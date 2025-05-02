@@ -17,13 +17,14 @@ package io.netty.handler.codec.xml;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Specific {@link XmlElement} representing beginning  of element.
  */
 public class XmlElementStart extends XmlElement {
 
-    private final List<XmlAttribute> attributes = new ArrayList<XmlAttribute>();
+    private final List<XmlAttribute> attributes = new ArrayList<>();
 
     public XmlElementStart(String name, String namespace, String prefix) {
         super(name, namespace, prefix);
@@ -52,9 +53,7 @@ public class XmlElementStart extends XmlElement {
 
     @Override
     public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + attributes.hashCode();
-        return result;
+        return Objects.hash(super.hashCode(), attributes);
     }
 
     @Override

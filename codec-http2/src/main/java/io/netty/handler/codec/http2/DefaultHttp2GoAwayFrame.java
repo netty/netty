@@ -22,6 +22,8 @@ import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
 
+import java.util.Objects;
+
 /**
  * The default {@link Http2GoAwayFrame} implementation.
  */
@@ -163,10 +165,7 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
 
     @Override
     public int hashCode() {
-        int hash = super.hashCode();
-        hash = hash * 31 + (int) (errorCode ^ errorCode >>> 32);
-        hash = hash * 31 + extraStreamIds;
-        return hash;
+        return Objects.hash(super.hashCode(), errorCode, extraStreamIds);
     }
 
     @Override

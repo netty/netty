@@ -17,6 +17,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -126,10 +128,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
 
     @Override
     public int hashCode() {
-        int result = 1;
-        result = 31 * result + status.hashCode();
-        result = 31 * result + super.hashCode();
-        return result;
+        return Objects.hash(status, super.hashCode());
     }
 
     @Override

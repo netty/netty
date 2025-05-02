@@ -20,6 +20,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
+
 /**
  * Representation of SCTP Data Chunk
  */
@@ -138,12 +140,7 @@ public final class SctpMessage extends DefaultByteBufHolder {
 
     @Override
     public int hashCode() {
-        int result = streamIdentifier;
-        result = 31 * result + protocolIdentifier;
-        // values 1231 and 1237 are referenced in the javadocs of Boolean#hashCode()
-        result = 31 * result + (unordered ? 1231 : 1237);
-        result = 31 * result + content().hashCode();
-        return result;
+        return Objects.hash(streamIdentifier, protocolIdentifier, unordered, content());
     }
 
     @Override

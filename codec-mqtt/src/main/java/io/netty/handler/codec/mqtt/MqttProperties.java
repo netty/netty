@@ -17,10 +17,11 @@ package io.netty.handler.codec.mqtt;
 
 import io.netty.util.collection.IntObjectHashMap;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.ArrayList;
+import java.util.Objects;
 
 /**
  * MQTT Properties container
@@ -142,7 +143,7 @@ public final class MqttProperties {
 
         @Override
         public int hashCode() {
-            return propertyId + 31 * value.hashCode();
+            return Objects.hash(propertyId, value);
         }
 
         @Override
@@ -193,7 +194,7 @@ public final class MqttProperties {
 
         @Override
         public int hashCode() {
-            return key.hashCode() + 31 * value.hashCode();
+            return Objects.hash(key, value);
         }
 
         @Override
@@ -214,7 +215,7 @@ public final class MqttProperties {
     //are the only properties where ordering is required. Therefore, they need a special handling
     public static final class UserProperties extends MqttProperty<List<StringPair>> {
         public UserProperties() {
-            super(MqttPropertyType.USER_PROPERTY.value, new ArrayList<StringPair>());
+            super(MqttPropertyType.USER_PROPERTY.value, new ArrayList<>());
         }
 
         /**

@@ -17,6 +17,8 @@ package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelId;
 
+import java.util.Objects;
+
 /**
  * ChannelId implementation which is used by our {@link Http2StreamChannel} implementation.
  */
@@ -57,7 +59,7 @@ final class Http2StreamChannelId implements ChannelId {
 
     @Override
     public int hashCode() {
-        return id * 31 + parentId.hashCode();
+        return Objects.hash(id, parentId);
     }
 
     @Override

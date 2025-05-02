@@ -19,6 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.util.internal.StringUtil;
 
+import java.util.Objects;
+
 public final class DefaultSpdyUnknownFrame extends DefaultByteBufHolder implements SpdyUnknownFrame {
     private final int frameType;
     private final byte flags;
@@ -96,10 +98,7 @@ public final class DefaultSpdyUnknownFrame extends DefaultByteBufHolder implemen
 
     @Override
     public int hashCode() {
-        int result = super.hashCode();
-        result = 31 * result + frameType;
-        result = 31 * result + flags;
-        return result;
+        return Objects.hash(super.hashCode(), frameType, flags);
     }
 
     @Override
