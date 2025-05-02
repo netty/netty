@@ -118,6 +118,7 @@ final class IoUringBufferRing {
         try {
             byteBuf = allocator.allocate();
         } catch (OutOfMemoryError e) {
+            e.printStackTrace();
             // We did run out of memory, This buffer ring should be considered corrupted.
             // TODO: In the future we could try to recover it later by trying to refill it after some time and so
             //       bring it back to a non-corrupted state.
