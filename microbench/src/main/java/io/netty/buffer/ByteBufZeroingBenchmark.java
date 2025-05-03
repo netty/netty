@@ -49,7 +49,7 @@ public class ByteBufZeroingBenchmark extends AbstractMicrobenchmark {
             "65",
             "1024",
     })
-    private final int bytes = 1024;
+    private int bytes = 1024;
     @Param({
             "true",
             "false",
