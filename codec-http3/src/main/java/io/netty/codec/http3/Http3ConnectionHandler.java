@@ -19,9 +19,9 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.codec.http3.Http3FrameCodec.Http3FrameCodecFactory;
-import io.netty.codec.quic.QuicChannel;
-import io.netty.codec.quic.QuicStreamChannel;
-import io.netty.codec.quic.QuicStreamType;
+import io.netty.handler.codec.quic.QuicChannel;
+import io.netty.handler.codec.quic.QuicStreamChannel;
+import io.netty.handler.codec.quic.QuicStreamType;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.LongFunction;

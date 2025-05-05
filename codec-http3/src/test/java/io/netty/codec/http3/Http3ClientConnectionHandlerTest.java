@@ -15,7 +15,7 @@
  */
 package io.netty.codec.http3;
 
-import io.netty.codec.quic.QuicStreamChannel;
+import io.netty.handler.codec.quic.QuicStreamChannel;
 
 public class Http3ClientConnectionHandlerTest extends AbtractHttp3ConnectionHandlerTest {
 

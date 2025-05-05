@@ -17,7 +17,7 @@ package io.netty.codec.http3;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
-import io.netty.codec.quic.QuicStreamType;
+import io.netty.handler.codec.quic.QuicStreamType;
 
 import java.util.Arrays;
 import java.util.List;

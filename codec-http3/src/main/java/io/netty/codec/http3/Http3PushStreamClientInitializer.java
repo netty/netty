@@ -17,7 +17,7 @@ package io.netty.codec.http3;
 
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.codec.quic.QuicStreamChannel;
+import io.netty.handler.codec.quic.QuicStreamChannel;
 
 import static io.netty.codec.http3.Http3CodecUtils.isServerInitiatedQuicStream;
 import static io.netty.codec.http3.Http3RequestStreamCodecState.NO_STATE;

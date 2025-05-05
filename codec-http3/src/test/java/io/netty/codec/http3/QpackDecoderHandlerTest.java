@@ -16,7 +16,7 @@
 package io.netty.codec.http3;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.codec.quic.QuicStreamType;
+import io.netty.handler.codec.quic.QuicStreamType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 

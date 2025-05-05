@@ -17,7 +17,7 @@ package io.netty.codec.http3;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.codec.quic.QuicStreamChannel;
+import io.netty.handler.codec.quic.QuicStreamChannel;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.LongFunction;

@@ -16,7 +16,7 @@
 package io.netty.codec.http3;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.codec.quic.QuicStreamChannel;
+import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.AsciiString;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.internal.logging.InternalLogger;

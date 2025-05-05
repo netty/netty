@@ -24,11 +24,11 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
-import io.netty.codec.quic.InsecureQuicTokenHandler;
-import io.netty.codec.quic.QuicChannel;
-import io.netty.codec.quic.QuicSslContext;
-import io.netty.codec.quic.QuicSslContextBuilder;
-import io.netty.codec.quic.QuicStreamChannel;
+import io.netty.handler.codec.quic.InsecureQuicTokenHandler;
+import io.netty.handler.codec.quic.QuicChannel;
+import io.netty.handler.codec.quic.QuicSslContext;
+import io.netty.handler.codec.quic.QuicSslContextBuilder;
+import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
