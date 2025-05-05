@@ -80,7 +80,7 @@ final class KeytoolSelfSignedCertGenerator {
         try {
             Process process = new ProcessBuilder()
                     .command(
-                            "keytool",
+                            KEYTOOL.toAbsolutePath().toString(),
                             "-genkeypair",
                             "-keyalg", builder.algorithm,
                             "-keysize", String.valueOf(builder.bits),
