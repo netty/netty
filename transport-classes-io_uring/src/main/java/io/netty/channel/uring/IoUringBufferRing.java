@@ -114,7 +114,7 @@ final class IoUringBufferRing {
             return;
         }
         int oldTail = Short.toUnsignedInt((short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition));
-        int ringIndex = oldTail & mask;
+        int ringIndex = (oldTail & mask);
         assert buffers[ringIndex] == null : "buffers[" + ringIndex + "] == " + buffers[ringIndex];
         final ByteBuf byteBuf;
         try {
