@@ -53,6 +53,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.security.Provider;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -62,7 +63,7 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.TrustManagerFactory;
 
-@EnabledIf("supportKeyManager")
+@EnabledIf("supportKeyManagerAndTLS13")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 @Execution(ExecutionMode.SAME_THREAD)
 public class SocketSslLargeCertificateTest {
@@ -89,8 +90,10 @@ public class SocketSslLargeCertificateTest {
         group.shutdownGracefully(100, 1000, TimeUnit.MILLISECONDS);
     }
 
-    public static boolean supportKeyManager() {
-        return OpenSsl.isAvailable() && OpenSsl.supportsKeyManagerFactory();
+    public static boolean supportKeyManagerAndTLS13() {
+        return OpenSsl.isAvailable() &&
+                OpenSsl.supportsKeyManagerFactory() &&
+                SslProvider.isTlsv13Supported(SslProvider.OPENSSL);
     }
 
     public static Stream<Arguments> certExtensionSizes() {
