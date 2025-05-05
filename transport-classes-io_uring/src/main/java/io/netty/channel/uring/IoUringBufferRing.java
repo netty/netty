@@ -37,7 +37,7 @@ final class IoUringBufferRing {
     private final short entries;
     private final int batchSize;
     private final int maxUnreleasedBuffers;
-    private final int mask;
+    private final short mask;
     private final short bufferGroupId;
     private final int ringFd;
     private final IoUringBufferRingByteBuf[] buffers;
@@ -60,7 +60,7 @@ final class IoUringBufferRing {
         this.entries = entries;
         this.batchSize = batchSize;
         this.maxUnreleasedBuffers = maxUnreleasedBuffers;
-        this.mask = entries - 1;
+        this.mask = (short) (entries - 1);
         this.bufferGroupId = bufferGroupId;
         this.ringFd = ringFd;
         this.buffers = new IoUringBufferRingByteBuf[entries];
@@ -113,8 +113,8 @@ final class IoUringBufferRing {
         if (corrupted || closed) {
             return;
         }
-        int oldTail = Short.toUnsignedInt((short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition));
-        int ringIndex = (oldTail & mask);
+        short oldTail = (short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition);
+        short ringIndex = (short) (oldTail & mask);
         assert buffers[ringIndex] == null : "buffers[" + ringIndex + "] == " + buffers[ringIndex];
         final ByteBuf byteBuf;
         try {
@@ -137,7 +137,7 @@ final class IoUringBufferRing {
         ioUringBufRing.putLong(position + Native.IOURING_BUFFER_OFFSETOF_ADDR,
                 IoUring.memoryAddress(byteBuf) + byteBuf.readerIndex());
         ioUringBufRing.putInt(position + Native.IOURING_BUFFER_OFFSETOF_LEN, byteBuf.capacity());
-        ioUringBufRing.putShort(position + Native.IOURING_BUFFER_OFFSETOF_BID, (short) ringIndex);
+        ioUringBufRing.putShort(position + Native.IOURING_BUFFER_OFFSETOF_BID, ringIndex);
 
         // Now advanced the tail by the number of buffers that we just added.
         SHORT_HANDLE.setRelease(ioUringBufRing, tailFieldPosition, (short) (oldTail + 1));
