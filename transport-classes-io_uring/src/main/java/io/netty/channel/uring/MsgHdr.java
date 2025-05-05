@@ -68,4 +68,35 @@ final class MsgHdr {
         }
         // No flags (we assume the memory was memset before)
     }
+
+    static void set(ByteBuffer memory, int fd, ByteBuffer msgControl, int cmsgHdrDataOffset) {
+        int memoryPosition = memory.position();
+        long msgControlAddr = Buffer.memoryAddress(msgControl);
+        CmsgHdr.writeScmRights(msgControl,cmsgHdrDataOffset,fd);
+        if (Native.SIZEOF_SIZE_T == 4) {
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, (int) msgControlAddr);
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, Native.MSG_CONTROL_LEN_FOR_FD);
+        } else {
+            assert Native.SIZEOF_SIZE_T == 8;
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, msgControlAddr);
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, Native.MSG_CONTROL_LEN_FOR_FD);
+        }
+    }
+
+    static void set(ByteBuffer memory, ByteBuffer msgControl, int cmsgHdrDataOffset) {
+        int memoryPosition = memory.position();
+        long msgControlAddr = Buffer.memoryAddress(msgControl);
+        if (Native.SIZEOF_SIZE_T == 4) {
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, (int) msgControlAddr);
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, Native.MSG_CONTROL_LEN_FOR_FD);
+        } else {
+            assert Native.SIZEOF_SIZE_T == 8;
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, msgControlAddr);
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, Native.MSG_CONTROL_LEN_FOR_FD);
+        }
+    }
+
+    static int getCmsgData(ByteBuffer memory, ByteBuffer msgControl, int cmsgHdrDataOffset) {
+        return CmsgHdr.readScmRights(msgControl, cmsgHdrDataOffset);
+    }
 }

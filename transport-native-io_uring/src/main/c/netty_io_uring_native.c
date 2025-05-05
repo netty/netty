@@ -683,16 +683,37 @@ static jint netty_io_uring_cmsgSpace(JNIEnv* env, jclass clazz) {
     return CMSG_SPACE(sizeof(uint16_t));
 }
 
+static jint netty_io_uring_cmsgSpace_for_fd(JNIEnv* env, jclass clazz) {
+    return CMSG_SPACE(sizeof(int));
+}
+
+static jint netty_io_uring_msg_controllen_for_fd(JNIEnv* env, jclass clazz) {
+    char control[CMSG_SPACE(sizeof(int))] = { 0 };
+    return sizeof(control);
+}
+
 static jint netty_io_uring_cmsgLen(JNIEnv* env, jclass clazz) {
     return CMSG_LEN(sizeof(uint16_t));
+}
+
+static jint netty_io_uring_cmsgLen_for_fd(JNIEnv* env, jclass clazz) {
+    return CMSG_LEN(sizeof(int));
 }
 
 static jint netty_io_uring_solUdp(JNIEnv* env, jclass clazz) {
     return SOL_UDP;
 }
 
+static jint netty_io_uring_solSocket(JNIEnv* env, jclass clazz) {
+    return SOL_SOCKET;
+}
+
 static jint netty_io_uring_udpSegment(JNIEnv* env, jclass clazz) {
     return UDP_SEGMENT;
+}
+
+static jint netty_io_uring_ScmRights(JNIEnv* env, jclass clazz) {
+    return SCM_RIGHTS;
 }
 
 // JNI Method Registration Table Begin
@@ -718,7 +739,10 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sizeofSizeT", "()I", (void *) netty_io_uring_sizeofSizeT },
   { "sizeofIovec", "()I", (void *) netty_io_uring_sizeofIovec },
   { "cmsgSpace", "()I", (void *) netty_io_uring_cmsgSpace},
+  { "cmsgSpaceForFd", "()I", (void *) netty_io_uring_cmsgSpace_for_fd},
+  { "msgControlLenForFd", "()I", (void *) netty_io_uring_msg_controllen_for_fd},
   { "cmsgLen", "()I", (void *) netty_io_uring_cmsgLen},
+  { "cmsgLenForFd", "()I", (void *) netty_io_uring_cmsgLen_for_fd},
   { "iovecOffsetofIovBase", "()I", (void *) netty_io_uring_iovecOffsetofIovBase },
   { "iovecOffsetofIovLen", "()I", (void *) netty_io_uring_iovecOffsetofIovLen },
   { "sizeofMsghdr", "()I", (void *) netty_io_uring_sizeofMsghdr },
@@ -743,7 +767,9 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "msgDontwait", "()I", (void *) netty_io_uring_msgDontwait },
   { "msgFastopen", "()I", (void *) netty_io_uring_msgFastopen },
   { "solUdp", "()I", (void *) netty_io_uring_solUdp },
+  { "solSocket", "()I", (void *) netty_io_uring_solSocket },
   { "udpSegment", "()I", (void *) netty_io_uring_udpSegment },
+  { "scmRights", "()I", (void *) netty_io_uring_ScmRights },
   { "cmsghdrOffsetofCmsgLen", "()I", (void *) netty_io_uring_cmsghdrOffsetofCmsgLen },
   { "cmsghdrOffsetofCmsgLevel", "()I", (void *) netty_io_uring_cmsghdrOffsetofCmsgLevel },
   { "cmsghdrOffsetofCmsgType", "()I", (void *) netty_io_uring_cmsghdrOffsetofCmsgType },

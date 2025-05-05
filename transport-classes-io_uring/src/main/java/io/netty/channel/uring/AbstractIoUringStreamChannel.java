@@ -42,10 +42,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     // Store the opCode so we know if we used WRITE or WRITEV.
-    private byte writeOpCode;
+    protected byte writeOpCode;
     // Keep track of the ids used for write and read so we can cancel these when needed.
-    private long writeId;
-    private long readId;
+    protected long writeId;
+    protected long readId;
 
     // The configured buffer ring if any
     private IoUringBufferRing bufferRing;
@@ -64,7 +64,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     }
 
     @Override
-    protected final AbstractUringUnsafe newUnsafe() {
+    protected AbstractUringUnsafe newUnsafe() {
         return new IoUringStreamUnsafe();
     }
 
@@ -231,7 +231,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         return super.filterOutboundMessage(msg);
     }
 
-    private final class IoUringStreamUnsafe extends AbstractUringUnsafe {
+    protected class IoUringStreamUnsafe extends AbstractUringUnsafe {
 
         private ByteBuf readBuffer;
 
@@ -548,7 +548,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
         }
 
-        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf,
+        protected final void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf,
                                          Throwable cause, boolean allDataRead,
                                          IoUringRecvByteAllocatorHandle allocHandle) {
             if (byteBuf != null) {

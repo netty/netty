@@ -46,6 +46,20 @@ final class MsgHdrMemory {
         cmsgDataOffset = (int) (cmsgDataAddr + cmsgDataMemoryAddr);
     }
 
+    MsgHdrMemory() {
+        this.idx = 0;
+        // jdk will memset the memory to 0, so we don't need to do it here.
+        msgHdrMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_MSGHDR);
+        msgHdrMemoryAddress = Buffer.memoryAddress(msgHdrMemory);
+        socketAddrMemory = null;
+        iovMemory = null;
+        cmsgDataMemory = Buffer.allocateDirectWithNativeOrder(Native.CMSG_SPACE_FOR_FD);
+
+        long cmsgDataMemoryAddr = Buffer.memoryAddress(cmsgDataMemory);
+        long cmsgDataAddr = Native.cmsghdrData(cmsgDataMemoryAddr);
+        cmsgDataOffset = (int) (cmsgDataAddr + cmsgDataMemoryAddr);
+    }
+
     void set(LinuxSocket socket, InetSocketAddress address, long bufferAddress , int length, short segmentSize) {
         int addressLength;
         if (address == null) {
@@ -62,6 +76,18 @@ final class MsgHdrMemory {
         Iov.set(iovMemory, bufferAddress, length);
         MsgHdr.set(msgHdrMemory, socketAddrMemory, addressLength, iovMemory, 1, cmsgDataMemory,
                 cmsgDataOffset, segmentSize);
+    }
+
+    void setScmRightsFd(int fd) {
+        MsgHdr.set(msgHdrMemory, fd, cmsgDataMemory, cmsgDataOffset);
+    }
+
+    int getScmRightsFd() {
+        return MsgHdr.getCmsgData(msgHdrMemory, cmsgDataMemory, cmsgDataOffset);
+    }
+
+    void set() {
+        MsgHdr.set(msgHdrMemory, cmsgDataMemory, cmsgDataOffset);
     }
 
     boolean hasPort(IoUringDatagramChannel channel) {
