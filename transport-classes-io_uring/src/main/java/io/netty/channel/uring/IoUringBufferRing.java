@@ -115,7 +115,21 @@ final class IoUringBufferRing {
         }
         short oldTail = (short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition);
         short ringIndex = (short) (oldTail & mask);
-        assert buffers[ringIndex] == null : "buffers[" + ringIndex + "] == " + buffers[ringIndex];
+        if (buffers[ringIndex] != null) {
+            StringBuilder sb = new StringBuilder();
+            sb.append("buffers[ ");
+            for (int i = 0; i < buffers.length; i++) {
+                sb.append(i).append(": ");
+                if (buffers[i] == null) {
+                    sb.append("null ,");
+                } else {
+                    sb.append("B ,");
+                }
+            }
+            sb.setLength(sb.length() - 1);
+            sb.append(" ]");
+            assert buffers[ringIndex] == null : oldTail + " => buffers[" + ringIndex + "] != null: " + sb;
+        }
         final ByteBuf byteBuf;
         try {
             byteBuf = allocator.allocate();
