@@ -202,7 +202,7 @@ final class IoUringBufferRing {
     }
 
     short nextBid(short bid) {
-        return (short) (++bid & mask);
+        return (short) ((bid + 1) & mask);
     }
 
     /**
