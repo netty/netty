@@ -63,8 +63,8 @@ public class HandlerSslTest {
     private Channel serverConnectedChannel;
     private Throwable clientException;
     private Throwable serverException;
-    private CountDownLatch serverLatch = new CountDownLatch(1);
-    private CountDownLatch clientLatch = new CountDownLatch(1);
+    private final CountDownLatch serverLatch = new CountDownLatch(1);
+    private final CountDownLatch clientLatch = new CountDownLatch(1);
 
     @BeforeAll
     public static void setup() throws Exception {
