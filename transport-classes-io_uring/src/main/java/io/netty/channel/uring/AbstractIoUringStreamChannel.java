@@ -460,6 +460,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                                 int attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
                                 byteBuf = bufferRing.useBuffer(bid, read, more);
                                 read -= byteBuf.readableBytes();
+                                System.err.println("bid(" + bid + ") = " + byteBuf.readableBytes() + "/" + attemptedBytesRead);
                                 allocHandle.attemptedBytesRead(attemptedBytesRead);
                                 allocHandle.lastBytesRead(byteBuf.readableBytes());
 
@@ -470,10 +471,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                                     break;
                                 }
                                 allocHandle.incMessagesRead(1);
-                                pipeline.fireChannelRead(byteBuf);
+                                pipeline.fireChannelRead(byteBuf.copy());
                                 byteBuf = null;
 
-                                bid = bufferRing.nextBid(bid);
+                                short nextBid = bufferRing.nextBid(bid);
+                                assert nextBid != bid;
+                                bid = nextBid;
                                 if (!allocHandle.continueReading()) {
                                     // We should call fireChannelReadComplete() to mimic a normal read loop.
                                     allocHandle.readComplete();

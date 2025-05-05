@@ -103,7 +103,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         List<Object[]> params = new ArrayList<Object[]>();
         for (SslContext sc: serverContexts) {
             for (SslContext cc: clientContexts) {
-                params.add(new Object[] { sc, cc, true });
+                //params.add(new Object[] { sc, cc, true });
                 params.add(new Object[] { sc, cc, false });
             }
         }

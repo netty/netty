@@ -43,7 +43,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
     static final EventLoopGroup IO_URING_BOSS_GROUP = new MultiThreadIoEventLoopGroup(
             BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IoUringIoHandler.newFactory());
     static final EventLoopGroup IO_URING_WORKER_GROUP = new MultiThreadIoEventLoopGroup(
-            WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true),
+            1, new DefaultThreadFactory("testsuite-io_uring-worker", true),
             IoUringIoHandler.newFactory(buildConfig()));
 
     static IoUringIoHandlerConfig buildConfig() {
@@ -51,7 +51,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
         if (IoUring.isRegisterBufferRingSupported()) {
             config.setBufferRingConfig(
                     new IoUringBufferRingConfig(BGID, (short) 16, 16 * 16,
-                            new IoUringFixedBufferRingAllocator(1024)));
+                            new IoUringFixedBufferRingAllocator(32)));
         }
         return config;
     }

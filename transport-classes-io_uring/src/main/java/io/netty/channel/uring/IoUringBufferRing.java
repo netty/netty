@@ -74,8 +74,8 @@ final class IoUringBufferRing {
     }
 
     void initialize() {
-        for (int i = 0; i < entries; i++) {
-            fillBuffer();
+        for (short i = 0; i < entries; i++) {
+            fillBuffer(i);
         }
         usable = true;
     }
@@ -109,13 +109,14 @@ final class IoUringBufferRing {
         return exhaustedEvent;
     }
 
-    private void fillBuffer() {
+    private void fillBuffer(short bid) {
         if (corrupted || closed) {
             return;
         }
         short oldTail = (short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition);
         short ringIndex = (short) (oldTail & mask);
-        if (buffers[ringIndex] != null) {
+        assert ringIndex == bid;
+        if (buffers[bid] != null) {
             StringBuilder sb = new StringBuilder();
             sb.append("buffers[ ");
             for (int i = 0; i < buffers.length; i++) {
@@ -128,7 +129,7 @@ final class IoUringBufferRing {
             }
             sb.setLength(sb.length() - 1);
             sb.append(" ]");
-            assert buffers[ringIndex] == null : oldTail + " => buffers[" + ringIndex + "] != null: " + sb;
+            assert buffers[bid] == null : oldTail + " => buffers[" + bid + "] != null: " + sb;
         }
         final ByteBuf byteBuf;
         try {
@@ -142,7 +143,7 @@ final class IoUringBufferRing {
             throw e;
         }
         byteBuf.writerIndex(byteBuf.capacity());
-        buffers[ringIndex] = new IoUringBufferRingByteBuf(byteBuf);
+        buffers[bid] = new IoUringBufferRingByteBuf(byteBuf);
 
         //  see:
         //  https://github.com/axboe/liburing/
@@ -151,7 +152,7 @@ final class IoUringBufferRing {
         ioUringBufRing.putLong(position + Native.IOURING_BUFFER_OFFSETOF_ADDR,
                 IoUring.memoryAddress(byteBuf) + byteBuf.readerIndex());
         ioUringBufRing.putInt(position + Native.IOURING_BUFFER_OFFSETOF_LEN, byteBuf.capacity());
-        ioUringBufRing.putShort(position + Native.IOURING_BUFFER_OFFSETOF_BID, ringIndex);
+        ioUringBufRing.putShort(position + Native.IOURING_BUFFER_OFFSETOF_BID, bid);
 
         // Now advanced the tail by the number of buffers that we just added.
         SHORT_HANDLE.setRelease(ioUringBufRing, tailFieldPosition, (short) (oldTail + 1));
@@ -187,15 +188,15 @@ final class IoUringBufferRing {
         IoUringBufferRingByteBuf byteBuf = buffers[bid];
 
         allocator.lastBytesRead(byteBuf.readableBytes(), readableBytes);
-        if (incremental && more && byteBuf.readableBytes() > readableBytes) {
+        /*if (incremental && more && byteBuf.readableBytes() > readableBytes) {
             // The buffer will be used later again, just slice out what we did read so far.
             return byteBuf.readRetainedSlice(readableBytes);
-        }
+        }*/
 
         // The buffer is considered to be used, null out the slot.
         buffers[bid] = null;
         numBuffers--;
-        fillBuffer();
+        fillBuffer(bid);
         byteBuf.markUsed();
         return byteBuf.writerIndex(byteBuf.readerIndex() +
                 Math.min(readableBytes, byteBuf.readableBytes()));
