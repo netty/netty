@@ -545,7 +545,7 @@ final class Native {
         if (!name.startsWith("linux")) {
             throw new IllegalStateException("Only supported on Linux");
         }
-        String staticLibName = "netty_transport_native_io_uring";
+        String staticLibName = "netty_transport_native_io_uring42";
         String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
         ClassLoader cl = PlatformDependent.getClassLoader(Native.class);
         try {

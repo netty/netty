@@ -1,0 +1,490 @@
+[
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"[B"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.HmacSignQuicConnectionIdGenerator"},
+  "name":"com.sun.crypto.provider.HmacCore$HmacSHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContextBuilder"},
+  "name":"com.sun.crypto.provider.HmacCore$HmacSHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContextBuilder"},
+  "name":"com.sun.crypto.provider.PBEKeyFactory$PBEWithMD5AndDES",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContextBuilder"},
+  "name":"com.sun.crypto.provider.PBES2Core$HmacSHA256AndAES_256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContextBuilder"},
+  "name":"com.sun.crypto.provider.PBES2Parameters$General",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContextBuilder"},
+  "name":"com.sun.crypto.provider.PBES2Parameters$HmacSHA256AndAES_256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"com.sun.org.apache.xerces.internal.jaxp.SAXParserFactoryImpl",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicConnectionAddress"},
+  "name":"io.netty.buffer.AbstractByteBufAllocator",
+  "queryAllDeclaredMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicConnectionAddress"},
+  "name":"io.netty.buffer.AbstractReferenceCountedByteBuf",
+  "fields":[{"name":"refCnt"}]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quic"},
+  "name":"io.netty.channel.ChannelInboundHandlerAdapter",
+  "methods":[
+    {"name":"channelReadComplete","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelWritabilityChanged","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicStreamChannelBootstrap$QuicStreamChannelBootstrapHandler"},
+  "name":"io.netty.channel.ChannelInboundHandlerAdapter",
+  "methods":[
+    {"name":"channelActive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"channelUnregistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"exceptionCaught","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Throwable"] }, 
+    {"name":"userEventTriggered","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicChannel"},
+  "name":"io.netty.channel.ChannelInboundHandlerAdapter",
+  "methods":[{"name":"channelActive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicChannel$2"},
+  "name":"io.netty.channel.ChannelInboundHandlerAdapter",
+  "methods":[
+    {"name":"channelActive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"channelRegistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelUnregistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"exceptionCaught","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Throwable"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicChannel$QuicChannelUnsafe"},
+  "name":"io.netty.channel.ChannelInboundHandlerAdapter",
+  "methods":[
+    {"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"channelReadComplete","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRegistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelUnregistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelWritabilityChanged","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"exceptionCaught","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Throwable"] }, 
+    {"name":"userEventTriggered","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicServerCodec"},
+  "name":"io.netty.channel.ChannelInboundHandlerAdapter",
+  "methods":[
+    {"name":"channelActive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"channelRegistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelUnregistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"exceptionCaught","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Throwable"] }, 
+    {"name":"userEventTriggered","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicChannel"},
+  "name":"io.netty.channel.ChannelInitializer",
+  "methods":[
+    {"name":"channelRegistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"exceptionCaught","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Throwable"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicChannel$2"},
+  "name":"io.netty.channel.DefaultChannelPipeline$HeadContext",
+  "methods":[
+    {"name":"bind","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.net.SocketAddress","io.netty.channel.ChannelPromise"] }, 
+    {"name":"channelActive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"channelReadComplete","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRegistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelUnregistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelWritabilityChanged","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"close","parameterTypes":["io.netty.channel.ChannelHandlerContext","io.netty.channel.ChannelPromise"] }, 
+    {"name":"connect","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.net.SocketAddress","java.net.SocketAddress","io.netty.channel.ChannelPromise"] }, 
+    {"name":"deregister","parameterTypes":["io.netty.channel.ChannelHandlerContext","io.netty.channel.ChannelPromise"] }, 
+    {"name":"disconnect","parameterTypes":["io.netty.channel.ChannelHandlerContext","io.netty.channel.ChannelPromise"] }, 
+    {"name":"exceptionCaught","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Throwable"] }, 
+    {"name":"flush","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"read","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"userEventTriggered","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"write","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object","io.netty.channel.ChannelPromise"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicStreamChannel$1"},
+  "name":"io.netty.channel.DefaultChannelPipeline$HeadContext",
+  "methods":[
+    {"name":"bind","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.net.SocketAddress","io.netty.channel.ChannelPromise"] }, 
+    {"name":"channelActive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"channelReadComplete","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRegistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelUnregistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelWritabilityChanged","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"close","parameterTypes":["io.netty.channel.ChannelHandlerContext","io.netty.channel.ChannelPromise"] }, 
+    {"name":"connect","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.net.SocketAddress","java.net.SocketAddress","io.netty.channel.ChannelPromise"] }, 
+    {"name":"deregister","parameterTypes":["io.netty.channel.ChannelHandlerContext","io.netty.channel.ChannelPromise"] }, 
+    {"name":"disconnect","parameterTypes":["io.netty.channel.ChannelHandlerContext","io.netty.channel.ChannelPromise"] }, 
+    {"name":"exceptionCaught","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Throwable"] }, 
+    {"name":"flush","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"read","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"userEventTriggered","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"write","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object","io.netty.channel.ChannelPromise"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicChannel$2"},
+  "name":"io.netty.channel.DefaultChannelPipeline$TailContext",
+  "methods":[
+    {"name":"channelActive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"channelReadComplete","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRegistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelUnregistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelWritabilityChanged","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"exceptionCaught","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Throwable"] }, 
+    {"name":"userEventTriggered","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicStreamChannel$1"},
+  "name":"io.netty.channel.DefaultChannelPipeline$TailContext",
+  "methods":[
+    {"name":"channelActive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelInactive","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRead","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }, 
+    {"name":"channelReadComplete","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelRegistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelUnregistered","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"channelWritabilityChanged","parameterTypes":["io.netty.channel.ChannelHandlerContext"] }, 
+    {"name":"exceptionCaught","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Throwable"] }, 
+    {"name":"userEventTriggered","parameterTypes":["io.netty.channel.ChannelHandlerContext","java.lang.Object"] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"io.netty.handler.codec.quic.BoringSSLCertificateCallback"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"io.netty.handler.codec.quic.BoringSSLCertificateVerifyCallback"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"io.netty.handler.codec.quic.BoringSSLHandshakeCompleteCallback"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicChannel"},
+  "name":"io.netty.handler.codec.quic.QuicStreamChannelBootstrap$QuicStreamChannelBootstrapHandler"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"io.netty.handler.codec.quic.QuicheLogger"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicChannel"},
+  "name":"io.netty.util.ReferenceCountUtil",
+  "queryAllDeclaredMethods":true
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"io.netty.util.internal.NativeLibraryUtil",
+  "methods":[{"name":"loadLibrary","parameterTypes":["java.lang.String","boolean"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicChannel"},
+  "name":"io.netty.util.internal.shaded.org.jctools.queues.MpscArrayQueueConsumerIndexField",
+  "fields":[{"name":"consumerIndex"}]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicChannel"},
+  "name":"io.netty.util.internal.shaded.org.jctools.queues.MpscArrayQueueProducerIndexField",
+  "fields":[{"name":"producerIndex"}]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicChannel"},
+  "name":"io.netty.util.internal.shaded.org.jctools.queues.MpscArrayQueueProducerLimitField",
+  "fields":[{"name":"producerLimit"}]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.io.FilePermission"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.lang.RuntimePermission"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.lang.String"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.lang.management.ManagementFactory",
+  "methods":[{"name":"getRuntimeMXBean","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.lang.management.RuntimeMXBean",
+  "methods":[{"name":"getInputArguments","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.net.NetPermission"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.net.SocketPermission"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.net.URLPermission",
+  "methods":[{"name":"<init>","parameterTypes":["java.lang.String","java.lang.String"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.nio.Bits",
+  "methods":[{"name":"unaligned","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.nio.Buffer",
+  "fields":[{"name":"address"}]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.nio.ByteBuffer",
+  "methods":[{"name":"alignedSlice","parameterTypes":["int"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.nio.DirectByteBuffer",
+  "methods":[{"name":"<init>","parameterTypes":["long","int"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.security.AllPermission"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.HmacSignQuicConnectionIdGenerator"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContextBuilder"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.SecureRandomQuicConnectionIdGenerator"},
+  "name":"java.security.SecureRandomParameters"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.security.SecurityPermission"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"java.util.PropertyPermission"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"javax.management.ObjectName"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.BoringSSLCertificateVerifyCallback"},
+  "name":"javax.net.ssl.X509ExtendedTrustManager"
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.BoringSSL"},
+  "name":"javax.security.auth.x500.X500Principal",
+  "methods":[{"name":"<init>","parameterTypes":["sun.security.x509.X500Name"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"jdk.internal.misc.Unsafe",
+  "methods":[{"name":"getUnsafe","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicSslContext"},
+  "name":"org.bouncycastle.jcajce.provider.asymmetric.rsa.KeyFactorySpi",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicHeaderParser"},
+  "name":"sun.misc.Unsafe",
+  "methods":[{"name":"invokeCleaner","parameterTypes":["java.nio.ByteBuffer"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContext"},
+  "name":"sun.misc.Unsafe",
+  "methods":[{"name":"invokeCleaner","parameterTypes":["java.nio.ByteBuffer"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"sun.misc.Unsafe",
+  "fields":[{"name":"theUnsafe"}],
+  "methods":[
+    {"name":"copyMemory","parameterTypes":["java.lang.Object","long","java.lang.Object","long","long"] }, 
+    {"name":"invokeCleaner","parameterTypes":["java.nio.ByteBuffer"] }, 
+    {"name":"storeFence","parameterTypes":[] }
+  ]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicCodec"},
+  "name":"sun.misc.Unsafe",
+  "methods":[{"name":"invokeCleaner","parameterTypes":["java.nio.ByteBuffer"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicConnection"},
+  "name":"sun.misc.Unsafe",
+  "methods":[{"name":"invokeCleaner","parameterTypes":["java.nio.ByteBuffer"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicServerCodec"},
+  "name":"sun.misc.Unsafe",
+  "methods":[{"name":"invokeCleaner","parameterTypes":["java.nio.ByteBuffer"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicSslContext"},
+  "name":"sun.misc.Unsafe",
+  "methods":[{"name":"invokeCleaner","parameterTypes":["java.nio.ByteBuffer"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicStreamChannel$QuicStreamChannelUnsafe"},
+  "name":"sun.misc.Unsafe",
+  "methods":[{"name":"invokeCleaner","parameterTypes":["java.nio.ByteBuffer"] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContextBuilder"},
+  "name":"sun.security.pkcs12.PKCS12KeyStore",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicSslContext"},
+  "name":"sun.security.pkcs12.PKCS12KeyStore",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContextBuilder"},
+  "name":"sun.security.pkcs12.PKCS12KeyStore$DualFormatPKCS12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicSslContext"},
+  "name":"sun.security.pkcs12.PKCS12KeyStore$DualFormatPKCS12",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.HmacSignQuicConnectionIdGenerator"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContextBuilder"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.SecureRandomQuicConnectionIdGenerator"},
+  "name":"sun.security.provider.NativePRNG",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.Quiche"},
+  "name":"sun.security.provider.SHA",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.HmacSignQuicConnectionIdGenerator"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContextBuilder"},
+  "name":"sun.security.provider.SHA2$SHA256",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.BoringSSL"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.BoringSSLCertificateVerifyCallback"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContext"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicSslContext"},
+  "name":"sun.security.provider.X509Factory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContextBuilder"},
+  "name":"sun.security.rsa.RSAKeyFactory$Legacy",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.BoringSSLKeylessManagerFactory"},
+  "name":"sun.security.ssl.KeyManagerFactoryImpl$SunX509",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicSslContextBuilder"},
+  "name":"sun.security.ssl.KeyManagerFactoryImpl$SunX509",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+},
+{
+  "condition":{"typeReachable":"io.netty.handler.codec.quic.QuicheQuicSslContext"},
+  "name":"sun.security.ssl.TrustManagerFactoryImpl$PKIXFactory",
+  "methods":[{"name":"<init>","parameterTypes":[] }]
+}
+]

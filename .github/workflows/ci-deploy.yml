@@ -161,23 +161,14 @@ jobs:
         with:
           args: install ninja nasm
 
-      # Caching of maven dependencies
-      - uses: actions/cache@v4
-        continue-on-error: true
-        with:
-          path: ~/.m2/repository
-          key: stage-snapshot-windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
-          restore-keys: |
-            stage-snapshot-windows-x86_64-maven-cache-
-
       - name: Stage snapshots to local staging directory
-        run: ./mvnw.cmd -B -ntp --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=local-staging -DskipRemoteStaging=true -DskipTests=true
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/local-staging -DskipRemoteStaging=true -DskipTests=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
         with:
           name: windows-x86_64-local-staging
-          path: local-staging
+          path: /local-staging
           if-no-files-found: error
           include-hidden-files: true
 
@@ -204,6 +195,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-deploy-staged-snapshots-
             ${{ runner.os }}-maven-
+
+      - uses: s4u/maven-settings-action@v3.0.0
+        with:
+          servers: |
+            [{
+              "id": "sonatype-nexus-snapshots",
+              "username": "${{ secrets.SONATYPE_USERNAME }}",
+              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+            }]
 
       # Setup some env to re-use later.
       - name: Prepare environment variables
@@ -249,45 +249,15 @@ jobs:
           path: ~/linux-x86_64-java11-local-staging
 
       - name: Copy previous build artifacts to local maven repository
-        run: |
-          cp -r ~/windows-x86_64-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/macos-aarch64-java11-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/macos-x86_64-java11-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/linux-aarch64-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/linux-riscv64-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/linux-x86_64-java11-local-staging/deferred/* ~/.m2/repository/
+        run: bash ./.github/scripts/install_local_staging.sh ~/.m2/repository ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging
 
       - name: Generate netty-all and deploy to local staging.
         run: |
           mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Pnative-dependencies -am -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
+          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
 
       - name: Merge staging repositories
-        run: |
-          mkdir -p ~/local-staging/deferred
-          cat ~/windows-x86_64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/windows-x86_64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/macos-aarch64-java11-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/macos-aarch64-java11-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/macos-x86_64-java11-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/macos-x86_64-java11-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-aarch64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-aarch64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-riscv64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-riscv64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-x86_64-java11-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-x86_64-java11-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/all-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/all-local-staging/deferred/io/netty/netty-all/* ~/local-staging/deferred/io/netty/netty-all/
-
-      - uses: s4u/maven-settings-action@v3.0.0
-        with:
-          servers: |
-            [{
-              "id": "sonatype-nexus-snapshots",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
-            }]
+        run: bash ./.github/scripts/merge_local_staging.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ~/all-local-staging
 
       - name: Deploy local staged artifacts
         run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR

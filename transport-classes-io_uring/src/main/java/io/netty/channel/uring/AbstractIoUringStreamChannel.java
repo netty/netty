@@ -195,20 +195,29 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
     @Override
     protected final void doRegister(ChannelPromise promise) {
-        super.doRegister(promise);
-        promise.addListener(f -> {
+        ChannelPromise registerPromise = this.newPromise();
+        // Ensure that the buffer group is properly set before channel::read
+        registerPromise.addListener(f -> {
             if (f.isSuccess()) {
-                short bgid = ((IoUringStreamChannelConfig) config()).getBufferGroupId();
-                if (bgid >= 0) {
-                    final IoUringIoHandler ioUringIoHandler = registration().attachment();
-                    bufferRing = ioUringIoHandler.findBufferRing(bgid);
-                }
-                if (active) {
-                    // Register for POLLRDHUP if this channel is already considered active.
-                    schedulePollRdHup();
-                }
+               try {
+                   short bgid = ((IoUringStreamChannelConfig) config()).getBufferGroupId();
+                   if (bgid >= 0) {
+                       final IoUringIoHandler ioUringIoHandler = registration().attachment();
+                       bufferRing = ioUringIoHandler.findBufferRing(bgid);
+                   }
+                   if (active) {
+                       // Register for POLLRDHUP if this channel is already considered active.
+                       schedulePollRdHup();
+                   }
+               } finally {
+                   promise.setSuccess();
+               }
+            } else {
+                promise.setFailure(f.cause());
             }
         });
+
+        super.doRegister(registerPromise);
     }
 
     @Override
