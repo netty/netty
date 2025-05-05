@@ -41,7 +41,7 @@
     <skipTests>true</skipTests>
     <jniArch>${os.detected.arch}</jniArch>
     <jni.classifier>${os.detected.name}-${jniArch}</jni.classifier>
-    <jniLibName>netty_transport_native_io_uring_${jniArch}</jniLibName>
+    <jniLibName>netty_transport_native_io_uring42_${jniArch}</jniLibName>
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <extraConfigureArg />
     <extraConfigureArg2 />
@@ -59,6 +59,7 @@
         </os>
       </activation>
       <properties>
+        <!-- Enable testsuite -->
         <skipTests>false</skipTests>
       </properties>
 
@@ -148,7 +149,7 @@
                 </goals>
                 <configuration>
                   <instructions>
-                    <Bundle-NativeCode>META-INF/native/libnetty_transport_native_io_uring_${os.detected.arch}.so; osname=Linux; processor=${os.detected.arch},*</Bundle-NativeCode>
+                    <Bundle-NativeCode>META-INF/native/libnetty_transport_native_io_uring42_${os.detected.arch}.so; osname=Linux; processor=${os.detected.arch},*</Bundle-NativeCode>
                     <Bundle-SymbolicName>${maven-symbolicname}.${jni.classifier}</Bundle-SymbolicName>
                     <Fragment-Host>io.netty.transport-classes-io_uring</Fragment-Host>
                   </instructions>
