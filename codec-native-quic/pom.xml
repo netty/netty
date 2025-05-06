@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.2.Final-SNAPSHOT</version>
+    <version>4.2.1.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec-native-quic</artifactId>
@@ -752,7 +752,7 @@
                     </copy>
 
                     <!-- Delete boringssl source directory after build to free up space -->
-                    <delete dir="${boringsslSourceDir}" />
+                    <delete dir="${boringsslSourceDir}"/>
                   </else>
                 </if>
               </target>
@@ -875,7 +875,7 @@
                     </copy>
 
                     <!-- Delete quiche source directory after build to free up space -->
-                    <delete dir="${quicheSourceDir}" />
+                    <delete dir="${quicheSourceDir}"/>
                   </else>
                 </if>
               </target>
