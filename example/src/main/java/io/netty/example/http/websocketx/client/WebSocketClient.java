@@ -59,6 +59,7 @@ import java.net.URI;
 public final class WebSocketClient {
 
     static final String URL = System.getProperty("url", "ws://127.0.0.1:8080/websocket");
+    static final int MAX_CONTENT_LENGTH = 8192;
 
     public static void main(String[] args) throws Exception {
         URI uri = new URI(URL);
@@ -113,8 +114,8 @@ public final class WebSocketClient {
                      }
                      p.addLast(
                              new HttpClientCodec(),
-                             new HttpObjectAggregator(8192),
-                             WebSocketClientCompressionHandler.INSTANCE,
+                             new HttpObjectAggregator(MAX_CONTENT_LENGTH),
+                             new WebSocketClientCompressionHandler(MAX_CONTENT_LENGTH),
                              handler);
                  }
              });
