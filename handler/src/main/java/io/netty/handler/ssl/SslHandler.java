@@ -1351,7 +1351,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 // Not an SSL/TLS packet
                 NotSslRecordException e = new NotSslRecordException(
                         "not an SSL/TLS record: " + ByteBufUtil.hexDump(in));
-                in.skipBytes(in.readableBytes());
+                //in.skipBytes(in.readableBytes());
 
                 // First fail the handshake promise as we may need to have access to the SSLEngine which may
                 // be released because the user will remove the SslHandler in an exceptionCaught(...) implementation.
@@ -1424,10 +1424,16 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         if (isStateSet(STATE_PROCESS_TASK)) {
             return;
         }
-        if (jdkCompatibilityMode) {
-            decodeJdkCompatible(ctx, in);
-        } else {
-            decodeNonJdkCompatible(ctx, in);
+        try {
+            System.err.println(in.readableBytes());
+            if (jdkCompatibilityMode) {
+                decodeJdkCompatible(ctx, in);
+            } else {
+                decodeNonJdkCompatible(ctx, in);
+            }
+        } catch (SSLException cause) {
+            cause.printStackTrace();
+            throw cause;
         }
     }
 

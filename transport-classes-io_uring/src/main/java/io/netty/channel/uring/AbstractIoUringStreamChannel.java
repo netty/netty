@@ -456,11 +456,14 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                             // See https://github.com/axboe/liburing/wiki/
                             // What's-new-with-io_uring-in-6.10#add-support-for-sendrecv-bundles
                             int read = res;
-                            for (;;) {
+                            for (int i  = 0;; i++) {
                                 int attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
                                 byteBuf = bufferRing.useBuffer(bid, read, more);
                                 read -= byteBuf.readableBytes();
-                                System.err.println("bid(" + bid + ") = " + byteBuf.readableBytes() + "/" + attemptedBytesRead);
+                                System.err.println(i + " bid(" + bid + ") = " + byteBuf.readableBytes() + "/" + attemptedBytesRead);
+                                if (byteBuf.readableBytes() < byteBuf.capacity()) {
+                                    System.err.println("HERE");
+                                }
                                 allocHandle.attemptedBytesRead(attemptedBytesRead);
                                 allocHandle.lastBytesRead(byteBuf.readableBytes());
 
@@ -471,7 +474,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                                     break;
                                 }
                                 allocHandle.incMessagesRead(1);
-                                pipeline.fireChannelRead(byteBuf.copy());
+                                pipeline.fireChannelRead(byteBuf);
                                 byteBuf = null;
 
                                 short nextBid = bufferRing.nextBid(bid);

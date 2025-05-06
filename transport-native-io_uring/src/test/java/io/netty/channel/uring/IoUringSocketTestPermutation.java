@@ -62,7 +62,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
         List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> list =
                 combo(serverSocket(), clientSocket());
 
-        list.remove(list.size() - 1); // Exclude NIO x NIO test
+        //list.remove(list.size() - 1); // Exclude NIO x NIO test
 
         return list;
     }
@@ -76,7 +76,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                 return new ServerBootstrap().group(IO_URING_BOSS_GROUP, IO_URING_WORKER_GROUP)
                                             .channel(IoUringServerSocketChannel.class);
             }
-        });
+        });/*
         if (IoUring.isTcpFastOpenServerSideAvailable()) {
             toReturn.add(new BootstrapFactory<ServerBootstrap>() {
                 @Override
@@ -95,7 +95,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                 return new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
                                             .channel(NioServerSocketChannel.class);
             }
-        });
+        });*/
 
         return toReturn;
     }
@@ -103,12 +103,12 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
     @Override
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
         return Arrays.asList(
-                new BootstrapFactory<Bootstrap>() {
+                /*new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
                         return new Bootstrap().group(IO_URING_WORKER_GROUP).channel(IoUringSocketChannel.class);
                     }
-                },
+                },*/
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {

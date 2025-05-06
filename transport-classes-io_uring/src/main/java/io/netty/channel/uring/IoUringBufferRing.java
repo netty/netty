@@ -134,6 +134,9 @@ final class IoUringBufferRing {
         final ByteBuf byteBuf;
         try {
             byteBuf = allocator.allocate();
+            for (int i = 0; i < byteBuf.capacity(); i++) {
+                byteBuf.setByte(i, (byte) 127);
+            }
         } catch (OutOfMemoryError e) {
             e.printStackTrace();
             // We did run out of memory, This buffer ring should be considered corrupted.
@@ -142,7 +145,6 @@ final class IoUringBufferRing {
             corrupted = true;
             throw e;
         }
-        byteBuf.writerIndex(byteBuf.capacity());
         buffers[bid] = new IoUringBufferRingByteBuf(byteBuf);
 
         //  see:
@@ -170,7 +172,7 @@ final class IoUringBufferRing {
      * @return      the attempted bytes.
      */
     int attemptedBytesRead(short bid) {
-        return buffers[bid].readableBytes();
+        return buffers[bid].writableBytes();
     }
 
     /**
@@ -188,18 +190,18 @@ final class IoUringBufferRing {
         IoUringBufferRingByteBuf byteBuf = buffers[bid];
 
         allocator.lastBytesRead(byteBuf.readableBytes(), readableBytes);
-        /*if (incremental && more && byteBuf.readableBytes() > readableBytes) {
+        if (incremental && more && byteBuf.readableBytes() > readableBytes) {
             // The buffer will be used later again, just slice out what we did read so far.
-            return byteBuf.readRetainedSlice(readableBytes);
-        }*/
+            //return byteBuf.readRetainedSlice(readableBytes);
+        }
 
         // The buffer is considered to be used, null out the slot.
         buffers[bid] = null;
         numBuffers--;
         fillBuffer(bid);
         byteBuf.markUsed();
-        return byteBuf.writerIndex(byteBuf.readerIndex() +
-                Math.min(readableBytes, byteBuf.readableBytes()));
+        int written = Math.min(readableBytes, byteBuf.writableBytes());
+        return byteBuf.writerIndex(byteBuf.writerIndex() + written);
     }
 
     short nextBid(short bid) {
