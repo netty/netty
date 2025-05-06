@@ -73,7 +73,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: prepare-release-workspace
-          path: ${{ github.workspace }}/**
+          path: |
+            ${{ github.workspace }}/**
+            !${{ github.workspace }}/.git/config
           include-hidden-files: true
 
   stage-release-linux:
@@ -271,7 +273,11 @@ jobs:
       # failures sometimes due the fact that not enough memory could be reserved.
       RUSTUP_UNPACK_RAM: 134217728  # Use 128 MiB
     steps:
-      - uses: actions/checkout@v4
+      - name: Download release-workspace
+        uses: actions/download-artifact@v4
+        with:
+          name: prepare-release-workspace
+          path: ${{ github.workspace }}/prepare-release-workspace
 
       - name: Import GPG key
         id: import_gpg
@@ -290,15 +296,6 @@ jobs:
         with:
           key: ${{ secrets.SSH_PRIVATE_KEY_PEM }}
           known_hosts: ${{ secrets.SSH_KNOWN_HOSTS }}
-
-      - uses: s4u/maven-settings-action@v3.0.0
-        with:
-          servers: |
-            [{
-              "id": "sonatype-nexus-staging",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
-            }]
 
       - name: Set up JDK 11
         uses: actions/setup-java@v4
@@ -333,16 +330,34 @@ jobs:
           restore-keys: |
             stage-release-windows-x86_64-maven-cache-
 
-      - name: Stage snapshots to local staging directory
-        run: ./mvnw.cmd -B -ntp --file pom.xml javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=$HOME/local-staging -DskipRemoteStaging=true -DskipTests=true -DskipH3Spec=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
+
+      - uses: s4u/maven-settings-action@v3.0.0
+        with:
+          servers: |
+            [{
+              "id": "sonatype-nexus-staging",
+              "username": "${{ secrets.SONATYPE_USERNAME }}",
+              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+            }]
+
+
+      - name: Stage release to local staging directory
+        working-directory: ${{ github.workspace }}/prepare-release-workspace
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/local-staging -DskipRemoteStaging=true -DskipTests=true -D'checkstyle.skip=true' -DskipH3Spec=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
         with:
           name: windows-x86_64-local-staging
-          path: ~/local-staging
+          path: /local-staging
           if-no-files-found: error
           include-hidden-files: true
+
+      - name: Rollback release on failure
+        working-directory: ${{ github.workspace }}/prepare-release-workspace
+        if: ${{ failure() }}
+        # Rollback the release in case of an failure
+        run: ./.github/scripts/release_rollback.ps1 release.properties netty/netty 4.2
 
   deploy-staged-release:
     runs-on: ubuntu-latest
@@ -363,6 +378,14 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '11'
+
+      - name: Import GPG key
+        id: import_gpg
+        uses: crazy-max/ghaction-import-gpg@v6
+        with:
+          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
+          passphrase: ${{ secrets.GPG_PASSPHRASE }}
+
 
       - name: Setup git configuration
         run: |
@@ -452,7 +475,7 @@ jobs:
       - name: Deploy local staged artifacts
         working-directory: ./prepare-release-workspace/
         # If we don't want to close the repository we can add -DskipStagingRepositoryClose=true
-        run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/home/runner/local-staging -DskipStagingRepositoryClose=true
+        run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=$HOME/local-staging -DskipStagingRepositoryClose=true
 
       - name: Rollback release on failure
         working-directory: ./prepare-release-workspace/

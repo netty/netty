@@ -52,7 +52,7 @@ public class PerMessageDeflateEncoderTest {
     public void testCompressedFrame() {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE));
+                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE, 0));
 
         // initialize
         byte[] payload = new byte[300];
@@ -113,7 +113,7 @@ public class PerMessageDeflateEncoderTest {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(new PerMessageDeflateEncoder(9, 15, false,
                                                                                           NEVER_SKIP));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE));
+                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE, 0));
 
         // initialize
         byte[] payload1 = new byte[100];
@@ -206,7 +206,7 @@ public class PerMessageDeflateEncoderTest {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 new PerMessageDeflateEncoder(9, 15, false, selectivityCompressionFilter));
         EmbeddedChannel decoderChannel = new EmbeddedChannel(
-                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE));
+                ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE, 0));
 
         String textPayload = "not compressed payload";
         byte[] binaryPayload = new byte[101];
