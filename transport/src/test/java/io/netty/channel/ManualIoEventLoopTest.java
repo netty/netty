@@ -25,6 +25,8 @@ import io.netty.util.internal.ThreadExecutorMap;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.util.Collections;
 import java.util.Set;
@@ -277,8 +279,28 @@ public class ManualIoEventLoopTest {
         eventLoop.shutdownGracefully();
     }
 
-    @Test
-    public void testRunNonIoTasksWhileExpiringTimeout() {
+    private enum RunMode {
+        Now,
+        Wait,
+        NonIoNow;
+
+        public int runWith(ManualIoEventLoop el, long timeoutNs) {
+            switch (this) {
+                case Now:
+                    return el.runNow(timeoutNs);
+                case Wait:
+                    return el.run(TimeUnit.HOURS.toNanos(1), timeoutNs);
+                case NonIoNow:
+                    return el.runNonIoTasks(timeoutNs);
+                default:
+                    throw new IllegalStateException("Unknown run mode: " + this);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(RunMode.class)
+    public void testTasksWhileExpiringTimeout(RunMode mode) {
         MockTicker ticker = Ticker.newMockTicker();
         ManualIoEventLoop eventLoop = new ManualIoEventLoop(
                 null, Thread.currentThread(), LocalIoHandler.newFactory(), ticker);
@@ -296,11 +318,11 @@ public class ManualIoEventLoopTest {
                 assertTrue(executedSecond.compareAndSet(false, true));
             }
         });
-        assertEquals(1, eventLoop.runNonIoTasks(1));
+        assertEquals(1, mode.runWith(eventLoop, 1));
         assertTrue(executedFirst.get());
         assertFalse(executedSecond.get());
         canExecute.set(true);
-        assertEquals(1, eventLoop.runNonIoTasks(1));
+        assertEquals(1, mode.runWith(eventLoop, 1));
         eventLoop.shutdownGracefully();
     }
 
