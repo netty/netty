@@ -132,7 +132,8 @@
     <!-- Needed for SSL tests as these use the SelfSignedCertificate --> 
     <argLine.java9.extras>--add-exports java.base/sun.security.x509=ALL-UNNAMED</argLine.java9.extras>
     <revapi.skip>true</revapi.skip>
-    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <javadocTestsuiteSkip>false</javadocTestsuiteSkip>
+    <maven.javadoc.skip>${javadocTestsuiteSkip}</maven.javadoc.skip>
   </properties>
 
   <build>

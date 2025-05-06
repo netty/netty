@@ -72,6 +72,7 @@
       <id>aggregate</id>
       <properties>
         <checkstyle.skip>true</checkstyle.skip>
+        <javadocTestsuiteSkip>true</javadocTestsuiteSkip>
       </properties>
       <build>
         <plugins>
