@@ -36,9 +36,11 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
      * Constructor
      *
      * @param noContext true to disable context takeover.
+     * @param maxAllocation
+     *             maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
      */
-    PerMessageDeflateDecoder(boolean noContext) {
-        super(noContext, WebSocketExtensionFilter.NEVER_SKIP);
+    PerMessageDeflateDecoder(boolean noContext, int maxAllocation) {
+        super(noContext, WebSocketExtensionFilter.NEVER_SKIP, maxAllocation);
     }
 
     /**
@@ -46,9 +48,11 @@ class PerMessageDeflateDecoder extends DeflateDecoder {
      *
      * @param noContext true to disable context takeover.
      * @param extensionDecoderFilter extension decoder for per message deflate decoder.
+     * @param maxAllocation
+     *            maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
      */
-    PerMessageDeflateDecoder(boolean noContext, WebSocketExtensionFilter extensionDecoderFilter) {
-        super(noContext, extensionDecoderFilter);
+    PerMessageDeflateDecoder(boolean noContext, WebSocketExtensionFilter extensionDecoderFilter, int maxAllocation) {
+        super(noContext, extensionDecoderFilter, maxAllocation);
     }
 
     @Override
