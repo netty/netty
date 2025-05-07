@@ -42,18 +42,27 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
     static final short BGID = 0;
     static final EventLoopGroup IO_URING_BOSS_GROUP = new MultiThreadIoEventLoopGroup(
             BOSSES, new DefaultThreadFactory("testsuite-io_uring-boss", true), IoUringIoHandler.newFactory());
-    static final EventLoopGroup IO_URING_WORKER_GROUP = new MultiThreadIoEventLoopGroup(
-            WORKERS, new DefaultThreadFactory("testsuite-io_uring-worker", true),
-            IoUringIoHandler.newFactory(buildConfig()));
+    static final EventLoopGroup IO_URING_WORKER_GROUP = newWorkerGroup(false);
+    static final EventLoopGroup IO_URING_INCREMENTAL_WORKER_GROUP = newWorkerGroup(true);
 
-    static IoUringIoHandlerConfig buildConfig() {
+    static IoUringIoHandlerConfig buildConfig(boolean incremental) {
         IoUringIoHandlerConfig config = new IoUringIoHandlerConfig();
         if (IoUring.isRegisterBufferRingSupported()) {
             config.setBufferRingConfig(
-                    new IoUringBufferRingConfig(BGID, (short) 16, 16 * 16,
-                            new IoUringFixedBufferRingAllocator(1024)));
+                    new IoUringBufferRingConfig(BGID, (short) 16, 8, 16 * 16,
+                            incremental, new IoUringFixedBufferRingAllocator(1024)));
         }
         return config;
+    }
+
+    private static EventLoopGroup newWorkerGroup(boolean incremental) {
+        if (!IoUring.isRegisterBufferRingIncSupported() && incremental) {
+            return null;
+        }
+        return new MultiThreadIoEventLoopGroup(
+                WORKERS, new DefaultThreadFactory(incremental ?
+                "testsuite-io_uring-worker-buffer-ring-incremental" : "testsuite-io_uring-worker", true),
+                IoUringIoHandler.newFactory(buildConfig(incremental)));
     }
 
     @Override
@@ -77,6 +86,15 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                                             .channel(IoUringServerSocketChannel.class);
             }
         });
+        if (IO_URING_INCREMENTAL_WORKER_GROUP != null) {
+            toReturn.add(new BootstrapFactory<ServerBootstrap>() {
+                @Override
+                public ServerBootstrap newInstance() {
+                    return new ServerBootstrap().group(IO_URING_BOSS_GROUP, IO_URING_INCREMENTAL_WORKER_GROUP)
+                            .channel(IoUringServerSocketChannel.class);
+                }
+            });
+        }
         if (IoUring.isTcpFastOpenServerSideAvailable()) {
             toReturn.add(new BootstrapFactory<ServerBootstrap>() {
                 @Override
@@ -88,6 +106,18 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                     return serverBootstrap;
                 }
             });
+            if (IO_URING_INCREMENTAL_WORKER_GROUP != null) {
+                toReturn.add(new BootstrapFactory<ServerBootstrap>() {
+                    @Override
+                    public ServerBootstrap newInstance() {
+                        ServerBootstrap serverBootstrap = new ServerBootstrap().group(IO_URING_BOSS_GROUP,
+                                        IO_URING_INCREMENTAL_WORKER_GROUP)
+                                .channel(IoUringServerSocketChannel.class);
+                        serverBootstrap.option(ChannelOption.TCP_FASTOPEN, 5);
+                        return serverBootstrap;
+                    }
+                });
+            }
         }
         toReturn.add(new BootstrapFactory<ServerBootstrap>() {
             @Override
@@ -102,13 +132,25 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
     @Override
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
-        return Arrays.asList(
+        List<BootstrapFactory<Bootstrap>> toReturn = new ArrayList<>();
+        toReturn.add(
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
                         return new Bootstrap().group(IO_URING_WORKER_GROUP).channel(IoUringSocketChannel.class);
                     }
-                },
+                });
+        if (IO_URING_INCREMENTAL_WORKER_GROUP != null) {
+            toReturn.add(
+                    new BootstrapFactory<Bootstrap>() {
+                        @Override
+                        public Bootstrap newInstance() {
+                            return new Bootstrap().group(IO_URING_INCREMENTAL_WORKER_GROUP)
+                                    .channel(IoUringSocketChannel.class);
+                        }
+                    });
+        }
+        toReturn.add(
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
@@ -116,6 +158,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                     }
                 }
         );
+        return toReturn;
     }
 
     @Override
@@ -131,6 +174,16 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                             .option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
                 }
             });
+            if (IO_URING_INCREMENTAL_WORKER_GROUP != null) {
+                factories.add(insertIndex + 1, new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(IO_URING_INCREMENTAL_WORKER_GROUP)
+                                .channel(IoUringSocketChannel.class)
+                                .option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
+                    }
+                });
+            }
         }
 
         return factories;
