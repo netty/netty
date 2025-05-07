@@ -217,7 +217,6 @@ final class AdaptivePoolingAllocator {
 
     private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
         if (size <= MAX_CHUNK_SIZE) {
-            int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
             FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
             if (threadLocalMagazine != null && currentThread instanceof FastThreadLocalThread) {
                 Object mag = threadLocalMagazine.get();
@@ -226,7 +225,7 @@ final class AdaptivePoolingAllocator {
                     if (buf == null) {
                         buf = magazine.newBuffer();
                     }
-                    boolean allocated = magazine.tryAllocate(size, sizeBucket, maxCapacity, buf);
+                    boolean allocated = magazine.tryAllocate(size, maxCapacity, buf);
                     assert allocated : "Allocation of threadLocalMagazine must always succeed";
                     return buf;
                 }
@@ -243,7 +242,7 @@ final class AdaptivePoolingAllocator {
                     if (buf == null) {
                         buf = mag.newBuffer();
                     }
-                    if (mag.tryAllocate(size, sizeBucket, maxCapacity, buf)) {
+                    if (mag.tryAllocate(size, maxCapacity, buf)) {
                         // Was able to allocate.
                         return buf;
                     }
@@ -437,7 +436,14 @@ final class AdaptivePoolingAllocator {
             this.shareable = shareable;
         }
 
-        protected void recordAllocationSize(int bucket) {
+        protected void recordAllocationSize(int bufferSizeToRecord) {
+            // Use the preserved size from the reused AdaptiveByteBuf, if available.
+            // Otherwise, use the requested buffer size.
+            // This way, we better take into account
+            if (bufferSizeToRecord == 0) {
+                return;
+            }
+            int bucket = sizeBucket(bufferSizeToRecord);
             histo[bucket]++;
             if (datumCount++ == datumTarget) {
                 rotateHistograms();
@@ -558,17 +564,17 @@ final class AdaptivePoolingAllocator {
             usedMemory = new AtomicLong();
         }
 
-        public boolean tryAllocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
+        public boolean tryAllocate(int size, int maxCapacity, AdaptiveByteBuf buf) {
             if (allocationLock == null) {
                 // This magazine is not shared across threads, just allocate directly.
-                return allocate(size, sizeBucket, maxCapacity, buf);
+                return allocate(size, maxCapacity, buf);
             }
 
             // Try to retrieve the lock and if successful allocate.
             long writeLock = allocationLock.tryWriteLock();
             if (writeLock != 0) {
                 try {
-                    return allocate(size, sizeBucket, maxCapacity, buf);
+                    return allocate(size, maxCapacity, buf);
                 } finally {
                     allocationLock.unlockWrite(writeLock);
                 }
@@ -610,8 +616,8 @@ final class AdaptivePoolingAllocator {
             return allocated;
         }
 
-        private boolean allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
-            recordAllocationSize(sizeBucket);
+        private boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf) {
+            recordAllocationSize(buf.length);
             int startingCapacity = getStartingCapacity(size, maxCapacity);
             Chunk curr = current;
             if (curr != null) {
@@ -1059,6 +1065,7 @@ final class AdaptivePoolingAllocator {
             int baseOldRootIndex = adjustment;
             int oldCapacity = length;
             AbstractByteBuf oldRoot = rootParent();
+            length = 0; // Don't record buffer size statistics for this allocation.
             allocator.allocate(newCapacity, maxCapacity(), this);
             oldRoot.getBytes(baseOldRootIndex, this, 0, oldCapacity);
             chunk.release();
