@@ -60,6 +60,9 @@ final class QuicheQuicConnection {
     private long connection;
 
     QuicheQuicConnection(long connection, long ssl, QuicheQuicSslEngine engine, ReferenceCounted refCnt) {
+        if (connection == -1) {
+            throw new IllegalArgumentException("Unset connection");
+        }
         this.connection = connection;
         this.ssl = ssl;
         this.engine = engine;
@@ -216,8 +219,7 @@ final class QuicheQuicConnection {
     }
 
     boolean isClosed() {
-        assert connection != -1;
-        return Quiche.quiche_conn_is_closed(connection);
+        return isFreed() || Quiche.quiche_conn_is_closed(connection);
     }
 
     // Let's override finalize() as we want to ensure we never leak memory even if the user will miss to close
