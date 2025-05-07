@@ -472,11 +472,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                                 allocHandle.incMessagesRead(1);
                                 pipeline.fireChannelRead(byteBuf);
                                 byteBuf = null;
-
-                                // Fill a new buffer for the bid after we fired the buffer through the pipeline.
-                                // We do it only after we called fireChannelRead(...) as there is a good chance
-                                // that the user will have released the buffer. In this case we reduce memory usage.
-                                bufferRing.fillBuffer();
                                 bid = bufferRing.nextBid(bid);
                                 if (!allocHandle.continueReading()) {
                                     // We should call fireChannelReadComplete() to mimic a normal read loop.
@@ -521,12 +516,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 allocHandle.incMessagesRead(1);
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
-                if (useBufferRing && !more) {
-                    // Fill a new buffer for the bid after we fired the buffer through the pipeline.
-                    // We do it only after we called fireChannelRead(...) as there is a good chance
-                    // that the user will have released the buffer. In this case we reduce memory usage.
-                    bufferRing.fillBuffer();
-                }
                 scheduleNextRead(pipeline, allocHandle, rearm, empty);
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
