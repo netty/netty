@@ -68,7 +68,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: prepare-release-workspace
-          path: ${{ github.workspace }}/**
+          path: |
+            ${{ github.workspace }}/**
+            !${{ github.workspace }}/.git/config
           include-hidden-files: true
 
   stage-release-linux:
