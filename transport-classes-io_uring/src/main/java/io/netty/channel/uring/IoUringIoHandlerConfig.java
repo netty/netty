@@ -46,11 +46,24 @@ import java.util.Set;
  *   <tbody>
  *     <tr>
  *       <td>{@link IoUringIoHandlerConfig#setRingSize}</td>
- *       <td>Sets the size of the submission queue for the io_uring instance.</td>
+ *       <td>Sets the size of the submission queue for the io_uring instance.
+ *        <br>
+ *        If you want to submit a large number of io_uring requests at once,
+ *        it is recommended to properly configure this option.
+ *        The default value is 4096, which is sufficient for most scenarios.
+ *       </td>
  *     </tr>
  *     <tr>
  *       <td>{@link IoUringIoHandlerConfig#setMaxBoundedWorker}</td>
- *       <td>Defines the maximum number of bounded io_uring worker threads.</td>
+ *       <td>Defines the maximum number of bounded io_uring worker threads.
+ *        <br>
+ *        If you extend io_uring-related file operations based on Netty,
+ *        it is recommended to properly configure this option.
+ *        For more details, refer to the
+ *        <a href="https://man7.org/linux/man-pages/man3/io_uring_register_iowq_max_workers.3.html>
+ *            manual.
+ *        </a>
+ *       </td>
  *     </tr>
  *     <tr>
  *       <td>{@link IoUringIoHandlerConfig#setMaxUnboundedWorker}</td>
@@ -59,6 +72,17 @@ import java.util.Set;
  *        If you use FileRegion to perform `sendfile` operations in io_uring,
  *        it is recommended to properly configure this option as otherwise you might
  *        end up with an <a href="https://github.com/netty/netty/issues/15125>unexpected number of kernel threads</a>.
+ *       </td>
+ *     </tr>
+ *     <tr>
+ *       <td>{@link IoUringIoHandlerConfig#setCqSize}</td>
+ *       <td>Sets the size of the completionQueue queue for the io_uring instance.
+ *        <br>
+ *        If your current kernel supports some multishot variants
+ *        (such as IORING_RECV_MULTISHOT, IORING_ACCEPT_MULTISHOT) or IORING_RECVSEND_BUNDLE,
+ *        and you want to handle more CQEs in a single syscall
+ *        it is recommended to properly configure this option.
+ *        The default value is twice the ring size, which is sufficient for most scenarios.
  *       </td>
  *     </tr>
  *     <tr>
