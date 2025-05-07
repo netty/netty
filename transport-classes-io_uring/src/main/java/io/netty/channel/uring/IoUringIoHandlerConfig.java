@@ -57,11 +57,8 @@ import java.util.Set;
  *       <td>Defines the maximum number of unbounded io_uring worker threads.
  *        <br>
  *        If you use FileRegion to perform `sendfile` operations in io_uring,
- *        it is recommended to properly configure this option.
- *        <br>
- *        see:
- *        <br>
- *        https://github.com/netty/netty/issues/15125
+ *        it is recommended to properly configure this option as otherwise you might
+ *        end up with an <a href="https://github.com/netty/netty/issues/15125>unexpected number of kernel threads</a>.
  *       </td>
  *     </tr>
  *     <tr>
