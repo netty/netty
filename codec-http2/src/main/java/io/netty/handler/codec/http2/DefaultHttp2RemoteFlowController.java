@@ -744,7 +744,8 @@ public class DefaultHttp2RemoteFlowController implements Http2RemoteFlowControll
             try {
                 listener.writabilityChanged(state.stream);
             } catch (Throwable cause) {
-                logger.error("Caught Throwable from listener.writabilityChanged", cause);
+                logger.error("{} Caught Throwable from listener.writabilityChanged for {}",
+                        ctx.channel(), state.stream, cause);
             }
         }
 

@@ -27,12 +27,25 @@ import io.netty.handler.codec.http.websocketx.extensions.WebSocketClientExtensio
 @ChannelHandler.Sharable
 public final class WebSocketClientCompressionHandler extends WebSocketClientExtensionHandler {
 
+    /**
+     * @deprecated Use {@link WebSocketClientCompressionHandler#WebSocketClientCompressionHandler(int)}
+     */
+    @Deprecated
     public static final WebSocketClientCompressionHandler INSTANCE = new WebSocketClientCompressionHandler();
 
     private WebSocketClientCompressionHandler() {
-        super(new PerMessageDeflateClientExtensionHandshaker(),
-                new DeflateFrameClientExtensionHandshaker(false),
-                new DeflateFrameClientExtensionHandshaker(true));
+        this(0);
+    }
+
+    /**
+     * Constructor with default configuration.
+     * @param maxAllocation
+     *            Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
+     */
+    public WebSocketClientCompressionHandler(int maxAllocation) {
+        super(new PerMessageDeflateClientExtensionHandshaker(maxAllocation),
+                new DeflateFrameClientExtensionHandshaker(false, maxAllocation),
+                new DeflateFrameClientExtensionHandshaker(true, maxAllocation));
     }
 
 }

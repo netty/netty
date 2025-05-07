@@ -26,6 +26,10 @@ import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
  * <a href="https://en.wikipedia.org/wiki/Internet_Content_Adaptation_Protocol">ICAP</a>.
  */
 public class HttpMethod implements Comparable<HttpMethod> {
+
+    private static final String GET_STRING = "GET";
+    private static final String POST_STRING = "POST";
+
     /**
      * The OPTIONS method represents a request for information about the communication options
      * available on the request/response chain identified by the Request-URI. This method allows
@@ -41,7 +45,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
      * produced data which shall be returned as the entity in the response and not the source text
      * of the process, unless that text happens to be the output of the process.
      */
-    public static final HttpMethod GET = new HttpMethod("GET");
+    public static final HttpMethod GET = new HttpMethod(GET_STRING);
 
     /**
      * The HEAD method is identical to GET except that the server MUST NOT return a message-body
@@ -54,7 +58,7 @@ public class HttpMethod implements Comparable<HttpMethod> {
      * request as a new subordinate of the resource identified by the Request-URI in the
      * Request-Line.
      */
-    public static final HttpMethod POST = new HttpMethod("POST");
+    public static final HttpMethod POST = new HttpMethod(POST_STRING);
 
     /**
      * The PUT method requests that the enclosed entity be stored under the supplied Request-URI.
@@ -107,11 +111,11 @@ public class HttpMethod implements Comparable<HttpMethod> {
      */
     public static HttpMethod valueOf(String name) {
         // fast-path
-        if (name == HttpMethod.GET.name()) {
-            return HttpMethod.GET;
+        if (name == GET_STRING) {
+            return GET;
         }
-        if (name == HttpMethod.POST.name()) {
-            return HttpMethod.POST;
+        if (name == POST_STRING) {
+            return POST;
         }
         // "slow"-path
         HttpMethod result = methodMap.get(name);

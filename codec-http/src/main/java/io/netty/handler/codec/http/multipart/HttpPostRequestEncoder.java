@@ -969,11 +969,13 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         ByteBuf delimiter = null;
         if (buffer.readableBytes() < size) {
             isKey = true;
+            currentData = null;
             delimiter = iterator.hasNext() ? wrappedBuffer("&".getBytes(charset)) : null;
         }
 
         // End for current InterfaceHttpData, need potentially more data
         if (buffer.capacity() == 0) {
+            isKey = true;
             currentData = null;
             if (currentBuffer == null) {
                 if (delimiter == null) {
@@ -1008,15 +1010,10 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             }
         }
 
-        // end for current InterfaceHttpData, need more data
-        if (currentBuffer.readableBytes() < HttpPostBodyUtil.chunkSize) {
-            currentData = null;
-            isKey = true;
-            return null;
+        if (currentBuffer.readableBytes() >= HttpPostBodyUtil.chunkSize) {
+            return new DefaultHttpContent(fillByteBuf());
         }
-
-        buffer = fillByteBuf();
-        return new DefaultHttpContent(buffer);
+        return null;
     }
 
     @Override

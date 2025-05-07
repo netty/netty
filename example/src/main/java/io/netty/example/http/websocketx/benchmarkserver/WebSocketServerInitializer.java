@@ -26,6 +26,8 @@ import io.netty.handler.ssl.SslContext;
  */
 public class WebSocketServerInitializer extends ChannelInitializer<SocketChannel> {
 
+    private static final int MAX_CONTENT_LENGTH = 65536;
+
     private final SslContext sslCtx;
 
     public WebSocketServerInitializer(SslContext sslCtx) {
@@ -39,7 +41,7 @@ public class WebSocketServerInitializer extends ChannelInitializer<SocketChannel
             pipeline.addLast(sslCtx.newHandler(ch.alloc()));
         }
         pipeline.addLast(new HttpServerCodec());
-        pipeline.addLast(new HttpObjectAggregator(65536));
+        pipeline.addLast(new HttpObjectAggregator(MAX_CONTENT_LENGTH));
         pipeline.addLast(new WebSocketServerHandler());
     }
 }

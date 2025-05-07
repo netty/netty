@@ -52,16 +52,68 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
     private final boolean strict;
     private boolean flowControllerInitialized;
     private final Http2Connection.PropertyKey propertyKey;
+    private final int maxAllocation;
 
+    /**
+     * Create a new instance.
+     *
+     * @param connection the connection to read data which should be decompressed
+     * @param listener the delegate listener used by {@link Http2FrameListenerDecorator}
+     * @deprecated
+     *      Use {@link DelegatingDecompressorFrameListener#DelegatingDecompressorFrameListener(Http2Connection,
+     *      Http2FrameListener, int)}
+     */
+    @Deprecated
     public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener) {
-        this(connection, listener, true);
+        this(connection, listener, 0);
     }
 
+    /**
+     * Create a new instance.
+     *
+     * @param connection the connection to read data which should be decompressed
+     * @param listener the delegate listener used by {@link Http2FrameListenerDecorator}
+     * @param maxAllocation maximum size of the decompression buffer. Must be &gt;= 0.
+     *                      If zero, maximum size is not limited by decoder.
+     */
     public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener,
-                    boolean strict) {
+                                               int maxAllocation) {
+        this(connection, listener, true, maxAllocation);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param connection the connection to read data which should be decompressed
+     * @param listener the delegate listener used by {@link Http2FrameListenerDecorator}
+     * @param strict if `true`, {@link ZlibWrapper#ZLIB} will be used for the decoder,
+     *               otherwise the decoder can fallback to {@link ZlibWrapper#NONE}
+     * @deprecated
+     *      Use {@link DelegatingDecompressorFrameListener#DelegatingDecompressorFrameListener(Http2Connection,
+     *      Http2FrameListener, boolean, int)}
+     */
+    @Deprecated
+    public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener,
+                                               boolean strict) {
+        this(connection, listener, strict, 0);
+    }
+
+    /**
+     * Create a new instance.
+     *
+     * @param connection the connection to read data which should be decompressed
+     * @param listener the delegate listener used by {@link Http2FrameListenerDecorator}
+     * @param strict if `true`, {@link ZlibWrapper#ZLIB} will be used for the decoder,
+     *               otherwise the decoder can fallback to {@link ZlibWrapper#NONE}
+     * @param maxAllocation maximum size of the decompression buffer. Must be &gt;= 0.
+     *                      If zero, maximum size is not limited by decoder.
+     */
+    public DelegatingDecompressorFrameListener(Http2Connection connection, Http2FrameListener listener,
+                    boolean strict, int maxAllocation) {
         super(listener);
         this.connection = connection;
         this.strict = strict;
+        this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
 
         propertyKey = connection.newKey();
         connection.addListener(new Http2ConnectionAdapter() {
@@ -173,13 +225,13 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             throws Http2Exception {
         if (GZIP.contentEqualsIgnoreCase(contentEncoding) || X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
+                    ctx.channel().config(), ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP, maxAllocation));
         }
         if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) || X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), ZlibCodecFactory.newZlibDecoder(wrapper));
+                    ctx.channel().config(), ZlibCodecFactory.newZlibDecoder(wrapper, maxAllocation));
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),

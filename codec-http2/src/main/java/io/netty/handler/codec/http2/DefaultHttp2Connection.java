@@ -613,6 +613,15 @@ public class DefaultHttp2Connection implements Http2Connection {
             }
             return (int) (value ^ (value >>> 32));
         }
+
+        @Override
+        public String toString() {
+            return getClass().getSimpleName() +
+                    "{id=" + id +
+                    ", state=" + state +
+                    ", metaState=" + metaState +
+                    '}';
+        }
     }
 
     /**

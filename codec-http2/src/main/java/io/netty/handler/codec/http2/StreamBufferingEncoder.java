@@ -151,22 +151,32 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     }
 
     @Override
-    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                      int padding, boolean endStream, ChannelPromise promise) {
-        return writeHeaders(ctx, streamId, headers, 0, Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT,
-                false, padding, endStream, promise);
+    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
+                                      boolean endStream, ChannelPromise promise) {
+        return writeHeaders0(ctx, streamId, headers, false, 0, (short) 0,
+                             false, padding, endStream, promise);
     }
 
     @Override
     public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                                      int streamDependency, short weight, boolean exclusive,
-                                      int padding, boolean endOfStream, ChannelPromise promise) {
+                                      int streamDependency, short weight, boolean exclusive, int padding,
+                                      boolean endOfStream, ChannelPromise promise) {
+        return writeHeaders0(ctx, streamId, headers, true, streamDependency, weight, exclusive, padding,
+                             endOfStream, promise);
+    }
+
+    private ChannelFuture writeHeaders0(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
+                                        boolean hasPriority, int streamDependency, short weight, boolean exclusive,
+                                        int padding, boolean endOfStream, ChannelPromise promise) {
         if (closed) {
             return promise.setFailure(new Http2ChannelClosedException());
         }
         if (isExistingStream(streamId) || canCreateStream()) {
-            return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
-                    exclusive, padding, endOfStream, promise);
+            if (hasPriority) {
+                return super.writeHeaders(ctx, streamId, headers, streamDependency, weight,
+                                          exclusive, padding, endOfStream, promise);
+            }
+            return super.writeHeaders(ctx, streamId, headers, padding, endOfStream, promise);
         }
         if (goAwayDetail != null) {
             return promise.setFailure(new Http2GoAwayException(goAwayDetail));
@@ -176,7 +186,7 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
             pendingStream = new PendingStream(ctx, streamId);
             pendingStreams.put(streamId, pendingStream);
         }
-        pendingStream.frames.add(new HeadersFrame(headers, streamDependency, weight, exclusive,
+        pendingStream.frames.add(new HeadersFrame(headers, hasPriority, streamDependency, weight, exclusive,
                 padding, endOfStream, promise));
         return promise;
     }
@@ -332,15 +342,17 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     private final class HeadersFrame extends Frame {
         final Http2Headers headers;
         final int streamDependency;
+        final boolean hasPriority;
         final short weight;
         final boolean exclusive;
         final int padding;
         final boolean endOfStream;
 
-        HeadersFrame(Http2Headers headers, int streamDependency, short weight, boolean exclusive,
+        HeadersFrame(Http2Headers headers, boolean hasPriority, int streamDependency, short weight, boolean exclusive,
                      int padding, boolean endOfStream, ChannelPromise promise) {
             super(promise);
             this.headers = headers;
+            this.hasPriority = hasPriority;
             this.streamDependency = streamDependency;
             this.weight = weight;
             this.exclusive = exclusive;
@@ -350,7 +362,9 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
 
         @Override
         void send(ChannelHandlerContext ctx, int streamId) {
-            writeHeaders(ctx, streamId, headers, streamDependency, weight, exclusive, padding, endOfStream, promise);
+            writeHeaders0(ctx, streamId, headers, hasPriority, streamDependency, weight, exclusive, padding,
+                          endOfStream,
+                          promise);
         }
     }
 

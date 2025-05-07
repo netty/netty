@@ -20,7 +20,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import javax.naming.Context;
-import javax.naming.NamingException;
 import javax.naming.directory.DirContext;
 import javax.naming.directory.InitialDirContext;
 import java.net.InetSocketAddress;
@@ -69,8 +68,9 @@ final class DirContextUtils {
                     }
                 }
             }
-        } catch (NamingException ignore) {
+        } catch (Exception ex) {
             // Will try reflection if this fails.
+            logger.debug("Unable to obtain nameservers via InitialDirContext", ex);
         }
     }
 }

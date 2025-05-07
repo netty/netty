@@ -235,11 +235,10 @@ public final class Http2StreamChannelBootstrap {
             @SuppressWarnings("unchecked")
             ChannelOption<Object> opt = (ChannelOption<Object>) option;
             if (!channel.config().setOption(opt, value)) {
-                logger.warn("Unknown channel option '{}' for channel '{}'", option, channel);
+                logger.warn("{} Unknown channel option '{}'", channel, option);
             }
         } catch (Throwable t) {
-            logger.warn(
-                    "Failed to set channel option '{}' with value '{}' for channel '{}'", option, value, channel, t);
+            logger.warn("{} Failed to set channel option '{}' with value '{}'", channel, option, value, t);
         }
     }
 

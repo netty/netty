@@ -31,9 +31,11 @@ class PerFrameDeflateDecoder extends DeflateDecoder {
      * Constructor
      *
      * @param noContext true to disable context takeover.
+     * @param maxAllocation
+     *          maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
      */
-    PerFrameDeflateDecoder(boolean noContext) {
-        super(noContext, WebSocketExtensionFilter.NEVER_SKIP);
+    PerFrameDeflateDecoder(boolean noContext, int maxAllocation) {
+        super(noContext, WebSocketExtensionFilter.NEVER_SKIP, maxAllocation);
     }
 
     /**
@@ -41,9 +43,11 @@ class PerFrameDeflateDecoder extends DeflateDecoder {
      *
      * @param noContext true to disable context takeover.
      * @param extensionDecoderFilter extension decoder filter for per frame deflate decoder.
+     * @param maxAllocation
+     *            maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
      */
-    PerFrameDeflateDecoder(boolean noContext, WebSocketExtensionFilter extensionDecoderFilter) {
-        super(noContext, extensionDecoderFilter);
+    PerFrameDeflateDecoder(boolean noContext, WebSocketExtensionFilter extensionDecoderFilter, int maxAllocation) {
+        super(noContext, extensionDecoderFilter, maxAllocation);
     }
 
     @Override

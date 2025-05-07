@@ -40,7 +40,7 @@ public class HttpContentDecompressorTest {
                 readCalled.incrementAndGet();
                 ctx.read();
             }
-        }, new HttpContentDecompressor(), new ChannelInboundHandlerAdapter() {
+        }, new HttpContentDecompressor(0), new ChannelInboundHandlerAdapter() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 ctx.fireChannelRead(msg);

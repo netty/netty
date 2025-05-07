@@ -38,7 +38,7 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
     private static final ByteBufAllocator unpooledAllocator = new UnpooledByteBufAllocator(true);
     private static final ByteBufAllocator pooledAllocator =
-            new PooledByteBufAllocator(true, 4, 4, 8192, 11, 0, 0, 0, true, 0); // Disable thread-local cache
+            new PooledByteBufAllocator(true, 4, 4, 8192, 11, 0, 0, 0, true, 0);
     private static final ByteBufAllocator adaptiveAllocator = new AdaptiveByteBufAllocator();
 
     private static final int MAX_LIVE_BUFFERS = 8192;

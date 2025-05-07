@@ -36,7 +36,7 @@ public class DeflateFrameClientExtensionHandshakerTest {
     @Test
     public void testWebkitDeflateFrameData() {
         DeflateFrameClientExtensionHandshaker handshaker =
-                new DeflateFrameClientExtensionHandshaker(true);
+                new DeflateFrameClientExtensionHandshaker(true, 0);
 
         WebSocketExtensionData data = handshaker.newRequestData();
 
@@ -47,7 +47,7 @@ public class DeflateFrameClientExtensionHandshakerTest {
     @Test
     public void testDeflateFrameData() {
         DeflateFrameClientExtensionHandshaker handshaker =
-                new DeflateFrameClientExtensionHandshaker(false);
+                new DeflateFrameClientExtensionHandshaker(false, 0);
 
         WebSocketExtensionData data = handshaker.newRequestData();
 
@@ -58,7 +58,7 @@ public class DeflateFrameClientExtensionHandshakerTest {
     @Test
     public void testNormalHandshake() {
         DeflateFrameClientExtensionHandshaker handshaker =
-                new DeflateFrameClientExtensionHandshaker(false);
+                new DeflateFrameClientExtensionHandshaker(false, 0);
 
         WebSocketClientExtension extension = handshaker.handshakeExtension(
                 new WebSocketExtensionData(DEFLATE_FRAME_EXTENSION, Collections.<String, String>emptyMap()));
@@ -73,7 +73,7 @@ public class DeflateFrameClientExtensionHandshakerTest {
     public void testFailedHandshake() {
         // initialize
         DeflateFrameClientExtensionHandshaker handshaker =
-                new DeflateFrameClientExtensionHandshaker(false);
+                new DeflateFrameClientExtensionHandshaker(false, 0);
 
         Map<String, String> parameters = new HashMap<String, String>();
         parameters.put("invalid", "12");

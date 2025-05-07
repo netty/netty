@@ -550,8 +550,9 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .build());
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                                        .sslProvider(sslServerProvider())
-                                        .build());
+                .sslProvider(sslServerProvider())
+                .option(OpenSslContextOption.TMP_DH_KEYLENGTH, 2048)
+                .build());
 
         testWrapWithDifferentSizes(param, SslProtocols.TLS_v1, "AES128-SHA");
         testWrapWithDifferentSizes(param, SslProtocols.TLS_v1, "ECDHE-RSA-AES128-SHA");
@@ -582,8 +583,9 @@ public class OpenSslEngineTest extends SSLEngineTest {
                                         .build());
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
-                                        .sslProvider(sslServerProvider())
-                                        .build());
+                .sslProvider(sslServerProvider())
+                .option(OpenSslContextOption.TMP_DH_KEYLENGTH, 2048)
+                .build());
 
         testWrapWithDifferentSizes(param, SslProtocols.TLS_v1_1, "ECDHE-RSA-AES256-SHA");
         testWrapWithDifferentSizes(param, SslProtocols.TLS_v1_1, "AES256-SHA");
@@ -612,6 +614,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
+                .option(OpenSslContextOption.TMP_DH_KEYLENGTH, 2048)
                 .build());
 
         testWrapWithDifferentSizes(param, SslProtocols.TLS_v1_2, "AES128-SHA");
@@ -651,6 +654,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey())
                 .sslProvider(sslServerProvider())
+                .option(OpenSslContextOption.TMP_DH_KEYLENGTH, 2048)
                 .build());
 
         testWrapWithDifferentSizes(param, SslProtocols.SSL_v3, "ADH-AES128-SHA");

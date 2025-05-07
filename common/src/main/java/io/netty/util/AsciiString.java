@@ -833,6 +833,11 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
             return true;
         }
 
+        if (string instanceof AsciiString) {
+            final AsciiString asciiString = (AsciiString) string;
+            return PlatformDependent.equals(value, thisStart + offset, asciiString.value,
+                                            start + asciiString.offset, length);
+        }
         final int thatEnd = start + length;
         for (int i = start, j = thisStart + arrayOffset(); i < thatEnd; i++, j++) {
             if (b2c(value[j]) != string.charAt(i)) {
@@ -871,6 +876,18 @@ public final class AsciiString implements CharSequence, Comparable<CharSequence>
 
         thisStart += arrayOffset();
         final int thisEnd = thisStart + length;
+        if (string instanceof AsciiString) {
+            final AsciiString asciiString = (AsciiString) string;
+            final byte[] value = this.value;
+            final byte[] otherValue = asciiString.value;
+            start += asciiString.offset;
+            while (thisStart < thisEnd) {
+                if (!equalsIgnoreCase(value[thisStart++], otherValue[start++])) {
+                    return false;
+                }
+            }
+            return true;
+        }
         while (thisStart < thisEnd) {
             if (!equalsIgnoreCase(b2c(value[thisStart++]), string.charAt(start++))) {
                 return false;

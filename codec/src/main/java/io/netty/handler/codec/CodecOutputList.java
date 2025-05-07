@@ -96,6 +96,7 @@ final class CodecOutputList extends AbstractList<Object> implements RandomAccess
 
     private final CodecOutputListRecycler recycler;
     private int size;
+    private int maxSeenSize;
     private Object[] array;
     private boolean insertSinceRecycled;
 
@@ -174,6 +175,7 @@ final class CodecOutputList extends AbstractList<Object> implements RandomAccess
     public void clear() {
         // We only set the size to 0 and not null out the array. Null out the array will explicit requested by
         // calling recycle()
+        maxSeenSize = Math.max(maxSeenSize, size);
         size = 0;
     }
 
@@ -188,10 +190,12 @@ final class CodecOutputList extends AbstractList<Object> implements RandomAccess
      * Recycle the array which will clear it and null out all entries in the internal storage.
      */
     void recycle() {
-        for (int i = 0 ; i < size; i ++) {
+        int len = Math.max(maxSeenSize, size);
+        for (int i = 0; i < len; i ++) {
             array[i] = null;
         }
         size = 0;
+        maxSeenSize = 0;
         insertSinceRecycled = false;
 
         recycler.recycle(this);

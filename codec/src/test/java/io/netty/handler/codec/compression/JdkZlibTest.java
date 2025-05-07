@@ -86,7 +86,7 @@ public class JdkZlibTest extends ZlibTest {
 
     @Test
     public void testConcatenatedStreamsReadFully() throws IOException {
-        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true));
+        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
 
         try {
             byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
@@ -108,7 +108,7 @@ public class JdkZlibTest extends ZlibTest {
 
     @Test
     public void testConcatenatedStreamsReadFullyWhenFragmented() throws IOException {
-        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true));
+        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
 
         try {
             byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
@@ -147,7 +147,7 @@ public class JdkZlibTest extends ZlibTest {
 
         byte[] compressed = bytesOut.toByteArray();
         ByteBuf buffer = Unpooled.buffer().writeBytes(compressed).writeBytes(compressed);
-        EmbeddedChannel channel = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, true));
+        EmbeddedChannel channel = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, true, 0));
         // Write it into the Channel in a way that we were able to decompress the first data completely but not the
         // whole footer.
         assertTrue(channel.writeInbound(buffer.readRetainedSlice(compressed.length - 1)));

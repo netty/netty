@@ -82,4 +82,15 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
      *     SSL_CTX_set1_groups_list</a>.
      */
     public static final OpenSslContextOption<String[]> GROUPS = new OpenSslContextOption<String[]>("GROUPS");
+
+    /**
+     * Set the desired length of the Diffie-Hellman ephemeral session keys.
+     * This will override the key length set with {@code -Djdk.tls.ephemeralDHKeySize}.
+     * <p>
+     * The only supported values are {@code 512}, {@code 1024}, {@code 2048}, and {@code 4096}.
+     * <p>
+     * See <a href="https://docs.openssl.org/1.0.2/man3/SSL_CTX_set_tmp_dh_callback/">SSL_CTX_set_tmp_dh_callback</a>.
+     */
+    public static final OpenSslContextOption<Integer> TMP_DH_KEYLENGTH =
+            new OpenSslContextOption<Integer>("TMP_DH_KEYLENGTH");
 }

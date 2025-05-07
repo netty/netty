@@ -42,9 +42,12 @@ import java.security.AccessController;
 import java.security.PrivateKey;
 import java.security.PrivilegedAction;
 import java.security.Provider;
+import java.security.Security;
 
 final class BouncyCastlePemReader {
+    private static final String BC_PROVIDER_NAME = "BC";
     private static final String BC_PROVIDER = "org.bouncycastle.jce.provider.BouncyCastleProvider";
+    private static final String BC_FIPS_PROVIDER_NAME = "BCFIPS";
     private static final String BC_FIPS_PROVIDER = "org.bouncycastle.jcajce.provider.BouncyCastleFipsProvider";
     private static final String BC_PEMPARSER = "org.bouncycastle.openssl.PEMParser";
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(BouncyCastlePemReader.class);
@@ -77,21 +80,27 @@ final class BouncyCastlePemReader {
             public Void run() {
                 try {
                     ClassLoader classLoader = getClass().getClassLoader();
-                    // Check for bcprov-jdk15on or bc-fips:
-                    Class<Provider> bcProviderClass;
-                    try {
-                        bcProviderClass = (Class<Provider>) Class.forName(BC_PROVIDER, true, classLoader);
-                    } catch (ClassNotFoundException e) {
-                        try {
-                            bcProviderClass = (Class<Provider>) Class.forName(BC_FIPS_PROVIDER, true, classLoader);
-                        } catch (ClassNotFoundException ex) {
-                            ThrowableUtil.addSuppressed(e, ex);
-                            throw e;
-                        }
-                    }
                     // Check for bcpkix-jdk15on:
                     Class.forName(BC_PEMPARSER, true, classLoader);
-                    bcProvider = bcProviderClass.getConstructor().newInstance();
+                    // Check for bcprov-jdk15on or bc-fips:
+                    bcProvider = Security.getProvider(BC_PROVIDER_NAME);
+                    if (bcProvider == null) {
+                        bcProvider = Security.getProvider(BC_FIPS_PROVIDER_NAME);
+                    }
+                    if (bcProvider == null) {
+                        Class<Provider> bcProviderClass;
+                        try {
+                            bcProviderClass = (Class<Provider>) Class.forName(BC_PROVIDER, true, classLoader);
+                        } catch (ClassNotFoundException e) {
+                            try {
+                                bcProviderClass = (Class<Provider>) Class.forName(BC_FIPS_PROVIDER, true, classLoader);
+                            } catch (ClassNotFoundException ex) {
+                                ThrowableUtil.addSuppressed(e, ex);
+                                throw e;
+                            }
+                        }
+                        bcProvider = bcProviderClass.getConstructor().newInstance();
+                    }
                     logger.debug("Bouncy Castle provider available");
                     attemptedLoading = true;
                 } catch (Throwable e) {
@@ -102,6 +111,19 @@ final class BouncyCastlePemReader {
                 return null;
             }
         });
+    }
+
+    /**
+     * Allows to test {@link #attemptedLoading} under different conditions.
+     *
+     * @return previous {@link #bcProvider} value
+     */
+    static Provider resetBcProvider() {
+        Provider previousProvider = bcProvider;
+        bcProvider = null;
+        attemptedLoading = false;
+        unavailabilityCause = null;
+        return previousProvider;
     }
 
     /**

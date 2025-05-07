@@ -135,7 +135,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                     keyMaterialProvider = providerFor(keyManagerFactory, keyPassword);
 
                     SSLContext.setCertificateCallback(ctx, new OpenSslServerCertificateCallback(
-                            engineMap, new OpenSslKeyMaterialManager(keyMaterialProvider)));
+                            engineMap, new OpenSslKeyMaterialManager(keyMaterialProvider, thiz.hasTmpDhKeys)));
                 }
             } catch (Exception e) {
                 throw new SSLException("failed to set certificate and key", e);

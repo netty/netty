@@ -84,7 +84,8 @@ public final class Http2CodecUtil {
     public static final char SETTINGS_INITIAL_WINDOW_SIZE = 4;
     public static final char SETTINGS_MAX_FRAME_SIZE = 5;
     public static final char SETTINGS_MAX_HEADER_LIST_SIZE = 6;
-    public static final int NUM_STANDARD_SETTINGS = 6;
+    public static final char SETTINGS_ENABLE_CONNECT_PROTOCOL = 8;
+    public static final int NUM_STANDARD_SETTINGS = 7;
 
     public static final long MAX_HEADER_TABLE_SIZE = MAX_UNSIGNED_INT;
     public static final long MAX_CONCURRENT_STREAMS = MAX_UNSIGNED_INT;

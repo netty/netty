@@ -50,6 +50,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
 
     private final boolean noContext;
     private final WebSocketExtensionFilter extensionDecoderFilter;
+    private final int maxAllocation;
 
     private EmbeddedChannel decoder;
 
@@ -59,9 +60,10 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
      * @param noContext true to disable context takeover.
      * @param extensionDecoderFilter extension decoder filter.
      */
-    DeflateDecoder(boolean noContext, WebSocketExtensionFilter extensionDecoderFilter) {
+    DeflateDecoder(boolean noContext, WebSocketExtensionFilter extensionDecoderFilter, int maxAllocation) {
         this.noContext = noContext;
         this.extensionDecoderFilter = checkNotNull(extensionDecoderFilter, "extensionDecoderFilter");
+        this.maxAllocation = maxAllocation;
     }
 
     /**
@@ -110,7 +112,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
             if (!(msg instanceof TextWebSocketFrame) && !(msg instanceof BinaryWebSocketFrame)) {
                 throw new CodecException("unexpected initial frame type: " + msg.getClass().getName());
             }
-            decoder = new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE));
+            decoder = new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE, maxAllocation));
         }
 
         boolean readable = msg.content().isReadable();
