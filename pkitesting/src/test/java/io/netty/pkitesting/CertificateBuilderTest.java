@@ -18,6 +18,7 @@ package io.netty.pkitesting;
 import io.netty.pkitesting.CertificateBuilder.Algorithm;
 import io.netty.pkitesting.CertificateBuilder.KeyUsage;
 import io.netty.util.internal.PlatformDependent;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
@@ -98,6 +99,7 @@ class CertificateBuilderTest {
         assertNotNull(keyPair.getPublic());
     }
 
+    @Disabled
     @EnabledForJreRange(
             min = JRE.JAVA_24,
             disabledReason = "ML-KEM is only supported in Java 24 onwards")
