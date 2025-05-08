@@ -45,14 +45,16 @@ final class OpenSslX509TrustManagerWrapper {
             .getInstance(OpenSslX509TrustManagerWrapper.class);
     private static final TrustManagerWrapper WRAPPER;
 
+    private static final TrustManagerWrapper DEFAULT = new TrustManagerWrapper() {
+        @Override
+        public X509TrustManager wrapIfNeeded(X509TrustManager manager) {
+            return manager;
+        }
+    };
+
     static {
         // By default we will not do any wrapping but just return the passed in manager.
-        TrustManagerWrapper wrapper = new TrustManagerWrapper() {
-            @Override
-            public X509TrustManager wrapIfNeeded(X509TrustManager manager) {
-                return manager;
-            }
-        };
+        TrustManagerWrapper wrapper = DEFAULT;
 
         Throwable cause = null;
         Throwable unsafeCause = PlatformDependent.getUnsafeUnavailabilityCause();
@@ -139,6 +141,10 @@ final class OpenSslX509TrustManagerWrapper {
             LOGGER.debug("Unable to access wrapped TrustManager", cause);
         }
         WRAPPER = wrapper;
+    }
+
+    static boolean isWrappingSupported() {
+        return WRAPPER != DEFAULT;
     }
 
     private OpenSslX509TrustManagerWrapper() { }
