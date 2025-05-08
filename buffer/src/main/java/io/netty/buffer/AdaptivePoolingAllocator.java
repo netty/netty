@@ -97,7 +97,7 @@ final class AdaptivePoolingAllocator {
     private static final int INITIAL_MAGAZINES = 4;
     private static final int RETIRE_CAPACITY = 256;
     private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
-    private static final int BUFS_PER_CHUNK = 10; // For large buffers, aim to have about this many buffers per chunk.
+    private static final int BUFS_PER_CHUNK = 8; // For large buffers, aim to have about this many buffers per chunk.
 
     /**
      * The maximum size of a pooled chunk, in bytes. Allocations bigger than this will never be pooled.
@@ -105,6 +105,7 @@ final class AdaptivePoolingAllocator {
      * This number is 8 MiB, and is derived from the limitations of internal histograms.
      */
     private static final int MAX_CHUNK_SIZE = 1 << AllocationStatistics.HISTO_MAX_BUCKET_SHIFT; // 8 MiB.
+    private static final int MAX_POOLED_BUF_SIZE = MAX_CHUNK_SIZE / BUFS_PER_CHUNK;
 
     /**
      * The capacity if the central queue that allow chunks to be shared across magazines.
@@ -216,7 +217,7 @@ final class AdaptivePoolingAllocator {
     }
 
     private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
-        if (size <= MAX_CHUNK_SIZE) {
+        if (size <= MAX_POOLED_BUF_SIZE) {
             FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
             if (threadLocalMagazine != null && currentThread instanceof FastThreadLocalThread) {
                 Object mag = threadLocalMagazine.get();
@@ -427,6 +428,7 @@ final class AdaptivePoolingAllocator {
         private int histoIndex;
         private int datumCount;
         private int datumTarget = INIT_DATUM_TARGET;
+        protected boolean hasHadRotation;
         protected volatile int sharedPrefChunkSize = MIN_CHUNK_SIZE;
         protected volatile int localPrefChunkSize = MIN_CHUNK_SIZE;
         protected volatile int localUpperBufSize;
@@ -479,6 +481,7 @@ final class AdaptivePoolingAllocator {
                 }
                 targetPercentile -= sums[sizeBucket];
             }
+            hasHadRotation = true;
             int percentileSize = 1 << sizeBucket + HISTO_MIN_BUCKET_SHIFT;
             int prefChunkSize = Math.max(percentileSize * BUFS_PER_CHUNK, MIN_CHUNK_SIZE);
             localUpperBufSize = percentileSize;
@@ -781,6 +784,11 @@ final class AdaptivePoolingAllocator {
 
             // Limit chunks to the max size, even if the histogram suggests to go above it.
             size = Math.min(size, MAX_CHUNK_SIZE);
+
+            // If we haven't rotated the histogram yet, optimisticly record this chunk size as our preferred.
+            if (!hasHadRotation && sharedPrefChunkSize == MIN_CHUNK_SIZE) {
+                sharedPrefChunkSize = size;
+            }
 
             ChunkAllocator chunkAllocator = parent.chunkAllocator;
             return new Chunk(chunkAllocator.allocate(size, size), this, true);
