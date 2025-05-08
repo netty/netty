@@ -1983,8 +1983,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 throw exception;
             }
         }
-        final boolean notified;
-        if (notified = !handshakePromise.isDone() && handshakePromise.trySuccess(ctx.channel())) {
+        final boolean notified = !handshakePromise.isDone() && handshakePromise.trySuccess(ctx.channel());
+        if (notified) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
                         "{} HANDSHAKEN: protocol:{} cipher suite:{}",
