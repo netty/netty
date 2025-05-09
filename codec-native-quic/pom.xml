@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.1.Final-SNAPSHOT</version>
+    <version>4.2.2.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec-native-quic</artifactId>
@@ -49,7 +49,7 @@
     <boringsslRepository>https://boringssl.googlesource.com/boringssl</boringsslRepository>
     <!-- Lets use what we use in netty-tcnative-boringssl-static -->
     <boringsslBranch>main</boringsslBranch>
-    <boringsslCommitSha>b8c97f5b4bc5d4758612a0430e5c2792d0f9ca7f</boringsslCommitSha>
+    <boringsslCommitSha>cccf8525db8a57153d3cb3e22efed2db4b71a8ab</boringsslCommitSha>
 
     <quicheSourceDir>${project.build.directory}/quiche-source</quicheSourceDir>
     <quicheBuildDir>${quicheSourceDir}/target/release</quicheBuildDir>
@@ -70,10 +70,6 @@
     <extraLdflags />
     <extraConfigureArg />
     <extraConfigureArg2 />
-    <!-- We need 10.12 as minimum to compile quiche and use it.
-         Anything below will fail when trying to load quiche with:
-         Symbol not found: ___isPlatformVersionAtLeast
-    -->
     <macosxDeploymentTarget />
     <bundleNativeCode />
     <crossCompile />
@@ -116,11 +112,8 @@
         </os>
       </activation>
       <properties>
-        <!--  We need 10.12 as minimum to compile quiche and use it.
-              Anything below will fail when trying to load quiche with:
-              Symbol not found: ___isPlatformVersionAtLeast
-        -->
-        <macosxDeploymentTarget>10.12</macosxDeploymentTarget>
+        <!--  We need 10.13 as minimum to compile quiche and boringssl  -->
+        <macosxDeploymentTarget>10.13</macosxDeploymentTarget>
         <!-- On *nix, add ASM flags to disable executable stack -->
         <cmakeAsmFlags>-Wa,--noexecstack -mmacosx-version-min=${macosxDeploymentTarget}</cmakeAsmFlags>
         <extraCflags>-mmacosx-version-min=${macosxDeploymentTarget}</extraCflags>
@@ -171,11 +164,11 @@
         <jniLibName>${jniLibPrefix}_osx_x86_64</jniLibName>
         <jni.classifier>osx-x86_64</jni.classifier>
         <javaModuleNameClassifier>osx.x86_64</javaModuleNameClassifier>
-        <macosxDeploymentTarget>10.12</macosxDeploymentTarget>
-        <extraCflags>-target x86_64-apple-macos10.12 -mmacosx-version-min=${macosxDeploymentTarget}</extraCflags>
-        <extraCxxflags>-target x86_64-apple-macos10.12</extraCxxflags>
+        <macosxDeploymentTarget>10.13</macosxDeploymentTarget>
+        <extraCflags>-target x86_64-apple-macos10.13 -mmacosx-version-min=${macosxDeploymentTarget}</extraCflags>
+        <extraCxxflags>-target x86_64-apple-macos10.13</extraCxxflags>
         <!-- On *nix, add ASM flags to disable executable stack -->
-        <cmakeAsmFlags>-Wa,--noexecstack -target x86_64-apple-macos10.12 -mmacosx-version-min=${macosxDeploymentTarget}</cmakeAsmFlags>
+        <cmakeAsmFlags>-Wa,--noexecstack -target x86_64-apple-macos10.13 -mmacosx-version-min=${macosxDeploymentTarget}</cmakeAsmFlags>
         <extraCmakeFlags>-DCMAKE_SYSTEM_PROCESSOR=x86_64 -DCMAKE_OSX_ARCHITECTURES=x86_64</extraCmakeFlags>
         <cmakeCFlags>${extraCflags} -O3 -fno-omit-frame-pointer</cmakeCFlags>
         <!-- We need to define __STDC_CONSTANT_MACROS and __STDC_FORMAT_MACROS when building boringssl on centos 6 -->
@@ -684,7 +677,7 @@
                           <arg value="clone" />
                           <arg value="--branch" />
                           <arg value="${boringsslBranch}" />
-                          <arg value="--single-branch"/>
+                          <arg value="--single-branch" />
                           <arg value="${boringsslRepository}" />
                           <arg value="${boringsslSourceDir}" />
                         </exec>
@@ -752,14 +745,14 @@
 
                     <!-- Only copy the libs and header files we need -->
                     <mkdir dir="${boringsslHomeBuildDir}" />
-                    <copy file="${boringsslBuildDir}/ssl/${libssl}" todir="${boringsslHomeBuildDir}" verbose="true" />
-                    <copy file="${boringsslBuildDir}/crypto/${libcrypto}" todir="${boringsslHomeBuildDir}" verbose="true" />
+                    <copy file="${boringsslBuildDir}/${libssl}" todir="${boringsslHomeBuildDir}" verbose="true" />
+                    <copy file="${boringsslBuildDir}/${libcrypto}" todir="${boringsslHomeBuildDir}" verbose="true" />
                     <copy todir="${boringsslHomeIncludeDir}" verbose="true">
                       <fileset dir="${boringsslSourceDir}/include" />
                     </copy>
 
                     <!-- Delete boringssl source directory after build to free up space -->
-                    <delete dir="${boringsslSourceDir}"/>
+                    <delete dir="${boringsslSourceDir}" />
                   </else>
                 </if>
               </target>
@@ -796,7 +789,7 @@
                           <arg value="clone" />
                           <arg value="--branch" />
                           <arg value="${quicheBranch}" />
-                          <arg value="--single-branch"/>
+                          <arg value="--single-branch" />
                           <arg value="${quicheRepository}" />
                           <arg value="${quicheSourceDir}" />
                         </exec>
@@ -882,7 +875,7 @@
                     </copy>
 
                     <!-- Delete quiche source directory after build to free up space -->
-                    <delete dir="${quicheSourceDir}"/>
+                    <delete dir="${quicheSourceDir}" />
                   </else>
                 </if>
               </target>
