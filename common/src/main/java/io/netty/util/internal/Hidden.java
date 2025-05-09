@@ -174,6 +174,22 @@ class Hidden {
             builder.allowBlockingCallsInside("io.netty.util.internal.ReferenceCountUpdater",
                     "retryRelease0");
 
+            builder.allowBlockingCallsInside(
+                    "io.netty.channel.embedded.EmbeddedEventLoop$FreezableTicker",
+                    "advance");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.channel.embedded.EmbeddedEventLoop$FreezableTicker",
+                    "freezeTime");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.channel.embedded.EmbeddedEventLoop$FreezableTicker",
+                    "nanoTime");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.channel.embedded.EmbeddedEventLoop$FreezableTicker",
+                    "unfreezeTime");
+
             builder.allowBlockingCallsInside("io.netty.util.internal.PlatformDependent", "createTempFile");
             builder.nonBlockingThreadPredicate(new Function<Predicate<Thread>, Predicate<Thread>>() {
                 @Override
