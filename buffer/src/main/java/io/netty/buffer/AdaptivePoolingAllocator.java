@@ -739,7 +739,17 @@ final class AdaptivePoolingAllocator {
         }
 
         private int getStartingCapacity(int size, int maxCapacity) {
-            int startingCapacity = localUpperBufSize;
+            // Predict starting capacity from localUpperBufSize, but place limits on the max starting capacity
+            // based on the requested size, because localUpperBufSize can potentially be quite large.
+            int startCapLimits;
+            if (size <= 2048) { // Less than or equal to 2 KiB.
+                startCapLimits = 16384; // Use at most 16 KiB.
+            } else if (size <= 32768) { // Less than or equal to 32 KiB.
+                startCapLimits = 65536; // Use at most 64 KiB, which is also the AdaptiveRecvByteBufAllocator max.
+            } else {
+                startCapLimits = size * 2; // Otherwise use at most twice the requested memory.
+            }
+            int startingCapacity = Math.min(startCapLimits, localUpperBufSize);
             startingCapacity = Math.max(size, Math.min(maxCapacity, startingCapacity));
             return startingCapacity;
         }
