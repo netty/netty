@@ -24,6 +24,8 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.nio.ByteBuffer;
+
 public final class IoUring {
 
     private static final Throwable UNAVAILABILITY_CAUSE;
@@ -326,7 +328,11 @@ public final class IoUring {
         if (buffer.hasMemoryAddress()) {
             return buffer.memoryAddress();
         }
-        return Buffer.memoryAddress(buffer.internalNioBuffer(0, buffer.capacity()));
+        // Use internalNioBuffer to reduce object creation.
+        // It is important to add the position as the returned ByteBuffer might be shared by multiple ByteBuf
+        // instances and so has an address that starts before the start of the ByteBuf itself.
+        ByteBuffer byteBuffer = buffer.internalNioBuffer(0, buffer.capacity());
+        return Buffer.memoryAddress(byteBuffer) + byteBuffer.position();
     }
 
     public static Throwable unavailabilityCause() {
