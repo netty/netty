@@ -22,12 +22,13 @@ import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.annotations.TearDown;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Random;
 
 /**
@@ -61,6 +62,27 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
             "65536",
     })
     public int size;
+
+    @TearDown
+    public void releaseBuffers() {
+        List<ByteBuf[]> bufferLists = Arrays.asList(
+                unpooledHeapBuffers,
+                unpooledDirectBuffers,
+                pooledHeapBuffers,
+                pooledDirectBuffers,
+                defaultPooledHeapBuffers,
+                defaultPooledDirectBuffers,
+                adaptiveHeapBuffers,
+                adaptiveDirectBuffers);
+        for (ByteBuf[] bufs : bufferLists) {
+            for (ByteBuf buf : bufs) {
+                if (buf != null && buf.refCnt() > 0) {
+                    buf.release();
+                }
+            }
+            Arrays.fill(bufs, null);
+        }
+    }
 
     @Benchmark
     public void unpooledHeapAllocAndFree() {
