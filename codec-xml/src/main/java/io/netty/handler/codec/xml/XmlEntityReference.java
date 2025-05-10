@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.xml;
 
+import java.util.Objects;
+
 /**
  * XML entity reference ... {@code &#nnnn;}
  */
@@ -46,18 +48,13 @@ public class XmlEntityReference {
         }
 
         XmlEntityReference that = (XmlEntityReference) o;
-
-        if (name != null ? !name.equals(that.name) : that.name != null) {
-            return false;
-        }
-        return text != null ? text.equals(that.text) : that.text == null;
+        return Objects.equals(name, that.name) &&
+                Objects.equals(text, that.text);
     }
 
     @Override
     public int hashCode() {
-        int result = name != null ? name.hashCode() : 0;
-        result = 31 * result + (text != null ? text.hashCode() : 0);
-        return result;
+        return Objects.hash(name, text);
     }
 
     @Override

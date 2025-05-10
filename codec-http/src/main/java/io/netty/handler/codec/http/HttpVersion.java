@@ -22,6 +22,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
 
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -252,8 +253,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
 
     @Override
     public int hashCode() {
-        return (protocolName().hashCode() * 31 + majorVersion()) * 31 +
-               minorVersion();
+        return Objects.hash(protocolName(), majorVersion(), minorVersion());
     }
 
     @Override

@@ -988,8 +988,8 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         for (K name : names()) {
             result = 31 * result + hashingStrategy.hashCode(name);
             List<V> values = getAll(name);
-            for (int i = 0; i < values.size(); ++i) {
-                result = 31 * result + valueHashingStrategy.hashCode(values.get(i));
+            for (V value : values) {
+                result = 31 * result + valueHashingStrategy.hashCode(value);
             }
         }
         return result;
@@ -1021,7 +1021,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     }
 
     protected HeaderEntry<K, V> newHeaderEntry(int h, K name, V value, HeaderEntry<K, V> next) {
-        return new HeaderEntry<K, V>(h, name, value, next, head);
+        return new HeaderEntry<>(h, name, value, next, head);
     }
 
     protected ValueConverter<V> valueConverter() {

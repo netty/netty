@@ -17,6 +17,7 @@
 package io.netty.channel.epoll;
 
 import java.net.SocketAddress;
+import java.util.Objects;
 
 /**
  * A address for a
@@ -73,8 +74,6 @@ public final class VSockAddress extends SocketAddress {
 
     @Override
     public int hashCode() {
-        int result = cid;
-        result = 31 * result + port;
-        return result;
+        return Objects.hash(cid, port);
     }
 }

@@ -15,6 +15,9 @@
  */
 package io.netty.microbench.buffer;
 
+import static java.nio.charset.StandardCharsets.UTF_8;
+import static java.util.Objects.requireNonNull;
+
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
@@ -32,7 +35,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -88,34 +90,26 @@ public class Utf8EncodingBenchmark extends AbstractMicrobenchmark {
     private int dataSetLength;
 
     @Setup
-    public void init() {
+    public void init() throws IOException {
         System.setProperty("io.netty.noUnsafe", Boolean.valueOf(noUnsafe).toString());
-        InputStream testTextStream = null;
-        InputStreamReader inStreamReader = null;
-        BufferedReader buffReader = null;
         int maxExpectedSize = 0;
         List<String> strings = new ArrayList<String>();
         List<StringBuilder> stringBuilders = new ArrayList<StringBuilder>();
         List<AnotherCharSequence> anotherCharSequenceList = new ArrayList<AnotherCharSequence>();
         List<AsciiString> asciiStrings = new ArrayList<AsciiString>();
-        try {
-            testTextStream = getClass().getResourceAsStream("/Utf8Samples.txt");
-            inStreamReader = new InputStreamReader(testTextStream, "UTF-8");
-            buffReader = new BufferedReader(inStreamReader);
-            String line;
-            while ((line = buffReader.readLine()) != null) {
-                strings.add(line);
-                stringBuilders.add(new StringBuilder(line));
-                anotherCharSequenceList.add(new AnotherCharSequence(line));
-                asciiStrings.add(new AsciiString(line));
-                maxExpectedSize = Math.max(maxExpectedSize, ByteBufUtil.utf8MaxBytes(line.length()));
+        try (InputStream testTextStream = requireNonNull(getClass().getResourceAsStream("/Utf8Samples.txt"))) {
+            try (InputStreamReader inStreamReader = new InputStreamReader(testTextStream, UTF_8)) {
+                try (BufferedReader buffReader = new BufferedReader(inStreamReader)) {
+                    String line;
+                    while ((line = buffReader.readLine()) != null) {
+                        strings.add(line);
+                        stringBuilders.add(new StringBuilder(line));
+                        anotherCharSequenceList.add(new AnotherCharSequence(line));
+                        asciiStrings.add(new AsciiString(line));
+                        maxExpectedSize = Math.max(maxExpectedSize, ByteBufUtil.utf8MaxBytes(line.length()));
+                    }
+                }
             }
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        } finally {
-            closeStream(testTextStream);
-            closeReader(inStreamReader);
-            closeReader(buffReader);
         }
         buffer = direct? Unpooled.directBuffer(maxExpectedSize, maxExpectedSize) :
                 Unpooled.buffer(maxExpectedSize, maxExpectedSize);
@@ -271,11 +265,11 @@ public class Utf8EncodingBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     @CompilerControl(Mode.DONT_INLINE)
-    public int writeGetBytes() throws UnsupportedEncodingException {
+    public int writeGetBytes() {
         int countBytes = 0;
         for (String string : strings) {
             buffer.resetWriterIndex();
-            final byte[] bytes = string.getBytes("UTF-8");
+            final byte[] bytes = string.getBytes(UTF_8);
             buffer.writeBytes(bytes);
             countBytes += buffer.writerIndex();
         }

@@ -34,6 +34,7 @@ package io.netty.handler.codec.http2;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * Utility methods for hpack tests.
@@ -77,9 +78,7 @@ public final class HpackBenchmarkUtil {
 
         @Override
         public int hashCode() {
-            int result = size.hashCode();
-            result = 31 * result + (limitToAscii ? 1 : 0);
-            return result;
+            return Objects.hash(size, limitToAscii);
         }
     }
 
@@ -87,7 +86,7 @@ public final class HpackBenchmarkUtil {
 
     static {
         HpackHeadersSize[] sizes = HpackHeadersSize.values();
-        headersMap = new HashMap<HeadersKey, List<HpackHeader>>(sizes.length * 2);
+        headersMap = new HashMap<>(sizes.length * 2);
         for (HpackHeadersSize size : sizes) {
             HeadersKey key = new HeadersKey(size, true);
             headersMap.put(key, key.newHeaders());
@@ -107,8 +106,7 @@ public final class HpackBenchmarkUtil {
     static Http2Headers http2Headers(HpackHeadersSize size, boolean limitToAscii) {
         List<HpackHeader> hpackHeaders = headersMap.get(new HeadersKey(size, limitToAscii));
         Http2Headers http2Headers = new DefaultHttp2Headers(false);
-        for (int i = 0; i < hpackHeaders.size(); ++i) {
-            HpackHeader hpackHeader = hpackHeaders.get(i);
+        for (HpackHeader hpackHeader : hpackHeaders) {
             http2Headers.add(hpackHeader.name, hpackHeader.value);
         }
         return http2Headers;

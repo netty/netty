@@ -148,7 +148,7 @@ public final class Http2Flags {
     }
 
     /**
-     * Indicates whether or not a particular flag is set.
+     * Indicates whether a particular flag is set.
      * @param mask the mask identifying the bit for the particular flag being tested
      * @return {@code true} if the flag is set
      */
@@ -158,10 +158,7 @@ public final class Http2Flags {
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + value;
-        return result;
+        return value;
     }
 
     @Override
