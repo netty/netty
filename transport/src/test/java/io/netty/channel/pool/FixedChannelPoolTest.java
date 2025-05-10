@@ -65,27 +65,13 @@ public class FixedChannelPoolTest {
 
     @Test
     public void testAcquire() throws Exception {
-        LocalAddress addr = new LocalAddress(getLocalAddrId());
-        Bootstrap cb = new Bootstrap();
-        cb.remoteAddress(addr);
-        cb.group(group)
-          .channel(LocalChannel.class);
-
-        ServerBootstrap sb = new ServerBootstrap();
-        sb.group(group)
-          .channel(LocalServerChannel.class)
-          .childHandler(new ChannelInitializer<LocalChannel>() {
-              @Override
-              public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
-              }
-          });
+        Tuple t = bootstrap();
 
         // Start server
-        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
         CountingChannelPoolHandler handler = new CountingChannelPoolHandler();
 
-        ChannelPool pool = new FixedChannelPool(cb, handler, 1, Integer.MAX_VALUE);
+        ChannelPool pool = new FixedChannelPool(t.cb, handler, 1, Integer.MAX_VALUE);
 
         Channel channel = pool.acquire().syncUninterruptibly().getNow();
         Future<Channel> future = pool.acquire();
@@ -116,28 +102,14 @@ public class FixedChannelPoolTest {
         testAcquireTimeout(0);
     }
 
-    private static void testAcquireTimeout(long timeoutMillis) throws Exception {
-        LocalAddress addr = new LocalAddress(getLocalAddrId());
-        Bootstrap cb = new Bootstrap();
-        cb.remoteAddress(addr);
-        cb.group(group)
-          .channel(LocalChannel.class);
-
-        ServerBootstrap sb = new ServerBootstrap();
-        sb.group(group)
-          .channel(LocalServerChannel.class)
-          .childHandler(new ChannelInitializer<LocalChannel>() {
-              @Override
-              public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
-              }
-          });
+    private void testAcquireTimeout(long timeoutMillis) throws Exception {
+        Tuple t = bootstrap();
 
         // Start server
-        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
-        ChannelPool pool = new FixedChannelPool(cb, handler, ChannelHealthChecker.ACTIVE,
-                                                AcquireTimeoutAction.FAIL, timeoutMillis, 1, Integer.MAX_VALUE);
+        ChannelPool pool = new FixedChannelPool(t.cb, handler, ChannelHealthChecker.ACTIVE,
+                AcquireTimeoutAction.FAIL, timeoutMillis, 1, Integer.MAX_VALUE);
 
         Channel channel = pool.acquire().syncUninterruptibly().getNow();
         final Future<Channel> future = pool.acquire();
@@ -154,26 +126,12 @@ public class FixedChannelPoolTest {
 
     @Test
     public void testAcquireNewConnection() throws Exception {
-        LocalAddress addr = new LocalAddress(getLocalAddrId());
-        Bootstrap cb = new Bootstrap();
-        cb.remoteAddress(addr);
-        cb.group(group)
-          .channel(LocalChannel.class);
-
-        ServerBootstrap sb = new ServerBootstrap();
-        sb.group(group)
-          .channel(LocalServerChannel.class)
-          .childHandler(new ChannelInitializer<LocalChannel>() {
-              @Override
-              public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
-              }
-          });
+        Tuple t = bootstrap();
 
         // Start server
-        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
-        ChannelPool pool = new FixedChannelPool(cb, handler, ChannelHealthChecker.ACTIVE,
+        ChannelPool pool = new FixedChannelPool(t.cb, handler, ChannelHealthChecker.ACTIVE,
                 AcquireTimeoutAction.NEW, 500, 1, Integer.MAX_VALUE);
 
         Channel channel = pool.acquire().syncUninterruptibly().getNow();
@@ -191,26 +149,12 @@ public class FixedChannelPoolTest {
      */
     @Test
     public void testAcquireNewConnectionWhen() throws Exception {
-        LocalAddress addr = new LocalAddress(getLocalAddrId());
-        Bootstrap cb = new Bootstrap();
-        cb.remoteAddress(addr);
-        cb.group(group)
-          .channel(LocalChannel.class);
-
-        ServerBootstrap sb = new ServerBootstrap();
-        sb.group(group)
-          .channel(LocalServerChannel.class)
-          .childHandler(new ChannelInitializer<LocalChannel>() {
-              @Override
-              public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
-              }
-          });
+        Tuple t = bootstrap();
 
         // Start server
-        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
-        ChannelPool pool = new FixedChannelPool(cb, handler, 1);
+        ChannelPool pool = new FixedChannelPool(t.cb, handler, 1);
         Channel channel1 = pool.acquire().syncUninterruptibly().getNow();
         channel1.close().syncUninterruptibly();
         pool.release(channel1);
@@ -225,26 +169,12 @@ public class FixedChannelPoolTest {
 
     @Test
     public void testAcquireBoundQueue() throws Exception {
-        LocalAddress addr = new LocalAddress(getLocalAddrId());
-        Bootstrap cb = new Bootstrap();
-        cb.remoteAddress(addr);
-        cb.group(group)
-          .channel(LocalChannel.class);
-
-        ServerBootstrap sb = new ServerBootstrap();
-        sb.group(group)
-          .channel(LocalServerChannel.class)
-          .childHandler(new ChannelInitializer<LocalChannel>() {
-              @Override
-              public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
-              }
-          });
+        Tuple t = bootstrap();
 
         // Start server
-        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
-        final ChannelPool pool = new FixedChannelPool(cb, handler, 1, 1);
+        final ChannelPool pool = new FixedChannelPool(t.cb, handler, 1, 1);
 
         Channel channel = pool.acquire().syncUninterruptibly().getNow();
         Future<Channel> future = pool.acquire();
@@ -263,27 +193,13 @@ public class FixedChannelPoolTest {
 
     @Test
     public void testReleaseDifferentPool() throws Exception {
-        LocalAddress addr = new LocalAddress(getLocalAddrId());
-        Bootstrap cb = new Bootstrap();
-        cb.remoteAddress(addr);
-        cb.group(group)
-          .channel(LocalChannel.class);
-
-        ServerBootstrap sb = new ServerBootstrap();
-        sb.group(group)
-          .channel(LocalServerChannel.class)
-          .childHandler(new ChannelInitializer<LocalChannel>() {
-              @Override
-              public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
-              }
-          });
+        Tuple t = bootstrap();
 
         // Start server
-        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
-        ChannelPool pool = new FixedChannelPool(cb, handler, 1, 1);
-        final ChannelPool pool2 = new FixedChannelPool(cb, handler, 1, 1);
+        ChannelPool pool = new FixedChannelPool(t.cb, handler, 1, 1);
+        final ChannelPool pool2 = new FixedChannelPool(t.cb, handler, 1, 1);
 
         final Channel channel = pool.acquire().syncUninterruptibly().getNow();
 
@@ -301,25 +217,12 @@ public class FixedChannelPoolTest {
 
     @Test
     public void testReleaseAfterClosePool() throws Exception {
-        LocalAddress addr = new LocalAddress(getLocalAddrId());
-        Bootstrap cb = new Bootstrap();
-        cb.remoteAddress(addr);
-        cb.group(group).channel(LocalChannel.class);
-
-        ServerBootstrap sb = new ServerBootstrap();
-        sb.group(group)
-                .channel(LocalServerChannel.class)
-                .childHandler(new ChannelInitializer<LocalChannel>() {
-                    @Override
-                    public void initChannel(LocalChannel ch) throws Exception {
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
-                    }
-                });
+        Tuple t = bootstrap();
 
         // Start server
-        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
 
-        final FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 2);
+        final FixedChannelPool pool = new FixedChannelPool(t.cb, new TestChannelPoolHandler(), 2);
         final Future<Channel> acquire = pool.acquire();
         final Channel channel = acquire.get();
         pool.close();
@@ -344,25 +247,12 @@ public class FixedChannelPoolTest {
 
     @Test
     public void testReleaseClosed() {
-        LocalAddress addr = new LocalAddress(getLocalAddrId());
-        Bootstrap cb = new Bootstrap();
-        cb.remoteAddress(addr);
-        cb.group(group).channel(LocalChannel.class);
-
-        ServerBootstrap sb = new ServerBootstrap();
-        sb.group(group)
-                .channel(LocalServerChannel.class)
-                .childHandler(new ChannelInitializer<LocalChannel>() {
-                    @Override
-                    public void initChannel(LocalChannel ch) throws Exception {
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
-                    }
-                });
+        Tuple t = bootstrap();
 
         // Start server
-        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
 
-        FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 2);
+        FixedChannelPool pool = new FixedChannelPool(t.cb, new TestChannelPoolHandler(), 2);
         Channel channel = pool.acquire().syncUninterruptibly().getNow();
         channel.close().syncUninterruptibly();
         pool.release(channel).syncUninterruptibly();
@@ -373,25 +263,12 @@ public class FixedChannelPoolTest {
 
     @Test
     public void testCloseAsync() throws ExecutionException, InterruptedException {
-        LocalAddress addr = new LocalAddress(getLocalAddrId());
-        Bootstrap cb = new Bootstrap();
-        cb.remoteAddress(addr);
-        cb.group(group).channel(LocalChannel.class);
-
-        ServerBootstrap sb = new ServerBootstrap();
-        sb.group(group)
-                .channel(LocalServerChannel.class)
-                .childHandler(new ChannelInitializer<LocalChannel>() {
-                    @Override
-                    public void initChannel(LocalChannel ch) throws Exception {
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
-                    }
-                });
+        Tuple t = bootstrap();
 
         // Start server
-        final Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        final Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
 
-        final FixedChannelPool pool = new FixedChannelPool(cb, new TestChannelPoolHandler(), 2);
+        final FixedChannelPool pool = new FixedChannelPool(t.cb, new TestChannelPoolHandler(), 2);
 
         pool.acquire().get();
         pool.acquire().get();
@@ -409,25 +286,12 @@ public class FixedChannelPoolTest {
 
     @Test
     public void testChannelAcquiredException() throws InterruptedException {
-        LocalAddress addr = new LocalAddress(getLocalAddrId());
-        Bootstrap cb = new Bootstrap();
-        cb.remoteAddress(addr);
-        cb.group(group).channel(LocalChannel.class);
-
-        ServerBootstrap sb = new ServerBootstrap();
-        sb.group(group)
-              .channel(LocalServerChannel.class)
-              .childHandler(new ChannelInitializer<LocalChannel>() {
-                  @Override
-                  public void initChannel(LocalChannel ch) throws Exception {
-                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
-                  }
-              });
+        Tuple t = bootstrap();
 
         // Start server
-        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
         final NullPointerException exception = new NullPointerException();
-        FixedChannelPool pool = new FixedChannelPool(cb, new ChannelPoolHandler() {
+        FixedChannelPool pool = new FixedChannelPool(t.cb, new ChannelPoolHandler() {
             @Override
             public void channelReleased(Channel ch) {
             }
@@ -450,10 +314,42 @@ public class FixedChannelPoolTest {
         pool.close();
     }
 
+    private Tuple bootstrap() {
+        LocalAddress addr = new LocalAddress(getLocalAddrId());
+        Bootstrap cb = new Bootstrap();
+        cb.remoteAddress(addr);
+        cb.group(group).channel(LocalChannel.class);
+
+        ServerBootstrap sb = new ServerBootstrap();
+        sb.group(group)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    public void initChannel(LocalChannel ch) {
+                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                    }
+                });
+
+        return new Tuple(addr, cb, sb);
+    }
+
     private static final class TestChannelPoolHandler extends AbstractChannelPoolHandler {
         @Override
         public void channelCreated(Channel ch) throws Exception {
             // NOOP
+        }
+    }
+
+    private static final class Tuple {
+
+        LocalAddress address;
+        Bootstrap cb;
+        ServerBootstrap sb;
+
+        Tuple(LocalAddress address, Bootstrap cb, ServerBootstrap sb) {
+            this.address = address;
+            this.cb = cb;
+            this.sb = sb;
         }
     }
 }
