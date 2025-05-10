@@ -78,9 +78,9 @@ public abstract class AbstractOioMessageChannel extends AbstractOioChannel {
         int size = readBuf.size();
         if (size > 0) {
             readData = true;
-            for (int i = 0; i < size; i++) {
+            for (Object o : readBuf) {
                 readPending = false;
-                pipeline.fireChannelRead(readBuf.get(i));
+                pipeline.fireChannelRead(o);
             }
             readBuf.clear();
             allocHandle.readComplete();

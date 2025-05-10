@@ -139,8 +139,7 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
         // We use and old style for loop as CopyOnWriteArrayList implements RandomAccess and so we can
         // reduce the object creations.
         boolean dispatchForOwnContextAlready = false;
-        for (int i = 0; i < contextList.size(); i++) {
-            ChannelHandlerContextDispatcher ctxDispatcher = contextList.get(i);
+        for (ChannelHandlerContextDispatcher ctxDispatcher : contextList) {
             if (ctxDispatcher != null) {
                 boolean fired = ctxDispatcher.fireChannelReadCompleteIfNeeded();
                 if (fired && !dispatchForOwnContextAlready) {

@@ -72,8 +72,8 @@ final class QuicheQuicSslContext extends QuicSslContext {
     static {
         String[] namedGroups = DEFAULT_NAMED_GROUPS;
         Set<String> defaultConvertedNamedGroups = new LinkedHashSet<>(namedGroups.length);
-        for (int i = 0; i < namedGroups.length; i++) {
-            defaultConvertedNamedGroups.add(GroupsConverter.toBoringSSL(namedGroups[i]));
+        for (String group : namedGroups) {
+            defaultConvertedNamedGroups.add(GroupsConverter.toBoringSSL(group));
         }
 
         // Call Quic.isAvailable() first to ensure native lib is loaded.

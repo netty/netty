@@ -116,8 +116,8 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
      */
     private void fireBufferedMessages() {
         if (!bufferedMessages.isEmpty()) {
-            for (int i = 0; i < bufferedMessages.size(); i++) {
-                ctx.fireChannelRead(bufferedMessages.get(i));
+            for (Object bufferedMessage : bufferedMessages) {
+                ctx.fireChannelRead(bufferedMessage);
             }
             ctx.fireChannelReadComplete();
             bufferedMessages.clear();

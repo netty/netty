@@ -107,8 +107,8 @@ public final class HAProxySSLTLV extends HAProxyTLV {
     @Override
     int contentNumBytes() {
         int tlvNumBytes = 0;
-        for (int i = 0; i < tlvs.size(); i++) {
-            tlvNumBytes += tlvs.get(i).totalNumBytes();
+        for (HAProxyTLV tlv : tlvs) {
+            tlvNumBytes += tlv.totalNumBytes();
         }
         return 5 + tlvNumBytes; // clientBit(1) + verify(4) + tlvs
     }

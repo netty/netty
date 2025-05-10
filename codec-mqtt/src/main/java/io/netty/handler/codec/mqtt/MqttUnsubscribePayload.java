@@ -39,8 +39,8 @@ public final class MqttUnsubscribePayload {
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append('[');
-        for (int i = 0; i < topics.size(); i++) {
-            builder.append("topicName = ").append(topics.get(i)).append(", ");
+        for (String topic : topics) {
+            builder.append("topicName = ").append(topic).append(", ");
         }
         if (!topics.isEmpty()) {
             builder.setLength(builder.length() - 2);

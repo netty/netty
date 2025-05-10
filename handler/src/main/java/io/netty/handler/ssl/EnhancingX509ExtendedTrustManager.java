@@ -95,8 +95,7 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
         String message = e.getMessage();
         if (message != null && e.getMessage().startsWith("No subject alternative DNS name matching")) {
             StringBuilder names = new StringBuilder(64);
-            for (int i = 0; i < chain.length; i++) {
-                X509Certificate cert = chain[i];
+            for (X509Certificate cert : chain) {
                 Collection<List<?>> collection = cert.getSubjectAlternativeNames();
                 if (collection != null) {
                     for (List<?> altNames : collection) {

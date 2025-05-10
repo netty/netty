@@ -54,8 +54,7 @@ public class AsciiStringCharacterTest {
         }
         final String bString = b.toString();
         final Charset[] charsets = CharsetUtil.values();
-        for (int i = 0; i < charsets.length; ++i) {
-            final Charset charset = charsets[i];
+        for (final Charset charset : charsets) {
             byte[] expected = bString.getBytes(charset);
             byte[] actual = new AsciiString(b, charset).toByteArray();
             assertArrayEquals(expected, actual, "failure for " + charset);
@@ -70,8 +69,7 @@ public class AsciiStringCharacterTest {
         }
         final String bString = b.toString();
         final Charset[] charsets = CharsetUtil.values();
-        for (int i = 0; i < charsets.length; ++i) {
-            final Charset charset = charsets[i];
+        for (final Charset charset : charsets) {
             byte[] expected = bString.getBytes(charset);
             byte[] actual = new AsciiString(bString, charset).toByteArray();
             assertArrayEquals(expected, actual, "failure for " + charset);

@@ -155,8 +155,8 @@ public final class OpenSsl {
             boolean tlsv13Supported = false;
             String[] namedGroups = DEFAULT_NAMED_GROUPS;
             Set<String> defaultConvertedNamedGroups = new LinkedHashSet<String>(namedGroups.length);
-            for (int i = 0; i < namedGroups.length; i++) {
-                defaultConvertedNamedGroups.add(GroupsConverter.toOpenSsl(namedGroups[i]));
+            for (String group : namedGroups) {
+                defaultConvertedNamedGroups.add(GroupsConverter.toOpenSsl(group));
             }
 
             IS_BORINGSSL = "BoringSSL".equals(versionString());

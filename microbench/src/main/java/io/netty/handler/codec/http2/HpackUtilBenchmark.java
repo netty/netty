@@ -51,8 +51,7 @@ public class HpackUtilBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     public int oldEquals() {
         int count = 0;
-        for (int i = 0; i < hpackHeaders.size(); ++i) {
-            HpackHeader hpackHeader = hpackHeaders.get(i);
+        for (HpackHeader hpackHeader : hpackHeaders) {
             if (oldEquals(hpackHeader.name, hpackHeader.name)) {
                 ++count;
             }
@@ -63,8 +62,7 @@ public class HpackUtilBenchmark extends AbstractMicrobenchmark {
     @Benchmark
     public int newEquals() {
         int count = 0;
-        for (int i = 0; i < hpackHeaders.size(); ++i) {
-            HpackHeader hpackHeader = hpackHeaders.get(i);
+        for (HpackHeader hpackHeader : hpackHeaders) {
             if (newEquals(hpackHeader.name, hpackHeader.name)) {
                 ++count;
             }

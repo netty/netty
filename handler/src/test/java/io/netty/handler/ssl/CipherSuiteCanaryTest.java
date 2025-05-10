@@ -268,12 +268,8 @@ public class CipherSuiteCanaryTest {
         List<Object[]> dst = new ArrayList<Object[]>();
         SslProvider[] sslProviders = SslProvider.values();
 
-        for (int i = 0; i < sslProviders.length; i++) {
-            SslProvider serverSslProvider = sslProviders[i];
-
-            for (int j = 0; j < sslProviders.length; j++) {
-                SslProvider clientSslProvider = sslProviders[j];
-
+        for (SslProvider serverSslProvider : sslProviders) {
+            for (SslProvider clientSslProvider : sslProviders) {
                 if ((serverSslProvider != SslProvider.JDK || clientSslProvider != SslProvider.JDK)
                         && !OpenSsl.isAvailable()) {
                     continue;

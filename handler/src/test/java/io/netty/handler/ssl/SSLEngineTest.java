@@ -2050,8 +2050,8 @@ public abstract class SSLEngineTest {
                                     // See https://bugs.openjdk.java.net/browse/JDK-8241039
                                     assertTrue(PlatformDependent.javaVersion() >= 15);
                                     assertEquals(2, peerCertificates.length);
-                                    for (int i = 0; i < peerCertificates.length; i++) {
-                                        if (peerCertificates[i] == null) {
+                                    for (Certificate peerCertificate : peerCertificates) {
+                                        if (peerCertificate == null) {
                                             promise.setFailure(
                                                     new IllegalStateException("Certificate in chain is null"));
                                             return;

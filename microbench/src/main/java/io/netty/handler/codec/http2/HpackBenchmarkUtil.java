@@ -107,8 +107,7 @@ public final class HpackBenchmarkUtil {
     static Http2Headers http2Headers(HpackHeadersSize size, boolean limitToAscii) {
         List<HpackHeader> hpackHeaders = headersMap.get(new HeadersKey(size, limitToAscii));
         Http2Headers http2Headers = new DefaultHttp2Headers(false);
-        for (int i = 0; i < hpackHeaders.size(); ++i) {
-            HpackHeader hpackHeader = hpackHeaders.get(i);
+        for (HpackHeader hpackHeader : hpackHeaders) {
             http2Headers.add(hpackHeader.name, hpackHeader.value);
         }
         return http2Headers;

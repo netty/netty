@@ -372,8 +372,7 @@ public final class WeightedFairQueueByteDistributor implements StreamByteDistrib
      * @param events The events (top down order) which have changed
      */
     void notifyParentChanged(List<ParentChangedEvent> events) {
-        for (int i = 0; i < events.size(); ++i) {
-            ParentChangedEvent event = events.get(i);
+        for (ParentChangedEvent event : events) {
             stateOnlyRemovalQueue.priorityChanged(event.state);
             if (event.state.parent != null && event.state.activeCountForTree != 0) {
                 event.state.parent.offerAndInitializePseudoTime(event.state);

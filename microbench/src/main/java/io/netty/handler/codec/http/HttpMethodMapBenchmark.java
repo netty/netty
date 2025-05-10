@@ -153,22 +153,22 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void oldMapKnownMethods(Blackhole bh) throws Exception {
-        for (int i = 0; i < KNOWN_METHODS.length; ++i) {
-            bh.consume(OLD_MAP.get(KNOWN_METHODS[i]));
+        for (String knownMethod : KNOWN_METHODS) {
+            bh.consume(OLD_MAP.get(knownMethod));
         }
     }
 
     @Benchmark
     public void newMapKnownMethods(Blackhole bh) throws Exception {
-        for (int i = 0; i < KNOWN_METHODS.length; ++i) {
-            bh.consume(NEW_MAP.get(KNOWN_METHODS[i]));
+        for (String knownMethod : KNOWN_METHODS) {
+            bh.consume(NEW_MAP.get(knownMethod));
         }
     }
 
     @Benchmark
     public void oldMapMixMethods(Blackhole bh) throws Exception {
-        for (int i = 0; i < MIXED_METHODS.length; ++i) {
-            HttpMethod method = OLD_MAP.get(MIXED_METHODS[i]);
+        for (String mixedMethod : MIXED_METHODS) {
+            HttpMethod method = OLD_MAP.get(mixedMethod);
             if (method != null) {
                 bh.consume(method);
             }
@@ -177,8 +177,8 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void newMapMixMethods(Blackhole bh) throws Exception {
-        for (int i = 0; i < MIXED_METHODS.length; ++i) {
-            HttpMethod method = NEW_MAP.get(MIXED_METHODS[i]);
+        for (String mixedMethod : MIXED_METHODS) {
+            HttpMethod method = NEW_MAP.get(mixedMethod);
             if (method != null) {
                 bh.consume(method);
             }
@@ -187,8 +187,8 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void oldMapUnknownMethods(Blackhole bh) throws Exception {
-        for (int i = 0; i < UNKNOWN_METHODS.length; ++i) {
-            HttpMethod method = OLD_MAP.get(UNKNOWN_METHODS[i]);
+        for (String unknownMethod : UNKNOWN_METHODS) {
+            HttpMethod method = OLD_MAP.get(unknownMethod);
             if (method != null) {
                 bh.consume(method);
             }
@@ -197,8 +197,8 @@ public class HttpMethodMapBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void newMapUnknownMethods(Blackhole bh) throws Exception {
-        for (int i = 0; i < UNKNOWN_METHODS.length; ++i) {
-            HttpMethod method = NEW_MAP.get(UNKNOWN_METHODS[i]);
+        for (String unknownMethod : UNKNOWN_METHODS) {
+            HttpMethod method = NEW_MAP.get(unknownMethod);
             if (method != null) {
                 bh.consume(method);
             }

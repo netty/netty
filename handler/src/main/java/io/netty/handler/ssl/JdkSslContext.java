@@ -142,8 +142,7 @@ public class JdkSslContext extends SslContext {
         // Choose the sensible default list of cipher suites.
         final String[] supportedCiphers = engine.getSupportedCipherSuites();
         Set<String> supportedCiphersSet = new LinkedHashSet<String>(supportedCiphers.length);
-        for (int i = 0; i < supportedCiphers.length; ++i) {
-            String supportedCipher = supportedCiphers[i];
+        for (String supportedCipher : supportedCiphers) {
             supportedCiphersSet.add(supportedCipher);
             // IBM's J9 JVM utilizes a custom naming scheme for ciphers and only returns ciphers with the "SSL_"
             // prefix instead of the "TLS_" prefix (as defined in the JSSE cipher suite names [1]). According to IBM's

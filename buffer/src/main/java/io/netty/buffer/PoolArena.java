@@ -544,8 +544,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         long val = activeBytesHuge.value();
         lock();
         try {
-            for (int i = 0; i < chunkListMetrics.size(); i++) {
-                for (PoolChunkMetric m: chunkListMetrics.get(i)) {
+            for (PoolChunkListMetric chunkListMetric : chunkListMetrics) {
+                for (PoolChunkMetric m : chunkListMetric) {
                     val += m.chunkSize();
                 }
             }
@@ -561,8 +561,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
      */
     public long numPinnedBytes() {
         long val = activeBytesHuge.value(); // Huge chunks are exact-sized for the buffers they were allocated to.
-        for (int i = 0; i < chunkListMetrics.size(); i++) {
-            for (PoolChunkMetric m: chunkListMetrics.get(i)) {
+        for (PoolChunkListMetric chunkListMetric : chunkListMetrics) {
+            for (PoolChunkMetric m : chunkListMetric) {
                 val += ((PoolChunk<?>) m).pinnedBytes();
             }
         }

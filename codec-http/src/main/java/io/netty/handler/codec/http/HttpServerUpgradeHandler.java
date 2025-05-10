@@ -335,8 +335,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         final int numRequestedProtocols = requestedProtocols.size();
         UpgradeCodec upgradeCodec = null;
         CharSequence upgradeProtocol = null;
-        for (int i = 0; i < numRequestedProtocols; i ++) {
-            final CharSequence p = requestedProtocols.get(i);
+        for (final CharSequence p : requestedProtocols) {
             final UpgradeCodec c = upgradeCodecFactory.newUpgradeCodec(p);
             if (c != null) {
                 upgradeProtocol = p;

@@ -94,8 +94,8 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
     public long hexDigits() {
         long v = 0;
         final char[] hexDigits = this.hexDigits[nextHexDigits()];
-        for (int i = 0, size = hexDigits.length; i < size; i++) {
-            v += StringUtil.decodeHexNibble(hexDigits[i]);
+        for (char hexDigit : hexDigits) {
+            v += StringUtil.decodeHexNibble(hexDigit);
         }
         return v;
     }
@@ -105,8 +105,8 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
     public long hexDigitsWithChecks() {
         long v = 0;
         final char[] hexDigits = this.hexDigits[nextHexDigits()];
-        for (int i = 0, size = hexDigits.length; i < size; i++) {
-            v += decodeHexNibbleWithCheck(hexDigits[i]);
+        for (char hexDigit : hexDigits) {
+            v += decodeHexNibbleWithCheck(hexDigit);
         }
         return v;
     }
@@ -116,8 +116,8 @@ public class DecodeHexBenchmark extends AbstractMicrobenchmark {
     public long hexDigitsOriginal() {
         long v = 0;
         final char[] hexDigits = this.hexDigits[nextHexDigits()];
-        for (int i = 0, size = hexDigits.length; i < size; i++) {
-            v += decodeHexNibble(hexDigits[i]);
+        for (char hexDigit : hexDigits) {
+            v += decodeHexNibble(hexDigit);
         }
         return v;
     }

@@ -95,8 +95,8 @@ public final class RecyclableArrayList extends ArrayList<Object> {
             // produce less garbage
             List<?> list = (List<?>) c;
             int size = list.size();
-            for (int i = 0; i  < size; i++) {
-                if (list.get(i) == null) {
+            for (Object o : list) {
+                if (o == null) {
                     throw new IllegalArgumentException("c contains null values");
                 }
             }

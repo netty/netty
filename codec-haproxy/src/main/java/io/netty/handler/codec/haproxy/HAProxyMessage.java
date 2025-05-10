@@ -546,8 +546,8 @@ public final class HAProxyMessage extends AbstractReferenceCounted {
 
     int tlvNumBytes() {
         int tlvNumBytes = 0;
-        for (int i = 0; i < tlvs.size(); i++) {
-            tlvNumBytes += tlvs.get(i).totalNumBytes();
+        for (HAProxyTLV tlv : tlvs) {
+            tlvNumBytes += tlv.totalNumBytes();
         }
         return tlvNumBytes;
     }

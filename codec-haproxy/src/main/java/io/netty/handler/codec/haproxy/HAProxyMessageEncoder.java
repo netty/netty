@@ -127,8 +127,8 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
     }
 
     private static void encodeTlvs(List<HAProxyTLV> haProxyTLVs, ByteBuf out) {
-        for (int i = 0; i < haProxyTLVs.size(); i++) {
-            encodeTlv(haProxyTLVs.get(i), out);
+        for (HAProxyTLV haProxyTLV : haProxyTLVs) {
+            encodeTlv(haProxyTLV, out);
         }
     }
 }

@@ -135,15 +135,15 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
     private static void writeVoidPromise(ChannelHandlerContext ctx, List<Object> out) {
         final ChannelPromise voidPromise = ctx.voidPromise();
-        for (int i = 0; i < out.size(); i++) {
-            ctx.write(out.get(i), voidPromise);
+        for (Object o : out) {
+            ctx.write(o, voidPromise);
         }
     }
 
     private static void writePromiseCombiner(ChannelHandlerContext ctx, List<Object> out, ChannelPromise promise) {
         final PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
-        for (int i = 0; i < out.size(); i++) {
-            combiner.add(ctx.write(out.get(i)));
+        for (Object o : out) {
+            combiner.add(ctx.write(o));
         }
         combiner.finish(promise);
     }

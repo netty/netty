@@ -230,9 +230,9 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         localEndpoint.lastStreamKnownByPeer(lastKnownStream);
-        for (int i = 0; i < listeners.size(); ++i) {
+        for (Listener listener : listeners) {
             try {
-                listeners.get(i).onGoAwayReceived(lastKnownStream, errorCode, debugData);
+                listener.onGoAwayReceived(lastKnownStream, errorCode, debugData);
             } catch (Throwable cause) {
                 logger.error("Caught Throwable from listener onGoAwayReceived.", cause);
             }
@@ -262,9 +262,9 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         remoteEndpoint.lastStreamKnownByPeer(lastKnownStream);
-        for (int i = 0; i < listeners.size(); ++i) {
+        for (Listener listener : listeners) {
             try {
-                listeners.get(i).onGoAwaySent(lastKnownStream, errorCode, debugData);
+                listener.onGoAwaySent(lastKnownStream, errorCode, debugData);
             } catch (Throwable cause) {
                 logger.error("Caught Throwable from listener onGoAwaySent.", cause);
             }
@@ -310,9 +310,9 @@ public class DefaultHttp2Connection implements Http2Connection {
         }
 
         if (removed) {
-            for (int i = 0; i < listeners.size(); i++) {
+            for (Listener listener : listeners) {
                 try {
-                    listeners.get(i).onStreamRemoved(stream);
+                    listener.onStreamRemoved(stream);
                 } catch (Throwable cause) {
                     logger.error("Caught Throwable from listener onStreamRemoved.", cause);
                 }
@@ -340,9 +340,9 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     void notifyHalfClosed(Http2Stream stream) {
-        for (int i = 0; i < listeners.size(); i++) {
+        for (Listener listener : listeners) {
             try {
-                listeners.get(i).onStreamHalfClosed(stream);
+                listener.onStreamHalfClosed(stream);
             } catch (Throwable cause) {
                 logger.error("Caught Throwable from listener onStreamHalfClosed.", cause);
             }
@@ -350,9 +350,9 @@ public class DefaultHttp2Connection implements Http2Connection {
     }
 
     void notifyClosed(Http2Stream stream) {
-        for (int i = 0; i < listeners.size(); i++) {
+        for (Listener listener : listeners) {
             try {
-                listeners.get(i).onStreamClosed(stream);
+                listener.onStreamClosed(stream);
             } catch (Throwable cause) {
                 logger.error("Caught Throwable from listener onStreamClosed.", cause);
             }
@@ -832,9 +832,9 @@ public class DefaultHttp2Connection implements Http2Connection {
             streamMap.put(stream.id(), stream);
 
             // Notify the listeners of the event.
-            for (int i = 0; i < listeners.size(); i++) {
+            for (Listener listener : listeners) {
                 try {
-                    listeners.get(i).onStreamAdded(stream);
+                    listener.onStreamAdded(stream);
                 } catch (Throwable cause) {
                     logger.error("Caught Throwable from listener onStreamAdded.", cause);
                 }
@@ -1026,9 +1026,9 @@ public class DefaultHttp2Connection implements Http2Connection {
                 // Update the number of active streams initiated by the endpoint.
                 stream.createdBy().numActiveStreams++;
 
-                for (int i = 0; i < listeners.size(); i++) {
+                for (Listener listener : listeners) {
                     try {
-                        listeners.get(i).onStreamActive(stream);
+                        listener.onStreamActive(stream);
                     } catch (Throwable cause) {
                         logger.error("Caught Throwable from listener onStreamActive.", cause);
                     }

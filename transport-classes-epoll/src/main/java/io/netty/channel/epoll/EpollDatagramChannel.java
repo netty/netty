@@ -659,8 +659,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             byteBuf.release();
         }
         if (packetList != null) {
-            for (int i = 0; i < packetList.size(); i++) {
-                ReferenceCountUtil.release(packetList.get(i));
+            for (Object o : packetList) {
+                ReferenceCountUtil.release(o);
             }
             packetList.recycle();
         }

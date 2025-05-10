@@ -39,8 +39,8 @@ public final class MqttSubscribePayload {
     @Override
     public String toString() {
         StringBuilder builder = new StringBuilder(StringUtil.simpleClassName(this)).append('[');
-        for (int i = 0; i < topicSubscriptions.size(); i++) {
-            builder.append(topicSubscriptions.get(i)).append(", ");
+        for (MqttTopicSubscription topicSubscription : topicSubscriptions) {
+            builder.append(topicSubscription).append(", ");
         }
         if (!topicSubscriptions.isEmpty()) {
             builder.setLength(builder.length() - 2);

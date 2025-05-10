@@ -179,8 +179,8 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             ch.flush();
             writeFuture.sync();
             h.assertWritability(true);
-            for (int i = 0; i < expectedBytes.length; ++i) {
-                assertEquals(expectedBytes[i], s.getInputStream().read());
+            for (byte expectedByte : expectedBytes) {
+                assertEquals(expectedByte, s.getInputStream().read());
             }
 
             assertTrue(h.ch.isOpen());
