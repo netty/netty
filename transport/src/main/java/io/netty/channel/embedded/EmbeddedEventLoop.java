@@ -30,14 +30,15 @@ import io.netty.util.internal.ObjectUtil;
 import java.util.ArrayDeque;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 
 final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
-    private final FreezableTicker ticker = new FreezableTicker();
+    private final Ticker ticker;
 
     private final Queue<Runnable> tasks = new ArrayDeque<Runnable>(2);
+
+    EmbeddedEventLoop(Ticker ticker) {
+        this.ticker = ticker;
+    }
 
     @Override
     public EventLoopGroup parent() {
@@ -93,18 +94,6 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     @Override
     protected long getCurrentTimeNanos() {
         return ticker.nanoTime();
-    }
-
-    void advanceTimeBy(long nanos) {
-        ticker.advance(nanos, TimeUnit.NANOSECONDS);
-    }
-
-    void freezeTime() {
-        ticker.freezeTime();
-    }
-
-    void unfreezeTime() {
-        ticker.unfreezeTime();
     }
 
     @Override
@@ -180,10 +169,8 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     /**
      * Ticker that implements the old {@link EmbeddedChannel} time freezing mechanics.
      */
-    private static final class FreezableTicker implements MockTicker {
+    static final class FreezableTicker implements MockTicker {
         private final Ticker unfrozen = Ticker.systemTicker();
-        private final Lock lock = new ReentrantLock();
-        private final Condition cond = lock.newCondition();
         /**
          * When time is not {@link #timeFrozen frozen}, the base time to subtract from {@link System#nanoTime()}. When
          * time is frozen, this variable is unused.
@@ -200,80 +187,44 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
 
         @Override
         public void advance(long amount, TimeUnit unit) {
-            lock.lock();
-            try {
-                long nanos = unit.toNanos(amount);
-                if (timeFrozen) {
-                    frozenTimestamp += nanos;
-                } else {
-                    // startTime is subtracted from nanoTime, so increasing the startTime will advance
-                    // getCurrentTimeNanos
-                    startTime -= nanos;
-                }
-                cond.signalAll();
-            } finally {
-                lock.unlock();
+            long nanos = unit.toNanos(amount);
+            if (timeFrozen) {
+                frozenTimestamp += nanos;
+            } else {
+                // startTime is subtracted from nanoTime, so increasing the startTime will advance
+                // getCurrentTimeNanos
+                startTime -= nanos;
             }
         }
 
         @Override
         public long nanoTime() {
-            lock.lock();
-            try {
-                if (timeFrozen) {
-                    return frozenTimestamp;
-                }
-                return unfrozen.nanoTime() - startTime;
-            } finally {
-                lock.unlock();
+            if (timeFrozen) {
+                return frozenTimestamp;
             }
+            return unfrozen.nanoTime() - startTime;
         }
 
         @Override
         public void sleep(long delay, TimeUnit unit) throws InterruptedException {
-            long deadline = nanoTime() + unit.toNanos(delay);
-            lock.lockInterruptibly();
-            try {
-                while (true) {
-                    long timeout = deadline - nanoTime();
-                    if (timeout < 0) {
-                        break;
-                    }
-                    if (timeFrozen) {
-                        cond.await();
-                    } else {
-                        cond.awaitNanos(timeout);
-                    }
-                }
-            } finally {
-                lock.unlock();
-            }
+            throw new UnsupportedOperationException("Sleeping is not supported by the default ticker for " +
+                    "EmbeddedEventLoop. Please use a different ticker implementation if you require sleep support.");
         }
 
         public void freezeTime() {
-            lock.lock();
-            try {
-                if (!timeFrozen) {
-                    frozenTimestamp = nanoTime();
-                    timeFrozen = true;
-                }
-            } finally {
-                lock.unlock();
+            if (!timeFrozen) {
+                frozenTimestamp = nanoTime();
+                timeFrozen = true;
             }
         }
 
         public void unfreezeTime() {
-            lock.lock();
-            try {
-                if (timeFrozen) {
-                    // we want getCurrentTimeNanos to continue right where frozenTimestamp left off:
-                    // nanoTime = unfrozen.nanoTime - startTime = frozenTimestamp
-                    // then solve for startTime
-                    startTime = unfrozen.nanoTime() - frozenTimestamp;
-                    timeFrozen = false;
-                }
-            } finally {
-                lock.unlock();
+            if (timeFrozen) {
+                // we want getCurrentTimeNanos to continue right where frozenTimestamp left off:
+                // nanoTime = unfrozen.nanoTime - startTime = frozenTimestamp
+                // then solve for startTime
+                startTime = unfrozen.nanoTime() - frozenTimestamp;
+                timeFrozen = false;
             }
         }
     }
