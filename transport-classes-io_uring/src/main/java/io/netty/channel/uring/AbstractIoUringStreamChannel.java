@@ -451,48 +451,35 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     allocHandle.lastBytesRead(ioResult("io_uring read", res));
                 } else if (res > 0) {
                     if (useBufferRing) {
-
-                        if (IoUring.isRecvsendBundleEnabled()) {
-                            // If RECVSEND_BUNDLE is supported we need to do a bit more work here.
-                            // In this case we might need to obtain multiple buffers out of the buffer ring as
-                            // multiple of them might have been filled for one recv operation.
-                            // See https://github.com/axboe/liburing/wiki/
-                            // What's-new-with-io_uring-in-6.10#add-support-for-sendrecv-bundles
-                            int read = res;
-                            for (;;) {
-                                int attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
-                                byteBuf = bufferRing.useBuffer(bid, read, more);
-                                read -= byteBuf.readableBytes();
-                                allocHandle.attemptedBytesRead(attemptedBytesRead);
-                                allocHandle.lastBytesRead(byteBuf.readableBytes());
-
-                                assert read >= 0;
-                                if (read == 0) {
-                                    // Just break here, we will handle the byteBuf below and also fill the bufferRing
-                                    // if needed later.
-                                    break;
-                                }
-                                allocHandle.incMessagesRead(1);
-                                pipeline.fireChannelRead(byteBuf);
-                                byteBuf = null;
-
-                                // Fill a new buffer for the bid after we fired the buffer through the pipeline.
-                                // We do it only after we called fireChannelRead(...) as there is a good chance
-                                // that the user will have released the buffer. In this case we reduce memory usage.
-                                bufferRing.fillBuffer();
-                                bid = bufferRing.nextBid(bid);
-                                if (!allocHandle.continueReading()) {
-                                    // We should call fireChannelReadComplete() to mimic a normal read loop.
-                                    allocHandle.readComplete();
-                                    pipeline.fireChannelReadComplete();
-                                    allocHandle.reset(config());
-                                }
-                            }
-                        } else {
+                        // If RECVSEND_BUNDLE is used we need to do a bit more work here.
+                        // In this case we might need to obtain multiple buffers out of the buffer ring as
+                        // multiple of them might have been filled for one recv operation.
+                        // See https://github.com/axboe/liburing/wiki/
+                        // What's-new-with-io_uring-in-6.10#add-support-for-sendrecv-bundles
+                        int read = res;
+                        for (;;) {
                             int attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
-                            byteBuf = bufferRing.useBuffer(bid, res, more);
+                            byteBuf = bufferRing.useBuffer(bid, read, more);
+                            read -= byteBuf.readableBytes();
                             allocHandle.attemptedBytesRead(attemptedBytesRead);
-                            allocHandle.lastBytesRead(res);
+                            allocHandle.lastBytesRead(byteBuf.readableBytes());
+
+                            assert read >= 0;
+                            if (read == 0) {
+                                // Just break here, we will handle the byteBuf below and also fill the bufferRing
+                                // if needed later.
+                                break;
+                            }
+                            allocHandle.incMessagesRead(1);
+                            pipeline.fireChannelRead(byteBuf);
+                            byteBuf = null;
+                            bid = bufferRing.nextBid(bid);
+                            if (!allocHandle.continueReading()) {
+                                // We should call fireChannelReadComplete() to mimic a normal read loop.
+                                allocHandle.readComplete();
+                                pipeline.fireChannelReadComplete();
+                                allocHandle.reset(config());
+                            }
                         }
                     } else {
                         int attemptedBytesRead = byteBuf.writableBytes();
@@ -524,12 +511,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 allocHandle.incMessagesRead(1);
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
-                if (useBufferRing && !more) {
-                    // Fill a new buffer for the bid after we fired the buffer through the pipeline.
-                    // We do it only after we called fireChannelRead(...) as there is a good chance
-                    // that the user will have released the buffer. In this case we reduce memory usage.
-                    bufferRing.fillBuffer();
-                }
                 scheduleNextRead(pipeline, allocHandle, rearm, empty);
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);

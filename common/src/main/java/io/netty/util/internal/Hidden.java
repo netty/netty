@@ -127,6 +127,10 @@ class Hidden {
 
             builder.allowBlockingCallsInside(
                     "io.netty.util.concurrent.SingleThreadEventExecutor",
+                    "pollTaskFrom");
+
+            builder.allowBlockingCallsInside(
+                    "io.netty.util.concurrent.SingleThreadEventExecutor",
                     "takeTask");
 
             builder.allowBlockingCallsInside(

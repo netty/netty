@@ -73,7 +73,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: prepare-release-workspace
-          path: ${{ github.workspace }}/**
+          path: |
+            ${{ github.workspace }}/**
+            !${{ github.workspace }}/.git/config
           include-hidden-files: true
 
   stage-release-linux:
@@ -180,7 +182,6 @@ jobs:
             os: macos-13
           - setup: macos-aarch64-java8
             os: macos-15
-
     runs-on: ${{ matrix.os }}
     name:  stage-release-${{ matrix.setup }}
 

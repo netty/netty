@@ -32,17 +32,24 @@ import static io.netty.util.internal.ObjectUtil.*;
  */
 public final class DeflateFrameServerExtensionHandshaker implements WebSocketServerExtensionHandshaker {
 
+    public static final int DEFAULT_COMPRESSION_LEVEL = 6;
+
     static final String X_WEBKIT_DEFLATE_FRAME_EXTENSION = "x-webkit-deflate-frame";
     static final String DEFLATE_FRAME_EXTENSION = "deflate-frame";
 
     private final int compressionLevel;
     private final WebSocketExtensionFilterProvider extensionFilterProvider;
+    private final int maxAllocation;
 
     /**
      * Constructor with default configuration.
+     * @deprecated
+     *            Use {@link DeflateFrameServerExtensionHandshaker#DeflateFrameServerExtensionHandshaker(int, int)}
+     *            with {@link DeflateFrameServerExtensionHandshaker#DEFAULT_COMPRESSION_LEVEL}.
      */
+    @Deprecated
     public DeflateFrameServerExtensionHandshaker() {
-        this(6);
+        this(DEFAULT_COMPRESSION_LEVEL, 0);
     }
 
     /**
@@ -50,9 +57,24 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
      *
      * @param compressionLevel
      *            Compression level between 0 and 9 (default is 6).
+     * @deprecated
+     *            Use {@link DeflateFrameServerExtensionHandshaker#DeflateFrameServerExtensionHandshaker(int, int)}.
      */
+    @Deprecated
     public DeflateFrameServerExtensionHandshaker(int compressionLevel) {
-        this(compressionLevel, WebSocketExtensionFilterProvider.DEFAULT);
+        this(compressionLevel, 0);
+    }
+
+    /**
+     * Constructor with custom configuration.
+     *
+     * @param compressionLevel
+     *            Compression level between 0 and 9 (default is 6).
+     * @param maxAllocation
+     *            Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
+     */
+    public DeflateFrameServerExtensionHandshaker(int compressionLevel, int maxAllocation) {
+        this(compressionLevel, WebSocketExtensionFilterProvider.DEFAULT, maxAllocation);
     }
 
     /**
@@ -62,15 +84,36 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
      *            Compression level between 0 and 9 (default is 6).
      * @param extensionFilterProvider
      *            provides server extension filters for per frame deflate encoder and decoder.
+     * @deprecated
+     *            Use {@link DeflateFrameServerExtensionHandshaker#DeflateFrameServerExtensionHandshaker(int,
+     *            WebSocketExtensionFilterProvider, int)}.
+     */
+    @Deprecated
+    public DeflateFrameServerExtensionHandshaker(int compressionLevel,
+                                                 WebSocketExtensionFilterProvider extensionFilterProvider) {
+        this(compressionLevel, extensionFilterProvider, 0);
+    }
+
+    /**
+     * Constructor with custom configuration.
+     *
+     * @param compressionLevel
+     *            Compression level between 0 and 9 (default is 6).
+     * @param extensionFilterProvider
+     *            provides server extension filters for per frame deflate encoder and decoder.
+     * @param maxAllocation
+     *            Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
      */
     public DeflateFrameServerExtensionHandshaker(int compressionLevel,
-            WebSocketExtensionFilterProvider extensionFilterProvider) {
+            WebSocketExtensionFilterProvider extensionFilterProvider,
+            int maxAllocation) {
         if (compressionLevel < 0 || compressionLevel > 9) {
             throw new IllegalArgumentException(
                     "compressionLevel: " + compressionLevel + " (expected: 0-9)");
         }
         this.compressionLevel = compressionLevel;
         this.extensionFilterProvider = checkNotNull(extensionFilterProvider, "extensionFilterProvider");
+        this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
     }
 
     @Override
@@ -81,7 +124,8 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
         }
 
         if (extensionData.parameters().isEmpty()) {
-            return new DeflateFrameServerExtension(compressionLevel, extensionData.name(), extensionFilterProvider);
+            return new DeflateFrameServerExtension(compressionLevel, extensionData.name(), extensionFilterProvider,
+                                                   maxAllocation);
         } else {
             return null;
         }
@@ -92,12 +136,15 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
         private final String extensionName;
         private final int compressionLevel;
         private final WebSocketExtensionFilterProvider extensionFilterProvider;
+        private final int maxAllocation;
 
         DeflateFrameServerExtension(int compressionLevel, String extensionName,
-                WebSocketExtensionFilterProvider extensionFilterProvider) {
+                WebSocketExtensionFilterProvider extensionFilterProvider,
+                int maxAllocation) {
             this.extensionName = extensionName;
             this.compressionLevel = compressionLevel;
             this.extensionFilterProvider = extensionFilterProvider;
+            this.maxAllocation = maxAllocation;
         }
 
         @Override
@@ -113,7 +160,7 @@ public final class DeflateFrameServerExtensionHandshaker implements WebSocketSer
 
         @Override
         public WebSocketExtensionDecoder newExtensionDecoder() {
-            return new PerFrameDeflateDecoder(false, extensionFilterProvider.decoderFilter());
+            return new PerFrameDeflateDecoder(false, extensionFilterProvider.decoderFilter(), maxAllocation);
         }
 
         @Override

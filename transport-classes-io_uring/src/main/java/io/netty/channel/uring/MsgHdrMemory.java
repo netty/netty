@@ -112,7 +112,8 @@ final class MsgHdrMemory {
         int bufferLength = Iov.getBufferLength(iovMemory);
         // reconstruct the reader index based on the memoryAddress of the buffer and the bufferAddress that was used
         // in the iovec.
-        int readerIndex = (int) (bufferAddress - buffer.memoryAddress());
+        long memoryAddress = IoUring.memoryAddress(buffer);
+        int readerIndex = (int) (bufferAddress - memoryAddress);
 
         ByteBuf slice = buffer.slice(readerIndex, bufferLength)
                 .writerIndex(bytesRead);

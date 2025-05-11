@@ -1090,7 +1090,7 @@ final class AdaptivePoolingAllocator {
 
         private ByteBuffer internalNioBuffer() {
             if (tmpNioBuf == null) {
-                tmpNioBuf = rootParent().internalNioBuffer(adjustment, length).slice();
+                tmpNioBuf = rootParent().nioBuffer(adjustment, length);
             }
             return (ByteBuffer) tmpNioBuf.clear();
         }
@@ -1237,21 +1237,24 @@ final class AdaptivePoolingAllocator {
         @Override
         public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
             checkIndex(index, length);
-            rootParent().setBytes(idx(index), src, srcIndex, length);
+            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
+            tmp.put(src, srcIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
             checkIndex(index, length);
-            rootParent().setBytes(idx(index), src, srcIndex, length);
+            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
+            tmp.put(src.nioBuffer(srcIndex, length));
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuffer src) {
             checkIndex(index, src.remaining());
-            rootParent().setBytes(idx(index), src);
+            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
+            tmp.put(src);
             return this;
         }
 

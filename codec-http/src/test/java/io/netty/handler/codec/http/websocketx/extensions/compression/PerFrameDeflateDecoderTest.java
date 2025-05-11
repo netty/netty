@@ -42,7 +42,7 @@ public class PerFrameDeflateDecoderTest {
     public void testCompressedFrame() {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false, 0));
 
         // initialize
         byte[] payload = new byte[300];
@@ -73,7 +73,7 @@ public class PerFrameDeflateDecoderTest {
 
     @Test
     public void testNormalFrame() {
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false, 0));
 
         // initialize
         byte[] payload = new byte[300];
@@ -103,7 +103,7 @@ public class PerFrameDeflateDecoderTest {
     public void testCompressedEmptyFrame() {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false, 0));
 
         assertTrue(encoderChannel.writeOutbound(Unpooled.EMPTY_BUFFER));
         ByteBuf compressedPayload = encoderChannel.readOutbound();
@@ -126,7 +126,7 @@ public class PerFrameDeflateDecoderTest {
     public void testDecompressionSkip() {
         EmbeddedChannel encoderChannel = new EmbeddedChannel(
                 ZlibCodecFactory.newZlibEncoder(ZlibWrapper.NONE, 9, 15, 8));
-        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false, ALWAYS_SKIP));
+        EmbeddedChannel decoderChannel = new EmbeddedChannel(new PerFrameDeflateDecoder(false, ALWAYS_SKIP, 0));
 
         byte[] payload = new byte[300];
         random.nextBytes(payload);

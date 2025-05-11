@@ -23,13 +23,18 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.ChannelOutputShutdownException;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class QuicStreamShutdownTest extends AbstractQuicTest {
 
@@ -73,6 +78,84 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
             streamChannel.writeAndFlush(Unpooled.buffer().writeLong(8)).sync();
 
             latch.await();
+        } finally {
+            QuicTestUtils.closeIfNotNull(channel);
+            QuicTestUtils.closeIfNotNull(server);
+
+            shutdown(executor);
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("newSslTaskExecutors")
+    public void testShutdownInputClosureByServerCausesStreamStopped(Executor executor) throws Throwable {
+        Channel server = null;
+        Channel channel = null;
+        CountDownLatch latch = new CountDownLatch(2);
+        AtomicReference<Throwable> errorRef = new AtomicReference<>();
+        try {
+            server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(),
+                    new ChannelInboundHandlerAdapter() {
+                        @Override
+                        public void channelRegistered(ChannelHandlerContext ctx) {
+                            ctx.fireChannelRegistered();
+                        }
+
+                        @Override
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                            QuicStreamChannel streamChannel = (QuicStreamChannel) ctx.channel();
+                            streamChannel.shutdownInput().addListener(new ChannelFutureListener() {
+                                @Override
+                                public void operationComplete(ChannelFuture f) throws Exception {
+                                    ByteBuf buffer = (ByteBuf) msg;
+                                    if (!f.isSuccess()) {
+                                        errorRef.compareAndSet(null, f.cause());
+                                        latch.countDown();
+                                        buffer.release();
+                                    } else {
+                                        ctx.writeAndFlush(buffer).addListener(new ChannelFutureListener() {
+                                            @Override
+                                            public void operationComplete(ChannelFuture channelFuture) {
+                                                if (!channelFuture.isSuccess()) {
+                                                    errorRef.compareAndSet(null, channelFuture.cause());
+                                                }
+                                                latch.countDown();
+                                            }
+                                        });
+                                    }
+                                }
+                            });
+                        }
+                    });
+
+            channel = QuicTestUtils.newClient(executor);
+            QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .remoteAddress(server.localAddress())
+                    .connect()
+                    .get();
+
+            QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
+                    new ByteToMessageDecoder() {
+                        @Override
+                        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> list) {
+                            if (in.readableBytes() == 4) {
+                                latch.countDown();
+                                ctx.close();
+                            }
+                        }
+                    }).sync().getNow();
+
+            streamChannel.writeAndFlush(Unpooled.buffer().writeInt(4)).sync();
+
+            if (!latch.await(5, TimeUnit.SECONDS)) {
+                fail("Timeout while waiting for completion", errorRef.get());
+            }
+            Throwable error = errorRef.get();
+            if (error != null) {
+                fail("Failure during execution", error);
+            }
         } finally {
             QuicTestUtils.closeIfNotNull(channel);
             QuicTestUtils.closeIfNotNull(server);

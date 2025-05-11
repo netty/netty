@@ -68,7 +68,8 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
                         new InboundHttp2ToHttpAdapterBuilder(connection)
                                 .maxContentLength(maxContentLength)
                                 .propagateSettings(true)
-                                .build()))
+                                .build(),
+                        maxContentLength))
                 .frameLogger(logger)
                 .connection(connection)
                 .build();
@@ -123,7 +124,8 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
     private void configureClearText(SocketChannel ch) {
         HttpClientCodec sourceCodec = new HttpClientCodec();
         Http2ClientUpgradeCodec upgradeCodec = new Http2ClientUpgradeCodec(connectionHandler);
-        HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 65536);
+        HttpClientUpgradeHandler upgradeHandler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec,
+                maxContentLength);
 
         ch.pipeline().addLast(sourceCodec,
                               upgradeHandler,

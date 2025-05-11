@@ -24,6 +24,8 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.nio.ByteBuffer;
+
 public final class IoUring {
 
     private static final Throwable UNAVAILABILITY_CAUSE;
@@ -45,7 +47,6 @@ public final class IoUring {
     private static final boolean IORING_RECV_MULTISHOT_ENABLED;
     private static final boolean IORING_RECVSEND_BUNDLE_ENABLED;
     private static final boolean IORING_POLL_ADD_MULTISHOT_ENABLED;
-
     static final int NUM_ELEMENTS_IOVEC;
 
     private static final InternalLogger logger;
@@ -95,12 +96,7 @@ public final class IoUring {
                         recvsendBundleSupported = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
                         // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
                         acceptSupportNoWait = recvsendBundleSupported;
-                        // Explicit disable recvsend bundles as there seems to be a bug which cause
-                        // and AssertionError which leads to the CI running out of memory.
-                        // We will enable this again once we found the bug and fixed it.
-                        //
-                        // TODO: Remove once fixed.
-                        recvsendBundleSupported = false;
+
                         acceptMultishotSupported = Native.isAcceptMultishotSupported(ringBuffer.fd());
                         recvMultishotSupported = Native.isRecvMultishotSupported();
                         pollAddMultishotSupported = Native.isPollAddMultiShotSupported(ringBuffer.fd());
@@ -180,8 +176,11 @@ public final class IoUring {
                 "io.netty.iouring.acceptMultiShotEnabled", true);
         IORING_RECV_MULTISHOT_ENABLED = IORING_RECV_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
                 "io.netty.iouring.recvMultiShotEnabled", true);
+        // Explicit disable RECVSEND_BUNDLE as there is a know kernel bug that will be fixed in the future:
+        // See https://lore.kernel.org/io-uring/364679fa-8fc3-4bcb-8296-0877f39d6f2c@gmail.com/
+        //      T/#ma949ad361d376247a16db73e741cb1043e56e6a4
         IORING_RECVSEND_BUNDLE_ENABLED = IORING_RECVSEND_BUNDLE_SUPPORTED && SystemPropertyUtil.getBoolean(
-                "io.netty.iouring.recvsendBundleEnabled", true);
+                "io.netty.iouring.recvsendBundleEnabled", false);
         IORING_POLL_ADD_MULTISHOT_ENABLED = IORING_POLL_ADD_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
                "io.netty.iouring.pollAddMultishotEnabled", true);
         NUM_ELEMENTS_IOVEC = numElementsIoVec;
@@ -329,7 +328,11 @@ public final class IoUring {
         if (buffer.hasMemoryAddress()) {
             return buffer.memoryAddress();
         }
-        return Buffer.memoryAddress(buffer.internalNioBuffer(0, buffer.capacity()));
+        // Use internalNioBuffer to reduce object creation.
+        // It is important to add the position as the returned ByteBuffer might be shared by multiple ByteBuf
+        // instances and so has an address that starts before the start of the ByteBuf itself.
+        ByteBuffer byteBuffer = buffer.internalNioBuffer(0, buffer.capacity());
+        return Buffer.memoryAddress(byteBuffer) + byteBuffer.position();
     }
 
     public static Throwable unavailabilityCause() {
