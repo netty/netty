@@ -199,8 +199,7 @@
       </activation>
       <properties>
         <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
