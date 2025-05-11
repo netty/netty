@@ -45,6 +45,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     protected byte writeOpCode;
     // Keep track of the ids used for write and read so we can cancel these when needed.
     protected long writeId;
+    protected byte readOpCode;
     protected long readId;
 
     // The configured buffer ring if any
@@ -340,6 +341,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 IoUringIoOps ops = IoUringIoOps.newRecv(fd, (byte) 0, ioPrio, recvFlags,
                         IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
                 readId = registration.submit(ops);
+                readOpCode = Native.IORING_OP_RECV;
                 if (readId == 0) {
                     return 0;
                 }
@@ -381,6 +383,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                         0, nextOpsId(), bgId
                 );
                 readId = registration.submit(ops);
+                readOpCode = Native.IORING_OP_RECV;
                 if (readId == 0) {
                     return 0;
                 }
@@ -622,7 +625,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         if (readId != 0) {
             // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
             assert numOutstandingReads == 1 || numOutstandingReads == -1;
-            IoUringIoOps ops = IoUringIoOps.newAsyncCancel((byte) 0, readId, Native.IORING_OP_RECV);
+            IoUringIoOps ops = IoUringIoOps.newAsyncCancel((byte) 0, readId, readOpCode);
             long id = registration.submit(ops);
             assert id != 0;
             readId = 0;

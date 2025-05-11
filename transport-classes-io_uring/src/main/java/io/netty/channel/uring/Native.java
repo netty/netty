@@ -89,7 +89,15 @@ final class Native {
     static final int SOCK_CLOEXEC = NativeStaticallyReferencedJniMethods.sockCloexec();
     static final short AF_INET = (short) NativeStaticallyReferencedJniMethods.afInet();
     static final short AF_INET6 = (short) NativeStaticallyReferencedJniMethods.afInet6();
+    static final short AF_UNIX = (short) NativeStaticallyReferencedJniMethods.afUnix();
     static final int SIZEOF_SOCKADDR_STORAGE = NativeStaticallyReferencedJniMethods.sizeofSockaddrStorage();
+    static final int SIZEOF_SOCKADDR_UN = NativeStaticallyReferencedJniMethods.sizeofSockaddrUn();
+    static final int SOCKADDR_UN_OFFSETOF_SUN_FAMILY =
+            NativeStaticallyReferencedJniMethods.sockaddrUnOffsetofSunFamily();
+    static final int SOCKADDR_UN_OFFSETOF_SUN_PATH =
+            NativeStaticallyReferencedJniMethods.sockaddrUnOffsetofSunPath();
+    static final int MAX_SUN_PATH_LEN =
+            NativeStaticallyReferencedJniMethods.maxSunPathLen();
     static final int SIZEOF_SOCKADDR_IN = NativeStaticallyReferencedJniMethods.sizeofSockaddrIn();
     static final int SIZEOF_SOCKADDR_IN6 = NativeStaticallyReferencedJniMethods.sizeofSockaddrIn6();
     static final int SOCKADDR_IN_OFFSETOF_SIN_FAMILY =

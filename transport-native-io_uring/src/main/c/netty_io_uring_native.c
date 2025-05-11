@@ -473,6 +473,10 @@ static jint netty_io_uring_afInet6(JNIEnv* env, jclass clazz) {
     return AF_INET6;
 }
 
+static jint netty_io_uring_afUnix(JNIEnv* env, jclass clazz) {
+    return AF_UNIX;
+}
+
 static jint netty_io_uring_sizeofSockaddrIn(JNIEnv* env, jclass clazz) {
     return sizeof(struct sockaddr_in);
 }
@@ -523,6 +527,23 @@ static jint netty_io_uring_in6AddressOffsetofS6Addr(JNIEnv* env, jclass clazz) {
 
 static jint netty_io_uring_sizeofSockaddrStorage(JNIEnv* env, jclass clazz) {
     return sizeof(struct sockaddr_storage);
+}
+
+static jint netty_io_uring_sizeofSockaddrUn(JNIEnv* env, jclass clazz) {
+    return sizeof(struct sockaddr_un);
+}
+
+static jint netty_io_uring_sockaddrUnOffsetofSunFamily(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_un, sun_family);
+}
+
+static jint netty_io_uring_sockaddrUnOffsetofSunPath(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_un, sun_path);
+}
+
+static jint netty_io_uring_max_sun_path_len(JNIEnv* env, jclass clazz) {
+     struct sockaddr_un addr;
+     return sizeof(addr.sun_path);
 }
 
 static jint netty_io_uring_sizeofSizeT(JNIEnv* env, jclass clazz) {
@@ -722,6 +743,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockCloexec", "()I", (void *) netty_io_uring_sockCloexec },
   { "afInet", "()I", (void *) netty_io_uring_afInet },
   { "afInet6", "()I", (void *) netty_io_uring_afInet6 },
+  { "afUnix", "()I", (void*) netty_io_uring_afUnix},
   { "sizeofSockaddrIn", "()I", (void *) netty_io_uring_sizeofSockaddrIn },
   { "sizeofSockaddrIn6", "()I", (void *) netty_io_uring_sizeofSockaddrIn6 },
   { "pageSize", "()I", (void*) netty_io_uring_pageSize},
@@ -736,6 +758,10 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockaddrIn6OffsetofSin6ScopeId", "()I", (void *) netty_io_uring_sockaddrIn6OffsetofSin6ScopeId },
   { "in6AddressOffsetofS6Addr", "()I", (void *) netty_io_uring_in6AddressOffsetofS6Addr },
   { "sizeofSockaddrStorage", "()I", (void *) netty_io_uring_sizeofSockaddrStorage },
+  { "sizeofSockaddrUn", "()I", (void *) netty_io_uring_sizeofSockaddrUn },
+  { "sockaddrUnOffsetofSunFamily", "()I", (void *) netty_io_uring_sockaddrUnOffsetofSunFamily },
+  { "sockaddrUnOffsetofSunPath", "()I", (void *) netty_io_uring_sockaddrUnOffsetofSunPath },
+  { "maxSunPathLen", "()I", (void *) netty_io_uring_max_sun_path_len },
   { "sizeofSizeT", "()I", (void *) netty_io_uring_sizeofSizeT },
   { "sizeofIovec", "()I", (void *) netty_io_uring_sizeofIovec },
   { "cmsgSpace", "()I", (void *) netty_io_uring_cmsgSpace},

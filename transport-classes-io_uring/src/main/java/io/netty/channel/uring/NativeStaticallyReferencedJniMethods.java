@@ -34,6 +34,7 @@ final class NativeStaticallyReferencedJniMethods {
     static native int sockCloexec();
     static native int afInet();
     static native int afInet6();
+    static native int afUnix();
     static native int sizeofSockaddrIn();
     static native int sizeofSockaddrIn6();
     static native int pageSize();
@@ -48,6 +49,10 @@ final class NativeStaticallyReferencedJniMethods {
     static native int sockaddrIn6OffsetofSin6ScopeId();
     static native int in6AddressOffsetofS6Addr();
     static native int sizeofSockaddrStorage();
+    static native int sizeofSockaddrUn();
+    static native int sockaddrUnOffsetofSunFamily();
+    static native int sockaddrUnOffsetofSunPath();
+    static native int maxSunPathLen();
     static native int sizeofSizeT();
     static native int sizeofIovec();
     static native int iovecOffsetofIovBase();

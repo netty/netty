@@ -26,6 +26,8 @@ import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
+import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.channel.unix.tests.UnixTestUtils;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
@@ -34,6 +36,7 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class IoUringSocketTestPermutation extends SocketTestPermutation {
@@ -136,6 +139,10 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
         return factories;
     }
 
+    public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> domainSocket() {
+        return combo(serverDomainSocket(), clientDomainSocket());
+    }
+
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(
             final SocketProtocolFamily family) {
@@ -178,4 +185,33 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
         return combo(bfs, bfs);
     }
+
+    public List<BootstrapFactory<ServerBootstrap>> serverDomainSocket() {
+        return Collections.<BootstrapFactory<ServerBootstrap>>singletonList(
+                new BootstrapFactory<ServerBootstrap>() {
+                    @Override
+                    public ServerBootstrap newInstance() {
+                        return new ServerBootstrap().group(IO_URING_BOSS_GROUP, IO_URING_WORKER_GROUP)
+                                .channel(IoUringServerDomainSocketChannel.class);
+                    }
+                }
+        );
+    }
+
+    public List<BootstrapFactory<Bootstrap>> clientDomainSocket() {
+        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(IO_URING_WORKER_GROUP)
+                                .channel(IoUringDomainSocketChannel.class);
+                    }
+                }
+        );
+    }
+
+    public static DomainSocketAddress newDomainSocketAddress() {
+        return UnixTestUtils.newDomainSocketAddress();
+    }
+
 }

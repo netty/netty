@@ -72,7 +72,7 @@ final class MsgHdr {
     static void set(ByteBuffer memory, int fd, ByteBuffer msgControl, int cmsgHdrDataOffset) {
         int memoryPosition = memory.position();
         long msgControlAddr = Buffer.memoryAddress(msgControl);
-        CmsgHdr.writeScmRights(msgControl,cmsgHdrDataOffset,fd);
+        CmsgHdr.writeScmRights(msgControl, cmsgHdrDataOffset, fd);
         if (Native.SIZEOF_SIZE_T == 4) {
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, (int) msgControlAddr);
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, Native.MSG_CONTROL_LEN_FOR_FD);
