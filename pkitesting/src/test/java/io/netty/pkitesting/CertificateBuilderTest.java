@@ -18,6 +18,7 @@ package io.netty.pkitesting;
 import io.netty.pkitesting.CertificateBuilder.Algorithm;
 import io.netty.pkitesting.CertificateBuilder.KeyUsage;
 import io.netty.util.internal.PlatformDependent;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;

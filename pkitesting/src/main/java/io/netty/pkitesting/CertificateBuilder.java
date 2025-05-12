@@ -763,7 +763,7 @@ public final class CertificateBuilder {
         }
         if ("ML-DSA".equals(keyAlgorithm)) {
             try {
-                Method getParams = key.getClass().getMethod("getParams");
+                Method getParams = Class.forName("java.security.AsymmetricKey").getMethod("getParams");
                 Object params = getParams.invoke(key);
                 Method getName = params.getClass().getMethod("getName");
                 return (String) getName.invoke(params);

@@ -392,10 +392,9 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             try {
                 recvmsgComplete(pipeline, allocHandle, byteBuf, res, flags, data, outstanding);
             } catch (Throwable t) {
-                if (connected && t instanceof NativeIoException) {
-                    t = translateForConnected((NativeIoException) t);
-                }
-                pipeline.fireExceptionCaught(t);
+                Throwable e = (connected && t instanceof NativeIoException) ?
+                  translateForConnected((NativeIoException) t) : t;
+                pipeline.fireExceptionCaught(e);
             }
         }
 

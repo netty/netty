@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.Objects;
@@ -66,7 +67,8 @@ public final class IoUringBufferRingConfig {
                                    boolean incremental, IoUringBufferRingAllocator allocator) {
         this.bgId = (short) ObjectUtil.checkPositiveOrZero(bgId, "bgId");
         this.bufferRingSize = checkBufferRingSize(bufferRingSize);
-        this.batchSize = ObjectUtil.checkInRange(batchSize, 1, bufferRingSize, "batchSize");
+        this.batchSize = MathUtil.findNextPositivePowerOfTwo(
+                ObjectUtil.checkInRange(batchSize, 1, bufferRingSize, "batchSize"));
         this.maxUnreleasedBuffers = ObjectUtil.checkInRange(
                 maxUnreleasedBuffers, bufferRingSize, Integer.MAX_VALUE, "maxUnreleasedBuffers");
         if (incremental && !IoUring.isRegisterBufferRingIncSupported()) {
