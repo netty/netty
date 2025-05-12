@@ -202,7 +202,6 @@
       </activation>
       <properties>
         <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
         <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
@@ -215,7 +214,6 @@
       </activation>
       <properties>
         <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
         <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
@@ -228,7 +226,6 @@
       </activation>
       <properties>
         <argLine.java9.extras />
-        <!-- Export some stuff which is used during our tests -->
         <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <!-- pax-exam does not work on latest Java12 EA 22 build -->
         <skipOsgiTestsuite>true</skipOsgiTestsuite>
