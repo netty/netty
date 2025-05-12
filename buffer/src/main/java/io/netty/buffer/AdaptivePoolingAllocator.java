@@ -98,17 +98,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     private static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int EXPANSION_ATTEMPTS = 3;
     private static final int INITIAL_MAGAZINES = 4;
-    private static final int RETIRE_CAPACITY = 4 * 1024;
+    private static final int RETIRE_CAPACITY = 256;
     private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
-    private static final int BUFS_PER_CHUNK = 10; // For large buffers, aim to have about this many buffers per chunk.
+    private static final int BUFS_PER_CHUNK = 8; // For large buffers, aim to have about this many buffers per chunk.
 
     /**
      * The maximum size of a pooled chunk, in bytes. Allocations bigger than this will never be pooled.
      * <p>
-     * This number is 10 MiB, and is derived from the limitations of internal histograms.
+     * This number is 8 MiB, and is derived from the limitations of internal histograms.
      */
-    private static final int MAX_CHUNK_SIZE =
-            BUFS_PER_CHUNK * (1 << AllocationStatistics.HISTO_MAX_BUCKET_SHIFT); // 10 MiB.
+    private static final int MAX_CHUNK_SIZE = 1 << AllocationStatistics.HISTO_MAX_BUCKET_SHIFT; // 8 MiB.
+    private static final int MAX_POOLED_BUF_SIZE = MAX_CHUNK_SIZE / BUFS_PER_CHUNK;
 
     /**
      * The capacity if the central queue that allow chunks to be shared across magazines.
@@ -162,7 +162,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 protected Object initialValue() {
                     if (cachedMagazinesNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null) {
                         if (!FastThreadLocalThread.willCleanupFastThreadLocals(Thread.currentThread())) {
-                            // To prevent potential leak, we will not use thread-local magazine.
+                            // To prevent a potential leak, we will not use thread-local magazine.
                             return NO_MAGAZINE;
                         }
                         Magazine mag = new Magazine(AdaptivePoolingAllocator.this, false);
@@ -221,8 +221,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     }
 
     private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
-        if (size <= MAX_CHUNK_SIZE) {
-            int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
+        if (size <= MAX_POOLED_BUF_SIZE) {
             FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
             if (threadLocalMagazine != null && currentThread instanceof FastThreadLocalThread) {
                 Object mag = threadLocalMagazine.get();
@@ -231,7 +230,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     if (buf == null) {
                         buf = magazine.newBuffer();
                     }
-                    boolean allocated = magazine.tryAllocate(size, sizeBucket, maxCapacity, buf);
+                    boolean allocated = magazine.tryAllocate(size, maxCapacity, buf);
                     assert allocated : "Allocation of threadLocalMagazine must always succeed";
                     return buf;
                 }
@@ -248,7 +247,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     if (buf == null) {
                         buf = mag.newBuffer();
                     }
-                    if (mag.tryAllocate(size, sizeBucket, maxCapacity, buf)) {
+                    if (mag.tryAllocate(size, maxCapacity, buf)) {
                         // Was able to allocate.
                         return buf;
                     }
@@ -277,7 +276,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
         Chunk chunk = new Chunk(innerChunk, magazine, false);
         try {
-            chunk.readInitInto(buf, size, maxCapacity);
+            chunk.readInitInto(buf, size, size, maxCapacity);
         } finally {
             // As the chunk is an one-off we need to always call release explicitly as readInitInto(...)
             // will take care of retain once when successful. Once The AdaptiveByteBuf is released it will
@@ -355,7 +354,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         return true;
     }
 
-    private boolean offerToQueue(Chunk buffer) {
+    boolean offerToQueue(Chunk buffer) {
         if (freed) {
             return false;
         }
@@ -416,9 +415,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private static final int MIN_DATUM_TARGET = 1024;
         private static final int MAX_DATUM_TARGET = 65534;
         private static final int INIT_DATUM_TARGET = 9;
-        private static final int HISTO_MIN_BUCKET_SHIFT = 13; // Smallest bucket is 1 << 13 = 8192 bytes in size.
-        private static final int HISTO_MAX_BUCKET_SHIFT = 20; // Biggest bucket is 1 << 20 = 1 MiB bytes in size.
-        private static final int HISTO_BUCKET_COUNT = 1 + HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT; // 8 buckets.
+        private static final int HISTO_MIN_BUCKET_SHIFT = 8; // Smallest bucket is 1 << 8 = 256 bytes in size.
+        private static final int HISTO_MAX_BUCKET_SHIFT = 23; // Biggest bucket is 1 << 23 = 8 MiB bytes in size.
+        private static final int HISTO_BUCKET_COUNT = 1 + HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT; // 16 buckets
         private static final int HISTO_MAX_BUCKET_MASK = HISTO_BUCKET_COUNT - 1;
         private static final int SIZE_MAX_MASK = MAX_CHUNK_SIZE - 1;
 
@@ -434,15 +433,24 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private int histoIndex;
         private int datumCount;
         private int datumTarget = INIT_DATUM_TARGET;
+        protected boolean hasHadRotation;
         protected volatile int sharedPrefChunkSize = MIN_CHUNK_SIZE;
         protected volatile int localPrefChunkSize = MIN_CHUNK_SIZE;
+        protected volatile int localUpperBufSize;
 
         private AllocationStatistics(AdaptivePoolingAllocator parent, boolean shareable) {
             this.parent = parent;
             this.shareable = shareable;
         }
 
-        protected void recordAllocationSize(int bucket) {
+        protected void recordAllocationSize(int bufferSizeToRecord) {
+            // Use the preserved size from the reused AdaptiveByteBuf, if available.
+            // Otherwise, use the requested buffer size.
+            // This way, we better take into account
+            if (bufferSizeToRecord == 0) {
+                return;
+            }
+            int bucket = sizeBucket(bufferSizeToRecord);
             histo[bucket]++;
             if (datumCount++ == datumTarget) {
                 rotateHistograms();
@@ -453,9 +461,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             if (size == 0) {
                 return 0;
             }
-            // Minimum chunk size is 128 KiB. We'll only make bigger chunks if the 99-percentile is 16 KiB or greater,
-            // so we truncate and roll up the bottom part of the histogram to 8 KiB.
-            // The upper size band is 1 MiB, and that gives us exactly 8 size buckets,
+            // Minimum chunk size is 128 KiB. We'll only make bigger chunks if the 99-percentile is 16 KiB or greater.
+            // We truncate and roll up the bottom part of the histogram to 256 bytes.
+            // The upper size bound is 8 MiB, and that gives us exactly 16 size buckets,
             // which is a magical number for JIT optimisations.
             int normalizedSize = size - 1 >> HISTO_MIN_BUCKET_SHIFT & SIZE_MAX_MASK;
             return Math.min(Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize), HISTO_MAX_BUCKET_MASK);
@@ -478,8 +486,10 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 }
                 targetPercentile -= sums[sizeBucket];
             }
+            hasHadRotation = true;
             int percentileSize = 1 << sizeBucket + HISTO_MIN_BUCKET_SHIFT;
             int prefChunkSize = Math.max(percentileSize * BUFS_PER_CHUNK, MIN_CHUNK_SIZE);
+            localUpperBufSize = percentileSize;
             localPrefChunkSize = prefChunkSize;
             if (shareable) {
                 for (Magazine mag : parent.magazines) {
@@ -563,17 +573,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             usedMemory = new AtomicLong();
         }
 
-        public boolean tryAllocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
+        public boolean tryAllocate(int size, int maxCapacity, AdaptiveByteBuf buf) {
             if (allocationLock == null) {
                 // This magazine is not shared across threads, just allocate directly.
-                return allocate(size, sizeBucket, maxCapacity, buf);
+                return allocate(size, maxCapacity, buf);
             }
 
             // Try to retrieve the lock and if successful allocate.
             long writeLock = allocationLock.tryWriteLock();
             if (writeLock != 0) {
                 try {
-                    return allocate(size, sizeBucket, maxCapacity, buf);
+                    return allocate(size, maxCapacity, buf);
                 } finally {
                     allocationLock.unlockWrite(writeLock);
                 }
@@ -596,12 +606,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 curr.attachToMagazine(this);
             }
             boolean allocated = false;
-            if (curr.remainingCapacity() >= size) {
-                curr.readInitInto(buf, size, maxCapacity);
+            int remainingCapacity = curr.remainingCapacity();
+            int startingCapacity = getStartingCapacity(size, maxCapacity);
+            if (remainingCapacity >= size) {
+                curr.readInitInto(buf, size, Math.min(remainingCapacity, startingCapacity), maxCapacity);
                 allocated = true;
             }
             try {
-                if (curr.remainingCapacity() >= RETIRE_CAPACITY) {
+                if (remainingCapacity >= RETIRE_CAPACITY) {
                     transferToNextInLineOrRelease(curr);
                     curr = null;
                 }
@@ -613,13 +625,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             return allocated;
         }
 
-        private boolean allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
-            recordAllocationSize(sizeBucket);
+        private boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf) {
+            recordAllocationSize(buf.length);
+            int startingCapacity = getStartingCapacity(size, maxCapacity);
             Chunk curr = current;
             if (curr != null) {
                 // We have a Chunk that has some space left.
-                if (curr.remainingCapacity() > size) {
-                    curr.readInitInto(buf, size, maxCapacity);
+                int remainingCapacity = curr.remainingCapacity();
+                if (remainingCapacity > startingCapacity) {
+                    curr.readInitInto(buf, size, startingCapacity, maxCapacity);
                     // We still have some bytes left that we can use for the next allocation, just early return.
                     return true;
                 }
@@ -627,9 +641,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 // At this point we know that this will be the last time current will be used, so directly set it to
                 // null and release it once we are done.
                 current = null;
-                if (curr.remainingCapacity() == size) {
+                if (remainingCapacity >= size) {
                     try {
-                        curr.readInitInto(buf, size, maxCapacity);
+                        curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
                         return true;
                     } finally {
                         curr.release();
@@ -637,7 +651,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 }
 
                 // Check if we either retain the chunk in the nextInLine cache or releasing it.
-                if (curr.remainingCapacity() < RETIRE_CAPACITY) {
+                if (remainingCapacity < RETIRE_CAPACITY) {
                     curr.release();
                 } else {
                     // See if it makes sense to transfer the Chunk to the nextInLine cache for later usage.
@@ -649,11 +663,12 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             assert current == null;
             // The fast-path for allocations did not work.
             //
-            // Try to fetch the next "Magazine local" Chunk first, if this this fails as we don't have
-            // one setup we will poll our centralQueue. If this fails as well we will just allocate a new Chunk.
+            // Try to fetch the next "Magazine local" Chunk first, if this fails because we don't have a
+            // next-in-line chunk available, we will poll our centralQueue.
+            // If this fails as well we will just allocate a new Chunk.
             //
             // In any case we will store the Chunk as the current so it will be used again for the next allocation and
-            // so be "reserved" by this Magazine for exclusive usage.
+            // thus be "reserved" by this Magazine for exclusive usage.
             curr = NEXT_IN_LINE.getAndSet(this, null);
             if (curr != null) {
                 if (curr == MAGAZINE_FREED) {
@@ -662,18 +677,19 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     return false;
                 }
 
-                if (curr.remainingCapacity() > size) {
+                int remainingCapacity = curr.remainingCapacity();
+                if (remainingCapacity > startingCapacity) {
                     // We have a Chunk that has some space left.
-                    curr.readInitInto(buf, size, maxCapacity);
+                    curr.readInitInto(buf, size, startingCapacity, maxCapacity);
                     current = curr;
                     return true;
                 }
 
-                if (curr.remainingCapacity() == size) {
+                if (remainingCapacity >= size) {
                     // At this point we know that this will be the last time curr will be used, so directly set it to
                     // null and release it once we are done.
                     try {
-                        curr.readInitInto(buf, size, maxCapacity);
+                        curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
                         return true;
                     } finally {
                         // Release in a finally block so even if readInitInto(...) would throw we would still correctly
@@ -693,9 +709,10 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             } else {
                 curr.attachToMagazine(this);
 
-                if (curr.remainingCapacity() < size) {
+                int remainingCapacity = curr.remainingCapacity();
+                if (remainingCapacity < size) {
                     // Check if we either retain the chunk in the nextInLine cache or releasing it.
-                    if (curr.remainingCapacity() < RETIRE_CAPACITY) {
+                    if (remainingCapacity < RETIRE_CAPACITY) {
                         curr.release();
                     } else {
                         // See if it makes sense to transfer the Chunk to the nextInLine cache for later usage.
@@ -708,12 +725,13 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
             current = curr;
             try {
-                assert current.remainingCapacity() >= size;
-                if (curr.remainingCapacity() > size) {
-                    curr.readInitInto(buf, size, maxCapacity);
+                int remainingCapacity = curr.remainingCapacity();
+                assert remainingCapacity >= size;
+                if (remainingCapacity > startingCapacity) {
+                    curr.readInitInto(buf, size, startingCapacity, maxCapacity);
                     curr = null;
                 } else {
-                    curr.readInitInto(buf, size, maxCapacity);
+                    curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
                 }
             } finally {
                 if (curr != null) {
@@ -724,6 +742,22 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 }
             }
             return true;
+        }
+
+        private int getStartingCapacity(int size, int maxCapacity) {
+            // Predict starting capacity from localUpperBufSize, but place limits on the max starting capacity
+            // based on the requested size, because localUpperBufSize can potentially be quite large.
+            int startCapLimits;
+            if (size <= 2048) { // Less than or equal to 2 KiB.
+                startCapLimits = 16384; // Use at most 16 KiB.
+            } else if (size <= 32768) { // Less than or equal to 32 KiB.
+                startCapLimits = 65536; // Use at most 64 KiB, which is also the AdaptiveRecvByteBufAllocator max.
+            } else {
+                startCapLimits = size * 2; // Otherwise use at most twice the requested memory.
+            }
+            int startingCapacity = Math.min(startCapLimits, localUpperBufSize);
+            startingCapacity = Math.max(size, Math.min(maxCapacity, startingCapacity));
+            return startingCapacity;
         }
 
         private void restoreMagazineFreed() {
@@ -763,6 +797,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 // but without the potentially high overhead that power-of-2 chunk sizes would bring.
                 size = MIN_CHUNK_SIZE * (1 + minChunks);
             }
+
+            // Limit chunks to the max size, even if the histogram suggests to go above it.
+            size = Math.min(size, MAX_CHUNK_SIZE);
+
+            // If we haven't rotated the histogram yet, optimisticly record this chunk size as our preferred.
+            if (!hasHadRotation && sharedPrefChunkSize == MIN_CHUNK_SIZE) {
+                sharedPrefChunkSize = size;
+            }
+
             ChunkAllocator chunkAllocator = parent.chunkAllocator;
             return new Chunk(chunkAllocator.allocate(size, size), this, true);
         }
@@ -948,13 +991,13 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     PlatformDependent.threadLocalRandom().nextDouble() * 20.0 < deviation;
         }
 
-        public void readInitInto(AdaptiveByteBuf buf, int size, int maxCapacity) {
+        public void readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
             int startIndex = allocatedBytes;
-            allocatedBytes = startIndex + size;
+            allocatedBytes = startIndex + startingCapacity;
             Chunk chunk = this;
             chunk.retain();
             try {
-                buf.init(delegate, chunk, 0, 0, startIndex, size, maxCapacity);
+                buf.init(delegate, chunk, 0, 0, startIndex, size, startingCapacity, maxCapacity);
                 chunk = null;
             } finally {
                 if (chunk != null) {
@@ -984,6 +1027,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private AbstractByteBuf rootParent;
         Chunk chunk;
         private int length;
+        private int maxFastCapacity;
         private ByteBuffer tmpNioBuf;
         private boolean hasArray;
         private boolean hasMemoryAddress;
@@ -994,10 +1038,11 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         void init(AbstractByteBuf unwrapped, Chunk wrapped, int readerIndex, int writerIndex,
-                  int adjustment, int capacity, int maxCapacity) {
+                  int adjustment, int size, int capacity, int maxCapacity) {
             this.adjustment = adjustment;
             chunk = wrapped;
-            length = capacity;
+            length = size;
+            maxFastCapacity = capacity;
             maxCapacity(maxCapacity);
             setIndex0(readerIndex, writerIndex);
             hasArray = unwrapped.hasArray();
@@ -1020,9 +1065,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         @Override
+        public int maxFastWritableBytes() {
+            return maxFastCapacity;
+        }
+
+        @Override
         public ByteBuf capacity(int newCapacity) {
-            if (newCapacity == capacity()) {
+            if (length <= newCapacity && newCapacity <= maxFastCapacity) {
                 ensureAccessible();
+                length = newCapacity;
                 return this;
             }
             checkNewCapacity(newCapacity);
@@ -1040,6 +1091,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             int baseOldRootIndex = adjustment;
             int oldCapacity = length;
             AbstractByteBuf oldRoot = rootParent();
+            length = 0; // Don't record buffer size statistics for this allocation.
             allocator.allocate(newCapacity, maxCapacity(), this);
             oldRoot.getBytes(baseOldRootIndex, this, 0, oldCapacity);
             chunk.release();
@@ -1098,7 +1150,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         private ByteBuffer internalNioBuffer() {
             if (tmpNioBuf == null) {
-                tmpNioBuf = rootParent().nioBuffer(adjustment, length);
+                tmpNioBuf = rootParent().nioBuffer(adjustment, maxFastCapacity);
             }
             return (ByteBuffer) tmpNioBuf.clear();
         }
