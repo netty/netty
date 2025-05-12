@@ -115,7 +115,8 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         super(parent, threadFactory, false, true, maxPendingTasks, rejectedExecutionHandler);
         this.maxTaskProcessingQuantumNs =
                 ObjectUtil.checkPositiveOrZero(maxTaskProcessingQuantumMs, "maxTaskProcessingQuantumMs") == 0 ?
-                        DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS : maxTaskProcessingQuantumMs;
+                        DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS :
+                        TimeUnit.MILLISECONDS.toNanos(maxTaskProcessingQuantumMs);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
     }
 
@@ -141,7 +142,8 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         super(parent, executor, false, true, maxPendingTasks, rejectedExecutionHandler);
         this.maxTaskProcessingQuantumNs =
                 ObjectUtil.checkPositiveOrZero(maxTaskProcessingQuantumMs, "maxTaskProcessingQuantumMs") == 0 ?
-                        DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS : maxTaskProcessingQuantumMs;
+                        DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS :
+                        TimeUnit.MILLISECONDS.toNanos(maxTaskProcessingQuantumMs);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
     }
 
