@@ -99,7 +99,6 @@ class CertificateBuilderTest {
         assertNotNull(keyPair.getPublic());
     }
 
-    @Disabled
     @EnabledForJreRange(
             min = JRE.JAVA_24,
             disabledReason = "ML-KEM is only supported in Java 24 onwards")
