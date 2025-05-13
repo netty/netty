@@ -43,8 +43,6 @@ jobs:
           - setup: linux-x86_64-java21
           - setup: linux-x86_64-java24
           - setup: windows-x86_64-java11-boringssl
-          - setup: macos-x86_64-java11-boringssl
-          - setup: macos-aarch64-java11-boringssl
     continue-on-error: ${{ matrix.ignore-if-missing }}
     steps:
       - name: Download Artifacts
