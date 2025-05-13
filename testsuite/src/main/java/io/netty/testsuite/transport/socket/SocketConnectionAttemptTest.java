@@ -39,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 
 import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_HOST;
 import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_PORT;
+import static io.netty.testsuite.transport.socket.SocketTestPermutation.UNASSIGNED_PORT;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -46,9 +47,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
-
-    // See /etc/services
-    private static final int UNASSIGNED_PORT = 4;
 
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
