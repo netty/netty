@@ -158,7 +158,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
 
             // Write payload
             if (maskPayload) {
-                int mask = PlatformDependent.threadLocalRandom().nextInt(Integer.MAX_VALUE);
+                int mask = PlatformDependent.threadLocalRandom().nextInt();
                 buf.writeInt(mask);
 
                 if (length > 0) {
