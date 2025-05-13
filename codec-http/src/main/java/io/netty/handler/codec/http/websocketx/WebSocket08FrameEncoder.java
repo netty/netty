@@ -106,22 +106,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
         final ByteBuf data = msg.content();
 
-        byte opcode;
-        if (msg instanceof TextWebSocketFrame) {
-            opcode = OPCODE_TEXT;
-        } else if (msg instanceof PingWebSocketFrame) {
-            opcode = OPCODE_PING;
-        } else if (msg instanceof PongWebSocketFrame) {
-            opcode = OPCODE_PONG;
-        } else if (msg instanceof CloseWebSocketFrame) {
-            opcode = OPCODE_CLOSE;
-        } else if (msg instanceof BinaryWebSocketFrame) {
-            opcode = OPCODE_BINARY;
-        } else if (msg instanceof ContinuationWebSocketFrame) {
-            opcode = OPCODE_CONT;
-        } else {
-            throw new UnsupportedOperationException("Cannot encode frame of type: " + msg.getClass().getName());
-        }
+        byte opcode = getOpCode(msg);
 
         int length = data.readableBytes();
 
@@ -176,7 +161,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 int mask = PlatformDependent.threadLocalRandom().nextInt(Integer.MAX_VALUE);
                 buf.writeInt(mask);
 
-                if (data.isReadable()) {
+                if (length > 0) {
 
                     ByteOrder srcOrder = data.order();
                     ByteOrder dstOrder = buf.order();
@@ -213,7 +198,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 }
                 out.add(buf);
             } else {
-                if (buf.writableBytes() >= data.readableBytes()) {
+                if (buf.writableBytes() >= length) {
                     // merge buffers as this is cheaper then a gathering write if the payload is small enough
                     buf.writeBytes(data);
                     out.add(buf);
@@ -228,5 +213,28 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 buf.release();
             }
         }
+    }
+
+    private static byte getOpCode(WebSocketFrame msg) {
+        if (msg instanceof TextWebSocketFrame) {
+            return OPCODE_TEXT;
+        }
+        if (msg instanceof PingWebSocketFrame) {
+            return OPCODE_PING;
+        }
+        if (msg instanceof PongWebSocketFrame) {
+            return OPCODE_PONG;
+        }
+        if (msg instanceof CloseWebSocketFrame) {
+            return OPCODE_CLOSE;
+        }
+        if (msg instanceof BinaryWebSocketFrame) {
+            return OPCODE_BINARY;
+        }
+        if (msg instanceof ContinuationWebSocketFrame) {
+            return OPCODE_CONT;
+        }
+
+        throw new UnsupportedOperationException("Cannot encode frame of type: " + msg.getClass().getName());
     }
 }
