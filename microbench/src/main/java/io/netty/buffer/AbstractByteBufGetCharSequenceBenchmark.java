@@ -53,7 +53,7 @@ public class AbstractByteBufGetCharSequenceBenchmark extends AbstractMicrobenchm
                 return Unpooled.wrappedBuffer(bytes, 0, length);
             }
         },
-        POOLED_HEAD {
+        POOLED_HEAP {
             @Override
             ByteBuf newBuffer(byte[] bytes, int length) {
                 return PooledByteBufAllocator.DEFAULT.heapBuffer(length).writeBytes(bytes, 0, length);
@@ -65,7 +65,7 @@ public class AbstractByteBufGetCharSequenceBenchmark extends AbstractMicrobenchm
                 return PooledByteBufAllocator.DEFAULT.directBuffer(length).writeBytes(bytes, 0, length);
             }
         },
-        ADAPTIVE_HEAD {
+        ADAPTIVE_HEAP {
             @Override
             ByteBuf newBuffer(byte[] bytes, int length) {
                 return ADAPTIVE_ALLOC.heapBuffer(length).writeBytes(bytes, 0, length);
