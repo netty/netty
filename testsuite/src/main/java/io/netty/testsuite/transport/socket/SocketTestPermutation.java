@@ -47,6 +47,9 @@ public class SocketTestPermutation {
     static final String BAD_HOST = SystemPropertyUtil.get("io.netty.testsuite.badHost", "198.51.100.254");
     static final int BAD_PORT = SystemPropertyUtil.getInt("io.netty.testsuite.badPort", 65535);
 
+    // See /etc/services
+    public static final int UNASSIGNED_PORT = 4;
+
     static {
         InternalLogger logger = InternalLoggerFactory.getInstance(SocketConnectionAttemptTest.class);
         logger.debug("-Dio.netty.testsuite.badHost: {}", BAD_HOST);
