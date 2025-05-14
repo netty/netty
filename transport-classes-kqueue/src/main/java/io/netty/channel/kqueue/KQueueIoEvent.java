@@ -26,6 +26,7 @@ public final class KQueueIoEvent implements IoEvent {
     private short flags;
     private int fflags;
     private long data;
+    private long udata;
 
     /**
      * Creates a new {@link KQueueIoEvent}.
@@ -35,30 +36,49 @@ public final class KQueueIoEvent implements IoEvent {
      * @param flags     the general flags.
      * @param fflags    filter-specific flags.
      * @return          {@link KQueueIoEvent}.
+     * @deprecated use {@link #newEvent(int, short, short, int, long, long)}
      */
+    @Deprecated
     public static KQueueIoEvent newEvent(int ident, short filter, short flags, int fflags) {
-        return new KQueueIoEvent(ident, filter, flags, fflags, 0);
+        return new KQueueIoEvent(ident, filter, flags, fflags, 0, 0);
     }
 
-    private KQueueIoEvent(int ident, short filter, short flags, int fflags, long data) {
+    /**
+     * Creates a new {@link KQueueIoEvent}.
+     *
+     * @param ident     the identifier for this event.
+     * @param filter    the filter for this event.
+     * @param flags     the general flags.
+     * @param fflags    filter-specific flags.
+     * @param data      the data
+     * @param udata     the user defined data that is passed through.
+     * @return          {@link KQueueIoEvent}.
+     */
+    public static KQueueIoEvent newEvent(int ident, short filter, short flags, int fflags, long data, long udata) {
+        return new KQueueIoEvent(ident, filter, flags, fflags, data, udata);
+    }
+
+    private KQueueIoEvent(int ident, short filter, short flags, int fflags, long data, long udata) {
         this.ident = ident;
         this.filter = filter;
         this.flags = flags;
         this.fflags = fflags;
         this.data = data;
+        this.udata = udata;
     }
 
     KQueueIoEvent() {
-        this(0, (short) 0, (short) 0, 0, 0);
+        this(0, (short) 0, (short) 0, 0, 0, 0);
     }
 
     // Only used internally for re-use.
-    void update(int ident, short filter, short flags, int fflags, long data) {
+    void update(int ident, short filter, short flags, int fflags, long data, long udata) {
         this.ident = ident;
         this.filter = filter;
         this.flags = flags;
         this.fflags = fflags;
         this.data = data;
+        this.udata = udata;
     }
 
     /**
@@ -106,6 +126,15 @@ public final class KQueueIoEvent implements IoEvent {
         return data;
     }
 
+    /**
+     * Returns user specified data.
+     *
+     * @return udata.
+     */
+    public long udata() {
+        return udata;
+    }
+
     @Override
     public String toString() {
         return "KQueueIoEvent{" +
@@ -114,6 +143,7 @@ public final class KQueueIoEvent implements IoEvent {
                 ", flags=" + flags +
                 ", fflags=" + fflags +
                 ", data=" + data +
+                ", udata=" + udata +
                 '}';
     }
 }

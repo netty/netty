@@ -27,8 +27,8 @@ import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.util.IntSupplier;
-import io.netty.util.collection.IntObjectHashMap;
-import io.netty.util.collection.IntObjectMap;
+import io.netty.util.collection.LongObjectHashMap;
+import io.netty.util.collection.LongObjectMap;
 import io.netty.util.concurrent.ThreadAwareExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
@@ -76,10 +76,30 @@ public final class KQueueIoHandler implements IoHandler {
         }
     };
     private final ThreadAwareExecutor executor;
-    private final IntObjectMap<DefaultKqueueIoRegistration> registrations = new IntObjectHashMap<>(4096);
+    private final LongObjectMap<DefaultKqueueIoRegistration> registrations = new LongObjectHashMap<>(4096);
     private int numChannels;
+    private long nextId;
 
     private volatile int wakenUp;
+
+    private long generateNextId() {
+        boolean reset = false;
+        for (;;) {
+            if (nextId == Long.MAX_VALUE) {
+                if (reset) {
+                    throw new IllegalStateException("All possible ids in use");
+                }
+                reset = true;
+            }
+            nextId++;
+            if (nextId == KQUEUE_WAKE_UP_IDENT) {
+                continue;
+            }
+            if (!registrations.containsKey(nextId)) {
+                return nextId;
+            }
+        }
+    }
 
     /**
      * Returns a new {@link IoHandlerFactory} that creates {@link KQueueIoHandler} instances.
@@ -170,15 +190,16 @@ public final class KQueueIoHandler implements IoHandler {
                 continue;
             }
 
-            DefaultKqueueIoRegistration registration = registrations.get(ident);
+            long id = eventList.udata(i);
+            DefaultKqueueIoRegistration registration = registrations.get(id);
             if (registration == null) {
                 // This may happen if the channel has already been closed, and it will be removed from kqueue anyways.
                 // We also handle EV_ERROR above to skip this even early if it is a result of a referencing a closed and
                 // thus removed from kqueue FD.
-                logger.warn("events[{}]=[{}, {}] had no registration!", i, ident, filter);
+                logger.warn("events[{}]=[{}, {}, {}] had no registration!", i, ident, id, filter);
                 continue;
             }
-            registration.handle(ident, filter, flags, eventList.fflags(i), eventList.data(i));
+            registration.handle(ident, filter, flags, eventList.fflags(i), eventList.data(i), id);
         }
     }
 
@@ -254,7 +275,7 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     List<Channel> registeredChannelsList() {
-        IntObjectMap<DefaultKqueueIoRegistration> ch = registrations;
+        LongObjectMap<DefaultKqueueIoRegistration> ch = registrations;
         if (ch.isEmpty()) {
             return Collections.emptyList();
         }
@@ -323,11 +344,11 @@ public final class KQueueIoHandler implements IoHandler {
 
         DefaultKqueueIoRegistration registration = new DefaultKqueueIoRegistration(
                 executor, kqueueHandle);
-        DefaultKqueueIoRegistration old = registrations.put(kqueueHandle.ident(), registration);
+        DefaultKqueueIoRegistration old = registrations.put(registration.id, registration);
         if (old != null) {
-            // restore old mapping and throw exception
-            registrations.put(kqueueHandle.ident(), old);
-            throw new IllegalStateException("registration for the KQueueIoHandle.ident() already exists");
+            // This should never happen but just in case.
+            registrations.put(old.id, old);
+            throw new IllegalStateException();
         }
 
         if (kqueueHandle instanceof AbstractKQueueChannel.AbstractKQueueUnsafe) {
@@ -360,12 +381,13 @@ public final class KQueueIoHandler implements IoHandler {
         private final KQueueIoEvent event = new KQueueIoEvent();
 
         final KQueueIoHandle handle;
-
+        final long id;
         private final ThreadAwareExecutor executor;
 
         DefaultKqueueIoRegistration(ThreadAwareExecutor executor, KQueueIoHandle handle) {
             this.executor = executor;
             this.handle = handle;
+            id = generateNextId();
         }
 
         @SuppressWarnings("unchecked")
@@ -391,13 +413,13 @@ public final class KQueueIoHandler implements IoHandler {
             return 0;
         }
 
-        void handle(int ident, short filter, short flags, int fflags, long data) {
-            event.update(ident, filter, flags, fflags, data);
+        void handle(int ident, short filter, short flags, int fflags, long data, long udata) {
+            event.update(ident, filter, flags, fflags, data, udata);
             handle.handle(this, event);
         }
 
         private void evSet(short filter, short flags, int fflags) {
-            changeList.evSet(handle.ident(), filter, flags, fflags);
+            changeList.evSet(handle.ident(), filter, flags, fflags, 0, id);
         }
 
         @Override
@@ -419,12 +441,11 @@ public final class KQueueIoHandler implements IoHandler {
         }
 
         private void cancel0() {
-            int ident = handle.ident();
-            DefaultKqueueIoRegistration old = registrations.remove(ident);
+            DefaultKqueueIoRegistration old = registrations.remove(id);
             if (old != null) {
                 if (old != this) {
                     // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
-                    registrations.put(ident, old);
+                    registrations.put(id, old);
                 } else if (old.handle instanceof AbstractKQueueChannel.AbstractKQueueUnsafe) {
                     numChannels--;
                 }
