@@ -450,7 +450,9 @@ public final class PlatformDependent {
 
     /**
      * Creates a new fastest {@link LongCounter} implementation for the current platform.
+     * @deprecated please use {@link java.util.concurrent.atomic.LongAdder} instead.
      */
+    @Deprecated
     public static LongCounter newLongCounter() {
         return new LongAdderCounter();
     }
