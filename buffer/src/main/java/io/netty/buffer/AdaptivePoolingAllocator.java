@@ -41,6 +41,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Queue;
 import java.util.Set;
@@ -1320,6 +1321,12 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             } catch (ClosedChannelException ignored) {
                 return -1;
             }
+        }
+
+        @Override
+        public int setCharSequence(int index, CharSequence sequence, Charset charset) {
+            checkIndex(index, sequence.length());
+            return rootParent().setCharSequence(idx(index), sequence, charset);
         }
 
         @Override

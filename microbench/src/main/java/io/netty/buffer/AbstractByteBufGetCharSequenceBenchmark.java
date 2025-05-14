@@ -27,9 +27,10 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.concurrent.TimeUnit;
 
-@Warmup(iterations = 5, time = 1, timeUnit = TimeUnit.SECONDS)
+@Warmup(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS)
 @Measurement(iterations = 10, time = 1, timeUnit = TimeUnit.SECONDS)
 public class AbstractByteBufGetCharSequenceBenchmark extends AbstractMicrobenchmark {
+    private static final AdaptiveByteBufAllocator ADAPTIVE_ALLOC = new AdaptiveByteBufAllocator();
 
     public enum ByteBufType {
         DIRECT {
@@ -52,6 +53,30 @@ public class AbstractByteBufGetCharSequenceBenchmark extends AbstractMicrobenchm
                 return Unpooled.wrappedBuffer(bytes, 0, length);
             }
         },
+        POOLED_HEAD {
+            @Override
+            ByteBuf newBuffer(byte[] bytes, int length) {
+                return PooledByteBufAllocator.DEFAULT.heapBuffer(length).writeBytes(bytes, 0, length);
+            }
+        },
+        POOLED_DIRECT {
+            @Override
+            ByteBuf newBuffer(byte[] bytes, int length) {
+                return PooledByteBufAllocator.DEFAULT.directBuffer(length).writeBytes(bytes, 0, length);
+            }
+        },
+        ADAPTIVE_HEAD {
+            @Override
+            ByteBuf newBuffer(byte[] bytes, int length) {
+                return ADAPTIVE_ALLOC.heapBuffer(length).writeBytes(bytes, 0, length);
+            }
+        },
+        ADAPTIVE_DIRECT {
+            @Override
+            ByteBuf newBuffer(byte[] bytes, int length) {
+                return ADAPTIVE_ALLOC.directBuffer(length).writeBytes(bytes, 0, length);
+            }
+        },
         COMPOSITE {
             @Override
             ByteBuf newBuffer(byte[] bytes, int length) {
@@ -67,11 +92,18 @@ public class AbstractByteBufGetCharSequenceBenchmark extends AbstractMicrobenchm
                 }
                 return buffer;
             }
-        };
+        }
+        ;
         abstract ByteBuf newBuffer(byte[] bytes, int length);
     }
 
-    @Param({ "8", "64", "1024", "10240", "1073741824" })
+    @Param({
+            "8",
+            "64",
+            "1024",
+            "10240",
+            "1073741824"
+    })
     public int size;
 
     @Param({
@@ -84,6 +116,7 @@ public class AbstractByteBufGetCharSequenceBenchmark extends AbstractMicrobenchm
     public ByteBufType bufferType;
 
     private ByteBuf buffer;
+    private String str;
     private Charset charset;
 
     @Override
@@ -96,6 +129,7 @@ public class AbstractByteBufGetCharSequenceBenchmark extends AbstractMicrobenchm
     public void setup() {
         byte[] bytes = new byte[size + 2];
         Arrays.fill(bytes, (byte) 'a');
+        str = new String(bytes, 0, size);
 
         // Use an offset to not allow any optimizations because we use the exact passed in byte[] for heap buffers.
         buffer = bufferType.newBuffer(bytes, size);
@@ -110,6 +144,11 @@ public class AbstractByteBufGetCharSequenceBenchmark extends AbstractMicrobenchm
     @Benchmark
     public int getCharSequence() {
         return traverse(buffer.getCharSequence(buffer.readerIndex(), size, charset));
+    }
+
+    @Benchmark
+    public int setCharSequence() {
+        return buffer.setCharSequence(0, str, charset);
     }
 
     @Benchmark
