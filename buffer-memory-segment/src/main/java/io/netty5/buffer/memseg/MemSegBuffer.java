@@ -185,22 +185,25 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
 
     @Override
     public boolean hasReadableArray() {
-        return false;
+        return this.seg.heapBase().isPresent();
     }
 
     @Override
     public byte[] readableArray() {
-        throw new UnsupportedOperationException("This component has no backing array.");
+        Object heapBase = this.seg.heapBase()
+            .orElseThrow(() -> new UnsupportedOperationException("This component has no backing array."));
+        return (byte[]) heapBase;
     }
 
     @Override
     public int readableArrayOffset() {
-        throw new UnsupportedOperationException("This component has no backing array.");
+        assertHasArray(seg);
+        return Math.toIntExact(seg.address()) + roff;
     }
 
     @Override
     public int readableArrayLength() {
-        throw new UnsupportedOperationException("This component has no backing array.");
+        return woff - roff;
     }
 
     @Override
@@ -218,22 +221,30 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
 
     @Override
     public boolean hasWritableArray() {
-        return false;
+        return this.wseg.heapBase().isPresent();
     }
 
     @Override
     public byte[] writableArray() {
-        throw new UnsupportedOperationException("This component has no backing array.");
+        Object heapBase = this.wseg.heapBase()
+            .orElseThrow(() -> new UnsupportedOperationException("This component has no backing array."));
+        return (byte[]) heapBase;
     }
 
     @Override
     public int writableArrayOffset() {
-        throw new UnsupportedOperationException("This component has no backing array.");
+        return Math.toIntExact(wseg.address()) + woff;
     }
 
     @Override
     public int writableArrayLength() {
-        throw new UnsupportedOperationException("This component has no backing array.");
+        return writableBytes();
+    }
+
+    private static void assertHasArray(MemorySegment seg) {
+        if (seg.heapBase().isEmpty()) {
+            throw new UnsupportedOperationException("This component has no backing array.");
+        }
     }
 
     @Override
