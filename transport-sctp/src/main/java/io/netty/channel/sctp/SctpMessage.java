@@ -20,7 +20,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.util.internal.ObjectUtil;
 
-import java.util.Objects;
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * Representation of SCTP Data Chunk
@@ -140,7 +141,7 @@ public final class SctpMessage extends DefaultByteBufHolder {
 
     @Override
     public int hashCode() {
-        return Objects.hash(streamIdentifier, protocolIdentifier, unordered, content());
+        return hashSum(streamIdentifier, protocolIdentifier, hash(unordered), hash(content()));
     }
 
     @Override

@@ -22,6 +22,9 @@ import io.netty.util.internal.StringUtil;
 
 import java.util.Objects;
 
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
+
 public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder implements Http2UnknownFrame {
     private final byte frameType;
     private final Http2Flags flags;
@@ -128,6 +131,6 @@ public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder impleme
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), frameType, flags, stream);
+        return hashSum(super.hashCode(), Byte.hashCode(frameType), hash(flags), hash(stream));
     }
 }

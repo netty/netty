@@ -17,7 +17,8 @@
 package io.netty.handler.codec.quic;
 
 import java.util.Arrays;
-import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * Session Ticket Key
@@ -113,7 +114,7 @@ public final class SslSessionTicketKey {
 
     @Override
     public int hashCode() {
-        return Objects.hash(Arrays.hashCode(name), Arrays.hashCode(hmacKey), Arrays.hashCode(aesKey));
+        return hashSum(Arrays.hashCode(name), Arrays.hashCode(hmacKey), Arrays.hashCode(aesKey));
     }
 
     @Override

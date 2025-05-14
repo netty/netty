@@ -15,10 +15,10 @@
  */
 package io.netty.handler.codec.http;
 
-import java.util.Objects;
-
 import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * The default {@link HttpRequest} implementation.
@@ -123,7 +123,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
 
     @Override
     public int hashCode() {
-        return Objects.hash(method, uri, super.hashCode());
+        return hashSum(hash(method), hash(uri), super.hashCode());
     }
 
     @Override

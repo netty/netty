@@ -17,6 +17,8 @@ package io.netty.handler.codec.xml;
 
 import java.util.Objects;
 
+import static io.netty.util.internal.ObjectUtil.hash;
+
 /**
  * XML namespace is part of XML element.
  */
@@ -54,7 +56,7 @@ public class XmlNamespace {
 
     @Override
     public int hashCode() {
-        return Objects.hash(prefix, uri);
+        return hash(prefix, uri);
     }
 
     @Override

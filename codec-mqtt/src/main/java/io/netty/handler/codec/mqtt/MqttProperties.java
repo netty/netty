@@ -16,12 +16,16 @@
 package io.netty.handler.codec.mqtt;
 
 import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * MQTT Properties container
@@ -183,7 +187,7 @@ public final class MqttProperties {
 
         @Override
         public int hashCode() {
-            return Objects.hash(propertyId, value);
+            return hashSum(propertyId, hash(value));
         }
 
         @Override
@@ -234,7 +238,7 @@ public final class MqttProperties {
 
         @Override
         public int hashCode() {
-            return Objects.hash(key, value);
+            return hash(key, value);
         }
 
         @Override

@@ -18,7 +18,7 @@ package io.netty.channel.kqueue;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
-import java.util.Objects;
+import static io.netty.util.internal.ObjectUtil.hash;
 
 @UnstableApi
 public final class AcceptFilter {
@@ -53,7 +53,7 @@ public final class AcceptFilter {
 
     @Override
     public int hashCode() {
-        return Objects.hash(filterName, filterArgs);
+        return hash(filterName, filterArgs);
     }
 
     @Override

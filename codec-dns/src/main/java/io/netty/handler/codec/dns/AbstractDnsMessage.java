@@ -25,9 +25,9 @@ import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * A skeletal implementation of {@link DnsMessage}.
@@ -405,7 +405,7 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
 
     @Override
     public int hashCode() {
-        return Objects.hash(id(), this instanceof DnsQuery);
+        return hashSum(id(), this instanceof DnsQuery? 0 : 1);
     }
 
     private Object sectionAt(int section) {

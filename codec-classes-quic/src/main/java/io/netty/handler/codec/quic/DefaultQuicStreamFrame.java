@@ -18,8 +18,6 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 
-import java.util.Objects;
-
 public final class DefaultQuicStreamFrame extends DefaultByteBufHolder implements QuicStreamFrame {
 
     private final boolean fin;
@@ -105,6 +103,6 @@ public final class DefaultQuicStreamFrame extends DefaultByteBufHolder implement
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), fin);
+        return 31 * super.hashCode() + (fin ? 1 : 0);
     }
 }

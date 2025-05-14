@@ -20,10 +20,10 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
 
-import java.util.Objects;
-
 import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * The default {@link Http2DataFrame} implementation.
@@ -189,6 +189,6 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), content, endStream, padding);
+        return hashSum(super.hashCode(), hash(content), Boolean.hashCode(endStream), padding);
     }
 }

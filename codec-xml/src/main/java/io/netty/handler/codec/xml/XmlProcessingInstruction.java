@@ -17,6 +17,8 @@ package io.netty.handler.codec.xml;
 
 import java.util.Objects;
 
+import static io.netty.util.internal.ObjectUtil.hash;
+
 /**
  * XML processing instruction
  */
@@ -54,7 +56,7 @@ public class XmlProcessingInstruction {
 
     @Override
     public int hashCode() {
-        return Objects.hash(data, target);
+        return hash(data, target);
     }
 
     @Override

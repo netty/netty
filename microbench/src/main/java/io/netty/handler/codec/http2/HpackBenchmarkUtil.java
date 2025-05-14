@@ -34,7 +34,9 @@ package io.netty.handler.codec.http2;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * Utility methods for hpack tests.
@@ -78,7 +80,7 @@ public final class HpackBenchmarkUtil {
 
         @Override
         public int hashCode() {
-            return Objects.hash(size, limitToAscii);
+            return hashSum(hash(size), hash(limitToAscii));
         }
     }
 

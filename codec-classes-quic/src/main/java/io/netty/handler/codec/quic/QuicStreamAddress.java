@@ -16,7 +16,6 @@
 package io.netty.handler.codec.quic;
 
 import java.net.SocketAddress;
-import java.util.Objects;
 
 /**
  * A {@link SocketAddress} for QUIC stream.
@@ -49,7 +48,7 @@ public final class QuicStreamAddress extends SocketAddress {
 
     @Override
     public int hashCode() {
-        return Objects.hash(streamId);
+        return Long.hashCode(streamId);
     }
 
     @Override

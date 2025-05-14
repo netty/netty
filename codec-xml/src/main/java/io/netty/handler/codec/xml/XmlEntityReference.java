@@ -17,6 +17,8 @@ package io.netty.handler.codec.xml;
 
 import java.util.Objects;
 
+import static io.netty.util.internal.ObjectUtil.hash;
+
 /**
  * XML entity reference ... {@code &#nnnn;}
  */
@@ -54,7 +56,7 @@ public class XmlEntityReference {
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, text);
+        return hash(name, text);
     }
 
     @Override

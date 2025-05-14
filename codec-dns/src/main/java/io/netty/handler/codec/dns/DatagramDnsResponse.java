@@ -19,7 +19,9 @@ import io.netty.channel.AddressedEnvelope;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * A {@link DnsResponse} implementation for UDP/IP.
@@ -209,6 +211,6 @@ public class DatagramDnsResponse extends DefaultDnsResponse
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), sender(), recipient());
+        return hashSum(super.hashCode(), hash(sender()), hash(recipient()));
     }
 }

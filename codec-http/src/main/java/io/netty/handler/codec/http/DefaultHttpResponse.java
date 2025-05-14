@@ -17,10 +17,10 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.internal.ObjectUtil;
 
-import java.util.Objects;
-
 import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * The default {@link HttpResponse} implementation.
@@ -128,7 +128,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
 
     @Override
     public int hashCode() {
-        return Objects.hash(status, super.hashCode());
+        return hashSum(hash(status), super.hashCode());
     }
 
     @Override

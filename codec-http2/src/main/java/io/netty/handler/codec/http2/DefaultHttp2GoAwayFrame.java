@@ -15,14 +15,13 @@
  */
 package io.netty.handler.codec.http2;
 
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.util.internal.StringUtil;
 
-import java.util.Objects;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * The default {@link Http2GoAwayFrame} implementation.
@@ -165,7 +164,7 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), errorCode, extraStreamIds);
+        return hashSum(super.hashCode(), Long.hashCode(errorCode), extraStreamIds);
     }
 
     @Override

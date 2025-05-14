@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.util.internal.StringUtil;
 
-import java.util.Objects;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 public final class DefaultSpdyUnknownFrame extends DefaultByteBufHolder implements SpdyUnknownFrame {
     private final int frameType;
@@ -98,7 +98,7 @@ public final class DefaultSpdyUnknownFrame extends DefaultByteBufHolder implemen
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), frameType, flags);
+        return hashSum(super.hashCode(), frameType, Byte.hashCode(flags));
     }
 
     @Override

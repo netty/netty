@@ -17,6 +17,9 @@ package io.netty.handler.codec.xml;
 
 import java.util.Objects;
 
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
+
 /**
  * Beginning of the XML document ... i.e. XML header
  */
@@ -72,7 +75,7 @@ public class XmlDocumentStart {
 
     @Override
     public int hashCode() {
-        return Objects.hash(encoding, version, standalone, encodingScheme);
+        return hashSum(hash(encoding), hash(version), Boolean.hashCode(standalone), hash(encodingScheme));
     }
 
     @Override

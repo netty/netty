@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
+import static io.netty.util.internal.ObjectUtil.hash;
+
 /**
  * Generic XML element in document, {@link XmlElementStart} represents open element and provides access to attributes,
  * {@link XmlElementEnd} represents closing element.
@@ -72,7 +74,7 @@ public abstract class XmlElement {
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, namespace, prefix, namespaces);
+        return hash(name, namespace, prefix, namespaces);
     }
 
     @Override

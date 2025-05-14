@@ -19,9 +19,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
 
-import java.util.Objects;
 import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
+import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * The version of HTTP or its derived protocols, such as
@@ -269,7 +273,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(protocolName(), majorVersion(), minorVersion());
+        return hashSum(hash(protocolName()), majorVersion(), minorVersion());
     }
 
     @Override

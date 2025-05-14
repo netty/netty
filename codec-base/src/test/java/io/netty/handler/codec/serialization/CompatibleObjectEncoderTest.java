@@ -23,8 +23,8 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
-import java.util.Objects;
 
+import static io.netty.util.internal.ObjectUtil.hashSum;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -73,7 +73,7 @@ public class CompatibleObjectEncoderTest {
 
         @Override
         public int hashCode() {
-            return Objects.hash(x, y);
+            return hashSum(x, y);
         }
     }
 }
