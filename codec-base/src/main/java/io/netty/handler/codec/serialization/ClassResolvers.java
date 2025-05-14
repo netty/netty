@@ -82,8 +82,7 @@ public final class ClassResolvers {
     public static ClassResolver weakCachingConcurrentResolver(ClassLoader classLoader) {
         return new CachingClassResolver(
                 new ClassLoaderClassResolver(defaultClassLoader(classLoader)),
-                new WeakReferenceMap<String, Class<?>>(
-                        new ConcurrentHashMap<String, Reference<Class<?>>>()));
+                new WeakReferenceMap<String, Class<?>>(new ConcurrentHashMap<>()));
     }
 
     /**
