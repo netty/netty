@@ -37,6 +37,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
+import java.util.Objects;
 
 import static io.netty.util.internal.MathUtil.isOutOfBounds;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -1373,6 +1374,50 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
         buf.append(')');
         return buf.toString();
+    }
+
+    @Override
+    public ByteBuf replaceRange(int fromIndex, int toIndex, ByteReplacer replacer) {
+        ensureAccessible();
+        ByteBufUtil.checkRange(fromIndex, toIndex, Byte.BYTES, this);
+        Objects.requireNonNull(replacer, "replacer");
+        for (int i = fromIndex; i < toIndex; i += Byte.BYTES) {
+            _setByte(i, replacer.replace(_getByte(i)));
+        }
+        return this;
+    }
+
+    @Override
+    public ByteBuf replaceRange(int fromIndex, int toIndex, ShortReplacer replacer) {
+        ensureAccessible();
+        ByteBufUtil.checkRange(fromIndex, toIndex, Short.BYTES, this);
+        Objects.requireNonNull(replacer, "replacer");
+        for (int i = fromIndex; i < toIndex; i += Short.BYTES) {
+            _setShort(i, replacer.replace(_getShort(i)));
+        }
+        return this;
+    }
+
+    @Override
+    public ByteBuf replaceRange(int fromIndex, int toIndex, IntReplacer replacer) {
+        ensureAccessible();
+        ByteBufUtil.checkRange(fromIndex, toIndex, Integer.BYTES, this);
+        Objects.requireNonNull(replacer, "replacer");
+        for (int i = fromIndex; i < toIndex; i += Integer.BYTES) {
+            _setInt(i, replacer.replace(_getInt(i)));
+        }
+        return this;
+    }
+
+    @Override
+    public ByteBuf replaceRange(int fromIndex, int toIndex, LongReplacer replacer) {
+        ensureAccessible();
+        ByteBufUtil.checkRange(fromIndex, toIndex, Long.BYTES, this);
+        Objects.requireNonNull(replacer, "replacer");
+        for (int i = fromIndex; i < toIndex; i += Long.BYTES) {
+            _setLong(i, replacer.replace(_getLong(i)));
+        }
+        return this;
     }
 
     protected final void checkIndex(int index) {
