@@ -763,8 +763,7 @@ public final class CertificateBuilder {
         }
         if ("ML-DSA".equals(keyAlgorithm)) {
             try {
-                Method getParams = key.getClass().getMethod("getParams");
-                Object params = getParams.invoke(key);
+                AlgorithmParameterSpec params = key.getParams();
                 Method getName = params.getClass().getMethod("getName");
                 return (String) getName.invoke(params);
             } catch (Exception e) {
