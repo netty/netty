@@ -649,7 +649,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     public int pinnedBytes() {
-        return (int) pinnedBytes.longValue();
+        return (int) pinnedBytes.sum();
     }
 
     @Override

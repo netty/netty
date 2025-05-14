@@ -398,7 +398,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         } finally {
             unlock();
         }
-        return allocationsSmall.longValue() + allocsNormal + allocationsHuge.longValue();
+        return allocationsSmall.sum() + allocsNormal + allocationsHuge.sum();
     }
 
     @Override
@@ -408,7 +408,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numSmallAllocations() {
-        return allocationsSmall.longValue();
+        return allocationsSmall.sum();
     }
 
     @Override
@@ -440,7 +440,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         } finally {
             unlock();
         }
-        return deallocs + deallocationsHuge.longValue();
+        return deallocs + deallocationsHuge.sum();
     }
 
     @Override
@@ -480,18 +480,18 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numHugeAllocations() {
-        return allocationsHuge.longValue();
+        return allocationsHuge.sum();
     }
 
     @Override
     public long numHugeDeallocations() {
-        return deallocationsHuge.longValue();
+        return deallocationsHuge.sum();
     }
 
     @Override
     public  long numActiveAllocations() {
-        long val = allocationsSmall.longValue() + allocationsHuge.longValue()
-                - deallocationsHuge.longValue();
+        long val = allocationsSmall.sum() + allocationsHuge.sum()
+                - deallocationsHuge.sum();
         lock();
         try {
             val += allocationsNormal - (deallocationsSmall + deallocationsNormal);
@@ -542,7 +542,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numActiveBytes() {
-        long val = activeBytesHuge.longValue();
+        long val = activeBytesHuge.sum();
         lock();
         try {
             for (int i = 0; i < chunkListMetrics.size(); i++) {
@@ -561,7 +561,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
      * pinned memory is not accessible for use by any other allocation, until the buffers using have all been released.
      */
     public long numPinnedBytes() {
-        long val = activeBytesHuge.longValue(); // Huge chunks are exact-sized for the buffers they were allocated to.
+        long val = activeBytesHuge.sum(); // Huge chunks are exact-sized for the buffers they were allocated to.
         for (int i = 0; i < chunkListMetrics.size(); i++) {
             for (PoolChunkMetric m: chunkListMetrics.get(i)) {
                 val += ((PoolChunk<?>) m).pinnedBytes();

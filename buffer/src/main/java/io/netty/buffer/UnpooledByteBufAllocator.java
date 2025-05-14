@@ -252,12 +252,12 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
 
         @Override
         public long usedHeapMemory() {
-            return heapCounter.longValue();
+            return heapCounter.sum();
         }
 
         @Override
         public long usedDirectMemory() {
-            return directCounter.longValue();
+            return directCounter.sum();
         }
 
         @Override
