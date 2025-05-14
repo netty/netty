@@ -1146,7 +1146,7 @@ public final class PlatformDependent {
         try {
             boolean hasUnsafe = PlatformDependent0.hasUnsafe();
             logger.debug("sun.misc.Unsafe: {}", hasUnsafe ? "available" : "unavailable");
-            return hasUnsafe ? null : PlatformDependent0.getUnsafeUnavailabilityCause();
+            return null;
         } catch (Throwable t) {
             logger.trace("Could not determine if Unsafe is available", t);
             // Probably failed to initialize PlatformDependent0.
