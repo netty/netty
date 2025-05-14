@@ -233,6 +233,7 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
 
     @Override
     public int writableArrayOffset() {
+        assertHasArray(wseg);
         return Math.toIntExact(wseg.address()) + woff;
     }
 
