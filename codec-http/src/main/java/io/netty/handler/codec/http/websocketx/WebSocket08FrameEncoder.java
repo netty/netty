@@ -184,7 +184,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
 
             // Write payload
             if (maskGenerator != null) {
-                int mask = ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
+                int mask = maskGenerator.nextMask();
                 buf.writeInt(mask);
 
                 // If the mask is 0 we can skip all the XOR operations.
