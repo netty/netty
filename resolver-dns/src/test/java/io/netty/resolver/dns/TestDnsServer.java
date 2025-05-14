@@ -16,7 +16,6 @@
 package io.netty.resolver.dns;
 
 import io.netty.util.NetUtil;
-import io.netty.util.internal.PlatformDependent;
 import org.apache.directory.server.dns.DnsServer;
 import org.apache.directory.server.dns.io.decoder.DnsMessageDecoder;
 import org.apache.directory.server.dns.io.encoder.DnsMessageEncoder;
@@ -55,6 +54,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 class TestDnsServer extends DnsServer {
     private static final Map<String, byte[]> BYTES = new HashMap<String, byte[]>();
@@ -294,7 +294,7 @@ class TestDnsServer extends DnsServer {
         }
 
         private static int index(int arrayLength) {
-            return Math.abs(PlatformDependent.threadLocalRandom().nextInt()) % arrayLength;
+            return Math.abs(ThreadLocalRandom.current().nextInt()) % arrayLength;
         }
 
         private static String nextDomain() {
@@ -328,19 +328,19 @@ class TestDnsServer extends DnsServer {
                     case A:
                         do {
                             attr.put(DnsAttribute.IP_ADDRESS.toLowerCase(Locale.US), nextIp());
-                        } while (PlatformDependent.threadLocalRandom().nextBoolean());
+                        } while (ThreadLocalRandom.current().nextBoolean());
                         break;
                     case AAAA:
                         do {
                             attr.put(DnsAttribute.IP_ADDRESS.toLowerCase(Locale.US), nextIp6());
-                        } while (PlatformDependent.threadLocalRandom().nextBoolean());
+                        } while (ThreadLocalRandom.current().nextBoolean());
                         break;
                     case MX:
                         int priority = 0;
                         do {
                             attr.put(DnsAttribute.DOMAIN_NAME.toLowerCase(Locale.US), nextDomain());
                             attr.put(DnsAttribute.MX_PREFERENCE.toLowerCase(Locale.US), String.valueOf(++priority));
-                        } while (PlatformDependent.threadLocalRandom().nextBoolean());
+                        } while (ThreadLocalRandom.current().nextBoolean());
                         break;
                     default:
                         return null;

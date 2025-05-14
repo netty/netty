@@ -32,6 +32,7 @@ import java.security.SecureRandom;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.util.CharsetUtil.*;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -50,7 +51,7 @@ public class AbstractMemoryHttpDataTest {
             tmpFile.deleteOnExit();
             FileOutputStream fos = new FileOutputStream(tmpFile);
             byte[] bytes = new byte[4096];
-            PlatformDependent.threadLocalRandom().nextBytes(bytes);
+            ThreadLocalRandom.current().nextBytes(bytes);
             try {
                 fos.write(bytes);
                 fos.flush();
@@ -77,7 +78,7 @@ public class AbstractMemoryHttpDataTest {
             tmpFile.deleteOnExit();
             final int totalByteCount = 4096;
             byte[] bytes = new byte[totalByteCount];
-            PlatformDependent.threadLocalRandom().nextBytes(bytes);
+            ThreadLocalRandom.current().nextBytes(bytes);
             ByteBuf content = Unpooled.wrappedBuffer(bytes);
             test.setContent(content);
             boolean succ = test.renameTo(tmpFile);

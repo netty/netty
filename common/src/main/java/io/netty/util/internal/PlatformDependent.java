@@ -1097,7 +1097,9 @@ public final class PlatformDependent {
 
     /**
      * Return a {@link Random} which is not-threadsafe and so can only be used from the same thread.
+     * @deprecated Use ThreadLocalRandom.current() instead.
      */
+    @Deprecated
     public static Random threadLocalRandom() {
         return ThreadLocalRandom.current();
     }

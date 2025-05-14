@@ -42,6 +42,7 @@ import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Helper class to load JNI resources.
@@ -372,7 +373,7 @@ public final class NativeLibraryLoader {
         byte[] idBytes = new byte[length];
         for (int i = 0; i < idBytes.length; i++) {
             // We should only use bytes as replacement that are in our UNIQUE_ID_BYTES array.
-            idBytes[i] = UNIQUE_ID_BYTES[PlatformDependent.threadLocalRandom()
+            idBytes[i] = UNIQUE_ID_BYTES[ThreadLocalRandom.current()
                     .nextInt(UNIQUE_ID_BYTES.length)];
         }
         return idBytes;

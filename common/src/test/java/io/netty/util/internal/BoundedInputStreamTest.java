@@ -22,6 +22,7 @@ import org.junit.jupiter.api.function.Executable;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -33,7 +34,7 @@ public class BoundedInputStreamTest {
     @RepeatedTest(50)
     void testBoundEnforced() throws IOException {
         final byte[] bytes = new byte[64];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         final BoundedInputStream reader = new BoundedInputStream(new ByteArrayInputStream(bytes), bytes.length - 1);
         assertEquals(bytes[0], (byte) reader.read());
 
@@ -80,7 +81,7 @@ public class BoundedInputStreamTest {
     @RepeatedTest(50)
     void testBigReadsPermittedIfUnderlyingStreamIsSmall() throws IOException {
         final byte[] bytes = new byte[64];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         final BoundedInputStream reader = new BoundedInputStream(new ByteArrayInputStream(bytes), 8192);
         final byte[] buffer = new byte[10000];
         assertThat(reader.read(buffer, 0, 10000)).isEqualTo(64);

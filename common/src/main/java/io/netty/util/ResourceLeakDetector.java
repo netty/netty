@@ -18,7 +18,6 @@ package io.netty.util;
 
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -31,6 +30,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -269,7 +269,7 @@ public class ResourceLeakDetector<T> {
         Level level = ResourceLeakDetector.level;
         if (force ||
                 level == Level.PARANOID ||
-                (level != Level.DISABLED && PlatformDependent.threadLocalRandom().nextInt(samplingInterval) == 0)) {
+                (level != Level.DISABLED && ThreadLocalRandom.current().nextInt(samplingInterval) == 0)) {
             reportLeak();
             return new DefaultResourceLeak(obj, refQueue, allLeaks, getInitialHint(resourceType));
         }
@@ -478,7 +478,7 @@ public class ResourceLeakDetector<T> {
                     final int numElements = oldHead.pos + 1;
                     if (numElements >= TARGET_RECORDS) {
                         final int backOffFactor = Math.min(numElements - TARGET_RECORDS, 30);
-                        dropped = PlatformDependent.threadLocalRandom().nextInt(1 << backOffFactor) != 0;
+                        dropped = ThreadLocalRandom.current().nextInt(1 << backOffFactor) != 0;
                         if (dropped) {
                             prevHead = oldHead.next;
                         }
