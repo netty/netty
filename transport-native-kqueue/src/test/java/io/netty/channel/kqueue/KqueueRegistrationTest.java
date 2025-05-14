@@ -30,9 +30,7 @@ import org.junit.jupiter.api.Test;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 public class KqueueRegistrationTest {
 
@@ -49,7 +47,6 @@ public class KqueueRegistrationTest {
         try {
             bootstrap.group(group)
                     .channel(KQueueSocketChannel.class)
-                    //.channel(NioSocketChannel.class)
                     .handler(new LoggingHandler());
             bootstrap.connect(new InetSocketAddress(NetUtil.LOCALHOST, SocketTestPermutation.UNASSIGNED_PORT))
                     .addListener(new ChannelFutureListener() {
@@ -72,7 +69,7 @@ public class KqueueRegistrationTest {
                         }
                     });
             Throwable cause = promise.sync().getNow();
-            assertThat(cause, is(instanceOf(ConnectException.class)));
+            assertInstanceOf(ConnectException.class, cause);
         } finally {
             group.shutdownGracefully();
         }
