@@ -19,12 +19,12 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReadOnlyIterator;
 
 import java.io.Closeable;
 import java.util.Iterator;
 import java.util.Map.Entry;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -35,7 +35,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public abstract class AbstractChannelPoolMap<K, P extends ChannelPool>
         implements ChannelPoolMap<K, P>, Iterable<Entry<K, P>>, Closeable {
-    private final ConcurrentMap<K, P> map = PlatformDependent.newConcurrentHashMap();
+    private final ConcurrentMap<K, P> map = new ConcurrentHashMap<>();
 
     @Override
     public final P get(K key) {

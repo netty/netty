@@ -443,7 +443,9 @@ public final class PlatformDependent {
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap}<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap() {
         return new ConcurrentHashMap<K, V>();
     }
@@ -457,21 +459,27 @@ public final class PlatformDependent {
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap}<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity) {
         return new ConcurrentHashMap<K, V>(initialCapacity);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap}<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity, float loadFactor) {
         return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap}<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(
             int initialCapacity, float loadFactor, int concurrencyLevel) {
         return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor, concurrencyLevel);
@@ -479,7 +487,9 @@ public final class PlatformDependent {
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap}<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(Map<? extends K, ? extends V> map) {
         return new ConcurrentHashMap<K, V>(map);
     }

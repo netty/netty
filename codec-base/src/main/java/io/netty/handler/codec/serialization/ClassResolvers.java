@@ -19,6 +19,7 @@ import io.netty.util.internal.PlatformDependent;
 
 import java.lang.ref.Reference;
 import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Factory methods for creating {@link ClassResolver} instances.
@@ -82,7 +83,7 @@ public final class ClassResolvers {
         return new CachingClassResolver(
                 new ClassLoaderClassResolver(defaultClassLoader(classLoader)),
                 new WeakReferenceMap<String, Class<?>>(
-                        PlatformDependent.<String, Reference<Class<?>>>newConcurrentHashMap()));
+                        new ConcurrentHashMap<String, Reference<Class<?>>>()));
     }
 
     /**
@@ -95,8 +96,7 @@ public final class ClassResolvers {
     public static ClassResolver softCachingConcurrentResolver(ClassLoader classLoader) {
         return new CachingClassResolver(
                 new ClassLoaderClassResolver(defaultClassLoader(classLoader)),
-                new SoftReferenceMap<String, Class<?>>(
-                        PlatformDependent.<String, Reference<Class<?>>>newConcurrentHashMap()));
+                new SoftReferenceMap<String, Class<?>>(new ConcurrentHashMap<>()));
     }
 
     static ClassLoader defaultClassLoader(ClassLoader classLoader) {
