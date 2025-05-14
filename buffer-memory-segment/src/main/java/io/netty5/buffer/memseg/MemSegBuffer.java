@@ -185,19 +185,20 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
 
     @Override
     public boolean hasReadableArray() {
-        return this.seg.heapBase().isPresent();
+        return seg.heapBase().isPresent();
     }
 
     @Override
     public byte[] readableArray() {
-        Object heapBase = this.seg.heapBase()
-            .orElseThrow(() -> new UnsupportedOperationException("This component has no backing array."));
+        Object heapBase = seg.heapBase().orElseThrow(MemSegBuffer::createNoBackingArrayException);
         return (byte[]) heapBase;
     }
 
     @Override
     public int readableArrayOffset() {
-        assertHasArray(seg);
+        if (!hasReadableArray()) {
+            throw createNoBackingArrayException();
+        }
         return Math.toIntExact(seg.address()) + roff;
     }
 
@@ -221,19 +222,20 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
 
     @Override
     public boolean hasWritableArray() {
-        return this.wseg.heapBase().isPresent();
+        return wseg.heapBase().isPresent();
     }
 
     @Override
     public byte[] writableArray() {
-        Object heapBase = this.wseg.heapBase()
-            .orElseThrow(() -> new UnsupportedOperationException("This component has no backing array."));
+        Object heapBase = wseg.heapBase().orElseThrow(MemSegBuffer::createNoBackingArrayException);
         return (byte[]) heapBase;
     }
 
     @Override
     public int writableArrayOffset() {
-        assertHasArray(wseg);
+        if (!hasWritableArray()) {
+            throw createNoBackingArrayException();
+        }
         return Math.toIntExact(wseg.address()) + woff;
     }
 
@@ -242,10 +244,8 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
         return writableBytes();
     }
 
-    private static void assertHasArray(MemorySegment seg) {
-        if (seg.heapBase().isEmpty()) {
-            throw new UnsupportedOperationException("This component has no backing array.");
-        }
+    private static UnsupportedOperationException createNoBackingArrayException() {
+        return new UnsupportedOperationException("This component has no backing array.");
     }
 
     @Override
