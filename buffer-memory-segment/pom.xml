@@ -64,6 +64,14 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <argLine>-Dio.netty5.buffer.MemoryManager=MemorySegment</argLine>
+          <dependenciesToScan>
+            <dependency>io.netty:netty5-buffer</dependency>
+            <dependency>io.netty:netty5-handler</dependency>
+            <dependency>io.netty:netty5-codec-http</dependency>
+          </dependenciesToScan>
+        </configuration>
       </plugin>
     </plugins>
   </build>
