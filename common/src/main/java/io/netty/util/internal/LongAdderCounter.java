@@ -17,6 +17,10 @@ package io.netty.util.internal;
 
 import java.util.concurrent.atomic.LongAdder;
 
+/**
+ * @deprecated please use {@link LongAdder} instead.
+ */
+@Deprecated
 final class LongAdderCounter extends LongAdder implements LongCounter {
 
     @Override
