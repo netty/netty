@@ -15,7 +15,8 @@
  */
 package io.netty.handler.codec.mqtt;
 
-import java.util.Objects;
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * Model the SubscriptionOption used in Subscribe MQTT v5 packet
@@ -104,7 +105,7 @@ public final class MqttSubscriptionOption {
 
     @Override
     public int hashCode() {
-        return Objects.hash(qos, noLocal, retainAsPublished, retainHandling);
+        return hashSum(hash(qos), Boolean.hashCode(noLocal), Boolean.hashCode(retainAsPublished), hash(retainHandling));
     }
 
     @Override

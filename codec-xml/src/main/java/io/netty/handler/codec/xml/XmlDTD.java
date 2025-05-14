@@ -17,6 +17,8 @@ package io.netty.handler.codec.xml;
 
 import java.util.Objects;
 
+import static io.netty.util.internal.ObjectUtil.hash;
+
 /**
  * DTD (Document Type Definition)
  */
@@ -47,7 +49,7 @@ public class XmlDTD {
 
     @Override
     public int hashCode() {
-        return Objects.hash(text);
+        return hash(text);
     }
 
     @Override

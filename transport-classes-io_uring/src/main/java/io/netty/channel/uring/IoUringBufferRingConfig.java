@@ -18,8 +18,6 @@ package io.netty.channel.uring;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectUtil;
 
-import java.util.Objects;
-
 /**
  * Configuration class for an {@link IoUringBufferRing}.
  * It will configure the buffer ring size, buffer group id and the chunk size.
@@ -158,6 +156,6 @@ public final class IoUringBufferRingConfig {
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(bgId);
+        return Short.hashCode(bgId);
     }
 }

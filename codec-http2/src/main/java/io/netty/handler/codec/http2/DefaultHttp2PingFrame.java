@@ -18,7 +18,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.util.internal.StringUtil;
 
-import java.util.Objects;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * The default {@link Http2PingFrame} implementation.
@@ -63,7 +63,7 @@ public class DefaultHttp2PingFrame implements Http2PingFrame {
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), ack);
+        return hashSum(super.hashCode(), Boolean.hashCode(ack));
     }
 
     @Override

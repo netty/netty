@@ -15,16 +15,17 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
 
-import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * The version of HTTP or its derived protocols, such as
@@ -253,7 +254,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(protocolName(), majorVersion(), minorVersion());
+        return hashSum(hash(protocolName()), majorVersion(), minorVersion());
     }
 
     @Override

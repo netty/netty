@@ -15,9 +15,9 @@
  */
 package io.netty.handler.codec.http;
 
-import java.util.Objects;
-
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * The default {@link HttpMessage} implementation.
@@ -80,7 +80,7 @@ public abstract class DefaultHttpMessage extends DefaultHttpObject implements Ht
 
     @Override
     public int hashCode() {
-        return Objects.hash(headers, version, super.hashCode());
+        return hashSum(hash(headers), hash(version), super.hashCode());
     }
 
     @Override

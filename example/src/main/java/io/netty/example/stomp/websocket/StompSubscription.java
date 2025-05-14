@@ -18,7 +18,7 @@ package io.netty.example.stomp.websocket;
 import io.netty.channel.Channel;
 import io.netty.util.internal.ObjectUtil;
 
-import java.util.Objects;
+import static io.netty.util.internal.ObjectUtil.hash;
 
 public final class StompSubscription {
 
@@ -62,6 +62,6 @@ public final class StompSubscription {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, destination, channel);
+        return hash(id, destination, channel);
     }
 }

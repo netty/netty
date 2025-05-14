@@ -22,7 +22,8 @@ import io.netty.util.internal.EmptyArrays;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.hash;
 
 /**
  * A {@link QuicConnectionAddress} that can be used to connect too.
@@ -90,7 +91,7 @@ public final class QuicConnectionAddress extends SocketAddress {
         if (this == EPHEMERAL) {
             return System.identityHashCode(EPHEMERAL);
         }
-        return Objects.hash(connId);
+        return hash(connId);
     }
 
     @Override

@@ -17,7 +17,8 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.AsciiString;
 
-import java.util.Objects;
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * Defines the common schemes used for the HTTP protocol as defined by
@@ -62,7 +63,7 @@ public final class HttpScheme {
 
     @Override
     public int hashCode() {
-        return Objects.hash(port, name);
+        return hashSum(port, hash(name));
     }
 
     @Override

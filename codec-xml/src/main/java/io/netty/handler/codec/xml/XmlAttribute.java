@@ -18,6 +18,8 @@ package io.netty.handler.codec.xml;
 
 import java.util.Objects;
 
+import static io.netty.util.internal.ObjectUtil.hash;
+
 /**
  * XML attributes, it is part of {@link XmlElement}
  */
@@ -76,7 +78,7 @@ public class XmlAttribute {
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, name, prefix, namespace, value);
+        return hash(type, name, prefix, namespace, value);
     }
 
     @Override

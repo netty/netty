@@ -17,7 +17,9 @@ package io.netty.handler.codec.xml;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * Specific {@link XmlElement} representing beginning  of element.
@@ -53,7 +55,7 @@ public class XmlElementStart extends XmlElement {
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), attributes);
+        return hashSum(super.hashCode(), hash(attributes));
     }
 
     @Override
