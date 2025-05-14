@@ -48,7 +48,9 @@ public final class TcpDnsQueryDecoder extends LengthFieldBasedFrameDecoder {
             if (frame == null) {
                 return null;
             }
-            return DnsMessageUtil.decodeDnsQuery(decoder, ctx.bufferAllocator(), frame.split(), DefaultDnsQuery::new);
+            try (Buffer buffer = frame.split()) {
+                return DnsMessageUtil.decodeDnsQuery(decoder, ctx.bufferAllocator(), buffer, DefaultDnsQuery::new);
+            }
         }
     }
 }
