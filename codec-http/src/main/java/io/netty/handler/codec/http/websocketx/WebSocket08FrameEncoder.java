@@ -219,6 +219,9 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
         if (msg instanceof TextWebSocketFrame) {
             return OPCODE_TEXT;
         }
+        if (msg instanceof BinaryWebSocketFrame) {
+            return OPCODE_BINARY;
+        }
         if (msg instanceof PingWebSocketFrame) {
             return OPCODE_PING;
         }
@@ -227,9 +230,6 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
         }
         if (msg instanceof CloseWebSocketFrame) {
             return OPCODE_CLOSE;
-        }
-        if (msg instanceof BinaryWebSocketFrame) {
-            return OPCODE_BINARY;
         }
         if (msg instanceof ContinuationWebSocketFrame) {
             return OPCODE_CONT;
