@@ -15,14 +15,13 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.PlatformDependent;
-
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -37,7 +36,8 @@ public class SlicedByteBufTest extends AbstractByteBufTest {
     @Override
     protected final ByteBuf newBuffer(int length, int maxCapacity) {
         Assumptions.assumeTrue(maxCapacity == Integer.MAX_VALUE);
-        int offset = length == 0 ? 0 : PlatformDependent.threadLocalRandom().nextInt(length);
+        int offset;
+        offset = length == 0 ? 0 : ThreadLocalRandom.current().nextInt(length);
         ByteBuf buffer = Unpooled.buffer(length * 2);
         ByteBuf slice = newSlice(buffer, offset, length);
         assertEquals(0, slice.readerIndex());

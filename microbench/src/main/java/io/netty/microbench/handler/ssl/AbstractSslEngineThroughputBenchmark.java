@@ -17,13 +17,13 @@ package io.netty.microbench.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
-import io.netty.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
 
 import java.nio.ByteBuffer;
+import java.util.concurrent.ThreadLocalRandom;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 
@@ -45,7 +45,7 @@ public abstract class AbstractSslEngineThroughputBenchmark extends AbstractSslEn
         wrapSrcBuffer = allocateBuffer(messageSize);
 
         byte[] bytes = new byte[messageSize];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         wrapSrcBuffer.put(bytes);
         wrapSrcBuffer.flip();
 

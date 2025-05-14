@@ -100,6 +100,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -110,7 +111,6 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.KeyManagerFactorySpi;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SNIHostName;
-import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -318,7 +318,7 @@ public abstract class SSLEngineTest {
             case Heap:
                 return ByteBuffer.allocate(len);
             case Mixed:
-                return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                return ThreadLocalRandom.current().nextBoolean() ?
                         ByteBuffer.allocateDirect(len) : ByteBuffer.allocate(len);
             default:
                 throw new Error();
@@ -343,7 +343,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.heapBuffer();
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer() : allocator.heapBuffer();
                 default:
                     throw new Error();
@@ -358,7 +358,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.heapBuffer(initialCapacity);
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer(initialCapacity) : allocator.heapBuffer(initialCapacity);
                 default:
                     throw new Error();
@@ -373,7 +373,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.heapBuffer(initialCapacity, maxCapacity);
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer(initialCapacity, maxCapacity) :
                             allocator.heapBuffer(initialCapacity, maxCapacity);
                 default:
@@ -434,7 +434,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.compositeHeapBuffer();
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.compositeDirectBuffer() :
                             allocator.compositeHeapBuffer();
                 default:
@@ -450,7 +450,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.compositeHeapBuffer(maxNumComponents);
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.compositeDirectBuffer(maxNumComponents) :
                             allocator.compositeHeapBuffer(maxNumComponents);
                 default:

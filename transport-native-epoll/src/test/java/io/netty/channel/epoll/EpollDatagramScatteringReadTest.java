@@ -25,7 +25,6 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractDatagramTest;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -35,6 +34,7 @@ import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -255,7 +255,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
 
             final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
             final byte[] bytes = new byte[packetSize];
-            PlatformDependent.threadLocalRandom().nextBytes(bytes);
+            ThreadLocalRandom.current().nextBytes(bytes);
 
             final CountDownLatch latch = new CountDownLatch(1);
             sb.handler(new SimpleChannelInboundHandler<DatagramPacket>() {

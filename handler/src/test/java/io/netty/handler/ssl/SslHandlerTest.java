@@ -64,7 +64,6 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 import org.hamcrest.CoreMatchers;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
@@ -91,6 +90,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1326,7 +1326,7 @@ public class SslHandlerTest {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         Channel sc = null;
         final byte[] bytes = new byte[96];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         try {
             final AtomicReference<AssertionError> assertErrorRef = new AtomicReference<AssertionError>();
             sc = new ServerBootstrap()

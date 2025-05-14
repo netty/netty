@@ -22,7 +22,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.PlatformDependent;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -31,6 +30,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Queue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.GZIPOutputStream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -139,7 +139,7 @@ public class JdkZlibTest extends ZlibTest {
     @Test
     public void testDecodeWithHeaderFollowingFooter() throws Exception {
         byte[] bytes = new byte[1024];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
         GZIPOutputStream out = new GZIPOutputStream(bytesOut);
         out.write(bytes);

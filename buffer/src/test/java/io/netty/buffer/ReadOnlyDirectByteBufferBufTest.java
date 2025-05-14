@@ -30,6 +30,7 @@ import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.nio.ReadOnlyBufferException;
 import java.nio.channels.FileChannel;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.buffer.AbstractByteBufTest.assertReadyOnlyNioBuffer;
@@ -390,7 +391,7 @@ public class ReadOnlyDirectByteBufferBufTest {
         try {
             output = new RandomAccessFile(file, "rw").getChannel();
             byte[] bytes = new byte[1024];
-            PlatformDependent.threadLocalRandom().nextBytes(bytes);
+            ThreadLocalRandom.current().nextBytes(bytes);
             output.write(ByteBuffer.wrap(bytes));
 
             input = new RandomAccessFile(file, "r").getChannel();
@@ -492,7 +493,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     @Test
     public void testDuplicateReadGatheringByteChannelMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         ByteBuffer nioBuffer = allocate(bytes.length);
         nioBuffer.put(bytes);
         nioBuffer.flip();
@@ -507,7 +508,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     @Test
     public void testSliceReadGatheringByteChannelMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         ByteBuffer nioBuffer = allocate(bytes.length);
         nioBuffer.put(bytes);
         nioBuffer.flip();
@@ -522,7 +523,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     @Test
     public void testDuplicateReadOutputStreamMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         ByteBuffer nioBuffer = allocate(bytes.length);
         nioBuffer.put(bytes);
         nioBuffer.flip();
@@ -537,7 +538,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     @Test
     public void testSliceReadOutputStreamMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         ByteBuffer nioBuffer = allocate(bytes.length);
         nioBuffer.put(bytes);
         nioBuffer.flip();
@@ -552,7 +553,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     @Test
     public void testDuplicateBytesInArrayMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         ByteBuffer nioBuffer = allocate(bytes.length);
         nioBuffer.put(bytes);
         nioBuffer.flip();
@@ -567,7 +568,7 @@ public class ReadOnlyDirectByteBufferBufTest {
     @Test
     public void testSliceBytesInArrayMultipleThreads() throws Exception {
         final byte[] bytes = new byte[8];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         ByteBuffer nioBuffer = allocate(bytes.length);
         nioBuffer.put(bytes);
         nioBuffer.flip();
@@ -798,7 +799,7 @@ public class ReadOnlyDirectByteBufferBufTest {
 
     private ByteBuf newRandomReadOnlyBuffer() {
         final byte[] bytes = new byte[8];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         ByteBuffer nioBuffer = allocate(bytes.length);
         nioBuffer.put(bytes);
         nioBuffer.flip();
