@@ -21,10 +21,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.NetUtil;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -90,16 +90,16 @@ public class QuicCodecDispatcherTest {
 
     private static void writePacket(EmbeddedChannel[] channels, boolean shortHeader, short localConnectionIdLength) {
         DatagramPacket packet = createQuicPacket(
-                PlatformDependent.threadLocalRandom().nextInt(channels.length),
+                ThreadLocalRandom.current().nextInt(channels.length),
                 shortHeader, localConnectionIdLength);
-        channels[PlatformDependent.threadLocalRandom().nextInt(channels.length)].writeInbound(packet);
+        channels[ThreadLocalRandom.current().nextInt(channels.length)].writeInbound(packet);
     }
 
     // See https://www.rfc-editor.org/rfc/rfc9000.html#section-17
     private static DatagramPacket createQuicPacket(int idx, boolean shortHeader, short localConnectionIdLength) {
         ByteBuf content = Unpooled.buffer();
         byte[] random = new byte[localConnectionIdLength];
-        PlatformDependent.threadLocalRandom().nextBytes(random);
+        ThreadLocalRandom.current().nextBytes(random);
 
         if (shortHeader) {
             content.writeByte(0);
@@ -115,7 +115,7 @@ public class QuicCodecDispatcherTest {
             content.setShort(writerIndex, (short) idx);
         }
         // Add some more data.
-        content.writeZero(PlatformDependent.threadLocalRandom().nextInt(32));
+        content.writeZero(ThreadLocalRandom.current().nextInt(32));
         return new DatagramPacket(content, new InetSocketAddress(NetUtil.LOCALHOST, 0));
     }
 }

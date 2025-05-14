@@ -499,7 +499,7 @@ public class DnsNameResolverTest {
                 if (EXCLUSIONS_RESOLVE_A.contains(name)) {
                     continue;
                 }
-                if (PlatformDependent.threadLocalRandom().nextBoolean()) {
+                if (java.util.concurrent.ThreadLocalRandom.current().nextBoolean()) {
                     overriddenHostnames.add(name);
                 }
             }
