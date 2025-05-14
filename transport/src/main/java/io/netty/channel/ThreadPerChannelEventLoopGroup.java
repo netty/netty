@@ -27,13 +27,13 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReadOnlyIterator;
 
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
@@ -51,8 +51,8 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     private final Object[] childArgs;
     private final int maxChannels;
     final Executor executor;
-    final Set<EventLoop> activeChildren =
-            Collections.newSetFromMap(PlatformDependent.<EventLoop, Boolean>newConcurrentHashMap());
+    final Set<EventLoop> activeChildren
+            = Collections.newSetFromMap(new ConcurrentHashMap<>());
     final Queue<EventLoop> idleChildren = new ConcurrentLinkedQueue<EventLoop>();
     private final ChannelException tooManyChannels;
 
