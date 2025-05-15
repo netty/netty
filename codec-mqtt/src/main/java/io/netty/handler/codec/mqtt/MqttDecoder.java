@@ -237,6 +237,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             multiplier *= 128;
         }
 
+        // MQTT protocol limits Remaining Length to 4 bytes
         throw new DecoderException("remaining length exceeds 4 digits (" + messageType + ')');
     }
 
