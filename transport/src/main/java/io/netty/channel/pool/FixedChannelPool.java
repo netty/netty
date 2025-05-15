@@ -19,6 +19,9 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
+import io.netty.channel.pool.processingorder.FifoChannelProcessingOrder;
+import io.netty.channel.pool.processingorder.LifoChannelProcessingOrder;
+import io.netty.channel.pool.processingorder.ChannelProcessingOrder;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
@@ -149,6 +152,10 @@ public class FixedChannelPool extends SimpleChannelPool {
     }
 
     /**
+     * @deprecated Use {@link #FixedChannelPool(Bootstrap, ChannelPoolHandler, ChannelHealthChecker,
+     * AcquireTimeoutAction, long, int, int, boolean, ChannelProcessingOrder)} instead. The {@code lastRecentUsed}
+     * parameter is replaced by {@link ChannelProcessingOrder}.
+     *
      * Creates a new instance.
      *
      * @param bootstrap             the {@link Bootstrap} that is used for connections
@@ -168,13 +175,45 @@ public class FixedChannelPool extends SimpleChannelPool {
      *                              {@code true}.
      * @param lastRecentUsed        {@code true} {@link Channel} selection will be LIFO, if {@code false} FIFO.
      */
+    @Deprecated
     public FixedChannelPool(Bootstrap bootstrap,
                             ChannelPoolHandler handler,
                             ChannelHealthChecker healthCheck, AcquireTimeoutAction action,
                             final long acquireTimeoutMillis,
                             int maxConnections, int maxPendingAcquires,
                             boolean releaseHealthCheck, boolean lastRecentUsed) {
-        super(bootstrap, handler, healthCheck, releaseHealthCheck, lastRecentUsed);
+        this(bootstrap, handler, healthCheck, action, acquireTimeoutMillis, maxConnections, maxPendingAcquires,
+                releaseHealthCheck,
+                lastRecentUsed ? new LifoChannelProcessingOrder() : new FifoChannelProcessingOrder());
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param bootstrap             the {@link Bootstrap} that is used for connections
+     * @param handler               the {@link ChannelPoolHandler} that will be notified for the different pool actions
+     * @param healthCheck           the {@link ChannelHealthChecker} that will be used to check if a {@link Channel} is
+     *                              still healthy when obtain from the {@link ChannelPool}
+     * @param action                the {@link AcquireTimeoutAction} to use or {@code null} if non should be used.
+     *                              In this case {@param acquireTimeoutMillis} must be {@code -1}.
+     * @param acquireTimeoutMillis  the time (in milliseconds) after which an pending acquire must complete or
+     *                              the {@link AcquireTimeoutAction} takes place.
+     * @param maxConnections        the number of maximal active connections, once this is reached new tries to
+     *                              acquire a {@link Channel} will be delayed until a connection is returned to the
+     *                              pool again.
+     * @param maxPendingAcquires    the maximum number of pending acquires. Once this is exceed acquire tries will
+     *                              be failed.
+     * @param releaseHealthCheck    will check channel health before offering back if this parameter set to
+     *                              {@code true}.
+     * @param processingOrder       the {@link ChannelProcessingOrder} that is used to retrieve {@link Channel}
+     */
+    public FixedChannelPool(Bootstrap bootstrap,
+                            ChannelPoolHandler handler,
+                            ChannelHealthChecker healthCheck, AcquireTimeoutAction action,
+                            final long acquireTimeoutMillis,
+                            int maxConnections, int maxPendingAcquires,
+                            boolean releaseHealthCheck, ChannelProcessingOrder processingOrder) {
+        super(bootstrap, handler, healthCheck, releaseHealthCheck, processingOrder);
         checkPositive(maxConnections, "maxConnections");
         checkPositive(maxPendingAcquires, "maxPendingAcquires");
         if (action == null && acquireTimeoutMillis == -1) {
