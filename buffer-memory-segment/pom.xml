@@ -36,7 +36,6 @@
     <java.compatibility>22</java.compatibility>
     <!-- Java version actually used to perform the build; compiling and testing. -->
     <java.version>22</java.version>
-    <surefire.version>3.0.0-M5</surefire.version>
     <jmh.version>1.33</jmh.version>
   </properties>
 
@@ -65,7 +64,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>${surefire.version}</version>
       </plugin>
     </plugins>
   </build>
