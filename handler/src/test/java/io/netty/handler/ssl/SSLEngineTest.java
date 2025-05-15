@@ -633,7 +633,11 @@ public abstract class SSLEngineTest {
             serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
             // Set the server to only support a single TLSv1.2 cipher
-            final String serverCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+            final String serverCipher =
+                    // JDK24+ does not support TLS_RSA_* ciphers by default anymore:
+                    // See https://www.java.com/en/configure_crypto.html
+                    PlatformDependent.javaVersion() >= 24 ? "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" :
+                            "TLS_RSA_WITH_AES_128_CBC_SHA";
             serverEngine.setEnabledCipherSuites(new String[] { serverCipher });
 
             // Set the client to only support a single TLSv1.3 cipher
@@ -2247,7 +2251,11 @@ public abstract class SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
         // due to no shared/supported cipher.
-        final String sharedCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        final String sharedCipher =
+                // JDK24+ does not support TLS_RSA_* ciphers by default anymore:
+                // See https://www.java.com/en/configure_crypto.html
+                PlatformDependent.javaVersion() >= 24 ? "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" :
+                "TLS_RSA_WITH_AES_128_CBC_SHA";
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher))
@@ -2280,7 +2288,11 @@ public abstract class SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
         // due to no shared/supported cipher.
-        final String sharedCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        final String sharedCipher =
+                // JDK24+ does not support TLS_RSA_* ciphers by default anymore:
+                // See https://www.java.com/en/configure_crypto.html
+                PlatformDependent.javaVersion() >= 24 ? "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" :
+                        "TLS_RSA_WITH_AES_128_CBC_SHA";
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher), SupportedCipherSuiteFilter.INSTANCE)
