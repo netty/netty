@@ -1800,12 +1800,12 @@
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>3.3.0</version>
+          <version>3.5.3</version>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>3.3.0</version>
+          <version>3.5.3</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>

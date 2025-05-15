@@ -27,7 +27,6 @@ import io.netty.handler.codec.http.websocketx.WebSocket08FrameDecoder;
 import io.netty.handler.codec.http.websocketx.WebSocket08FrameEncoder;
 import io.netty.microbench.channel.EmbeddedChannelHandlerContext;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.internal.ThreadLocalRandom;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -41,6 +40,8 @@ import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.profile.GCProfiler;
 import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 @State(Scope.Benchmark)
 @Fork(value = 2)
