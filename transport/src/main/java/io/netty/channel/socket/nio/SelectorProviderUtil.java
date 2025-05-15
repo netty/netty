@@ -55,9 +55,7 @@ final class SelectorProviderUtil {
                 @SuppressWarnings("unchecked")
                 C channel = (C) method.invoke(provider, family);
                 return channel;
-            } catch (InvocationTargetException e) {
-                throw new IOException(e);
-            } catch (IllegalAccessException e) {
+            } catch (InvocationTargetException | IllegalAccessException e) {
                 throw new IOException(e);
             }
         }

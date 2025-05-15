@@ -109,11 +109,7 @@ final class PlatformDependent0 {
                         }
                         // the unsafe instance
                         return unsafeField.get(null);
-                    } catch (NoSuchFieldException e) {
-                        return e;
-                    } catch (SecurityException e) {
-                        return e;
-                    } catch (IllegalAccessException e) {
+                    } catch (NoSuchFieldException | IllegalAccessException | SecurityException e) {
                         return e;
                     } catch (NoClassDefFoundError e) {
                         // Also catch NoClassDefFoundError in case someone uses for example OSGI and it made
@@ -189,11 +185,7 @@ final class PlatformDependent0 {
                                 finalUnsafe.freeMemory(address);
                             }
                             return null;
-                        } catch (UnsupportedOperationException e) {
-                            return e;
-                        } catch (NoSuchMethodException e) {
-                            return e;
-                        } catch (SecurityException e) {
+                        } catch (UnsupportedOperationException | SecurityException | NoSuchMethodException e) {
                             return e;
                         }
                     }
@@ -233,9 +225,7 @@ final class PlatformDependent0 {
                                 return null;
                             }
                             return field;
-                        } catch (NoSuchFieldException e) {
-                            return e;
-                        } catch (SecurityException e) {
+                        } catch (NoSuchFieldException | SecurityException e) {
                             return e;
                         }
                     }
@@ -387,15 +377,8 @@ final class PlatformDependent0 {
                             return cause;
                         }
                         return unalignedMethod.invoke(null);
-                    } catch (NoSuchMethodException e) {
-                        return e;
-                    } catch (SecurityException e) {
-                        return e;
-                    } catch (IllegalAccessException e) {
-                        return e;
-                    } catch (ClassNotFoundException e) {
-                        return e;
-                    } catch (InvocationTargetException e) {
+                    } catch (NoSuchMethodException | SecurityException | IllegalAccessException |
+                             InvocationTargetException | ClassNotFoundException e) {
                         return e;
                     }
                 }
