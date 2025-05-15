@@ -390,6 +390,10 @@ public class WebSocket13FrameDecoder extends ByteToMessageDecoder implements Web
         int index = 0;
 
         int intMask = mask;
+        if (intMask == 0) {
+            // If the mask is 0 we can just return directly as the XOR operations will just produce the same value.
+            return;
+        }
         for (; index + 3 < len; index += Integer.BYTES) {
             int off = base + index;
             frame.setInt(off, frame.getInt(off) ^ intMask);
