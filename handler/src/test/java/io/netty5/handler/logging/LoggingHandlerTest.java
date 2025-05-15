@@ -550,7 +550,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogBufferDataReadWithSimpleFormat() throws Exception {
         try (Buffer msg = preferredAllocator().copyOf("hello", StandardCharsets.UTF_8)) {
-            EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler(LogLevel.DEBUG, BufferFormat.SIMPLE));
+            EmbeddedChannel channel = new EmbeddedChannel(newLoggingHandler(LogLevel.WARN, BufferFormat.SIMPLE));
             channel.writeInbound(msg.copy());
             appender.verify(new RegexLogMatcher(".+READ: " + msg.readableBytes() + 'B', false));
 
@@ -584,7 +584,7 @@ public class LoggingHandlerTest {
     }
 
     private LoggingHandler newLoggingHandler() {
-        return newLoggingHandler(LoggingHandler.DEFAULT_LEVEL);
+        return newLoggingHandler(LogLevel.WARN);
     }
 
     private LoggingHandler newLoggingHandler(LogLevel level) {
