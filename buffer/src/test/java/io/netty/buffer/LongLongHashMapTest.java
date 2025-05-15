@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.jupiter.api.Test;
 
 import java.util.HashMap;
@@ -23,6 +22,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.PrimitiveIterator.OfLong;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
