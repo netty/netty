@@ -216,24 +216,28 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 throw new DecoderException("Unknown message type, do not know how to validate fixed header");
         }
 
-        int remainingLength = 0;
-        int multiplier = 1;
-        short digit;
-        int loops = 0;
-        do {
-            digit = buffer.readUnsignedByte();
-            remainingLength += (digit & 127) * multiplier;
-            multiplier *= 128;
-            loops++;
-        } while ((digit & 128) != 0 && loops < 4);
-
-        // MQTT protocol limits Remaining Length to 4 bytes
-        if (loops == 4 && (digit & 128) != 0) {
-            throw new DecoderException("remaining length exceeds 4 digits (" + messageType + ')');
-        }
+        int remainingLength = parseRemainingLength(buffer, messageType);
         MqttFixedHeader decodedFixedHeader =
                 new MqttFixedHeader(messageType, dupFlag, MqttQoS.valueOf(qosLevel), retain, remainingLength);
         return validateFixedHeader(ctx, resetUnusedFields(decodedFixedHeader));
+    }
+
+    private static int parseRemainingLength(ByteBuf buffer, MqttMessageType messageType) {
+        int remainingLength = 0;
+        int multiplier = 1;
+
+        for (int i = 0; i < 4; i++) {
+            short digit = buffer.readUnsignedByte();
+            remainingLength += (digit & 0x7F) * multiplier;
+
+            if ((digit & 0x80) == 0) {
+                return remainingLength;
+            }
+
+            multiplier *= 128;
+        }
+
+        throw new DecoderException("remaining length exceeds 4 digits (" + messageType + ')');
     }
 
     /**
