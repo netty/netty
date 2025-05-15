@@ -22,6 +22,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.PriorityQueue;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -169,7 +170,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     /**
      * Accounting of pinned memory – memory that is currently in use by ByteBuf instances.
      */
-    private final LongCounter pinnedBytes = PlatformDependent.newLongCounter();
+    private final LongAdder pinnedBytes = new LongAdder();
 
     final int pageSize;
     final int pageShifts;
@@ -648,7 +649,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     public int pinnedBytes() {
-        return (int) pinnedBytes.value();
+        return (int) pinnedBytes.sum();
     }
 
     @Override

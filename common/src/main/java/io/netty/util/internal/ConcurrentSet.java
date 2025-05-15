@@ -18,6 +18,7 @@ package io.netty.util.internal;
 import java.io.Serializable;
 import java.util.AbstractSet;
 import java.util.Iterator;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -34,7 +35,7 @@ public final class ConcurrentSet<E> extends AbstractSet<E> implements Serializab
      * Creates a new instance which wraps the specified {@code map}.
      */
     public ConcurrentSet() {
-        map = PlatformDependent.newConcurrentHashMap();
+        map = new ConcurrentHashMap<>();
     }
 
     @Override

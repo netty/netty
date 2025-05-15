@@ -14,6 +14,9 @@ services:
   build-leak:
     image: netty:centos-7-1.17
 
+  build-with-oio-testsuite:
+    image: netty:centos-7-1.17
+
   build-boringssl-static:
     image: netty:centos-7-1.17
 

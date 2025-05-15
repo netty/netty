@@ -39,9 +39,7 @@ public final class ClassInitializerUtil {
         try {
             // Load the class and also ensure we init it which means its linked etc.
             Class.forName(className, true, classLoader);
-        } catch (ClassNotFoundException ignore) {
-            // Ignore
-        } catch (SecurityException ignore) {
+        } catch (ClassNotFoundException | SecurityException ignore) {
             // Ignore
         }
     }

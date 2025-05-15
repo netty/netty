@@ -57,12 +57,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.handler.codec.TooLongFrameException;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteOrder;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * <p>
@@ -89,7 +89,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
      */
     private static final int GATHERING_WRITE_THRESHOLD = 1024;
 
-    private final boolean maskPayload;
+    private final WebSocketFrameMaskGenerator maskGenerator;
 
     /**
      * Constructor
@@ -99,7 +99,18 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
      *            false.
      */
     public WebSocket08FrameEncoder(boolean maskPayload) {
-        this.maskPayload = maskPayload;
+        this(maskPayload ? RandomWebSocketFrameMaskGenerator.INSTANCE : null);
+    }
+
+    /**
+     * Constructor
+     *
+     * @param maskGenerator
+     *            Web socket clients must set this to {@code non null} to mask payload.
+     *            Server implementations must set this to {@code null}.
+     */
+    public WebSocket08FrameEncoder(WebSocketFrameMaskGenerator maskGenerator) {
+        this.maskGenerator = maskGenerator;
     }
 
     @Override
@@ -143,89 +154,99 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
         boolean release = true;
         ByteBuf buf = null;
         try {
-            int maskLength = maskPayload ? 4 : 0;
+            int maskLength = maskGenerator != null ? 4 : 0;
             if (length <= 125) {
                 int size = 2 + maskLength + length;
                 buf = ctx.alloc().buffer(size);
                 buf.writeByte(b0);
-                byte b = (byte) (maskPayload ? 0x80 | (byte) length : (byte) length);
+                byte b = (byte) (maskGenerator != null ? 0x80 | (byte) length : (byte) length);
                 buf.writeByte(b);
             } else if (length <= 0xFFFF) {
                 int size = 4 + maskLength;
-                if (maskPayload || length <= GATHERING_WRITE_THRESHOLD) {
+                if (maskGenerator != null || length <= GATHERING_WRITE_THRESHOLD) {
                     size += length;
                 }
                 buf = ctx.alloc().buffer(size);
                 buf.writeByte(b0);
-                buf.writeByte(maskPayload ? 0xFE : 126);
+                buf.writeByte(maskGenerator != null ? 0xFE : 126);
                 buf.writeByte(length >>> 8 & 0xFF);
                 buf.writeByte(length & 0xFF);
             } else {
                 int size = 10 + maskLength;
-                if (maskPayload) {
+                if (maskGenerator != null) {
                     size += length;
                 }
                 buf = ctx.alloc().buffer(size);
                 buf.writeByte(b0);
-                buf.writeByte(maskPayload ? 0xFF : 127);
+                buf.writeByte(maskGenerator != null ? 0xFF : 127);
                 buf.writeLong(length);
             }
 
             // Write payload
-            if (maskPayload) {
-                int mask = PlatformDependent.threadLocalRandom().nextInt(Integer.MAX_VALUE);
+            if (maskGenerator != null) {
+                int mask = maskGenerator.nextMask();
                 buf.writeInt(mask);
 
-                if (data.isReadable()) {
+                // If the mask is 0 we can skip all the XOR operations.
+                if (mask != 0) {
+                    if (data.isReadable()) {
+                        ByteOrder srcOrder = data.order();
+                        ByteOrder dstOrder = buf.order();
 
-                    ByteOrder srcOrder = data.order();
-                    ByteOrder dstOrder = buf.order();
+                        int i = data.readerIndex();
+                        int end = data.writerIndex();
 
-                    int i = data.readerIndex();
-                    int end = data.writerIndex();
+                        if (srcOrder == dstOrder) {
+                            // Use the optimized path only when byte orders match.
+                            // Avoid sign extension on widening primitive conversion
+                            long longMask = mask & 0xFFFFFFFFL;
+                            longMask |= longMask << 32;
 
-                    if (srcOrder == dstOrder) {
-                        // Use the optimized path only when byte orders match.
-                        // Avoid sign extension on widening primitive conversion
-                        long longMask = mask & 0xFFFFFFFFL;
-                        longMask |= longMask << 32;
+                            // If the byte order of our buffers it little endian we have to bring our mask
+                            // into the same format, because getInt() and writeInt() will use a reversed byte order
+                            if (srcOrder == ByteOrder.LITTLE_ENDIAN) {
+                                longMask = Long.reverseBytes(longMask);
+                            }
 
-                        // If the byte order of our buffers it little endian we have to bring our mask
-                        // into the same format, because getInt() and writeInt() will use a reversed byte order
-                        if (srcOrder == ByteOrder.LITTLE_ENDIAN) {
-                            longMask = Long.reverseBytes(longMask);
+                            for (int lim = end - 7; i < lim; i += 8) {
+                                buf.writeLong(data.getLong(i) ^ longMask);
+                            }
+
+                            if (i < end - 3) {
+                                buf.writeInt(data.getInt(i) ^ (int) longMask);
+                                i += 4;
+                            }
                         }
-
-                        for (int lim = end - 7; i < lim; i += 8) {
-                            buf.writeLong(data.getLong(i) ^ longMask);
-                        }
-
-                        if (i < end - 3) {
-                            buf.writeInt(data.getInt(i) ^ (int) longMask);
-                            i += 4;
+                        int maskOffset = 0;
+                        for (; i < end; i++) {
+                            byte byteData = data.getByte(i);
+                            buf.writeByte(byteData ^ WebSocketUtil.byteAtIndex(mask, maskOffset++ & 3));
                         }
                     }
-                    int maskOffset = 0;
-                    for (; i < end; i++) {
-                        byte byteData = data.getByte(i);
-                        buf.writeByte(byteData ^ WebSocketUtil.byteAtIndex(mask, maskOffset++ & 3));
-                    }
-                }
-                out.add(buf);
-            } else {
-                if (buf.writableBytes() >= data.readableBytes()) {
-                    // merge buffers as this is cheaper then a gathering write if the payload is small enough
-                    buf.writeBytes(data);
                     out.add(buf);
                 } else {
-                    out.add(buf);
-                    out.add(data.retain());
+                    addBuffers(buf, data, out);
                 }
+            } else {
+                addBuffers(buf, data, out);
             }
             release = false;
         } finally {
             if (release && buf != null) {
                 buf.release();
+            }
+        }
+    }
+
+    private static void addBuffers(ByteBuf buf, ByteBuf data, List<Object> out) {
+        if (buf.writableBytes() >= data.readableBytes()) {
+            // merge buffers as this is cheaper then a gathering write if the payload is small enough
+            buf.writeBytes(data);
+            out.add(buf);
+        } else {
+            out.add(buf);
+            if (data.isReadable()) {
+                out.add(data.retain());
             }
         }
     }

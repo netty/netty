@@ -142,6 +142,7 @@ final class Native {
     static native int offsetofKEventFFlags();
     static native int offsetofKEventFilter();
     static native int offsetofKeventData();
+    static native int offsetofKeventUdata();
 
     private static void loadNativeLibrary() {
         String name = PlatformDependent.normalizedOs();

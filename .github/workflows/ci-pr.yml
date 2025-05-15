@@ -57,7 +57,7 @@ jobs:
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
-        if: cancelled()
+        if: ${{ cancelled() }}
 
   build-pr-windows:
     runs-on: windows-2019
@@ -109,17 +109,17 @@ jobs:
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
-        if: cancelled()
+        if: ${{ cancelled() }}
 
       - name: Upload Test Results
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: test-results-windows-x86_64-java11-boringssl
           path: '**/target/surefire-reports/TEST-*.xml'
 
       - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
+        if: ${{ failure() || cancelled() }}
         with:
           name: build-pr-windows-target
           path: |
@@ -135,7 +135,6 @@ jobs:
         include:
           - arch: aarch64
             java_arch: arm64
-          - arch: riscv64
 
     name: linux-${{ matrix.arch }}-verify-native
     permissions:
@@ -200,7 +199,7 @@ jobs:
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build"
           - setup: linux-x86_64-java21
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml run build-with-oio-testsuite"
           - setup: linux-x86_64-java24
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.24.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.24.yaml run build"
@@ -241,17 +240,17 @@ jobs:
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
-        if: cancelled()
+        if: ${{ cancelled() }}
 
       - name: Upload Test Results
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.setup }}
           path: '**/target/surefire-reports/TEST-*.xml'
 
       - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
+        if: ${{ failure() || cancelled() }}
         with:
           name: build-${{ matrix.setup }}-target
           path: |
@@ -301,17 +300,17 @@ jobs:
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
-        if: cancelled()
+        if: ${{ cancelled() }}
 
       - name: Upload Test Results
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.setup }}
           path: '**/target/surefire-reports/TEST-*.xml'
 
       - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
+        if: ${{ failure() || cancelled() }}
         with:
           name: build-pr-${{ matrix.setup }}-target
           path: |

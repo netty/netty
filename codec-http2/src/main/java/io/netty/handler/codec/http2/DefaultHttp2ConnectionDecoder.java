@@ -324,14 +324,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
                 }
 
                 return bytesToReturn;
-            } catch (Http2Exception e) {
-                // If an exception happened during delivery, the listener may have returned part
-                // of the bytes before the error occurred. If that's the case, subtract that from
-                // the total processed bytes so that we don't return too many bytes.
-                int delta = unconsumedBytes - unconsumedBytes(stream);
-                bytesToReturn -= delta;
-                throw e;
-            } catch (RuntimeException e) {
+            } catch (Http2Exception | RuntimeException e) {
                 // If an exception happened during delivery, the listener may have returned part
                 // of the bytes before the error occurred. If that's the case, subtract that from
                 // the total processed bytes so that we don't return too many bytes.

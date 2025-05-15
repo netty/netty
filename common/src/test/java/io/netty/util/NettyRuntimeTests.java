@@ -197,9 +197,7 @@ public class NettyRuntimeTests {
     private static void await(final CyclicBarrier barrier) {
         try {
             barrier.await();
-        } catch (final InterruptedException e) {
-            fail(e.toString());
-        } catch (final BrokenBarrierException e) {
+        } catch (InterruptedException | BrokenBarrierException e) {
             fail(e.toString());
         }
     }

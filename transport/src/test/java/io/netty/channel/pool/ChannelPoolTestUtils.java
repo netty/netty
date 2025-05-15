@@ -15,7 +15,7 @@
  */
 package io.netty.channel.pool;
 
-import io.netty.util.internal.ThreadLocalRandom;
+import java.util.concurrent.ThreadLocalRandom;
 
 final class ChannelPoolTestUtils {
     private static final String LOCAL_ADDR_ID = "test.id";
