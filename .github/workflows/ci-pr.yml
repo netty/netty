@@ -57,7 +57,7 @@ jobs:
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
-        if: cancelled()
+        if: ${{ cancelled() }}
 
   build-pr-windows:
     runs-on: windows-2019
@@ -109,17 +109,17 @@ jobs:
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
-        if: cancelled()
+        if: ${{ cancelled() }}
 
       - name: Upload Test Results
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: test-results-windows-x86_64-java11-boringssl
           path: '**/target/surefire-reports/TEST-*.xml'
 
       - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
+        if: ${{ failure() || cancelled() }}
         with:
           name: build-pr-windows-target
           path: |
@@ -240,17 +240,17 @@ jobs:
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
-        if: cancelled()
+        if: ${{ cancelled() }}
 
       - name: Upload Test Results
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.setup }}
           path: '**/target/surefire-reports/TEST-*.xml'
 
       - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
+        if: ${{ failure() || cancelled() }}
         with:
           name: build-${{ matrix.setup }}-target
           path: |
@@ -300,17 +300,17 @@ jobs:
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
-        if: cancelled()
+        if: ${{ cancelled() }}
 
       - name: Upload Test Results
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.setup }}
           path: '**/target/surefire-reports/TEST-*.xml'
 
       - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
+        if: ${{ failure() || cancelled() }}
         with:
           name: build-pr-${{ matrix.setup }}-target
           path: |
