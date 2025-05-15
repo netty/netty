@@ -709,7 +709,7 @@
     <corretto.classifier>${os.detected.name}-${os.detected.arch}</corretto.classifier>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
-    <logging.logLevel>debug</logging.logLevel>
+    <logging.logLevel>warn</logging.logLevel>
     <log4j2.version>2.23.1</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
     <junit.version>5.12.1</junit.version>
@@ -1406,7 +1406,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.13.0</version>
+        <version>3.14.0</version>
         <configuration>
           <compilerVersion>1.8</compilerVersion>
           <fork>true</fork>

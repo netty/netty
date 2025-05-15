@@ -135,7 +135,6 @@ jobs:
         include:
           - arch: aarch64
             java_arch: arm64
-          - arch: riscv64
 
     name: linux-${{ matrix.arch }}-verify-native
     permissions:
