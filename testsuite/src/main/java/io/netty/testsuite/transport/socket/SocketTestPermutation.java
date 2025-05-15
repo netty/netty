@@ -138,7 +138,7 @@ public class SocketTestPermutation {
 
     public List<BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(final InternetProtocolFamily family) {
         // Make the list of Bootstrap factories.
-        List<BootstrapFactory<Bootstrap>> bfs = new ArrayList<>();
+        List<BootstrapFactory<Bootstrap>> bfs = new ArrayList<BootstrapFactory<Bootstrap>>();
 
         bfs.add(new BootstrapFactory<Bootstrap>() {
             @Override
@@ -171,7 +171,7 @@ public class SocketTestPermutation {
     }
 
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
-        List<BootstrapFactory<ServerBootstrap>> factories = new ArrayList<>();
+        List<BootstrapFactory<ServerBootstrap>> factories = new ArrayList<BootstrapFactory<ServerBootstrap>>();
         factories.add(new BootstrapFactory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
@@ -194,7 +194,7 @@ public class SocketTestPermutation {
     }
 
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
-        List<BootstrapFactory<Bootstrap>> factories = new ArrayList<>();
+        List<BootstrapFactory<Bootstrap>> factories = new ArrayList<BootstrapFactory<Bootstrap>>();
         factories.add(new BootstrapFactory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
@@ -218,7 +218,7 @@ public class SocketTestPermutation {
     }
 
     public List<BootstrapFactory<Bootstrap>> datagramSocket() {
-        List<BootstrapFactory<Bootstrap>> factories = new ArrayList<>();
+        List<BootstrapFactory<Bootstrap>> factories = new ArrayList<BootstrapFactory<Bootstrap>>();
         factories.add(new BootstrapFactory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
