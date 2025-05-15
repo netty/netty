@@ -415,9 +415,7 @@ public final class HttpUtil {
                 }
                 try {
                     return Charset.forName(charsetRaw.toString());
-                } catch (IllegalCharsetNameException ignored) {
-                    // just return the default charset
-                } catch (UnsupportedCharsetException ignored) {
+                } catch (IllegalCharsetNameException | UnsupportedCharsetException ignored) {
                     // just return the default charset
                 }
             }
