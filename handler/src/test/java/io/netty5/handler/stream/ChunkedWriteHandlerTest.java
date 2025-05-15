@@ -25,7 +25,6 @@ import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.internal.PlatformDependent;
-import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -43,6 +42,7 @@ import java.nio.file.StandardOpenOption;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Stream;
 
 import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static java.util.concurrent.TimeUnit.SECONDS;
