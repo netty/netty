@@ -17,6 +17,7 @@ package io.netty5.handler.stream;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
+import io.netty5.channel.ChannelOption;
 import io.netty5.util.Resource;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
@@ -24,8 +25,11 @@ import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.internal.PlatformDependent;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -77,45 +81,59 @@ public class ChunkedWriteHandlerTest {
         }
     }
 
-    // See #310
-    @Test
-    public void testChunkedStream() {
-        check(new ChunkedStream(new ByteArrayInputStream(BYTES)));
+    static Stream<BufferAllocator> allocators() {
+        return Stream.of(
+                BufferAllocator.onHeapPooled(),
+                BufferAllocator.onHeapUnpooled(),
+                BufferAllocator.offHeapPooled(),
+                BufferAllocator.offHeapUnpooled()
+        );
+    }
 
-        check(new ChunkedStream(new ByteArrayInputStream(BYTES)),
+    // See #310
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void testChunkedStream(BufferAllocator allocator) {
+        check(allocator, new ChunkedStream(new ByteArrayInputStream(BYTES)));
+
+        check(allocator, new ChunkedStream(new ByteArrayInputStream(BYTES)),
                 new ChunkedStream(new ByteArrayInputStream(BYTES)),
                 new ChunkedStream(new ByteArrayInputStream(BYTES)));
     }
 
-    @Test
-    public void testChunkedNioStream() {
-        check(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))));
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void testChunkedNioStream(BufferAllocator allocator) {
+        check(allocator, new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))));
 
-        check(new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))),
+        check(allocator, new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))),
                 new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))),
                 new ChunkedNioStream(Channels.newChannel(new ByteArrayInputStream(BYTES))));
     }
 
-    @Test
-    public void testChunkedFile() throws IOException {
-        check(new ChunkedFile(TMP));
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void testChunkedFile(BufferAllocator allocator) throws IOException {
+        check(allocator, new ChunkedFile(TMP));
 
-        check(new ChunkedFile(TMP), new ChunkedFile(TMP), new ChunkedFile(TMP));
+        check(allocator, new ChunkedFile(TMP), new ChunkedFile(TMP), new ChunkedFile(TMP));
     }
 
-    @Test
-    public void testChunkedNioFile() throws IOException {
-        check(new ChunkedNioFile(TMP));
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void testChunkedNioFile(BufferAllocator allocator) throws IOException {
+        check(allocator, new ChunkedNioFile(TMP));
 
-        check(new ChunkedNioFile(TMP), new ChunkedNioFile(TMP), new ChunkedNioFile(TMP));
+        check(allocator, new ChunkedNioFile(TMP), new ChunkedNioFile(TMP), new ChunkedNioFile(TMP));
     }
 
-    @Test
-    public void testChunkedNioFileLeftPositionUnchanged() throws IOException {
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void testChunkedNioFileLeftPositionUnchanged(BufferAllocator allocator) throws IOException {
         final long expectedPosition = 10;
         try (FileChannel in = FileChannel.open(TMP.toPath(), StandardOpenOption.READ)) {
             in.position(expectedPosition);
-            check(new ChunkedNioFile(in) {
+            check(allocator, new ChunkedNioFile(in) {
                 @Override
                 public void close() throws Exception {
                     //no op
@@ -126,15 +144,16 @@ public class ChunkedWriteHandlerTest {
         }
     }
 
-    @Test
-    public void testChunkedNioFileFailOnClosedFileChannel() throws IOException {
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void testChunkedNioFileFailOnClosedFileChannel(BufferAllocator allocator) throws IOException {
         final FileChannel in = FileChannel.open(TMP.toPath(), StandardOpenOption.READ);
         in.close();
 
         assertThrows(ClosedChannelException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                check(new ChunkedNioFile(in) {
+                check(allocator, new ChunkedNioFile(in) {
                     @Override
                     public void close() throws Exception {
                         //no op
@@ -144,11 +163,14 @@ public class ChunkedWriteHandlerTest {
         });
     }
 
-    @Test
-    public void testUnchunkedData() throws IOException {
-        check(onHeapAllocator().copyOf(BYTES));
+    @ParameterizedTest
+    @MethodSource("allocators")
+    public void testUnchunkedData(BufferAllocator allocator) throws IOException {
+        check(allocator, onHeapAllocator().copyOf(BYTES));
 
-        check(onHeapAllocator().copyOf(BYTES), onHeapAllocator().copyOf(BYTES), onHeapAllocator().copyOf(BYTES));
+        check(allocator, onHeapAllocator().copyOf(BYTES),
+              onHeapAllocator().copyOf(BYTES),
+              onHeapAllocator().copyOf(BYTES));
     }
 
     // Test case which shows that there is not a bug like stated here:
@@ -613,8 +635,9 @@ public class ChunkedWriteHandlerTest {
         assertFalse(ch.finish());
     }
 
-    private static void check(Object... inputs) {
+    private static void check(BufferAllocator allocator, Object... inputs) {
         EmbeddedChannel ch = new EmbeddedChannel(new ChunkedWriteHandler());
+        ch.setOption(ChannelOption.BUFFER_ALLOCATOR, allocator);
 
         for (Object input: inputs) {
             ch.writeOutbound(input);

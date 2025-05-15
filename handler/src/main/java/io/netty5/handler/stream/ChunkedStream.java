@@ -126,6 +126,9 @@ public class ChunkedStream implements ChunkedInput<Buffer> {
                     written = in.read(component.writableArray(),
                             component.writableArrayOffset(),
                             component.writableArrayLength());
+                    if (written > 0) {
+                        component.skipWritableBytes(written);
+                    }
                 } else {
                     int size = Math.min(component.writableBytes(), chunkSize);
                     if (cachedArray == null || cachedArray.length < size) {
