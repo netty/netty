@@ -51,9 +51,8 @@ public class ThreadPerChannelEventLoopGroup extends AbstractEventExecutorGroup i
     private final Object[] childArgs;
     private final int maxChannels;
     final Executor executor;
-    final Set<EventLoop> activeChildren
-            = Collections.newSetFromMap(new ConcurrentHashMap<>());
-    final Queue<EventLoop> idleChildren = new ConcurrentLinkedQueue<EventLoop>();
+    final Set<EventLoop> activeChildren = ConcurrentHashMap.newKeySet();
+    final Queue<EventLoop> idleChildren = new ConcurrentLinkedQueue<>();
     private final ChannelException tooManyChannels;
 
     private volatile boolean shuttingDown;
