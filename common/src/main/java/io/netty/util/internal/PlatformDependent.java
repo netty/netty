@@ -443,45 +443,57 @@ public final class PlatformDependent {
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap() {
-        return new ConcurrentHashMap<K, V>();
+        return new ConcurrentHashMap<>();
     }
 
     /**
      * Creates a new fastest {@link LongCounter} implementation for the current platform.
+     * @deprecated please use {@link java.util.concurrent.atomic.LongAdder} instead.
      */
+    @Deprecated
     public static LongCounter newLongCounter() {
         return new LongAdderCounter();
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity) {
-        return new ConcurrentHashMap<K, V>(initialCapacity);
+        return new ConcurrentHashMap<>(initialCapacity);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity, float loadFactor) {
-        return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor);
+        return new ConcurrentHashMap<>(initialCapacity, loadFactor);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(
             int initialCapacity, float loadFactor, int concurrencyLevel) {
-        return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor, concurrencyLevel);
+        return new ConcurrentHashMap<>(initialCapacity, loadFactor, concurrencyLevel);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(Map<? extends K, ? extends V> map) {
-        return new ConcurrentHashMap<K, V>(map);
+        return new ConcurrentHashMap<>(map);
     }
 
     /**

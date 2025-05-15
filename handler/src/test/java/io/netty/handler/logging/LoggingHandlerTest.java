@@ -118,13 +118,13 @@ public class LoggingHandlerTest {
 
     @Test
     public void shouldLogChannelActive() {
-        new EmbeddedChannel(new LoggingHandler());
+        new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+ACTIVE$")));
     }
 
     @Test
     public void shouldLogChannelWritabilityChanged() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         // this is used to switch the channel to become unwritable
         channel.config().setWriteBufferLowWaterMark(5);
         channel.config().setWriteBufferHighWaterMark(10);
@@ -135,27 +135,27 @@ public class LoggingHandlerTest {
 
     @Test
     public void shouldLogChannelRegistered() {
-        new EmbeddedChannel(new LoggingHandler());
+        new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+REGISTERED$")));
     }
 
     @Test
     public void shouldLogChannelClose() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.close().await();
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+CLOSE$")));
     }
 
     @Test
     public void shouldLogChannelConnect() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.connect(new InetSocketAddress(80)).await();
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+CONNECT: 0.0.0.0/0.0.0.0:80$")));
     }
 
     @Test
     public void shouldLogChannelConnectWithLocalAddress() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.connect(new InetSocketAddress(80), new InetSocketAddress(81)).await();
         verify(appender).doAppend(argThat(new RegexLogMatcher(
                 "^\\[id: 0xembedded, L:embedded - R:embedded\\] CONNECT: 0.0.0.0/0.0.0.0:80, 0.0.0.0/0.0.0.0:81$")));
@@ -163,7 +163,7 @@ public class LoggingHandlerTest {
 
     @Test
     public void shouldLogChannelDisconnect() throws Exception {
-        EmbeddedChannel channel = new DisconnectingEmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new DisconnectingEmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.connect(new InetSocketAddress(80)).await();
         channel.disconnect().await();
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+DISCONNECT$")));
@@ -171,14 +171,14 @@ public class LoggingHandlerTest {
 
     @Test
     public void shouldLogChannelInactive() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.pipeline().fireChannelInactive();
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+INACTIVE$")));
     }
 
     @Test
     public void shouldLogChannelBind() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.bind(new InetSocketAddress(80));
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+BIND: 0.0.0.0/0.0.0.0:80$")));
     }
@@ -187,7 +187,7 @@ public class LoggingHandlerTest {
     @SuppressWarnings("RedundantStringConstructorCall")
     public void shouldLogChannelUserEvent() throws Exception {
         String userTriggered = "iAmCustom!";
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.pipeline().fireUserEventTriggered(new String(userTriggered));
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+USER_EVENT: " + userTriggered + '$')));
     }
@@ -196,7 +196,7 @@ public class LoggingHandlerTest {
     public void shouldLogChannelException() throws Exception {
         String msg = "illegalState";
         Throwable cause = new IllegalStateException(msg);
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.pipeline().fireExceptionCaught(cause);
         verify(appender).doAppend(argThat(new RegexLogMatcher(
                 ".+EXCEPTION: " + cause.getClass().getCanonicalName() + ": " + msg + '$')));
@@ -205,7 +205,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogDataWritten() throws Exception {
         String msg = "hello";
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.writeOutbound(msg);
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+WRITE: " + msg + '$')));
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+FLUSH$")));
@@ -214,7 +214,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogNonByteBufDataRead() throws Exception {
         String msg = "hello";
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.writeInbound(msg);
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg + '$')));
 
@@ -226,7 +226,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogByteBufDataRead() throws Exception {
         ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8);
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.writeInbound(msg);
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", true)));
 
@@ -239,7 +239,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogByteBufDataReadWithSimpleFormat() throws Exception {
         ByteBuf msg = Unpooled.copiedBuffer("hello", CharsetUtil.UTF_8);
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.DEBUG, ByteBufFormat.SIMPLE));
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN, ByteBufFormat.SIMPLE));
         channel.writeInbound(msg);
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", false)));
 
@@ -252,7 +252,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogEmptyByteBufDataRead() throws Exception {
         ByteBuf msg = Unpooled.EMPTY_BUFFER;
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.writeInbound(msg);
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: 0B$", false)));
 
@@ -270,7 +270,7 @@ public class LoggingHandlerTest {
             }
         };
 
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.writeInbound(msg);
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: foobar, 5B$", true)));
 
@@ -283,7 +283,7 @@ public class LoggingHandlerTest {
     @Test
     public void shouldLogChannelReadComplete() throws Exception {
         ByteBuf msg = Unpooled.EMPTY_BUFFER;
-        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler());
+        EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.writeInbound(msg);
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ COMPLETE$")));
     }
