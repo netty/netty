@@ -291,9 +291,12 @@ public final class IoUringIoOps implements IoOps {
      */
     static IoUringIoOps newConnect(int fd, byte flags, long remoteMemoryAddress, short data) {
         // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L695
-        return newConnect(fd, flags, remoteMemoryAddress, Native.SIZEOF_SOCKADDR_STORAGE, data);
+        return newConnect(
+                fd, flags,
+                remoteMemoryAddress, Native.SIZEOF_SOCKADDR_STORAGE,
+                data
+        );
     }
-
 
     /**
      * Returns a new {@code OP_CONNECT} {@link IoUringIoOps}.

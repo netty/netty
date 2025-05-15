@@ -312,7 +312,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         public final SocketAddress localAddress() {
-            //
             return localAddress0();
         }
 

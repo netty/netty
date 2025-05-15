@@ -69,30 +69,40 @@ final class MsgHdr {
         // No flags (we assume the memory was memset before)
     }
 
-    static void set(ByteBuffer memory, int fd, ByteBuffer msgControl, int cmsgHdrDataOffset) {
+    static void prepSendFd(ByteBuffer memory, int fd, ByteBuffer msgControl,
+                           int cmsgHdrDataOffset, ByteBuffer iovMemory, int iovLength) {
         int memoryPosition = memory.position();
         long msgControlAddr = Buffer.memoryAddress(msgControl);
         CmsgHdr.writeScmRights(msgControl, cmsgHdrDataOffset, fd);
         if (Native.SIZEOF_SIZE_T == 4) {
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, (int) msgControlAddr);
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, Native.MSG_CONTROL_LEN_FOR_FD);
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, (int) Buffer.memoryAddress(iovMemory));
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
         } else {
             assert Native.SIZEOF_SIZE_T == 8;
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, msgControlAddr);
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, Native.MSG_CONTROL_LEN_FOR_FD);
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, Buffer.memoryAddress(iovMemory));
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
         }
     }
 
-    static void set(ByteBuffer memory, ByteBuffer msgControl, int cmsgHdrDataOffset) {
+    static void prepReadFd(ByteBuffer memory, ByteBuffer msgControl, int cmsgHdrDataOffset,
+                           ByteBuffer iovMemory, int iovLength) {
         int memoryPosition = memory.position();
         long msgControlAddr = Buffer.memoryAddress(msgControl);
         if (Native.SIZEOF_SIZE_T == 4) {
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, (int) msgControlAddr);
             memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, Native.MSG_CONTROL_LEN_FOR_FD);
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, (int) Buffer.memoryAddress(iovMemory));
+            memory.putInt(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
         } else {
             assert Native.SIZEOF_SIZE_T == 8;
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROL, msgControlAddr);
             memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_CONTROLLEN, Native.MSG_CONTROL_LEN_FOR_FD);
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOV, Buffer.memoryAddress(iovMemory));
+            memory.putLong(memoryPosition + Native.MSGHDR_OFFSETOF_MSG_IOVLEN, iovLength);
         }
     }
 

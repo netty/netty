@@ -27,6 +27,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
@@ -35,7 +36,7 @@ import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
 public class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
         implements DomainSocketChannelConfig, DuplexChannelConfig {
-    private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
+    private AtomicReference<DomainSocketReadMode> mode = new AtomicReference<>(DomainSocketReadMode.BYTES);
     private volatile boolean allowHalfClosure;
 
     IoUringDomainSocketChannelConfig(AbstractIoUringChannel channel) {
@@ -119,14 +120,27 @@ public class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
 
     @Override
     public IoUringDomainSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
-        //todo cancel multishot
-        this.mode = ObjectUtil.checkNotNull(mode, "mode");
+        boolean change = (mode == DomainSocketReadMode.BYTES
+                          && this.mode.compareAndSet(DomainSocketReadMode.FILE_DESCRIPTORS, mode))
+                         ||
+                         (mode == DomainSocketReadMode.FILE_DESCRIPTORS
+                          && this.mode.compareAndSet(DomainSocketReadMode.BYTES, mode));
+        if (change) {
+            if (channel.isRegistered()) {
+                // cancel current Read
+                ((IoUringDomainSocketChannel) channel).autoReadCleared();
+                // switch to a new mode and read if autoRead is enabled
+                if (isAutoRead()) {
+                    channel.read();
+                }
+            }
+        }
         return this;
     }
 
     @Override
     public DomainSocketReadMode getReadMode() {
-        return mode;
+        return mode.get();
     }
 
     @Override

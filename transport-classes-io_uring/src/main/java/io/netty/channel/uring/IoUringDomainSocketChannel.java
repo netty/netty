@@ -93,23 +93,8 @@ public class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel imp
     }
 
     @Override
-    protected boolean socketIsEmpty(int flags) {
-        // IORING_CQE_F_SOCK_NONEMPTY is not for uds
-        // so we should disable it
-        return false;
-    }
-
-    @Override
-    protected boolean socketHasMoreData(int flags) {
-        // IORING_CQE_F_SOCK_NONEMPTY is not for uds
-        // so we should disable it
-        return false;
-    }
-
-    @Override
     protected boolean allowMultiShotPollIn() {
-        // IORING_CQE_F_SOCK_NONEMPTY is not for uds
-        // and POLL_ADD_MULTI is edge-triggered
+        // UNIX domain sockets do not support IORING_CQE_F_SOCK_NONEMPTY. and POLL_ADD_MULTI is edge-triggered
         // so we should disable it
         return false;
     }
@@ -122,6 +107,7 @@ public class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel imp
         @Override
         protected int scheduleWriteSingle(Object msg) {
             if (msg instanceof FileDescriptor) {
+                // we can reuse the same memory for any fd
                 if (writeMsgHdrMemory == null) {
                     writeMsgHdrMemory = new MsgHdrMemory();
                 }
@@ -175,10 +161,11 @@ public class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel imp
             }
 
             if (config.getReadMode() == DomainSocketReadMode.FILE_DESCRIPTORS) {
+                // we can reuse the same memory for any fd
                 if (readMsgHdrMemory == null) {
                     readMsgHdrMemory = new MsgHdrMemory();
                 }
-                readMsgHdrMemory.set();
+                readMsgHdrMemory.prepRecvReadFd();
                 IoRegistration registration = registration();
                 IoUringIoOps ioUringIoOps = IoUringIoOps.newRecvmsg(
                         fd().intValue(), (byte) 0, 0, readMsgHdrMemory.address(), readMsgHdrMemory.idx());
@@ -190,6 +177,7 @@ public class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel imp
                     memory.release();
                     return 0;
                 }
+                return 1;
             }
             throw new Error();
         }
@@ -233,6 +221,19 @@ public class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel imp
                 }
             });
             super.connect(remoteAddress, localAddress, channelPromise);
+        }
+
+        @Override
+        protected void freeResourcesNow(IoRegistration reg) {
+            super.freeResourcesNow(reg);
+            if (readMsgHdrMemory != null) {
+                readMsgHdrMemory.release();
+                readMsgHdrMemory = null;
+            }
+            if (writeMsgHdrMemory != null) {
+                writeMsgHdrMemory.release();
+                writeMsgHdrMemory = null;
+            }
         }
     }
 

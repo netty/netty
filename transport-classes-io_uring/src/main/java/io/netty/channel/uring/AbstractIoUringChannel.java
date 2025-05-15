@@ -761,7 +761,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             inReadComplete = true;
             try {
                 socketIsEmpty = socketIsEmpty(flags);
-                socketHasMoreData = socketHasMoreData(flags);
+                socketHasMoreData = IoUring.isCqeFSockNonEmptySupported() &&
+                                    (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0;
                 readComplete0(op, res, flags, data, numOutstandingReads);
             } finally {
                 try {
@@ -1286,11 +1287,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      * @return          {@code true} if empty.
      */
     protected abstract boolean socketIsEmpty(int flags);
-
-    protected boolean socketHasMoreData(int flags) {
-        return  IoUring.isCqeFSockNonEmptySupported() &&
-                (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0;
-    }
 
     abstract boolean isPollInFirst();
 }

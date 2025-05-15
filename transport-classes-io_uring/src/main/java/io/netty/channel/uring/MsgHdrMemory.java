@@ -24,6 +24,8 @@ import java.nio.ByteBuffer;
 
 final class MsgHdrMemory {
     private static final byte[] EMPTY_SOCKADDR_STORAGE = new byte[Native.SIZEOF_SOCKADDR_STORAGE];
+    private static ByteBuffer MSG_IOV_EMPTY_CONTENT = ByteBuffer.allocateDirect(1);
+    private static long MSG_IOV_EMPTY_CONTENT_ADDRESS = Buffer.memoryAddress(MSG_IOV_EMPTY_CONTENT);
     private final ByteBuffer msgHdrMemory;
     private final ByteBuffer socketAddrMemory;
     private final ByteBuffer iovMemory;
@@ -43,7 +45,7 @@ final class MsgHdrMemory {
 
         long cmsgDataMemoryAddr = Buffer.memoryAddress(cmsgDataMemory);
         long cmsgDataAddr = Native.cmsghdrData(cmsgDataMemoryAddr);
-        cmsgDataOffset = (int) (cmsgDataAddr + cmsgDataMemoryAddr);
+        cmsgDataOffset = (int) (cmsgDataAddr - cmsgDataMemoryAddr);
     }
 
     MsgHdrMemory() {
@@ -52,12 +54,13 @@ final class MsgHdrMemory {
         msgHdrMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_MSGHDR);
         msgHdrMemoryAddress = Buffer.memoryAddress(msgHdrMemory);
         socketAddrMemory = null;
-        iovMemory = null;
+        iovMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_IOVEC);
+        Iov.set(iovMemory, 0, 0);
         cmsgDataMemory = Buffer.allocateDirectWithNativeOrder(Native.CMSG_SPACE_FOR_FD);
 
         long cmsgDataMemoryAddr = Buffer.memoryAddress(cmsgDataMemory);
         long cmsgDataAddr = Native.cmsghdrData(cmsgDataMemoryAddr);
-        cmsgDataOffset = (int) (cmsgDataAddr + cmsgDataMemoryAddr);
+        cmsgDataOffset = (int) (cmsgDataAddr - cmsgDataMemoryAddr);
     }
 
     void set(LinuxSocket socket, InetSocketAddress address, long bufferAddress , int length, short segmentSize) {
@@ -79,15 +82,16 @@ final class MsgHdrMemory {
     }
 
     void setScmRightsFd(int fd) {
-        MsgHdr.set(msgHdrMemory, fd, cmsgDataMemory, cmsgDataOffset);
+        Iov.set(iovMemory, MSG_IOV_EMPTY_CONTENT_ADDRESS, 1);
+        MsgHdr.prepSendFd(msgHdrMemory, fd, cmsgDataMemory, cmsgDataOffset, iovMemory, 1);
     }
 
     int getScmRightsFd() {
         return MsgHdr.getCmsgData(msgHdrMemory, cmsgDataMemory, cmsgDataOffset);
     }
 
-    void set() {
-        MsgHdr.set(msgHdrMemory, cmsgDataMemory, cmsgDataOffset);
+    void prepRecvReadFd() {
+        MsgHdr.prepReadFd(msgHdrMemory, cmsgDataMemory, cmsgDataOffset, iovMemory, 1);
     }
 
     boolean hasPort(IoUringDatagramChannel channel) {
@@ -130,7 +134,9 @@ final class MsgHdrMemory {
 
     void release() {
         Buffer.free(msgHdrMemory);
-        Buffer.free(socketAddrMemory);
+        if (socketAddrMemory != null) {
+            Buffer.free(socketAddrMemory);
+        }
         Buffer.free(iovMemory);
         Buffer.free(cmsgDataMemory);
     }
