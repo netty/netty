@@ -199,7 +199,7 @@ jobs:
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.117.yaml run build"
           - setup: linux-x86_64-java21
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml run build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.21.yaml run build-with-oio-testsuite"
           - setup: linux-x86_64-java24
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.24.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.24.yaml run build"
