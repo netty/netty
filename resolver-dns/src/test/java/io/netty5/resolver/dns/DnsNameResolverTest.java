@@ -49,6 +49,7 @@ import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.StringUtil;
+
 import org.apache.directory.server.dns.DnsException;
 import org.apache.directory.server.dns.io.encoder.DnsMessageEncoder;
 import org.apache.directory.server.dns.messages.DnsMessage;
@@ -1914,22 +1915,19 @@ public class DnsNameResolverTest {
     private static void testRRNameContainsDifferentSearchDomain(final List<String> searchDomains, String unresolved)
             throws Exception {
         final String ipAddrPrefix = "1.2.3.";
-        TestDnsServer searchDomainServer = new TestDnsServer(new RecordStore() {
-            @Override
-            public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) {
-                Set<ResourceRecord> records = new HashSet<ResourceRecord>(searchDomains.size());
-                final String qName = questionRecord.getDomainName();
-                for (String searchDomain : searchDomains) {
-                    if (qName.endsWith(searchDomain)) {
-                        continue;
-                    }
-                    final ResourceRecord rr = newARecord(qName + '.' + searchDomain,
-                            ipAddrPrefix + ThreadLocalRandom.current().nextInt(1, 10));
-                    logger.info("Adding A record: " + rr);
-                    records.add(rr);
+        TestDnsServer searchDomainServer = new TestDnsServer(questionRecord -> {
+            Set<ResourceRecord> records = new HashSet<>(searchDomains.size());
+            final String qName = questionRecord.getDomainName();
+            for (String searchDomain : searchDomains) {
+                if (qName.endsWith(searchDomain)) {
+                    continue;
                 }
-                return records;
+                final ResourceRecord rr = newARecord(qName + '.' + searchDomain,
+                        ipAddrPrefix + ThreadLocalRandom.current().nextInt(1, 10));
+                logger.info("Adding A record: " + rr);
+                records.add(rr);
             }
+            return records;
         });
         searchDomainServer.start();
 

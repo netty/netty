@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
@@ -151,13 +150,14 @@ public class DefaultPriorityQueueTest {
 
     @Test
     public void testRemovalFuzz() {
-        final int numElements = ThreadLocalRandom.current().nextInt(0, 30);
+        ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
+        final int numElements = threadLocalRandom.nextInt(0, 30);
         final TestElement[] values = new TestElement[numElements];
         PriorityQueue<TestElement> queue =
-                new DefaultPriorityQueue<TestElement>(TestElementComparator.INSTANCE, values.length);
+                new DefaultPriorityQueue<>(TestElementComparator.INSTANCE, values.length);
         for (int i = 0; i < values.length; ++i) {
             do {
-                values[i] = new TestElement(ThreadLocalRandom.current().nextInt(0, numElements * 2));
+                values[i] = new TestElement(threadLocalRandom.nextInt(0, numElements * 2));
             } while (!queue.add(values[i]));
         }
 
@@ -273,7 +273,7 @@ public class DefaultPriorityQueueTest {
 
         List<TestElement> expectedOrderList = new ArrayList<>(queue.size());
         expectedOrderList.addAll(Arrays.asList(a, b, c, d, e, f));
-        Collections.sort(expectedOrderList, TestElementComparator.INSTANCE);
+        expectedOrderList.sort(TestElementComparator.INSTANCE);
 
         assertEquals(expectedOrderList.size(), queue.size());
         assertEquals(expectedOrderList.isEmpty(), queue.isEmpty());
