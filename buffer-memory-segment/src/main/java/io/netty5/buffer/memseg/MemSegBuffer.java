@@ -125,8 +125,7 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
 
     @Override
     public MemSegBuffer skipReadableBytes(int delta) {
-        readerOffset(readerOffset() + delta);
-        return this;
+        return (MemSegBuffer) super.skipReadableBytes(delta);
     }
 
     @Override
@@ -143,8 +142,7 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
 
     @Override
     public MemSegBuffer skipWritableBytes(int delta) {
-        writerOffset(writerOffset() + delta);
-        return this;
+        return (MemSegBuffer) super.skipWritableBytes(delta);
     }
 
     @Override
@@ -159,12 +157,12 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
 
     @Override
     public int readableBytes() {
-        return writerOffset() - readerOffset();
+        return super.readableBytes();
     }
 
     @Override
     public int writableBytes() {
-        return capacity() - writerOffset();
+        return super.writableBytes();
     }
 
     @Override
@@ -354,14 +352,19 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
             throw bufferIsClosed(this);
         }
         if (srcPos < 0) {
-            throw new IllegalArgumentException("The srcPos cannot be negative: " + srcPos + '.');
+            throw new IndexOutOfBoundsException("The srcPos cannot be negative: " + srcPos + '.');
         }
-        if (length < 0) {
-            throw new IllegalArgumentException("The length cannot be negative: " + length + '.');
+        if (destPos < 0) {
+            throw new IndexOutOfBoundsException("The destination position cannot be negative: " + destPos);
         }
-        if (seg.byteSize() < srcPos + length) {
-            throw new IllegalArgumentException("The srcPos + length is beyond the end of the buffer: " +
-                                               "srcPos = " + srcPos + ", length = " + length + '.');
+        checkLength(length);
+        if (capacity() < srcPos + length) {
+            throw new IndexOutOfBoundsException("The srcPos + length is beyond the end of the buffer: " +
+                "srcPos = " + srcPos + ", length = " + length + '.');
+        }
+        if (dest.byteSize() < destPos + length) {
+            throw new IndexOutOfBoundsException("The destPos + length is beyond the end of the buffer: " +
+                "destPos = " + destPos + ", length = " + length + '.');
         }
         dest.asSlice(destPos, length).copyFrom(seg.asSlice(srcPos, length));
     }
@@ -392,8 +395,9 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
         if (length == 0) {
             return 0;
         }
-        checkGet(readerOffset(), length);
-        int bytesWritten = channel.write(readableBuffer().limit(length));
+        final int roff = readerOffset();
+        checkGet(roff, length);
+        int bytesWritten = channel.write(readableBuffer().limit(roff + length));
         skipReadableBytes(bytesWritten);
         return bytesWritten;
     }
@@ -407,8 +411,9 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
         if (length == 0) {
             return 0;
         }
-        checkGet(readerOffset(), length);
-        int bytesWritten = channel.write(readableBuffer().limit(length), position);
+        final int roff = readerOffset();
+        checkGet(roff, length);
+        int bytesWritten = channel.write(readableBuffer().limit(roff + length), position);
         skipReadableBytes(bytesWritten);
         return bytesWritten;
     }
@@ -427,8 +432,9 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
         if (length == 0) {
             return 0;
         }
-        checkSet(writerOffset(), length);
-        int bytesRead = channel.read(writableBuffer().limit(length), position);
+        final int woff = writerOffset();
+        checkSet(woff, length);
+        int bytesRead = channel.read(writableBuffer().limit(woff + length), position);
         if (bytesRead > 0) { // Don't skipWritable if bytesRead is 0 or -1
             skipWritableBytes(bytesRead);
         }
@@ -447,8 +453,9 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
         if (length == 0) {
             return 0;
         }
-        checkSet(writerOffset(), length);
-        int bytesRead = channel.read(writableBuffer().limit(length));
+        final int woff = writerOffset();
+        checkSet(woff, length);
+        int bytesRead = channel.read(writableBuffer().limit(woff + length));
         if (bytesRead != -1) {
             skipWritableBytes(bytesRead);
         }
@@ -512,14 +519,12 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
             throw bufferIsClosed(this);
         }
         if (fromOffset < 0) {
-            throw new IllegalArgumentException("The fromOffset cannot be negative: " + fromOffset + '.');
+            throw new IndexOutOfBoundsException("The fromOffset cannot be negative: " + fromOffset + '.');
         }
-        if (length < 0) {
-            throw new IllegalArgumentException("The length cannot be negative: " + length + '.');
-        }
-        if (seg.byteSize() < fromOffset + length) {
-            throw new IllegalArgumentException("The fromOffset + length is beyond the end of the buffer: " +
-                                               "fromOffset = " + fromOffset + ", length = " + length + '.');
+        checkLength(length);
+        if (capacity() < fromOffset + length) {
+            throw new IndexOutOfBoundsException("The fromOffset + length is beyond the end of the buffer: " +
+                "fromOffset = " + fromOffset + ", length = " + length + '.');
         }
         return new ByteCursor() {
             final MemorySegment segment = seg;
@@ -566,17 +571,15 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
             throw bufferIsClosed(this);
         }
         if (fromOffset < 0) {
-            throw new IllegalArgumentException("The fromOffset cannot be negative: " + fromOffset + '.');
+            throw new IndexOutOfBoundsException("The fromOffset cannot be negative: " + fromOffset + '.');
         }
-        if (length < 0) {
-            throw new IllegalArgumentException("The length cannot be negative: " + length + '.');
-        }
-        if (seg.byteSize() <= fromOffset) {
-            throw new IllegalArgumentException("The fromOffset is beyond the end of the buffer: " + fromOffset + '.');
+        checkLength(length);
+        if (capacity() <= fromOffset) {
+            throw new IndexOutOfBoundsException("The fromOffset is beyond the end of the buffer: " + fromOffset + '.');
         }
         if (fromOffset - length < -1) {
-            throw new IllegalArgumentException("The fromOffset - length would underflow the buffer: " +
-                                               "fromOffset = " + fromOffset + ", length = " + length + '.');
+            throw new IndexOutOfBoundsException("The fromOffset - length would underflow the buffer: " +
+                "fromOffset = " + fromOffset + ", length = " + length + '.');
         }
         return new ByteCursor() {
             final MemorySegment segment = seg;
@@ -1183,7 +1186,7 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
 
     @Override
     public Buffer writeDouble(double value) {
-        checkWrite(woff, Byte.BYTES, true);
+        checkWrite(woff, Double.BYTES, true);
         setDoubleAtOffset(wseg, woff, value);
         woff += Double.BYTES;
         return this;

@@ -668,7 +668,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      *                  The first byte read from the iterator will be the byte at this offset.
      * @param length The number of bytes to iterate.
      * @return A {@link ByteCursor} for the given stretch of bytes of this buffer.
-     * @throws IllegalArgumentException if the length is negative, or if the region given by the {@code fromOffset} and
+     * @throws IndexOutOfBoundsException if the length is negative, or if the region given by the {@code fromOffset} and
      * the {@code length} reaches outside the bounds of this buffer.
      */
     ByteCursor openReverseCursor(int fromOffset, int length);
