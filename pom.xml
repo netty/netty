@@ -927,7 +927,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.0</version>
+        <version>3.14.0</version>
         <configuration>
           <compilerVersion>22</compilerVersion>
           <fork>true</fork>
