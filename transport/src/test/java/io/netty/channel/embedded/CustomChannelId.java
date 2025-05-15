@@ -30,7 +30,6 @@ public class CustomChannelId implements ChannelId {
     @Override
     public int compareTo(final ChannelId o) {
         if (o instanceof CustomChannelId) {
-            // do not subtract for comparison, it could overflow
             return Integer.compare(id, ((CustomChannelId) o).id);
         }
 
