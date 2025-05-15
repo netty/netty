@@ -68,8 +68,6 @@
           <argLine>-Dio.netty5.buffer.MemoryManager=MemorySegment</argLine>
           <dependenciesToScan>
             <dependency>io.netty:netty5-buffer</dependency>
-            <dependency>io.netty:netty5-handler</dependency>
-            <dependency>io.netty:netty5-codec-http</dependency>
           </dependenciesToScan>
         </configuration>
       </plugin>
@@ -109,12 +107,6 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty5-handler</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty5-codec-http</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
