@@ -70,4 +70,15 @@ public class WebSocket07FrameEncoder extends WebSocket08FrameEncoder {
     public WebSocket07FrameEncoder(boolean maskPayload) {
         super(maskPayload);
     }
+
+    /**
+     * Constructor
+     *
+     * @param maskGenerator
+     *            Web socket clients must set this to {@code non null} to mask payload.
+     *            Server implementations must set this to {@code null}.
+     */
+    public WebSocket07FrameEncoder(WebSocketFrameMaskGenerator maskGenerator) {
+        super(maskGenerator);
+    }
 }
