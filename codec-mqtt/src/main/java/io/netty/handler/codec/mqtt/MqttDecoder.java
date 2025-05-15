@@ -228,9 +228,9 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
         for (int i = 0; i < 4; i++) {
             short digit = buffer.readUnsignedByte();
-            remainingLength += (digit & 0x7F) * multiplier;
+            remainingLength += (digit & 127) * multiplier;
 
-            if ((digit & 0x80) == 0) {
+            if ((digit & 128) == 0) {
                 return remainingLength;
             }
 
