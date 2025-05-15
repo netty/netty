@@ -185,22 +185,26 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
 
     @Override
     public boolean hasReadableArray() {
-        return false;
+        return seg.heapBase().isPresent();
     }
 
     @Override
     public byte[] readableArray() {
-        throw new UnsupportedOperationException("This component has no backing array.");
+        Object heapBase = seg.heapBase().orElseThrow(MemSegBuffer::createNoBackingArrayException);
+        return (byte[]) heapBase;
     }
 
     @Override
     public int readableArrayOffset() {
-        throw new UnsupportedOperationException("This component has no backing array.");
+        if (!hasReadableArray()) {
+            throw createNoBackingArrayException();
+        }
+        return Math.toIntExact(seg.address()) + roff;
     }
 
     @Override
     public int readableArrayLength() {
-        throw new UnsupportedOperationException("This component has no backing array.");
+        return woff - roff;
     }
 
     @Override
@@ -218,22 +222,30 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
 
     @Override
     public boolean hasWritableArray() {
-        return false;
+        return wseg.heapBase().isPresent();
     }
 
     @Override
     public byte[] writableArray() {
-        throw new UnsupportedOperationException("This component has no backing array.");
+        Object heapBase = wseg.heapBase().orElseThrow(MemSegBuffer::createNoBackingArrayException);
+        return (byte[]) heapBase;
     }
 
     @Override
     public int writableArrayOffset() {
-        throw new UnsupportedOperationException("This component has no backing array.");
+        if (!hasWritableArray()) {
+            throw createNoBackingArrayException();
+        }
+        return Math.toIntExact(wseg.address()) + woff;
     }
 
     @Override
     public int writableArrayLength() {
-        throw new UnsupportedOperationException("This component has no backing array.");
+        return writableBytes();
+    }
+
+    private static UnsupportedOperationException createNoBackingArrayException() {
+        return new UnsupportedOperationException("This component has no backing array.");
     }
 
     @Override
