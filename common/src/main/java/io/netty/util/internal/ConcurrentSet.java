@@ -17,7 +17,6 @@ package io.netty.util.internal;
 
 import java.io.Serializable;
 import java.util.AbstractSet;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
