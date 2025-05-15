@@ -1,0 +1,82 @@
+# ----------------------------------------------------------------------------
+# Copyright 2025 The Netty Project
+#
+# The Netty Project licenses this file to you under the Apache License,
+# version 2.0 (the "License"); you may not use this file except in compliance
+# with the License. You may obtain a copy of the License at:
+#
+#   https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
+# ----------------------------------------------------------------------------
+name: Build project on RiscV 64
+
+on:
+  push:
+    branches: [ "4.1"]
+
+  schedule:
+    - cron: '30 1 * * *'  # At 01:30 every day.
+
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+env:
+  MAVEN_OPTS: -Xmx6g -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
+permissions:
+  contents: read
+
+jobs:
+  build-riscv64:
+    # The host should always be Linux
+    runs-on: ubuntu-latest
+
+    name: linux-riscv64-verify-native
+    permissions:
+      contents: read  # for actions/checkout to fetch code
+      packages: write  # for uraimo/run-on-arch-action to cache docker images
+    steps:
+      - uses: actions/checkout@v4
+
+      # Cache .m2/repository
+      - name: Cache local Maven repository
+        uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-build-pr-riscv64-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-build-pr-riscv64-
+            ${{ runner.os }}-maven-
+
+      - uses: uraimo/run-on-arch-action@v2
+        name: Run commands
+        id: runcmd
+        with:
+          arch: riscv64
+          distro: ubuntu20.04
+
+          # Not required, but speeds up builds by storing container images in
+          # a GitHub package registry.
+          githubToken: ${{ github.token }}
+
+          # Mount the .m2/repository
+          dockerRunArgs: |
+            --volume "/home/runner/.m2/repository/:/root/.m2/repository"
+
+          # Install dependencies
+          install: |
+            apt-get update -q -y
+            apt-get install -q -y openjdk-11-jdk autoconf automake libtool make tar maven git
+
+          # Compile native code and the modules it depend on and run NativeLoadingTest. This is enough to ensure
+          # we can load the native module on riscv64
+          #
+          # Use tcnative.classifier that is empty as we don't support using the shared lib version on ubuntu.
+          run: |
+            JAVA_HOME=/usr/lib/jvm/java-11-openjdk-riscv64 ./mvnw -V -B -ntp -pl testsuite-native -am clean package -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
