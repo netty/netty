@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,6 +29,7 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.nio.charset.UnsupportedCharsetException;
+import java.util.Objects;
 
 /**
  * A random and sequential accessible sequence of zero or more bytes (octets).
@@ -2488,5 +2490,73 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
      */
     boolean isAccessible() {
         return refCnt() != 0;
+    }
+
+    /**
+     * Replace a series of bytes.
+     *
+     * @param fromIndex the start index (inclusive)
+     * @param toIndex   the end index (exclusive)
+     * @param replacer  the {@link ByteReplacer} to use.
+     * @return          self
+     */
+    public ByteBuf replaceRange(int fromIndex, int toIndex, ByteReplacer replacer) {
+        ByteBufUtil.checkRange(fromIndex, toIndex, Byte.BYTES, this);
+        Objects.requireNonNull(replacer, "replacer");
+        for (int i = fromIndex; i < toIndex; i += Byte.BYTES) {
+            setByte(i, replacer.replace(getByte(i)));
+        }
+        return this;
+    }
+
+    /**
+     * Replace a series of shorts.
+     *
+     * @param fromIndex the start index (inclusive)
+     * @param toIndex   the end index (exclusive)
+     * @param replacer  the {@link ShortReplacer} to use.
+     * @return          self
+     */
+    public ByteBuf replaceRange(int fromIndex, int toIndex, ShortReplacer replacer) {
+        ByteBufUtil.checkRange(fromIndex, toIndex, Short.BYTES, this);
+        Objects.requireNonNull(replacer, "replacer");
+        for (int i = fromIndex; i < toIndex; i += Short.BYTES) {
+            setShort(i, replacer.replace(getShort(i)));
+        }
+        return this;
+    }
+
+    /**
+     * Replace a series of ints.
+     *
+     * @param fromIndex the start index (inclusive)
+     * @param toIndex   the end index (exclusive)
+     * @param replacer  the {@link IntReplacer} to use.
+     * @return          self
+     */
+    public ByteBuf replaceRange(int fromIndex, int toIndex, IntReplacer replacer) {
+        ByteBufUtil.checkRange(fromIndex, toIndex, Integer.BYTES, this);
+        Objects.requireNonNull(replacer, "replacer");
+        for (int i = fromIndex; i < toIndex; i += Integer.BYTES) {
+            setInt(i, replacer.replace(getInt(i)));
+        }
+        return this;
+    }
+
+    /**
+     * Replace a series of longs.
+     *
+     * @param fromIndex the start index (inclusive)
+     * @param toIndex   the end index (exclusive)
+     * @param replacer  the {@link LongReplacer} to use.
+     * @return          self
+     */
+    public ByteBuf replaceRange(int fromIndex, int toIndex, LongReplacer replacer) {
+        ByteBufUtil.checkRange(fromIndex, toIndex, Long.BYTES, this);
+        Objects.requireNonNull(replacer, "replacer");
+        for (int i = fromIndex; i < toIndex; i += Long.BYTES) {
+            setLong(i, replacer.replace(getLong(i)));
+        }
+        return this;
     }
 }
