@@ -3189,9 +3189,7 @@ public abstract class SSLEngineTest {
                     .ciphers(cipherList).build());
             server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             fail();
-        } catch (IllegalArgumentException expected) {
-            // expected when invalid cipher is used.
-        } catch (SSLException expected) {
+        } catch (IllegalArgumentException | SSLException expected) {
             // expected when invalid cipher is used.
         } finally {
             cleanupServerSslEngine(server);
