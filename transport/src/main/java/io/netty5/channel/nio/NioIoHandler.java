@@ -220,7 +220,6 @@ public final class NioIoHandler implements IoHandler {
             if (maybeException == null) {
                 selectedKeysField.set(unwrappedSelector, selectedKeySet);
                 publicSelectedKeysField.set(unwrappedSelector, selectedKeySet);
-                return null;
             }
         } catch (NoSuchFieldException | IllegalAccessException e) {
             maybeException = e;
