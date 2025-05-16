@@ -40,8 +40,6 @@ import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.spi.SelectorProvider;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -169,16 +167,15 @@ public final class NioIoHandler implements IoHandler {
             return new SelectorTuple(unwrappedSelector);
         }
 
-        Object maybeSelectorImplClass = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-            try {
-                return Class.forName(
-                        "sun.nio.ch.SelectorImpl",
-                        false,
-                        PlatformDependent.getSystemClassLoader());
-            } catch (Throwable cause) {
-                return cause;
-            }
-        });
+        Object maybeSelectorImplClass;
+        try {
+            maybeSelectorImplClass = Class.forName(
+                    "sun.nio.ch.SelectorImpl",
+                    false,
+                    PlatformDependent.getSystemClassLoader());
+        } catch (Throwable cause) {
+            maybeSelectorImplClass = cause;
+        }
 
         if (!(maybeSelectorImplClass instanceof Class) ||
             // ensure the current selector implementation is what we can instrument.
@@ -193,44 +190,41 @@ public final class NioIoHandler implements IoHandler {
         final Class<?> selectorImplClass = (Class<?>) maybeSelectorImplClass;
         final SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
 
-        Object maybeException = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-            try {
-                Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
-                Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
+        Object maybeException;
+        try {
+            Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
+            Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
 
-                if (PlatformDependent.hasUnsafe()) {
-                    // Let us try to use sun.misc.Unsafe to replace the SelectionKeySet.
-                    // This allows us to also do this in Java9+ without any extra flags.
-                    long selectedKeysFieldOffset = PlatformDependent.objectFieldOffset(selectedKeysField);
-                    long publicSelectedKeysFieldOffset =
-                            PlatformDependent.objectFieldOffset(publicSelectedKeysField);
+            if (PlatformDependent.hasUnsafe()) {
+                // Let us try to use sun.misc.Unsafe to replace the SelectionKeySet.
+                // This allows us to also do this in Java9+ without any extra flags.
+                long selectedKeysFieldOffset = PlatformDependent.objectFieldOffset(selectedKeysField);
+                long publicSelectedKeysFieldOffset =
+                        PlatformDependent.objectFieldOffset(publicSelectedKeysField);
 
-                    if (selectedKeysFieldOffset != -1 && publicSelectedKeysFieldOffset != -1) {
-                        PlatformDependent.putObject(
-                                unwrappedSelector, selectedKeysFieldOffset, selectedKeySet);
-                        PlatformDependent.putObject(
-                                unwrappedSelector, publicSelectedKeysFieldOffset, selectedKeySet);
-                        return null;
-                    }
-                    // We could not retrieve the offset, lets try reflection as last-resort.
+                if (selectedKeysFieldOffset != -1 && publicSelectedKeysFieldOffset != -1) {
+                    PlatformDependent.putObject(
+                            unwrappedSelector, selectedKeysFieldOffset, selectedKeySet);
+                    PlatformDependent.putObject(
+                            unwrappedSelector, publicSelectedKeysFieldOffset, selectedKeySet);
+                    return null;
                 }
+                // We could not retrieve the offset, lets try reflection as last-resort.
+            }
 
-                Throwable cause = ReflectionUtil.trySetAccessible(selectedKeysField, true);
-                if (cause != null) {
-                    return cause;
-                }
-                cause = ReflectionUtil.trySetAccessible(publicSelectedKeysField, true);
-                if (cause != null) {
-                    return cause;
-                }
+            maybeException = ReflectionUtil.trySetAccessible(selectedKeysField, true);
+            if (maybeException == null) {
+                maybeException = ReflectionUtil.trySetAccessible(publicSelectedKeysField, true);
+            }
 
+            if (maybeException == null) {
                 selectedKeysField.set(unwrappedSelector, selectedKeySet);
                 publicSelectedKeysField.set(unwrappedSelector, selectedKeySet);
                 return null;
-            } catch (NoSuchFieldException | IllegalAccessException e) {
-                return e;
             }
-        });
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            maybeException = e;
+        }
 
         if (maybeException instanceof Exception) {
             selectedKeys = null;

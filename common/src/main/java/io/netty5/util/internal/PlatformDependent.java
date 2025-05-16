@@ -26,7 +26,6 @@ import org.jctools.queues.atomic.MpscUnboundedAtomicArrayQueue;
 import org.jctools.queues.atomic.SpscLinkedAtomicQueue;
 import org.jctools.queues.unpadded.SpscLinkedUnpaddedQueue;
 import org.jctools.util.Pow2;
-import org.jctools.util.UnsafeAccess;
 import org.jetbrains.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +42,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
@@ -203,39 +200,27 @@ public final class PlatformDependent {
                                            final Set<String> availableClassifiers) {
         for (final String osReleaseFileName : OS_RELEASE_FILES) {
             final File file = new File(osReleaseFileName);
-            boolean found = AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-                try {
-                    if (file.exists()) {
-                        try (BufferedReader reader = new BufferedReader(
-                                new InputStreamReader(
-                                        new BoundedInputStream(new FileInputStream(file)), StandardCharsets.UTF_8))) {
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                if (line.startsWith(LINUX_ID_PREFIX)) {
-                                    String id = normalizeOsReleaseVariableValue(
-                                            line.substring(LINUX_ID_PREFIX.length()));
-                                    addClassifier(allowedClassifiers, availableClassifiers, id);
-                                } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
-                                    line = normalizeOsReleaseVariableValue(
-                                            line.substring(LINUX_ID_LIKE_PREFIX.length()));
-                                    addClassifier(allowedClassifiers, availableClassifiers, line.split("[ ]+"));
-                                }
-                            }
-                        } catch (SecurityException e) {
-                            logger.debug("Unable to read {}", osReleaseFileName, e);
-                        } catch (IOException e) {
-                            logger.debug("Error while reading content of {}", osReleaseFileName, e);
+            if (file.exists()) {
+                try (BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(
+                                new BoundedInputStream(new FileInputStream(file)), StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        if (line.startsWith(LINUX_ID_PREFIX)) {
+                            String id = normalizeOsReleaseVariableValue(
+                                    line.substring(LINUX_ID_PREFIX.length()));
+                            addClassifier(allowedClassifiers, availableClassifiers, id);
+                        } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
+                            line = normalizeOsReleaseVariableValue(
+                                    line.substring(LINUX_ID_LIKE_PREFIX.length()));
+                            addClassifier(allowedClassifiers, availableClassifiers, line.split("[ ]+"));
                         }
-                        // specification states we should only fall back if /etc/os-release does not exist
-                        return true;
                     }
-                } catch (SecurityException e) {
-                    logger.debug("Unable to check if {} exists", osReleaseFileName, e);
+                } catch (IOException e) {
+                    logger.debug("Error while reading content of {}", osReleaseFileName, e);
                 }
-                return false;
-            });
 
-            if (found) {
+                // specification states we should only fall back if /etc/os-release does not exist
                 break;
             }
         }
@@ -950,13 +935,8 @@ public final class PlatformDependent {
         static {
             Object unsafe = null;
             if (hasUnsafe()) {
-                // jctools goes through its own process of initializing unsafe; of
-                // course, this requires permissions which might not be granted to calling code, so we
-                // must mark this block as privileged too
-                unsafe = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-                    // force JCTools to initialize unsafe
-                    return UnsafeAccess.UNSAFE;
-                });
+                // jctools goes through its own process of initializing unsafe
+                unsafe = org.jctools.util.UnsafeAccess.UNSAFE;
             }
 
             if (unsafe == null) {
@@ -1053,6 +1033,7 @@ public final class PlatformDependent {
     /**
      * Return the {@link ClassLoader} for the given {@link Class}.
      */
+    @Deprecated
     public static ClassLoader getClassLoader(final Class<?> clazz) {
         return PlatformDependent0.getClassLoader(clazz);
     }
@@ -1060,6 +1041,7 @@ public final class PlatformDependent {
     /**
      * Return the context {@link ClassLoader} for the current {@link Thread}.
      */
+    @Deprecated
     public static ClassLoader getContextClassLoader() {
         return PlatformDependent0.getContextClassLoader();
     }
@@ -1067,6 +1049,7 @@ public final class PlatformDependent {
     /**
      * Return the system {@link ClassLoader}.
      */
+    @Deprecated
     public static ClassLoader getSystemClassLoader() {
         return PlatformDependent0.getSystemClassLoader();
     }

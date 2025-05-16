@@ -22,8 +22,6 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.nio.ByteBuffer;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 
 /**
  * Provide a way to clean a ByteBuffer on Java9+.
@@ -34,31 +32,20 @@ final class CleanerJava9 implements Cleaner {
     private static final MethodHandle INVOKE_CLEANER_HANDLE;
 
     static {
-        final MethodHandle invokeCleanerHandle;
-        final Throwable error;
+        MethodHandle invokeCleanerHandle = null;
+        Throwable error = null;
         if (PlatformDependent0.hasUnsafe()) {
             final ByteBuffer buffer = ByteBuffer.allocateDirect(1);
-            Object maybeInvokeMethodHandle = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-                try {
-                    MethodHandles.Lookup lookup = MethodHandles.lookup();
-                    // See https://bugs.openjdk.java.net/browse/JDK-8171377
-                    MethodHandle m = lookup.findVirtual(
-                            PlatformDependent0.UNSAFE.getClass(),
-                            "invokeCleaner",
-                            MethodType.methodType(void.class, ByteBuffer.class)).bindTo(PlatformDependent0.UNSAFE);
-                    m.invokeExact(buffer);
-                    return m;
-                } catch (Throwable cause) {
-                    return cause;
-                }
-            });
-
-            if (maybeInvokeMethodHandle instanceof Throwable) {
-                invokeCleanerHandle = null;
-                error = (Throwable) maybeInvokeMethodHandle;
-            } else {
-                invokeCleanerHandle = (MethodHandle) maybeInvokeMethodHandle;
-                error = null;
+            try {
+                MethodHandles.Lookup lookup = MethodHandles.lookup();
+                // See https://bugs.openjdk.java.net/browse/JDK-8171377
+                invokeCleanerHandle = lookup.findVirtual(
+                        PlatformDependent0.UNSAFE.getClass(),
+                        "invokeCleaner",
+                        MethodType.methodType(void.class, ByteBuffer.class)).bindTo(PlatformDependent0.UNSAFE);
+                invokeCleanerHandle.invokeExact(buffer);
+            } catch (Throwable cause) {
+                error = cause;
             }
         } else {
             invokeCleanerHandle = null;
@@ -78,34 +65,12 @@ final class CleanerJava9 implements Cleaner {
 
     @Override
     public void freeDirectBuffer(ByteBuffer buffer) {
-        // Try to minimize overhead when there is no SecurityManager present.
-        // See https://bugs.openjdk.java.net/browse/JDK-8191053.
-        if (System.getSecurityManager() == null) {
-            try {
-                INVOKE_CLEANER_HANDLE.invokeExact(buffer);
-            } catch (RuntimeException exception) {
-                throw exception;
-            } catch (Throwable throwable) {
-                PlatformDependent.throwException(throwable);
-            }
-        } else {
-            freeDirectBufferPrivileged(buffer);
-        }
-    }
-
-    private static void freeDirectBufferPrivileged(final ByteBuffer buffer) {
-        Exception error = AccessController.doPrivileged((PrivilegedAction<Exception>) () -> {
-            try {
-                INVOKE_CLEANER_HANDLE.invokeExact(PlatformDependent0.UNSAFE, buffer);
-            } catch (RuntimeException exception) {
-                return exception;
-            } catch (Throwable throwable) {
-                PlatformDependent.throwException(throwable);
-            }
-            return null;
-        });
-        if (error != null) {
-            PlatformDependent.throwException(error);
+        try {
+            INVOKE_CLEANER_HANDLE.invokeExact(buffer);
+        } catch (RuntimeException exception) {
+            throw exception;
+        } catch (Throwable throwable) {
+            PlatformDependent.throwException(throwable);
         }
     }
 }

@@ -29,10 +29,8 @@ import java.io.OutputStream;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.security.AccessController;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivilegedAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -358,8 +356,6 @@ public final class NativeLibraryLoader {
             Thread.currentThread().interrupt();
         } catch (IOException e) {
             logger.info("Execution of '{}' failed.", cmd, e);
-        } catch (SecurityException e) {
-            logger.error("Execution of '{}' failed.", cmd, e);
         }
         return false;
     }
@@ -418,19 +414,13 @@ public final class NativeLibraryLoader {
 
     private static void loadLibraryByHelper(final Class<?> helper, final String name, final boolean absolute)
             throws UnsatisfiedLinkError {
-        Object ret = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-            try {
-                // Invoke the helper to load the native library, if succeed, then the native
-                // library belong to the specified ClassLoader.
-                Method method = helper.getMethod("loadLibrary", String.class, boolean.class);
-                method.setAccessible(true);
-                return method.invoke(null, name, absolute);
-            } catch (Exception e) {
-                return e;
-            }
-        });
-        if (ret instanceof Throwable) {
-            Throwable t = (Throwable) ret;
+        try {
+            // Invoke the helper to load the native library, if succeed, then the native
+            // library belong to the specified ClassLoader.
+            Method method = helper.getMethod("loadLibrary", String.class, boolean.class);
+            method.setAccessible(true);
+            method.invoke(null, name, absolute);
+        } catch (Throwable t) {
             assert !(t instanceof UnsatisfiedLinkError) : t + " should be a wrapper throwable";
             Throwable cause = t.getCause();
             if (cause instanceof UnsatisfiedLinkError) {
@@ -461,19 +451,17 @@ public final class NativeLibraryLoader {
             try {
                 // The helper class is NOT found in target ClassLoader, we have to define the helper class.
                 final byte[] classBinary = classToByteArray(helper);
-                return AccessController.doPrivileged((PrivilegedAction<Class<?>>) () -> {
-                    try {
-                        // Define the helper class in the target ClassLoader,
-                        //  then we can call the helper to load the native library.
-                        Method defineClass = ClassLoader.class.getDeclaredMethod("defineClass", String.class,
-                                byte[].class, int.class, int.class);
-                        defineClass.setAccessible(true);
-                        return (Class<?>) defineClass.invoke(loader, helper.getName(), classBinary, 0,
-                                classBinary.length);
-                    } catch (Exception e) {
-                        throw new IllegalStateException("Define class failed!", e);
-                    }
-                });
+                try {
+                    // Define the helper class in the target ClassLoader,
+                    //  then we can call the helper to load the native library.
+                    Method defineClass = ClassLoader.class.getDeclaredMethod("defineClass", String.class,
+                                                                             byte[].class, int.class, int.class);
+                    defineClass.setAccessible(true);
+                    return (Class<?>) defineClass.invoke(loader, helper.getName(), classBinary, 0,
+                                                         classBinary.length);
+                } catch (Exception e) {
+                    throw new IllegalStateException("Define class failed!", e);
+                }
             } catch (ClassNotFoundException | Error | RuntimeException e2) {
                 ThrowableUtil.addSuppressed(e2, e1);
                 throw e2;

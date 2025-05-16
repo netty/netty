@@ -41,8 +41,6 @@ public final class ClassInitializerUtil {
             Class.forName(className, true, classLoader);
         } catch (ClassNotFoundException ignore) {
             // Ignore
-        } catch (SecurityException ignore) {
-            // Ignore
         }
     }
 }

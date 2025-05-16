@@ -37,9 +37,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.security.AccessController;
 import java.security.PrivateKey;
-import java.security.PrivilegedAction;
 import java.security.Provider;
 import java.security.Security;
 
@@ -74,42 +72,36 @@ final class BouncyCastlePemReader {
     }
 
     private static void tryLoading() {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @Override
-            public Void run() {
-                try {
-                    ClassLoader classLoader = getClass().getClassLoader();
-                    // Check for bcpkix-jdk18on:
-                    Class.forName(BC_PEMPARSER, true, classLoader);
-                    // Check for bcprov-jdk18on or bc-fips:
-                    bcProvider = Security.getProvider(BC_PROVIDER_NAME);
-                    if (bcProvider == null) {
-                        bcProvider = Security.getProvider(BC_FIPS_PROVIDER_NAME);
-                    }
-                    if (bcProvider == null) {
-                        Class<Provider> bcProviderClass;
-                        try {
-                            bcProviderClass = (Class<Provider>) Class.forName(BC_PROVIDER, true, classLoader);
-                        } catch (ClassNotFoundException e) {
-                            try {
-                                bcProviderClass = (Class<Provider>) Class.forName(BC_FIPS_PROVIDER, true, classLoader);
-                            } catch (ClassNotFoundException ex) {
-                                e.addSuppressed(ex);
-                                throw e;
-                            }
-                        }
-                        bcProvider = bcProviderClass.getConstructor().newInstance();
-                    }
-                    logger.debug("Bouncy Castle provider available");
-                    attemptedLoading = true;
-                } catch (Throwable e) {
-                    logger.debug("Cannot load Bouncy Castle provider", e);
-                    unavailabilityCause = e;
-                    attemptedLoading = true;
-                }
-                return null;
+        try {
+            ClassLoader classLoader = BouncyCastlePemReader.class.getClassLoader();
+            // Check for bcpkix-jdk18on:
+            Class.forName(BC_PEMPARSER, true, classLoader);
+            // Check for bcprov-jdk18on or bc-fips:
+            bcProvider = Security.getProvider(BC_PROVIDER_NAME);
+            if (bcProvider == null) {
+                bcProvider = Security.getProvider(BC_FIPS_PROVIDER_NAME);
             }
-        });
+            if (bcProvider == null) {
+                Class<Provider> bcProviderClass;
+                try {
+                    bcProviderClass = (Class<Provider>) Class.forName(BC_PROVIDER, true, classLoader);
+                } catch (ClassNotFoundException e) {
+                    try {
+                        bcProviderClass = (Class<Provider>) Class.forName(BC_FIPS_PROVIDER, true, classLoader);
+                    } catch (ClassNotFoundException ex) {
+                        e.addSuppressed(ex);
+                        throw e;
+                    }
+                }
+                bcProvider = bcProviderClass.getConstructor().newInstance();
+            }
+            logger.debug("Bouncy Castle provider available");
+            attemptedLoading = true;
+        } catch (Throwable e) {
+            logger.debug("Cannot load Bouncy Castle provider", e);
+            unavailabilityCause = e;
+            attemptedLoading = true;
+        }
     }
 
     /**

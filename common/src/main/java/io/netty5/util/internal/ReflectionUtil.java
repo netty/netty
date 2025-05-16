@@ -28,7 +28,7 @@ public final class ReflectionUtil {
     private ReflectionUtil() { }
 
     /**
-     * Try to call {@link AccessibleObject#setAccessible(boolean)} but will catch any {@link SecurityException} and
+     * Try to call {@link AccessibleObject#setAccessible(boolean)} but will catch any
      * {@link InaccessibleObjectException} and return it.
      * The caller must check if it returns {@code null} and if not handle the returned exception.
      */
@@ -39,7 +39,7 @@ public final class ReflectionUtil {
         try {
             object.setAccessible(true);
             return null;
-        } catch (SecurityException | InaccessibleObjectException e) {
+        } catch (InaccessibleObjectException e) {
             return e;
         }
     }
