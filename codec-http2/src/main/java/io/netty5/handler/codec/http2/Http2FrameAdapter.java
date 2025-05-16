@@ -85,7 +85,7 @@ public class Http2FrameAdapter implements Http2FrameListener {
     }
 
     @Override
-    public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+    public void onUnknownFrame(ChannelHandlerContext ctx, short frameType, int streamId, Http2Flags flags,
                                Buffer payload) {
     }
 }
