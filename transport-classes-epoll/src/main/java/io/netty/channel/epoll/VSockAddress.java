@@ -18,6 +18,8 @@ package io.netty.channel.epoll;
 
 import java.net.SocketAddress;
 
+import static io.netty.util.internal.ObjectUtil.hashSum;
+
 /**
  * A address for a
  * <a href="https://man7.org/linux/man-pages/man7/vsock.7.html">VM sockets (Linux VSOCK address family)</a>.
@@ -73,8 +75,6 @@ public final class VSockAddress extends SocketAddress {
 
     @Override
     public int hashCode() {
-        int result = cid;
-        result = 31 * result + port;
-        return result;
+        return hashSum(cid, port);
     }
 }

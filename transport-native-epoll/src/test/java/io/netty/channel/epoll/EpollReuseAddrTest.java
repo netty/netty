@@ -220,9 +220,7 @@ public class EpollReuseAddrTest {
             if (MINOR > minor) {
                 return true;
             } else if (MINOR == minor) {
-                if (BUGFIX >= bugfix) {
-                    return true;
-                }
+                return BUGFIX >= bugfix;
             }
         }
         return false;

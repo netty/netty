@@ -17,12 +17,13 @@ package io.netty.handler.codec.http;
 
 import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * The default {@link HttpRequest} implementation.
  */
 public class DefaultHttpRequest extends DefaultHttpMessage implements HttpRequest {
-    private static final int HASH_CODE_PRIME = 31;
     private HttpMethod method;
     private String uri;
 
@@ -122,11 +123,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
 
     @Override
     public int hashCode() {
-        int result = 1;
-        result = HASH_CODE_PRIME * result + method.hashCode();
-        result = HASH_CODE_PRIME * result + uri.hashCode();
-        result = HASH_CODE_PRIME * result + super.hashCode();
-        return result;
+        return hashSum(hash(method), hash(uri), super.hashCode());
     }
 
     @Override
