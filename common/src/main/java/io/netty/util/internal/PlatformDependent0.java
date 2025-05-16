@@ -127,7 +127,7 @@ final class PlatformDependent0 {
                 unsafe = null;
                 unsafeUnavailabilityCause = (Throwable) maybeUnsafe;
                 if (logger.isTraceEnabled()) {
-                    logger.debug("sun.misc.Unsafe.theUnsafe: unavailable", (Throwable) maybeUnsafe);
+                    logger.debug("sun.misc.Unsafe.theUnsafe: unavailable", unsafeUnavailabilityCause);
                 } else {
                     logger.debug("sun.misc.Unsafe.theUnsafe: unavailable: {}", unsafeUnavailabilityCause.getMessage());
                 }
@@ -200,8 +200,7 @@ final class PlatformDependent0 {
                     if (logger.isTraceEnabled()) {
                         logger.debug("sun.misc.Unsafe method unavailable:", unsafeUnavailabilityCause);
                     } else {
-                        logger.debug("sun.misc.Unsafe method unavailable: {}",
-                                ((Throwable) maybeException).getMessage());
+                        logger.debug("sun.misc.Unsafe method unavailable: {}", unsafeUnavailabilityCause.getMessage());
                     }
                 }
             }
@@ -731,8 +730,8 @@ final class PlatformDependent0 {
         return UNSAFE.getIntVolatile(null, address);
     }
 
-    static void putIntOrdered(long adddress, int newValue) {
-        UNSAFE.putOrderedInt(null, adddress, newValue);
+    static void putIntOrdered(long address, int newValue) {
+        UNSAFE.putOrderedInt(null, address, newValue);
     }
 
     static long getLong(byte[] data, int index) {
@@ -751,9 +750,9 @@ final class PlatformDependent0 {
         UNSAFE.putShort(address, value);
     }
 
-    static void putShortOrdered(long adddress, short newValue) {
+    static void putShortOrdered(long address, short newValue) {
         UNSAFE.storeFence();
-        UNSAFE.putShort(null, adddress, newValue);
+        UNSAFE.putShort(null, address, newValue);
     }
 
     static void putInt(long address, int value) {
