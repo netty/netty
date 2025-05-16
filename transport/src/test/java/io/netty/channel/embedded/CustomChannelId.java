@@ -16,7 +16,6 @@
 package io.netty.channel.embedded;
 
 import io.netty.channel.ChannelId;
-import io.netty.util.internal.MathUtil;
 
 public class CustomChannelId implements ChannelId {
 
@@ -31,7 +30,7 @@ public class CustomChannelId implements ChannelId {
     @Override
     public int compareTo(final ChannelId o) {
         if (o instanceof CustomChannelId) {
-            return MathUtil.compare(id, ((CustomChannelId) o).id);
+            return Integer.compare(id, ((CustomChannelId) o).id);
         }
 
         return asLongText().compareTo(o.asLongText());
