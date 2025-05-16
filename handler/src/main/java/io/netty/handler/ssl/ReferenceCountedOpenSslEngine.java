@@ -387,9 +387,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                 }
 
-                if (OpenSsl.isBoringSSL() && clientMode) {
-                    // If in client-mode and BoringSSL let's allow to renegotiate once as the server may use this
-                    // for client auth.
+                if ((OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) && clientMode) {
+                    // If in client-mode and provider is BoringSSL or AWS-LC let's allow to renegotiate once as the
+                    // server may use this for client auth.
                     //
                     // See https://github.com/netty/netty/issues/11529
                     SSL.setRenegotiateMode(ssl, SSL.SSL_RENEGOTIATE_ONCE);
@@ -1711,7 +1711,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         final StringBuilder buf = new StringBuilder();
         final StringBuilder bufTLSv13 = new StringBuilder();
 
-        CipherSuiteConverter.convertToCipherStrings(Arrays.asList(cipherSuites), buf, bufTLSv13, OpenSsl.isBoringSSL());
+        CipherSuiteConverter.convertToCipherStrings(Arrays.asList(cipherSuites), buf, bufTLSv13,
+                OpenSsl.isBoringSSL());
         final String cipherSuiteSpec = buf.toString();
         final String cipherSuiteSpecTLSv13 = bufTLSv13.toString();
 
