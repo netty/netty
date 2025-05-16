@@ -190,7 +190,8 @@ public final class NioIoHandler implements IoHandler {
         final Class<?> selectorImplClass = (Class<?>) maybeSelectorImplClass;
         final SelectedSelectionKeySet selectedKeySet = new SelectedSelectionKeySet();
 
-        Object maybeException;
+        Object maybeException = null;
+        boolean useReflectionFallback = true;
         try {
             Field selectedKeysField = selectorImplClass.getDeclaredField("selectedKeys");
             Field publicSelectedKeysField = selectorImplClass.getDeclaredField("publicSelectedKeys");
@@ -207,19 +208,21 @@ public final class NioIoHandler implements IoHandler {
                             unwrappedSelector, selectedKeysFieldOffset, selectedKeySet);
                     PlatformDependent.putObject(
                             unwrappedSelector, publicSelectedKeysFieldOffset, selectedKeySet);
-                    return null;
+                    useReflectionFallback = false;
                 }
+            }
+
+            if (useReflectionFallback) {
                 // We could not retrieve the offset, lets try reflection as last-resort.
-            }
+                maybeException = ReflectionUtil.trySetAccessible(selectedKeysField, true);
+                if (maybeException == null) {
+                    maybeException = ReflectionUtil.trySetAccessible(publicSelectedKeysField, true);
+                }
 
-            maybeException = ReflectionUtil.trySetAccessible(selectedKeysField, true);
-            if (maybeException == null) {
-                maybeException = ReflectionUtil.trySetAccessible(publicSelectedKeysField, true);
-            }
-
-            if (maybeException == null) {
-                selectedKeysField.set(unwrappedSelector, selectedKeySet);
-                publicSelectedKeysField.set(unwrappedSelector, selectedKeySet);
+                if (maybeException == null) {
+                    selectedKeysField.set(unwrappedSelector, selectedKeySet);
+                    publicSelectedKeysField.set(unwrappedSelector, selectedKeySet);
+                }
             }
         } catch (NoSuchFieldException | IllegalAccessException e) {
             maybeException = e;
