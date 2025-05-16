@@ -73,19 +73,4 @@ public class MathUtilTest {
         assertTrue(isOutOfBounds(0, Integer.MAX_VALUE, 0));
     }
 
-    @Test
-    public void testCompare() {
-        assertEquals(-1, Integer.compare(0, 1));
-        assertEquals(-1, Long.compare(0L, 1L));
-        assertEquals(-1, Integer.compare(0, Integer.MAX_VALUE));
-        assertEquals(-1, Long.compare(0L, Long.MAX_VALUE));
-        assertEquals(0, Integer.compare(0, 0));
-        assertEquals(0, Long.compare(0L, 0L));
-        assertEquals(0, Integer.compare(Integer.MIN_VALUE, Integer.MIN_VALUE));
-        assertEquals(0, Long.compare(Long.MIN_VALUE, Long.MIN_VALUE));
-        assertEquals(1, Integer.compare(Integer.MAX_VALUE, 0));
-        assertEquals(1, Integer.compare(Integer.MAX_VALUE, Integer.MAX_VALUE - 1));
-        assertEquals(1, Long.compare(Long.MAX_VALUE, 0L));
-        assertEquals(1, Long.compare(Long.MAX_VALUE, Long.MAX_VALUE - 1));
-    }
 }
