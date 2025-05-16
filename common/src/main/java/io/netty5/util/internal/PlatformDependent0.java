@@ -30,6 +30,7 @@ import java.lang.reflect.Parameter;
 import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static java.lang.invoke.MethodHandles.lookup;
@@ -221,7 +222,7 @@ final class PlatformDependent0 {
                                 return e;
                             }
                         })
-                        .orElseThrow();
+                        .orElseGet(() -> new NoSuchElementException("No matching constructor found"));
 
                 if (maybeDirectBufferConstructorHandle instanceof MethodHandle) {
                     address = UNSAFE.allocateMemory(1);
@@ -259,7 +260,7 @@ final class PlatformDependent0 {
             // using a known type to avoid loading new classes
             final AtomicLong maybeMaxMemory = new AtomicLong(-1);
 
-            Object maybeUnaligned;
+            Object maybeUnaligned = null;
             try {
                 Class<?> bitsClass =
                         Class.forName("java.nio.Bits", false, getSystemClassLoader());
@@ -287,12 +288,15 @@ final class PlatformDependent0 {
                         // We did not find the field we expected, move on.
                     }
                 }
-                Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
-                Throwable cause = ReflectionUtil.trySetAccessible(unalignedMethod, true);
-                if (cause != null) {
-                    maybeUnaligned = cause;
-                } else {
-                    maybeUnaligned = unalignedMethod.invoke(null);
+
+                if (maybeUnaligned == null) {
+                    Method unalignedMethod = bitsClass.getDeclaredMethod("unaligned");
+                    Throwable cause = ReflectionUtil.trySetAccessible(unalignedMethod, true);
+                    if (cause != null) {
+                        maybeUnaligned = cause;
+                    } else {
+                        maybeUnaligned = unalignedMethod.invoke(null);
+                    }
                 }
             } catch (NoSuchMethodException | IllegalAccessException
                      | ClassNotFoundException | InvocationTargetException e) {
