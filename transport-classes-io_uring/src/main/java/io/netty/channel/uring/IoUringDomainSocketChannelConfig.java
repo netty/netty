@@ -34,7 +34,7 @@ import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
-public class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
+class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
         implements DomainSocketChannelConfig, DuplexChannelConfig {
     private AtomicReference<DomainSocketReadMode> mode = new AtomicReference<>(DomainSocketReadMode.BYTES);
     private volatile boolean allowHalfClosure;

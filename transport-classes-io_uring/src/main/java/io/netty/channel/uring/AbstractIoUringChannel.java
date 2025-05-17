@@ -433,7 +433,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         remote = socket.remoteAddress();
     }
 
-    abstract class AbstractUringUnsafe extends AbstractUnsafe implements IoUringIoHandle {
+    protected abstract class AbstractUringUnsafe extends AbstractUnsafe implements IoUringIoHandle {
         private IoUringRecvByteAllocatorHandle allocHandle;
         private boolean closed;
         private boolean freed;
@@ -762,7 +762,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             try {
                 socketIsEmpty = socketIsEmpty(flags);
                 socketHasMoreData = IoUring.isCqeFSockNonEmptySupported() &&
-                                    (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0;
+                        (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0;
                 readComplete0(op, res, flags, data, numOutstandingReads);
             } finally {
                 try {
