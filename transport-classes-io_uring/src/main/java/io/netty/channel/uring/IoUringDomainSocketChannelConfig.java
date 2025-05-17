@@ -39,7 +39,7 @@ public class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
     private AtomicReference<DomainSocketReadMode> mode = new AtomicReference<>(DomainSocketReadMode.BYTES);
     private volatile boolean allowHalfClosure;
 
-    IoUringDomainSocketChannelConfig(AbstractIoUringChannel channel) {
+    IoUringDomainSocketChannelConfig(IoUringDomainSocketChannel channel) {
         super(channel);
     }
 
@@ -120,6 +120,7 @@ public class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
 
     @Override
     public IoUringDomainSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
+        ObjectUtil.checkNotNull(mode, "mode");
         boolean change = (mode == DomainSocketReadMode.BYTES
                           && this.mode.compareAndSet(DomainSocketReadMode.FILE_DESCRIPTORS, mode))
                          ||
@@ -129,10 +130,6 @@ public class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
             if (channel.isRegistered()) {
                 // cancel current Read
                 ((IoUringDomainSocketChannel) channel).autoReadCleared();
-                // switch to a new mode and read if autoRead is enabled
-                if (isAutoRead()) {
-                    channel.read();
-                }
             }
         }
         return this;

@@ -94,7 +94,7 @@ public class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel imp
 
     @Override
     protected boolean allowMultiShotPollIn() {
-        // UNIX domain sockets do not support IORING_CQE_F_SOCK_NONEMPTY. and POLL_ADD_MULTI is edge-triggered
+        // UNIX domain sockets do not support IORING_CQE_F_SOCK_NONEMPTY and POLL_ADD_MULTI is edge-triggered
         // so we should disable it
         return false;
     }
@@ -156,10 +156,6 @@ public class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel imp
 
         @Override
         protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
-            if (config.getReadMode() == DomainSocketReadMode.BYTES) {
-                return super.scheduleRead0(first, socketIsEmpty);
-            }
-
             if (config.getReadMode() == DomainSocketReadMode.FILE_DESCRIPTORS) {
                 // we can reuse the same memory for any fd
                 if (readMsgHdrMemory == null) {
@@ -179,6 +175,11 @@ public class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel imp
                 }
                 return 1;
             }
+
+            if (config.getReadMode() == DomainSocketReadMode.BYTES) {
+                return super.scheduleRead0(first, socketIsEmpty);
+            }
+
             throw new Error();
         }
 
@@ -194,9 +195,14 @@ public class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel imp
                 try {
                     int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring recvmsg", res);
                     int nativeFd = readMsgHdrMemory.getScmRightsFd();
+                    allocHandle.lastBytesRead(nativeFd);
+                    allocHandle.incMessagesRead(1);
                     pipeline.fireChannelRead(new FileDescriptor(nativeFd));
                 } catch (Throwable throwable) {
                     handleReadException(pipeline, null, throwable, false, allocHandle);
+                } finally {
+                    allocHandle.readComplete();
+                    pipeline.fireChannelReadComplete();
                 }
                 return;
             }

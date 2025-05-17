@@ -24,8 +24,6 @@ import java.nio.ByteBuffer;
 
 final class MsgHdrMemory {
     private static final byte[] EMPTY_SOCKADDR_STORAGE = new byte[Native.SIZEOF_SOCKADDR_STORAGE];
-    private static ByteBuffer MSG_IOV_EMPTY_CONTENT = ByteBuffer.allocateDirect(1);
-    private static long MSG_IOV_EMPTY_CONTENT_ADDRESS = Buffer.memoryAddress(MSG_IOV_EMPTY_CONTENT);
     private final ByteBuffer msgHdrMemory;
     private final ByteBuffer socketAddrMemory;
     private final ByteBuffer iovMemory;
@@ -82,7 +80,6 @@ final class MsgHdrMemory {
     }
 
     void setScmRightsFd(int fd) {
-        Iov.set(iovMemory, MSG_IOV_EMPTY_CONTENT_ADDRESS, 1);
         MsgHdr.prepSendFd(msgHdrMemory, fd, cmsgDataMemory, cmsgDataOffset, iovMemory, 1);
     }
 
