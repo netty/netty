@@ -22,6 +22,7 @@ import java.lang.ref.WeakReference;
 import java.security.AccessController;
 import java.security.PrivilegedAction;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.util.internal.SystemPropertyUtil.getInt;
@@ -38,8 +39,8 @@ public final class ObjectCleaner {
     // Package-private for testing
     static final String CLEANER_THREAD_NAME = ObjectCleaner.class.getSimpleName() + "Thread";
     // This will hold a reference to the AutomaticCleanerReference which will be removed once we called cleanup()
-    private static final Set<AutomaticCleanerReference> LIVE_SET = new ConcurrentSet<AutomaticCleanerReference>();
-    private static final ReferenceQueue<Object> REFERENCE_QUEUE = new ReferenceQueue<Object>();
+    private static final Set<AutomaticCleanerReference> LIVE_SET = ConcurrentHashMap.newKeySet();
+    private static final ReferenceQueue<Object> REFERENCE_QUEUE = new ReferenceQueue<>();
     private static final AtomicBoolean CLEANER_RUNNING = new AtomicBoolean(false);
     private static final Runnable CLEANER_TASK = new Runnable() {
         @Override

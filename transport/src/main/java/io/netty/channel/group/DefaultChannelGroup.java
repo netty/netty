@@ -25,7 +25,6 @@ import io.netty.channel.ServerChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.util.AbstractSet;
@@ -34,6 +33,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -45,8 +45,8 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
     private static final AtomicInteger nextId = new AtomicInteger();
     private final String name;
     private final EventExecutor executor;
-    private final ConcurrentMap<ChannelId, Channel> serverChannels = PlatformDependent.newConcurrentHashMap();
-    private final ConcurrentMap<ChannelId, Channel> nonServerChannels = PlatformDependent.newConcurrentHashMap();
+    private final ConcurrentMap<ChannelId, Channel> serverChannels = new ConcurrentHashMap<>();
+    private final ConcurrentMap<ChannelId, Channel> nonServerChannels = new ConcurrentHashMap<>();
     private final ChannelFutureListener remover = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {

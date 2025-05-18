@@ -48,7 +48,6 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ResourcesUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -74,6 +73,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -553,7 +553,7 @@ public class ParameterizedSslHandlerTest {
             Class<? extends ServerChannel> serverClass = LocalServerChannel.class;
             Class<? extends Channel> clientClass = LocalChannel.class;
             SocketAddress bindAddress = new LocalAddress(String.valueOf(
-                    PlatformDependent.threadLocalRandom().nextLong()));
+                    ThreadLocalRandom.current().nextLong()));
             reentryOnHandshakeComplete(clientProvider, serverProvider, group, bindAddress,
                     serverClass, clientClass, false, false);
             reentryOnHandshakeComplete(clientProvider, serverProvider, group, bindAddress,

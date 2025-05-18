@@ -15,12 +15,11 @@
  */
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.PlatformDependent;
-
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 final class DelayingExecutor implements Executor {
@@ -39,7 +38,7 @@ final class DelayingExecutor implements Executor {
     public void execute(Runnable command) {
         // Let's add some jitter in terms of when the task is actual run
         service.schedule(command,
-                PlatformDependent.threadLocalRandom().nextInt(100), TimeUnit.MILLISECONDS);
+                ThreadLocalRandom.current().nextInt(100), TimeUnit.MILLISECONDS);
     }
 
     void shutdown() {

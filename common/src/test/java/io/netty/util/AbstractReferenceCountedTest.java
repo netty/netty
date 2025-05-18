@@ -15,7 +15,6 @@
  */
 package io.netty.util;
 
-import io.netty.util.internal.ThreadLocalRandom;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
@@ -26,6 +25,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -41,24 +41,14 @@ public class AbstractReferenceCountedTest {
         final AbstractReferenceCounted referenceCounted = newReferenceCounted();
         referenceCounted.setRefCnt(Integer.MAX_VALUE);
         assertEquals(Integer.MAX_VALUE, referenceCounted.refCnt());
-        assertThrows(IllegalReferenceCountException.class, new Executable() {
-            @Override
-            public void execute() {
-                referenceCounted.retain();
-            }
-        });
+        assertThrows(IllegalReferenceCountException.class, referenceCounted::retain);
     }
 
     @Test
     public void testRetainOverflow2() {
         final AbstractReferenceCounted referenceCounted = newReferenceCounted();
         assertEquals(1, referenceCounted.refCnt());
-        assertThrows(IllegalReferenceCountException.class, new Executable() {
-            @Override
-            public void execute() {
-                referenceCounted.retain(Integer.MAX_VALUE);
-            }
-        });
+        assertThrows(IllegalReferenceCountException.class, () -> referenceCounted.retain(Integer.MAX_VALUE));
     }
 
     @Test
@@ -66,12 +56,7 @@ public class AbstractReferenceCountedTest {
         final AbstractReferenceCounted referenceCounted = newReferenceCounted();
         referenceCounted.setRefCnt(0);
         assertEquals(0, referenceCounted.refCnt());
-        assertThrows(IllegalReferenceCountException.class, new Executable() {
-            @Override
-            public void execute() {
-                referenceCounted.release(Integer.MAX_VALUE);
-            }
-        });
+        assertThrows(IllegalReferenceCountException.class, () -> referenceCounted.release(Integer.MAX_VALUE));
     }
 
     @Test
@@ -91,12 +76,7 @@ public class AbstractReferenceCountedTest {
         final AbstractReferenceCounted referenceCounted = newReferenceCounted();
         assertTrue(referenceCounted.release());
         assertEquals(0, referenceCounted.refCnt());
-        assertThrows(IllegalReferenceCountException.class, new Executable() {
-            @Override
-            public void execute() {
-                referenceCounted.retain();
-            }
-        });
+        assertThrows(IllegalReferenceCountException.class, referenceCounted::retain);
     }
 
     @Test
@@ -104,19 +84,14 @@ public class AbstractReferenceCountedTest {
         final AbstractReferenceCounted referenceCounted = newReferenceCounted();
         assertTrue(referenceCounted.release());
         assertEquals(0, referenceCounted.refCnt());
-        assertThrows(IllegalReferenceCountException.class, new Executable() {
-            @Override
-            public void execute() {
-                referenceCounted.retain(2);
-            }
-        });
+        assertThrows(IllegalReferenceCountException.class, () -> referenceCounted.retain(2));
     }
 
     @Test
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testRetainFromMultipleThreadsThrowsReferenceCountException() throws Exception {
         int threads = 4;
-        Queue<Future<?>> futures = new ArrayDeque<Future<?>>(threads);
+        Queue<Future<?>> futures = new ArrayDeque<>(threads);
         ExecutorService service = Executors.newFixedThreadPool(threads);
         final AtomicInteger refCountExceptions = new AtomicInteger();
 
@@ -128,19 +103,16 @@ public class AbstractReferenceCountedTest {
 
                 for (int a = 0; a < threads; a++) {
                     final int retainCnt = ThreadLocalRandom.current().nextInt(1, Integer.MAX_VALUE);
-                    futures.add(service.submit(new Runnable() {
-                        @Override
-                        public void run() {
+                    futures.add(service.submit(() -> {
+                        try {
+                            retainLatch.await();
                             try {
-                                retainLatch.await();
-                                try {
-                                    referenceCounted.retain(retainCnt);
-                                } catch (IllegalReferenceCountException e) {
-                                    refCountExceptions.incrementAndGet();
-                                }
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
+                                referenceCounted.retain(retainCnt);
+                            } catch (IllegalReferenceCountException e) {
+                                refCountExceptions.incrementAndGet();
                             }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
                         }
                     }));
                 }
@@ -165,7 +137,7 @@ public class AbstractReferenceCountedTest {
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testReleaseFromMultipleThreadsThrowsReferenceCountException() throws Exception {
         int threads = 4;
-        Queue<Future<?>> futures = new ArrayDeque<Future<?>>(threads);
+        Queue<Future<?>> futures = new ArrayDeque<>(threads);
         ExecutorService service = Executors.newFixedThreadPool(threads);
         final AtomicInteger refCountExceptions = new AtomicInteger();
 
@@ -178,21 +150,18 @@ public class AbstractReferenceCountedTest {
                 for (int a = 0; a < threads; a++) {
                     final AtomicInteger releaseCnt = new AtomicInteger(0);
 
-                    futures.add(service.submit(new Runnable() {
-                        @Override
-                        public void run() {
+                    futures.add(service.submit(() -> {
+                        try {
+                            releaseLatch.await();
                             try {
-                                releaseLatch.await();
-                                try {
-                                    if (referenceCounted.release(releaseCnt.incrementAndGet())) {
-                                        releasedCount.incrementAndGet();
-                                    }
-                                } catch (IllegalReferenceCountException e) {
-                                    refCountExceptions.incrementAndGet();
+                                if (referenceCounted.release(releaseCnt.incrementAndGet())) {
+                                    releasedCount.incrementAndGet();
                                 }
-                            } catch (InterruptedException e) {
-                                Thread.currentThread().interrupt();
+                            } catch (IllegalReferenceCountException e) {
+                                refCountExceptions.incrementAndGet();
                             }
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
                         }
                     }));
                 }

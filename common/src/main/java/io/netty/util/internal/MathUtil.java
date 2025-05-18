@@ -65,6 +65,7 @@ public final class MathUtil {
     }
 
     /**
+     * @deprecated not used anymore. User Integer.compare() instead. For removal.
      * Compares two {@code int} values.
      *
      * @param  x the first {@code int} to compare
@@ -73,12 +74,14 @@ public final class MathUtil {
      *         {@code -1} if {@code x < y}; and
      *         {@code 1} if {@code x > y}
      */
+    @Deprecated
     public static int compare(final int x, final int y) {
         // do not subtract for comparison, it could overflow
-        return x < y ? -1 : (x > y ? 1 : 0);
+        return Integer.compare(x, y);
     }
 
     /**
+     * @deprecated not used anymore. User Long.compare() instead. For removal.
      * Compare two {@code long} values.
      * @param x the first {@code long} to compare.
      * @param y the second {@code long} to compare.
@@ -89,7 +92,9 @@ public final class MathUtil {
      * <li>{@code < 0} if {@code x < y}</li>
      * </ul>
      */
+    @Deprecated
     public static int compare(long x, long y) {
-        return (x < y) ? -1 : (x > y) ? 1 : 0;
+        return Long.compare(x, y);
     }
+
 }

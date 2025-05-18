@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static io.netty.buffer.PoolChunk.isSubpage;
@@ -55,9 +56,9 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     // Metrics for allocations and deallocations
     private long allocationsNormal;
     // We need to use the LongCounter here as this is not guarded via synchronized block.
-    private final LongCounter allocationsSmall = PlatformDependent.newLongCounter();
-    private final LongCounter allocationsHuge = PlatformDependent.newLongCounter();
-    private final LongCounter activeBytesHuge = PlatformDependent.newLongCounter();
+    private final LongAdder allocationsSmall = new LongAdder();
+    private final LongAdder allocationsHuge = new LongAdder();
+    private final LongAdder activeBytesHuge = new LongAdder();
 
     private long deallocationsSmall;
     private long deallocationsNormal;
@@ -66,7 +67,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     private long pooledChunkDeallocations;
 
     // We need to use the LongCounter here as this is not guarded via synchronized block.
-    private final LongCounter deallocationsHuge = PlatformDependent.newLongCounter();
+    private final LongAdder deallocationsHuge = new LongAdder();
 
     // Number of thread caches backed by this arena.
     final AtomicInteger numThreadCaches = new AtomicInteger();
@@ -397,7 +398,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         } finally {
             unlock();
         }
-        return allocationsSmall.value() + allocsNormal + allocationsHuge.value();
+        return allocationsSmall.sum() + allocsNormal + allocationsHuge.sum();
     }
 
     @Override
@@ -407,7 +408,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numSmallAllocations() {
-        return allocationsSmall.value();
+        return allocationsSmall.sum();
     }
 
     @Override
@@ -439,7 +440,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         } finally {
             unlock();
         }
-        return deallocs + deallocationsHuge.value();
+        return deallocs + deallocationsHuge.sum();
     }
 
     @Override
@@ -479,18 +480,18 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numHugeAllocations() {
-        return allocationsHuge.value();
+        return allocationsHuge.sum();
     }
 
     @Override
     public long numHugeDeallocations() {
-        return deallocationsHuge.value();
+        return deallocationsHuge.sum();
     }
 
     @Override
     public  long numActiveAllocations() {
-        long val = allocationsSmall.value() + allocationsHuge.value()
-                - deallocationsHuge.value();
+        long val = allocationsSmall.sum() + allocationsHuge.sum()
+                - deallocationsHuge.sum();
         lock();
         try {
             val += allocationsNormal - (deallocationsSmall + deallocationsNormal);
@@ -541,7 +542,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numActiveBytes() {
-        long val = activeBytesHuge.value();
+        long val = activeBytesHuge.sum();
         lock();
         try {
             for (int i = 0; i < chunkListMetrics.size(); i++) {
@@ -560,7 +561,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
      * pinned memory is not accessible for use by any other allocation, until the buffers using have all been released.
      */
     public long numPinnedBytes() {
-        long val = activeBytesHuge.value(); // Huge chunks are exact-sized for the buffers they were allocated to.
+        long val = activeBytesHuge.sum(); // Huge chunks are exact-sized for the buffers they were allocated to.
         for (int i = 0; i < chunkListMetrics.size(); i++) {
             for (PoolChunkMetric m: chunkListMetrics.get(i)) {
                 val += ((PoolChunk<?>) m).pinnedBytes();

@@ -21,7 +21,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
@@ -34,6 +33,7 @@ import org.openjdk.jmh.annotations.Warmup;
 
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 
 @Threads(1)
@@ -65,7 +65,7 @@ public class HttpPostDecoderBenchmark extends AbstractMicrobenchmark {
     }
 
     private static CharSequence randomString() {
-        Random rng = PlatformDependent.threadLocalRandom();
+        Random rng = ThreadLocalRandom.current();
         int len = 4 + rng.nextInt(110);
         StringBuilder sb = new StringBuilder(len);
         for (int i = 0; i < len; i++) {

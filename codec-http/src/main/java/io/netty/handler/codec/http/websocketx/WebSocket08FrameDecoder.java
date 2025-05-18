@@ -396,6 +396,10 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
         ByteOrder order = frame.order();
 
         int intMask = mask;
+        if (intMask == 0) {
+            // If the mask is 0 we can just return directly as the XOR operations will just produce the same value.
+            return;
+        }
         // Avoid sign extension on widening primitive conversion
         long longMask = intMask & 0xFFFFFFFFL;
         longMask |= longMask << 32;

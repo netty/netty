@@ -106,9 +106,7 @@ final class ResolvConf {
             ResolvConf resolvConf;
             try {
                 resolvConf = ResolvConf.fromFile("/etc/resolv.conf");
-            } catch (IOException e) {
-                resolvConf = null;
-            } catch (SecurityException ignore) {
+            } catch (IOException | SecurityException e) {
                 resolvConf = null;
             }
             machineResolvConf = resolvConf;

@@ -52,7 +52,6 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.ThreadLocalRandom;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.apache.directory.server.dns.DnsException;
@@ -108,6 +107,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -499,7 +499,7 @@ public class DnsNameResolverTest {
                 if (EXCLUSIONS_RESOLVE_A.contains(name)) {
                     continue;
                 }
-                if (PlatformDependent.threadLocalRandom().nextBoolean()) {
+                if (java.util.concurrent.ThreadLocalRandom.current().nextBoolean()) {
                     overriddenHostnames.add(name);
                 }
             }
@@ -2062,22 +2062,19 @@ public class DnsNameResolverTest {
                                                                 final List<String> searchDomains, String unresolved)
             throws Exception {
         final String ipAddrPrefix = "1.2.3.";
-        TestDnsServer searchDomainServer = new TestDnsServer(new RecordStore() {
-            @Override
-            public Set<ResourceRecord> getRecords(QuestionRecord questionRecord) {
-                Set<ResourceRecord> records = new HashSet<ResourceRecord>(searchDomains.size());
-                final String qName = questionRecord.getDomainName();
-                for (String searchDomain : searchDomains) {
-                    if (qName.endsWith(searchDomain)) {
-                        continue;
-                    }
-                    final ResourceRecord rr = newARecord(qName + '.' + searchDomain,
-                            ipAddrPrefix + ThreadLocalRandom.current().nextInt(1, 10));
-                    logger.info("Adding A record: " + rr);
-                    records.add(rr);
+        TestDnsServer searchDomainServer = new TestDnsServer(questionRecord -> {
+            Set<ResourceRecord> records = new HashSet<>(searchDomains.size());
+            final String qName = questionRecord.getDomainName();
+            for (String searchDomain : searchDomains) {
+                if (qName.endsWith(searchDomain)) {
+                    continue;
                 }
-                return records;
+                final ResourceRecord rr = newARecord(qName + '.' + searchDomain,
+                        ipAddrPrefix + ThreadLocalRandom.current().nextInt(1, 10));
+                logger.info("Adding A record: " + rr);
+                records.add(rr);
             }
+            return records;
         });
         searchDomainServer.start();
 
@@ -2087,7 +2084,7 @@ public class DnsNameResolverTest {
 
         try {
             final List<InetAddress> addresses = resolver.resolveAll(unresolved).sync().get();
-            assertThat(addresses, Matchers.<InetAddress>hasSize(greaterThan(0)));
+            assertThat(addresses, Matchers.hasSize(greaterThan(0)));
             for (InetAddress address : addresses) {
                 assertThat(address.getHostName(), startsWith(unresolved));
                 assertThat(address.getHostAddress(), startsWith(ipAddrPrefix));

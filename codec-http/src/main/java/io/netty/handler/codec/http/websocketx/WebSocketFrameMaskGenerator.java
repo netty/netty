@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,18 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.util.internal;
-
-import java.util.concurrent.atomic.LongAdder;
+package io.netty.handler.codec.http.websocketx;
 
 /**
- * @deprecated please use {@link LongAdder} instead.
+ * Allows to customize how the mask is generated that is used to mask the {@link WebSocketFrame}. Masking
+ * is only be done on the client-side.
  */
-@Deprecated
-final class LongAdderCounter extends LongAdder implements LongCounter {
+public interface WebSocketFrameMaskGenerator {
 
-    @Override
-    public long value() {
-        return longValue();
-    }
+    /**
+     * Return the next mask that is used to mask the payload of the {@link WebSocketFrame}.
+     *
+     * @return  mask.
+     */
+    int nextMask();
 }
