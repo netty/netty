@@ -24,10 +24,15 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.epoll.EpollDomainSocketChannel;
+import io.netty.channel.epoll.EpollIoHandle;
+import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractSocketTest;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -40,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class IoUringDomainSocketFdTest extends AbstractSocketTest {
@@ -145,13 +151,17 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
 
         FileDescriptor fd = recvFdFuture.get();
         assertTrue(fd.isOpen());
+        assertNotEquals(0, fd.intValue());
         fd.close();
         assertFalse(fd.isOpen());
 
-        ByteBuf recvBuffer = recvByteBufFuture.get();
-        assertEquals(expected, recvBuffer.toString(Charset.defaultCharset()));
-
-        cc.close().sync();
-        sc.close().sync();
+       try {
+           ByteBuf recvBuffer = recvByteBufFuture.get();
+           assertEquals(expected, recvBuffer.toString(Charset.defaultCharset()));
+           cc.close().sync();
+           sc.close().sync();
+       } finally {
+           ReferenceCountUtil.release(fd);
+       }
     }
 }

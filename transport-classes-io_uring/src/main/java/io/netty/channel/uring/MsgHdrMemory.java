@@ -24,6 +24,9 @@ import java.nio.ByteBuffer;
 
 final class MsgHdrMemory {
     private static final byte[] EMPTY_SOCKADDR_STORAGE = new byte[Native.SIZEOF_SOCKADDR_STORAGE];
+    private static final ByteBuffer GLOBAL_IOV_BASE =  Buffer.allocateDirectWithNativeOrder(1);
+    private static final long GLOBAL_IOV_BASE_ADDRESS = Buffer.memoryAddress(GLOBAL_IOV_BASE);
+    private static final int GLOBAL_IOV_LEN = 1;
     private final ByteBuffer msgHdrMemory;
     private final ByteBuffer socketAddrMemory;
     private final ByteBuffer iovMemory;
@@ -53,7 +56,9 @@ final class MsgHdrMemory {
         msgHdrMemoryAddress = Buffer.memoryAddress(msgHdrMemory);
         socketAddrMemory = null;
         iovMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_IOVEC);
-        Iov.set(iovMemory, 0, 0);
+        // These two parameters must be set to valid values and cannot be 0,
+        // otherwise the fd we get in io_uring_recvmsg is 0
+        Iov.set(iovMemory, GLOBAL_IOV_BASE_ADDRESS, GLOBAL_IOV_LEN);
         cmsgDataMemory = Buffer.allocateDirectWithNativeOrder(Native.CMSG_SPACE_FOR_FD);
 
         long cmsgDataMemoryAddr = Buffer.memoryAddress(cmsgDataMemory);
