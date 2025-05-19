@@ -433,7 +433,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         remote = socket.remoteAddress();
     }
 
-    abstract class AbstractUringUnsafe extends AbstractUnsafe implements IoUringIoHandle {
+    protected abstract class AbstractUringUnsafe extends AbstractUnsafe implements IoUringIoHandle {
         private IoUringRecvByteAllocatorHandle allocHandle;
         private boolean closed;
         private boolean freed;
