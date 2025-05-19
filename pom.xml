@@ -67,6 +67,14 @@
     </developer>
   </developers>
 
+  <distributionManagement>
+    <snapshotRepository>
+      <name>Central Portal Snapshots</name>
+      <id>central-portal-snapshots</id>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
+
   <profiles>
     <profile>
       <id>aggregate</id>
@@ -385,6 +393,26 @@
         <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8+ javadoc which got more strict. -->
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
       </properties>
+    </profile>
+    <profile>
+      <id>stage-snapshot</id>
+      <properties>
+        <skipTests>true</skipTests>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.sonatype.plugins</groupId>
+            <artifactId>nexus-staging-maven-plugin</artifactId>
+            <version>1.7.0</version>
+            <configuration>
+              <serverId>central-portal-snapshots</serverId>
+              <nexusUrl>https://central.sonatype.com/repository/maven-snapshots</nexusUrl>
+              <skipRemoteStaging>true</skipRemoteStaging>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
   </profiles>
 
@@ -1138,6 +1166,16 @@
             <version>1.9.4</version>
           </dependency>
         </dependencies>
+      </plugin>
+      <plugin>
+        <groupId>org.sonatype.central</groupId>
+        <artifactId>central-publishing-maven-plugin</artifactId>
+        <version>0.7.0</version>
+        <configuration>
+          <publishingServerId>central</publishingServerId>
+          <skipPublishing>true</skipPublishing>
+          <autoPublish>false</autoPublish>
+        </configuration>
       </plugin>
 
       <!-- Ensure to put maven-antrun-plugin at the end of the plugin list
