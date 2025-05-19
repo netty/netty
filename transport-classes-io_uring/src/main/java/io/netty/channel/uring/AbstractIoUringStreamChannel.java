@@ -42,11 +42,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     // Store the opCode so we know if we used WRITE or WRITEV.
-    protected byte writeOpCode;
+    byte writeOpCode;
     // Keep track of the ids used for write and read so we can cancel these when needed.
-    protected long writeId;
-    protected byte readOpCode;
-    protected long readId;
+    long writeId;
+    byte readOpCode;
+    long readId;
 
     // The configured buffer ring if any
     private IoUringBufferRing bufferRing;

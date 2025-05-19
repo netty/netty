@@ -33,7 +33,10 @@ import io.netty.channel.unix.PeerCredentials;
 import java.io.IOException;
 import java.net.SocketAddress;
 
-public class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel implements DomainSocketChannel {
+/**
+ * {@link DomainSocketChannel} implementation that uses linux io_uring
+ */
+public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel implements DomainSocketChannel {
 
     private final IoUringDomainSocketChannelConfig config;
 
@@ -108,6 +111,7 @@ public class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel imp
         protected int scheduleWriteSingle(Object msg) {
             if (msg instanceof FileDescriptor) {
                 // we can reuse the same memory for any fd
+                // because we never have more than a single outstanding write.
                 if (writeMsgHdrMemory == null) {
                     writeMsgHdrMemory = new MsgHdrMemory();
                 }
@@ -156,31 +160,33 @@ public class IoUringDomainSocketChannel extends AbstractIoUringStreamChannel imp
 
         @Override
         protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
-            if (config.getReadMode() == DomainSocketReadMode.FILE_DESCRIPTORS) {
-                // we can reuse the same memory for any fd
-                if (readMsgHdrMemory == null) {
-                    readMsgHdrMemory = new MsgHdrMemory();
-                }
-                readMsgHdrMemory.prepRecvReadFd();
-                IoRegistration registration = registration();
-                IoUringIoOps ioUringIoOps = IoUringIoOps.newRecvmsg(
-                        fd().intValue(), (byte) 0, 0, readMsgHdrMemory.address(), readMsgHdrMemory.idx());
-                readId = registration.submit(ioUringIoOps);
-                readOpCode = Native.IORING_OP_RECVMSG;
-                if (readId == 0) {
-                    MsgHdrMemory memory = readMsgHdrMemory;
-                    readMsgHdrMemory = null;
-                    memory.release();
-                    return 0;
-                }
-                return 1;
+            DomainSocketReadMode readMode = config.getReadMode();
+            switch (readMode) {
+                case FILE_DESCRIPTORS: return scheduleRecvReadFd();
+                case BYTES: return super.scheduleRead0(first, socketIsEmpty);
+                default: throw new Error();
             }
+        }
 
-            if (config.getReadMode() == DomainSocketReadMode.BYTES) {
-                return super.scheduleRead0(first, socketIsEmpty);
+        private int scheduleRecvReadFd() {
+            // we can reuse the same memory for any fd
+            // because we only submit one outstanding read
+            if (readMsgHdrMemory == null) {
+                readMsgHdrMemory = new MsgHdrMemory();
             }
-
-            throw new Error();
+            readMsgHdrMemory.prepRecvReadFd();
+            IoRegistration registration = registration();
+            IoUringIoOps ioUringIoOps = IoUringIoOps.newRecvmsg(
+                    fd().intValue(), (byte) 0, 0, readMsgHdrMemory.address(), readMsgHdrMemory.idx());
+            readId = registration.submit(ioUringIoOps);
+            readOpCode = Native.IORING_OP_RECVMSG;
+            if (readId == 0) {
+                MsgHdrMemory memory = readMsgHdrMemory;
+                readMsgHdrMemory = null;
+                memory.release();
+                return 0;
+            }
+            return 1;
         }
 
         @Override
