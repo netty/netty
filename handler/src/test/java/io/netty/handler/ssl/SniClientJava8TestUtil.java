@@ -34,7 +34,6 @@ import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.ThrowableUtil;
 
 import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.KeyManager;
@@ -132,8 +131,7 @@ final class SniClientJava8TestUtil {
                                             promise.setSuccess(null);
                                         } else {
                                             promise.setFailure(
-                                                    new AssertionError("cause not of type SSLException: "
-                                                            + ThrowableUtil.stackTraceToString(cause)));
+                                                    new AssertionError("cause not of type SSLException: " + cause));
                                         }
                                     }
                                 }
