@@ -155,13 +155,13 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
         fd.close();
         assertFalse(fd.isOpen());
 
+        ByteBuf recvBuffer = recvByteBufFuture.get();
        try {
-           ByteBuf recvBuffer = recvByteBufFuture.get();
            assertEquals(expected, recvBuffer.toString(Charset.defaultCharset()));
            cc.close().sync();
            sc.close().sync();
        } finally {
-           ReferenceCountUtil.release(fd);
+           ReferenceCountUtil.release(recvBuffer);
        }
     }
 }
