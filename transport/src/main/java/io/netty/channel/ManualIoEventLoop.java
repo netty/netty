@@ -48,7 +48,6 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@link #waitAndRun()}} methods are called in a timely fashion.
  */
 public final class ManualIoEventLoop extends AbstractScheduledEventExecutor implements IoEventLoop {
-
     private static final int ST_STARTED = 0;
     private static final int ST_SHUTTING_DOWN = 1;
     private static final int ST_SHUTDOWN = 2;
@@ -150,22 +149,12 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     }
 
     /**
-     * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.
-     * <br>
-     * The behaviour of this method is the same as {@link #runNonIoTasks(long)}
-     * with {@code timeoutNanos} set {@code <= 0}.
-     */
-    public int runNonIoTasks() {
-        return runAllTasks(-1, true);
-    }
-
-    /**
-     * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.  This method stops running
-     * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.<br>
+     * Poll and run tasks from the task queue, until the task queue is empty or the given deadline is exceeded.<br>
+     * If {@code timeoutNanos} is less or equals 0, no deadline is applied.
      *
-     * @param timeoutNanos the maximum time in nanoseconds to run tasks. If {@code <= 0}, no timeout is applied.
+     * @param timeoutNanos the maximum time in nanoseconds to run tasks.
      */
-    public int runNonIoTasks(long timeoutNanos) {
+    public int runNonBlockingTasks(long timeoutNanos) {
         return runAllTasks(timeoutNanos, true);
     }
 
@@ -190,8 +179,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
 
                 runTasks++;
 
-                // Check timeout every each TICKER_FREQUENCY tasks because nanoTime() is relatively expensive.
-                if (timeoutNanos > 0) {
+               if (timeoutNanos > 0) {
                     lastExecutionTime = ticker.nanoTime();
                     if ((lastExecutionTime - deadline) >= 0) {
                         break;
@@ -230,9 +218,13 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
                 }
                 return runAllTasksBeforeDestroy();
             }
-            int run = handler.run(context);
+            final int ioTasks = handler.run(context);
             // Now run all tasks.
-            return run + runAllTasks(runAllTasksTimeoutNanos, false);
+            if (runAllTasksTimeoutNanos < 0) {
+                return ioTasks;
+            }
+            assert runAllTasksTimeoutNanos >= 0;
+            return ioTasks + runAllTasks(runAllTasksTimeoutNanos, false);
         } finally {
             ThreadExecutorMap.setCurrentExecutor(old);
         }
@@ -269,8 +261,8 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      * <strong>Must be called from the owning {@link Thread} that was passed as a parameter on construction.</strong>
      * <p>
      *
-     * @param runAllTasksTimeoutNanos the maximum time in nanoseconds to run tasks. If {@code <= 0},
-     *                                no timeout is applied.
+     * @param runAllTasksTimeoutNanos the maximum time in nanoseconds to run tasks.
+     *                                If {@code = 0}, no timeout is applied; if {@code < 0} it just perform I/O tasks.
      * @return the number of IO and tasks executed.
      * @throws IllegalStateException if the method is not called from the owning {@link Thread}.
      */
@@ -290,7 +282,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      */
     public int runNow() {
         checkCurrentThread();
-        return run(nonBlockingContext, -1);
+        return run(nonBlockingContext, 0);
     }
 
     /**
@@ -300,8 +292,8 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      * <p>
      * <strong>Must be called from the owning {@link Thread} that was passed as an parameter on construction.</strong>
      *
-     * @param runAllTasksTimeoutNanos the maximum time in nanoseconds to run tasks. If {@code <= 0},
-     *                                no timeout is applied.
+     * @param runAllTasksTimeoutNanos the maximum time in nanoseconds to run tasks.
+     *                                If {@code = 0}, no timeout is applied; if {@code < 0} it just perform I/O tasks.
      * @param waitNanos the maximum amount of nanoseconds to wait before returning. IF {@code 0} it will block until
      *                  there is some IO / tasks ready, if {@code -1} will not block at all and just return directly
      *                  if there is nothing to run (like {@link #runNow()}).
@@ -333,7 +325,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      * @return          the number of IO and tasks executed.
      */
     public int run(long waitNanos) {
-        return run(waitNanos, -1);
+        return run(waitNanos, 0);
     }
 
     private void checkCurrentThread() {

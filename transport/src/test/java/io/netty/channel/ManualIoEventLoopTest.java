@@ -274,7 +274,7 @@ public class ManualIoEventLoopTest {
             assertTrue(executed.compareAndSet(false, true));
             assertSame(eventLoop, ThreadExecutorMap.currentExecutor());
         });
-        assertEquals(1, eventLoop.runNonIoTasks());
+        assertEquals(1, eventLoop.runNonBlockingTasks(0));
         assertTrue(executed.get());
         eventLoop.shutdownGracefully();
     }
@@ -291,7 +291,7 @@ public class ManualIoEventLoopTest {
                 case Wait:
                     return el.run(TimeUnit.HOURS.toNanos(1), timeoutNs);
                 case NonIoNow:
-                    return el.runNonIoTasks(timeoutNs);
+                    return el.runNonBlockingTasks(timeoutNs);
                 default:
                     throw new IllegalStateException("Unknown run mode: " + this);
             }
