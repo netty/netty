@@ -299,7 +299,7 @@ public final class CipherSuiteConverter {
      * Convert from OpenSSL cipher suite name convention to java cipher suite name convention.
      * @param openSslCipherSuite An OpenSSL cipher suite name.
      * @param protocol The cryptographic protocol (i.e. SSL, TLS, ...).
-     * @return The translated cipher suite name according to java conventions. This will not be {@code null}.
+     * @return The translated cipher suite name according to java conventions (or null if translation was not possible).
      */
     public static String toJava(String openSslCipherSuite, String protocol) {
         Map<String, String> p2j = o2j.get(openSslCipherSuite);

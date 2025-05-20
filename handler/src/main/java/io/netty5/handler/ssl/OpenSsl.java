@@ -333,8 +333,14 @@ public final class OpenSsl {
             for (String cipher: AVAILABLE_OPENSSL_CIPHER_SUITES) {
                 // Included converted but also openssl cipher name
                 if (!isTLSv13Cipher(cipher)) {
-                    availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "TLS"));
-                    availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "SSL"));
+                    final String tlsConversion = CipherSuiteConverter.toJava(cipher, "TLS");
+                    if (tlsConversion != null) {
+                        availableJavaCipherSuites.add(tlsConversion);
+                    }
+                    final String sslConversion = CipherSuiteConverter.toJava(cipher, "SSL");
+                    if (sslConversion != null) {
+                        availableJavaCipherSuites.add(sslConversion);
+                    }
                 } else {
                     // TLSv1.3 ciphers have the correct format.
                     availableJavaCipherSuites.add(cipher);

@@ -17,15 +17,33 @@ package io.netty5.handler.ssl;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class OpenSslTest {
+final class OpenSslTest {
 
     @Test
-    public void testDefaultCiphers() {
+    void testDefaultCiphers() {
         if (!OpenSsl.isTlsv13Supported()) {
             assertTrue(
                     OpenSsl.DEFAULT_CIPHERS.size() <= SslUtils.DEFAULT_CIPHER_SUITES.length);
         }
+    }
+
+    @Test
+    void availableJavaCipherSuitesMustNotContainNullOrEmptyElement() {
+        OpenSsl.availableJavaCipherSuites().forEach(suite -> {
+            assertNotNull(suite);
+            assertFalse(suite.isEmpty());
+        });
+    }
+
+    @Test
+    void availableOpenSslCipherSuitesMustNotContainNullOrEmptyElement() {
+        OpenSsl.availableOpenSslCipherSuites().forEach(suite -> {
+            assertNotNull(suite);
+            assertFalse(suite.isEmpty());
+        });
     }
 }
