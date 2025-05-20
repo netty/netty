@@ -496,9 +496,10 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             int willTopicSize = decodeMsbLsb(buffer);
             numberOfBytesConsumed += 2 + willTopicSize;
             if (willTopicSize <= 32767) {
-                decodedWillTopic = buffer.toString(buffer.readerIndex(), willTopicSize, CharsetUtil.UTF_8);
+                decodedWillTopic = buffer.readString(willTopicSize, CharsetUtil.UTF_8);
+            } else {
+                buffer.skipBytes(willTopicSize);
             }
-            buffer.skipBytes(willTopicSize);
 
             decodedWillMessage = decodeByteArray(buffer);
             numberOfBytesConsumed += decodedWillMessage.length + 2;
@@ -531,8 +532,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
         int numberOfBytesConsumed = 0;
         while (numberOfBytesConsumed < bytesRemainingInVariablePart) {
             int topicNameSize = decodeMsbLsb(buffer);
-            String decodedTopicName = buffer.toString(buffer.readerIndex(), topicNameSize, CharsetUtil.UTF_8);
-            buffer.skipBytes(topicNameSize);
+            String decodedTopicName = buffer.readString(topicNameSize, CharsetUtil.UTF_8);
             numberOfBytesConsumed += 2 + topicNameSize;
 
             //See 3.8.3.1 Subscription Options of MQTT 5.0 specification for optionByte details
@@ -610,9 +610,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private String decodeStringAndDecreaseBytesRemaining(ByteBuf buffer) {
         int size = decodeMsbLsb(buffer);
         bytesRemainingInVariablePart -= 2 + size;
-        String s = buffer.toString(buffer.readerIndex(), size, CharsetUtil.UTF_8);
-        buffer.skipBytes(size);
-        return s;
+        return buffer.readString(size, CharsetUtil.UTF_8);
     }
 
     /**
@@ -733,19 +731,16 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 case REASON_STRING:
                     int size = decodeMsbLsb(buffer);
                     numberOfBytesConsumed += 2 + size;
-                    String string = buffer.toString(buffer.readerIndex(), size, CharsetUtil.UTF_8);
-                    buffer.skipBytes(size);
+                    String string = buffer.readString(size, CharsetUtil.UTF_8);
 
                     decodedProperties.add(new MqttProperties.StringProperty(propertyIdValue, string));
                     break;
                 case USER_PROPERTY:
                     int keySize = decodeMsbLsb(buffer);
-                    String key = buffer.toString(buffer.readerIndex(), keySize, CharsetUtil.UTF_8);
-                    buffer.skipBytes(keySize);
+                    String key = buffer.readString(keySize, CharsetUtil.UTF_8);
 
                     int valueSize = decodeMsbLsb(buffer);
-                    String value = buffer.toString(buffer.readerIndex(), valueSize, CharsetUtil.UTF_8);
-                    buffer.skipBytes(valueSize);
+                    String value = buffer.readString(valueSize, CharsetUtil.UTF_8);
 
                     numberOfBytesConsumed += 4 + keySize + valueSize;
                     decodedProperties.add(new MqttProperties.UserProperty(key, value));
