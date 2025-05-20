@@ -109,6 +109,7 @@ public final class Http3SpecTestServer {
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
                     .bind(new InetSocketAddress(port)).sync().channel();
+            channel.eventLoop().submit(() -> System.out.println("H3SPEC_SERVER_READY"));
             channel.closeFuture().sync();
         } finally {
             group.shutdownGracefully();

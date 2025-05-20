@@ -160,9 +160,10 @@
       <plugin>
         <groupId>io.netty.incubator</groupId>
         <artifactId>netty-incubator-h3spec-maven-plugin</artifactId>
-        <version>0.0.5.Final</version>
+        <version>0.0.7.Final-SNAPSHOT</version>
         <configuration>
           <delay>1000</delay>
+          <readyMessage>H3SPEC_SERVER_READY</readyMessage>
           <mainClass>io.netty.handler.codec.http3.Http3SpecTestServer</mainClass>
           <excludeSpecs>
             <!-- Let's only run the HTTP3 tests -->
