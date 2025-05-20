@@ -29,6 +29,8 @@ public class FastThreadLocalThread extends Thread {
 
     private static final NonBlockingHashMapLong<Object> fallbackThreads = new NonBlockingHashMapLong<>();
 
+    private static final Object MARKER = new Object();
+
     // This will be set to true if we have a chance to wrap the Runnable.
     private final boolean cleanupFastThreadLocals;
 
@@ -126,9 +128,8 @@ public class FastThreadLocalThread extends Thread {
         Thread currentThread = currentThread();
         if (currentThread instanceof FastThreadLocalThread) {
             return ((FastThreadLocalThread) currentThread).willCleanupFastThreadLocals();
-        } else {
-            return isFastThreadLocalVirtualThread();
         }
+        return isFastThreadLocalVirtualThread();
     }
 
     /**
@@ -157,7 +158,7 @@ public class FastThreadLocalThread extends Thread {
      */
     public static void runWithFastThreadLocal(Runnable runnable) {
         long id = currentThread().getId();
-        if (fallbackThreads.put(id, "") != null || currentThread() instanceof FastThreadLocalThread) {
+        if (currentThread() instanceof FastThreadLocalThread || fallbackThreads.put(id, MARKER) != null) {
             throw new IllegalStateException("Reentrant call to run()");
         }
         try {
