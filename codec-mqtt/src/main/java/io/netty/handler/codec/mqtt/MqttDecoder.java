@@ -706,19 +706,19 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private static long decodeVariableByteInteger(ByteBuf buffer) {
         int remainingLength = 0;
         int multiplier = 1;
-        short digit;
-        int loops = 0;
-        do {
-            digit = buffer.readUnsignedByte();
-            remainingLength += (digit & 127) * multiplier;
-            multiplier *= 128;
-            loops++;
-        } while ((digit & 128) != 0 && loops < 4);
 
-        if (loops == 4 && (digit & 128) != 0) {
-            throw new DecoderException("MQTT protocol limits Remaining Length to 4 bytes");
+        for (int i = 0; i < 4; i++) {
+            short digit = buffer.readUnsignedByte();
+            remainingLength += (digit & 127) * multiplier;
+
+            if ((digit & 128) == 0) {
+                return packInts(remainingLength, i + 1);
+            }
+
+            multiplier *= 128;
         }
-        return packInts(remainingLength, loops);
+
+        throw new DecoderException("MQTT protocol limits Remaining Length to 4 bytes");
     }
 
     private static final class Result<T> {
