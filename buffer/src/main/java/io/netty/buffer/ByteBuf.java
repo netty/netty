@@ -1746,7 +1746,12 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
      * @throws IndexOutOfBoundsException
      *         if {@code length} is greater than {@code this.readableBytes}
      */
-    public abstract String readString(int length, Charset charset);
+    public String readString(int length, Charset charset) {
+        int readerIndex = readerIndex();
+        String string = toString(readerIndex, length, charset);
+        readerIndex(readerIndex + length);
+        return string;
+    }
 
     /**
      * Transfers this buffer's data starting at the current {@code readerIndex}
