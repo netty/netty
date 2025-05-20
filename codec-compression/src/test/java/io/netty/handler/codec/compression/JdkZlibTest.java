@@ -32,8 +32,10 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.zip.Deflater;
 import java.util.zip.GZIPOutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -182,6 +184,11 @@ public class JdkZlibTest extends ZlibTest {
         assertTrue(channel.finish());
         channel.checkException();
         assertTrue(channel.releaseOutbound());
+    }
+
+    @Test
+    void testAllowDefaultCompression() {
+        assertDoesNotThrow(() -> new JdkZlibEncoder(Deflater.DEFAULT_COMPRESSION));
     }
 
     /**

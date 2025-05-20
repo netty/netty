@@ -127,9 +127,9 @@ jobs:
         with:
           servers: |
             [{
-              "id": "sonatype-nexus-staging",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+              "id": "central",
+              "username": "${{ secrets.MAVEN_CENTRAL_USERNAME }}",
+              "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
             }]
 
       # Cache .m2/repository
@@ -162,7 +162,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.setup }}-local-staging
-          path: ~/local-staging
+          path: ./prepare-release-workspace/target/central-staging
           if-no-files-found: error
           include-hidden-files: true
 
@@ -224,9 +224,9 @@ jobs:
         with:
           servers: |
             [{
-              "id": "sonatype-nexus-staging",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+              "id": "central",
+              "username": "${{ secrets.MAVEN_CENTRAL_USERNAME }}",
+              "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
             }]
 
       # Cache .m2/repository
@@ -248,13 +248,13 @@ jobs:
 
       - name: Stage release to local staging directory
         working-directory: ./prepare-release-workspace/
-        run: ./mvnw -B -ntp clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=$HOME/local-staging -DskipRemoteStaging=true -DskipTests=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
+        run: ./mvnw -B -ntp clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.setup }}-local-staging
-          path: ~/local-staging
+          path: ./prepare-release-workspace/target/central-staging
           if-no-files-found: error
           include-hidden-files: true
 
@@ -335,21 +335,20 @@ jobs:
         with:
           servers: |
             [{
-              "id": "sonatype-nexus-staging",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+              "id": "central",
+              "username": "${{ secrets.MAVEN_CENTRAL_USERNAME }}",
+              "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
             }]
-
 
       - name: Stage release to local staging directory
         working-directory: ${{ github.workspace }}/prepare-release-workspace
-        run: ./mvnw.cmd -B -ntp --file pom.xml clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/local-staging -DskipRemoteStaging=true -DskipTests=true -D'checkstyle.skip=true'
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true -D'checkstyle.skip=true'
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
         with:
           name: windows-x86_64-local-staging
-          path: /local-staging
+          path: ./prepare-release-workspace/target/central-staging
           if-no-files-found: error
           include-hidden-files: true
 
@@ -402,11 +401,10 @@ jobs:
         with:
           servers: |
             [{
-              "id": "sonatype-nexus-staging",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+              "id": "central",
+              "username": "${{ secrets.MAVEN_CENTRAL_USERNAME }}",
+              "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
             }]
-
       # Cache .m2/repository
       - name: Cache local Maven repository
         uses: actions/cache@v4
@@ -458,24 +456,27 @@ jobs:
 
       - name: Copy previous build artifacts to local maven repository
         working-directory: ./prepare-release-workspace/
-        run: bash ./.github/scripts/install_local_staging.sh ~/.m2/repository ~/windows-x86_64-local-staging/staging ~/macos-aarch64-java11-local-staging/staging ~/macos-x86_64-java11-local-staging/staging ~/linux-aarch64-local-staging/staging ~/linux-riscv64-local-staging/staging ~/linux-x86_64-java11-local-staging/staging
+        run: bash ./.github/scripts/local_staging_install_release.sh ~/.m2/repository ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging
 
       - name: Generate netty-all and deploy to local staging.
         working-directory: ./prepare-release-workspace/
         run: |
           mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -pl all clean package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy  -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true  -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
+          ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -pl all clean package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true
 
       # This step takes care of merging all the previous staged repositories in a way that will allow us to deploy
       # all together with one maven command.
       - name: Merge staging repositories
         working-directory: ./prepare-release-workspace/
-        run: bash ./.github/scripts/merge_local_staging.sh ~/local-staging/staging ~/windows-x86_64-local-staging/staging ~/macos-aarch64-java11-local-staging/staging ~/macos-x86_64-java11-local-staging/staging ~/linux-aarch64-local-staging/staging ~/linux-riscv64-local-staging/staging ~/linux-x86_64-java11-local-staging/staging ~/all-local-staging/staging
+        run: bash ./.github/scripts/local_staging_merge_release.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ./all/target/central-staging
 
-      - name: Deploy local staged artifacts
+      - name: Create bundle
         working-directory: ./prepare-release-workspace/
-        # If we don't want to close the repository we can add -DskipStagingRepositoryClose=true
-        run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=$HOME/local-staging -DskipStagingRepositoryClose=true
+        run: bash ./.github/scripts/bundle_create.sh ~/central-bundle.zip ~/local-staging/
+
+      - name: Upload bundle to maven central
+        working-directory: ./prepare-release-workspace/
+        run: bash ./.github/scripts/bundle_upload.sh ~/central-bundle.zip ${{ secrets.MAVEN_CENTRAL_USERNAME }} ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
 
       - name: Rollback release on failure
         working-directory: ./prepare-release-workspace/
