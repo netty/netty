@@ -116,7 +116,7 @@ final class PlatformDependent0 {
                 unsafe = null;
                 unsafeUnavailabilityCause = (Throwable) maybeUnsafe;
                 if (logger.isTraceEnabled()) {
-                    logger.debug("sun.misc.Unsafe.theUnsafe: unavailable", (Throwable) maybeUnsafe);
+                    logger.debug("sun.misc.Unsafe.theUnsafe: unavailable", unsafeUnavailabilityCause);
                 } else {
                     logger.debug("sun.misc.Unsafe.theUnsafe: unavailable: {}", ((Throwable) maybeUnsafe).getMessage());
                 }
@@ -153,10 +153,10 @@ final class PlatformDependent0 {
                 } else {
                     unsafeUnavailabilityCause = (Throwable) maybeAddressField;
                     if (logger.isTraceEnabled()) {
-                        logger.debug("java.nio.Buffer.address: unavailable", (Throwable) maybeAddressField);
+                        logger.debug("java.nio.Buffer.address: unavailable", unsafeUnavailabilityCause);
                     } else {
                         logger.debug("java.nio.Buffer.address: unavailable: {}",
-                                ((Throwable) maybeAddressField).getMessage());
+                                unsafeUnavailabilityCause.getMessage());
                     }
 
                     // If we cannot access the address of a direct buffer, there's no point of using unsafe.
@@ -589,8 +589,8 @@ final class PlatformDependent0 {
         return UNSAFE.getIntVolatile(null, address);
     }
 
-    static void putIntOrdered(long adddress, int newValue) {
-        UNSAFE.putOrderedInt(null, adddress, newValue);
+    static void putIntOrdered(long address, int newValue) {
+        UNSAFE.putOrderedInt(null, address, newValue);
     }
 
     static long getLong(byte[] data, int index) {
