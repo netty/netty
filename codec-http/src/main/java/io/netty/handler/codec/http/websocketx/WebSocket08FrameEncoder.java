@@ -62,7 +62,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.nio.ByteOrder;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * <p>
@@ -117,22 +116,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
         final ByteBuf data = msg.content();
 
-        byte opcode;
-        if (msg instanceof TextWebSocketFrame) {
-            opcode = OPCODE_TEXT;
-        } else if (msg instanceof PingWebSocketFrame) {
-            opcode = OPCODE_PING;
-        } else if (msg instanceof PongWebSocketFrame) {
-            opcode = OPCODE_PONG;
-        } else if (msg instanceof CloseWebSocketFrame) {
-            opcode = OPCODE_CLOSE;
-        } else if (msg instanceof BinaryWebSocketFrame) {
-            opcode = OPCODE_BINARY;
-        } else if (msg instanceof ContinuationWebSocketFrame) {
-            opcode = OPCODE_CONT;
-        } else {
-            throw new UnsupportedOperationException("Cannot encode frame of type: " + msg.getClass().getName());
-        }
+        byte opcode = getOpCode(msg);
 
         int length = data.readableBytes();
 
@@ -144,8 +128,8 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
         if (msg.isFinalFragment()) {
             b0 |= 1 << 7;
         }
-        b0 |= msg.rsv() % 8 << 4;
-        b0 |= opcode % 128;
+        b0 |= (msg.rsv() & 0x07) << 4;
+        b0 |= opcode & 0x7F;
 
         if (opcode == OPCODE_PING && length > 125) {
             throw new TooLongFrameException("invalid payload for PING (payload length must be <= 125, was " + length);
@@ -189,7 +173,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
 
                 // If the mask is 0 we can skip all the XOR operations.
                 if (mask != 0) {
-                    if (data.isReadable()) {
+                    if (length > 0) {
                         ByteOrder srcOrder = data.order();
                         ByteOrder dstOrder = buf.order();
 
@@ -238,14 +222,37 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
         }
     }
 
+    private static byte getOpCode(WebSocketFrame msg) {
+        if (msg instanceof TextWebSocketFrame) {
+            return OPCODE_TEXT;
+        }
+        if (msg instanceof BinaryWebSocketFrame) {
+            return OPCODE_BINARY;
+        }
+        if (msg instanceof PingWebSocketFrame) {
+            return OPCODE_PING;
+        }
+        if (msg instanceof PongWebSocketFrame) {
+            return OPCODE_PONG;
+        }
+        if (msg instanceof CloseWebSocketFrame) {
+            return OPCODE_CLOSE;
+        }
+        if (msg instanceof ContinuationWebSocketFrame) {
+            return OPCODE_CONT;
+        }
+        throw new UnsupportedOperationException("Cannot encode frame of type: " + msg.getClass().getName());
+    }
+
     private static void addBuffers(ByteBuf buf, ByteBuf data, List<Object> out) {
-        if (buf.writableBytes() >= data.readableBytes()) {
+        int readableBytes = data.readableBytes();
+        if (buf.writableBytes() >= readableBytes) {
             // merge buffers as this is cheaper then a gathering write if the payload is small enough
             buf.writeBytes(data);
             out.add(buf);
         } else {
             out.add(buf);
-            if (data.isReadable()) {
+            if (readableBytes > 0) {
                 out.add(data.retain());
             }
         }
