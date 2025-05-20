@@ -61,7 +61,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * <p>
@@ -112,22 +111,7 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
         final Buffer data = msg.binaryData();
 
-        byte opcode;
-        if (msg instanceof TextWebSocketFrame) {
-            opcode = OPCODE_TEXT;
-        } else if (msg instanceof PingWebSocketFrame) {
-            opcode = OPCODE_PING;
-        } else if (msg instanceof PongWebSocketFrame) {
-            opcode = OPCODE_PONG;
-        } else if (msg instanceof CloseWebSocketFrame) {
-            opcode = OPCODE_CLOSE;
-        } else if (msg instanceof BinaryWebSocketFrame) {
-            opcode = OPCODE_BINARY;
-        } else if (msg instanceof ContinuationWebSocketFrame) {
-            opcode = OPCODE_CONT;
-        } else {
-            throw new UnsupportedOperationException("Cannot encode frame of type: " + msg.getClass().getName());
-        }
+        byte opcode = getOpCode(msg);
 
         int length = data.readableBytes();
 
@@ -139,8 +123,8 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
         if (msg.isFinalFragment()) {
             b0 |= 1 << 7;
         }
-        b0 |= msg.rsv() % 8 << 4;
-        b0 |= opcode % 128;
+        b0 |= (msg.rsv() & 0x07) << 4;
+        b0 |= opcode & 0x7F;
 
         if (opcode == OPCODE_PING && length > 125) {
             throw new TooLongFrameException("invalid payload for PING (payload length must be <= 125, was "
@@ -151,13 +135,10 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
         try {
             int maskLength = maskGenerator != null ? 4 : 0;
             if (length <= 125) {
-                int size = 2 + maskLength;
-                if (maskGenerator != null || length <= GATHERING_WRITE_THRESHOLD) {
-                    size += length;
-                }
+                int size = 2 + maskLength + length;
                 buf = ctx.bufferAllocator().allocate(size);
                 buf.writeByte((byte) b0);
-                byte b = (byte) (maskGenerator != null ? 0x80 | (byte) length : (byte) length);
+                byte b = (byte) (maskGenerator != null ? 0x80 | length : length);
                 buf.writeByte(b);
             } else if (length <= 0xFFFF) {
                 int size = 4 + maskLength;
@@ -209,14 +190,40 @@ public class WebSocket13FrameEncoder extends MessageToMessageEncoder<WebSocketFr
         }
     }
 
+    private static byte getOpCode(WebSocketFrame msg) {
+        if (msg instanceof TextWebSocketFrame) {
+            return OPCODE_TEXT;
+        }
+        if (msg instanceof BinaryWebSocketFrame) {
+            return OPCODE_BINARY;
+        }
+        if (msg instanceof PingWebSocketFrame) {
+            return OPCODE_PING;
+        }
+        if (msg instanceof PongWebSocketFrame) {
+            return OPCODE_PONG;
+        }
+        if (msg instanceof CloseWebSocketFrame) {
+            return OPCODE_CLOSE;
+        }
+        if (msg instanceof ContinuationWebSocketFrame) {
+            return OPCODE_CONT;
+        }
+        throw new UnsupportedOperationException("Cannot encode frame of type: " + msg.getClass().getName());
+    }
+
     private static void addBuffers(Buffer buf, Buffer data, List<Object> out) {
-        if (buf.writableBytes() >= data.readableBytes()) {
+        int readableBytes = data.readableBytes();
+
+        if (buf.writableBytes() >= readableBytes) {
             // merge buffers as this is cheaper then a gathering write if the payload is small enough
             buf.writeBytes(data);
             out.add(buf);
         } else {
             out.add(buf);
-            out.add(data.split());
+            if (readableBytes > 0) {
+                out.add(data.split());
+            }
         }
     }
 }
