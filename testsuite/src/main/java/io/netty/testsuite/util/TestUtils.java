@@ -23,9 +23,8 @@ import org.junit.jupiter.api.TestInfo;
 import org.tukaani.xz.LZMA2Options;
 import org.tukaani.xz.XZOutputStream;
 
+import javax.management.MBeanServer;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -41,7 +40,6 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import javax.management.MBeanServer;
 
 public final class TestUtils {
 
@@ -169,7 +167,7 @@ public final class TestUtils {
 
             try (InputStream in = Files.newInputStream(Paths.get(filename));
                  OutputStream out = new XZOutputStream(Files.newOutputStream(Paths.get(xzFilename)), options)) {
-                for (; ; ) {
+                for (;;) {
                     int readBytes = in.read(buf);
                     if (readBytes < 0) {
                         break;
