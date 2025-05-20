@@ -27,7 +27,7 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
@@ -36,7 +36,11 @@ import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
 final class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
         implements DomainSocketChannelConfig, DuplexChannelConfig {
-    private AtomicReference<DomainSocketReadMode> mode = new AtomicReference<>(DomainSocketReadMode.BYTES);
+    @SuppressWarnings("checkstyle:LineLength") //Avoid Checkstyle thinking this is too long
+    private static final AtomicReferenceFieldUpdater<IoUringDomainSocketChannelConfig, DomainSocketReadMode> MODE_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(IoUringDomainSocketChannelConfig.class, DomainSocketReadMode.class, "mode");
+
+    private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
     private volatile boolean allowHalfClosure;
 
     IoUringDomainSocketChannelConfig(IoUringDomainSocketChannel channel) {
@@ -123,7 +127,7 @@ final class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
         ObjectUtil.checkNotNull(mode, "mode");
         DomainSocketReadMode expectedMode = mode == DomainSocketReadMode.BYTES ?
                 DomainSocketReadMode.FILE_DESCRIPTORS : DomainSocketReadMode.BYTES;
-        boolean change = this.mode.compareAndSet(expectedMode, mode);
+        boolean change = MODE_UPDATER.compareAndSet(this, expectedMode, mode);
         if (change) {
             if (channel.isRegistered()) {
                 // cancel current Read
@@ -135,7 +139,7 @@ final class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
 
     @Override
     public DomainSocketReadMode getReadMode() {
-        return mode.get();
+        return mode;
     }
 
     @Override
@@ -215,4 +219,3 @@ final class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
         return this;
     }
 }
-
