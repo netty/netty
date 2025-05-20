@@ -143,7 +143,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
                 int size = 2 + maskLength + length;
                 buf = ctx.alloc().buffer(size);
                 buf.writeByte(b0);
-                byte b = (byte) (maskGenerator != null ? 0x80 | (byte) length : (byte) length);
+                byte b = (byte) (maskGenerator != null ? 0x80 | length : length);
                 buf.writeByte(b);
             } else if (length <= 0xFFFF) {
                 int size = 4 + maskLength;
