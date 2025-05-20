@@ -18,6 +18,7 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jctools.maps.NonBlockingHashMapLong;
 
 /**
  * A special {@link Thread} that provides fast access to {@link FastThreadLocal} variables.
@@ -25,6 +26,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 public class FastThreadLocalThread extends Thread {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(FastThreadLocalThread.class);
+
+    private static final NonBlockingHashMapLong<Object> fallbackThreads = new NonBlockingHashMapLong<>();
 
     // This will be set to true if we have a chance to wrap the Runnable.
     private final boolean cleanupFastThreadLocals;
@@ -96,17 +99,73 @@ public class FastThreadLocalThread extends Thread {
 
     /**
      * Returns {@code true} if {@link FastThreadLocal#removeAll()} will be called once {@link #run()} completes.
+     *
+     * @deprecated Use {@link FastThreadLocalThread#currentThreadWillCleanupFastThreadLocals()} instead
      */
+    @Deprecated
     public boolean willCleanupFastThreadLocals() {
         return cleanupFastThreadLocals;
     }
 
     /**
      * Returns {@code true} if {@link FastThreadLocal#removeAll()} will be called once {@link Thread#run()} completes.
+     *
+     * @deprecated Use {@link FastThreadLocalThread#currentThreadWillCleanupFastThreadLocals()} instead
      */
+    @Deprecated
     public static boolean willCleanupFastThreadLocals(Thread thread) {
         return thread instanceof FastThreadLocalThread &&
                 ((FastThreadLocalThread) thread).willCleanupFastThreadLocals();
+    }
+
+    /**
+     * Returns {@code true} if {@link FastThreadLocal#removeAll()} will be called once {@link Thread#run()} completes.
+     */
+    public static boolean currentThreadWillCleanupFastThreadLocals() {
+        // intentionally doesn't accept a thread parameter to work with ScopedValue in the future
+        Thread currentThread = currentThread();
+        if (currentThread instanceof FastThreadLocalThread) {
+            return ((FastThreadLocalThread) currentThread).willCleanupFastThreadLocals();
+        } else {
+            return isFastThreadLocalVirtualThread();
+        }
+    }
+
+    /**
+     * Returns {@code true} if this thread supports {@link FastThreadLocal}.
+     */
+    public static boolean currentThreadHasFastThreadLocal() {
+        // intentionally doesn't accept a thread parameter to work with ScopedValue in the future
+        return currentThread() instanceof FastThreadLocalThread || isFastThreadLocalVirtualThread();
+    }
+
+    private static boolean isFastThreadLocalVirtualThread() {
+        return fallbackThreads.containsKey(currentThread().getId());
+    }
+
+    /**
+     * Run the given task with {@link FastThreadLocal} support. This call should wrap the runnable for any thread that
+     * is long-running enough to make treating it as a {@link FastThreadLocalThread} reasonable, but that can't
+     * actually extend this class (e.g. because it's a virtual thread). Netty will use optimizations for recyclers and
+     * allocators as if this was a {@link FastThreadLocalThread}.
+     * <p>This method will clean up any {@link FastThreadLocal}s at the end, and
+     * {@link #currentThreadWillCleanupFastThreadLocals()} will return {@code true}.
+     * <p>At the moment, {@link FastThreadLocal} uses normal {@link ThreadLocal} as the backing storage here, but in
+     * the future this may be replaced with scoped values, if semantics can be preserved and performance is good.
+     *
+     * @param runnable The task to run
+     */
+    public static void runWithFastThreadLocal(Runnable runnable) {
+        long id = currentThread().getId();
+        if (fallbackThreads.put(id, "") != null || currentThread() instanceof FastThreadLocalThread) {
+            throw new IllegalStateException("Reentrant call to run()");
+        }
+        try {
+            runnable.run();
+        } finally {
+            fallbackThreads.remove(id);
+            FastThreadLocal.removeAll();
+        }
     }
 
     /**

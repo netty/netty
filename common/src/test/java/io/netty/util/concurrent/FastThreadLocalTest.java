@@ -36,6 +36,7 @@ import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -184,32 +185,55 @@ public class FastThreadLocalTest {
     }
 
     @Test
+    public void testWrappedProperties() {
+        assertFalse(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+        assertFalse(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+        FastThreadLocalThread.runWithFastThreadLocal(() -> {
+            assertTrue(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+            assertTrue(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+        });
+    }
+
+    @Test
     @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
     public void testOnRemoveCalledForFastThreadLocalGet() throws Exception {
-        testOnRemoveCalled(true, true);
+        testOnRemoveCalled(true, false, true);
     }
 
     @Disabled("onRemoval(...) not called with non FastThreadLocal")
     @Test
     @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
     public void testOnRemoveCalledForNonFastThreadLocalGet() throws Exception {
-        testOnRemoveCalled(false, true);
+        testOnRemoveCalled(false, false, true);
     }
 
     @Test
     @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
     public void testOnRemoveCalledForFastThreadLocalSet() throws Exception {
-        testOnRemoveCalled(true, false);
+        testOnRemoveCalled(true, false, false);
     }
 
     @Disabled("onRemoval(...) not called with non FastThreadLocal")
     @Test
     @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
     public void testOnRemoveCalledForNonFastThreadLocalSet() throws Exception {
-        testOnRemoveCalled(false, false);
+        testOnRemoveCalled(false, false, false);
     }
 
-    private static void testOnRemoveCalled(boolean fastThreadLocal, final boolean callGet) throws Exception {
+    @Test
+    @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
+    public void testOnRemoveCalledForWrappedGet() throws Exception {
+        testOnRemoveCalled(false, true, true);
+    }
+
+    @Test
+    @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
+    public void testOnRemoveCalledForWrappedSet() throws Exception {
+        testOnRemoveCalled(false, true, false);
+    }
+
+    private static void testOnRemoveCalled(boolean fastThreadLocal, boolean wrap, final boolean callGet)
+            throws Exception {
 
         final TestFastThreadLocal threadLocal = new TestFastThreadLocal();
         final TestFastThreadLocal threadLocal2 = new TestFastThreadLocal();
@@ -226,6 +250,10 @@ public class FastThreadLocalTest {
                 }
             }
         };
+        if (wrap) {
+            Runnable r = runnable;
+            runnable = () -> FastThreadLocalThread.runWithFastThreadLocal(r);
+        }
         Thread thread = fastThreadLocal ? new FastThreadLocalThread(runnable) : new Thread(runnable);
         thread.start();
         thread.join();
