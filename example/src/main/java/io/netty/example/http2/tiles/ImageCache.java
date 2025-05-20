@@ -21,6 +21,7 @@ import static io.netty.example.http2.Http2ExampleUtil.toByteBuf;
 import io.netty.buffer.ByteBuf;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,10 +49,9 @@ public final class ImageCache {
     private void init() {
         for (int y = 0; y < 10; y++) {
             for (int x = 0; x < 20; x++) {
-                try {
-                    String name = name(x, y);
-                    ByteBuf fileBytes = unreleasableBuffer(toByteBuf(getClass()
-                            .getResourceAsStream(name)).asReadOnly());
+                String name = name(x, y);
+                try (InputStream resourceAsStream = getClass().getResourceAsStream(name)) {
+                    ByteBuf fileBytes = unreleasableBuffer(toByteBuf(resourceAsStream).asReadOnly());
                     imageBank.put(name, fileBytes);
                 } catch (IOException e) {
                     e.printStackTrace();

@@ -746,9 +746,13 @@ public abstract class SSLEngineTest {
     private void testMutualAuthInvalidClientCertSucceed(SSLEngineTestParam param, ClientAuth auth) throws Exception {
         char[] password = "example".toCharArray();
         final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
-        serverKeyStore.load(getClass().getResourceAsStream("mutual_auth_server.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("mutual_auth_server.p12")) {
+            serverKeyStore.load(resourceAsStream, password);
+        }
         final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
-        clientKeyStore.load(getClass().getResourceAsStream("mutual_auth_invalid_client.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("mutual_auth_invalid_client.p12")) {
+            clientKeyStore.load(resourceAsStream, password);
+        }
         final KeyManagerFactory serverKeyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         serverKeyManagerFactory.init(serverKeyStore, password);
@@ -774,9 +778,13 @@ public abstract class SSLEngineTest {
             throws Exception {
         char[] password = "example".toCharArray();
         final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
-        serverKeyStore.load(getClass().getResourceAsStream("mutual_auth_server.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("mutual_auth_server.p12")) {
+            serverKeyStore.load(resourceAsStream, password);
+        }
         final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
-        clientKeyStore.load(getClass().getResourceAsStream(clientCert), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream(clientCert)) {
+            clientKeyStore.load(resourceAsStream, password);
+        }
         final KeyManagerFactory serverKeyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         serverKeyManagerFactory.init(serverKeyStore, password);
@@ -4725,10 +4733,14 @@ public abstract class SSLEngineTest {
         char[] password = "password".toCharArray();
 
         final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
-        serverKeyStore.load(getClass().getResourceAsStream("rsaValidations-server-keystore.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("rsaValidations-server-keystore.p12")) {
+            serverKeyStore.load(resourceAsStream, password);
+        }
 
         final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
-        clientKeyStore.load(getClass().getResourceAsStream("rsaValidation-user-certs.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("rsaValidation-user-certs.p12")) {
+            clientKeyStore.load(resourceAsStream, password);
+        }
 
         final KeyManagerFactory serverKeyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());

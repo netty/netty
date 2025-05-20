@@ -165,20 +165,13 @@ public class OcspServerExample {
     }
 
     private static X509Certificate[] parseCertificates(Class<?> clazz, String name) throws Exception {
-        InputStream in = clazz.getResourceAsStream(name);
-        if (in == null) {
-            throw new FileNotFoundException("clazz=" + clazz + ", name=" + name);
-        }
-
-        try {
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in, CharsetUtil.US_ASCII));
-            try {
-                return parseCertificates(reader);
-            } finally {
-                reader.close();
+        try (InputStream in = clazz.getResourceAsStream(name)) {
+            if (in == null) {
+                throw new FileNotFoundException("clazz=" + clazz + ", name=" + name);
             }
-        } finally {
-            in.close();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, CharsetUtil.US_ASCII))) {
+                return parseCertificates(reader);
+            }
         }
     }
 
