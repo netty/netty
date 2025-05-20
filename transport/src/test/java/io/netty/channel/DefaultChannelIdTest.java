@@ -20,13 +20,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.Unpooled;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.util.Arrays;
-import java.util.Comparator;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
@@ -69,19 +66,13 @@ public class DefaultChannelIdTest {
         ChannelId b;
 
         ByteBuf buf = Unpooled.buffer();
-        ObjectOutputStream out = new ObjectOutputStream(new ByteBufOutputStream(buf));
-        try {
+        try (ObjectOutputStream out = new ObjectOutputStream(new ByteBufOutputStream(buf))) {
             out.writeObject(a);
             out.flush();
-        } finally {
-            out.close();
         }
 
-        ObjectInputStream in = new ObjectInputStream(new ByteBufInputStream(buf, true));
-        try {
+        try (ObjectInputStream in = new ObjectInputStream(new ByteBufInputStream(buf, true))) {
             b = (ChannelId) in.readObject();
-        } finally {
-            in.close();
         }
 
         assertThat(a, is(b));

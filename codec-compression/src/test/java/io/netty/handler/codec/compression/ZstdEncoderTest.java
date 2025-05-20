@@ -80,11 +80,10 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
 
     @Override
     protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
-        InputStream is = new ByteBufInputStream(compressed, true);
-        ZstdInputStream zstdIs = null;
         byte[] decompressed = new byte[originalLength];
-        try {
-            zstdIs = new ZstdInputStream(is);
+        try (InputStream is = new ByteBufInputStream(compressed, true);
+             ZstdInputStream zstdIs = new ZstdInputStream(is)) {
+
             int remaining = originalLength;
             while (remaining > 0) {
                 int read = zstdIs.read(decompressed, originalLength - remaining, remaining);
@@ -95,12 +94,6 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
                 }
             }
             assertEquals(-1, zstdIs.read());
-        } finally {
-            if (zstdIs != null) {
-                zstdIs.close();
-            } else {
-                is.close();
-            }
         }
 
         return Unpooled.wrappedBuffer(decompressed);

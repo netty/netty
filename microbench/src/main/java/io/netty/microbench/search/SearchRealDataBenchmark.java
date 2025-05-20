@@ -149,37 +149,18 @@ public class SearchRealDataBenchmark extends AbstractMicrobenchmark {
     }
 
     private static byte[] readBytes(File file) throws IOException {
-        InputStream in = new FileInputStream(file);
-        try {
+        try (InputStream in = new FileInputStream(file)) {
             ByteArrayOutputStream out = new ByteArrayOutputStream();
-            try {
-                byte[] buf = new byte[8192];
-                for (;;) {
-                    int ret = in.read(buf);
-                    if (ret < 0) {
-                        break;
-                    }
-                    out.write(buf, 0, ret);
+            byte[] buf = new byte[8192];
+            for (;;) {
+                int ret = in.read(buf);
+                if (ret < 0) {
+                    break;
                 }
-                return out.toByteArray();
-            } finally {
-                safeClose(out);
+                out.write(buf, 0, ret);
             }
-        } finally {
-            safeClose(in);
+            return out.toByteArray();
         }
-    }
-
-    private static void safeClose(InputStream in) {
-        try {
-            in.close();
-        } catch (IOException ignored) { }
-    }
-
-    private static void safeClose(OutputStream out) {
-        try {
-            out.close();
-        } catch (IOException ignored) { }
     }
 
 }

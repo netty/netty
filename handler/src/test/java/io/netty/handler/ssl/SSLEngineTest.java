@@ -4555,7 +4555,6 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        Socket socket = null;
 
         try {
             sb = new ServerBootstrap();
@@ -4588,30 +4587,20 @@ public abstract class SSLEngineTest {
 
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, InsecureTrustManagerFactory.INSTANCE.getTrustManagers(), null);
-            socket = sslContext.getSocketFactory().createSocket(NetUtil.LOCALHOST, port);
-            OutputStream out = socket.getOutputStream();
-            out.write(1);
-            out.flush();
+            try (Socket socket = sslContext.getSocketFactory().createSocket(NetUtil.LOCALHOST, port)) {
+                OutputStream out = socket.getOutputStream();
+                out.write(1);
+                out.flush();
 
-            assertTrue(promise.await(10, TimeUnit.SECONDS));
-            SecretKey key = promise.get();
-            assertEquals(48, key.getEncoded().length, "AES secret key must be 48 bytes");
+                assertTrue(promise.await(10, TimeUnit.SECONDS));
+                SecretKey key = promise.get();
+                assertEquals(48, key.getEncoded().length, "AES secret key must be 48 bytes");
+            }
         } finally {
-            closeQuietly(socket);
             if (originalSystemPropertyValue != null) {
                 System.setProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY, originalSystemPropertyValue);
             } else {
                 System.clearProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY);
-            }
-        }
-    }
-
-    private static void closeQuietly(Closeable c) {
-        if (c != null) {
-            try {
-                c.close();
-            } catch (IOException ignore) {
-                // ignore
             }
         }
     }
