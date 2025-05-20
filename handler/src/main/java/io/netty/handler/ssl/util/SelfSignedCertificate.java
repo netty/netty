@@ -308,7 +308,6 @@ public final class SelfSignedCertificate {
         File keyFile = PlatformDependent.createTempFile("keyutil_" + fqdn + '_', ".key", null);
         keyFile.deleteOnExit();
 
-
         try (OutputStream keyOut = new FileOutputStream(keyFile)) {
             keyOut.write(keyText.getBytes(CharsetUtil.US_ASCII));
         } finally {
