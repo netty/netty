@@ -117,7 +117,7 @@ jobs:
         run: mkdir -p ~/local-staging
 
       - name: Stage snapshots to local staging directory
-        run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/local-staging -DskipRemoteStaging=true -DskipTests=true
+        run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/local-staging -DskipTests=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -162,7 +162,7 @@ jobs:
           args: install ninja nasm
 
       - name: Stage snapshots to local staging directory
-        run: ./mvnw.cmd -B -ntp --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/local-staging -DskipRemoteStaging=true -DskipTests=true
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/local-staging -DskipTests=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -200,15 +200,10 @@ jobs:
         with:
           servers: |
             [{
-              "id": "sonatype-nexus-snapshots",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+              "id": "central-portal-snapshots",
+              "username": "${{ secrets.MAVEN_CENTRAL_USERNAME }}",
+              "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
             }]
-
-      # Setup some env to re-use later.
-      - name: Prepare environment variables
-        run: |
-          echo "LOCAL_STAGING_DIR=$HOME/local-staging" >> $GITHUB_ENV
 
       # Hardcode the staging artifacts that need to be downloaded.
       # These must match the matrix setups. There is currently no way to pull this out of the config.
@@ -249,15 +244,15 @@ jobs:
           path: ~/linux-x86_64-java11-local-staging
 
       - name: Copy previous build artifacts to local maven repository
-        run: bash ./.github/scripts/install_local_staging.sh ~/.m2/repository ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging
+        run: bash ./.github/scripts/local_staging_install_snapshot.sh ~/.m2/repository ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging
 
       - name: Generate netty-all and deploy to local staging.
         run: |
           mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
+          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipTests=true
 
       - name: Merge staging repositories
-        run: bash ./.github/scripts/merge_local_staging.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ~/all-local-staging
+        run: bash ./.github/scripts/local_staging_merge_snapshot.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ~/all-local-staging
 
       - name: Deploy local staged artifacts
-        run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR
+        run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$HOME/local-staging
