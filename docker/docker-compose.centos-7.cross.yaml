@@ -38,7 +38,7 @@ services:
       - ~/.m2:/root/.m2
       - ~/local-staging:/root/local-staging
       - ..:/code
-    command: /bin/bash -cl "./mvnw -B -ntp -Plinux-aarch64 -pl transport-native-unix-common,transport-native-epoll,transport-native-io_uring,codec-native-quic -am clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/root/local-staging -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+    command: /bin/bash -cl "./mvnw -B -ntp -Plinux-aarch64 -pl transport-native-unix-common,transport-native-epoll,transport-native-io_uring,codec-native-quic -am clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=/root/local-staging -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
 
   cross-compile-aarch64-stage-release:
     <<: *cross-compile-aarch64-common

@@ -117,7 +117,7 @@ jobs:
         run: mkdir -p ~/local-staging
 
       - name: Stage snapshots to local staging directory
-        run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/local-staging -DskipTests=true
+        run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/local-staging -DskipTests=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -162,7 +162,7 @@ jobs:
           args: install ninja nasm
 
       - name: Stage snapshots to local staging directory
-        run: ./mvnw.cmd -B -ntp --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/local-staging -DskipTests=true
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=/local-staging -DskipTests=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -249,7 +249,7 @@ jobs:
       - name: Generate netty-all and deploy to local staging.
         run: |
           mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipTests=true
+          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/all-local-staging -DskipTests=true
 
       - name: Merge staging repositories
         run: bash ./.github/scripts/local_staging_merge_snapshot.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ~/all-local-staging
