@@ -18,6 +18,7 @@ package io.netty5.example.http2.tiles;
 import io.netty5.buffer.Buffer;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,9 +48,9 @@ public final class ImageCache {
     private void init() {
         for (int y = 0; y < 10; y++) {
             for (int x = 0; x < 20; x++) {
-                try {
-                    String name = name(x, y);
-                    Buffer fileBytes = toBuffer(getClass().getResourceAsStream(name)).makeReadOnly();
+                String name = name(x, y);
+                try (InputStream resourceAsStream = getClass().getResourceAsStream(name)) {
+                    Buffer fileBytes = toBuffer(resourceAsStream).makeReadOnly();
                     imageBank.put(name, fileBytes);
                 } catch (IOException e) {
                     e.printStackTrace();

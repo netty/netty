@@ -94,18 +94,15 @@ public class Utf8EncodingBenchmark extends AbstractMicrobenchmark {
     @Setup
     public void init() {
         System.setProperty("io.netty5.noUnsafe", Boolean.valueOf(noUnsafe).toString());
-        InputStream testTextStream = null;
-        InputStreamReader inStreamReader = null;
-        BufferedReader buffReader = null;
+
         int maxExpectedSize = 0;
         List<String> strings = new ArrayList<>();
         List<StringBuilder> stringBuilders = new ArrayList<>();
         List<AnotherCharSequence> anotherCharSequenceList = new ArrayList<>();
         List<AsciiString> asciiStrings = new ArrayList<>();
-        try {
-            testTextStream = getClass().getResourceAsStream("/Utf8Samples.txt");
-            inStreamReader = new InputStreamReader(testTextStream, "UTF-8");
-            buffReader = new BufferedReader(inStreamReader);
+        try (InputStream testTextStream = getClass().getResourceAsStream("/Utf8Samples.txt")) {
+            InputStreamReader inStreamReader = new InputStreamReader(testTextStream, "UTF-8");
+            BufferedReader buffReader = new BufferedReader(inStreamReader);
             String line;
             while ((line = buffReader.readLine()) != null) {
                 strings.add(line);
@@ -116,10 +113,6 @@ public class Utf8EncodingBenchmark extends AbstractMicrobenchmark {
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
-        } finally {
-            closeStream(testTextStream);
-            closeReader(inStreamReader);
-            closeReader(buffReader);
         }
         buffer = direct? BufferAllocator.offHeapUnpooled().allocate(maxExpectedSize) :
                 BufferAllocator.onHeapUnpooled().allocate(maxExpectedSize);

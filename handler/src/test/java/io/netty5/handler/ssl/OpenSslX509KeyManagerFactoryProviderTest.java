@@ -16,6 +16,7 @@
 package io.netty5.handler.ssl;
 
 import javax.net.ssl.KeyManagerFactory;
+import java.io.InputStream;
 import java.security.KeyStore;
 
 public class OpenSslX509KeyManagerFactoryProviderTest extends OpenSslCachingKeyMaterialProviderTest {
@@ -24,11 +25,13 @@ public class OpenSslX509KeyManagerFactoryProviderTest extends OpenSslCachingKeyM
     protected KeyManagerFactory newKeyManagerFactory() throws Exception {
         char[] password = PASSWORD.toCharArray();
         final KeyStore keystore = KeyStore.getInstance("PKCS12");
-        keystore.load(getClass().getResourceAsStream("mutual_auth_server.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("mutual_auth_server.p12")) {
+            keystore.load(resourceAsStream, password);
 
-        OpenSslX509KeyManagerFactory kmf = new OpenSslX509KeyManagerFactory();
-        kmf.init(keystore, password);
-        return kmf;
+            OpenSslX509KeyManagerFactory kmf = new OpenSslX509KeyManagerFactory();
+            kmf.init(keystore, password);
+            return kmf;
+        }
     }
 
     @Override

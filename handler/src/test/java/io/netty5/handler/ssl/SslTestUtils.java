@@ -52,16 +52,10 @@ public final class SslTestUtils {
         X509Certificate[] certCollection = new X509Certificate[resourceNames.length];
         for (int i = 0; i < resourceNames.length; i++) {
             String resourceName = resourceNames[i];
-            InputStream is = null;
-            try {
-                is = SslContextTest.class.getResourceAsStream(resourceName);
+            try (InputStream is = SslContextTest.class.getResourceAsStream(resourceName)) {
                 assertNotNull(is, "Cannot find " + resourceName);
                 certCollection[i] = (X509Certificate) certFactory
                         .generateCertificate(is);
-            } finally {
-                if (is != null) {
-                    is.close();
-                }
             }
         }
         return certCollection;

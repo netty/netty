@@ -55,9 +55,10 @@ public class HpackTest {
     @ParameterizedTest(name = "file = {0}")
     @MethodSource("files")
     public void test(File file) throws Exception {
-        InputStream is = HpackTest.class.getResourceAsStream(TEST_DIR + file.getName());
-        HpackTestCase hpackTestCase = HpackTestCase.load(is);
-        hpackTestCase.testCompress();
-        hpackTestCase.testDecompress();
+        try (InputStream is = HpackTest.class.getResourceAsStream(TEST_DIR + file.getName())) {
+            HpackTestCase hpackTestCase = HpackTestCase.load(is);
+            hpackTestCase.testCompress();
+            hpackTestCase.testDecompress();
+        }
     }
 }
