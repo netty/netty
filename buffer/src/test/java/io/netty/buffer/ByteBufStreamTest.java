@@ -245,7 +245,7 @@ public class ByteBufStreamTest {
         ByteBuf buf2 = Unpooled.buffer(16);
         buf2.writeBytes(new byte[]{1, 2, 3, 4, 5, 6});
 
-        try(ByteBufInputStream in2 = new ByteBufInputStream(buf2, 4)){
+        try (ByteBufInputStream in2 = new ByteBufInputStream(buf2, 4)) {
             assertEquals(1, in2.read());
             assertEquals(2, in2.read());
             assertEquals(3, in2.read());
