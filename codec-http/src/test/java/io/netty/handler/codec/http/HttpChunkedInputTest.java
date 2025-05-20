@@ -51,7 +51,7 @@ public class HttpChunkedInputTest {
         try {
             TMP = PlatformDependent.createTempFile("netty-chunk-", ".tmp", null);
             TMP.deleteOnExit();
-            try (FileOutputStream out = new FileOutputStream(TMP)){
+            try (FileOutputStream out = new FileOutputStream(TMP)) {
                 out.write(BYTES);
                 out.flush();
             }
