@@ -20,6 +20,7 @@ package io.netty.handler.ssl;
  */
 final class GroupsConverter {
 
+    // See https://tools.ietf.org/search/rfc4492#appendix-A and https://www.java.com/en/configure_crypto.html
     static String toOpenSsl(String key) {
         switch (key) {
             case "secp224r1":
