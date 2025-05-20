@@ -434,8 +434,9 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                 message.variableHeader().properties());
 
         try {
+            boolean qosLevelGreaterZero = mqttFixedHeader.qosLevel().value() > 0;
             int variableHeaderBufferSize = 2 + topicNameBytes +
-                    (mqttFixedHeader.qosLevel().value() > 0 ? 2 : 0) + propertiesBuf.readableBytes();
+                    (qosLevelGreaterZero ? 2 : 0) + propertiesBuf.readableBytes();
             int payloadBufferSize = payload.readableBytes();
             int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
             int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
@@ -444,7 +445,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
             writeVariableLengthInt(buf, variablePartSize);
             writeExactUTF8String(buf, topicName, topicNameBytes);
-            if (mqttFixedHeader.qosLevel().value() > 0) {
+            if (qosLevelGreaterZero) {
                 buf.writeShort(variableHeader.packetId());
             }
             buf.writeBytes(propertiesBuf);
@@ -730,12 +731,16 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
     }
 
     private static int getVariableLengthInt(int num) {
-        int count = 0;
-        do {
-            num /= 128;
-            count++;
-        } while (num > 0);
-        return count;
+        if (num < 128) {
+            return 1;
+        }
+        if (num < 16_384) { // 128 * 128
+            return 2;
+        }
+        if (num < 2_097_152) { // 128 * 128 * 128
+            return 3;
+        }
+        return 4;
     }
 
 }
