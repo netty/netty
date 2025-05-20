@@ -304,10 +304,11 @@ public final class IoUringIoOps implements IoOps {
      * @param fd                    the filedescriptor
      * @param flags                 the flags.
      * @param remoteMemoryAddress   the memory address of the sockaddr_storage.
+     * @param addrLen               then remoteMemory storage length.
      * @param data                  the data
      * @return                      ops.
      */
-    static IoUringIoOps newConnect(int fd, byte flags, long remoteMemoryAddress, long addrLen, short data) {
+    static IoUringIoOps newConnect(int fd, byte flags, long remoteMemoryAddress, int addrLen, short data) {
         // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L695
         return new IoUringIoOps(Native.IORING_OP_CONNECT, flags, (short) 0, fd, addrLen,
                 remoteMemoryAddress, 0, 0, data, (short) 0, (short) 0, 0, 0);

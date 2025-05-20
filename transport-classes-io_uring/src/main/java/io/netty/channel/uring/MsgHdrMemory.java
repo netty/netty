@@ -24,9 +24,11 @@ import java.nio.ByteBuffer;
 
 final class MsgHdrMemory {
     private static final byte[] EMPTY_SOCKADDR_STORAGE = new byte[Native.SIZEOF_SOCKADDR_STORAGE];
-    private static final ByteBuffer GLOBAL_IOV_BASE =  Buffer.allocateDirectWithNativeOrder(1);
-    private static final long GLOBAL_IOV_BASE_ADDRESS = Buffer.memoryAddress(GLOBAL_IOV_BASE);
+    // It is not possible to have a zero length buffer in sendFd,
+    // so we use a 1 byte buffer here.
     private static final int GLOBAL_IOV_LEN = 1;
+    private static final ByteBuffer GLOBAL_IOV_BASE =  Buffer.allocateDirectWithNativeOrder(GLOBAL_IOV_LEN);
+    private static final long GLOBAL_IOV_BASE_ADDRESS = Buffer.memoryAddress(GLOBAL_IOV_BASE);
     private final ByteBuffer msgHdrMemory;
     private final ByteBuffer socketAddrMemory;
     private final ByteBuffer iovMemory;

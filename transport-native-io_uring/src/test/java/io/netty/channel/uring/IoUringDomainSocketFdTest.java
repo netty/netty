@@ -24,10 +24,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.epoll.EpollDomainSocketChannel;
-import io.netty.channel.epoll.EpollIoHandle;
-import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.testsuite.transport.TestsuitePermutation;
@@ -115,7 +111,8 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
                 if (msg instanceof FileDescriptor) {
                     FileDescriptor fd = (FileDescriptor) msg;
                     recvFdFuture.complete(fd);
-                    ((IoUringDomainSocketChannelConfig) ctx.channel().config()).setReadMode(DomainSocketReadMode.BYTES);
+                    ctx.channel().config()
+                            .setOption(IoUringChannelOption.DOMAIN_SOCKET_READ_MODE, DomainSocketReadMode.BYTES);
                 } else {
                     byteBufs.addComponent(true, (ByteBuf) msg);
                 }
@@ -123,8 +120,8 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
 
             @Override
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                DomainSocketReadMode readMode = ((IoUringDomainSocketChannelConfig) ctx.channel().config())
-                        .getReadMode();
+                DomainSocketReadMode readMode = ctx.channel().config()
+                        .getOption(IoUringChannelOption.DOMAIN_SOCKET_READ_MODE);
                 if (readMode == DomainSocketReadMode.FILE_DESCRIPTORS) {
                     recvFdFuture.completeExceptionally(cause);
                 } else {

@@ -28,7 +28,7 @@ import java.io.File;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
-public class IoUringServerDomainSocketChannel extends AbstractIoUringServerChannel
+public final class IoUringServerDomainSocketChannel extends AbstractIoUringServerChannel
         implements ServerDomainSocketChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(

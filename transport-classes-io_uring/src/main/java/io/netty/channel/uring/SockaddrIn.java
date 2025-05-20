@@ -18,7 +18,6 @@ package io.netty.channel.uring;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.internal.PlatformDependent;
 
-import java.lang.reflect.Array;
 import java.net.Inet4Address;
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -27,7 +26,6 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 final class SockaddrIn {
     static final byte[] IPV4_MAPPED_IPV6_PREFIX = {

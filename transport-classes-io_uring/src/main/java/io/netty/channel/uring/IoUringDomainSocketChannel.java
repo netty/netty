@@ -162,9 +162,12 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
             DomainSocketReadMode readMode = config.getReadMode();
             switch (readMode) {
-                case FILE_DESCRIPTORS: return scheduleRecvReadFd();
-                case BYTES: return super.scheduleRead0(first, socketIsEmpty);
-                default: throw new Error();
+                case FILE_DESCRIPTORS:
+                    return scheduleRecvReadFd();
+                case BYTES:
+                    return super.scheduleRead0(first, socketIsEmpty);
+                default:
+                    throw new Error();
             }
         }
 

@@ -34,7 +34,7 @@ import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
-class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
+final class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
         implements DomainSocketChannelConfig, DuplexChannelConfig {
     private AtomicReference<DomainSocketReadMode> mode = new AtomicReference<>(DomainSocketReadMode.BYTES);
     private volatile boolean allowHalfClosure;
@@ -121,11 +121,9 @@ class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
     @Override
     public IoUringDomainSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
         ObjectUtil.checkNotNull(mode, "mode");
-        boolean change = (mode == DomainSocketReadMode.BYTES
-                          && this.mode.compareAndSet(DomainSocketReadMode.FILE_DESCRIPTORS, mode))
-                         ||
-                         (mode == DomainSocketReadMode.FILE_DESCRIPTORS
-                          && this.mode.compareAndSet(DomainSocketReadMode.BYTES, mode));
+        DomainSocketReadMode expectedMode = mode == DomainSocketReadMode.BYTES ?
+                DomainSocketReadMode.FILE_DESCRIPTORS : DomainSocketReadMode.BYTES;
+        boolean change = this.mode.compareAndSet(expectedMode, mode);
         if (change) {
             if (channel.isRegistered()) {
                 // cancel current Read
