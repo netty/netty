@@ -35,6 +35,7 @@ import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.MockTicker;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.concurrent.Ticker;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -771,6 +772,12 @@ public class EmbeddedChannelTest {
         channel.runPendingTasks();
         assertTrue(future101.isDone());
         assertFalse(future20.isDone());
+    }
+
+    @Test
+    void testDefaultTickerCannotSleep() {
+        Ticker ticker = new EmbeddedChannel().eventLoop().ticker();
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> ticker.sleep(1, TimeUnit.SECONDS));
     }
 
     @Test
