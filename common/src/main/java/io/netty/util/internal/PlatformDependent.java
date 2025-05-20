@@ -218,11 +218,8 @@ public final class PlatformDependent {
                     Pattern lineSplitPattern = Pattern.compile("[ ]+");
                     try {
                         if (Files.exists(file)) {
-                            BufferedReader reader = null;
-                            try {
-                                reader = new BufferedReader(new InputStreamReader(
-                                        new BoundedInputStream(Files.newInputStream(file)), StandardCharsets.UTF_8));
-
+                            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                                    new BoundedInputStream(Files.newInputStream(file)), StandardCharsets.UTF_8))) {
                                 String line;
                                 while ((line = reader.readLine()) != null) {
                                     if (line.startsWith(LINUX_ID_PREFIX)) {

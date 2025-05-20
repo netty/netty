@@ -71,7 +71,9 @@ public final class BoringSSLKeylessManagerFactory extends KeyManagerFactory {
     public static BoringSSLKeylessManagerFactory newKeyless(BoringSSLAsyncPrivateKeyMethod privateKeyMethod, File chain)
             throws CertificateException, IOException,
             KeyStoreException, NoSuchAlgorithmException, UnrecoverableKeyException {
-        return newKeyless(privateKeyMethod, Files.newInputStream(chain.toPath()));
+        try (InputStream chainInputStream = Files.newInputStream(chain.toPath())) {
+            return newKeyless(privateKeyMethod, chainInputStream);
+        }
     }
 
     /**
