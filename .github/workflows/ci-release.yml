@@ -354,7 +354,7 @@ jobs:
       # all together with one maven command.
       - name: Merge staging repositories
         working-directory: ./prepare-release-workspace/
-        run: bash ./.github/scripts/local_staging_merge_release.sh ~/local-staging ~/macos-aarch64-java8-local-staging ~/macos-x86_64-java8-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java8-local-staging ./target/central-staging
+        run: bash ./.github/scripts/local_staging_merge_release.sh ~/local-staging ~/macos-aarch64-java8-local-staging ~/macos-x86_64-java8-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java8-local-staging ./all/target/central-staging
 
       - name: Create bundle
         working-directory: ./prepare-release-workspace/
