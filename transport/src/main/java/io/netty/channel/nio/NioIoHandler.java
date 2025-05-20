@@ -215,9 +215,7 @@ public final class NioIoHandler implements IoHandler {
                     selectedKeysField.set(unwrappedSelector, selectedKeySet);
                     publicSelectedKeysField.set(unwrappedSelector, selectedKeySet);
                     return null;
-                } catch (NoSuchFieldException e) {
-                    return e;
-                } catch (IllegalAccessException e) {
+                } catch (NoSuchFieldException | IllegalAccessException e) {
                     return e;
                 }
             }

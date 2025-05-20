@@ -28,6 +28,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ThreadLocalRandom;
@@ -68,8 +69,8 @@ public class JdkZlibTest extends ZlibTest {
     public void testConcatenatedStreamsReadFirstOnly() throws IOException {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
 
-        try {
-            byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("/multiple.gz")) {
+            byte[] bytes = IOUtils.toByteArray(resourceAsStream);
 
             assertTrue(chDecoderGZip.writeInbound(Unpooled.copiedBuffer(bytes)));
             Queue<Object> messages = chDecoderGZip.inboundMessages();
@@ -88,8 +89,8 @@ public class JdkZlibTest extends ZlibTest {
     public void testConcatenatedStreamsReadFully() throws IOException {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
 
-        try {
-            byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("/multiple.gz")) {
+            byte[] bytes = IOUtils.toByteArray(resourceAsStream);
 
             assertTrue(chDecoderGZip.writeInbound(Unpooled.copiedBuffer(bytes)));
             Queue<Object> messages = chDecoderGZip.inboundMessages();
@@ -110,8 +111,8 @@ public class JdkZlibTest extends ZlibTest {
     public void testConcatenatedStreamsReadFullyWhenFragmented() throws IOException {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
 
-        try {
-            byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("/multiple.gz")) {
+            byte[] bytes = IOUtils.toByteArray(resourceAsStream);
 
             // Let's feed the input byte by byte to simulate fragmentation.
             ByteBuf buf = Unpooled.copiedBuffer(bytes);

@@ -479,13 +479,7 @@ public final class NativeLibraryLoader {
                         }
                     }
                 });
-            } catch (ClassNotFoundException e2) {
-                ThrowableUtil.addSuppressed(e2, e1);
-                throw e2;
-            } catch (RuntimeException e2) {
-                ThrowableUtil.addSuppressed(e2, e1);
-                throw e2;
-            } catch (Error e2) {
+            } catch (ClassNotFoundException | RuntimeException | Error e2) {
                 ThrowableUtil.addSuppressed(e2, e1);
                 throw e2;
             }

@@ -285,9 +285,7 @@ public class DefaultDnsCache implements DnsCache {
             ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
             ois = new ObjectInputStream(bais);
             return (Throwable) ois.readObject();
-        } catch (IOException e) {
-            throw new IllegalStateException(e);
-        } catch (ClassNotFoundException e) {
+        } catch (IOException | ClassNotFoundException e) {
             throw new IllegalStateException(e);
         } finally {
             if (oos != null) {

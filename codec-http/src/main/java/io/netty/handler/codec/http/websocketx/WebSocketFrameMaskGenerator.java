@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,17 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.pool;
+package io.netty.handler.codec.http.websocketx;
 
-import java.util.concurrent.ThreadLocalRandom;
+/**
+ * Allows to customize how the mask is generated that is used to mask the {@link WebSocketFrame}. Masking
+ * is only be done on the client-side.
+ */
+public interface WebSocketFrameMaskGenerator {
 
-final class ChannelPoolTestUtils {
-    private static final String LOCAL_ADDR_ID = "test.id";
-
-    private ChannelPoolTestUtils() {
-    }
-
-    static String getLocalAddrId() {
-        return LOCAL_ADDR_ID + ThreadLocalRandom.current().nextInt();
-    }
+    /**
+     * Return the next mask that is used to mask the payload of the {@link WebSocketFrame}.
+     *
+     * @return  mask.
+     */
+    int nextMask();
 }

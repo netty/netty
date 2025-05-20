@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,17 +13,21 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.pool;
+package io.netty.handler.codec.http.websocketx;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-final class ChannelPoolTestUtils {
-    private static final String LOCAL_ADDR_ID = "test.id";
+/**
+ * {@link WebSocketFrameMaskGenerator} implementation which returns a random int for masking.
+ */
+public final class RandomWebSocketFrameMaskGenerator implements WebSocketFrameMaskGenerator {
+    public static final RandomWebSocketFrameMaskGenerator INSTANCE = new RandomWebSocketFrameMaskGenerator();
 
-    private ChannelPoolTestUtils() {
+    private RandomWebSocketFrameMaskGenerator() {
     }
 
-    static String getLocalAddrId() {
-        return LOCAL_ADDR_ID + ThreadLocalRandom.current().nextInt();
+    @Override
+    public int nextMask() {
+        return ThreadLocalRandom.current().nextInt();
     }
 }
