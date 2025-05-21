@@ -44,4 +44,21 @@ final class CmsgHdr {
         cmsghdr.putInt(cmsghdrPosition + Native.CMSG_OFFSETOF_CMSG_TYPE, cmsgType);
         cmsghdr.putShort(cmsghdrPosition + cmsgHdrDataOffset, segmentSize);
     }
+
+    static void writeScmRights(ByteBuffer cmsghdr, int cmsgHdrDataOffset, int fd) {
+        int cmsghdrPosition = cmsghdr.position();
+        if (Native.SIZEOF_SIZE_T == 4) {
+            cmsghdr.putInt(cmsghdrPosition + Native.CMSG_OFFSETOF_CMSG_LEN, Native.CMSG_LEN_FOR_FD);
+        } else {
+            assert Native.SIZEOF_SIZE_T == 8;
+            cmsghdr.putLong(cmsghdrPosition + Native.CMSG_OFFSETOF_CMSG_LEN, Native.CMSG_LEN_FOR_FD);
+        }
+        cmsghdr.putInt(cmsghdrPosition + Native.CMSG_OFFSETOF_CMSG_LEVEL, Native.SOL_SOCKET);
+        cmsghdr.putInt(cmsghdrPosition + Native.CMSG_OFFSETOF_CMSG_TYPE, Native.SCM_RIGHTS);
+        cmsghdr.putInt(cmsghdrPosition + cmsgHdrDataOffset, fd);
+    }
+
+    static int readScmRights(ByteBuffer cmsghdr, int cmsgHdrDataOffset) {
+        return cmsghdr.getInt(cmsghdr.position() + cmsgHdrDataOffset);
+    }
 }
