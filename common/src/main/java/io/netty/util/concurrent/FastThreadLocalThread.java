@@ -179,7 +179,7 @@ public class FastThreadLocalThread extends Thread {
             if (index >= 0) {
                 throw new IllegalStateException("Reentrant call to run()");
             }
-            index = ~index;
+            index = ~index; // same as -(index + 1)
             long[] next = new long[arr.length + 1];
             System.arraycopy(arr, 0, next, 0, index);
             next[index] = id;
