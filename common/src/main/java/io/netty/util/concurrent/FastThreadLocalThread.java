@@ -18,11 +18,9 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
-import org.jctools.maps.NonBlockingHashMapLong;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
  * A special {@link Thread} that provides fast access to {@link FastThreadLocal} variables.
