@@ -144,7 +144,7 @@ public final class MqttProperties {
 
     static MqttProperties withEmptyDefaults(MqttProperties properties) {
         if (properties == null) {
-            return MqttProperties.NO_PROPERTIES;
+            return NO_PROPERTIES;
         }
         return properties;
     }
@@ -254,7 +254,7 @@ public final class MqttProperties {
     //are the only properties where ordering is required. Therefore, they need a special handling
     public static final class UserProperties extends MqttProperty<List<StringPair>> {
         public UserProperties() {
-            super(MqttProperties.USER_PROPERTY, new ArrayList<>());
+            super(USER_PROPERTY, new ArrayList<>());
         }
 
         /**
@@ -301,7 +301,7 @@ public final class MqttProperties {
 
     public static final class UserProperty extends MqttProperty<StringPair> {
         public UserProperty(String key, String value) {
-            super(MqttProperties.USER_PROPERTY, new StringPair(key, value));
+            super(USER_PROPERTY, new StringPair(key, value));
         }
 
         @Override
@@ -340,10 +340,10 @@ public final class MqttProperties {
             throw new UnsupportedOperationException("adding property isn't allowed");
         }
         IntObjectHashMap<MqttProperty> props = this.props;
-        if (property.propertyId == MqttProperties.USER_PROPERTY) {
+        if (property.propertyId == USER_PROPERTY) {
             List<UserProperty> userProperties = this.userProperties;
             if (userProperties == null) {
-                userProperties = new ArrayList<UserProperty>(1);
+                userProperties = new ArrayList<>(1);
                 this.userProperties = userProperties;
             }
             if (property instanceof UserProperty) {
@@ -355,10 +355,10 @@ public final class MqttProperties {
             } else {
                 throw new IllegalArgumentException("User property must be of UserProperty or UserProperties type");
             }
-        } else if (property.propertyId == MqttProperties.SUBSCRIPTION_IDENTIFIER) {
+        } else if (property.propertyId == SUBSCRIPTION_IDENTIFIER) {
             List<IntegerProperty> subscriptionIds = this.subscriptionIds;
             if (subscriptionIds == null) {
-                subscriptionIds = new ArrayList<IntegerProperty>(1);
+                subscriptionIds = new ArrayList<>(1);
                 this.subscriptionIds = subscriptionIds;
             }
             if (property instanceof IntegerProperty) {
@@ -378,7 +378,7 @@ public final class MqttProperties {
     public Collection<? extends MqttProperty> listAll() {
         IntObjectHashMap<MqttProperty> props = this.props;
         if (props == null && subscriptionIds == null && userProperties == null) {
-            return Collections.<MqttProperty>emptyList();
+            return Collections.emptyList();
         }
         if (subscriptionIds == null && userProperties == null) {
             return props.values();
