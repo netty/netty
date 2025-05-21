@@ -431,7 +431,7 @@ final class UnsafeByteBufUtil {
             PlatformDependent.putLong(data, index, ZERO);
             index += 8;
         }
-        final int remaining = length % 8;
+        final int remaining = length & 0x07;
         for (int i = 0; i < remaining; i++) {
             PlatformDependent.putByte(data, index + i, ZERO);
         }
@@ -642,7 +642,7 @@ final class UnsafeByteBufUtil {
             PlatformDependent.putLong(addr, ZERO);
             addr += 8;
         }
-        final int remaining = length % 8;
+        final int remaining = length & 0x07;
         for (int i = 0; i < remaining; i++) {
             PlatformDependent.putByte(addr + i, ZERO);
         }
