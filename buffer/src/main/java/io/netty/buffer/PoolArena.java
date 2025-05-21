@@ -737,7 +737,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                         chunkSize, maxPageIdx);
             }
 
-            CleanableDirectBuffer cleanableDirectBuffer = allocateDirect(chunkSize + sizeClass.directMemoryCacheAlignment);
+            CleanableDirectBuffer cleanableDirectBuffer = allocateDirect(
+                    chunkSize + sizeClass.directMemoryCacheAlignment);
             final ByteBuffer base = cleanableDirectBuffer.buffer();
             final ByteBuffer memory = PlatformDependent.alignDirectBuffer(base, sizeClass.directMemoryCacheAlignment);
             return new PoolChunk<ByteBuffer>(this, cleanableDirectBuffer, base, memory, pageSize,
@@ -752,7 +753,8 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 return new PoolChunk<ByteBuffer>(this, cleanableDirectBuffer, memory, memory, capacity);
             }
 
-            CleanableDirectBuffer cleanableDirectBuffer = allocateDirect(capacity + sizeClass.directMemoryCacheAlignment);
+            CleanableDirectBuffer cleanableDirectBuffer = allocateDirect(
+                    capacity + sizeClass.directMemoryCacheAlignment);
             final ByteBuffer base = cleanableDirectBuffer.buffer();
             final ByteBuffer memory = PlatformDependent.alignDirectBuffer(base, sizeClass.directMemoryCacheAlignment);
             return new PoolChunk<ByteBuffer>(this, cleanableDirectBuffer, base, memory, capacity);
