@@ -20,6 +20,10 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jctools.maps.NonBlockingHashMapLong;
 
+import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+
 /**
  * A special {@link Thread} that provides fast access to {@link FastThreadLocal} variables.
  */
@@ -27,9 +31,10 @@ public class FastThreadLocalThread extends Thread {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(FastThreadLocalThread.class);
 
-    private static final NonBlockingHashMapLong<Object> fallbackThreads = new NonBlockingHashMapLong<>();
-
-    private static final Object MARKER = new Object();
+    /**
+     * Sorted array of thread IDs that are treated like {@link FastThreadLocalThread}.
+     */
+    private static final AtomicReference<long[]> fallbackThreads = new AtomicReference<>(null);
 
     // This will be set to true if we have a chance to wrap the Runnable.
     private final boolean cleanupFastThreadLocals;
@@ -141,7 +146,11 @@ public class FastThreadLocalThread extends Thread {
     }
 
     private static boolean isFastThreadLocalVirtualThread() {
-        return fallbackThreads.containsKey(currentThread().getId());
+        long[] arr = fallbackThreads.get();
+        if (arr == null) {
+            return false;
+        }
+        return Arrays.binarySearch(arr, Thread.currentThread().getId()) >= 0;
     }
 
     /**
@@ -158,13 +167,43 @@ public class FastThreadLocalThread extends Thread {
      */
     public static void runWithFastThreadLocal(Runnable runnable) {
         long id = currentThread().getId();
-        if (currentThread() instanceof FastThreadLocalThread || fallbackThreads.put(id, MARKER) != null) {
-            throw new IllegalStateException("Reentrant call to run()");
+        if (currentThread() instanceof FastThreadLocalThread) {
+            throw new IllegalStateException("Caller is a real FastThreadLocalThread");
         }
+        fallbackThreads.updateAndGet(arr -> {
+            if (arr == null) {
+                return new long[] { id };
+            }
+            int index = Arrays.binarySearch(arr, id);
+            if (index >= 0) {
+                throw new IllegalStateException("Reentrant call to run()");
+            }
+            index = ~index;
+            long[] next = new long[arr.length + 1];
+            System.arraycopy(arr, 0, next, 0, index);
+            next[index] = id;
+            System.arraycopy(arr, index, next, index + 1, arr.length - index);
+            return next;
+        });
         try {
             runnable.run();
         } finally {
-            fallbackThreads.remove(id);
+            fallbackThreads.getAndUpdate(arr -> {
+                if (arr == null) {
+                    return null;
+                }
+                if (arr.length == 1 && arr[0] == id) {
+                    return null;
+                }
+                int index = Arrays.binarySearch(arr, id);
+                if (index < 0) {
+                    return arr;
+                }
+                long[] next = new long[arr.length - 1];
+                System.arraycopy(arr, 0, next, 0, index);
+                System.arraycopy(arr, index + 1, next, index, arr.length - index - 1);
+                return next;
+            });
             FastThreadLocal.removeAll();
         }
     }

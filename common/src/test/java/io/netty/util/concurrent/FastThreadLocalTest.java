@@ -18,6 +18,7 @@ package io.netty.util.concurrent;
 
 import io.netty.util.internal.InternalThreadLocalMap;
 import io.netty.util.internal.ObjectCleaner;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -25,6 +26,14 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.Phaser;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -192,6 +201,50 @@ public class FastThreadLocalTest {
             assertTrue(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
             assertTrue(FastThreadLocalThread.currentThreadHasFastThreadLocal());
         });
+    }
+
+    @Test
+    public void testWrapMany() throws ExecutionException, InterruptedException {
+        class Worker implements Runnable {
+            final Semaphore semaphore = new Semaphore(0);
+            final FutureTask<?> task = new FutureTask<>(this, null);
+
+            @Override
+            public void run() {
+                assertFalse(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+                assertFalse(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+                semaphore.acquireUninterruptibly();
+                FastThreadLocalThread.runWithFastThreadLocal(() -> {
+                    assertTrue(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+                    assertTrue(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+                    semaphore.acquireUninterruptibly();
+                    assertTrue(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+                    assertTrue(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+                });
+                assertFalse(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+                assertFalse(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+            }
+        }
+
+        int n = 100;
+        List<Worker> workers = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            Worker worker = new Worker();
+            workers.add(worker);
+        }
+        Collections.shuffle(workers);
+        for (int i = 0; i < workers.size(); i++) {
+            new Thread(workers.get(i).task, "worker-" + i).start();
+        }
+        for (int i = 0; i < 2; i++) {
+            Collections.shuffle(workers);
+            for (Worker worker : workers) {
+                worker.semaphore.release();
+            }
+        }
+        for (Worker worker : workers) {
+            worker.task.get();
+        }
     }
 
     @Test
