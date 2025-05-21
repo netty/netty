@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.unix.Buffer;
+import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -46,6 +47,7 @@ public final class EpollEventArray {
     // The offset of the data union in the epoll_event struct
     private static final int EPOLL_DATA_OFFSET = Native.offsetofEpollData();
 
+    private CleanableDirectBuffer cleanable;
     private ByteBuffer memory;
     private long memoryAddress;
     private int length;
@@ -55,7 +57,8 @@ public final class EpollEventArray {
             throw new IllegalArgumentException("length must be >= 1 but was " + length);
         }
         this.length = length;
-        memory = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(length));
+        cleanable = Buffer.allocateDirectBufferWithNativeOrder(calculateBufferCapacity(length));
+        memory = cleanable.buffer();
         memoryAddress = Buffer.memoryAddress(memory);
     }
 
@@ -81,17 +84,18 @@ public final class EpollEventArray {
         // double the size
         length <<= 1;
         // There is no need to preserve what was in the memory before.
-        ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(length));
-        Buffer.free(memory);
-        memory = buffer;
-        memoryAddress = Buffer.memoryAddress(buffer);
+        CleanableDirectBuffer buffer = Buffer.allocateDirectBufferWithNativeOrder(calculateBufferCapacity(length));
+        cleanable.clean();
+        cleanable = buffer;
+        memory = buffer.buffer();
+        memoryAddress = Buffer.memoryAddress(buffer.buffer());
     }
 
     /**
      * Free this {@link EpollEventArray}. Any usage after calling this method may segfault the JVM!
      */
     void free() {
-        Buffer.free(memory);
+        cleanable.clean();
         memoryAddress = 0;
     }
 

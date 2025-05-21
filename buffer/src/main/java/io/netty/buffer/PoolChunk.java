@@ -15,8 +15,7 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.LongCounter;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.CleanableDirectBuffer;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
@@ -146,6 +145,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     static final int RUN_OFFSET_SHIFT = SIZE_BIT_LENGTH + SIZE_SHIFT;
 
     final PoolArena<T> arena;
+    final CleanableDirectBuffer cleanable;
     final Object base;
     final T memory;
     final boolean unpooled;
@@ -194,9 +194,11 @@ final class PoolChunk<T> implements PoolChunkMetric {
     //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
 
     @SuppressWarnings("unchecked")
-    PoolChunk(PoolArena<T> arena, Object base, T memory, int pageSize, int pageShifts, int chunkSize, int maxPageIdx) {
+    PoolChunk(PoolArena<T> arena, CleanableDirectBuffer cleanable, Object base, T memory, int pageSize, int pageShifts,
+              int chunkSize, int maxPageIdx) {
         unpooled = false;
         this.arena = arena;
+        this.cleanable = cleanable;
         this.base = base;
         this.memory = memory;
         this.pageSize = pageSize;
@@ -219,9 +221,10 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     /** Creates a special chunk that is not pooled. */
-    PoolChunk(PoolArena<T> arena, Object base, T memory, int size) {
+    PoolChunk(PoolArena<T> arena, CleanableDirectBuffer cleanable, Object base, T memory, int size) {
         unpooled = true;
         this.arena = arena;
+        this.cleanable = cleanable;
         this.base = base;
         this.memory = memory;
         pageSize = 0;

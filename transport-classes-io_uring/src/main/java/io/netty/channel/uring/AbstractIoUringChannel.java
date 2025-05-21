@@ -46,6 +46,7 @@ import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseNotifier;
+import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -121,6 +122,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
+    private CleanableDirectBuffer cleanable;
     private ByteBuffer remoteAddressMemory;
     private MsgHdrMemoryArray msgHdrMemoryArray;
 
@@ -288,7 +290,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     private void freeRemoteAddressMemory() {
         if (remoteAddressMemory != null) {
-            Buffer.free(remoteAddressMemory);
+            cleanable.clean();
+            cleanable = null;
             remoteAddressMemory = null;
         }
     }
@@ -1176,7 +1179,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     private void submitConnect(InetSocketAddress inetSocketAddress) {
-        remoteAddressMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
+        cleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
+        remoteAddressMemory = cleanable.buffer();
 
         SockaddrIn.set(socket.isIpv6(), remoteAddressMemory, inetSocketAddress);
 

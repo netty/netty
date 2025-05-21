@@ -121,6 +121,8 @@ public final class PlatformDependent {
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
     private static final long DIRECT_MEMORY_LIMIT;
     private static final Cleaner CLEANER;
+    private static final Cleaner DIRECT_CLEANER;
+    private static final Cleaner LEGACY_CLEANER;
     private static final boolean HAS_ALLOCATE_UNINIT_ARRAY;
     // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
     private static final String[] OS_RELEASE_FILES = {"/etc/os-release", "/usr/lib/os-release"};
@@ -129,6 +131,23 @@ public final class PlatformDependent {
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
     private static final Cleaner NOOP = new Cleaner() {
+        @Override
+        public CleanableDirectBuffer allocate(int capacity) {
+            return new CleanableDirectBuffer() {
+                private final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(capacity);
+
+                @Override
+                public ByteBuffer buffer() {
+                    return byteBuffer;
+                }
+
+                @Override
+                public void clean() {
+                    // NOOP
+                }
+            };
+        }
+
         @Override
         public void freeDirectBuffer(ByteBuffer buffer) {
             // NOOP
@@ -147,9 +166,11 @@ public final class PlatformDependent {
 
         if (maxDirectMemory == 0 || !hasUnsafe() || !PlatformDependent0.hasDirectBufferNoCleanerConstructor()) {
             USE_DIRECT_BUFFER_NO_CLEANER = false;
+            DIRECT_CLEANER = NOOP;
             DIRECT_MEMORY_COUNTER = null;
         } else {
             USE_DIRECT_BUFFER_NO_CLEANER = true;
+            DIRECT_CLEANER = new DirectCleaner();
             if (maxDirectMemory < 0) {
                 maxDirectMemory = MAX_DIRECT_MEMORY;
                 if (maxDirectMemory <= 0) {
@@ -171,13 +192,22 @@ public final class PlatformDependent {
             // only direct to method if we are not running on android.
             // See https://github.com/netty/netty/issues/2604
             if (javaVersion() >= 9) {
-                CLEANER = CleanerJava9.isSupported() ? new CleanerJava9() : NOOP;
+                // Try Java 9 cleaner first, because it's based on Unsafe and can skip a few steps.
+                if (CleanerJava9.isSupported()) {
+                    LEGACY_CLEANER = new CleanerJava9();
+                } else if (CleanerJava24.isSupported()) {
+                    // On Java 24+ we can't use Unsafe, but we have MemorySegment.
+                    LEGACY_CLEANER = new CleanerJava24();
+                } else {
+                    LEGACY_CLEANER = NOOP;
+                }
             } else {
-                CLEANER = CleanerJava6.isSupported() ? new CleanerJava6() : NOOP;
+                LEGACY_CLEANER = CleanerJava6.isSupported() ? new CleanerJava6() : NOOP;
             }
         } else {
-            CLEANER = NOOP;
+            LEGACY_CLEANER = NOOP;
         }
+        CLEANER = USE_DIRECT_BUFFER_NO_CLEANER ? DIRECT_CLEANER : LEGACY_CLEANER;
 
         EXPLICIT_NO_PREFER_DIRECT = SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
         // We should always prefer direct buffers by default if we can use a Cleaner to release direct buffers.
@@ -498,11 +528,25 @@ public final class PlatformDependent {
     }
 
     /**
+     * Allocate a direct {@link ByteBuffer} of the given capacity, and return it alongside its deallocation mechanism.
+     * @param capacity The desired capacity of the direct byte buffer.
+     * @return The {@link CleanableDirectBuffer} instance that contain the buffer and its deallocation mechanism.
+     */
+    public static CleanableDirectBuffer allocateDirect(int capacity) {
+        return CLEANER.allocate(capacity);
+    }
+
+    /**
      * Try to deallocate the specified direct {@link ByteBuffer}. Please note this method does nothing if
      * the current platform does not support this operation or the specified buffer is not a direct buffer.
+     *
+     * @deprecated Use the {@link CleanableDirectBuffer#clean()} from {@link #allocateDirect(int)} instead.
      */
+    @Deprecated
     public static void freeDirectBuffer(ByteBuffer buffer) {
-        CLEANER.freeDirectBuffer(buffer);
+        // Use the LEGACY_CLEANER reference to avoid using the DIRECT_CLEANER implementation
+        // that just calls #freeDirectNoCleaner(ByteBuffer).
+        LEGACY_CLEANER.freeDirectBuffer(buffer);
     }
 
     public static long directBufferAddress(ByteBuffer buffer) {
@@ -757,7 +801,10 @@ public final class PlatformDependent {
     /**
      * Allocate a new {@link ByteBuffer} with the given {@code capacity}. {@link ByteBuffer}s allocated with
      * this method <strong>MUST</strong> be deallocated via {@link #freeDirectNoCleaner(ByteBuffer)}.
+     *
+     * @deprecated Use {@link #allocateDirect(int)} for a more portable API and implementation.
      */
+    @Deprecated
     public static ByteBuffer allocateDirectNoCleaner(int capacity) {
         assert USE_DIRECT_BUFFER_NO_CLEANER;
 
@@ -774,7 +821,10 @@ public final class PlatformDependent {
     /**
      * Reallocate a new {@link ByteBuffer} with the given {@code capacity}. {@link ByteBuffer}s reallocated with
      * this method <strong>MUST</strong> be deallocated via {@link #freeDirectNoCleaner(ByteBuffer)}.
+     *
+     * @deprecated Use {@link #allocateDirect(int)} to reallocate instead for a more portable API and implementation.
      */
+    @Deprecated
     public static ByteBuffer reallocateDirectNoCleaner(ByteBuffer buffer, int capacity) {
         assert USE_DIRECT_BUFFER_NO_CLEANER;
 
@@ -792,7 +842,9 @@ public final class PlatformDependent {
     /**
      * This method <strong>MUST</strong> only be called for {@link ByteBuffer}s that were allocated via
      * {@link #allocateDirectNoCleaner(int)}.
+     * @deprecated Use {@link #allocateDirect(int)} instead for a more portable API.
      */
+    @Deprecated
     public static void freeDirectNoCleaner(ByteBuffer buffer) {
         assert USE_DIRECT_BUFFER_NO_CLEANER;
 
