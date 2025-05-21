@@ -1127,11 +1127,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     } else {
                         submitConnect(inetSocketAddress);
                     }
-                }
-
-                if (remoteAddress instanceof DomainSocketAddress) {
+                } else if (remoteAddress instanceof DomainSocketAddress) {
                     DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) remoteAddress;
                     submitConnect(unixDomainSocketAddress);
+                } else {
+                    throw new Error("Unexpected SocketAddress implementation " + remoteAddress);
                 }
 
                 if (connectId != 0) {
