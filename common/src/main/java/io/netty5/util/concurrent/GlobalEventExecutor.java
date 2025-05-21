@@ -24,8 +24,6 @@ import org.jetbrains.annotations.VisibleForTesting;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Executors;
@@ -235,10 +233,9 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     private void startThread() {
         if (started.compareAndSet(false, true)) {
             Thread callingThread = Thread.currentThread();
-            ClassLoader parentCCL = AccessController.doPrivileged(
-                (PrivilegedAction<ClassLoader>) callingThread::getContextClassLoader);
+            ClassLoader parentCCL = callingThread.getContextClassLoader();
             // Avoid calling classloader leaking through Thread.inheritedAccessControlContext.
-            setContextClassLoader(callingThread, null);
+            callingThread.setContextClassLoader(null);
             try {
                 final Thread t = threadFactory.newThread(taskRunner);
                 // Set to null to ensure we not create classloader leaks by holds a strong reference to the inherited
@@ -246,7 +243,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                 // See:
                 // - https://github.com/netty/netty/issues/7290
                 // - https://bugs.openjdk.java.net/browse/JDK-7008595
-                setContextClassLoader(t, null);
+                t.setContextClassLoader(null);
 
                 // Set the thread before starting it as otherwise inEventLoop() may return false and so produce
                 // an assert error.
@@ -254,16 +251,9 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
                 thread = t;
                 t.start();
             } finally {
-                setContextClassLoader(callingThread, parentCCL);
+                callingThread.setContextClassLoader(parentCCL);
             }
         }
-    }
-
-    private static void setContextClassLoader(final Thread t, final ClassLoader cl) {
-        AccessController.doPrivileged((PrivilegedAction<Void>) () -> {
-            t.setContextClassLoader(cl);
-            return null;
-        });
     }
 
     final class TaskRunner implements Runnable {

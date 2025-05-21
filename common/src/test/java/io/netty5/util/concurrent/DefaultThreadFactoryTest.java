@@ -16,104 +16,17 @@
 
 package io.netty5.util.concurrent;
 
-import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.security.Permission;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class DefaultThreadFactoryTest {
-
-    @Test
-    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
-    public void testDescendantThreadGroups() throws InterruptedException {
-        final SecurityManager current = System.getSecurityManager();
-
-        boolean securityManagerSet = false;
-        try {
-            try {
-                // install security manager that only allows parent thread groups to mess with descendant thread groups
-                System.setSecurityManager(new SecurityManager() {
-                    @Override
-                    public void checkAccess(ThreadGroup g) {
-                        final ThreadGroup source = Thread.currentThread().getThreadGroup();
-
-                        if (source != null) {
-                            if (!source.parentOf(g)) {
-                                throw new SecurityException("source group is not an ancestor of the target group");
-                            }
-                            super.checkAccess(g);
-                        }
-                    }
-
-                    // so we can restore the security manager at the end of the test
-                    @Override
-                    public void checkPermission(Permission perm) {
-                    }
-                });
-            } catch (UnsupportedOperationException e) {
-                Assumptions.assumeFalse(true, "Setting SecurityManager not supported");
-            }
-            securityManagerSet = true;
-
-            // holder for the thread factory, plays the role of a global singleton
-            final AtomicReference<DefaultThreadFactory> factory = new AtomicReference<>();
-            final AtomicInteger counter = new AtomicInteger();
-            final Runnable task = counter::incrementAndGet;
-
-            final AtomicReference<Throwable> interrupted = new AtomicReference<>();
-
-            // create the thread factory, since we are running the thread group brother, the thread
-            // factory will now forever be tied to that group
-            // we then create a thread from the factory to run a "task" for us
-            final Thread first = new Thread(new ThreadGroup("brother"), () -> {
-                factory.set(new DefaultThreadFactory("test", false, Thread.NORM_PRIORITY, null));
-                final Thread t = factory.get().newThread(task);
-                t.start();
-                try {
-                    t.join();
-                } catch (InterruptedException e) {
-                    interrupted.set(e);
-                    Thread.currentThread().interrupt();
-                }
-            });
-            first.start();
-            first.join();
-
-            assertNull(interrupted.get());
-
-            // now we will use factory again, this time from a sibling thread group sister
-            // if DefaultThreadFactory is "sticky" about thread groups, a security manager
-            // that forbids sibling thread groups from messing with each other will strike this down
-            final Thread second = new Thread(new ThreadGroup("sister"), () -> {
-                final Thread t = factory.get().newThread(task);
-                t.start();
-                try {
-                    t.join();
-                } catch (InterruptedException e) {
-                    interrupted.set(e);
-                    Thread.currentThread().interrupt();
-                }
-            });
-            second.start();
-            second.join();
-
-            assertNull(interrupted.get());
-
-            assertEquals(2, counter.get());
-        } finally {
-            if (securityManagerSet) {
-                System.setSecurityManager(current);
-            }
-        }
-    }
 
     // test that when DefaultThreadFactory is constructed with a sticky thread group, threads
     // created by it have the sticky thread group
@@ -124,43 +37,6 @@ public class DefaultThreadFactoryTest {
         runStickyThreadGroupTest(
                 () -> new DefaultThreadFactory("test", false, Thread.NORM_PRIORITY, sticky),
                 sticky);
-    }
-
-    // test that when a security manager is installed that provides a ThreadGroup, DefaultThreadFactory inherits from
-    // the security manager
-    @Test
-    @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
-    public void testDefaultThreadFactoryInheritsThreadGroupFromSecurityManager() throws InterruptedException {
-        final SecurityManager current = System.getSecurityManager();
-
-        boolean securityManagerSet = false;
-        try {
-            final ThreadGroup sticky = new ThreadGroup("sticky");
-            try {
-                System.setSecurityManager(new SecurityManager() {
-                    @Override
-                    public ThreadGroup getThreadGroup() {
-                        return sticky;
-                    }
-
-                    // so we can restore the security manager at the end of the test
-                    @Override
-                    public void checkPermission(Permission perm) {
-                    }
-                });
-            } catch (UnsupportedOperationException e) {
-                Assumptions.assumeFalse(true, "Setting SecurityManager not supported");
-            }
-            securityManagerSet = true;
-
-            runStickyThreadGroupTest(
-                    () -> new DefaultThreadFactory("test"),
-                    sticky);
-        } finally {
-            if (securityManagerSet) {
-                System.setSecurityManager(current);
-            }
-        }
     }
 
     private static void runStickyThreadGroupTest(

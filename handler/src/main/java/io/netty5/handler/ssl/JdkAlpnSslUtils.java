@@ -26,8 +26,6 @@ import javax.net.ssl.SSLParameters;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
-import java.security.AccessController;
-import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.function.BiFunction;
 
@@ -51,35 +49,30 @@ final class JdkAlpnSslUtils {
             context.init(null, null, null);
             SSLEngine engine = context.createSSLEngine();
             MethodHandles.Lookup lookup = MethodHandles.lookup();
-            getHandshakeApplicationProtocol =
-                    AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
-                    lookup.findVirtual(SSLEngine.class, "getHandshakeApplicationProtocol",
-                            MethodType.methodType(String.class)));
+            getHandshakeApplicationProtocol = lookup.findVirtual(SSLEngine.class, "getHandshakeApplicationProtocol",
+                                                                 MethodType.methodType(String.class));
             // Invoke and specify the return type so the compiler doesnt try to use void
             String getHandshakeApplicationProtocolRes = (String) getHandshakeApplicationProtocol.invokeExact(engine);
 
-            getApplicationProtocol = AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
-                    lookup.findVirtual(SSLEngine.class, "getApplicationProtocol",
-                            MethodType.methodType(String.class)));
+            getApplicationProtocol = lookup.findVirtual(SSLEngine.class, "getApplicationProtocol",
+                                                        MethodType.methodType(String.class));
             // Invoke and specify the return type so the compiler doesnt try to use void
             String getApplicationProtocolRes = (String) getApplicationProtocol.invokeExact(engine);
 
-            setApplicationProtocols = AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
-                    lookup.findVirtual(SSLParameters.class, "setApplicationProtocols",
-                            MethodType.methodType(void.class, String[].class)));
+            setApplicationProtocols = lookup.findVirtual(SSLParameters.class, "setApplicationProtocols",
+                                                         MethodType.methodType(void.class, String[].class));
             setApplicationProtocols.invokeExact(engine.getSSLParameters(), EmptyArrays.EMPTY_STRINGS);
 
             setHandshakeApplicationProtocolSelector =
-                    AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
-                            lookup.findVirtual(SSLEngine.class, "setHandshakeApplicationProtocolSelector",
-                                    MethodType.methodType(void.class, BiFunction.class)));
-            setHandshakeApplicationProtocolSelector.invokeExact(engine,
-                    (BiFunction<SSLEngine, List<String>, String>) (sslEngine, strings) -> null);
+                    lookup.findVirtual(SSLEngine.class, "setHandshakeApplicationProtocolSelector",
+                                       MethodType.methodType(void.class, BiFunction.class));
+            setHandshakeApplicationProtocolSelector
+                    .invokeExact(engine,
+                                 (BiFunction<SSLEngine, List<String>, String>) (sslEngine, strings) -> null);
 
             getHandshakeApplicationProtocolSelector =
-                    AccessController.doPrivileged((PrivilegedExceptionAction<MethodHandle>) () ->
-                            lookup.findVirtual(SSLEngine.class, "getHandshakeApplicationProtocolSelector",
-                                    MethodType.methodType(BiFunction.class)));
+                    lookup.findVirtual(SSLEngine.class, "getHandshakeApplicationProtocolSelector",
+                                       MethodType.methodType(BiFunction.class));
             // Invoke and specify the return type so the compiler doesn't try to use void
             @SuppressWarnings("unchecked")
             BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelectorRes =

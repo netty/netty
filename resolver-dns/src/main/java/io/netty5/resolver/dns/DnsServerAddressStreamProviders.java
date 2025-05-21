@@ -23,8 +23,6 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.InvocationTargetException;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -44,27 +42,16 @@ public final class DnsServerAddressStreamProviders {
             try {
                 // As MacOSDnsServerAddressStreamProvider is contained in another jar which depends on this jar
                 // we use reflection to use it if its on the classpath.
-                Object maybeProvider = AccessController.doPrivileged((PrivilegedAction<Object>) () -> {
-                    try {
-                        return Class.forName(
+                @SuppressWarnings("unchecked")
+                Class<? extends DnsServerAddressStreamProvider> providerClass =
+                        (Class<? extends DnsServerAddressStreamProvider>) Class.forName(
                                 MACOS_PROVIDER_CLASS_NAME,
                                 true,
                                 DnsServerAddressStreamProviders.class.getClassLoader());
-                    } catch (Throwable cause) {
-                        return cause;
-                    }
-                });
-                if (maybeProvider instanceof Class) {
-                    @SuppressWarnings("unchecked")
-                    Class<? extends DnsServerAddressStreamProvider> providerClass =
-                            (Class<? extends DnsServerAddressStreamProvider>) maybeProvider;
-                    MethodHandles.Lookup lookup = MethodHandles.lookup();
-                    constructorHandle = lookup.findConstructor(providerClass, MethodType.methodType(void.class));
-                    constructorHandle.invoke(); // ctor ensures availability
-                    LOGGER.debug("{}: available", MACOS_PROVIDER_CLASS_NAME);
-                } else {
-                    throw (Throwable) maybeProvider;
-                }
+                MethodHandles.Lookup lookup = MethodHandles.lookup();
+                constructorHandle = lookup.findConstructor(providerClass, MethodType.methodType(void.class));
+                constructorHandle.invoke(); // ctor ensures availability
+                LOGGER.debug("{}: available", MACOS_PROVIDER_CLASS_NAME);
             } catch (ClassNotFoundException cause) {
                 LOGGER.warn("Can not find {} in the classpath, fallback to system defaults. This may result in "
                         + "incorrect DNS resolutions on MacOS. Check whether you have a dependency on "

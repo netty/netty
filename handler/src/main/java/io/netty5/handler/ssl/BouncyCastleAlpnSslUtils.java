@@ -23,8 +23,6 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
-import java.security.AccessController;
-import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.function.BiFunction;
 
@@ -65,55 +63,35 @@ final class BouncyCastleAlpnSslUtils {
 
             final Class<?> testBCApplicationProtocolSelector = bcApplicationProtocolSelector;
 
-            bcApplicationProtocolSelectorSelect = AccessController.doPrivileged(
-                    (PrivilegedExceptionAction<Method>) () ->
-                            testBCApplicationProtocolSelector.getMethod("select", Object.class, List.class));
+            bcApplicationProtocolSelectorSelect =
+                    testBCApplicationProtocolSelector.getMethod("select", Object.class, List.class);
 
             SSLContext context = getSSLContext("BCJSSE");
             SSLEngine engine = context.createSSLEngine();
 
-            getParameters = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                @Override
-                public Method run() throws Exception {
-                    return testBCSslEngine.getMethod("getParameters");
-                }
-            });
+            getParameters = testBCSslEngine.getMethod("getParameters");
 
             final Object bcSslParameters = getParameters.invoke(engine);
             final Class<?> bCSslParametersClass = bcSslParameters.getClass();
 
-            setParameters = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                @Override
-                public Method run() throws Exception {
-                    return testBCSslEngine.getMethod("setParameters", bCSslParametersClass);
-                }
-            });
+            setParameters = testBCSslEngine.getMethod("setParameters", bCSslParametersClass);
             setParameters.invoke(engine, bcSslParameters);
 
-            setApplicationProtocols = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
-                @Override
-                public Method run() throws Exception {
-                    return bCSslParametersClass.getMethod("setApplicationProtocols", String[].class);
-                }
-            });
-            setApplicationProtocols.invoke(bcSslParameters, new Object[]{EmptyArrays.EMPTY_STRINGS});
+            setApplicationProtocols = bCSslParametersClass.getMethod("setApplicationProtocols", String[].class);
+            setApplicationProtocols.invoke(bcSslParameters, new Object[] { EmptyArrays.EMPTY_STRINGS });
 
-            getApplicationProtocol = AccessController.doPrivileged((PrivilegedExceptionAction<Method>)
-                    () -> testBCSslEngine.getMethod("getApplicationProtocol"));
+            getApplicationProtocol = testBCSslEngine.getMethod("getApplicationProtocol");
             getApplicationProtocol.invoke(engine);
 
-            getHandshakeApplicationProtocol = AccessController.doPrivileged((PrivilegedExceptionAction<Method>)
-                    () -> testBCSslEngine.getMethod("getHandshakeApplicationProtocol"));
+            getHandshakeApplicationProtocol = testBCSslEngine.getMethod("getHandshakeApplicationProtocol");
             getHandshakeApplicationProtocol.invoke(engine);
 
             setHandshakeApplicationProtocolSelector =
-                    AccessController.doPrivileged((PrivilegedExceptionAction<Method>)
-                            () -> testBCSslEngine.getMethod("setBCHandshakeApplicationProtocolSelector",
-                            testBCApplicationProtocolSelector));
+                    testBCSslEngine.getMethod("setBCHandshakeApplicationProtocolSelector",
+                                              testBCApplicationProtocolSelector);
 
             getHandshakeApplicationProtocolSelector =
-                    AccessController.doPrivileged((PrivilegedExceptionAction<Method>)
-                            () -> testBCSslEngine.getMethod("getBCHandshakeApplicationProtocolSelector"));
+                    testBCSslEngine.getMethod("getBCHandshakeApplicationProtocolSelector");
             getHandshakeApplicationProtocolSelector.invoke(engine);
 
         } catch (Throwable t) {

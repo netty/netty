@@ -19,7 +19,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.net.SocketException;
@@ -28,10 +27,6 @@ import java.net.UnknownHostException;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.security.AccessController;
-import java.security.PrivilegedAction;
-import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
 import java.util.Collections;
 import java.util.Enumeration;
 
@@ -53,100 +48,55 @@ public final class SocketUtils {
         return (Enumeration<T>) EMPTY;
     }
 
+    @Deprecated
     public static void connect(final Socket socket, final SocketAddress remoteAddress, final int timeout)
             throws IOException {
-        try {
-            AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
-                socket.connect(remoteAddress, timeout);
-                return null;
-            });
-        } catch (PrivilegedActionException e) {
-            throw (IOException) e.getCause();
-        }
+        socket.connect(remoteAddress, timeout);
     }
 
+    @Deprecated
     public static void bind(final Socket socket, final SocketAddress bindpoint) throws IOException {
-        try {
-            AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
-                socket.bind(bindpoint);
-                return null;
-            });
-        } catch (PrivilegedActionException e) {
-            throw (IOException) e.getCause();
-        }
+        socket.bind(bindpoint);
     }
 
+    @Deprecated
     public static boolean connect(final SocketChannel socketChannel, final SocketAddress remoteAddress)
             throws IOException {
-        try {
-            return AccessController.doPrivileged((PrivilegedExceptionAction<Boolean>) () ->
-                    socketChannel.connect(remoteAddress));
-        } catch (PrivilegedActionException e) {
-            throw (IOException) e.getCause();
-        }
+        return socketChannel.connect(remoteAddress);
     }
 
+    @Deprecated
     public static void bind(final SocketChannel socketChannel, final SocketAddress address) throws IOException {
-        try {
-            AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
-                socketChannel.bind(address);
-                return null;
-            });
-        } catch (PrivilegedActionException e) {
-            throw (IOException) e.getCause();
-        }
+        socketChannel.bind(address);
     }
 
+    @Deprecated
     public static SocketChannel accept(final ServerSocketChannel serverSocketChannel) throws IOException {
-        try {
-            return AccessController.doPrivileged(
-                    (PrivilegedExceptionAction<SocketChannel>) serverSocketChannel::accept);
-        } catch (PrivilegedActionException e) {
-            throw (IOException) e.getCause();
-        }
+        return serverSocketChannel.accept();
     }
 
+    @Deprecated
     public static void bind(final DatagramChannel networkChannel, final SocketAddress address) throws IOException {
-        try {
-            AccessController.doPrivileged((PrivilegedExceptionAction<Void>) () -> {
-                networkChannel.bind(address);
-                return null;
-            });
-        } catch (PrivilegedActionException e) {
-            throw (IOException) e.getCause();
-        }
+        networkChannel.bind(address);
     }
 
-    public static SocketAddress localSocketAddress(final ServerSocket socket) {
-        return AccessController.doPrivileged((PrivilegedAction<SocketAddress>) socket::getLocalSocketAddress);
-    }
-
+    @Deprecated
     public static InetAddress addressByName(final String hostname) throws UnknownHostException {
-        try {
-            return AccessController.doPrivileged((PrivilegedExceptionAction<InetAddress>) () ->
-                    InetAddress.getByName(hostname));
-        } catch (PrivilegedActionException e) {
-            throw (UnknownHostException) e.getCause();
-        }
+        return InetAddress.getByName(hostname);
     }
 
+    @Deprecated
     public static InetAddress[] allAddressesByName(final String hostname) throws UnknownHostException {
-        try {
-            return AccessController.doPrivileged((PrivilegedExceptionAction<InetAddress[]>) () ->
-                    InetAddress.getAllByName(hostname));
-        } catch (PrivilegedActionException e) {
-            throw (UnknownHostException) e.getCause();
-        }
+        return InetAddress.getAllByName(hostname);
     }
 
+    @Deprecated
     public static InetSocketAddress socketAddress(final String hostname, final int port) {
-        return AccessController.doPrivileged((PrivilegedAction<InetSocketAddress>) () ->
-                new InetSocketAddress(hostname, port));
+        return new InetSocketAddress(hostname, port);
     }
 
     public static Enumeration<InetAddress> addressesFromNetworkInterface(final NetworkInterface intf) {
-        Enumeration<InetAddress> addresses =
-                AccessController.doPrivileged((PrivilegedAction<Enumeration<InetAddress>>) intf::getInetAddresses);
+        Enumeration<InetAddress> addresses = intf.getInetAddresses();
         // Android seems to sometimes return null even if this is not a valid return value by the api docs.
         // Just return an empty Enumeration in this case.
         // See https://github.com/netty/netty/issues/10045
@@ -156,15 +106,8 @@ public final class SocketUtils {
         return addresses;
     }
 
-    public static InetAddress loopbackAddress() {
-        return AccessController.doPrivileged((PrivilegedAction<InetAddress>) InetAddress::getLoopbackAddress);
-    }
-
+    @Deprecated
     public static byte[] hardwareAddressFromNetworkInterface(final NetworkInterface intf) throws SocketException {
-        try {
-            return AccessController.doPrivileged((PrivilegedExceptionAction<byte[]>) intf::getHardwareAddress);
-        } catch (PrivilegedActionException e) {
-            throw (SocketException) e.getCause();
-        }
+        return intf.getHardwareAddress();
     }
 }
