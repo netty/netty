@@ -166,10 +166,11 @@ public class FastThreadLocalThread extends Thread {
      * @param runnable The task to run
      */
     public static void runWithFastThreadLocal(Runnable runnable) {
-        long id = currentThread().getId();
-        if (currentThread() instanceof FastThreadLocalThread) {
+        Thread current = currentThread();
+        if (current instanceof FastThreadLocalThread) {
             throw new IllegalStateException("Caller is a real FastThreadLocalThread");
         }
+        long id = current.getId();
         fallbackThreads.updateAndGet(arr -> {
             if (arr == null) {
                 return new long[] { id };
@@ -189,10 +190,7 @@ public class FastThreadLocalThread extends Thread {
             runnable.run();
         } finally {
             fallbackThreads.getAndUpdate(arr -> {
-                if (arr == null) {
-                    return null;
-                }
-                if (arr.length == 1 && arr[0] == id) {
+                if (arr == null || (arr.length == 1 && arr[0] == id)) {
                     return null;
                 }
                 int index = Arrays.binarySearch(arr, id);
