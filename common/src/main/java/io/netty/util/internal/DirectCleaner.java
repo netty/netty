@@ -17,7 +17,6 @@ package io.netty.util.internal;
 
 import java.nio.ByteBuffer;
 
-@SuppressWarnings("deprecation")
 final class DirectCleaner implements Cleaner {
     @Override
     public CleanableDirectBuffer allocate(int capacity) {
@@ -27,6 +26,11 @@ final class DirectCleaner implements Cleaner {
     @Override
     public void freeDirectBuffer(ByteBuffer buffer) {
         PlatformDependent.freeDirectNoCleaner(buffer);
+    }
+
+    CleanableDirectBuffer reallocate(CleanableDirectBuffer buffer, int capacity) {
+        ByteBuffer newByteBuffer = PlatformDependent.reallocateDirectNoCleaner(buffer.buffer(), capacity);
+        return new CleanableDirectBufferImpl(newByteBuffer);
     }
 
     private static final class CleanableDirectBufferImpl implements CleanableDirectBuffer {

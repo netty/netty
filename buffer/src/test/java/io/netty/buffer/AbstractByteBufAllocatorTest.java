@@ -88,7 +88,8 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
     public void testUnsafeHeapBufferAndUnsafeDirectBuffer() {
         T allocator = newUnpooledAllocator();
         ByteBuf directBuffer = allocator.directBuffer();
-        assertInstanceOf(directBuffer, UnpooledDirectByteBuf.class);
+        assertInstanceOf(directBuffer,
+                PlatformDependent.hasUnsafe() ? UnpooledUnsafeDirectByteBuf.class : UnpooledDirectByteBuf.class);
         directBuffer.release();
 
         ByteBuf heapBuffer = allocator.heapBuffer();

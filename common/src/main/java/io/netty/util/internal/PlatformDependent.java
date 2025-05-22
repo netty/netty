@@ -801,10 +801,7 @@ public final class PlatformDependent {
     /**
      * Allocate a new {@link ByteBuffer} with the given {@code capacity}. {@link ByteBuffer}s allocated with
      * this method <strong>MUST</strong> be deallocated via {@link #freeDirectNoCleaner(ByteBuffer)}.
-     *
-     * @deprecated Use {@link #allocateDirect(int)} for a more portable API and implementation.
      */
-    @Deprecated
     public static ByteBuffer allocateDirectNoCleaner(int capacity) {
         assert USE_DIRECT_BUFFER_NO_CLEANER;
 
@@ -819,12 +816,19 @@ public final class PlatformDependent {
     }
 
     /**
+     * Allocate a new {@link ByteBuffer} with the given {@code capacity}, inside a {@link CleanableDirectBuffer}.
+     * The {@link ByteBuffer} <strong>MUST</strong> be deallocated via the {@link CleanableDirectBuffer#clean()}
+     * of the returned {@link CleanableDirectBuffer} object.
+     */
+    public static CleanableDirectBuffer allocateDirectBufferNoCleaner(int capacity) {
+        assert USE_DIRECT_BUFFER_NO_CLEANER;
+        return DIRECT_CLEANER.allocate(capacity);
+    }
+
+    /**
      * Reallocate a new {@link ByteBuffer} with the given {@code capacity}. {@link ByteBuffer}s reallocated with
      * this method <strong>MUST</strong> be deallocated via {@link #freeDirectNoCleaner(ByteBuffer)}.
-     *
-     * @deprecated Use {@link #allocateDirect(int)} to reallocate instead for a more portable API and implementation.
      */
-    @Deprecated
     public static ByteBuffer reallocateDirectNoCleaner(ByteBuffer buffer, int capacity) {
         assert USE_DIRECT_BUFFER_NO_CLEANER;
 
@@ -840,11 +844,21 @@ public final class PlatformDependent {
     }
 
     /**
+     * Reallocate a new {@link ByteBuffer} with the given {@code capacity}.
+     * The {@link ByteBuffer} is given as wrapped in its associated {@link CleanableDirectBuffer},
+     * and a new {@link CleanableDirectBuffer} instance will be returned.
+     * The {@link ByteBuffer}s reallocated with this method <strong>MUST</strong> be deallocated
+     * via the {@link CleanableDirectBuffer#clean()} method on the returned object.
+     */
+    public static CleanableDirectBuffer reallocateDirectBufferNoCleaner(CleanableDirectBuffer buffer, int capacity) {
+        assert USE_DIRECT_BUFFER_NO_CLEANER;
+        return ((DirectCleaner) DIRECT_CLEANER).reallocate(buffer, capacity);
+    }
+
+    /**
      * This method <strong>MUST</strong> only be called for {@link ByteBuffer}s that were allocated via
      * {@link #allocateDirectNoCleaner(int)}.
-     * @deprecated Use {@link #allocateDirect(int)} instead for a more portable API.
      */
-    @Deprecated
     public static void freeDirectNoCleaner(ByteBuffer buffer) {
         assert USE_DIRECT_BUFFER_NO_CLEANER;
 
