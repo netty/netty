@@ -15,35 +15,28 @@
  */
 package io.netty.incubator.codec.quic;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * Convert java naming to BoringSSL naming if possible and if not return the original name.
  */
 final class GroupsConverter {
 
-    private static final Map<String, String> mappings;
-
-    static {
-        // See https://tools.ietf.org/search/rfc4492#appendix-A and https://www.java.com/en/configure_crypto.html
-        Map<String, String> map = new HashMap<String, String>();
-        map.put("secp224r1", "P-224");
-        map.put("prime256v1", "P-256");
-        map.put("secp256r1", "P-256");
-        map.put("secp384r1", "P-384");
-        map.put("secp521r1", "P-521");
-        map.put("x25519", "X25519");
-        mappings = Collections.unmodifiableMap(map);
-    }
-
+    // See https://tools.ietf.org/search/rfc4492#appendix-A and https://www.java.com/en/configure_crypto.html
     static String toBoringSSL(String key) {
-        String mapping = mappings.get(key);
-        if (mapping == null) {
-            return key;
+        switch (key) {
+            case "secp224r1":
+                return "P-224";
+            case "prime256v1":
+            case "secp256r1":
+                return "P-256";
+            case "secp384r1":
+                return "P-384";
+            case "secp521r1":
+                return "P-521";
+            case "x25519":
+                return "X25519";
+            default:
+                return key;
         }
-        return mapping;
     }
 
     private GroupsConverter() { }
