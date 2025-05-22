@@ -185,7 +185,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
     }
 
     public static final PooledByteBufAllocator DEFAULT =
-            new PooledByteBufAllocator(PlatformDependent.directBufferPreferred());
+            new PooledByteBufAllocator(!PlatformDependent.isExplicitNoPreferDirect());
 
     private final PoolArena<byte[]>[] heapArenas;
     private final PoolArena<ByteBuffer>[] directArenas;
@@ -532,13 +532,13 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
 
             if (useCacheForAllThreads ||
                     // If the current thread is a FastThreadLocalThread we will always use the cache
-                    current instanceof FastThreadLocalThread ||
+                    FastThreadLocalThread.currentThreadHasFastThreadLocal() ||
                     // The Thread is used by an EventExecutor, let's use the cache as the chances are good that we
                     // will allocate a lot!
                     executor != null) {
                 final PoolThreadCache cache = new PoolThreadCache(
                         heapArena, directArena, smallCacheSize, normalCacheSize,
-                        DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL, useCacheFinalizers(current));
+                        DEFAULT_MAX_CACHED_BUFFER_CAPACITY, DEFAULT_CACHE_TRIM_INTERVAL, useCacheFinalizers());
 
                 if (DEFAULT_CACHE_TRIM_INTERVAL_MILLIS > 0) {
                     if (executor != null) {
@@ -579,12 +579,11 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         }
     }
 
-    private static boolean useCacheFinalizers(Thread current) {
+    private static boolean useCacheFinalizers() {
         if (!defaultDisableCacheFinalizersForFastThreadLocalThreads()) {
             return true;
         }
-        return current instanceof FastThreadLocalThread &&
-               ((FastThreadLocalThread) current).willCleanupFastThreadLocals();
+        return FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals();
     }
 
     @Override
