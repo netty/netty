@@ -308,10 +308,16 @@ public final class SelfSignedCertificate {
         File keyFile = PlatformDependent.createTempFile("keyutil_" + fqdn + '_', ".key", null);
         keyFile.deleteOnExit();
 
-        try (OutputStream keyOut = new FileOutputStream(keyFile)) {
+        OutputStream keyOut = new FileOutputStream(keyFile);
+        try {
             keyOut.write(keyText.getBytes(CharsetUtil.US_ASCII));
+            keyOut.close();
+            keyOut = null;
         } finally {
-            safeDelete(keyFile);
+            if (keyOut != null) {
+                safeClose(keyFile, keyOut);
+                safeDelete(keyFile);
+            }
         }
 
         wrappedBuf = Unpooled.wrappedBuffer(cert.getEncoded());
@@ -333,11 +339,17 @@ public final class SelfSignedCertificate {
         File certFile = PlatformDependent.createTempFile("keyutil_" + fqdn + '_', ".crt", null);
         certFile.deleteOnExit();
 
-        try (OutputStream certOut = new FileOutputStream(certFile)) {
+        OutputStream certOut = new FileOutputStream(certFile);
+        try {
             certOut.write(certText.getBytes(CharsetUtil.US_ASCII));
+            certOut.close();
+            certOut = null;
         } finally {
-            safeDelete(certFile);
-            safeDelete(keyFile);
+            if (certOut != null) {
+                safeClose(certFile, certOut);
+                safeDelete(certFile);
+                safeDelete(keyFile);
+            }
         }
 
         return new String[] { certFile.getPath(), keyFile.getPath() };
@@ -347,6 +359,16 @@ public final class SelfSignedCertificate {
         if (!certFile.delete()) {
             if (logger.isWarnEnabled()) {
                 logger.warn("Failed to delete a file: " + certFile);
+            }
+        }
+    }
+
+    private static void safeClose(File keyFile, OutputStream keyOut) {
+        try {
+            keyOut.close();
+        } catch (IOException e) {
+            if (logger.isWarnEnabled()) {
+                logger.warn("Failed to close a file: " + keyFile, e);
             }
         }
     }
