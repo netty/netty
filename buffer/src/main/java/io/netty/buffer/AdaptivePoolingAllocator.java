@@ -159,7 +159,7 @@ final class AdaptivePoolingAllocator {
                 @Override
                 protected Object initialValue() {
                     if (cachedMagazinesNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null) {
-                        if (!FastThreadLocalThread.willCleanupFastThreadLocals(Thread.currentThread())) {
+                        if (!FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals()) {
                             // To prevent a potential leak, we will not use thread-local magazine.
                             return NO_MAGAZINE;
                         }
@@ -220,7 +220,7 @@ final class AdaptivePoolingAllocator {
     private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
         if (size <= MAX_POOLED_BUF_SIZE) {
             FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
-            if (threadLocalMagazine != null && currentThread instanceof FastThreadLocalThread) {
+            if (threadLocalMagazine != null && FastThreadLocalThread.currentThreadHasFastThreadLocal()) {
                 Object mag = threadLocalMagazine.get();
                 if (mag != NO_MAGAZINE) {
                     Magazine magazine = (Magazine) mag;
@@ -287,7 +287,7 @@ final class AdaptivePoolingAllocator {
         Object tlMag;
         FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
         if (threadLocalMagazine != null &&
-                currentThread instanceof FastThreadLocalThread &&
+                FastThreadLocalThread.currentThreadHasFastThreadLocal() &&
                 (tlMag = threadLocalMagazine.get()) != NO_MAGAZINE) {
             return (Magazine) tlMag;
         }
