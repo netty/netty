@@ -113,7 +113,7 @@ public final class ByteBufUtil {
         // Only make use of ThreadLocal if we use a FastThreadLocalThread to make the implementation
         // Virtual Thread friendly.
         // See https://github.com/netty/netty/issues/14609
-        if (minLength <= MAX_TL_ARRAY_LEN && Thread.currentThread() instanceof FastThreadLocalThread) {
+        if (minLength <= MAX_TL_ARRAY_LEN && FastThreadLocalThread.currentThreadHasFastThreadLocal()) {
             return BYTE_ARRAYS.get();
         }
         return PlatformDependent.allocateUninitializedArray(minLength);

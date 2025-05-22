@@ -15,7 +15,6 @@
  */
 package io.netty.resolver;
 
-import com.google.common.collect.Maps;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
@@ -26,6 +25,7 @@ import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.nio.charset.Charset;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -144,8 +144,8 @@ public class DefaultHostsFileEntriesResolverTest {
 
     @Test
     public void shouldNotRefreshHostsFileContentBeforeRefreshIntervalElapsed() {
-        Map<String, List<InetAddress>> v4Addresses = Maps.newHashMap(LOCALHOST_V4_ADDRESSES);
-        Map<String, List<InetAddress>> v6Addresses = Maps.newHashMap(LOCALHOST_V6_ADDRESSES);
+        Map<String, List<InetAddress>> v4Addresses = new LinkedHashMap<>(LOCALHOST_V4_ADDRESSES);
+        Map<String, List<InetAddress>> v6Addresses = new LinkedHashMap<>(LOCALHOST_V6_ADDRESSES);
         DefaultHostsFileEntriesResolver resolver =
                 new DefaultHostsFileEntriesResolver(givenHostsParserWith(v4Addresses, v6Addresses), ENTRIES_TTL);
         String newHost = UUID.randomUUID().toString();
@@ -159,8 +159,8 @@ public class DefaultHostsFileEntriesResolverTest {
 
     @Test
     public void shouldRefreshHostsFileContentAfterRefreshInterval() throws Exception {
-        Map<String, List<InetAddress>> v4Addresses = Maps.newHashMap(LOCALHOST_V4_ADDRESSES);
-        Map<String, List<InetAddress>> v6Addresses = Maps.newHashMap(LOCALHOST_V6_ADDRESSES);
+        Map<String, List<InetAddress>> v4Addresses = new LinkedHashMap<>(LOCALHOST_V4_ADDRESSES);
+        Map<String, List<InetAddress>> v6Addresses = new LinkedHashMap<>(LOCALHOST_V6_ADDRESSES);
         DefaultHostsFileEntriesResolver resolver =
                 new DefaultHostsFileEntriesResolver(givenHostsParserWith(v4Addresses, v6Addresses), /*nanos*/1);
         String newHost = UUID.randomUUID().toString();

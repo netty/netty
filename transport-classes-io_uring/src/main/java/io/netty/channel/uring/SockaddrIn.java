@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.internal.PlatformDependent;
 
 import java.net.Inet4Address;
@@ -24,6 +25,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 
 final class SockaddrIn {
     static final byte[] IPV4_MAPPED_IPV6_PREFIX = {
@@ -124,6 +126,24 @@ final class SockaddrIn {
                         ((Inet6Address) address).getScopeId());
             }
             return Native.SIZEOF_SOCKADDR_IN6;
+        } finally {
+            memory.reset();
+        }
+    }
+
+    static int setUds(ByteBuffer memory, DomainSocketAddress address) {
+        byte[] path = address.path().getBytes(StandardCharsets.UTF_8);
+        if (path.length + 1 > Native.MAX_SUN_PATH_LEN) {
+            throw new IllegalArgumentException("path too long: " + address.path());
+        }
+        int position = memory.position();
+        memory.mark();
+        try {
+            memory.putShort(position + Native.SOCKADDR_UN_OFFSETOF_SUN_FAMILY, Native.AF_UNIX);
+            memory.position(position + Native.SOCKADDR_UN_OFFSETOF_SUN_PATH);
+            memory.put(path);
+            memory.put((byte) 0);
+            return Native.SIZEOF_SOCKADDR_UN;
         } finally {
             memory.reset();
         }

@@ -19,11 +19,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Properties;
 import java.util.Set;
@@ -49,9 +45,8 @@ public class OsClassifiersTest {
 
     @Test
     void testOsClassifiersPropertyAbsent() {
-        Set<String> allowed = new HashSet<String>(Arrays.asList("fedora", "suse", "arch"));
-        Set<String> available = new LinkedHashSet<String>(2);
-        boolean added = PlatformDependent.addPropertyOsClassifiers(allowed, available);
+        Set<String> available = new LinkedHashSet<>(2);
+        boolean added = PlatformDependent.addPropertyOsClassifiers(available);
         assertFalse(added);
         assertTrue(available.isEmpty());
     }
@@ -60,9 +55,8 @@ public class OsClassifiersTest {
     void testOsClassifiersPropertyEmpty() {
         // empty property -Dio.netty.osClassifiers
         systemProperties.setProperty(OS_CLASSIFIERS_PROPERTY, "");
-        Set<String> allowed = Collections.singleton("fedora");
-        Set<String> available = new LinkedHashSet<String>(2);
-        boolean added = PlatformDependent.addPropertyOsClassifiers(allowed, available);
+        Set<String> available = new LinkedHashSet<>(2);
+        boolean added = PlatformDependent.addPropertyOsClassifiers(available);
         assertTrue(added);
         assertTrue(available.isEmpty());
     }
@@ -71,23 +65,17 @@ public class OsClassifiersTest {
     void testOsClassifiersPropertyNotEmptyNoClassifiers() {
         // ID
         systemProperties.setProperty(OS_CLASSIFIERS_PROPERTY, ",");
-        final Set<String> allowed = new HashSet<String>(Arrays.asList("fedora", "suse", "arch"));
-        final Set<String> available = new LinkedHashSet<String>(2);
-        Assertions.assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                PlatformDependent.addPropertyOsClassifiers(allowed, available);
-            }
-        });
+        final Set<String> available = new LinkedHashSet<>(2);
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> PlatformDependent.addPropertyOsClassifiers(available));
     }
 
     @Test
     void testOsClassifiersPropertySingle() {
         // ID
         systemProperties.setProperty(OS_CLASSIFIERS_PROPERTY, "fedora");
-        Set<String> allowed = Collections.singleton("fedora");
-        Set<String> available = new LinkedHashSet<String>(2);
-        boolean added = PlatformDependent.addPropertyOsClassifiers(allowed, available);
+        Set<String> available = new LinkedHashSet<>(2);
+        boolean added = PlatformDependent.addPropertyOsClassifiers(available);
         assertTrue(added);
         assertEquals(1, available.size());
         assertEquals("fedora", available.iterator().next());
@@ -97,9 +85,8 @@ public class OsClassifiersTest {
     void testOsClassifiersPropertyPair() {
         // ID, ID_LIKE
         systemProperties.setProperty(OS_CLASSIFIERS_PROPERTY, "manjaro,arch");
-        Set<String> allowed = new HashSet<String>(Arrays.asList("fedora", "suse", "arch"));
-        Set<String> available = new LinkedHashSet<String>(2);
-        boolean added = PlatformDependent.addPropertyOsClassifiers(allowed, available);
+        Set<String> available = new LinkedHashSet<>(2);
+        boolean added = PlatformDependent.addPropertyOsClassifiers(available);
         assertTrue(added);
         assertEquals(1, available.size());
         assertEquals("arch", available.iterator().next());
@@ -109,13 +96,8 @@ public class OsClassifiersTest {
     void testOsClassifiersPropertyExcessive() {
         // ID, ID_LIKE, excessive
         systemProperties.setProperty(OS_CLASSIFIERS_PROPERTY, "manjaro,arch,slackware");
-        final Set<String> allowed = new HashSet<String>(Arrays.asList("fedora", "suse", "arch"));
-        final Set<String> available = new LinkedHashSet<String>(2);
-        Assertions.assertThrows(IllegalArgumentException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                PlatformDependent.addPropertyOsClassifiers(allowed, available);
-            }
-        });
+        final Set<String> available = new LinkedHashSet<>(2);
+        Assertions.assertThrows(IllegalArgumentException.class,
+                () -> PlatformDependent.addPropertyOsClassifiers(available));
     }
 }

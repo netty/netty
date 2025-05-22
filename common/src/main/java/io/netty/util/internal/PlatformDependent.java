@@ -94,6 +94,7 @@ public final class PlatformDependent {
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE = unsafeUnavailabilityCause0();
     private static final boolean DIRECT_BUFFER_PREFERRED;
+    private static final boolean EXPLICIT_NO_PREFER_DIRECT;
     private static final long MAX_DIRECT_MEMORY = estimateMaxDirectMemory();
 
     private static final int MPSC_CHUNK_SIZE =  1024;
@@ -108,8 +109,6 @@ public final class PlatformDependent {
     private static final String NORMALIZED_ARCH = normalizeArch(SystemPropertyUtil.get("os.arch", ""));
     private static final String NORMALIZED_OS = normalizeOs(SystemPropertyUtil.get("os.name", ""));
 
-    // keep in sync with maven's pom.xml via os.detection.classifierWithLikes!
-    private static final String[] ALLOWED_LINUX_OS_CLASSIFIERS = {"fedora", "suse", "arch"};
     private static final Set<String> LINUX_OS_CLASSIFIERS;
 
     private static final boolean IS_WINDOWS = isWindows0();
@@ -180,11 +179,12 @@ public final class PlatformDependent {
             CLEANER = NOOP;
         }
 
+        EXPLICIT_NO_PREFER_DIRECT = SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
         // We should always prefer direct buffers by default if we can use a Cleaner to release direct buffers.
         DIRECT_BUFFER_PREFERRED = CLEANER != NOOP
-                                  && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
+                                  && !EXPLICIT_NO_PREFER_DIRECT;
         if (logger.isDebugEnabled()) {
-            logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
+            logger.debug("-Dio.netty.noPreferDirect: {}", EXPLICIT_NO_PREFER_DIRECT);
         }
 
         /*
@@ -198,18 +198,15 @@ public final class PlatformDependent {
                     "instability.");
         }
 
-        final Set<String> allowedClassifiers = Collections.unmodifiableSet(
-                new HashSet<String>(Arrays.asList(ALLOWED_LINUX_OS_CLASSIFIERS)));
-        final Set<String> availableClassifiers = new LinkedHashSet<String>();
+        final Set<String> availableClassifiers = new LinkedHashSet<>();
 
-        if (!addPropertyOsClassifiers(allowedClassifiers, availableClassifiers)) {
-            addFilesystemOsClassifiers(allowedClassifiers, availableClassifiers);
+        if (!addPropertyOsClassifiers(availableClassifiers)) {
+            addFilesystemOsClassifiers(availableClassifiers);
         }
         LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
     }
 
-    static void addFilesystemOsClassifiers(final Set<String> allowedClassifiers,
-                                           final Set<String> availableClassifiers) {
+    static void addFilesystemOsClassifiers(final Set<String> availableClassifiers) {
         for (final String osReleaseFileName : OS_RELEASE_FILES) {
             final Path file = Paths.get(osReleaseFileName);
             boolean found = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
@@ -225,12 +222,11 @@ public final class PlatformDependent {
                                     if (line.startsWith(LINUX_ID_PREFIX)) {
                                         String id = normalizeOsReleaseVariableValue(
                                                 line.substring(LINUX_ID_PREFIX.length()));
-                                        addClassifier(allowedClassifiers, availableClassifiers, id);
+                                        addClassifier(availableClassifiers, id);
                                     } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
                                         line = normalizeOsReleaseVariableValue(
                                                 line.substring(LINUX_ID_LIKE_PREFIX.length()));
-                                        addClassifier(allowedClassifiers, availableClassifiers,
-                                                lineSplitPattern.split(line));
+                                        addClassifier(availableClassifiers, lineSplitPattern.split(line));
                                     }
                                 }
                             } catch (SecurityException e) {
@@ -254,7 +250,7 @@ public final class PlatformDependent {
         }
     }
 
-    static boolean addPropertyOsClassifiers(Set<String> allowedClassifiers, Set<String> availableClassifiers) {
+    static boolean addPropertyOsClassifiers(Set<String> availableClassifiers) {
         // empty: -Dio.netty.osClassifiers (no distro specific classifiers for native libs)
         // single ID: -Dio.netty.osClassifiers=ubuntu
         // pair ID, ID_LIKE: -Dio.netty.osClassifiers=ubuntu,debian
@@ -280,7 +276,7 @@ public final class PlatformDependent {
                     osClassifiersPropertyName + " property contains more than 2 classifiers: " + osClassifiers);
         }
         for (String classifier : classifiers) {
-            addClassifier(allowedClassifiers, availableClassifiers, classifier);
+            addClassifier(availableClassifiers, classifier);
         }
         return true;
     }
@@ -378,6 +374,14 @@ public final class PlatformDependent {
      */
     public static boolean directBufferPreferred() {
         return DIRECT_BUFFER_PREFERRED;
+    }
+
+    /**
+     * Returns {@code true} if user has specified
+     * {@code -Dio.netty.noPreferDirect=true} option.
+     */
+    public static boolean isExplicitNoPreferDirect() {
+        return EXPLICIT_NO_PREFER_DIRECT;
     }
 
     /**
@@ -1483,15 +1487,25 @@ public final class PlatformDependent {
     /**
      * Adds only those classifier strings to <tt>dest</tt> which are present in <tt>allowed</tt>.
      *
-     * @param allowed          allowed classifiers
      * @param dest             destination set
      * @param maybeClassifiers potential classifiers to add
      */
-    private static void addClassifier(Set<String> allowed, Set<String> dest, String... maybeClassifiers) {
+    private static void addClassifier(Set<String> dest, String... maybeClassifiers) {
         for (String id : maybeClassifiers) {
-            if (allowed.contains(id)) {
+            if (isAllowedClassifier(id)) {
                 dest.add(id);
             }
+        }
+    }
+    // keep in sync with maven's pom.xml via os.detection.classifierWithLikes!
+    private static boolean isAllowedClassifier(String classifier) {
+        switch (classifier) {
+            case "fedora":
+            case "suse":
+            case "arch":
+                return true;
+            default:
+                return false;
         }
     }
 
