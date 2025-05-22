@@ -53,7 +53,6 @@ import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.Hidden.NettyBlockHoundIntegration;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -82,8 +81,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -119,7 +118,7 @@ public class NettyBlockHoundIntegrationTest {
             future.get(5, TimeUnit.SECONDS);
             fail("Expected an exception due to a blocking call but none was thrown");
         } catch (ExecutionException e) {
-            assertThat(e.getCause(), Matchers.instanceOf(BlockingOperationError.class));
+            assertInstanceOf(BlockingOperationError.class, e.getCause());
         }
     }
 

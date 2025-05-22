@@ -65,13 +65,11 @@ import static io.netty.handler.codec.http2.Http2TestUtil.randomString;
 import static io.netty.handler.codec.http2.Http2TestUtil.runInChannel;
 import static java.lang.Integer.MAX_VALUE;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -572,7 +570,7 @@ public class Http2ConnectionRoundtripTest {
         assertTrue(serverWriteHeadersLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
         Throwable serverWriteHeadersCause = serverWriteHeadersCauseRef.get();
         assertNotNull(serverWriteHeadersCause);
-        assertThat(serverWriteHeadersCauseRef.get(), not(instanceOf(Http2Exception.class)));
+        assertThat(serverWriteHeadersCauseRef.get()).isNotInstanceOf(Http2Exception.class);
 
         // Server should receive a RST_STREAM for stream 3.
         verify(serverListener, never()).onGoAwayRead(any(ChannelHandlerContext.class), anyInt(), anyLong(),
@@ -731,7 +729,7 @@ public class Http2ConnectionRoundtripTest {
                 emptyDataPromise.get();
             }
         });
-        assertThat(e.getCause(), is(instanceOf(IllegalReferenceCountException.class)));
+        assertInstanceOf(IllegalReferenceCountException.class, e.getCause());
     }
 
     @Test
@@ -783,7 +781,7 @@ public class Http2ConnectionRoundtripTest {
                 dataPromise.get();
             }
         });
-        assertThat(e.getCause(), is(instanceOf(IllegalStateException.class)));
+        assertInstanceOf(IllegalStateException.class, e.getCause());
         assertPromise.sync();
     }
 
@@ -935,7 +933,7 @@ public class Http2ConnectionRoundtripTest {
         ChannelFuture clientWriteAfterGoAwayFuture = clientWriteAfterGoAwayFutureRef.get();
         assertNotNull(clientWriteAfterGoAwayFuture);
         Throwable clientCause = clientWriteAfterGoAwayFuture.cause();
-        assertThat(clientCause, is(instanceOf(Http2Exception.StreamException.class)));
+        assertInstanceOf(Http2Exception.StreamException.class, clientCause);
         assertEquals(Http2Error.REFUSED_STREAM.code(), ((Http2Exception.StreamException) clientCause).error().code());
 
         // Wait for the server to receive a GO_AWAY, but this is expected to timeout!
