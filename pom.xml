@@ -2017,6 +2017,26 @@
         <artifactId>forbiddenapis</artifactId>
         <version>2.2</version>
       </plugin>
+      <plugin>
+        <groupId>org.sonatype.central</groupId>
+        <artifactId>central-publishing-maven-plugin</artifactId>
+        <version>0.7.0</version>
+        <configuration>
+          <publishingServerId>central</publishingServerId>
+          <skipPublishing>true</skipPublishing>
+          <autoPublish>false</autoPublish>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.7.0</version>
+        <configuration>
+          <serverId>central-portal-snapshots</serverId>
+          <nexusUrl>https://central.sonatype.com/repository/maven-snapshots</nexusUrl>
+          <skipRemoteStaging>true</skipRemoteStaging>
+        </configuration>
+      </plugin>
     </plugins>
 
     <pluginManagement>
