@@ -273,7 +273,10 @@ public final class IovArray implements MessageProcessor {
      */
     public void release() {
         memory.release();
-        cleanable.clean();
+        if (cleanable != null) {
+            // The 'cleanable' will be 'null' if the 'IovArray(ByteBuf)' constructor was used.
+            cleanable.clean();
+        }
     }
 
     @Override
