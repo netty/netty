@@ -17,15 +17,12 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
-    <groupId>org.sonatype.oss</groupId>
-    <artifactId>oss-parent</artifactId>
-    <version>7</version>
-    <relativePath />
+    <groupId>io.netty</groupId>
+    <artifactId>netty-parent</artifactId>
+    <version>4.2.2.Final-SNAPSHOT</version>
   </parent>
 
-  <groupId>io.netty</groupId>
   <artifactId>netty-bom</artifactId>
-  <version>4.2.2.Final-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Netty/BOM</name>
@@ -63,14 +60,6 @@
     </developer>
   </developers>
 
-  <distributionManagement>
-    <snapshotRepository>
-      <name>Central Portal Snapshots</name>
-      <id>central-portal-snapshots</id>
-      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
-    </snapshotRepository>
-  </distributionManagement>
-
   <properties>
     <!-- Keep in sync with ../pom.xml -->
     <tcnative.version>2.0.71.Final</tcnative.version>
@@ -82,26 +71,6 @@
         <groupId>com.commsen.maven</groupId>
         <artifactId>bom-helper-maven-plugin</artifactId>
         <version>0.4.0</version>
-      </plugin>
-      <plugin>
-        <groupId>org.sonatype.central</groupId>
-        <artifactId>central-publishing-maven-plugin</artifactId>
-        <version>0.7.0</version>
-        <configuration>
-          <publishingServerId>central</publishingServerId>
-          <skipPublishing>true</skipPublishing>
-          <autoPublish>false</autoPublish>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.sonatype.plugins</groupId>
-        <artifactId>nexus-staging-maven-plugin</artifactId>
-        <version>1.7.0</version>
-        <configuration>
-          <serverId>central-portal-snapshots</serverId>
-          <nexusUrl>https://central.sonatype.com/repository/maven-snapshots</nexusUrl>
-          <skipRemoteStaging>true</skipRemoteStaging>
-        </configuration>
       </plugin>
     </plugins>
   </build>
