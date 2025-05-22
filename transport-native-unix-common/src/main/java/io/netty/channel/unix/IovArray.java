@@ -75,7 +75,7 @@ public final class IovArray implements MessageProcessor {
      */
     @Deprecated
     public IovArray() {
-        this(MAX_CAPACITY);
+        this(IOV_MAX);
     }
 
     /**

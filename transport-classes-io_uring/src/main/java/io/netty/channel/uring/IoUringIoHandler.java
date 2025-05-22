@@ -152,7 +152,7 @@ public final class IoUringIoHandler implements IoHandler {
         // Also as we never submit an udata which is 0L we use this as the tombstone marker.
         completionBuffer = new CompletionBuffer(ringBuffer.ioUringCompletionQueue().ringCapacity * 2, 0);
 
-        iovArray = new IovArray(IoUring.NUM_ELEMENTS_IOVEC * IovArray.IOV_SIZE);
+        iovArray = new IovArray(IoUring.NUM_ELEMENTS_IOVEC);
     }
 
     @Override
