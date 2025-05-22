@@ -391,7 +391,6 @@ jobs:
           gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
           passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
-
       - name: Setup git configuration
         run: |
           git config --global user.email "netty-project-bot@users.noreply.github.com"
@@ -468,7 +467,7 @@ jobs:
         working-directory: ./prepare-release-workspace/
         run: |
           mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -pl all clean package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true
+          ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -pl all clean package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
 
       # This step takes care of merging all the previous staged repositories in a way that will allow us to deploy
       # all together with one maven command.
