@@ -709,7 +709,7 @@
   <properties>
     <maven.compiler.source>1.6</maven.compiler.source>
     <maven.compiler.target>1.6</maven.compiler.target>
-    <netty.dev.tools.directory>${project.build.directory}/dev-tools</netty.dev.tools.directory>
+    <netty.dev.tools.directory>${project.basedir}/../dev-tools/src/main/resources/</netty.dev.tools.directory>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
@@ -2182,27 +2182,6 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
           <version>3.2.1</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-remote-resources-plugin</artifactId>
-          <version>1.5</version>
-          <configuration>
-            <resourceBundles>
-              <resourceBundle>io.netty:netty-dev-tools:${project.version}</resourceBundle>
-            </resourceBundles>
-            <outputDirectory>${netty.dev.tools.directory}</outputDirectory>
-            <!-- don't include netty-dev-tools in artifacts -->
-            <attachToMain>false</attachToMain>
-            <attachToTest>false</attachToTest>
-          </configuration>
-          <executions>
-            <execution>
-              <goals>
-                <goal>process</goal>
-              </goals>
-            </execution>
-          </executions>
         </plugin>
         <plugin>
           <groupId>de.thetaphi</groupId>
