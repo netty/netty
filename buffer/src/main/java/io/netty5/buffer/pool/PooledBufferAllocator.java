@@ -390,7 +390,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
      * Default prefer direct - System Property: io.netty5.noPreferDirect - default false
      */
     public static boolean defaultPreferDirect() {
-        return PlatformDependent.directBufferPreferred();
+        return !PlatformDependent.isExplicitNoPreferDirect();
     }
 
     /**
