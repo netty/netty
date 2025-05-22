@@ -32,7 +32,7 @@ class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
 
     @Override
     protected ByteBuffer allocateDirect(int initialCapacity) {
-        return PlatformDependent.allocateDirectNoCleaner(initialCapacity);
+        throw new UnsupportedOperationException();
     }
 
     CleanableDirectBuffer reallocateDirect(CleanableDirectBuffer oldBuffer, int initialCapacity) {
@@ -41,7 +41,7 @@ class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
 
     @Override
     protected void freeDirect(ByteBuffer buffer) {
-        PlatformDependent.freeDirectNoCleaner(buffer);
+        throw new UnsupportedOperationException();
     }
 
     @Override

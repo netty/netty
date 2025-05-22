@@ -191,26 +191,12 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         }
 
         @Override
-        protected ByteBuffer allocateDirect(int initialCapacity) {
-            ByteBuffer buffer = super.allocateDirect(initialCapacity);
-            ((UnpooledByteBufAllocator) alloc()).incrementDirect(buffer.capacity());
-            return buffer;
-        }
-
-        @Override
         CleanableDirectBuffer reallocateDirect(CleanableDirectBuffer oldBuffer, int initialCapacity) {
             int capacity = oldBuffer.buffer().capacity();
             CleanableDirectBuffer buffer = super.reallocateDirect(oldBuffer, initialCapacity);
             UnpooledByteBufAllocator alloc = (UnpooledByteBufAllocator) alloc();
             alloc.incrementDirect(buffer.buffer().capacity() - capacity);
             return new DecrementingCleanableDirectBuffer(alloc, buffer);
-        }
-
-        @Override
-        protected void freeDirect(ByteBuffer buffer) {
-            int capacity = buffer.capacity();
-            super.freeDirect(buffer);
-            ((UnpooledByteBufAllocator) alloc()).decrementDirect(capacity);
         }
     }
 
@@ -230,16 +216,12 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
 
         @Override
         protected ByteBuffer allocateDirect(int initialCapacity) {
-            ByteBuffer buffer = super.allocateDirect(initialCapacity);
-            ((UnpooledByteBufAllocator) alloc()).incrementDirect(buffer.capacity());
-            return buffer;
+            throw new UnsupportedOperationException();
         }
 
         @Override
         protected void freeDirect(ByteBuffer buffer) {
-            int capacity = buffer.capacity();
-            super.freeDirect(buffer);
-            ((UnpooledByteBufAllocator) alloc()).decrementDirect(capacity);
+            throw new UnsupportedOperationException();
         }
     }
 
@@ -255,6 +237,16 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
             UnpooledByteBufAllocator alloc = (UnpooledByteBufAllocator) alloc();
             alloc.incrementDirect(buffer.buffer().capacity());
             return new DecrementingCleanableDirectBuffer(alloc, buffer);
+        }
+
+        @Override
+        protected ByteBuffer allocateDirect(int initialCapacity) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected void freeDirect(ByteBuffer buffer) {
+            throw new UnsupportedOperationException();
         }
     }
 
