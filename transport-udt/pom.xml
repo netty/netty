@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2014 The Netty Project
+  ~ Copyright 2012 The Netty Project
   ~
   ~ The Netty Project licenses this file to you under the Apache License,
   ~ version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,69 +17,59 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
 
   <modelVersion>4.0.0</modelVersion>
+
   <parent>
     <groupId>io.netty</groupId>
-    <artifactId>netty5-parent</artifactId>
-    <version>5.0.0.Alpha6-SNAPSHOT</version>
+    <artifactId>netty-parent</artifactId>
+    <version>4.2.2.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty5-codec-dns</artifactId>
+  <artifactId>netty-transport-udt</artifactId>
   <packaging>jar</packaging>
 
-  <name>Netty5/Codec/DNS</name>
+  <name>Netty/Transport/UDT</name>
 
   <properties>
-    <javaModuleName>io.netty5.codec.dns</javaModuleName>
+    <javaModuleName>io.netty.transport.udt</javaModuleName>
   </properties>
 
   <dependencies>
+
+    <!-- MAIN -->
+
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-common</artifactId>
+      <artifactId>netty-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-buffer</artifactId>
+      <artifactId>netty-buffer</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-transport</artifactId>
+      <artifactId>netty-transport</artifactId>
       <version>${project.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-codec</artifactId>
-      <version>${project.version}</version>
-    </dependency>
-    <!-- Annotations for IDE integration and analysis -->
-    <dependency>
-      <groupId>org.jetbrains</groupId>
-      <artifactId>annotations</artifactId>
-      <scope>provided</scope>
     </dependency>
 
     <dependency>
-      <groupId>org.apache.directory.server</groupId>
-      <artifactId>apacheds-protocol-dns</artifactId>
+      <groupId>com.barchart.udt</groupId>
+      <artifactId>barchart-udt-bundle</artifactId>
+    </dependency>
+
+    <!-- TEST -->
+
+    <!-- see https://github.com/netty/netty/issues/874 -->
+    <dependency>
+      <groupId>com.yammer.metrics</groupId>
+      <artifactId>metrics-core</artifactId>
       <scope>test</scope>
     </dependency>
 
-    <!-- Automatic native-image reflection metadata generation for handlers dependencies -->
     <dependency>
-      <groupId>org.reflections</groupId>
-      <artifactId>reflections</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>com.google.code.gson</groupId>
-      <artifactId>gson</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-transport</artifactId>
-      <version>${project.version}</version>
-      <type>test-jar</type>
+      <groupId>com.google.caliper</groupId>
+      <artifactId>caliper</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -107,11 +97,33 @@
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <scope>test</scope>
-    </dependency>
   </dependencies>
-</project>
 
+  <build>
+    <plugins>
+      <!-- run each test in separate JVM -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <reuseForks>false</reuseForks>
+        </configuration>
+      </plugin>
+      <plugin>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>default-jar</id>
+            <configuration>
+              <archive>
+                <manifestEntries>
+                  <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                </manifestEntries>
+              </archive>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>
