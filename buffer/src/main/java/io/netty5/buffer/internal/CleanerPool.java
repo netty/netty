@@ -111,7 +111,7 @@ final class CleanerPool {
 
         @Override
         protected Cleaner initialValue() {
-            if (!EVENT_LOOP_USE_POOL && Thread.currentThread() instanceof FastThreadLocalThread) {
+            if (!EVENT_LOOP_USE_POOL && FastThreadLocalThread.currentThreadHasFastThreadLocal()) {
                 // Allocate one dedicated cleaner for the caller event-loop thread
                 return Cleaner.create();
             }

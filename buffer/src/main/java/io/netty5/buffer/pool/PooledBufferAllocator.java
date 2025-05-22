@@ -437,7 +437,7 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
             final EventExecutor executor = ThreadExecutorMap.currentExecutor();
             if (useCacheForAllThreads ||
                 // If the current thread is a FastThreadLocalThread we will always use the cache
-                current instanceof FastThreadLocalThread ||
+                FastThreadLocalThread.currentThreadHasFastThreadLocal() ||
                 // The Thread is used by an EventExecutor, let's use the cache as the chances are good that we
                 // will allocate a lot!
                 executor != null) {
