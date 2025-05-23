@@ -15,7 +15,6 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.buffer.Unpooled;
 import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
@@ -29,6 +28,7 @@ import io.netty.channel.unix.IovArray;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 import io.netty.util.concurrent.ThreadAwareExecutor;
+import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -62,8 +62,10 @@ public final class IoUringIoHandler implements IoHandler {
 
     private final AtomicBoolean eventfdAsyncNotify = new AtomicBoolean();
     private final FileDescriptor eventfd;
+    private final CleanableDirectBuffer eventfdReadBufCleanable;
     private final ByteBuffer eventfdReadBuf;
     private final long eventfdReadBufAddress;
+    private final CleanableDirectBuffer timeoutMemoryCleanable;
     private final ByteBuffer timeoutMemory;
     private final long timeoutMemoryAddress;
     private final IovArray iovArray;
@@ -140,17 +142,17 @@ public final class IoUringIoHandler implements IoHandler {
 
         registrations = new IntObjectHashMap<>();
         eventfd = Native.newBlockingEventFd();
-        eventfdReadBuf = Buffer.allocateDirectWithNativeOrder(Long.BYTES);
+        eventfdReadBufCleanable = Buffer.allocateDirectBufferWithNativeOrder(Long.BYTES);
+        eventfdReadBuf = eventfdReadBufCleanable.buffer();
         eventfdReadBufAddress = Buffer.memoryAddress(eventfdReadBuf);
-        this.timeoutMemory = Buffer.allocateDirectWithNativeOrder(KERNEL_TIMESPEC_SIZE);
-        this.timeoutMemoryAddress = Buffer.memoryAddress(timeoutMemory);
+        timeoutMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(KERNEL_TIMESPEC_SIZE);
+        timeoutMemory = timeoutMemoryCleanable.buffer();
+        timeoutMemoryAddress = Buffer.memoryAddress(timeoutMemory);
         // We buffer a maximum of 2 * CompletionQueue.ringCapacity completions before we drain them in batches.
         // Also as we never submit an udata which is 0L we use this as the tombstone marker.
         completionBuffer = new CompletionBuffer(ringBuffer.ioUringCompletionQueue().ringCapacity * 2, 0);
 
-        iovArray = new IovArray(Unpooled.wrappedBuffer(
-                Buffer.allocateDirectWithNativeOrder(IoUring.NUM_ELEMENTS_IOVEC * IovArray.IOV_SIZE))
-                .setIndex(0, 0));
+        iovArray = new IovArray(IoUring.NUM_ELEMENTS_IOVEC);
     }
 
     @Override
@@ -465,8 +467,8 @@ public final class IoUringIoHandler implements IoHandler {
         } catch (IOException e) {
             logger.warn("Failed to close eventfd", e);
         }
-        Buffer.free(eventfdReadBuf);
-        Buffer.free(timeoutMemory);
+        eventfdReadBufCleanable.clean();
+        timeoutMemoryCleanable.clean();
         iovArray.release();
     }
 

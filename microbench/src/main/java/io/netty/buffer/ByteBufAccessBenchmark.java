@@ -18,6 +18,7 @@ package io.netty.buffer;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
+import io.netty.util.internal.CleanableDirectBuffer;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -41,9 +42,12 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
 
     static final class NioFacade extends WrappedByteBuf {
         private final ByteBuffer byteBuffer;
-        NioFacade(ByteBuffer byteBuffer) {
+        private final CleanableDirectBuffer cleanable;
+
+        NioFacade(CleanableDirectBuffer buffer) {
             super(Unpooled.EMPTY_BUFFER);
-            this.byteBuffer = byteBuffer;
+            byteBuffer = buffer.buffer();
+            cleanable = buffer;
         }
         @Override
         public ByteBuf setLong(int index, long value) {
@@ -66,7 +70,7 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
         }
         @Override
         public boolean release() {
-            PlatformDependent.freeDirectBuffer(byteBuffer);
+            cleanable.clean();
             return true;
         }
     }
@@ -101,7 +105,7 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
         NIO {
             @Override
             ByteBuf newBuffer() {
-                return new NioFacade(ByteBuffer.allocateDirect(64));
+                return new NioFacade(PlatformDependent.allocateDirect(64));
             }
         };
         abstract ByteBuf newBuffer();

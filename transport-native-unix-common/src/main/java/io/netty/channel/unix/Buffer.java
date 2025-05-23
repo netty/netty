@@ -15,6 +15,7 @@
  */
 package io.netty.channel.unix;
 
+import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -28,17 +29,32 @@ public final class Buffer {
 
     /**
      * Free the direct {@link ByteBuffer}.
+     * @deprecated Use {@link #allocateDirectBufferWithNativeOrder(int)} instead.
      */
+    @Deprecated
     public static void free(ByteBuffer buffer) {
         PlatformDependent.freeDirectBuffer(buffer);
     }
 
     /**
      * Returns a new {@link ByteBuffer} which has the same {@link ByteOrder} as the native order of the machine.
+     * @deprecated Use {@link #allocateDirectBufferWithNativeOrder(int)} instead.
      */
+    @Deprecated
     public static ByteBuffer allocateDirectWithNativeOrder(int capacity) {
         return ByteBuffer.allocateDirect(capacity).order(
                 PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
+    }
+
+    /**
+     * Returns a new {@link CleanableDirectBuffer} which has the same {@link ByteOrder} as the native order of the
+     * machine.
+     */
+    public static CleanableDirectBuffer allocateDirectBufferWithNativeOrder(int capacity) {
+        CleanableDirectBuffer cleanableDirectBuffer = PlatformDependent.allocateDirect(capacity);
+        cleanableDirectBuffer.buffer().order(
+                PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
+        return cleanableDirectBuffer;
     }
 
     /**

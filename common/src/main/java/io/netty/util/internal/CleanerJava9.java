@@ -82,7 +82,17 @@ final class CleanerJava9 implements Cleaner {
     }
 
     @Override
+    public CleanableDirectBuffer allocate(int capacity) {
+        return new CleanableDirectBufferImpl(ByteBuffer.allocateDirect(capacity));
+    }
+
+    @Deprecated
+    @Override
     public void freeDirectBuffer(ByteBuffer buffer) {
+        freeDirectBufferStatic(buffer);
+    }
+
+    private static void freeDirectBufferStatic(ByteBuffer buffer) {
         // Try to minimize overhead when there is no SecurityManager present.
         // See https://bugs.openjdk.java.net/browse/JDK-8191053.
         if (System.getSecurityManager() == null) {
@@ -110,6 +120,24 @@ final class CleanerJava9 implements Cleaner {
         });
         if (error != null) {
             PlatformDependent0.throwException(error);
+        }
+    }
+
+    private static final class CleanableDirectBufferImpl implements CleanableDirectBuffer {
+        private final ByteBuffer buffer;
+
+        private CleanableDirectBufferImpl(ByteBuffer buffer) {
+            this.buffer = buffer;
+        }
+
+        @Override
+        public ByteBuffer buffer() {
+            return buffer;
+        }
+
+        @Override
+        public void clean() {
+            freeDirectBufferStatic(buffer);
         }
     }
 }

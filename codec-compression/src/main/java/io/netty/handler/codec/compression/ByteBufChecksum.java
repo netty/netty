@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
 import java.util.zip.Adler32;
@@ -60,6 +61,7 @@ abstract class ByteBufChecksum implements Checksum {
 
     private static class JdkByteBufChecksum extends ByteBufChecksum {
         protected final Checksum checksum;
+        private byte[] scratchBuffer;
 
         JdkByteBufChecksum(Checksum checksum) {
             this.checksum = checksum;
@@ -75,14 +77,29 @@ abstract class ByteBufChecksum implements Checksum {
             if (b.hasArray()) {
                 update(b.array(), b.arrayOffset() + off, len);
             } else if (checksum instanceof CRC32) {
-                ByteBuffer byteBuffer = CompressionUtil.safeNioBuffer(b, off, len);
+                ByteBuffer byteBuffer = getSafeBuffer(b, off, len);
                 ((CRC32) checksum).update(byteBuffer);
             } else if (checksum instanceof Adler32) {
-                ByteBuffer byteBuffer = CompressionUtil.safeNioBuffer(b, off, len);
+                ByteBuffer byteBuffer = getSafeBuffer(b, off, len);
                 ((Adler32) checksum).update(byteBuffer);
             } else {
                 super.update(b, off, len);
             }
+        }
+
+        private ByteBuffer getSafeBuffer(ByteBuf b, int off, int len) {
+            ByteBuffer byteBuffer = CompressionUtil.safeNioBuffer(b, off, len);
+            int javaVersion = PlatformDependent.javaVersion();
+            if (javaVersion >= 22 && javaVersion < 25 && byteBuffer.isDirect()) {
+                // Work-around for https://bugs.openjdk.org/browse/JDK-8357145
+                if (scratchBuffer == null || scratchBuffer.length < len) {
+                    scratchBuffer = new byte[len];
+                }
+                ByteBuffer copy = ByteBuffer.wrap(scratchBuffer, 0, len);
+                copy.put(byteBuffer).flip();
+                return copy;
+            }
+            return byteBuffer;
         }
 
         @Override

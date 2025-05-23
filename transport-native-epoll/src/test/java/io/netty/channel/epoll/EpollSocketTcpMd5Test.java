@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ConnectTimeoutException;
@@ -24,6 +25,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -67,9 +69,22 @@ public class EpollSocketTcpMd5Test {
 
     @Test
     public void testServerSocketChannelOption() throws Exception {
-        server.config().setOption(EpollChannelOption.TCP_MD5SIG,
-                Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
-        server.config().setOption(EpollChannelOption.TCP_MD5SIG, Collections.<InetAddress, byte[]>emptyMap());
+        try {
+            server.config().setOption(EpollChannelOption.TCP_MD5SIG,
+                    Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
+            server.config().setOption(EpollChannelOption.TCP_MD5SIG, Collections.<InetAddress, byte[]>emptyMap());
+        } catch (ChannelException ce) {
+            handleException(ce);
+        }
+    }
+
+    private static void handleException(ChannelException ce) {
+        if (ce.getMessage().contains("Protocol not available")) {
+            // Some operating systems don't allow or support the TCP_MD5SIG option.
+            // Abort the test (instead of failing) if that's the case.
+            Assumptions.abort(ce.getMessage());
+        }
+        throw ce;
     }
 
     @Test
@@ -80,17 +95,25 @@ public class EpollSocketTcpMd5Test {
                 .handler(new ChannelInboundHandlerAdapter())
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
 
-        ch.config().setOption(EpollChannelOption.TCP_MD5SIG,
-                Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
-        ch.config().setOption(EpollChannelOption.TCP_MD5SIG, Collections.<InetAddress, byte[]>emptyMap());
-
-        ch.close().syncUninterruptibly();
+        try {
+            ch.config().setOption(EpollChannelOption.TCP_MD5SIG,
+                    Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
+            ch.config().setOption(EpollChannelOption.TCP_MD5SIG, Collections.<InetAddress, byte[]>emptyMap());
+        } catch (ChannelException ce) {
+            handleException(ce);
+        } finally {
+            ch.close().syncUninterruptibly();
+        }
     }
 
     @Test
     public void testKeyMismatch() throws Exception {
-        server.config().setOption(EpollChannelOption.TCP_MD5SIG,
-                Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
+        try {
+            server.config().setOption(EpollChannelOption.TCP_MD5SIG,
+                    Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
+        } catch (ChannelException ce) {
+            handleException(ce);
+        }
 
         assertThrows(ConnectTimeoutException.class, new Executable() {
             @Override
@@ -109,8 +132,12 @@ public class EpollSocketTcpMd5Test {
 
     @Test
     public void testKeyMatch() throws Exception {
-        server.config().setOption(EpollChannelOption.TCP_MD5SIG,
-                Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
+        try {
+            server.config().setOption(EpollChannelOption.TCP_MD5SIG,
+                    Collections.<InetAddress, byte[]>singletonMap(NetUtil.LOCALHOST4, SERVER_KEY));
+        } catch (ChannelException ce) {
+            handleException(ce);
+        }
 
         EpollSocketChannel client = (EpollSocketChannel) new Bootstrap().group(GROUP)
                 .channel(EpollSocketChannel.class)

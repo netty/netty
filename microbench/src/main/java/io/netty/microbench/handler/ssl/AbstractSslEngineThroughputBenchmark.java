@@ -17,6 +17,7 @@ package io.netty.microbench.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.util.internal.CleanableDirectBuffer;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
@@ -32,6 +33,8 @@ public abstract class AbstractSslEngineThroughputBenchmark extends AbstractSslEn
     @Param({ "64", "128", "512", "1024", "4096" })
     public int messageSize;
 
+    protected CleanableDirectBuffer cleanableWrapSrcBuffer;
+    private CleanableDirectBuffer cleanableWrapDstBuffer;
     protected ByteBuffer wrapSrcBuffer;
     private ByteBuffer wrapDstBuffer;
 
@@ -41,8 +44,10 @@ public abstract class AbstractSslEngineThroughputBenchmark extends AbstractSslEn
         initEngines(allocator);
         initHandshakeBuffers();
 
-        wrapDstBuffer = allocateBuffer(clientEngine.getSession().getPacketBufferSize() << 2);
-        wrapSrcBuffer = allocateBuffer(messageSize);
+        cleanableWrapDstBuffer = allocateBuffer(clientEngine.getSession().getPacketBufferSize() << 2);
+        cleanableWrapSrcBuffer = allocateBuffer(messageSize);
+        wrapDstBuffer = cleanableWrapDstBuffer.buffer();
+        wrapSrcBuffer = cleanableWrapDstBuffer.buffer();
 
         byte[] bytes = new byte[messageSize];
         ThreadLocalRandom.current().nextBytes(bytes);
@@ -62,8 +67,8 @@ public abstract class AbstractSslEngineThroughputBenchmark extends AbstractSslEn
     public final void tearDown() throws Exception {
         destroyEngines();
         destroyHandshakeBuffers();
-        freeBuffer(wrapSrcBuffer);
-        freeBuffer(wrapDstBuffer);
+        cleanableWrapSrcBuffer.clean();
+        cleanableWrapDstBuffer.clean();
         doTearDown();
     }
 

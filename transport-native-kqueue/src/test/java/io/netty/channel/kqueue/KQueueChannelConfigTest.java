@@ -24,6 +24,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.IntegerUnixChannelOption;
 import io.netty.channel.unix.RawUnixChannelOption;
+import io.netty.util.internal.CleanableDirectBuffer;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -102,15 +103,19 @@ public class KQueueChannelConfigTest {
         // See https://opensource.apple.com/source/xnu/xnu-201/bsd/sys/socket.h.auto.html
         RawUnixChannelOption opt = new RawUnixChannelOption("RAW_OPT", 0xffff, 0x0004, 4);
 
-        ByteBuffer disabled = Buffer.allocateDirectWithNativeOrder(4);
+        CleanableDirectBuffer disabledCleanable = Buffer.allocateDirectBufferWithNativeOrder(4);
+        ByteBuffer disabled = disabledCleanable.buffer();
         disabled.putInt(0).flip();
         assertEquals(disabled, channel.config().getOption(opt));
 
-        ByteBuffer enabled = Buffer.allocateDirectWithNativeOrder(4);
+        CleanableDirectBuffer enabledCleanable = Buffer.allocateDirectBufferWithNativeOrder(4);
+        ByteBuffer enabled = enabledCleanable.buffer();
         enabled.putInt(1).flip();
 
         channel.config().setOption(opt, enabled);
         assertNotEquals(disabled, channel.config().getOption(opt));
         channel.fd().close();
+        disabledCleanable.clean();
+        enabledCleanable.clean();
     }
 }

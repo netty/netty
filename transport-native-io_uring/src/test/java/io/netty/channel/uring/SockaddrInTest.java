@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.util.internal.CleanableDirectBuffer;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -24,8 +25,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
-import static io.netty.channel.unix.Buffer.allocateDirectWithNativeOrder;
-import static io.netty.channel.unix.Buffer.free;
+import static io.netty.channel.unix.Buffer.allocateDirectBufferWithNativeOrder;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -39,7 +39,8 @@ public class SockaddrInTest {
 
     @Test
     public void testIp4() throws Exception {
-        ByteBuffer buffer = allocateDirectWithNativeOrder(64);
+        CleanableDirectBuffer cleanableDirectBuffer = allocateDirectBufferWithNativeOrder(64);
+        ByteBuffer buffer = cleanableDirectBuffer.buffer();
         try {
             InetAddress address = InetAddress.getByAddress(new byte[] { 10, 10, 10, 10 });
             int port = 45678;
@@ -49,13 +50,14 @@ public class SockaddrInTest {
             assertArrayEquals(address.getAddress(), sockAddr.getAddress().getAddress());
             assertEquals(port, sockAddr.getPort());
         } finally {
-            free(buffer);
+            cleanableDirectBuffer.clean();
         }
     }
 
     @Test
     public void testIp6() throws Exception {
-        ByteBuffer buffer = allocateDirectWithNativeOrder(64);
+        CleanableDirectBuffer cleanableDirectBuffer = allocateDirectBufferWithNativeOrder(64);
+        ByteBuffer buffer = cleanableDirectBuffer.buffer();
         try {
             Inet6Address address = Inet6Address.getByAddress(
                     null, new byte[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1 }, 12345);
@@ -70,13 +72,14 @@ public class SockaddrInTest {
             assertEquals(address.getScopeId(), inet6Address.getScopeId());
             assertEquals(port, sockAddr.getPort());
         } finally {
-            free(buffer);
+            cleanableDirectBuffer.clean();
         }
     }
 
     @Test
     public void testWriteIp4ReadIpv6Mapped() throws Exception {
-        ByteBuffer buffer = allocateDirectWithNativeOrder(64);
+        CleanableDirectBuffer cleanableDirectBuffer = allocateDirectBufferWithNativeOrder(64);
+        ByteBuffer buffer = cleanableDirectBuffer.buffer();
         try {
             InetAddress address = InetAddress.getByAddress(new byte[] { 10, 10, 10, 10 });
             int port = 45678;
@@ -92,7 +95,7 @@ public class SockaddrInTest {
             assertArrayEquals(ipv4Bytes, ipv4Address.getAddress());
             assertEquals(port, sockAddr.getPort());
         } finally {
-            free(buffer);
+            cleanableDirectBuffer.clean();
         }
     }
 }

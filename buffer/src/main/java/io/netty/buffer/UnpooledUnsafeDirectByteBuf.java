@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -67,6 +68,12 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
     final void setByteBuffer(ByteBuffer buffer, boolean tryFree) {
         super.setByteBuffer(buffer, tryFree);
         memoryAddress = PlatformDependent.directBufferAddress(buffer);
+    }
+
+    @Override
+    final void setByteBuffer(CleanableDirectBuffer cleanableDirectBuffer, boolean tryFree) {
+        super.setByteBuffer(cleanableDirectBuffer, tryFree);
+        memoryAddress = PlatformDependent.directBufferAddress(cleanableDirectBuffer.buffer());
     }
 
     @Override

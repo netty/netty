@@ -15,28 +15,33 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
 
 class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
-
     UnpooledUnsafeNoCleanerDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         super(alloc, initialCapacity, maxCapacity);
     }
 
     @Override
-    protected ByteBuffer allocateDirect(int initialCapacity) {
-        return PlatformDependent.allocateDirectNoCleaner(initialCapacity);
+    protected CleanableDirectBuffer allocateDirectBuffer(int capacity) {
+        return PlatformDependent.allocateDirectBufferNoCleaner(capacity);
     }
 
-    ByteBuffer reallocateDirect(ByteBuffer oldBuffer, int initialCapacity) {
-        return PlatformDependent.reallocateDirectNoCleaner(oldBuffer, initialCapacity);
+    @Override
+    protected ByteBuffer allocateDirect(int initialCapacity) {
+        throw new UnsupportedOperationException();
+    }
+
+    CleanableDirectBuffer reallocateDirect(CleanableDirectBuffer oldBuffer, int initialCapacity) {
+        return PlatformDependent.reallocateDirectBufferNoCleaner(oldBuffer, initialCapacity);
     }
 
     @Override
     protected void freeDirect(ByteBuffer buffer) {
-        PlatformDependent.freeDirectNoCleaner(buffer);
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -49,7 +54,7 @@ class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
         }
 
         trimIndicesToCapacity(newCapacity);
-        setByteBuffer(reallocateDirect(buffer, newCapacity), false);
+        setByteBuffer(reallocateDirect(cleanable, newCapacity), false);
         return this;
     }
 }
