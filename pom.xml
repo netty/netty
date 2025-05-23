@@ -2006,6 +2006,11 @@
             </execution>
           </executions>
         </plugin>
+        <plugin>
+          <groupId>com.simpligility.maven.plugins</groupId>
+          <artifactId>android-maven-plugin</artifactId>
+          <version>4.6.0</version>
+        </plugin>
       </plugins>
     </pluginManagement>
   </build>
