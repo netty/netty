@@ -22,6 +22,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -110,6 +111,18 @@ public class EmptyByteBufTest {
     public void testGetCharSequence() {
         EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
         assertEquals("", empty.readCharSequence(0, CharsetUtil.US_ASCII));
+    }
+
+    @Test
+    public void testReadString() {
+        EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
+        assertEquals("", empty.readString(0, CharsetUtil.US_ASCII));
+    }
+
+    @Test
+    public void testReadStringThrowsIndexOutOfBoundsException() {
+        EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
+        assertThrows(IndexOutOfBoundsException.class, () -> empty.readString(1, CharsetUtil.US_ASCII));
     }
 
 }

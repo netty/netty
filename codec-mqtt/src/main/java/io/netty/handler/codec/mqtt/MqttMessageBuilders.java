@@ -19,7 +19,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType;
 import io.netty.util.CharsetUtil;
 
 import java.util.ArrayList;
@@ -369,61 +368,61 @@ public final class MqttMessageBuilders {
         public MqttProperties build() {
             final MqttProperties props = new MqttProperties();
             if (clientId != null) {
-                props.add(new MqttProperties.StringProperty(MqttPropertyType.ASSIGNED_CLIENT_IDENTIFIER.value(),
+                props.add(new MqttProperties.StringProperty(MqttProperties.ASSIGNED_CLIENT_IDENTIFIER,
                         clientId));
             }
             if (sessionExpiryInterval != null) {
                 props.add(new MqttProperties.IntegerProperty(
-                        MqttPropertyType.SESSION_EXPIRY_INTERVAL.value(), sessionExpiryInterval.intValue()));
+                        MqttProperties.SESSION_EXPIRY_INTERVAL, sessionExpiryInterval.intValue()));
             }
             if (receiveMaximum > 0) {
-                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.RECEIVE_MAXIMUM.value(), receiveMaximum));
+                props.add(new MqttProperties.IntegerProperty(MqttProperties.RECEIVE_MAXIMUM, receiveMaximum));
             }
             if (maximumQos != null) {
-                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.MAXIMUM_QOS.value(),
+                props.add(new MqttProperties.IntegerProperty(MqttProperties.MAXIMUM_QOS,
                         maximumQos.intValue()));
             }
-            props.add(new MqttProperties.IntegerProperty(MqttPropertyType.RETAIN_AVAILABLE.value(), retain ? 1 : 0));
+            props.add(new MqttProperties.IntegerProperty(MqttProperties.RETAIN_AVAILABLE, retain ? 1 : 0));
             if (maximumPacketSize != null) {
-                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.MAXIMUM_PACKET_SIZE.value(),
+                props.add(new MqttProperties.IntegerProperty(MqttProperties.MAXIMUM_PACKET_SIZE,
                         maximumPacketSize.intValue()));
             }
-            props.add(new MqttProperties.IntegerProperty(MqttPropertyType.TOPIC_ALIAS_MAXIMUM.value(),
+            props.add(new MqttProperties.IntegerProperty(MqttProperties.TOPIC_ALIAS_MAXIMUM,
                     topicAliasMaximum));
             if (reasonString != null) {
-                props.add(new MqttProperties.StringProperty(MqttPropertyType.REASON_STRING.value(), reasonString));
+                props.add(new MqttProperties.StringProperty(MqttProperties.REASON_STRING, reasonString));
             }
             props.add(userProperties);
             if (wildcardSubscriptionAvailable != null) {
-                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.WILDCARD_SUBSCRIPTION_AVAILABLE.value(),
+                props.add(new MqttProperties.IntegerProperty(MqttProperties.WILDCARD_SUBSCRIPTION_AVAILABLE,
                         wildcardSubscriptionAvailable ? 1 : 0));
             }
             if (subscriptionIdentifiersAvailable != null) {
-                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.SUBSCRIPTION_IDENTIFIER_AVAILABLE.value(),
+                props.add(new MqttProperties.IntegerProperty(MqttProperties.SUBSCRIPTION_IDENTIFIER_AVAILABLE,
                         subscriptionIdentifiersAvailable ? 1 : 0));
             }
             if (sharedSubscriptionAvailable != null) {
-                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.SHARED_SUBSCRIPTION_AVAILABLE.value(),
+                props.add(new MqttProperties.IntegerProperty(MqttProperties.SHARED_SUBSCRIPTION_AVAILABLE,
                         sharedSubscriptionAvailable ? 1 : 0));
             }
             if (serverKeepAlive != null) {
-                props.add(new MqttProperties.IntegerProperty(MqttPropertyType.SERVER_KEEP_ALIVE.value(),
+                props.add(new MqttProperties.IntegerProperty(MqttProperties.SERVER_KEEP_ALIVE,
                         serverKeepAlive));
             }
             if (responseInformation != null) {
-                props.add(new MqttProperties.StringProperty(MqttPropertyType.RESPONSE_INFORMATION.value(),
+                props.add(new MqttProperties.StringProperty(MqttProperties.RESPONSE_INFORMATION,
                         responseInformation));
             }
             if (serverReference != null) {
-                props.add(new MqttProperties.StringProperty(MqttPropertyType.SERVER_REFERENCE.value(),
+                props.add(new MqttProperties.StringProperty(MqttProperties.SERVER_REFERENCE,
                         serverReference));
             }
             if (authenticationMethod != null) {
-                props.add(new MqttProperties.StringProperty(MqttPropertyType.AUTHENTICATION_METHOD.value(),
+                props.add(new MqttProperties.StringProperty(MqttProperties.AUTHENTICATION_METHOD,
                         authenticationMethod));
             }
             if (authenticationData != null) {
-                props.add(new MqttProperties.BinaryProperty(MqttPropertyType.AUTHENTICATION_DATA.value(),
+                props.add(new MqttProperties.BinaryProperty(MqttProperties.AUTHENTICATION_DATA,
                         authenticationData));
             }
 
