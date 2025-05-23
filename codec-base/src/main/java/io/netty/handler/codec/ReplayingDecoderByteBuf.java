@@ -713,6 +713,12 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     }
 
     @Override
+    public String readString(int length, Charset charset) {
+        checkReadableBytes(length);
+        return buffer.readString(length, charset);
+    }
+
+    @Override
     public ByteBuf resetReaderIndex() {
         buffer.resetReaderIndex();
         return this;
