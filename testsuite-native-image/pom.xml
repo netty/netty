@@ -35,6 +35,7 @@
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <packaging.type>jar</packaging.type>
     <native.maven.plugin.version>0.10.6</native.maven.plugin.version>
+    <native.classifier>${os.detected.name}-${os.detected.arch}</native.classifier>
   </properties>
 
   <dependencies>
@@ -128,21 +129,21 @@
           <groupId>io.netty</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <version>${project.version}</version>
-          <classifier>${os.detected.classifier}</classifier>
+          <classifier>${native.classifier}</classifier>
           <scope>runtime</scope>
         </dependency>
         <dependency>
           <groupId>io.netty</groupId>
           <artifactId>netty-transport-native-io_uring</artifactId>
           <version>${project.version}</version>
-          <classifier>${os.detected.classifier}</classifier>
+          <classifier>${native.classifier}</classifier>
           <scope>runtime</scope>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-codec-native-quic</artifactId>
           <version>${project.version}</version>
-          <classifier>${os.detected.classifier}</classifier>
+          <classifier>${native.classifier}</classifier>
         </dependency>
       </dependencies>
       <build>
