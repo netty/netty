@@ -65,7 +65,7 @@ final class KQueueRecvByteAllocatorHandle extends DelegatingHandle implements Ex
         return readEOF;
     }
 
-    boolean maybeMoreDataToRead() {
+    private boolean maybeMoreDataToRead() {
         /**
          * kqueue with EV_CLEAR flag set requires that we read until we consume "data" bytes
          * (see <a href="https://www.freebsd.org/cgi/man.cgi?kqueue">kqueue man</a>). However in order to

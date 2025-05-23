@@ -69,7 +69,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private boolean readFilterEnabled;
     private boolean writeFilterEnabled;
     KQueueEventLoop.KQueueRegistration registration;
-
     boolean readReadyRunnablePending;
     boolean inputClosedSeenErrorOnRead;
     protected volatile boolean active;
