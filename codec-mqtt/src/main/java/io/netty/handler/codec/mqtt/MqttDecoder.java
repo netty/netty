@@ -36,6 +36,33 @@ import static io.netty.handler.codec.mqtt.MqttCodecUtil.resetUnusedFields;
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.validateFixedHeader;
 import static io.netty.handler.codec.mqtt.MqttConstant.DEFAULT_MAX_BYTES_IN_MESSAGE;
 import static io.netty.handler.codec.mqtt.MqttConstant.DEFAULT_MAX_CLIENT_ID_LENGTH;
+import static io.netty.handler.codec.mqtt.MqttProperties.ASSIGNED_CLIENT_IDENTIFIER;
+import static io.netty.handler.codec.mqtt.MqttProperties.AUTHENTICATION_DATA;
+import static io.netty.handler.codec.mqtt.MqttProperties.AUTHENTICATION_METHOD;
+import static io.netty.handler.codec.mqtt.MqttProperties.CONTENT_TYPE;
+import static io.netty.handler.codec.mqtt.MqttProperties.CORRELATION_DATA;
+import static io.netty.handler.codec.mqtt.MqttProperties.MAXIMUM_PACKET_SIZE;
+import static io.netty.handler.codec.mqtt.MqttProperties.MAXIMUM_QOS;
+import static io.netty.handler.codec.mqtt.MqttProperties.PAYLOAD_FORMAT_INDICATOR;
+import static io.netty.handler.codec.mqtt.MqttProperties.PUBLICATION_EXPIRY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.REASON_STRING;
+import static io.netty.handler.codec.mqtt.MqttProperties.RECEIVE_MAXIMUM;
+import static io.netty.handler.codec.mqtt.MqttProperties.REQUEST_PROBLEM_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.REQUEST_RESPONSE_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.RESPONSE_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.RESPONSE_TOPIC;
+import static io.netty.handler.codec.mqtt.MqttProperties.RETAIN_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SERVER_KEEP_ALIVE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SERVER_REFERENCE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SESSION_EXPIRY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.SHARED_SUBSCRIPTION_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SUBSCRIPTION_IDENTIFIER;
+import static io.netty.handler.codec.mqtt.MqttProperties.SUBSCRIPTION_IDENTIFIER_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.TOPIC_ALIAS;
+import static io.netty.handler.codec.mqtt.MqttProperties.TOPIC_ALIAS_MAXIMUM;
+import static io.netty.handler.codec.mqtt.MqttProperties.USER_PROPERTY;
+import static io.netty.handler.codec.mqtt.MqttProperties.WILDCARD_SUBSCRIPTION_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.WILL_DELAY_INTERVAL;
 import static io.netty.handler.codec.mqtt.MqttSubscriptionOption.RetainedHandlingPolicy;
 
 /**
@@ -692,8 +719,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             long propertyId = decodeVariableByteInteger(buffer);
             final int propertyIdValue = unpackA(propertyId);
             numberOfBytesConsumed += unpackB(propertyId);
-            MqttProperties.MqttPropertyType propertyType = MqttProperties.MqttPropertyType.valueOf(propertyIdValue);
-            switch (propertyType) {
+            switch (propertyIdValue) {
                 case PAYLOAD_FORMAT_INDICATOR:
                 case REQUEST_PROBLEM_INFORMATION:
                 case REQUEST_RESPONSE_INFORMATION:
@@ -758,7 +784,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                     break;
                 default:
                     //shouldn't reach here
-                    throw new DecoderException("Unknown property type: " + propertyType);
+                    throw new DecoderException("Unknown property type: " + propertyIdValue);
             }
         }
 
