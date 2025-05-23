@@ -467,8 +467,8 @@ public final class IoUringIoHandler implements IoHandler {
         } catch (IOException e) {
             logger.warn("Failed to close eventfd", e);
         }
-        Buffer.free(eventfdReadBuf);
-        Buffer.free(timeoutMemory);
+        eventfdReadBufCleanable.clean();
+        timeoutMemoryCleanable.clean();
         iovArray.release();
     }
 
