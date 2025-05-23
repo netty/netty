@@ -42,6 +42,7 @@ import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.Future;
 
 import java.io.IOException;
@@ -340,6 +341,40 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     private static ByteBuf newDirectBuffer0(Object holder, ByteBuf buf, ByteBufAllocator alloc, int capacity) {
+        final ByteBuf directBuf = alloc.directBuffer(capacity);
+        directBuf.writeBytes(buf, buf.readerIndex(), capacity);
+        ReferenceCountUtil.safeRelease(holder);
+        return directBuf;
+    }
+
+    /**
+     * Returns an off-heap copy of the specified {@link ByteBuf}, and releases the specified holder.
+     * The caller must ensure that the holder releases the original {@link ByteBuf} when the holder is released by
+     * this method.
+     */
+    protected final ByteBuf newDirectBuffer(ReferenceCounted holder, ByteBuf buf) {
+        final int readableBytes = buf.readableBytes();
+        if (readableBytes == 0) {
+            holder.release();
+            return Unpooled.EMPTY_BUFFER;
+        }
+
+        final ByteBufAllocator alloc = alloc();
+        if (alloc.isDirectBufferPooled()) {
+            return newDirectBuffer0(holder, buf, alloc, readableBytes);
+        }
+
+        final ByteBuf directBuf = ByteBufUtil.threadLocalDirectBuffer();
+        if (directBuf == null) {
+            return newDirectBuffer0(holder, buf, alloc, readableBytes);
+        }
+
+        directBuf.writeBytes(buf, buf.readerIndex(), readableBytes);
+        ReferenceCountUtil.safeRelease(holder);
+        return directBuf;
+    }
+
+    private static ByteBuf newDirectBuffer0(ReferenceCounted holder, ByteBuf buf, ByteBufAllocator alloc, int capacity) {
         final ByteBuf directBuf = alloc.directBuffer(capacity);
         directBuf.writeBytes(buf, buf.readerIndex(), capacity);
         ReferenceCountUtil.safeRelease(holder);
