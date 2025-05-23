@@ -27,45 +27,85 @@ import java.util.ArrayList;
  * */
 public final class MqttProperties {
 
+    // single byte properties
+    static final int PAYLOAD_FORMAT_INDICATOR = 0x01;
+    static final int REQUEST_PROBLEM_INFORMATION = 0x17;
+    static final int REQUEST_RESPONSE_INFORMATION = 0x19;
+    static final int MAXIMUM_QOS = 0x24;
+    static final int RETAIN_AVAILABLE = 0x25;
+    static final int WILDCARD_SUBSCRIPTION_AVAILABLE = 0x28;
+    static final int SUBSCRIPTION_IDENTIFIER_AVAILABLE = 0x29;
+    static final int SHARED_SUBSCRIPTION_AVAILABLE = 0x2A;
+
+    // two bytes properties
+    static final int SERVER_KEEP_ALIVE = 0x13;
+    static final int RECEIVE_MAXIMUM = 0x21;
+    static final int TOPIC_ALIAS_MAXIMUM = 0x22;
+    static final int TOPIC_ALIAS = 0x23;
+
+    // four bytes properties
+    static final int PUBLICATION_EXPIRY_INTERVAL = 0x02;
+    static final int SESSION_EXPIRY_INTERVAL = 0x11;
+    static final int WILL_DELAY_INTERVAL = 0x18;
+    static final int MAXIMUM_PACKET_SIZE = 0x27;
+
+    // Variable Byte Integer
+    static final int SUBSCRIPTION_IDENTIFIER = 0x0B;
+
+    // UTF-8 Encoded String properties
+    static final int CONTENT_TYPE = 0x03;
+    static final int RESPONSE_TOPIC = 0x08;
+    static final int ASSIGNED_CLIENT_IDENTIFIER = 0x12;
+    static final int AUTHENTICATION_METHOD = 0x15;
+    static final int RESPONSE_INFORMATION = 0x1A;
+    static final int SERVER_REFERENCE = 0x1C;
+    static final int REASON_STRING = 0x1F;
+    static final int USER_PROPERTY = 0x26;
+
+    // Binary Data
+    static final int CORRELATION_DATA = 0x09;
+    static final int AUTHENTICATION_DATA = 0x16;
+
+    @Deprecated
     public enum MqttPropertyType {
         // single byte properties
-        PAYLOAD_FORMAT_INDICATOR(0x01),
-        REQUEST_PROBLEM_INFORMATION(0x17),
-        REQUEST_RESPONSE_INFORMATION(0x19),
-        MAXIMUM_QOS(0x24),
-        RETAIN_AVAILABLE(0x25),
-        WILDCARD_SUBSCRIPTION_AVAILABLE(0x28),
-        SUBSCRIPTION_IDENTIFIER_AVAILABLE(0x29),
-        SHARED_SUBSCRIPTION_AVAILABLE(0x2A),
+        PAYLOAD_FORMAT_INDICATOR(MqttProperties.PAYLOAD_FORMAT_INDICATOR),
+        REQUEST_PROBLEM_INFORMATION(MqttProperties.REQUEST_PROBLEM_INFORMATION),
+        REQUEST_RESPONSE_INFORMATION(MqttProperties.REQUEST_RESPONSE_INFORMATION),
+        MAXIMUM_QOS(MqttProperties.MAXIMUM_QOS),
+        RETAIN_AVAILABLE(MqttProperties.RETAIN_AVAILABLE),
+        WILDCARD_SUBSCRIPTION_AVAILABLE(MqttProperties.WILDCARD_SUBSCRIPTION_AVAILABLE),
+        SUBSCRIPTION_IDENTIFIER_AVAILABLE(MqttProperties.SUBSCRIPTION_IDENTIFIER_AVAILABLE),
+        SHARED_SUBSCRIPTION_AVAILABLE(MqttProperties.SHARED_SUBSCRIPTION_AVAILABLE),
 
         // two bytes properties
-        SERVER_KEEP_ALIVE(0x13),
-        RECEIVE_MAXIMUM(0x21),
-        TOPIC_ALIAS_MAXIMUM(0x22),
-        TOPIC_ALIAS(0x23),
+        SERVER_KEEP_ALIVE(MqttProperties.SERVER_KEEP_ALIVE),
+        RECEIVE_MAXIMUM(MqttProperties.RECEIVE_MAXIMUM),
+        TOPIC_ALIAS_MAXIMUM(MqttProperties.TOPIC_ALIAS_MAXIMUM),
+        TOPIC_ALIAS(MqttProperties.TOPIC_ALIAS),
 
         // four bytes properties
-        PUBLICATION_EXPIRY_INTERVAL(0x02),
-        SESSION_EXPIRY_INTERVAL(0x11),
-        WILL_DELAY_INTERVAL(0x18),
-        MAXIMUM_PACKET_SIZE(0x27),
+        PUBLICATION_EXPIRY_INTERVAL(MqttProperties.PUBLICATION_EXPIRY_INTERVAL),
+        SESSION_EXPIRY_INTERVAL(MqttProperties.SESSION_EXPIRY_INTERVAL),
+        WILL_DELAY_INTERVAL(MqttProperties.WILL_DELAY_INTERVAL),
+        MAXIMUM_PACKET_SIZE(MqttProperties.MAXIMUM_PACKET_SIZE),
 
         // Variable Byte Integer
-        SUBSCRIPTION_IDENTIFIER(0x0B),
+        SUBSCRIPTION_IDENTIFIER(MqttProperties.SUBSCRIPTION_IDENTIFIER),
 
         // UTF-8 Encoded String properties
-        CONTENT_TYPE(0x03),
-        RESPONSE_TOPIC(0x08),
-        ASSIGNED_CLIENT_IDENTIFIER(0x12),
-        AUTHENTICATION_METHOD(0x15),
-        RESPONSE_INFORMATION(0x1A),
-        SERVER_REFERENCE(0x1C),
-        REASON_STRING(0x1F),
-        USER_PROPERTY(0x26),
+        CONTENT_TYPE(MqttProperties.CONTENT_TYPE),
+        RESPONSE_TOPIC(MqttProperties.RESPONSE_TOPIC),
+        ASSIGNED_CLIENT_IDENTIFIER(MqttProperties.ASSIGNED_CLIENT_IDENTIFIER),
+        AUTHENTICATION_METHOD(MqttProperties.AUTHENTICATION_METHOD),
+        RESPONSE_INFORMATION(MqttProperties.RESPONSE_INFORMATION),
+        SERVER_REFERENCE(MqttProperties.SERVER_REFERENCE),
+        REASON_STRING(MqttProperties.REASON_STRING),
+        USER_PROPERTY(MqttProperties.USER_PROPERTY),
 
         // Binary Data
-        CORRELATION_DATA(0x09),
-        AUTHENTICATION_DATA(0x16);
+        CORRELATION_DATA(MqttProperties.CORRELATION_DATA),
+        AUTHENTICATION_DATA(MqttProperties.AUTHENTICATION_DATA);
 
         private static final MqttPropertyType[] VALUES;
 
@@ -104,7 +144,7 @@ public final class MqttProperties {
 
     static MqttProperties withEmptyDefaults(MqttProperties properties) {
         if (properties == null) {
-            return MqttProperties.NO_PROPERTIES;
+            return NO_PROPERTIES;
         }
         return properties;
     }
@@ -214,7 +254,7 @@ public final class MqttProperties {
     //are the only properties where ordering is required. Therefore, they need a special handling
     public static final class UserProperties extends MqttProperty<List<StringPair>> {
         public UserProperties() {
-            super(MqttPropertyType.USER_PROPERTY.value, new ArrayList<StringPair>());
+            super(USER_PROPERTY, new ArrayList<>());
         }
 
         /**
@@ -261,7 +301,7 @@ public final class MqttProperties {
 
     public static final class UserProperty extends MqttProperty<StringPair> {
         public UserProperty(String key, String value) {
-            super(MqttPropertyType.USER_PROPERTY.value, new StringPair(key, value));
+            super(USER_PROPERTY, new StringPair(key, value));
         }
 
         @Override
@@ -300,10 +340,10 @@ public final class MqttProperties {
             throw new UnsupportedOperationException("adding property isn't allowed");
         }
         IntObjectHashMap<MqttProperty> props = this.props;
-        if (property.propertyId == MqttPropertyType.USER_PROPERTY.value) {
+        if (property.propertyId == USER_PROPERTY) {
             List<UserProperty> userProperties = this.userProperties;
             if (userProperties == null) {
-                userProperties = new ArrayList<UserProperty>(1);
+                userProperties = new ArrayList<>(1);
                 this.userProperties = userProperties;
             }
             if (property instanceof UserProperty) {
@@ -315,10 +355,10 @@ public final class MqttProperties {
             } else {
                 throw new IllegalArgumentException("User property must be of UserProperty or UserProperties type");
             }
-        } else if (property.propertyId == MqttPropertyType.SUBSCRIPTION_IDENTIFIER.value) {
+        } else if (property.propertyId == SUBSCRIPTION_IDENTIFIER) {
             List<IntegerProperty> subscriptionIds = this.subscriptionIds;
             if (subscriptionIds == null) {
-                subscriptionIds = new ArrayList<IntegerProperty>(1);
+                subscriptionIds = new ArrayList<>(1);
                 this.subscriptionIds = subscriptionIds;
             }
             if (property instanceof IntegerProperty) {
@@ -338,7 +378,7 @@ public final class MqttProperties {
     public Collection<? extends MqttProperty> listAll() {
         IntObjectHashMap<MqttProperty> props = this.props;
         if (props == null && subscriptionIds == null && userProperties == null) {
-            return Collections.<MqttProperty>emptyList();
+            return Collections.emptyList();
         }
         if (subscriptionIds == null && userProperties == null) {
             return props.values();
@@ -372,7 +412,7 @@ public final class MqttProperties {
      * @return a property if it is set, null otherwise
      */
     public MqttProperty getProperty(int propertyId) {
-        if (propertyId == MqttPropertyType.USER_PROPERTY.value) {
+        if (propertyId == USER_PROPERTY) {
             //special handling to keep compatibility with earlier versions
             List<UserProperty> userProperties = this.userProperties;
             if (userProperties == null) {
@@ -380,7 +420,7 @@ public final class MqttProperties {
             }
             return UserProperties.fromUserPropertyCollection(userProperties);
         }
-        if (propertyId == MqttPropertyType.SUBSCRIPTION_IDENTIFIER.value) {
+        if (propertyId == SUBSCRIPTION_IDENTIFIER) {
             List<IntegerProperty> subscriptionIds = this.subscriptionIds;
             if (subscriptionIds == null || subscriptionIds.isEmpty()) {
                 return null;
@@ -400,15 +440,15 @@ public final class MqttProperties {
      * @return all properties having specified ID
      */
     public List<? extends MqttProperty> getProperties(int propertyId) {
-        if (propertyId == MqttPropertyType.USER_PROPERTY.value) {
-            return userProperties == null ? Collections.<MqttProperty>emptyList() : userProperties;
+        if (propertyId == USER_PROPERTY) {
+            return userProperties == null ? Collections.emptyList() : userProperties;
         }
-        if (propertyId == MqttPropertyType.SUBSCRIPTION_IDENTIFIER.value) {
-            return subscriptionIds == null ? Collections.<MqttProperty>emptyList() : subscriptionIds;
+        if (propertyId == SUBSCRIPTION_IDENTIFIER) {
+            return subscriptionIds == null ? Collections.emptyList() : subscriptionIds;
         }
         IntObjectHashMap<MqttProperty> props = this.props;
         return (props == null || !props.containsKey(propertyId)) ?
-                Collections.<MqttProperty>emptyList() :
+                Collections.emptyList() :
                 Collections.singletonList(props.get(propertyId));
     }
 }

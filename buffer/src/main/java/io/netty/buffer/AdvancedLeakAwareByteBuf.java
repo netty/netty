@@ -529,6 +529,12 @@ final class AdvancedLeakAwareByteBuf extends SimpleLeakAwareByteBuf {
     }
 
     @Override
+    public String readString(int length, Charset charset) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.readString(length, charset);
+    }
+
+    @Override
     public ByteBuf skipBytes(int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.skipBytes(length);

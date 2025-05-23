@@ -4836,6 +4836,37 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testWriteReadUsAsciiString() {
+        testWriteReadString(CharsetUtil.US_ASCII);
+    }
+
+    @Test
+    public void testWriteReadUtf8String() {
+        testWriteReadString(CharsetUtil.UTF_8);
+    }
+
+    @Test
+    public void testWriteReadIso88591String() {
+        testWriteReadString(CharsetUtil.ISO_8859_1);
+    }
+
+    @Test
+    public void testWriteReadUtf16String() {
+        testWriteReadString(CharsetUtil.UTF_16);
+    }
+
+    private void testWriteReadString(Charset charset) {
+        ByteBuf buf = newBuffer(1024);
+        CharBuffer sequence = CharsetUtil.US_ASCII.equals(charset)
+                ? ASCII_CHARS : EXTENDED_ASCII_CHARS;
+        buf.writerIndex(1);
+        int bytes = buf.writeCharSequence(sequence, charset);
+        buf.readerIndex(1);
+        assertEquals(sequence, CharBuffer.wrap(buf.readString(bytes, charset)));
+        buf.release();
+    }
+
+    @Test
     public void testRetainedSliceIndexOutOfBounds() {
         assertThrows(IndexOutOfBoundsException.class, new Executable() {
             @Override
