@@ -117,7 +117,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
     private final Set<Magazine> liveCachedMagazines;
 
     public AdaptivePoolingAllocator() {
-        this(PlatformDependent.isExplicitNoPreferDirect());
+        this(!PlatformDependent.isExplicitNoPreferDirect());
     }
 
     public AdaptivePoolingAllocator(boolean direct) {
