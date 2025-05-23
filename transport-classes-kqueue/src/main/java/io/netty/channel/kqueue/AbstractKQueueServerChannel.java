@@ -85,7 +85,6 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
             final ChannelPipeline pipeline = pipeline();
             allocHandle.reset(config);
             allocHandle.attemptedBytesRead(1);
-            readReadyBefore();
 
             Throwable exception = null;
             try {
@@ -114,7 +113,9 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
                     pipeline.fireExceptionCaught(exception);
                 }
             } finally {
-                readReadyFinally(config);
+                if (shouldStopReading(config)) {
+                    clearReadFilter0();
+                }
             }
         }
     }
