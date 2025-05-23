@@ -374,7 +374,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         return directBuf;
     }
 
-    private static ByteBuf newDirectBuffer0(ReferenceCounted holder, ByteBuf buf, ByteBufAllocator alloc, int capacity) {
+    private static ByteBuf newDirectBuffer0(ReferenceCounted holder, ByteBuf buf,
+                                            ByteBufAllocator alloc, int capacity) {
         final ByteBuf directBuf = alloc.directBuffer(capacity);
         directBuf.writeBytes(buf, buf.readerIndex(), capacity);
         ReferenceCountUtil.safeRelease(holder);
