@@ -79,6 +79,7 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     private final Selector connectSelector;
 
     private final NotificationHandler<?> notificationHandler;
+    private ByteBuffer inputCopy;
 
     private static SctpChannel openChannel() {
         try {
@@ -197,6 +198,16 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
         try {
             ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
+            int javaVersion = PlatformDependent.javaVersion();
+            if (javaVersion >= 22 && javaVersion < 25 && data.isDirect()) {
+                // Work-around for https://bugs.openjdk.org/browse/JDK-8357268
+                if (inputCopy == null || inputCopy.capacity() < data.remaining()) {
+                    inputCopy = ByteBuffer.allocate(data.remaining());
+                }
+                inputCopy.clear();
+                inputCopy.put(data).flip();
+                data = inputCopy;
+            }
             MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
             if (messageInfo == null) {
                 return readMessages;
