@@ -17,14 +17,10 @@ package io.netty.channel.kqueue;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.RecvByteBufAllocator.DelegatingHandle;
 import io.netty.channel.RecvByteBufAllocator.ExtendedHandle;
 import io.netty.channel.unix.PreferredDirectByteBufAllocator;
 import io.netty.util.UncheckedBooleanSupplier;
-
-import static java.lang.Math.max;
-import static java.lang.Math.min;
 
 final class KQueueRecvByteAllocatorHandle extends DelegatingHandle implements ExtendedHandle {
     private final PreferredDirectByteBufAllocator preferredDirectByteBufAllocator =
@@ -36,42 +32,22 @@ final class KQueueRecvByteAllocatorHandle extends DelegatingHandle implements Ex
             return maybeMoreDataToRead();
         }
     };
-    private boolean overrideGuess;
     private boolean readEOF;
-    private long numberBytesPending;
 
     KQueueRecvByteAllocatorHandle(ExtendedHandle handle) {
         super(handle);
     }
 
     @Override
-    public int guess() {
-        return overrideGuess ? guess0() : delegate().guess();
-    }
-
-    @Override
-    public void reset(ChannelConfig config) {
-        overrideGuess = ((KQueueChannelConfig) config).getRcvAllocTransportProvidesGuess();
-        delegate().reset(config);
-    }
-
-    @Override
     public ByteBuf allocate(ByteBufAllocator alloc) {
         // We need to ensure we always allocate a direct ByteBuf as we can only use a direct buffer to read via JNI.
         preferredDirectByteBufAllocator.updateAllocator(alloc);
-        return overrideGuess ? preferredDirectByteBufAllocator.ioBuffer(guess0()) :
-                delegate().allocate(preferredDirectByteBufAllocator);
-    }
-
-    @Override
-    public void lastBytesRead(int bytes) {
-        numberBytesPending = bytes < 0 ? 0 : max(0, numberBytesPending - bytes);
-        delegate().lastBytesRead(bytes);
+        return delegate().allocate(preferredDirectByteBufAllocator);
     }
 
     @Override
     public boolean continueReading(UncheckedBooleanSupplier maybeMoreDataSupplier) {
-        return ((ExtendedHandle) delegate()).continueReading(maybeMoreDataSupplier);
+        return readEOF || ((ExtendedHandle) delegate()).continueReading(maybeMoreDataSupplier);
     }
 
     @Override
@@ -88,12 +64,8 @@ final class KQueueRecvByteAllocatorHandle extends DelegatingHandle implements Ex
         return readEOF;
     }
 
-    void numberBytesPending(long numberBytesPending) {
-        this.numberBytesPending = numberBytesPending;
-    }
-
     boolean maybeMoreDataToRead() {
-        /*
+        /**
          * kqueue with EV_CLEAR flag set requires that we read until we consume "data" bytes
          * (see <a href="https://www.freebsd.org/cgi/man.cgi?kqueue">kqueue man</a>). However in order to
          * respect auto read we supporting reading to stop if auto read is off. If auto read is on we force reading to
@@ -103,10 +75,6 @@ final class KQueueRecvByteAllocatorHandle extends DelegatingHandle implements Ex
          *
          * It is assumed EOF is handled externally by checking {@link #isReadEOF()}.
          */
-        return numberBytesPending != 0;
-    }
-
-    private int guess0() {
-        return (int) min(numberBytesPending, Integer.MAX_VALUE);
+        return lastBytesRead() == attemptedBytesRead();
     }
 }
