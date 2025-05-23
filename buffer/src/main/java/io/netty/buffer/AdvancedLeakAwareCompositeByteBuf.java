@@ -508,6 +508,12 @@ final class AdvancedLeakAwareCompositeByteBuf extends SimpleLeakAwareCompositeBy
     }
 
     @Override
+    public String readString(int length, Charset charset) {
+        recordLeakNonRefCountingOperation(leak);
+        return super.readString(length, charset);
+    }
+
+    @Override
     public CompositeByteBuf skipBytes(int length) {
         recordLeakNonRefCountingOperation(leak);
         return super.skipBytes(length);

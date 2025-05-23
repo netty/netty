@@ -23,20 +23,20 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.CONTENT_TYPE;
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.PAYLOAD_FORMAT_INDICATOR;
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCRIPTION_IDENTIFIER;
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.USER_PROPERTY;
+import static io.netty.handler.codec.mqtt.MqttProperties.CONTENT_TYPE;
+import static io.netty.handler.codec.mqtt.MqttProperties.PAYLOAD_FORMAT_INDICATOR;
+import static io.netty.handler.codec.mqtt.MqttProperties.SUBSCRIPTION_IDENTIFIER;
+import static io.netty.handler.codec.mqtt.MqttProperties.USER_PROPERTY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class MqttPropertiesTest {
 
     private MqttProperties createSampleProperties() {
         MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 10));
-        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 20));
-        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
-        props.add(new MqttProperties.StringProperty(CONTENT_TYPE.value(), "text/plain"));
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER, 10));
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER, 20));
+        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR, 6));
+        props.add(new MqttProperties.StringProperty(CONTENT_TYPE, "text/plain"));
         props.add(new MqttProperties.UserProperty("isSecret", "true"));
         props.add(new MqttProperties.UserProperty("tag", "firstTag"));
         props.add(new MqttProperties.UserProperty("tag", "secondTag"));
@@ -49,17 +49,17 @@ public class MqttPropertiesTest {
 
         assertEquals(
                 "text/plain",
-                ((MqttProperties.StringProperty) props.getProperty(CONTENT_TYPE.value())).value);
+                ((MqttProperties.StringProperty) props.getProperty(CONTENT_TYPE)).value);
         assertEquals(
                 10,
-                ((MqttProperties.IntegerProperty) props.getProperty(SUBSCRIPTION_IDENTIFIER.value())).value.intValue());
+                ((MqttProperties.IntegerProperty) props.getProperty(SUBSCRIPTION_IDENTIFIER)).value.intValue());
 
         List<MqttProperties.StringPair> expectedUserProps = new ArrayList<MqttProperties.StringPair>();
         expectedUserProps.add(new MqttProperties.StringPair("isSecret", "true"));
         expectedUserProps.add(new MqttProperties.StringPair("tag", "firstTag"));
         expectedUserProps.add(new MqttProperties.StringPair("tag", "secondTag"));
         List<MqttProperties.StringPair> actualUserProps =
-                ((MqttProperties.UserProperties) props.getProperty(USER_PROPERTY.value())).value;
+                ((MqttProperties.UserProperties) props.getProperty(USER_PROPERTY)).value;
         assertEquals(expectedUserProps, actualUserProps);
     }
 
@@ -68,22 +68,22 @@ public class MqttPropertiesTest {
         MqttProperties props = createSampleProperties();
 
         assertEquals(
-                Collections.singletonList(new MqttProperties.StringProperty(CONTENT_TYPE.value(), "text/plain")),
-                props.getProperties(CONTENT_TYPE.value()));
+                Collections.singletonList(new MqttProperties.StringProperty(CONTENT_TYPE, "text/plain")),
+                props.getProperties(CONTENT_TYPE));
 
-        List<MqttProperties.IntegerProperty> expectedSubscriptionIds = new ArrayList<MqttProperties.IntegerProperty>();
-        expectedSubscriptionIds.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 10));
-        expectedSubscriptionIds.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 20));
+        List<MqttProperties.IntegerProperty> expectedSubscriptionIds = new ArrayList<>();
+        expectedSubscriptionIds.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER, 10));
+        expectedSubscriptionIds.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER, 20));
         assertEquals(
                 expectedSubscriptionIds,
-               props.getProperties(SUBSCRIPTION_IDENTIFIER.value()));
+               props.getProperties(SUBSCRIPTION_IDENTIFIER));
 
-        List<MqttProperties.UserProperty> expectedUserProps = new ArrayList<MqttProperties.UserProperty>();
+        List<MqttProperties.UserProperty> expectedUserProps = new ArrayList<>();
         expectedUserProps.add(new MqttProperties.UserProperty("isSecret", "true"));
         expectedUserProps.add(new MqttProperties.UserProperty("tag", "firstTag"));
         expectedUserProps.add(new MqttProperties.UserProperty("tag", "secondTag"));
         List<MqttProperties.UserProperty> actualUserProps =
-                (List<MqttProperties.UserProperty>) props.getProperties(USER_PROPERTY.value());
+                (List<MqttProperties.UserProperty>) props.getProperties(USER_PROPERTY);
         assertEquals(expectedUserProps, actualUserProps);
     }
 
@@ -91,12 +91,12 @@ public class MqttPropertiesTest {
     public void testListAll() {
         MqttProperties props = createSampleProperties();
 
-        List<MqttProperties.MqttProperty> expectedProperties = new ArrayList<MqttProperties.MqttProperty>();
-        expectedProperties.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
-        expectedProperties.add(new MqttProperties.StringProperty(CONTENT_TYPE.value(), "text/plain"));
+        List<MqttProperties.MqttProperty> expectedProperties = new ArrayList<>();
+        expectedProperties.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR, 6));
+        expectedProperties.add(new MqttProperties.StringProperty(CONTENT_TYPE, "text/plain"));
 
-        expectedProperties.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 10));
-        expectedProperties.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 20));
+        expectedProperties.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER, 10));
+        expectedProperties.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER, 20));
 
         MqttProperties.UserProperties expectedUserProperties = new MqttProperties.UserProperties();
         expectedUserProperties.add(new MqttProperties.StringPair("isSecret", "true"));
