@@ -108,7 +108,15 @@ public class SctpEchoTest extends AbstractSctpTest {
 
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            cc.writeAndFlush(Unpooled.wrappedBuffer(data, i, length));
+            ByteBuf msg = Unpooled.wrappedBuffer(data, i, length);
+            if (random.nextBoolean()) {
+                // Make half the buffers direct.
+                ByteBuf buf = Unpooled.directBuffer(msg.capacity());
+                buf.writeBytes(msg);
+                msg.release();
+                msg = buf;
+            }
+            cc.writeAndFlush(msg);
             i += length;
         }
 

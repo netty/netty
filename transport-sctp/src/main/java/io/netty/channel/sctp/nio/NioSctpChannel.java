@@ -69,6 +69,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
     private final NotificationHandler<?> notificationHandler;
     private ByteBuffer inputCopy;
+    private ByteBuffer outputCopy;
 
     private static SctpChannel newSctpChannel() {
         try {
@@ -270,21 +271,26 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         boolean free = true;
         try {
             ByteBuffer data = buffer.internalNioBuffer(buffer.writerIndex(), buffer.writableBytes());
+            boolean useInputCopy = false;
             int javaVersion = PlatformDependent.javaVersion();
             if (javaVersion >= 22 && javaVersion < 25 && data.isDirect()) {
                 // Work-around for https://bugs.openjdk.org/browse/JDK-8357268
                 if (inputCopy == null || inputCopy.capacity() < data.remaining()) {
-                    inputCopy = ByteBuffer.allocate(data.remaining());
+                    inputCopy = ByteBuffer.allocateDirect(data.remaining());
                 }
                 inputCopy.clear();
-                inputCopy.put(data).flip();
-                data = inputCopy;
+                inputCopy.limit(data.remaining());
+                useInputCopy = true;
             }
             int pos = data.position();
 
-            MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
+            MessageInfo messageInfo = ch.receive(useInputCopy ? inputCopy : data, null, notificationHandler);
             if (messageInfo == null) {
                 return 0;
+            }
+            if (useInputCopy) {
+                inputCopy.flip();
+                data.put(inputCopy);
             }
 
             allocHandle.lastBytesRead(data.position() - pos);
@@ -312,17 +318,22 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         }
 
         ByteBufAllocator alloc = alloc();
-        boolean needsCopy = data.nioBufferCount() != 1;
-        if (!needsCopy) {
-            if (!data.isDirect() && alloc.isDirectBufferPooled()) {
-                needsCopy = true;
-            }
-        }
         ByteBuffer nioData;
-        if (needsCopy) {
-            data = alloc.directBuffer(dataLen).writeBytes(data);
+
+        int javaVersion = PlatformDependent.javaVersion();
+        if (javaVersion >= 22 && javaVersion < 25 && data.isDirect() ||
+                !data.isDirect() || data.nioBufferCount() != 1) {
+            if (outputCopy == null || outputCopy.capacity() < dataLen) {
+                outputCopy = ByteBuffer.allocateDirect(dataLen);
+            }
+            outputCopy.clear();
+            data.getBytes(data.readerIndex(), outputCopy);
+            outputCopy.flip();
+            nioData = outputCopy;
+        } else {
+            nioData = data.nioBuffer();
         }
-        nioData = data.nioBuffer();
+
         final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
         mi.payloadProtocolID(packet.protocolIdentifier());
         mi.streamNumber(packet.streamIdentifier());
