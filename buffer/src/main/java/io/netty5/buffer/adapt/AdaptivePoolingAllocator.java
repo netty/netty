@@ -140,7 +140,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                         return NO_MAGAZINE;
                     }
                     Magazine mag = new Magazine(AdaptivePoolingAllocator.this, executor);
-                    if (FastThreadLocalThread.willCleanupFastThreadLocals(Thread.currentThread())) {
+                    if (FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals()) {
                         // Only add it to the liveMagazines if we can guarantee that onRemoval(...) is called,
                         // as otherwise we might end up holding the reference forever.
                         liveMagazines.add(mag);
@@ -214,7 +214,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
             int sizeBucket = AllocationStatistics.sizeBucket(size); // Compute outside of Magazine lock for better ILP.
             FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
             Thread currentThread = Thread.currentThread();
-            if (threadLocalMagazine != null && currentThread instanceof FastThreadLocalThread) {
+            if (threadLocalMagazine != null && FastThreadLocalThread.currentThreadHasFastThreadLocal()) {
                 Object mag = threadLocalMagazine.get();
                 if (mag != NO_MAGAZINE) {
                     return ((Magazine) mag).allocate(size, sizeBucket);
