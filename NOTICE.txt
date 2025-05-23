@@ -229,3 +229,11 @@ languages written by JetBrains, which can be obtained at:
     * license/LICENSE.annotations.txt (Apache License 2.0)
   * HOMEPAGE:
     * https://github.com/JetBrains/java-annotations
+
+This product optionally depends on 'jsr305', reference implementations for Java Specification Request 305,
+which can be obtained at:
+
+  * LICENSE:
+    * license/LICENSE.jsr305.txt (BSD License)
+  * HOMEPAGE:
+    * https://code.google.com/p/jsr-305
