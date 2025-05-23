@@ -1196,7 +1196,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     private void submitConnect(DomainSocketAddress unixDomainSocketAddress) {
-        remoteAddressMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_SOCKADDR_UN);
+        cleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_SOCKADDR_UN);
+        remoteAddressMemory = cleanable.buffer();
         SockaddrIn.setUds(remoteAddressMemory, unixDomainSocketAddress);
         int fd = fd().intValue();
         IoRegistration registration = registration();

@@ -68,6 +68,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     private final SctpChannelConfig config;
 
     private final NotificationHandler<?> notificationHandler;
+    private ByteBuffer inputCopy;
 
     private static SctpChannel newSctpChannel() {
         try {
@@ -269,6 +270,16 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         boolean free = true;
         try {
             ByteBuffer data = buffer.internalNioBuffer(buffer.writerIndex(), buffer.writableBytes());
+            int javaVersion = PlatformDependent.javaVersion();
+            if (javaVersion >= 22 && javaVersion < 25 && data.isDirect()) {
+                // Work-around for https://bugs.openjdk.org/browse/JDK-8357268
+                if (inputCopy == null || inputCopy.capacity() < data.remaining()) {
+                    inputCopy = ByteBuffer.allocate(data.remaining());
+                }
+                inputCopy.clear();
+                inputCopy.put(data).flip();
+                data = inputCopy;
+            }
             int pos = data.position();
 
             MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
