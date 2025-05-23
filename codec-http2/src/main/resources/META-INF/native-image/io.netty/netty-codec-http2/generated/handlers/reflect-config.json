@@ -68,5 +68,12 @@
       "typeReachable": "io.netty.handler.codec.http2.InboundHttpToHttp2Adapter"
     },
     "queryAllPublicMethods": true
+  },
+  {
+    "name": "io.netty.handler.codec.http2.ClearTextHttpProtocolSniffChannelHandle",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.ClearTextHttpProtocolSniffChannelHandle"
+    },
+    "queryAllPublicMethods": true
   }
 ]
