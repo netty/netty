@@ -32,7 +32,10 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.MockTicker;
 import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.util.concurrent.Ticker;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -626,7 +629,7 @@ public class EmbeddedChannelTest {
             }
         });
 
-        final EmbeddedEventLoop embeddedEventLoop = new EmbeddedEventLoop();
+        final EmbeddedEventLoop embeddedEventLoop = new EmbeddedEventLoop(new EmbeddedEventLoop.FreezableTicker());
         channel.deregister().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
@@ -733,6 +736,48 @@ public class EmbeddedChannelTest {
         channel.runPendingTasks();
         assertTrue(future101.isDone());
         assertFalse(future20.isDone());
+    }
+
+    @Test
+    @Timeout(30) // generous timeout, just make sure we don't actually wait for the full 10 mins...
+    void testCustomTicker() {
+        MockTicker ticker = Ticker.newMockTicker();
+        EmbeddedChannel channel = EmbeddedChannel.builder().ticker(ticker).build();
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+            }
+        };
+
+        // this future will complete after 10min
+        ScheduledFuture<?> future10 = channel.eventLoop().schedule(runnable, 10, TimeUnit.MINUTES);
+        // this future will complete after 10min + 1ns
+        ScheduledFuture<?> future101 = channel.eventLoop().schedule(runnable,
+                TimeUnit.MINUTES.toNanos(10) + 1, TimeUnit.NANOSECONDS);
+        // this future will complete after 20min
+        ScheduledFuture<?> future20 = channel.eventLoop().schedule(runnable, 20, TimeUnit.MINUTES);
+
+        channel.runPendingTasks();
+        assertFalse(future10.isDone());
+        assertFalse(future101.isDone());
+        assertFalse(future20.isDone());
+
+        ticker.advance(10, TimeUnit.MINUTES);
+        channel.runPendingTasks();
+        assertTrue(future10.isDone());
+        assertFalse(future101.isDone());
+        assertFalse(future20.isDone());
+
+        ticker.advance(1, TimeUnit.NANOSECONDS);
+        channel.runPendingTasks();
+        assertTrue(future101.isDone());
+        assertFalse(future20.isDone());
+    }
+
+    @Test
+    void testDefaultTickerCannotSleep() {
+        Ticker ticker = new EmbeddedChannel().eventLoop().ticker();
+        Assertions.assertThrows(UnsupportedOperationException.class, () -> ticker.sleep(1, TimeUnit.SECONDS));
     }
 
     @Test
