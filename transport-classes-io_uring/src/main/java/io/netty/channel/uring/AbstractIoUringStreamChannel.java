@@ -560,6 +560,9 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             if (current instanceof IoUringFileRegion) {
                 IoUringFileRegion fileRegion = (IoUringFileRegion) current;
                 try {
+                    if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                        return true;
+                    }
                     int result = res >= 0 ? res : ioResult("io_uring splice", res);
                     if (result == 0 && fileRegion.count() > 0) {
                         validateFileRegion(fileRegion.fileRegion, fileRegion.transfered());

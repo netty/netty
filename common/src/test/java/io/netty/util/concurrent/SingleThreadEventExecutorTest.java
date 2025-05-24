@@ -146,6 +146,7 @@ public class SingleThreadEventExecutorTest {
     }
 
     @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
     void testNotSuspendedUntilScheduledTaskIsCancelled() throws Exception {
         TestThreadFactory threadFactory = new TestThreadFactory();
         final SingleThreadEventExecutor executor = new SuspendingSingleThreadEventExecutor(threadFactory);
@@ -160,7 +161,12 @@ public class SingleThreadEventExecutorTest {
 
         // Now cancel the task which should allow the suspension to let the thread die once we call trySuspend() again
         assertTrue(future.cancel(false));
-        assertTrue(executor.trySuspend());
+        future.await();
+
+        // Call in a loop as removal of scheduled tasks from task queue might be lazy
+        while (!executor.trySuspend()) {
+            Thread.sleep(50);
+        }
 
         currentThread.join();
 

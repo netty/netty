@@ -1116,6 +1116,11 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
+    public String readString(int length, Charset charset) {
+        return wrapped.readString(length, charset);
+    }
+
+    @Override
     public int setCharSequence(int index, CharSequence sequence, Charset charset) {
         return wrapped.setCharSequence(index, sequence, charset);
     }
