@@ -127,11 +127,19 @@ public class WebSocketServerHandshakerFactory {
      *         socket version is not supported.
      */
     public WebSocketServerHandshaker newHandshaker(HttpRequest req) {
-        return resolveHandshaker(req, webSocketURL, subprotocols, decoderConfig);
+        return resolveHandshaker0(req, webSocketURL, subprotocols, decoderConfig);
     }
 
     public static WebSocketServerHandshaker resolveHandshaker(HttpRequest req, String webSocketURL, String subprotocols,
                                                               WebSocketDecoderConfig decoderConfig) {
+        ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+        return resolveHandshaker0(req, webSocketURL, subprotocols, decoderConfig);
+    }
+
+    private static WebSocketServerHandshaker resolveHandshaker0(HttpRequest req,
+                                                                String webSocketURL,
+                                                                String subprotocols,
+                                                                WebSocketDecoderConfig decoderConfig) {
         CharSequence version = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_VERSION);
         if (version != null) {
             if (version.equals(WebSocketVersion.V13.toHttpHeaderValue())) {
