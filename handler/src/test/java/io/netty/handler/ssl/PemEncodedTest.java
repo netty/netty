@@ -97,22 +97,14 @@ public class PemEncodedTest {
     }
 
     private static byte[] toByteArray(File file) throws Exception {
-        FileInputStream in = new FileInputStream(file);
-        try {
+        try (FileInputStream in = new FileInputStream(file)) {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            try {
-                byte[] buf = new byte[1024];
-                int len;
-                while ((len = in.read(buf)) != -1) {
-                    baos.write(buf, 0, len);
-                }
-            } finally {
-                baos.close();
+            byte[] buf = new byte[1024];
+            int len;
+            while ((len = in.read(buf)) != -1) {
+                baos.write(buf, 0, len);
             }
-
             return baos.toByteArray();
-        } finally {
-            in.close();
         }
     }
 }
