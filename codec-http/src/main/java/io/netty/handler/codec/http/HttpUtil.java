@@ -659,7 +659,7 @@ public final class HttpUtil {
     private static int validateAsciiStringToken(AsciiString token) {
         byte[] array = token.array();
         for (int i = token.arrayOffset(), len = token.arrayOffset() + token.length(); i < len; i++) {
-            if (!contains(array[i])) {
+            if (!isValidTokenChar(array[i])) {
                 return i - token.arrayOffset();
             }
         }
@@ -675,7 +675,7 @@ public final class HttpUtil {
     private static int validateCharSequenceToken(CharSequence token) {
         for (int i = 0, len = token.length(); i < len; i++) {
             byte value = (byte) token.charAt(i);
-            if (!contains(value)) {
+            if (!isValidTokenChar(value)) {
                 return i;
             }
         }
@@ -763,7 +763,7 @@ public final class HttpUtil {
     private static final long TOKEN_CHARS_HIGH = 0x57ffffffc7fffffeL;
     private static final long TOKEN_CHARS_LOW = 0x3ff6cfa00000000L;
 
-    private static boolean contains(byte bit) {
+    private static boolean isValidTokenChar(byte bit) {
         if (bit < 0) {
             return false;
         }
