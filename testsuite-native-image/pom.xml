@@ -35,6 +35,7 @@
     <maven.javadoc.skip>true</maven.javadoc.skip>
     <packaging.type>jar</packaging.type>
     <native.maven.plugin.version>0.10.6</native.maven.plugin.version>
+    <native.classifier>${os.detected.name}-${os.detected.arch}</native.classifier>
   </properties>
 
   <dependencies>
@@ -80,6 +81,28 @@
     </dependency>
   </dependencies>
 
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>empty-javadoc-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>javadoc</classifier>
+              <classesDirectory>${basedir}/javadoc</classesDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
   <profiles>
     <profile>
       <id>skipTests</id>
@@ -106,21 +129,21 @@
           <groupId>io.netty</groupId>
           <artifactId>netty-transport-native-epoll</artifactId>
           <version>${project.version}</version>
-          <classifier>${os.detected.classifier}</classifier>
+          <classifier>${native.classifier}</classifier>
           <scope>runtime</scope>
         </dependency>
         <dependency>
           <groupId>io.netty</groupId>
           <artifactId>netty-transport-native-io_uring</artifactId>
           <version>${project.version}</version>
-          <classifier>${os.detected.classifier}</classifier>
+          <classifier>${native.classifier}</classifier>
           <scope>runtime</scope>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-codec-native-quic</artifactId>
           <version>${project.version}</version>
-          <classifier>${os.detected.classifier}</classifier>
+          <classifier>${native.classifier}</classifier>
         </dependency>
       </dependencies>
       <build>

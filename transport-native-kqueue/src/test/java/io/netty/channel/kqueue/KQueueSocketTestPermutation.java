@@ -150,7 +150,17 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDatagramChannel.class);
+                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channelFactory(new ChannelFactory<Channel>() {
+                            @Override
+                            public Channel newChannel() {
+                                return new KQueueDatagramChannel(family);
+                            }
+
+                            @Override
+                            public String toString() {
+                                return KQueueDatagramChannel.class.getSimpleName() + ".class";
+                            }
+                        });
                     }
                 }
         );

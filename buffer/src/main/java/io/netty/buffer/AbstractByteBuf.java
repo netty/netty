@@ -521,6 +521,13 @@ public abstract class AbstractByteBuf extends ByteBuf {
     }
 
     @Override
+    public String readString(int length, Charset charset) {
+        String string = toString(readerIndex, length, charset);
+        readerIndex += length;
+        return string;
+    }
+
+    @Override
     public ByteBuf setByte(int index, int value) {
         checkIndex(index);
         _setByte(index, value);
