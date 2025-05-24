@@ -1493,58 +1493,95 @@ public final class PlatformDependent {
         }
     }
 
+    //replaces value.trim().replaceAll("[\"']", "") to avoid regexp overhead
     private static String normalizeOsReleaseVariableValue(String value) {
-        // Variable assignment values may be enclosed in double or single quotes.
-        return value.trim().replaceAll("[\"']", "");
+        String trimmed = value.trim();
+        StringBuilder sb = new StringBuilder(trimmed.length());
+        for (int i = 0; i < trimmed.length(); i++) {
+            char c = trimmed.charAt(i);
+            if (c != '"' && c != '\'') {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
+    //replaces value.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", "") to avoid regexp overhead
     private static String normalize(String value) {
-        return value.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", "");
+        StringBuilder sb = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = Character.toLowerCase(value.charAt(i));
+            if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     private static String normalizeArch(String value) {
         value = normalize(value);
-        if (value.matches("^(x8664|amd64|ia32e|em64t|x64)$")) {
-            return "x86_64";
-        }
-        if (value.matches("^(x8632|x86|i[3-6]86|ia32|x32)$")) {
-            return "x86_32";
-        }
-        if (value.matches("^(ia64|itanium64)$")) {
-            return "itanium_64";
-        }
-        if (value.matches("^(sparc|sparc32)$")) {
-            return "sparc_32";
-        }
-        if (value.matches("^(sparcv9|sparc64)$")) {
-            return "sparc_64";
-        }
-        if (value.matches("^(arm|arm32)$")) {
-            return "arm_32";
-        }
-        if ("aarch64".equals(value)) {
-            return "aarch_64";
-        }
-        if (value.matches("^(ppc|ppc32)$")) {
-            return "ppc_32";
-        }
-        if ("ppc64".equals(value)) {
-            return "ppc_64";
-        }
-        if ("ppc64le".equals(value)) {
-            return "ppcle_64";
-        }
-        if ("s390".equals(value)) {
-            return "s390_32";
-        }
-        if ("s390x".equals(value)) {
-            return "s390_64";
-        }
-        if ("loongarch64".equals(value)) {
-            return "loongarch_64";
-        }
+        switch (value) {
+            case "x8664":
+            case "amd64":
+            case "ia32e":
+            case "em64t":
+            case "x64":
+                return "x86_64";
 
-        return "unknown";
+            case "x8632":
+            case "x86":
+            case "i386":
+            case "i486":
+            case "i586":
+            case "i686":
+            case "ia32":
+            case "x32":
+                return "x86_32";
+
+            case "ia64":
+            case "itanium64":
+                return "itanium_64";
+
+            case "sparc":
+            case "sparc32":
+                return "sparc_32";
+
+            case "sparcv9":
+            case "sparc64":
+                return "sparc_64";
+
+            case "arm":
+            case "arm32":
+                return "arm_32";
+
+            case "aarch64":
+                return "aarch_64";
+
+            case "riscv64":
+                return "riscv64";
+
+            case "ppc":
+            case "ppc32":
+                return "ppc_32";
+
+            case "ppc64":
+                return "ppc_64";
+
+            case "ppc64le":
+                return "ppcle_64";
+
+            case "s390":
+                return "s390_32";
+
+            case "s390x":
+                return "s390_64";
+
+            case "loongarch64":
+                return "loongarch_64";
+
+            default:
+                return "unknown";
+        }
     }
 
     private static String normalizeOs(String value) {
