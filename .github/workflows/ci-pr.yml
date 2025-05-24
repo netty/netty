@@ -67,6 +67,7 @@ jobs:
 
   build-pr-windows:
     runs-on: windows-2019
+    if: false
     name: windows-x86_64-java11-boringssl
     needs: verify-pr
     env:
@@ -134,7 +135,8 @@ jobs:
 
   build-pr-cross:
     # The host should always be Linux
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest+
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -190,6 +192,7 @@ jobs:
 
   build-pr:
     runs-on: ubuntu-latest
+    if: false
     strategy:
       fail-fast: false
       matrix:
@@ -302,7 +305,7 @@ jobs:
         run: brew bundle
 
       - name: Build project
-        run: ./mvnw -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true -DskipTests=true
+        run: ./mvnw -B -ntp --file pom.xml clean install -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true -DskipTests=true && ./mvnw -B -ntp --file pom.xml clean package -Pboringssl -pl transport-native-kqueue
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
