@@ -20,6 +20,33 @@ import io.netty.buffer.ByteBufUtil;
 
 import java.util.List;
 
+import static io.netty.handler.codec.mqtt.MqttProperties.ASSIGNED_CLIENT_IDENTIFIER;
+import static io.netty.handler.codec.mqtt.MqttProperties.AUTHENTICATION_DATA;
+import static io.netty.handler.codec.mqtt.MqttProperties.AUTHENTICATION_METHOD;
+import static io.netty.handler.codec.mqtt.MqttProperties.CONTENT_TYPE;
+import static io.netty.handler.codec.mqtt.MqttProperties.CORRELATION_DATA;
+import static io.netty.handler.codec.mqtt.MqttProperties.MAXIMUM_PACKET_SIZE;
+import static io.netty.handler.codec.mqtt.MqttProperties.MAXIMUM_QOS;
+import static io.netty.handler.codec.mqtt.MqttProperties.PAYLOAD_FORMAT_INDICATOR;
+import static io.netty.handler.codec.mqtt.MqttProperties.PUBLICATION_EXPIRY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.REASON_STRING;
+import static io.netty.handler.codec.mqtt.MqttProperties.RECEIVE_MAXIMUM;
+import static io.netty.handler.codec.mqtt.MqttProperties.REQUEST_PROBLEM_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.REQUEST_RESPONSE_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.RESPONSE_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.RESPONSE_TOPIC;
+import static io.netty.handler.codec.mqtt.MqttProperties.RETAIN_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SERVER_KEEP_ALIVE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SERVER_REFERENCE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SESSION_EXPIRY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.SHARED_SUBSCRIPTION_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SUBSCRIPTION_IDENTIFIER;
+import static io.netty.handler.codec.mqtt.MqttProperties.SUBSCRIPTION_IDENTIFIER_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.TOPIC_ALIAS;
+import static io.netty.handler.codec.mqtt.MqttProperties.TOPIC_ALIAS_MAXIMUM;
+import static io.netty.handler.codec.mqtt.MqttProperties.USER_PROPERTY;
+import static io.netty.handler.codec.mqtt.MqttProperties.WILDCARD_SUBSCRIPTION_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.WILL_DELAY_INTERVAL;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -31,10 +58,11 @@ public final class MqttTestUtils {
 
     public static void validateProperties(MqttProperties expected, MqttProperties actual) {
         for (MqttProperties.MqttProperty expectedProperty : expected.listAll()) {
-            MqttProperties.MqttProperty actualProperty = actual.getProperty(expectedProperty.propertyId);
+            int propertyId = expectedProperty.propertyId;
+            MqttProperties.MqttProperty actualProperty = actual.getProperty(propertyId);
             List<? extends MqttProperties.MqttProperty> actualProperties =
-                    actual.getProperties(expectedProperty.propertyId);
-            switch (MqttProperties.MqttPropertyType.valueOf(expectedProperty.propertyId)) {
+                    actual.getProperties(propertyId);
+            switch (propertyId) {
                 // one byte value integer property
                 case PAYLOAD_FORMAT_INDICATOR:
                 case REQUEST_PROBLEM_INFORMATION:
@@ -111,7 +139,7 @@ public final class MqttTestUtils {
                     break;
                 }
                 default:
-                    fail("Property Id not recognized " + Integer.toHexString(expectedProperty.propertyId));
+                    fail("Property Id not recognized " + Integer.toHexString(propertyId));
             }
         }
         for (MqttProperties.MqttProperty actualProperty : actual.listAll()) {
