@@ -25,9 +25,7 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.lessThanOrEqualTo;
-
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
@@ -69,7 +67,7 @@ public class InsecureQuicTokenHandlerTest extends AbstractQuicTest {
             }
 
             InsecureQuicTokenHandler.INSTANCE.writeToken(out, dcid, validAddress);
-            assertThat(out.readableBytes(), lessThanOrEqualTo(InsecureQuicTokenHandler.INSTANCE.maxTokenLength()));
+            assertThat(out.readableBytes()).isLessThanOrEqualTo(InsecureQuicTokenHandler.INSTANCE.maxTokenLength());
             assertNotEquals(-1, InsecureQuicTokenHandler.INSTANCE.validateToken(out, validAddress));
 
             // Use another address and check that the validate fails.

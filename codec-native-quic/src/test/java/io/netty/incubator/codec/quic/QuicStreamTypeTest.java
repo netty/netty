@@ -28,10 +28,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.concurrent.Executor;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -79,7 +78,7 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
             // Close stream and quic channel
             streamChannel.close().sync();
             quicChannel.close().sync();
-            assertThat(serverWritePromise.get(), instanceOf(UnsupportedOperationException.class));
+            assertInstanceOf(UnsupportedOperationException.class, serverWritePromise.get());
 
             serverHandler.assertState();
             clientHandler.assertState();
@@ -146,7 +145,7 @@ public class QuicStreamTypeTest extends AbstractQuicTest {
 
             quicChannel.closeFuture().sync();
             assertTrue(serverWritePromise.await().isSuccess());
-            assertThat(clientWritePromise.get(), instanceOf(UnsupportedOperationException.class));
+            assertInstanceOf(UnsupportedOperationException.class, clientWritePromise.get());
 
             serverHandler.assertState();
             clientHandler.assertState();

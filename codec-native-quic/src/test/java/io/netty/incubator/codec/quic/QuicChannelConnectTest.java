@@ -37,8 +37,6 @@ import io.netty.util.DomainWildcardMappingBuilder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.Matchers;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -86,7 +84,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -254,7 +252,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .connectionAddress(QuicConnectionAddress.random(20))
                     .connect();
             Throwable cause = future.await().cause();
-            assertThat(cause, CoreMatchers.instanceOf(IllegalArgumentException.class));
+            assertInstanceOf(IllegalArgumentException.class, cause);
             verifyHandler.assertState();
         } finally {
             socket.close();
@@ -519,7 +517,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .remoteAddress(socket.getLocalSocketAddress())
                     .connect();
             Throwable cause = future.await().cause();
-            assertThat(cause, CoreMatchers.instanceOf(ConnectTimeoutException.class));
+            assertInstanceOf(ConnectTimeoutException.class, cause);
             verifyHandler.assertState();
         } finally {
             socket.close();
@@ -584,7 +582,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             // Try to connect again
             ChannelFuture connectFuture = quicChannel.connect(QuicConnectionAddress.random());
             Throwable cause = connectFuture.await().cause();
-            assertThat(cause, CoreMatchers.instanceOf(AlreadyConnectedException.class));
+            assertInstanceOf(AlreadyConnectedException.class, cause);
             assertTrue(quicChannel.close().await().isSuccess());
             ChannelFuture closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
@@ -1117,7 +1115,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .remoteAddress(address)
                     .connect()
                     .await().cause();
-            assertThat(cause, Matchers.instanceOf(SSLException.class));
+            assertInstanceOf(SSLException.class, cause);
         } finally {
             server.close().sync();
             // Close the parent Datagram channel as well.
@@ -1181,7 +1179,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .remoteAddress(address)
                     .connect()
                     .await().cause();
-            assertThat(cause, Matchers.instanceOf(ClosedChannelException.class));
+            assertInstanceOf(ClosedChannelException.class, cause);
             latch.await();
             eventLatch.await();
             QuicConnectionCloseEvent closeEvent = closeEventRef.get();
@@ -1395,7 +1393,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .get();
             latch.await();
 
-            assertThat(causeRef.get(), Matchers.instanceOf(SSLHandshakeException.class));
+            assertInstanceOf(SSLHandshakeException.class, causeRef.get());
         } finally {
             server.close().sync();
 
@@ -1624,8 +1622,8 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .remoteAddress(address)
                     .connect().await();
             if (fail) {
-                assertThat(connectFuture.cause(), Matchers.instanceOf(ClosedChannelException.class));
-                assertThat(causeRef.get(), Matchers.instanceOf(SSLHandshakeException.class));
+                assertInstanceOf(ClosedChannelException.class, connectFuture.cause());
+                assertInstanceOf(SSLHandshakeException.class, causeRef.get());
             } else {
                 QuicChannel quicChannel = connectFuture.get();
                 assertTrue(quicChannel.close().await().isSuccess());

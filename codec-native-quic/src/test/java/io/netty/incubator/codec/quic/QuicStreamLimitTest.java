@@ -22,17 +22,15 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 public class QuicStreamLimitTest extends AbstractQuicTest {
 
@@ -102,7 +100,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
             // Second stream creation should fail.
             Throwable cause = quicChannel.createStream(
                     type, new ChannelInboundHandlerAdapter()).await().cause();
-            assertThat(cause, CoreMatchers.instanceOf(QuicException.class));
+            assertInstanceOf(QuicException.class, cause);
             stream.close().sync();
             latch2.await();
 
@@ -178,7 +176,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
                     .connect().get();
             streamPromise.sync();
             // Second stream creation should fail.
-            assertThat(stream2Promise.get(), CoreMatchers.instanceOf(QuicException.class));
+            assertInstanceOf(QuicException.class, stream2Promise.get());
             quicChannel.close().sync();
 
             serverHandler.assertState();
