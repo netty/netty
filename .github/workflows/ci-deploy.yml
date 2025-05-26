@@ -155,9 +155,9 @@ jobs:
         with:
           servers: |
             [{
-              "id": "sonatype-nexus-snapshots",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+              "id": "central-portal-snapshots",
+              "username": "${{ secrets.MAVEN_CENTRAL_USERNAME }}",
+              "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
             }]
 
       # Setup some env to re-use later.
@@ -198,7 +198,7 @@ jobs:
           path: ~/linux-x86_64-java8-local-staging
 
       - name: Copy previous build artifacts to local maven repository
-        run: bash ./.github/scripts/install_local_staging.sh ~/.m2/repository ~/macos-aarch64-java8-local-staging ~/macos-x86_64-java8-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java8-local-staging
+        run: bash ./.github/scripts//local_staging_install_snapshot.sh ~/.m2/repository ~/macos-aarch64-java8-local-staging ~/macos-x86_64-java8-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java8-local-staging
 
       - name: Generate netty-all and deploy to local staging.
         run: |
@@ -206,7 +206,7 @@ jobs:
           ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
 
       - name: Merge staging repositories
-        run: bash ./.github/scripts/merge_local_staging.sh ~/local-staging ~/macos-aarch64-java8-local-staging ~/macos-x86_64-java8-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java8-local-staging ~/all-local-staging
+        run: bash ./.github/scripts/mlocal_staging_merge_snapshot.sh ~/local-staging ~/macos-aarch64-java8-local-staging ~/macos-x86_64-java8-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java8-local-staging ~/all-local-staging
 
       - name: Deploy local staged artifacts
-        run: ./mvnw -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR
+        run: ./mvnw -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$HOME/local-staging  -DserverId=central-portal-snapshots
