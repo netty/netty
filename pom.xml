@@ -591,6 +591,21 @@
         <tcnative.version>2.0.73.Final-SNAPSHOT</tcnative.version>
         <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
       </properties>
+
+      <!-- tcnative uses maven central for snapshots already -->
+      <repositories>
+        <repository>
+          <name>Central Portal Snapshots</name>
+          <id>central-portal-snapshots</id>
+          <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+          <releases>
+            <enabled>false</enabled>
+          </releases>
+        </repository>
+      </repositories>
     </profile>
     <profile>
       <id>leak</id>
