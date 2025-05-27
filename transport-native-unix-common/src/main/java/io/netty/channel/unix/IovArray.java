@@ -85,10 +85,6 @@ public final class IovArray implements MessageProcessor {
     @SuppressWarnings("deprecation")
     public IovArray(int numEntries) {
         int sizeBytes = Math.multiplyExact(checkPositive(numEntries, "numEntries"), IOV_SIZE);
-        if (sizeBytes > MAX_CAPACITY) {
-            throw new IllegalArgumentException("IovArray cannot be larger than " + MAX_CAPACITY +
-                    " bytes, but " + sizeBytes + " were requested.");
-        }
         cleanable = Buffer.allocateDirectBufferWithNativeOrder(sizeBytes);
         ByteBuf bbuf = Unpooled.wrappedBuffer(cleanable.buffer()).setIndex(0, 0);
         memory = PlatformDependent.hasUnsafe() ? bbuf : bbuf.order(
