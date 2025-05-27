@@ -68,15 +68,18 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                                             .channel(KQueueServerSocketChannel.class);
             }
         });
-        toReturn.add(new BootstrapFactory<ServerBootstrap>() {
-            @Override
-            public ServerBootstrap newInstance() {
-                ServerBootstrap serverBootstrap = new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
-                                                                       .channel(KQueueServerSocketChannel.class);
-                serverBootstrap.option(ChannelOption.TCP_FASTOPEN, 1);
-                return serverBootstrap;
-            }
-        });
+        if (KQueue.isTcpFastOpenServerSideAvailable()) {
+            toReturn.add(new BootstrapFactory<ServerBootstrap>() {
+                @Override
+                public ServerBootstrap newInstance() {
+                    ServerBootstrap serverBootstrap = new ServerBootstrap()
+                            .group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
+                            .channel(KQueueServerSocketChannel.class);
+                    serverBootstrap.option(ChannelOption.TCP_FASTOPEN, 1);
+                    return serverBootstrap;
+                }
+            });
+        }
 
         toReturn.add(new BootstrapFactory<ServerBootstrap>() {
             @Override
@@ -114,14 +117,16 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     public List<BootstrapFactory<Bootstrap>> clientSocketWithFastOpen() {
         List<BootstrapFactory<Bootstrap>> factories = clientSocket();
 
-        int insertIndex = factories.size() - 1; // Keep NIO fixture last.
-        factories.add(insertIndex, new BootstrapFactory<Bootstrap>() {
-            @Override
-            public Bootstrap newInstance() {
-                return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class)
-                        .option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
-            }
-        });
+        if (KQueue.isTcpFastOpenClientSideAvailable()) {
+            int insertIndex = factories.size() - 1; // Keep NIO fixture last.
+            factories.add(insertIndex, new BootstrapFactory<Bootstrap>() {
+                @Override
+                public Bootstrap newInstance() {
+                    return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class)
+                            .option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
+                }
+            });
+        }
 
         return factories;
     }
@@ -150,7 +155,17 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDatagramChannel.class);
+                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channelFactory(new ChannelFactory<Channel>() {
+                            @Override
+                            public Channel newChannel() {
+                                return new KQueueDatagramChannel(family);
+                            }
+
+                            @Override
+                            public String toString() {
+                                return KQueueDatagramChannel.class.getSimpleName() + ".class";
+                            }
+                        });
                     }
                 }
         );

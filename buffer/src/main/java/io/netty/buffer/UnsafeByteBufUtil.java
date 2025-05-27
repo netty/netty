@@ -426,12 +426,12 @@ final class UnsafeByteBufUtil {
     }
 
     private static void batchSetZero(byte[] data, int index, int length) {
-        int longBatches = length / 8;
+        int longBatches = length >>> 3;
         for (int i = 0; i < longBatches; i++) {
             PlatformDependent.putLong(data, index, ZERO);
             index += 8;
         }
-        final int remaining = length % 8;
+        final int remaining = length & 0x07;
         for (int i = 0; i < remaining; i++) {
             PlatformDependent.putByte(data, index + i, ZERO);
         }
@@ -637,12 +637,12 @@ final class UnsafeByteBufUtil {
     }
 
     private static void batchSetZero(long addr, int length) {
-        int longBatches = length / 8;
+        int longBatches = length >>> 3;
         for (int i = 0; i < longBatches; i++) {
             PlatformDependent.putLong(addr, ZERO);
             addr += 8;
         }
-        final int remaining = length % 8;
+        final int remaining = length & 0x07;
         for (int i = 0; i < remaining; i++) {
             PlatformDependent.putByte(addr + i, ZERO);
         }

@@ -58,7 +58,7 @@ public class MqttMessageFactoryTest {
         MqttProperties properties = new MqttProperties();
         String reasonString = "All right";
         properties.add(new MqttProperties.StringProperty(
-                MqttProperties.MqttPropertyType.REASON_STRING.value(),
+                MqttProperties.REASON_STRING,
                 reasonString));
         MqttMessageIdAndPropertiesVariableHeader variableHeader =
                 new MqttMessageIdAndPropertiesVariableHeader(SAMPLE_MESSAGE_ID, properties);

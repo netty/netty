@@ -591,6 +591,21 @@
         <tcnative.version>2.0.73.Final-SNAPSHOT</tcnative.version>
         <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
       </properties>
+
+      <!-- tcnative uses maven central for snapshots already -->
+      <repositories>
+        <repository>
+          <name>Central Portal Snapshots</name>
+          <id>central-portal-snapshots</id>
+          <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+          <releases>
+            <enabled>false</enabled>
+          </releases>
+        </repository>
+      </repositories>
     </profile>
     <profile>
       <id>leak</id>
@@ -1528,6 +1543,14 @@
            <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
         </configuration>
+        <dependencies>
+          <!-- Needed for TimedOutTestsListener -->
+          <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>netty-build-common</artifactId>
+            <version>${netty.build.version}</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <!-- always produce osgi bundles -->
       <plugin>
@@ -1998,6 +2021,11 @@
               </goals>
             </execution>
           </executions>
+        </plugin>
+        <plugin>
+          <groupId>com.simpligility.maven.plugins</groupId>
+          <artifactId>android-maven-plugin</artifactId>
+          <version>4.6.0</version>
         </plugin>
       </plugins>
     </pluginManagement>
