@@ -40,9 +40,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static io.netty5.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_CLIENT;
-import static io.netty5.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_SERVER;
-
 class EpollSocketTestPermutation extends SocketTestPermutation {
 
     static final EpollSocketTestPermutation INSTANCE = new EpollSocketTestPermutation();
@@ -76,7 +73,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
         List<BootstrapFactory<ServerBootstrap>> toReturn = new ArrayList<>();
         toReturn.add(() -> new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
                                     .channel(EpollServerSocketChannel.class));
-        if (IS_SUPPORTING_TCP_FASTOPEN_SERVER) {
+        if (Epoll.isTcpFastOpenServerSideAvailable()) {
             toReturn.add(() -> {
                 ServerBootstrap serverBootstrap = new ServerBootstrap().group(EPOLL_BOSS_GROUP, EPOLL_WORKER_GROUP)
                                                                        .channel(EpollServerSocketChannel.class);
@@ -102,7 +99,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     public List<BootstrapFactory<Bootstrap>> clientSocketWithFastOpen() {
         List<BootstrapFactory<Bootstrap>> factories = clientSocket();
 
-        if (IS_SUPPORTING_TCP_FASTOPEN_CLIENT) {
+        if (Epoll.isTcpFastOpenClientSideAvailable()) {
             int insertIndex = factories.size() - 1; // Keep NIO fixture last.
             factories.add(insertIndex, () -> new Bootstrap().group(EPOLL_WORKER_GROUP).channel(EpollSocketChannel.class)
                     .option(ChannelOption.TCP_FASTOPEN_CONNECT, true));

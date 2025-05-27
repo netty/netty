@@ -67,12 +67,14 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
         List<BootstrapFactory<ServerBootstrap>> toReturn = new ArrayList<>();
         toReturn.add(() -> new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
                                     .channel(KQueueServerSocketChannel.class));
-        toReturn.add(() -> {
-            ServerBootstrap serverBootstrap = new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
-                                                                   .channel(KQueueServerSocketChannel.class);
-            serverBootstrap.option(ChannelOption.TCP_FASTOPEN, 1);
-            return serverBootstrap;
-        });
+        if (KQueue.isTcpFastOpenServerSideAvailable()) {
+            toReturn.add(() -> {
+                ServerBootstrap serverBootstrap = new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
+                        .channel(KQueueServerSocketChannel.class);
+                serverBootstrap.option(ChannelOption.TCP_FASTOPEN, 1);
+                return serverBootstrap;
+            });
+        }
 
         toReturn.add(() -> new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
                                     .channel(NioServerSocketChannel.class));
@@ -94,11 +96,12 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
     public List<BootstrapFactory<Bootstrap>> clientSocketWithFastOpen() {
         List<BootstrapFactory<Bootstrap>> factories = clientSocket();
 
-        int insertIndex = factories.size() - 1; // Keep NIO fixture last.
-        factories.add(insertIndex,
-                      () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class)
-                                           .option(ChannelOption.TCP_FASTOPEN_CONNECT, true));
-
+        if (KQueue.isTcpFastOpenClientSideAvailable()) {
+            int insertIndex = factories.size() - 1; // Keep NIO fixture last.
+            factories.add(insertIndex,
+                    () -> new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class)
+                            .option(ChannelOption.TCP_FASTOPEN_CONNECT, true));
+        }
         return factories;
     }
 
