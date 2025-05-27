@@ -479,6 +479,13 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
+      <artifactId>netty-tcnative</artifactId>
+      <version>${tcnative.version}</version>
+      <classifier>osx-aarch_64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
       <artifactId>netty-tcnative-boringssl-static</artifactId>
       <version>${tcnative.version}</version>
     </dependency>
