@@ -111,7 +111,7 @@ public class SctpEchoTest extends AbstractSctpTest {
             ByteBuf msg = Unpooled.wrappedBuffer(data, i, length);
             if (random.nextBoolean()) {
                 // Make half the buffers direct.
-                ByteBuf buf = Unpooled.directBuffer(msg.capacity());
+                ByteBuf buf = Unpooled.directBuffer(msg.readableBytes());
                 buf.writeBytes(msg);
                 msg.release();
                 msg = buf;
