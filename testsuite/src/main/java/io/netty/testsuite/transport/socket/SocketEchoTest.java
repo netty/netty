@@ -18,7 +18,6 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -39,6 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
+import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
@@ -202,7 +202,7 @@ public class SocketEchoTest extends AbstractSocketTest {
 
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
-            ByteBuf buf = Unpooled.wrappedBuffer(data, i, length);
+            ByteBuf buf = randomBufferType(cc.alloc(), data, i, length);
             if (voidPromise) {
                 assertEquals(cc.voidPromise(), cc.writeAndFlush(buf, cc.voidPromise()));
             } else {
@@ -281,7 +281,8 @@ public class SocketEchoTest extends AbstractSocketTest {
             }
 
             if (channel.parent() != null) {
-                channel.write(Unpooled.wrappedBuffer(actual));
+
+                channel.write(randomBufferType(channel.alloc(), actual, 0, actual.length));
             }
 
             counter += actual.length;
