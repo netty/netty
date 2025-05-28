@@ -25,8 +25,8 @@ import io.netty.channel.kqueue.AbstractKQueueChannel.AbstractKQueueUnsafe;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.util.IntSupplier;
-import io.netty.util.collection.IntObjectHashMap;
-import io.netty.util.collection.IntObjectMap;
+import io.netty.util.collection.LongObjectHashMap;
+import io.netty.util.collection.LongObjectMap;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -72,8 +72,9 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
             return kqueueWaitNow();
         }
     };
-    private final IntObjectMap<AbstractKQueueChannel> channels = new IntObjectHashMap<AbstractKQueueChannel>(4096);
+    private final LongObjectMap<AbstractKQueueChannel> channels = new LongObjectHashMap<AbstractKQueueChannel>(4096);
 
+    private long nextId;
     private volatile int wakenUp;
     private volatile int ioRatio = 50;
 
@@ -107,31 +108,47 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
         return queueFactory.newTaskQueue(DEFAULT_MAX_PENDING_TASKS);
     }
 
-    void add(AbstractKQueueChannel ch) {
-        assert inEventLoop();
-        AbstractKQueueChannel old = channels.put(ch.fd().intValue(), ch);
-        // We either expect to have no Channel in the map with the same FD or that the FD of the old Channel is already
-        // closed.
-        assert old == null || !old.isOpen();
+    private long generateNextId() {
+        boolean reset = false;
+        for (;;) {
+            if (nextId == Long.MAX_VALUE) {
+                if (reset) {
+                    throw new IllegalStateException("All possible ids in use");
+                }
+                reset = true;
+            }
+            nextId++;
+            if (nextId == KQUEUE_WAKE_UP_IDENT) {
+                continue;
+            }
+            if (!channels.containsKey(nextId)) {
+                return nextId;
+            }
+        }
     }
 
-    void evSet(AbstractKQueueChannel ch, short filter, short flags, int fflags) {
+    long add(AbstractKQueueChannel ch) {
         assert inEventLoop();
-        changeList.evSet(ch, filter, flags, fflags);
+
+        long id = generateNextId();
+        AbstractKQueueChannel old = channels.put(id, ch);
+
+        // We expect to have no Channel in the map with the same id;
+        assert old == null || !old.isOpen();
+        return id;
+    }
+
+    void evSet(AbstractKQueueChannel ch, short filter, short flags, int fflags, long data, long udata) {
+        assert inEventLoop();
+        changeList.evSet(ch, filter, flags, fflags, data, udata);
     }
 
     void remove(AbstractKQueueChannel ch) throws Exception {
         assert inEventLoop();
-        int fd = ch.fd().intValue();
 
-        AbstractKQueueChannel old = channels.remove(fd);
-        if (old != null && old != ch) {
-            // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
-            channels.put(fd, old);
-
-            // If we found another Channel in the map that is mapped to the same FD the given Channel MUST be closed.
-            assert !ch.isOpen();
-        } else if (ch.isOpen()) {
+        AbstractKQueueChannel old = channels.remove(ch.registerId);
+        assert old == ch;
+        if (ch.isOpen()) {
             // Remove the filters. This is only needed if it's still open as otherwise it will be automatically
             // removed once the file-descriptor is closed.
             //
@@ -199,12 +216,13 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
                 continue;
             }
 
-            AbstractKQueueChannel channel = channels.get(fd);
+            long id = eventList.udata(i);
+            AbstractKQueueChannel channel = channels.get(id);
             if (channel == null) {
                 // This may happen if the channel has already been closed, and it will be removed from kqueue anyways.
                 // We also handle EV_ERROR above to skip this even early if it is a result of a referencing a closed and
                 // thus removed from kqueue FD.
-                logger.warn("events[{}]=[{}, {}] had no channel!", i, eventList.fd(i), filter);
+                logger.warn("events[{}]=[{}, {}, {}] had no channel!", i, fd, id, filter);
                 continue;
             }
 
@@ -363,7 +381,7 @@ final class KQueueEventLoop extends SingleThreadEventLoop {
     @Override
     public Iterator<Channel> registeredChannelsIterator() {
         assert inEventLoop();
-        IntObjectMap<AbstractKQueueChannel> ch = channels;
+        LongObjectMap<AbstractKQueueChannel> ch = channels;
         if (ch.isEmpty()) {
             return ChannelsReadOnlyIterator.empty();
         }

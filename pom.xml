@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.120.Final-SNAPSHOT</version>
+  <version>4.1.122.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -66,6 +66,14 @@
       <organizationUrl>https://netty.io/</organizationUrl>
     </developer>
   </developers>
+
+  <distributionManagement>
+    <snapshotRepository>
+      <name>Central Portal Snapshots</name>
+      <id>central-portal-snapshots</id>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
 
   <profiles>
     <profile>
@@ -198,7 +206,7 @@
         <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
@@ -222,7 +230,7 @@
         <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
@@ -246,7 +254,7 @@
         <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
@@ -270,7 +278,7 @@
         <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
@@ -294,7 +302,7 @@
         <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
@@ -318,7 +326,7 @@
         <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
@@ -340,7 +348,7 @@
         <argLine.alpnAgent />
         <argLine.java9.extras />
         <!-- Export some stuff which is used during our tests -->
-        <argLine.java9>--illegal-access=deny ${argLine.java9.extras}</argLine.java9>
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
         <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
@@ -606,9 +614,24 @@
       <id>boringssl-snapshot</id>
       <properties>
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
-        <tcnative.version>2.0.71.Final-SNAPSHOT</tcnative.version>
+        <tcnative.version>2.0.73.Final-SNAPSHOT</tcnative.version>
         <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
       </properties>
+
+      <!-- tcnative uses maven central for snapshots already -->
+      <repositories>
+        <repository>
+          <name>Central Portal Snapshots</name>
+          <id>central-portal-snapshots</id>
+          <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+          <releases>
+            <enabled>false</enabled>
+          </releases>
+        </repository>
+      </repositories>
     </profile>
     <profile>
       <id>leak</id>
@@ -709,7 +732,7 @@
   <properties>
     <maven.compiler.source>1.6</maven.compiler.source>
     <maven.compiler.target>1.6</maven.compiler.target>
-    <netty.dev.tools.directory>${project.build.directory}/dev-tools</netty.dev.tools.directory>
+    <netty.dev.tools.directory>${project.basedir}/../dev-tools/src/main/resources/</netty.dev.tools.directory>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
@@ -739,7 +762,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.70.Final</tcnative.version>
+    <tcnative.version>2.0.72.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -754,7 +777,7 @@
     <corretto.classifier>${os.detected.name}-${os.detected.arch}</corretto.classifier>
     <jni.classifier>${os.detected.name}-${os.detected.arch}</jni.classifier>
     <logging.config>${project.basedir}/../common/src/test/resources/logback-test.xml</logging.config>
-    <logging.logLevel>debug</logging.logLevel>
+    <logging.logLevel>warn</logging.logLevel>
     <log4j2.version>2.17.2</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
     <junit.version>5.9.0</junit.version>
@@ -969,9 +992,9 @@
         <version>1.0.3</version>
       </dependency>
       <dependency>
-        <groupId>net.jpountz.lz4</groupId>
-        <artifactId>lz4</artifactId>
-        <version>1.3.0</version>
+        <groupId>org.lz4</groupId>
+        <artifactId>lz4-java</artifactId>
+        <version>1.8.0</version>
       </dependency>
       <dependency>
         <groupId>com.github.jponge</groupId>
@@ -1223,6 +1246,13 @@
         <scope>test</scope>
       </dependency>
 
+      <dependency>
+        <groupId>com.google.guava</groupId>
+        <artifactId>guava</artifactId>
+        <version>33.4.8-jre</version>
+        <scope>test</scope>
+      </dependency>
+
       <!-- Test suite dependency for generating a compressed heap dump file -->
       <dependency>
         <groupId>org.tukaani</groupId>
@@ -1254,45 +1284,6 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
-
-  <dependencies>
-    <!-- Testing frameworks and related dependencies -->
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-api</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-build-common</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-library</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>ch.qos.logback</groupId>
-      <artifactId>logback-classic</artifactId>
-      <scope>test</scope>
-    </dependency>
-  </dependencies>
 
   <build>
     <extensions>
@@ -1527,6 +1518,15 @@
                   <new>method void io.netty.handler.codec.MessageAggregator&lt;I, S, C extends io.netty.buffer.ByteBufHolder, O extends io.netty.buffer.ByteBufHolder&gt;::releaseCurrentMessage() @ io.netty.handler.codec.stomp.StompSubframeAggregator</new>
                   <justification>Exposed private method.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.constantValueChanged</code>
+                  <classQualifiedName>io.netty.handler.codec.http2.Http2CodecUtil</classQualifiedName>
+                  <field>NUM_STANDARD_SETTINGS</field>
+                  <oldValue>6</oldValue>
+                  <newValue>7</newValue>
+                  <justification>SETTINGS_ENABLE_CONNECT_PROTOCOL was added to the standard HTTP/2 settings.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
@@ -1614,7 +1614,7 @@
       </plugin>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.8.0</version>
+        <version>3.14.0</version>
         <configuration>
           <compilerVersion>1.8</compilerVersion>
           <fork>true</fork>
@@ -1804,13 +1804,33 @@
            <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
         </configuration>
+        <dependencies>
+          <!-- Needed for TimedOutTestsListener -->
+          <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>netty-build-common</artifactId>
+            <version>${netty.build.version}</version>
+          </dependency>
+        </dependencies>
       </plugin>
       <!-- always produce osgi bundles -->
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
         <version>5.1.8</version>
+        <configuration>
+          <!-- Common for all executions -->
+          <supportedProjectTypes>
+            <supportedProjectType>jar</supportedProjectType>
+            <supportedProjectType>bundle</supportedProjectType>
+          </supportedProjectTypes>
+          <instructions>
+            <Export-Package>${project.groupId}.*</Export-Package>
+            <Private-Package>!*</Private-Package>
+          </instructions>
+        </configuration>
         <executions>
+          <!-- Default execution. Note that transport-native-* have additional executions. -->
           <execution>
             <id>generate-manifest</id>
             <phase>process-classes</phase>
@@ -1818,16 +1838,9 @@
               <goal>manifest</goal>
             </goals>
             <configuration>
-              <supportedProjectTypes>
-                <supportedProjectType>jar</supportedProjectType>
-                <supportedProjectType>bundle</supportedProjectType>
-              </supportedProjectTypes>
               <instructions>
-                <Export-Package>${project.groupId}.*</Export-Package>
                 <!-- enforce JVM vendor package as optional -->
                 <Import-Package>sun.net.dns.*;resolution:=optional,sun.misc.*;resolution:=optional,sun.nio.ch;resolution:=optional,sun.security.*;resolution:=optional,org.eclipse.jetty.npn;version="[1,2)";resolution:=optional,org.eclipse.jetty.alpn;version="[1,2)";resolution:=optional,org.bouncycastle.jcajce.provider;version="[1.0,2)";resolution:=optional,*</Import-Package>
-                <!-- override "internal" private package convention -->
-                <Private-Package>!*</Private-Package>
               </instructions>
             </configuration>
           </execution>
@@ -2036,6 +2049,26 @@
         <artifactId>forbiddenapis</artifactId>
         <version>2.2</version>
       </plugin>
+      <plugin>
+        <groupId>org.sonatype.central</groupId>
+        <artifactId>central-publishing-maven-plugin</artifactId>
+        <version>0.7.0</version>
+        <configuration>
+          <publishingServerId>central</publishingServerId>
+          <skipPublishing>true</skipPublishing>
+          <autoPublish>false</autoPublish>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.sonatype.plugins</groupId>
+        <artifactId>nexus-staging-maven-plugin</artifactId>
+        <version>1.7.0</version>
+        <configuration>
+          <serverId>central-portal-snapshots</serverId>
+          <nexusUrl>https://central.sonatype.com/repository/maven-snapshots</nexusUrl>
+          <skipRemoteStaging>true</skipRemoteStaging>
+        </configuration>
+      </plugin>
     </plugins>
 
     <pluginManagement>
@@ -2169,27 +2202,6 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
           <version>3.2.1</version>
-        </plugin>
-        <plugin>
-          <groupId>org.apache.maven.plugins</groupId>
-          <artifactId>maven-remote-resources-plugin</artifactId>
-          <version>1.5</version>
-          <configuration>
-            <resourceBundles>
-              <resourceBundle>io.netty:netty-dev-tools:${project.version}</resourceBundle>
-            </resourceBundles>
-            <outputDirectory>${netty.dev.tools.directory}</outputDirectory>
-            <!-- don't include netty-dev-tools in artifacts -->
-            <attachToMain>false</attachToMain>
-            <attachToTest>false</attachToTest>
-          </configuration>
-          <executions>
-            <execution>
-              <goals>
-                <goal>process</goal>
-              </goals>
-            </execution>
-          </executions>
         </plugin>
         <plugin>
           <groupId>de.thetaphi</groupId>

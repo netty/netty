@@ -41,6 +41,7 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
+import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Queue;
 import java.util.Set;
@@ -138,10 +139,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     private volatile boolean freed;
 
     static {
-        if (CENTRAL_QUEUE_CAPACITY < 2) {
-            throw new IllegalArgumentException("CENTRAL_QUEUE_CAPACITY: " + CENTRAL_QUEUE_CAPACITY
-                    + " (expected: >= " + 2 + ')');
-        }
         if (MAGAZINE_BUFFER_QUEUE_CAPACITY < 2) {
             throw new IllegalArgumentException("MAGAZINE_BUFFER_QUEUE_CAPACITY: " + MAGAZINE_BUFFER_QUEUE_CAPACITY
                     + " (expected: >= " + 2 + ')');
@@ -598,8 +595,10 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 }
                 curr.attachToMagazine(this);
             }
+            boolean allocated = false;
             if (curr.remainingCapacity() >= size) {
                 curr.readInitInto(buf, size, maxCapacity);
+                allocated = true;
             }
             try {
                 if (curr.remainingCapacity() >= RETIRE_CAPACITY) {
@@ -611,7 +610,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                     curr.release();
                 }
             }
-            return true;
+            return allocated;
         }
 
         private boolean allocate(int size, int sizeBucket, int maxCapacity, AdaptiveByteBuf buf) {
@@ -914,7 +913,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             AdaptivePoolingAllocator parent = mag.parent;
             int chunkSize = mag.preferredChunkSize();
             int memSize = delegate.capacity();
-            if (!pooled || shouldReleaseSuboptimalChunkSuze(memSize, chunkSize)) {
+            if (!pooled || shouldReleaseSuboptimalChunkSize(memSize, chunkSize)) {
                 // Drop the chunk if the parent allocator is closed,
                 // or if the chunk deviates too much from the preferred chunk size.
                 detachFromMagazine();
@@ -937,14 +936,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             }
         }
 
-        private static boolean shouldReleaseSuboptimalChunkSuze(int givenSize, int preferredSize) {
+        private static boolean shouldReleaseSuboptimalChunkSize(int givenSize, int preferredSize) {
             int givenChunks = givenSize / MIN_CHUNK_SIZE;
             int preferredChunks = preferredSize / MIN_CHUNK_SIZE;
             int deviation = Math.abs(givenChunks - preferredChunks);
 
-            // Retire chunks with a 0.5% probability per unit of MIN_CHUNK_SIZE deviation from preference.
+            // Retire chunks with a 5% probability per unit of MIN_CHUNK_SIZE deviation from preference.
             return deviation != 0 &&
-                    PlatformDependent.threadLocalRandom().nextDouble() * 200.0 > deviation;
+                    PlatformDependent.threadLocalRandom().nextDouble() * 20.0 < deviation;
         }
 
         public void readInitInto(AdaptiveByteBuf buf, int size, int maxCapacity) {
@@ -1002,7 +1001,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             hasArray = unwrapped.hasArray();
             hasMemoryAddress = unwrapped.hasMemoryAddress();
             rootParent = unwrapped;
-            tmpNioBuf = unwrapped.internalNioBuffer(adjustment, capacity).slice();
+            tmpNioBuf = null;
         }
 
         private AbstractByteBuf rootParent() {
@@ -1032,16 +1031,15 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             }
 
             // Reallocation required.
-            ByteBuffer data = tmpNioBuf;
-            data.clear();
-            tmpNioBuf = null;
             Chunk chunk = this.chunk;
             AdaptivePoolingAllocator allocator = chunk.allocator;
             int readerIndex = this.readerIndex;
             int writerIndex = this.writerIndex;
+            int baseOldRootIndex = adjustment;
+            int oldCapacity = length;
+            AbstractByteBuf oldRoot = rootParent();
             allocator.allocate(newCapacity, maxCapacity(), this);
-            tmpNioBuf.put(data);
-            tmpNioBuf.clear();
+            oldRoot.getBytes(baseOldRootIndex, this, 0, oldCapacity);
             chunk.release();
             this.readerIndex = readerIndex;
             this.writerIndex = writerIndex;
@@ -1097,6 +1095,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         private ByteBuffer internalNioBuffer() {
+            if (tmpNioBuf == null) {
+                tmpNioBuf = rootParent().nioBuffer(adjustment, length);
+            }
             return (ByteBuffer) tmpNioBuf.clear();
         }
 
@@ -1242,21 +1243,24 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         @Override
         public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
             checkIndex(index, length);
-            rootParent().setBytes(idx(index), src, srcIndex, length);
+            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
+            tmp.put(src, srcIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
             checkIndex(index, length);
-            rootParent().setBytes(idx(index), src, srcIndex, length);
+            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
+            tmp.put(src.nioBuffer(srcIndex, length));
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuffer src) {
             checkIndex(index, src.remaining());
-            rootParent().setBytes(idx(index), src);
+            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
+            tmp.put(src);
             return this;
         }
 
@@ -1317,6 +1321,12 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             } catch (ClosedChannelException ignored) {
                 return -1;
             }
+        }
+
+        @Override
+        public int setCharSequence(int index, CharSequence sequence, Charset charset) {
+            checkIndex(index, sequence.length());
+            return rootParent().setCharSequence(idx(index), sequence, charset);
         }
 
         @Override

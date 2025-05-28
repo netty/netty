@@ -68,6 +68,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     final BsdSocket socket;
     private boolean readFilterEnabled;
     private boolean writeFilterEnabled;
+    long registerId;
     boolean readReadyRunnablePending;
     boolean inputClosedSeenErrorOnRead;
     protected volatile boolean active;
@@ -194,7 +195,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         // new EventLoop.
         readReadyRunnablePending = false;
 
-        ((KQueueEventLoop) eventLoop()).add(this);
+        registerId = ((KQueueEventLoop) eventLoop()).add(this);
 
         // Add the write event first so we get notified of connection refused on the client side!
         if (writeFilterEnabled) {
@@ -364,7 +365,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private void evSet0(short filter, short flags, int fflags) {
         // Only try to add to changeList if the FD is still open, if not we already closed it in the meantime.
         if (isOpen()) {
-            ((KQueueEventLoop) eventLoop()).evSet(this, filter, flags, fflags);
+            ((KQueueEventLoop) eventLoop()).evSet(this, filter, flags, fflags, 0, registerId);
         }
     }
 

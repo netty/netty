@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -46,6 +47,28 @@ public class TcpDnsTest {
         assertThat(readQuery.recordAt(DnsSection.QUESTION).name(), is(query.recordAt(DnsSection.QUESTION).name()));
         readQuery.release();
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testDecoderLeak() {
+        EmbeddedChannel decoder = new EmbeddedChannel(new TcpDnsQueryDecoder());
+        EmbeddedChannel encoder = new EmbeddedChannel(new TcpDnsQueryEncoder());
+        int randomID = new Random().nextInt(60000 - 1000) + 1000;
+        DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)
+                .setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
+        assertTrue(encoder.writeOutbound(query));
+        final ByteBuf encoded = encoder.readOutbound();
+        assertTrue(decoder.writeInbound(encoded));
+        final DnsQuery decoded = decoder.readInbound();
+        assertThat(decoded, is(query));
+
+        ReferenceCountUtil.release(decoded);
+
+        // Make sure the ByteBuf is released by TcpDnsQueryDecoder
+        assertTrue(encoded.refCnt() == 0);
+
+        assertFalse(encoder.finish());
+        assertFalse(decoder.finish());
     }
 
     @Test
