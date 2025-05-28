@@ -41,6 +41,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.compositeBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -158,11 +159,13 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
             if (composite && i % 2 == 0) {
                 int firstBufLength = length / 2;
                 CompositeByteBuf comp = compositeBuffer();
-                comp.addComponent(true, wrappedBuffer(data, i, firstBufLength))
-                    .addComponent(true, wrappedBuffer(data, i + firstBufLength, length - firstBufLength));
+                comp.addComponent(true,
+                                randomBufferType(cc.alloc(), data, i, firstBufLength))
+                    .addComponent(true,
+                            randomBufferType(cc.alloc(), data, i + firstBufLength, length - firstBufLength));
                 cc.write(comp);
             } else {
-                cc.write(wrappedBuffer(data, i, length));
+                cc.write(randomBufferType(cc.alloc(), data, i, length));
             }
             i += length;
         }
