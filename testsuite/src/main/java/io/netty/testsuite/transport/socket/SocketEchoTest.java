@@ -42,7 +42,6 @@ import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
-@Timeout(30)
 public class SocketEchoTest extends AbstractSocketTest {
 
     private static final Random random = new Random();
@@ -65,6 +64,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testSimpleEcho(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
@@ -150,6 +150,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testSimpleEchoWithAdditionalExecutorAndVoidPromise(TestInfo testInfo) throws Throwable {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
