@@ -185,18 +185,14 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         @Override
         protected CleanableDirectBuffer allocateDirectBuffer(int capacity) {
             CleanableDirectBuffer buffer = super.allocateDirectBuffer(capacity);
-            UnpooledByteBufAllocator alloc = (UnpooledByteBufAllocator) alloc();
-            alloc.incrementDirect(buffer.buffer().capacity());
-            return new DecrementingCleanableDirectBuffer(alloc, buffer);
+            return new DecrementingCleanableDirectBuffer(alloc(), buffer);
         }
 
         @Override
         CleanableDirectBuffer reallocateDirect(CleanableDirectBuffer oldBuffer, int initialCapacity) {
             int capacity = oldBuffer.buffer().capacity();
             CleanableDirectBuffer buffer = super.reallocateDirect(oldBuffer, initialCapacity);
-            UnpooledByteBufAllocator alloc = (UnpooledByteBufAllocator) alloc();
-            alloc.incrementDirect(buffer.buffer().capacity() - capacity);
-            return new DecrementingCleanableDirectBuffer(alloc, buffer);
+            return new DecrementingCleanableDirectBuffer(alloc(), buffer, buffer.buffer().capacity() - capacity);
         }
     }
 
@@ -209,9 +205,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         @Override
         protected CleanableDirectBuffer allocateDirectBuffer(int capacity) {
             CleanableDirectBuffer buffer = super.allocateDirectBuffer(capacity);
-            UnpooledByteBufAllocator alloc = (UnpooledByteBufAllocator) alloc();
-            alloc.incrementDirect(buffer.buffer().capacity());
-            return new DecrementingCleanableDirectBuffer(alloc, buffer);
+            return new DecrementingCleanableDirectBuffer(alloc(), buffer);
         }
 
         @Override
@@ -234,9 +228,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         @Override
         protected CleanableDirectBuffer allocateDirectBuffer(int initialCapacity) {
             CleanableDirectBuffer buffer = super.allocateDirectBuffer(initialCapacity);
-            UnpooledByteBufAllocator alloc = (UnpooledByteBufAllocator) alloc();
-            alloc.incrementDirect(buffer.buffer().capacity());
-            return new DecrementingCleanableDirectBuffer(alloc, buffer);
+            return new DecrementingCleanableDirectBuffer(alloc(), buffer);
         }
 
         @Override
@@ -254,8 +246,15 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
         private final UnpooledByteBufAllocator alloc;
         private final CleanableDirectBuffer delegate;
 
-        private DecrementingCleanableDirectBuffer(UnpooledByteBufAllocator alloc, CleanableDirectBuffer delegate) {
-            this.alloc = alloc;
+        private DecrementingCleanableDirectBuffer(
+                ByteBufAllocator alloc, CleanableDirectBuffer delegate) {
+            this(alloc, delegate, delegate.buffer().capacity());
+        }
+
+        private DecrementingCleanableDirectBuffer(
+                ByteBufAllocator alloc, CleanableDirectBuffer delegate, int capacityConsumed) {
+            this.alloc = (UnpooledByteBufAllocator) alloc;
+            this.alloc.incrementDirect(capacityConsumed);
             this.delegate = delegate;
         }
 
