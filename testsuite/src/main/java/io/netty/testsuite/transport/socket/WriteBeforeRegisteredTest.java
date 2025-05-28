@@ -16,7 +16,6 @@
 package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.socket.SocketChannel;
@@ -25,6 +24,8 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.TimeUnit;
+
+import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 
 public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
 
@@ -44,7 +45,7 @@ public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
         SocketChannel ch = null;
         try {
             ch = (SocketChannel) cb.handler(h).connect(newSocketAddress()).channel();
-            ch.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 1 }));
+            ch.writeAndFlush(randomBufferType(ch.alloc(), new byte[] { 1 }, 0, 1));
         } finally {
             if (ch != null) {
                 ch.close();
