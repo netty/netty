@@ -69,10 +69,10 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             }
 
             try {
-                final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
+                final WebSocketServerHandshaker handshaker = WebSocketServerHandshakerFactory.resolveHandshaker(
+                        req,
                         getWebSocketLocation(ctx.pipeline(), req, serverConfig.websocketPath()),
                         serverConfig.subprotocols(), serverConfig.decoderConfig());
-                final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
                 final ChannelPromise localHandshakePromise = handshakePromise;
                 if (handshaker == null) {
                     WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
