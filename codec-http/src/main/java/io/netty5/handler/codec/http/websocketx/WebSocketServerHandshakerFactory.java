@@ -128,7 +128,38 @@ public class WebSocketServerHandshakerFactory {
      *         socket version is not supported.
      */
     public WebSocketServerHandshaker newHandshaker(HttpRequest req) {
+        return resolveHandshaker0(req, webSocketURL, subprotocols, decoderConfig);
+    }
 
+    /**
+     * Resolves the client's WebSocket protocol version from the HTTP request header,
+     * and creates the corresponding handshaker.
+     * This method is identical to {@link #newHandshaker(HttpRequest)},
+     * however it does not require a {@link WebSocketServerHandshakerFactory} instance allocation.
+     *
+     * @param req
+     *            The HTTP request that came from the client to upgrade the protocol to WebSocket.
+     * @param webSocketURL
+     *            URL for web socket communications. e.g "ws://myhost.com/mypath".
+     *            Subsequent web socket frames will be sent to this URL.
+     * @param subprotocols
+     *            CSV of supported protocols. Null if sub protocols not supported.
+     * @param decoderConfig
+     *            Frames decoder options.
+     * @return A new {@link WebSocketServerHandshaker} for the requested web socket version. Null if web
+     *         socket version is not supported.
+     * @throws NullPointerException if the {@code decoderConfig} is {@code null}.
+     */
+    public static WebSocketServerHandshaker resolveHandshaker(HttpRequest req, String webSocketURL, String subprotocols,
+                                                              WebSocketDecoderConfig decoderConfig) {
+        ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+        return resolveHandshaker0(req, webSocketURL, subprotocols, decoderConfig);
+    }
+
+    private static WebSocketServerHandshaker resolveHandshaker0(HttpRequest req,
+                                                                String webSocketURL,
+                                                                String subprotocols,
+                                                                WebSocketDecoderConfig decoderConfig) {
         CharSequence version = req.headers().get(HttpHeaderNames.SEC_WEBSOCKET_VERSION);
         if (version != null && AsciiString.contentEqualsIgnoreCase(version, WebSocketVersion.V13.toAsciiString())) {
             // Version 13 of the wire protocol - RFC 6455 (version 17 of the draft hybi specification).
