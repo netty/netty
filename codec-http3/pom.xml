@@ -160,7 +160,7 @@
       <plugin>
         <groupId>io.netty.incubator</groupId>
         <artifactId>netty-incubator-h3spec-maven-plugin</artifactId>
-        <version>0.0.7.Final-SNAPSHOT</version>
+        <version>0.0.7.Final</version>
         <configuration>
           <delay>1000</delay>
           <readyMessage>H3SPEC_SERVER_READY</readyMessage>
