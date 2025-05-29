@@ -42,10 +42,11 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -112,8 +113,6 @@ public final class PlatformDependent {
     private static final long DIRECT_MEMORY_LIMIT;
     private static final Cleaner CLEANER;
     private static final int UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD;
-    // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
-    private static final String[] OS_RELEASE_FILES = {"/etc/os-release", "/usr/lib/os-release"};
     private static final String LINUX_ID_PREFIX = "ID=";
     private static final String LINUX_ID_LIKE_PREFIX = "ID_LIKE=";
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
@@ -194,33 +193,41 @@ public final class PlatformDependent {
         LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
     }
 
-    private static void addFilesystemOsClassifiers(final Set<String> availableClassifiers) {
-        for (final String osReleaseFileName : OS_RELEASE_FILES) {
-            final File file = new File(osReleaseFileName);
-            if (file.exists()) {
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(
-                                new BoundedInputStream(new FileInputStream(file)), StandardCharsets.UTF_8))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        if (line.startsWith(LINUX_ID_PREFIX)) {
-                            String id = normalizeOsReleaseVariableValue(
-                                    line.substring(LINUX_ID_PREFIX.length()));
-                            addClassifier( availableClassifiers, id);
-                        } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
-                            line = normalizeOsReleaseVariableValue(
-                                    line.substring(LINUX_ID_LIKE_PREFIX.length()));
-                            addClassifier( availableClassifiers, line.split("[ ]+"));
-                        }
-                    }
-                } catch (IOException e) {
-                    logger.debug("Error while reading content of {}", osReleaseFileName, e);
-                }
-
-                // specification states we should only fall back if /etc/os-release does not exist
-                break;
-            }
+    // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
+    static void addFilesystemOsClassifiers(final Set<String> availableClassifiers) {
+        if (processOsReleaseFile("/etc/os-release", availableClassifiers)) {
+            return;
         }
+        processOsReleaseFile("/usr/lib/os-release", availableClassifiers);
+    }
+
+    private static boolean processOsReleaseFile(String osReleaseFileName, Set<String> availableClassifiers) {
+        Path file = Paths.get(osReleaseFileName);
+        Pattern lineSplitPattern = Pattern.compile("[ ]+");
+        if (Files.exists(file)) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    new BoundedInputStream(Files.newInputStream(file)), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith(LINUX_ID_PREFIX)) {
+                        String id = normalizeOsReleaseVariableValue(
+                                line.substring(LINUX_ID_PREFIX.length()));
+                        addClassifier(availableClassifiers, id);
+                    } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
+                        line = normalizeOsReleaseVariableValue(
+                                line.substring(LINUX_ID_LIKE_PREFIX.length()));
+                        addClassifier(availableClassifiers, lineSplitPattern.split(line));
+                    }
+                }
+            } catch (SecurityException e) {
+                logger.debug("Unable to read {}", osReleaseFileName, e);
+            } catch (IOException e) {
+                logger.debug("Error while reading content of {}", osReleaseFileName, e);
+            }
+            // specification states we should only fall back if /etc/os-release does not exist
+            return true;
+        }
+        return false;
     }
 
     /**
