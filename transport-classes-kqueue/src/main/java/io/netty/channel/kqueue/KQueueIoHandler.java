@@ -36,9 +36,11 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -76,6 +78,7 @@ public final class KQueueIoHandler implements IoHandler {
         }
     };
     private final ThreadAwareExecutor executor;
+    private final Queue<DefaultKqueueIoRegistration> cancelledRegistrations = new ArrayDeque<>();
     private final LongObjectMap<DefaultKqueueIoRegistration> registrations = new LongObjectHashMap<>(4096);
     private int numChannels;
     private long nextId;
@@ -266,8 +269,25 @@ public final class KQueueIoHandler implements IoHandler {
             throw e;
         } catch (Throwable t) {
             handleLoopException(t);
+        } finally {
+            processCancelledRegistrations();
         }
         return handled;
+    }
+
+    // Process all previous cannceld registrations and remove them from the registration map.
+    private void processCancelledRegistrations() {
+        for (;;) {
+            DefaultKqueueIoRegistration cancelledRegistration = cancelledRegistrations.poll();
+            if (cancelledRegistration == null) {
+                return;
+            }
+            DefaultKqueueIoRegistration removed = registrations.remove(cancelledRegistration.id);
+            assert removed == cancelledRegistration;
+            if (removed.isHandleForChannel()) {
+                numChannels--;
+            }
+        }
     }
 
     int numRegisteredChannels() {
@@ -317,6 +337,8 @@ public final class KQueueIoHandler implements IoHandler {
         for (DefaultKqueueIoRegistration reg: copy) {
             reg.close();
         }
+
+        processCancelledRegistrations();
     }
 
     @Override
@@ -351,7 +373,7 @@ public final class KQueueIoHandler implements IoHandler {
             throw new IllegalStateException();
         }
 
-        if (kqueueHandle instanceof AbstractKQueueChannel.AbstractKQueueUnsafe) {
+        if (registration.isHandleForChannel()) {
             numChannels++;
         }
         return registration;
@@ -377,6 +399,7 @@ public final class KQueueIoHandler implements IoHandler {
     }
 
     private final class DefaultKqueueIoRegistration implements IoRegistration {
+        private boolean cancellationPending;
         private final AtomicBoolean canceled = new AtomicBoolean();
         private final KQueueIoEvent event = new KQueueIoEvent();
 
@@ -388,6 +411,10 @@ public final class KQueueIoHandler implements IoHandler {
             this.executor = executor;
             this.handle = handle;
             id = generateNextId();
+        }
+
+        boolean isHandleForChannel() {
+            return handle instanceof AbstractKQueueChannel.AbstractKQueueUnsafe;
         }
 
         @SuppressWarnings("unchecked")
@@ -414,11 +441,19 @@ public final class KQueueIoHandler implements IoHandler {
         }
 
         void handle(int ident, short filter, short flags, int fflags, long data, long udata) {
+            if (cancellationPending) {
+                // This registration was already cancelled but not removed from the map yet, just ignore.
+                return;
+            }
             event.update(ident, filter, flags, fflags, data, udata);
             handle.handle(this, event);
         }
 
         private void evSet(short filter, short flags, int fflags) {
+            if (cancellationPending) {
+                // This registration was already cancelled but not removed from the map yet, just ignore.
+                return;
+            }
             changeList.evSet(handle.ident(), filter, flags, fflags, 0, id);
         }
 
@@ -441,15 +476,11 @@ public final class KQueueIoHandler implements IoHandler {
         }
 
         private void cancel0() {
-            DefaultKqueueIoRegistration old = registrations.remove(id);
-            if (old != null) {
-                if (old != this) {
-                    // The Channel mapping was already replaced due FD reuse, put back the stored Channel.
-                    registrations.put(id, old);
-                } else if (old.handle instanceof AbstractKQueueChannel.AbstractKQueueUnsafe) {
-                    numChannels--;
-                }
-            }
+            // Let's add the registration to our cancelledRegistrations queue so we will process it
+            // after we processed all events. This is needed as otherwise we might end up removing it
+            // from the registration map while we still have some unprocessed events.
+            cancellationPending = true;
+            cancelledRegistrations.offer(this);
         }
 
         void close() {
