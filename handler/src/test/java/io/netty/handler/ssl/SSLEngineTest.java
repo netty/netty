@@ -3314,6 +3314,8 @@ public abstract class SSLEngineTest {
             }
 
             assertSessionReusedForEngine(clientEngine, serverEngine, reuse);
+            SSLSession clientSession = clientEngine.getSession();
+
             String key = "key";
             if (reuse) {
                 if (clientSessionReused != SessionReusedState.NOT_REUSED) {
@@ -3327,7 +3329,7 @@ public abstract class SSLEngineTest {
                     Matcher<Long> creationTimeMatcher;
                     if (clientSessionReused == SessionReusedState.REUSED) {
                         // If we know for sure it was reused so the accessedTime needs to be larger.
-                        creationTimeMatcher = greaterThan(clientEngine.getSession().getCreationTime());
+                        creationTimeMatcher = greaterThan(clientSession.getCreationTime());
                     } else {
                         creationTimeMatcher = greaterThanOrEqualTo(clientEngine.getSession().getCreationTime());
                     }
@@ -3339,14 +3341,39 @@ public abstract class SSLEngineTest {
                 // If we don't sleep and execution is very fast we will see test-failures once we go into the
                 // reuse branch.
                 Thread.sleep(1);
-
                 clientEngine.getSession().putValue(key, Boolean.TRUE);
             }
             closeOutboundAndInbound(param.type(), clientEngine, serverEngine);
+
+            // Check that if the session is cached it is actually what we expect.
+            SSLSession session = clientSession.getSessionContext().getSession(clientSession.getId());
+            if (session != null) {
+                assertCachedSessionEquals(clientSession, session);
+            }
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
         }
+    }
+
+    private static void assertCachedSessionEquals(SSLSession session1, SSLSession session2) throws Exception {
+        assertEquals(session1, session2);
+        assertEquals(session1.getCreationTime(), session2.getCreationTime());
+        assertEquals(session1.getCipherSuite(), session2.getCipherSuite());
+        assertArrayEquals(session1.getLocalCertificates(), session2.getLocalCertificates());
+        assertArrayEquals(session1.getPeerCertificates(), session2.getPeerCertificates());
+        assertEquals(session1.getLocalPrincipal(), session2.getLocalPrincipal());
+        assertEquals(session1.getPeerPrincipal(), session2.getPeerPrincipal());
+        assertEquals(session1.getPeerHost(), session2.getPeerHost());
+        assertEquals(session1.getPeerPort(), session2.getPeerPort());
+        assertEquals(session1.getProtocol(), session2.getProtocol());
+        assertEquals(session1.isValid(), session2.isValid());
+        assertArrayEquals(session1.getValueNames(), session2.getValueNames());
+        for (String name : session1.getValueNames()) {
+            assertEquals(session1.getValue(name), session2.getValue(name));
+        }
+        assertArrayEquals(session1.getId(), session2.getId());
+        assertEquals(session1 instanceof ExtendedSSLSession, session2 instanceof ExtendedSSLSession);
     }
 
     protected enum SessionReusedState {
@@ -3367,6 +3394,10 @@ public abstract class SSLEngineTest {
     }
 
     protected SessionReusedState isSessionReused(SSLEngine engine) {
+        SSLSession session = engine.getSession();
+        if (session.getLastAccessedTime() > session.getCreationTime()) {
+            return SessionReusedState.REUSED;
+        }
         return SessionReusedState.MAYBE_REUSED;
     }
 
