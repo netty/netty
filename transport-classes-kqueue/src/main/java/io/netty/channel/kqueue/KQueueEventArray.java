@@ -80,9 +80,9 @@ final class KQueueEventArray {
         size = 0;
     }
 
-    void evSet(AbstractKQueueChannel ch, short filter, short flags, int fflags, long data, long udata) {
+    void evSet(int ident, short filter, short flags, int fflags, long data, long udata) {
         reallocIfNeeded();
-        evSet(getKEventOffset(size++) + memoryAddress, ch.socket.intValue(), filter, flags,
+        evSet(getKEventOffset(size++) + memoryAddress, ident, filter, flags,
                 fflags, data, udata);
     }
 
