@@ -317,9 +317,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             return true;
         }
 
-        ByteBufAllocator alloc = alloc();
         ByteBuffer nioData;
-
         int javaVersion = PlatformDependent.javaVersion();
         if (javaVersion >= 22 && javaVersion < 25 && data.isDirect() ||
                 !data.isDirect() || data.nioBufferCount() != 1) {
@@ -327,7 +325,8 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 outputCopy = ByteBuffer.allocateDirect(dataLen);
             }
             outputCopy.clear();
-            data.getBytes(data.readerIndex(), outputCopy);
+            outputCopy.limit(dataLen);
+            data.readBytes(outputCopy);
             outputCopy.flip();
             nioData = outputCopy;
         } else {

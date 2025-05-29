@@ -273,7 +273,8 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                         outputCopy = ByteBuffer.allocateDirect(dataLen);
                     }
                     outputCopy.clear();
-                    data.getBytes(data.readerIndex(), outputCopy);
+                    outputCopy.limit(dataLen);
+                    data.readBytes(outputCopy);
                     outputCopy.flip();
                     nioData = outputCopy;
                 } else {
