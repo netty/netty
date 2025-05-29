@@ -28,12 +28,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.io.InputStream;
-
-
-import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
 public class ZstdEncoderTest extends AbstractEncoderTest {
 
@@ -81,8 +78,7 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     @Override
     protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
         byte[] decompressed = new byte[originalLength];
-        try (InputStream is = new ByteBufInputStream(compressed, true);
-             ZstdInputStream zstdIs = new ZstdInputStream(is)) {
+        try (ZstdInputStream zstdIs = new ZstdInputStream(new ByteBufInputStream(compressed, true))) {
 
             int remaining = originalLength;
             while (remaining > 0) {

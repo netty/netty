@@ -16,9 +16,7 @@
 
 package io.netty.handler.ssl;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
+import java.nio.file.Files;
 import java.security.PrivateKey;
 
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -30,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeFalse;
@@ -50,8 +49,8 @@ public class PemEncodedTest {
         OpenSsl.ensureAvailability();
         assumeFalse(OpenSsl.useKeyManagerFactory());
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
-        PemPrivateKey pemKey = PemPrivateKey.valueOf(toByteArray(ssc.privateKey()));
-        PemX509Certificate pemCert = PemX509Certificate.valueOf(toByteArray(ssc.certificate()));
+        PemPrivateKey pemKey = PemPrivateKey.valueOf(Files.readAllBytes(ssc.privateKey().toPath()));
+        PemX509Certificate pemCert = PemX509Certificate.valueOf(Files.readAllBytes(ssc.certificate().toPath()));
 
         SslContext context = SslContextBuilder.forServer(pemKey, pemCert)
                 .sslProvider(provider)
@@ -59,7 +58,7 @@ public class PemEncodedTest {
         assertEquals(1, pemKey.refCnt());
         assertEquals(1, pemCert.refCnt());
         try {
-            assertTrue(context instanceof ReferenceCountedOpenSslContext);
+            assertInstanceOf(ReferenceCountedOpenSslContext.class, context);
         } finally {
             ReferenceCountUtil.release(context);
             assertRelease(pemKey);
@@ -96,15 +95,4 @@ public class PemEncodedTest {
         assertTrue(encoded.release());
     }
 
-    private static byte[] toByteArray(File file) throws Exception {
-        try (FileInputStream in = new FileInputStream(file)) {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            byte[] buf = new byte[1024];
-            int len;
-            while ((len = in.read(buf)) != -1) {
-                baos.write(buf, 0, len);
-            }
-            return baos.toByteArray();
-        }
-    }
 }

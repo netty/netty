@@ -17,7 +17,6 @@ package io.netty.util.internal;
 
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -38,16 +37,13 @@ public class BoundedInputStreamTest {
         try (BoundedInputStream reader = new BoundedInputStream(new ByteArrayInputStream(bytes), bytes.length - 1)) {
             assertEquals(bytes[0], (byte) reader.read());
 
-            assertThrows(IOException.class, new Executable() {
-                @Override
-                public void execute() throws Throwable {
-                    int max = bytes.length;
-                    do {
-                        int result = reader.read(new byte[max], 0, max);
-                        assertThat(result).isNotEqualTo(-1);
-                        max -= result;
-                    } while (max > 0);
-                }
+            assertThrows(IOException.class, () -> {
+                int max = bytes.length;
+                do {
+                    int result = reader.read(new byte[max], 0, max);
+                    assertThat(result).isNotEqualTo(-1);
+                    max -= result;
+                } while (max > 0);
             });
         }
     }
