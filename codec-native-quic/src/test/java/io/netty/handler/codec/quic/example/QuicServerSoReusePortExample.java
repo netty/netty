@@ -36,6 +36,7 @@ import io.netty.handler.codec.quic.QuicSslContext;
 import io.netty.handler.codec.quic.QuicSslContextBuilder;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.NettyRuntime;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -56,7 +57,7 @@ public final class QuicServerSoReusePortExample {
                 selfSignedCertificate.privateKey(), null, selfSignedCertificate.certificate())
                 .applicationProtocols("http/0.9").build();
         // We will bind one socket to each EventLoopGroup.
-        int numCores = Runtime.getRuntime().availableProcessors();
+        int numCores = NettyRuntime.availableProcessors();
         EpollEventLoopGroup group = new EpollEventLoopGroup(numCores);
         try {
             Bootstrap bs = new Bootstrap().group(group)
