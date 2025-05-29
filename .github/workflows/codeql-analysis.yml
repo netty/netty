@@ -63,10 +63,10 @@ jobs:
       continue-on-error: true
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ matrix.language }} ${{ hashFiles('**/pom.xml') }}
+        key: cache-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
-          ${{ runner.os }}-maven-${{ matrix.language }}
-          ${{ runner.os }}-maven-
+          cache-maven-${{ hashFiles('**/pom.xml') }}
+          cache-maven-
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
