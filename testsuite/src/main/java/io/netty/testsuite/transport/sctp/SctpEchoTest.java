@@ -35,6 +35,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.TestInfo;
 
+import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -172,7 +173,7 @@ public class SctpEchoTest extends AbstractSctpTest {
             }
 
             if (channel.parent() != null) {
-                channel.writeAndFlush(Unpooled.wrappedBuffer(actual));
+                channel.writeAndFlush(randomBufferType(channel.alloc(), actual, 0, actual.length));
             }
 
             counter += actual.length;

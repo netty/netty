@@ -39,9 +39,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static io.netty.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_CLIENT;
-import static io.netty.channel.epoll.Native.IS_SUPPORTING_TCP_FASTOPEN_SERVER;
-
 class EpollSocketTestPermutation extends SocketTestPermutation {
 
     static final EpollSocketTestPermutation INSTANCE = new EpollSocketTestPermutation();
@@ -80,7 +77,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                                             .channel(EpollServerSocketChannel.class);
             }
         });
-        if (IS_SUPPORTING_TCP_FASTOPEN_SERVER) {
+        if (Epoll.isTcpFastOpenServerSideAvailable()) {
             toReturn.add(new BootstrapFactory<ServerBootstrap>() {
                 @Override
                 public ServerBootstrap newInstance() {
@@ -127,7 +124,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
     public List<BootstrapFactory<Bootstrap>> clientSocketWithFastOpen() {
         List<BootstrapFactory<Bootstrap>> factories = clientSocket();
 
-        if (IS_SUPPORTING_TCP_FASTOPEN_CLIENT) {
+        if (Epoll.isTcpFastOpenClientSideAvailable()) {
             int insertIndex = factories.size() - 1; // Keep NIO fixture last.
             factories.add(insertIndex, new BootstrapFactory<Bootstrap>() {
                 @Override
