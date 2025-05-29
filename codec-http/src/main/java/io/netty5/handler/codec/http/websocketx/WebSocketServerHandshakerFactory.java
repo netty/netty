@@ -152,7 +152,7 @@ public class WebSocketServerHandshakerFactory {
      */
     public static WebSocketServerHandshaker resolveHandshaker(HttpRequest req, String webSocketURL, String subprotocols,
                                                               WebSocketDecoderConfig decoderConfig) {
-        ObjectUtil.checkNotNull(decoderConfig, "decoderConfig");
+        Objects.requireNonNull(decoderConfig, "decoderConfig");
         return resolveHandshaker0(req, webSocketURL, subprotocols, decoderConfig);
     }
 
