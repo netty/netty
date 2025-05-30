@@ -116,6 +116,7 @@ public abstract class WebSocketServerHandshaker {
     /**
      * Returns the URL of the web socket
      */
+    @Deprecated
     public String uri() {
         return uri;
     }
