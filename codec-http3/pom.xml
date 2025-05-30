@@ -91,7 +91,7 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-native-quic</artifactId>
       <version>${project.version}</version>
-      <classifier>${os.detected.classifier}</classifier>
+      <classifier>${netty.quic.classifier}</classifier>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
