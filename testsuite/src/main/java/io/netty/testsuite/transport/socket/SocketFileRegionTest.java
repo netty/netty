@@ -240,7 +240,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
             assertEquals(cc.voidPromise(), cc.writeAndFlush(region, cc.voidPromise()));
         } else {
             assertNotEquals(cc.voidPromise(), cc.write(
-                    randomBufferType(cc.alloc(), data,0, bufferSize)));
+                    randomBufferType(cc.alloc(), data, 0, bufferSize)));
             assertNotEquals(cc.voidPromise(), cc.write(emptyRegion));
             assertNotEquals(cc.voidPromise(), cc.writeAndFlush(region));
         }
