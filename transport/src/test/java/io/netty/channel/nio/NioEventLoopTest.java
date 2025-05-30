@@ -50,10 +50,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -229,7 +228,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             group.shutdownNow();
             t.join();
             group.terminationFuture().syncUninterruptibly();
-            assertThat(error.get(), instanceOf(RejectedExecutionException.class));
+            assertInstanceOf(RejectedExecutionException.class, error.get());
             error.set(null);
         }
     }

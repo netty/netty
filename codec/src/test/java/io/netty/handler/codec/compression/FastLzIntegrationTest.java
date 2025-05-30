@@ -20,8 +20,6 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 
@@ -87,7 +85,6 @@ public class FastLzIntegrationTest extends AbstractIntegrationTest {
             while ((msg = encoder.readOutbound()) != null) {
                 compressed.addComponent(true, msg);
             }
-            assertThat(compressed, is(notNullValue()));
 
             final byte[] compressedArray = new byte[compressed.readableBytes()];
             compressed.readBytes(compressedArray);

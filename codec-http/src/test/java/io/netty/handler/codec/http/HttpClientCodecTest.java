@@ -42,12 +42,13 @@ import java.util.concurrent.CountDownLatch;
 
 import static io.netty.util.ReferenceCountUtil.release;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -109,7 +110,7 @@ public class HttpClientCodecTest {
         buffer.release();
         assertNull(ch.readInbound());
         ch.writeInbound(Unpooled.copiedBuffer(INCOMPLETE_CHUNKED_RESPONSE, CharsetUtil.ISO_8859_1));
-        assertThat(ch.readInbound(), instanceOf(HttpResponse.class));
+        assertInstanceOf(HttpResponse.class, ch.readInbound());
         ((HttpContent) ch.readInbound()).release(); // Chunk 'first'
         ((HttpContent) ch.readInbound()).release(); // Chunk 'second'
         assertNull(ch.readInbound());
@@ -226,9 +227,9 @@ public class HttpClientCodecTest {
             @Override
             void accept(Object object) {
                 if (parseAfterConnect) {
-                    assertThat("Unexpected response message type.", object, instanceOf(HttpObject.class));
+                    assertInstanceOf(HttpObject.class, object);
                 } else {
-                    assertThat("Unexpected response message type.", object, not(instanceOf(HttpObject.class)));
+                    assertThat(object).isNotInstanceOf(HttpObject.class);
                 }
             }
         };
@@ -301,14 +302,14 @@ public class HttpClientCodecTest {
                 "Channel inbound write failed.");
         Object switchingProtocolsResponse = ch.readInbound();
         assertNotNull(switchingProtocolsResponse, "No response received");
-        assertThat("Response was not decoded", switchingProtocolsResponse, instanceOf(FullHttpResponse.class));
+        assertInstanceOf(FullHttpResponse.class, switchingProtocolsResponse);
         ((FullHttpResponse) switchingProtocolsResponse).release();
 
         assertTrue(ch.writeInbound(Unpooled.copiedBuffer(RESPONSE, CharsetUtil.ISO_8859_1)),
                 "Channel inbound write failed");
         Object finalResponse = ch.readInbound();
         assertNotNull(finalResponse, "No response received");
-        assertThat("Response was not decoded", finalResponse, instanceOf(FullHttpResponse.class));
+        assertInstanceOf(FullHttpResponse.class, finalResponse);
         ((FullHttpResponse) finalResponse).release();
         assertTrue(ch.finishAndReleaseAll(), "Channel finish failed");
     }
@@ -326,15 +327,15 @@ public class HttpClientCodecTest {
         assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data)));
 
         HttpResponse res = ch.readInbound();
-        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.status(), is(HttpResponseStatus.SWITCHING_PROTOCOLS));
+        assertSame(HttpVersion.HTTP_1_1, res.protocolVersion());
+        assertEquals(HttpResponseStatus.SWITCHING_PROTOCOLS, res.status());
         HttpContent content = ch.readInbound();
-        assertThat(content.content().readableBytes(), is(16));
+        assertEquals(16, content.content().readableBytes());
         content.release();
 
-        assertThat(ch.finish(), is(false));
+        assertFalse(ch.finish());
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
     }
 
     @Test
@@ -347,14 +348,14 @@ public class HttpClientCodecTest {
         assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data)));
 
         HttpResponse res = ch.readInbound();
-        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.status(), is(HttpResponseStatus.PROCESSING));
+        assertSame(HttpVersion.HTTP_1_1, res.protocolVersion());
+        assertEquals(HttpResponseStatus.PROCESSING, res.status());
         HttpContent content = ch.readInbound();
         // HTTP 102 is not allowed to have content.
-        assertThat(content.content().readableBytes(), is(0));
+        assertEquals(0, content.content().readableBytes());
         content.release();
 
-        assertThat(ch.finish(), is(false));
+        assertFalse(ch.finish());
     }
 
     @Test
@@ -373,12 +374,12 @@ public class HttpClientCodecTest {
         assertNull(ch.readOutbound());
         assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data)));
         HttpResponse res = ch.readInbound();
-        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.status(), is(HttpResponseStatus.PROCESSING));
+        assertSame(HttpVersion.HTTP_1_1, res.protocolVersion());
+        assertEquals(HttpResponseStatus.PROCESSING, res.status());
         HttpContent content = ch.readInbound();
         // HTTP 102 is not allowed to have content.
-        assertThat(content.content().readableBytes(), is(0));
-        assertThat(content, instanceOf(LastHttpContent.class));
+        assertEquals(0, content.content().readableBytes());
+        assertInstanceOf(LastHttpContent.class, content);
         content.release();
 
         assertTrue(ch.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/")));
@@ -388,15 +389,15 @@ public class HttpClientCodecTest {
         assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(data2)));
 
         res = ch.readInbound();
-        assertThat(res.protocolVersion(), sameInstance(HttpVersion.HTTP_1_1));
-        assertThat(res.status(), is(HttpResponseStatus.OK));
+        assertSame(HttpVersion.HTTP_1_1, res.protocolVersion());
+        assertEquals(HttpResponseStatus.OK, res.status());
         content = ch.readInbound();
         // HTTP 200 has content.
-        assertThat(content.content().readableBytes(), is(8));
-        assertThat(content, instanceOf(LastHttpContent.class));
+        assertEquals(8, content.content().readableBytes());
+        assertInstanceOf(LastHttpContent.class, content);
         content.release();
 
-        assertThat(ch.finish(), is(false));
+        assertFalse(ch.finish());
     }
 
     @Test
@@ -429,11 +430,11 @@ public class HttpClientCodecTest {
         codec.prepareUpgradeFrom(null);
 
         ByteBuf buffer = ch.alloc().buffer();
-        assertThat(buffer.refCnt(), is(1));
+        assertEquals(1, buffer.refCnt());
         assertTrue(ch.writeOutbound(buffer));
         // buffer should pass through unchanged
-        assertThat(ch.<ByteBuf>readOutbound(), sameInstance(buffer));
-        assertThat(buffer.refCnt(), is(1));
+        assertSame(buffer, ch.<ByteBuf>readOutbound());
+        assertEquals(1, buffer.refCnt());
 
         buffer.release();
     }

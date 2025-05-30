@@ -25,8 +25,10 @@ import java.util.IdentityHashMap;
 import java.util.Set;
 
 import static io.netty.resolver.dns.DefaultDnsServerAddressStreamProvider.defaultAddressList;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class DnsServerAddressesTest {
 
@@ -36,13 +38,13 @@ public class DnsServerAddressesTest {
 
     @Test
     public void testDefaultAddresses() {
-        assertThat(defaultAddressList().size(), is(greaterThan(0)));
+        assertThat(defaultAddressList().size()).isGreaterThan(0);
     }
 
     @Test
     public void testSequential() {
         DnsServerAddresses seq = DnsServerAddresses.sequential(ADDR1, ADDR2, ADDR3);
-        assertThat(seq.stream(), is(not(sameInstance(seq.stream()))));
+        assertNotSame(seq.stream(), seq.stream());
 
         for (int j = 0; j < 2; j ++) {
             DnsServerAddressStream i = seq.stream();
@@ -104,8 +106,8 @@ public class DnsServerAddressesTest {
             set.add(i.next());
         }
 
-        assertThat(set.size(), is(3));
-        assertThat(seq.stream(), is(not(sameInstance(seq.stream()))));
+        assertEquals(3, set.size());
+        assertNotSame(seq.stream(), seq.stream());
     }
 
     @Test
@@ -113,7 +115,7 @@ public class DnsServerAddressesTest {
         DnsServerAddresses seq = DnsServerAddresses.singleton(ADDR1);
 
         // Should return the same iterator instance for least possible footprint.
-        assertThat(seq.stream(), is(sameInstance(seq.stream())));
+        assertSame(seq.stream(), seq.stream());
 
         DnsServerAddressStream i = seq.stream();
         assertNext(i, ADDR1);
@@ -122,6 +124,6 @@ public class DnsServerAddressesTest {
     }
 
     private static void assertNext(DnsServerAddressStream i, InetSocketAddress addr) {
-        assertThat(i.next(), is(sameInstance(addr)));
+        assertSame(i.next(), addr);
     }
 }

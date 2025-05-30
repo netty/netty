@@ -25,8 +25,6 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.nio.channels.WritableByteChannel;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -138,7 +136,7 @@ public class HttpResponseEncoderTest {
         // Test writing an empty buffer works when the encoder is at ST_INIT.
         channel.writeOutbound(Unpooled.EMPTY_BUFFER);
         ByteBuf buffer = channel.readOutbound();
-        assertThat(buffer, is(sameInstance(Unpooled.EMPTY_BUFFER)));
+        assertSame(Unpooled.EMPTY_BUFFER, buffer);
 
         // Leave the ST_INIT state.
         HttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
@@ -150,7 +148,7 @@ public class HttpResponseEncoderTest {
         // Test writing an empty buffer works when the encoder is not at ST_INIT.
         channel.writeOutbound(Unpooled.EMPTY_BUFFER);
         buffer = channel.readOutbound();
-        assertThat(buffer, is(sameInstance(Unpooled.EMPTY_BUFFER)));
+        assertSame(Unpooled.EMPTY_BUFFER, buffer);
 
         assertFalse(channel.finish());
     }

@@ -16,14 +16,14 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.UnpooledByteBufAllocator;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 
 import javax.net.ssl.KeyManagerFactory;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -77,8 +77,7 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
         OpenSslCachingX509KeyManagerFactory factory = new OpenSslCachingX509KeyManagerFactory(
                 super.newKeyManagerFactory("SunX509"));
         OpenSslKeyMaterialProvider provider = factory.newProvider(PASSWORD);
-        assertThat(provider,
-                CoreMatchers.<OpenSslKeyMaterialProvider>instanceOf(OpenSslCachingKeyMaterialProvider.class));
+        assertInstanceOf(OpenSslCachingKeyMaterialProvider.class, provider);
     }
 
     @Test
@@ -86,7 +85,6 @@ public class OpenSslCachingKeyMaterialProviderTest extends OpenSslKeyMaterialPro
         OpenSslCachingX509KeyManagerFactory factory = new OpenSslCachingX509KeyManagerFactory(
                 super.newKeyManagerFactory("PKIX"));
         OpenSslKeyMaterialProvider provider = factory.newProvider(PASSWORD);
-        assertThat(provider, CoreMatchers.not(
-                CoreMatchers.<OpenSslKeyMaterialProvider>instanceOf(OpenSslCachingKeyMaterialProvider.class)));
+        assertThat(provider).isNotInstanceOf(OpenSslCachingKeyMaterialProvider.class);
     }
 }

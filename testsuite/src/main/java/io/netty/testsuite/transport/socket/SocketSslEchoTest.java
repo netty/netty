@@ -62,13 +62,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.anyOf;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.sameInstance;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SocketSslEchoTest extends AbstractSocketTest {
 
@@ -342,7 +341,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 clientSslHandler.engine().setEnabledCipherSuites(new String[] { renegotiation.cipherSuite });
                 renegoFuture = clientSslHandler.renegotiate();
                 logStats("CLIENT RENEGOTIATES");
-                assertThat(renegoFuture, is(not(sameInstance(clientHandshakeFuture))));
+                assertNotSame(renegoFuture, clientHandshakeFuture);
             }
         }
 
@@ -399,18 +398,18 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         try {
             switch (renegotiation.type) {
             case SERVER_INITIATED:
-                assertThat(serverSslHandler.engine().getSession().getCipherSuite(), is(renegotiation.cipherSuite));
-                assertThat(serverNegoCounter.get(), is(2));
-                assertThat(clientNegoCounter.get(), anyOf(is(1), is(2)));
+                assertEquals(renegotiation.cipherSuite, serverSslHandler.engine().getSession().getCipherSuite());
+                assertEquals(2, serverNegoCounter.get());
+                assertThat(clientNegoCounter.get()).isIn(1, 2);
                 break;
             case CLIENT_INITIATED:
-                assertThat(serverNegoCounter.get(), anyOf(is(1), is(2)));
-                assertThat(clientSslHandler.engine().getSession().getCipherSuite(), is(renegotiation.cipherSuite));
-                assertThat(clientNegoCounter.get(), is(2));
+                assertThat(serverNegoCounter.get()).isIn(1, 2);
+                assertEquals(renegotiation.cipherSuite, clientSslHandler.engine().getSession().getCipherSuite());
+                assertEquals(2, clientNegoCounter.get());
                 break;
             case NONE:
-                assertThat(serverNegoCounter.get(), is(1));
-                assertThat(clientNegoCounter.get(), is(1));
+                assertEquals(1, serverNegoCounter.get());
+                assertEquals(1, clientNegoCounter.get());
             }
         } finally {
             logStats("STATS");
@@ -582,14 +581,14 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
 
                 Future<Channel> hf = sslHandler.handshakeFuture();
-                assertThat(hf.isDone(), is(true));
+                assertTrue(hf.isDone());
 
                 sslHandler.engine().setEnabledCipherSuites(new String[] { renegotiation.cipherSuite });
                 logStats("SERVER RENEGOTIATES");
                 renegoFuture = sslHandler.renegotiate();
-                assertThat(renegoFuture, is(not(sameInstance(hf))));
-                assertThat(renegoFuture, is(sameInstance(sslHandler.handshakeFuture())));
-                assertThat(renegoFuture.isDone(), is(false));
+                assertNotSame(renegoFuture, hf);
+                assertSame(renegoFuture, sslHandler.handshakeFuture());
+                assertFalse(renegoFuture.isDone());
             }
         }
     }
