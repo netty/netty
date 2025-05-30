@@ -20,7 +20,6 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.EventExecutor;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -41,10 +40,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -170,8 +169,7 @@ public class SingleThreadEventLoopTest {
                 endTime.set(System.nanoTime());
             }
         }, 500, TimeUnit.MILLISECONDS).get();
-        assertThat(endTime.get() - startTime,
-                   is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(500))));
+        assertThat(endTime.get() - startTime).isGreaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(500));
     }
 
     @Test
@@ -217,8 +215,8 @@ public class SingleThreadEventLoopTest {
             }
 
             long timepoint = t - firstTimestamp;
-            assertThat(timepoint, is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(100 * cnt + 80))));
-            assertThat(timepoint, is(lessThan(TimeUnit.MILLISECONDS.toNanos(100 * (cnt + 1) + 20))));
+            assertThat(timepoint).isGreaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(100 * cnt + 80));
+            assertThat(timepoint).isLessThan(TimeUnit.MILLISECONDS.toNanos(100 * (cnt + 1) + 20));
 
             cnt ++;
         }
@@ -271,9 +269,9 @@ public class SingleThreadEventLoopTest {
 
             long diff = t.longValue() - previousTimestamp.longValue();
             if (i == 0) {
-                assertThat(diff, is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(400))));
+                assertThat(diff).isGreaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(400));
             } else {
-                assertThat(diff, is(lessThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(10))));
+                assertThat(diff).isLessThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(10));
             }
             previousTimestamp = t;
             i ++;
@@ -321,8 +319,8 @@ public class SingleThreadEventLoopTest {
                 continue;
             }
 
-            assertThat(t.longValue() - previousTimestamp.longValue(),
-                       is(greaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(150))));
+            assertThat(t.longValue() - previousTimestamp.longValue()).
+                       isGreaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(150));
             previousTimestamp = t;
         }
     }
@@ -391,7 +389,7 @@ public class SingleThreadEventLoopTest {
             ChannelFuture f = loopA.register(new LocalChannel());
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
-            assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
+            assertInstanceOf(RejectedExecutionException.class, f.cause());
             assertFalse(f.channel().isOpen());
         } finally {
             for (Appender<ILoggingEvent> a: appenders) {
@@ -428,7 +426,7 @@ public class SingleThreadEventLoopTest {
             ChannelFuture f = loopA.register(promise);
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
-            assertThat(f.cause(), is(instanceOf(RejectedExecutionException.class)));
+            assertInstanceOf(RejectedExecutionException.class, f.cause());
 
             // Ensure the listener was notified.
             assertFalse(latch.await(1, TimeUnit.SECONDS));
@@ -452,15 +450,15 @@ public class SingleThreadEventLoopTest {
 
         long startTime = System.nanoTime();
 
-        assertThat(loopA.isShuttingDown(), is(true));
-        assertThat(loopA.isShutdown(), is(false));
+        assertTrue(loopA.isShuttingDown());
+        assertFalse(loopA.isShutdown());
 
         while (!loopA.isTerminated()) {
             loopA.awaitTermination(Integer.MAX_VALUE, TimeUnit.SECONDS);
         }
 
-        assertThat(System.nanoTime() - startTime,
-                   is(greaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(1))));
+        assertThat(System.nanoTime() - startTime).
+                   isGreaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(1));
     }
 
     @Test
@@ -484,8 +482,8 @@ public class SingleThreadEventLoopTest {
             // Expected
         }
 
-        assertThat(loopA.isShuttingDown(), is(true));
-        assertThat(loopA.isShutdown(), is(true));
+        assertTrue(loopA.isShuttingDown());
+        assertTrue(loopA.isShutdown());
     }
 
     @Test
@@ -496,10 +494,9 @@ public class SingleThreadEventLoopTest {
         CountingRunnable noopTask = new CountingRunnable();
         loopC.submit(noopTask).sync();
         loopC.iterationEndSignal.take();
-        MatcherAssert.assertThat("Unexpected invocation count for regular task.",
-                                 noopTask.getInvocationCount(), is(1));
-        MatcherAssert.assertThat("Unexpected invocation count for on every eventloop iteration task.",
-                                 onIteration.getInvocationCount(), is(1));
+        assertEquals(1, noopTask.getInvocationCount(), "Unexpected invocation count for regular task.");
+        assertEquals(1, onIteration.getInvocationCount(),
+                "Unexpected invocation count for on every eventloop iteration task.");
     }
 
     @Test
@@ -514,12 +511,11 @@ public class SingleThreadEventLoopTest {
         loopC.submit(noopTask).sync();
 
         loopC.iterationEndSignal.take();
-        MatcherAssert.assertThat("Unexpected invocation count for regular task.",
-                                 noopTask.getInvocationCount(), is(1));
-        MatcherAssert.assertThat("Unexpected invocation count for on every eventloop iteration task.",
-                                 onIteration2.getInvocationCount(), is(1));
-        MatcherAssert.assertThat("Unexpected invocation count for on every eventloop iteration task.",
-                                 onIteration1.getInvocationCount(), is(0));
+        assertEquals(1, noopTask.getInvocationCount(), "Unexpected invocation count for regular task.");
+        assertEquals(1, onIteration2.getInvocationCount(),
+                "Unexpected invocation count for on every eventloop iteration task.");
+        assertEquals(0, onIteration1.getInvocationCount(),
+                "Unexpected invocation count for on every eventloop iteration task.");
     }
 
     private static final class SingleThreadEventLoopA extends SingleThreadEventLoop {

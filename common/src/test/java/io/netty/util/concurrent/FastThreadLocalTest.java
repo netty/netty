@@ -30,12 +30,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.nullValue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,7 +40,7 @@ public class FastThreadLocalTest {
     @BeforeEach
     public void setUp() {
         FastThreadLocal.removeAll();
-        assertThat(FastThreadLocal.size(), is(0));
+        assertEquals(0, FastThreadLocal.size());
     }
 
     @Test
@@ -91,13 +88,13 @@ public class FastThreadLocalTest {
         };
 
         // Initialize a thread-local variable.
-        assertThat(var.get(), is(nullValue()));
-        assertThat(FastThreadLocal.size(), is(1));
+        assertNull(var.get());
+        assertEquals(1, FastThreadLocal.size());
 
         // And then remove it.
         FastThreadLocal.removeAll();
-        assertThat(removed.get(), is(true));
-        assertThat(FastThreadLocal.size(), is(0));
+        assertTrue(removed.get());
+        assertEquals(0, FastThreadLocal.size());
     }
 
     @Test
@@ -281,7 +278,7 @@ public class FastThreadLocalTest {
                 throwable.set(t);
             } finally {
                 // Assert the max index cannot greater than (ARRAY_LIST_CAPACITY_MAX_SIZE - 1).
-                assertThat(throwable.get(), is(instanceOf(IllegalStateException.class)));
+                assertInstanceOf(IllegalStateException.class, throwable.get());
                 // Assert the index was reset to ARRAY_LIST_CAPACITY_MAX_SIZE
                 // after it reaches ARRAY_LIST_CAPACITY_MAX_SIZE.
                 assertEquals(ARRAY_LIST_CAPACITY_MAX_SIZE - 1, InternalThreadLocalMap.lastVariableIndex());
@@ -316,7 +313,7 @@ public class FastThreadLocalTest {
         fastThreadLocalThread.start();
         fastThreadLocalThread.join();
         // assert the expanded size is not overflowed to negative value
-        assertThat(throwable.get(), is(not(instanceOf(NegativeArraySizeException.class))));
+        assertThat(throwable.get()).isNotInstanceOf(NegativeArraySizeException.class);
     }
 
     @Test
@@ -374,6 +371,6 @@ public class FastThreadLocalTest {
         FastThreadLocalThread fastThreadLocalThread = new FastThreadLocalThread(runnable);
         fastThreadLocalThread.start();
         fastThreadLocalThread.join();
-        assertThat(throwable.get(), is(instanceOf(IllegalArgumentException.class)));
+        assertInstanceOf(IllegalArgumentException.class, throwable.get());
     }
 }

@@ -22,8 +22,6 @@ import org.junit.jupiter.api.function.Executable;
 import java.util.List;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -57,10 +55,10 @@ public class HttpHeadersTest {
 
     @Test
     public void testEqualsIgnoreCase() {
-        assertThat(AsciiString.contentEqualsIgnoreCase(null, null), is(true));
-        assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
+        assertTrue(AsciiString.contentEqualsIgnoreCase(null, null));
+        assertFalse(AsciiString.contentEqualsIgnoreCase(null, "foo"));
+        assertFalse(AsciiString.contentEqualsIgnoreCase("bar", null));
+        assertTrue(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"));
     }
 
     @Test

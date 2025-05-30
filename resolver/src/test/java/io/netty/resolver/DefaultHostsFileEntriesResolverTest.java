@@ -31,9 +31,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
@@ -81,7 +80,7 @@ public class DefaultHostsFileEntriesResolverTest {
         DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser, ENTRIES_TTL);
 
         InetAddress address = resolver.address("localhost", ResolvedAddressTypes.IPV4_PREFERRED);
-        assertThat("Should pick an IPv4 address", address, instanceOf(Inet4Address.class));
+        assertInstanceOf(Inet4Address.class, address, "Should pick an IPv4 address");
     }
 
     @Test
@@ -94,7 +93,7 @@ public class DefaultHostsFileEntriesResolverTest {
         DefaultHostsFileEntriesResolver resolver = new DefaultHostsFileEntriesResolver(parser, ENTRIES_TTL);
 
         InetAddress address = resolver.address("localhost", ResolvedAddressTypes.IPV6_PREFERRED);
-        assertThat("Should pick an IPv6 address", address, instanceOf(Inet6Address.class));
+        assertInstanceOf(Inet6Address.class, address, "Should pick an IPv6 address");
     }
 
     @Test
@@ -122,8 +121,8 @@ public class DefaultHostsFileEntriesResolverTest {
         List<InetAddress> addresses = resolver.addresses("localhost", ResolvedAddressTypes.IPV4_PREFERRED);
         assertNotNull(addresses);
         assertEquals(2, addresses.size());
-        assertThat("Should pick an IPv4 address", addresses.get(0), instanceOf(Inet4Address.class));
-        assertThat("Should pick an IPv6 address", addresses.get(1), instanceOf(Inet6Address.class));
+        assertInstanceOf(Inet4Address.class, addresses.get(0), "Should pick an IPv4 address");
+        assertInstanceOf(Inet6Address.class, addresses.get(1), "Should pick an IPv6 address");
     }
 
     @Test
@@ -138,8 +137,8 @@ public class DefaultHostsFileEntriesResolverTest {
         List<InetAddress> addresses = resolver.addresses("localhost", ResolvedAddressTypes.IPV6_PREFERRED);
         assertNotNull(addresses);
         assertEquals(2, addresses.size());
-        assertThat("Should pick an IPv6 address", addresses.get(0), instanceOf(Inet6Address.class));
-        assertThat("Should pick an IPv4 address", addresses.get(1), instanceOf(Inet4Address.class));
+        assertInstanceOf(Inet6Address.class, addresses.get(0), "Should pick an IPv6 address");
+        assertInstanceOf(Inet4Address.class, addresses.get(1), "Should pick an IPv4 address");
     }
 
     @Test

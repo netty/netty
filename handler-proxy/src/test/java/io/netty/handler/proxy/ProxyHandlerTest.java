@@ -65,8 +65,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.Random;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class ProxyHandlerTest {
@@ -593,8 +596,8 @@ public class ProxyHandlerTest {
             for (ChannelHandler h: clientHandlers) {
                 if (h instanceof ProxyHandler) {
                     ProxyHandler ph = (ProxyHandler) h;
-                    assertThat(ph.connectFuture().isDone(), is(true));
-                    assertThat(ph.connectFuture().isSuccess(), is(success));
+                    assertTrue(ph.connectFuture().isDone());
+                    assertEquals(ph.connectFuture().isSuccess(), success);
                 }
             }
         }
@@ -662,10 +665,10 @@ public class ProxyHandlerTest {
 
             assertProxyHandlers(true);
 
-            assertThat(testHandler.received.toArray(), is(new Object[] { "0", "1", "2", "3" }));
-            assertThat(testHandler.exceptions.toArray(), is(EmptyArrays.EMPTY_OBJECTS));
-            assertThat(testHandler.eventCount, is(expectedEventCount));
-            assertThat(finished, is(true));
+            assertArrayEquals(new Object[] { "0", "1", "2", "3" }, testHandler.received.toArray());
+            assertArrayEquals(EmptyArrays.EMPTY_OBJECTS, testHandler.exceptions.toArray());
+            assertEquals(expectedEventCount, testHandler.eventCount);
+            assertTrue(finished);
         }
     }
 
@@ -703,11 +706,11 @@ public class ProxyHandlerTest {
 
             assertProxyHandlers(false);
 
-            assertThat(testHandler.exceptions.size(), is(1));
+            assertEquals(1, testHandler.exceptions.size());
             Throwable e = testHandler.exceptions.poll();
-            assertThat(e, is(instanceOf(ProxyConnectException.class)));
-            assertThat(String.valueOf(e), containsString(expectedMessage));
-            assertThat(finished, is(true));
+            assertInstanceOf(ProxyConnectException.class, e);
+            assertThat(String.valueOf(e)).contains(expectedMessage);
+            assertTrue(finished);
         }
     }
 
@@ -749,11 +752,11 @@ public class ProxyHandlerTest {
 
             assertProxyHandlers(false);
 
-            assertThat(testHandler.exceptions.size(), is(1));
+            assertEquals(1, testHandler.exceptions.size());
             Throwable e = testHandler.exceptions.poll();
-            assertThat(e, is(instanceOf(ProxyConnectException.class)));
-            assertThat(String.valueOf(e), containsString("timeout"));
-            assertThat(finished, is(true));
+            assertInstanceOf(ProxyConnectException.class, e);
+            assertThat(String.valueOf(e)).contains("timeout");
+            assertTrue(finished);
         }
     }
 }
