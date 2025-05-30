@@ -42,10 +42,11 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -99,8 +100,6 @@ public final class PlatformDependent {
     private static final String NORMALIZED_ARCH = normalizeArch(SystemPropertyUtil.get("os.arch", ""));
     private static final String NORMALIZED_OS = normalizeOs(SystemPropertyUtil.get("os.name", ""));
 
-    // keep in sync with maven's pom.xml via os.detection.classifierWithLikes!
-    private static final String[] ALLOWED_LINUX_OS_CLASSIFIERS = {"fedora", "suse", "arch"};
     private static final Set<String> LINUX_OS_CLASSIFIERS;
 
     private static final boolean IS_WINDOWS = isWindows0();
@@ -114,8 +113,6 @@ public final class PlatformDependent {
     private static final long DIRECT_MEMORY_LIMIT;
     private static final Cleaner CLEANER;
     private static final int UNINITIALIZED_ARRAY_ALLOCATION_THRESHOLD;
-    // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
-    private static final String[] OS_RELEASE_FILES = {"/etc/os-release", "/usr/lib/os-release"};
     private static final String LINUX_ID_PREFIX = "ID=";
     private static final String LINUX_ID_LIKE_PREFIX = "ID_LIKE=";
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
@@ -188,51 +185,56 @@ public final class PlatformDependent {
                     "instability.");
         }
 
-        final Set<String> allowedClassifiers = Collections.unmodifiableSet(
-                new HashSet<>(Arrays.asList(ALLOWED_LINUX_OS_CLASSIFIERS)));
         final Set<String> availableClassifiers = new LinkedHashSet<>();
 
-        if (!addPropertyOsClassifiers(allowedClassifiers, availableClassifiers)) {
-            addFilesystemOsClassifiers(allowedClassifiers, availableClassifiers);
+        if (!addPropertyOsClassifiers(availableClassifiers)) {
+            addFilesystemOsClassifiers(availableClassifiers);
         }
         LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
     }
 
-    private static void addFilesystemOsClassifiers(final Set<String> allowedClassifiers,
-                                           final Set<String> availableClassifiers) {
-        for (final String osReleaseFileName : OS_RELEASE_FILES) {
-            final File file = new File(osReleaseFileName);
-            if (file.exists()) {
-                try (BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(
-                                new BoundedInputStream(new FileInputStream(file)), StandardCharsets.UTF_8))) {
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        if (line.startsWith(LINUX_ID_PREFIX)) {
-                            String id = normalizeOsReleaseVariableValue(
-                                    line.substring(LINUX_ID_PREFIX.length()));
-                            addClassifier(allowedClassifiers, availableClassifiers, id);
-                        } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
-                            line = normalizeOsReleaseVariableValue(
-                                    line.substring(LINUX_ID_LIKE_PREFIX.length()));
-                            addClassifier(allowedClassifiers, availableClassifiers, line.split("[ ]+"));
-                        }
-                    }
-                } catch (IOException e) {
-                    logger.debug("Error while reading content of {}", osReleaseFileName, e);
-                }
-
-                // specification states we should only fall back if /etc/os-release does not exist
-                break;
-            }
+    // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
+    static void addFilesystemOsClassifiers(final Set<String> availableClassifiers) {
+        if (processOsReleaseFile("/etc/os-release", availableClassifiers)) {
+            return;
         }
+        processOsReleaseFile("/usr/lib/os-release", availableClassifiers);
+    }
+
+    private static boolean processOsReleaseFile(String osReleaseFileName, Set<String> availableClassifiers) {
+        Path file = Paths.get(osReleaseFileName);
+        Pattern lineSplitPattern = Pattern.compile("[ ]+");
+        if (Files.exists(file)) {
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                    new BoundedInputStream(Files.newInputStream(file)), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    if (line.startsWith(LINUX_ID_PREFIX)) {
+                        String id = normalizeOsReleaseVariableValue(
+                                line.substring(LINUX_ID_PREFIX.length()));
+                        addClassifier(availableClassifiers, id);
+                    } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
+                        line = normalizeOsReleaseVariableValue(
+                                line.substring(LINUX_ID_LIKE_PREFIX.length()));
+                        addClassifier(availableClassifiers, lineSplitPattern.split(line));
+                    }
+                }
+            } catch (SecurityException e) {
+                logger.debug("Unable to read {}", osReleaseFileName, e);
+            } catch (IOException e) {
+                logger.debug("Error while reading content of {}", osReleaseFileName, e);
+            }
+            // specification states we should only fall back if /etc/os-release does not exist
+            return true;
+        }
+        return false;
     }
 
     /**
      * Package private for testing purposes only!
      */
     @VisibleForTesting
-    static boolean addPropertyOsClassifiers(Set<String> allowedClassifiers, Set<String> availableClassifiers) {
+    static boolean addPropertyOsClassifiers(Set<String> availableClassifiers) {
         // empty: -Dio.netty5.osClassifiers (no distro specific classifiers for native libs)
         // single ID: -Dio.netty5.osClassifiers=ubuntu
         // pair ID, ID_LIKE: -Dio.netty5.osClassifiers=ubuntu,debian
@@ -258,7 +260,7 @@ public final class PlatformDependent {
                     osClassifiersPropertyName + " property contains more than 2 classifiers: " + osClassifiers);
         }
         for (String classifier : classifiers) {
-            addClassifier(allowedClassifiers, availableClassifiers, classifier);
+            addClassifier(availableClassifiers, classifier);
         }
         return true;
     }
@@ -1481,15 +1483,25 @@ public final class PlatformDependent {
     /**
      * Adds only those classifier strings to <tt>dest</tt> which are present in <tt>allowed</tt>.
      *
-     * @param allowed          allowed classifiers
      * @param dest             destination set
      * @param maybeClassifiers potential classifiers to add
      */
-    private static void addClassifier(Set<String> allowed, Set<String> dest, String... maybeClassifiers) {
+    private static void addClassifier(Set<String> dest, String... maybeClassifiers) {
         for (String id : maybeClassifiers) {
-            if (allowed.contains(id)) {
+            if (isAllowedClassifier(id)) {
                 dest.add(id);
             }
+        }
+    }
+    // keep in sync with maven's pom.xml via os.detection.classifierWithLikes!
+    private static boolean isAllowedClassifier(String classifier) {
+        switch (classifier) {
+            case "fedora":
+            case "suse":
+            case "arch":
+                return true;
+            default:
+                return false;
         }
     }
 
