@@ -405,7 +405,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             case SERVER_INITIATED:
                 assertEquals(renegotiation.cipherSuite, serverSslHandler.engine().getSession().getCipherSuite());
                 assertEquals(2, serverNegoCounter.get());
-                assertTrue(clientNegoCounter.get() == 1 || clientNegoCounter.get() == 2);
+                assertThat(clientNegoCounter.get()).isIn(1, 2);
                 break;
             case CLIENT_INITIATED:
                 assertThat(serverNegoCounter.get()).isIn(1, 2);
