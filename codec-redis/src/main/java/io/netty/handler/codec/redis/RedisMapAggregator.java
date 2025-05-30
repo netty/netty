@@ -22,29 +22,24 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Deque;
-import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
 
 /**
- * Aggregates {@link RedisMessage} parts into {@link ArrayRedisMessage} or {@link SetRedisMessage}.
+ * Aggregates {@link RedisMessage} parts into {@link MapRedisMessage}.
  * This decoder should be used together with {@link RedisDecoder}.
  */
 @UnstableApi
-public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMessage> {
+public final class RedisMapAggregator extends MessageToMessageDecoder<RedisMessage> {
 
     private final Deque<AggregateState> depths = new ArrayDeque<AggregateState>(4);
 
     @Override
     protected void decode(ChannelHandlerContext ctx, RedisMessage msg, List<Object> out) throws Exception {
-        // only decode Array and Set types
-        if (msg instanceof ArrayHeaderRedisMessage
-                || msg instanceof SetHeaderRedisMessage
-                || msg instanceof PushHeaderRedisMessage) {
-            msg = decodeRedisCollectionHeader((AggregatedHeaderRedisMessage) msg);
+        if (msg instanceof MapHeaderRedisMessage) {
+            msg = decodeRedisMapHeader((AggregatedHeaderRedisMessage) msg);
             if (msg == null) {
                 return;
             }
@@ -54,17 +49,11 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
 
         while (!depths.isEmpty()) {
             AggregateState current = depths.peek();
-            current.children.add(msg);
+            current.add(msg);
 
             // if current aggregation completed, go to parent aggregation.
             if (current.children.size() == current.length) {
-                if (RedisMessageType.ARRAY_HEADER.equals(current.aggregateType)) {
-                    msg = new ArrayRedisMessage((List<RedisMessage>) current.children);
-                } else if (RedisMessageType.SET_HEADER.equals(current.aggregateType)) {
-                    msg = new SetRedisMessage((Set<RedisMessage>) current.children);
-                } else if (RedisMessageType.PUSH.equals(current.aggregateType)) {
-                    msg = new PushRedisMessage((List<RedisMessage>) current.children);
-                }
+                msg = new MapRedisMessage(current.children);
                 depths.pop();
             } else {
                 // not aggregated yet. try next time.
@@ -75,46 +64,49 @@ public final class RedisArrayAggregator extends MessageToMessageDecoder<RedisMes
         out.add(msg);
     }
 
-    private RedisMessage decodeRedisCollectionHeader(AggregatedHeaderRedisMessage header) {
-        // todo use NullRedisMessage replacing *-1 and $-1 ?
+    private RedisMessage decodeRedisMapHeader(AggregatedHeaderRedisMessage header) {
+        // encode to Null types message if map is null or empty
         if (header.isNull()) {
-            return ArrayRedisMessage.NULL_INSTANCE;
-        } else if (header.length() == 0L) {
-            return (header instanceof SetHeaderRedisMessage) ?
-                    SetRedisMessage.EMPTY_INSTANCE : ArrayRedisMessage.EMPTY_INSTANCE;
-        } else if (header.length() > 0L) {
-            // Currently, this codec doesn't support `long` length for arrays because Java's List.size() is int.
+            return NullRedisMessage.INSTANCE;
+        }
+        if (header.length() == 0L) {
+            return MapRedisMessage.EMPTY_INSTANCE;
+        }
+        if (header.length() > 0L) {
+            // Currently, this codec doesn't support `long` length for arrays because Java's Map.size() is int.
             if (header.length() > Integer.MAX_VALUE) {
                 throw new CodecException("this codec doesn't support longer length than " + Integer.MAX_VALUE);
             }
 
             // start aggregating array or set according header type
             depths.push(new AggregateState(header, (int) header.length()));
-            return null;
-        } else {
-            throw new CodecException("bad length: " + header.length());
         }
+        return null;
     }
 
     private static final class AggregateState {
         private final int length;
-        private final Collection<RedisMessage> children;
+        private final Map<RedisMessage, RedisMessage> children;
         private final RedisMessageType aggregateType;
+        private RedisMessage cache;
 
         AggregateState(AggregatedHeaderRedisMessage headerType, int length) {
             this.length = length;
-            if (headerType instanceof ArrayHeaderRedisMessage) {
-                this.children = new ArrayList<RedisMessage>(length);
-                this.aggregateType = RedisMessageType.ARRAY_HEADER;
-            } else if (headerType instanceof SetHeaderRedisMessage) {
-                this.children = new HashSet<RedisMessage>(length);
-                this.aggregateType = RedisMessageType.SET_HEADER;
-            } else if (headerType instanceof PushHeaderRedisMessage) {
-                this.children = new ArrayList<RedisMessage>(length);
-                this.aggregateType = RedisMessageType.PUSH;
+            if (headerType instanceof MapHeaderRedisMessage) {
+                this.children = new HashMap<RedisMessage, RedisMessage>(length);
+                this.aggregateType = RedisMessageType.MAP_HEADER;
             } else {
-                // never going to run here
                 throw new CodecException("bad header type: " + headerType);
+            }
+        }
+
+        // aggregate msg to map key and value
+        void add(RedisMessage msg) {
+            if (cache == null) {
+                cache = msg;
+            } else {
+                children.put(cache, msg);
+                cache = null;
             }
         }
     }

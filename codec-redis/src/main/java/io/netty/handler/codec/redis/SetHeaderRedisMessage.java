@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
@@ -18,18 +18,17 @@ package io.netty.handler.codec.redis;
 import io.netty.util.internal.UnstableApi;
 
 /**
- * Header of Redis Array Message.
+ * Header of Redis Set Message.
  */
 @UnstableApi
-public class ArrayHeaderRedisMessage extends AggregatedHeaderRedisMessage {
+public final class SetHeaderRedisMessage extends AggregatedHeaderRedisMessage {
 
     /**
-     * Creates a {@link ArrayHeaderRedisMessage} for the given {@code length}.
+     * Creates a {@link SetHeaderRedisMessage} for the given {@code length}.
      *
      * @param length
      */
-    public ArrayHeaderRedisMessage(long length) {
+    public SetHeaderRedisMessage(long length) {
         super(length);
     }
-
 }

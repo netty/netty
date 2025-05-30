@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2021 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License, version 2.0 (the
  * "License"); you may not use this file except in compliance with the License. You may obtain a
@@ -17,19 +17,32 @@ package io.netty.handler.codec.redis;
 
 import io.netty.util.internal.UnstableApi;
 
-/**
- * Header of Redis Array Message.
- */
-@UnstableApi
-public class ArrayHeaderRedisMessage extends AggregatedHeaderRedisMessage {
+import java.util.Collections;
+import java.util.List;
 
-    /**
-     * Creates a {@link ArrayHeaderRedisMessage} for the given {@code length}.
-     *
-     * @param length
-     */
-    public ArrayHeaderRedisMessage(long length) {
-        super(length);
+@UnstableApi
+public final class PushRedisMessage extends AbstractCollectionRedisMessage {
+
+    private PushRedisMessage() {
+        super(Collections.<RedisMessage>emptySet());
     }
 
+    /**
+     * Creates a {@link PushRedisMessage} for the given {@code content}.
+     *
+     * @param children the children.
+     */
+    public PushRedisMessage(List<RedisMessage> children) {
+        super(children);
+    }
+
+    /**
+     * Get children of this Set. It can be null or empty.
+     *
+     * @return List of {@link RedisMessage}s.
+     */
+    @Override
+    public List<RedisMessage> children() {
+        return (List<RedisMessage>) children;
+    }
 }

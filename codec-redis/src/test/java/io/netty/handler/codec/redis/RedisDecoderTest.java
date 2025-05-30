@@ -27,15 +27,16 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
-import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
+import static io.netty.handler.codec.redis.RedisCodecTestUtil.byteBufOf;
+import static io.netty.handler.codec.redis.RedisCodecTestUtil.bytesOf;
 import static org.hamcrest.CoreMatchers.*;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Verifies the correct functionality of the {@link RedisDecoder} and {@link RedisArrayAggregator}.
@@ -53,7 +54,8 @@ public class RedisDecoderTest {
         return new EmbeddedChannel(
                 new RedisDecoder(decodeInlineCommands),
                 new RedisBulkStringAggregator(),
-                new RedisArrayAggregator());
+                new RedisArrayAggregator(),
+                new RedisMapAggregator());
     }
 
     @AfterEach
@@ -339,4 +341,260 @@ public class RedisDecoderTest {
         assertNotEquals(FullBulkStringRedisMessage.EMPTY_INSTANCE, FullBulkStringRedisMessage.NULL_INSTANCE);
         assertNotEquals(FullBulkStringRedisMessage.NULL_INSTANCE, FullBulkStringRedisMessage.EMPTY_INSTANCE);
     }
+
+    @Test
+    public void shouldDecodeNull() {
+        assertFalse(channel.writeInbound(byteBufOf("_")));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        RedisMessage msg = channel.readInbound();
+
+        assertTrue(msg instanceof NullRedisMessage);
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldDecodeBoolean() {
+        assertFalse(channel.writeInbound(byteBufOf("#")));
+        assertFalse(channel.writeInbound(byteBufOf("t")));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        assertTrue(channel.writeInbound(byteBufOf("#f\r\n")));
+
+        BooleanRedisMessage msgTrue = channel.readInbound();
+        assertTrue(msgTrue.value());
+        ReferenceCountUtil.release(msgTrue);
+
+        BooleanRedisMessage msgFalse = channel.readInbound();
+        assertFalse(msgFalse.value());
+        ReferenceCountUtil.release(msgFalse);
+    }
+
+    @Test
+    public void shouldDecodeDouble() {
+        assertFalse(channel.writeInbound(byteBufOf(",")));
+        assertFalse(channel.writeInbound(byteBufOf("1.23")));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        DoubleRedisMessage msg = channel.readInbound();
+        assertThat(msg.value(), is(1.23d));
+
+        assertTrue(channel.writeInbound(byteBufOf(",-1.23\r\n")));
+
+        msg = channel.readInbound();
+        assertThat(msg.value(), is(-1.23d));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldDecodeInfinityDouble() {
+        assertFalse(channel.writeInbound(byteBufOf(",inf")));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+        assertTrue(channel.writeInbound(byteBufOf(",-inf\r\n")));
+
+        DoubleRedisMessage msg = channel.readInbound();
+        assertThat(msg.value(), is(Double.MAX_VALUE));
+
+        msg = channel.readInbound();
+        assertThat(msg.value(), is(Double.MIN_VALUE));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldErrorOnDecodeDoubleOnNotValidRepresentation() {
+        assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                assertFalse(channel.writeInbound(byteBufOf(",-1.23a")));
+                assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+                BigNumberRedisMessage msg = channel.readInbound();
+                ReferenceCountUtil.release(msg);
+            }
+        });
+    }
+
+    @Test
+    public void shouldDecodeBigNumber() {
+        assertFalse(channel.writeInbound(byteBufOf("(3492890328409238509324850943850943825024385")));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        BigNumberRedisMessage msg = channel.readInbound();
+        assertThat(msg.value(), is("3492890328409238509324850943850943825024385"));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldErrorOnDecodeBigNumberOnNotValidRepresentation() {
+        assertThrows(DecoderException.class, new Executable() {
+            @Override
+            public void execute() {
+                assertFalse(channel.writeInbound(byteBufOf("(3492890328409238509324850943850943825024385")));
+                assertFalse(channel.writeInbound(byteBufOf("Error")));
+                assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+                BigNumberRedisMessage msg = channel.readInbound();
+                ReferenceCountUtil.release(msg);
+            }
+        });
+    }
+
+    @Test
+    public void shouldDecodeBulkErrorString() {
+        String buf1 = "bulk\nst";
+        String buf2 = "ring\ntest\n1234";
+        byte[] content = bytesOf(buf1 + buf2);
+        assertFalse(channel.writeInbound(byteBufOf("!")));
+        assertFalse(channel.writeInbound(byteBufOf(Integer.toString(content.length))));
+        assertFalse(channel.writeInbound(byteBufOf("\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf(buf1)));
+        assertFalse(channel.writeInbound(byteBufOf(buf2)));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        FullBulkErrorStringRedisMessage msg = channel.readInbound();
+
+        assertThat(bytesOf(msg.content()), is(content));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldDecodeBulkVerbatimString() {
+        String buf1 = "txt:bulk\nst";
+        String buf2 = "ring\ntest\n1234";
+        byte[] content = bytesOf(buf1 + buf2);
+        assertFalse(channel.writeInbound(byteBufOf("=")));
+        assertFalse(channel.writeInbound(byteBufOf(Integer.toString(content.length))));
+        assertFalse(channel.writeInbound(byteBufOf("\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf(buf1)));
+        assertFalse(channel.writeInbound(byteBufOf(buf2)));
+        assertTrue(channel.writeInbound(byteBufOf("\r\n")));
+
+        FullBulkVerbatimStringRedisMessage msg = channel.readInbound();
+
+        assertThat(bytesOf(msg.content()), is(content));
+        assertThat(msg.format(), is("txt"));
+        assertThat(msg.realContent(), is("bulk\nstring\ntest\n1234"));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldDecodeSet() {
+        assertFalse(channel.writeInbound(byteBufOf("~3\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf(":1234\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf("+sim")));
+        assertFalse(channel.writeInbound(byteBufOf("ple\r\n-err")));
+        assertTrue(channel.writeInbound(byteBufOf("or\r\n")));
+
+        SetRedisMessage msg = channel.readInbound();
+        Set<RedisMessage> children = msg.children();
+
+        assertThat(children.size(), is(equalTo(3)));
+        for (RedisMessage child : children) {
+            if (child instanceof IntegerRedisMessage) {
+                assertThat(((IntegerRedisMessage) child).value(), is(1234L));
+            } else if (child instanceof SimpleStringRedisMessage) {
+                assertThat(((SimpleStringRedisMessage) child).content(), is("simple"));
+            } else if (child instanceof ErrorRedisMessage) {
+                assertThat(((ErrorRedisMessage) child).content(), is("error"));
+            } else {
+                fail("Unexpected types");
+            }
+        }
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldDecodeEmptySet() {
+        assertTrue(channel.writeInbound(byteBufOf("~0\r\n")));
+
+        RedisMessage msg = channel.readInbound();
+
+        assertTrue(msg instanceof SetRedisMessage);
+        assertThat(((SetRedisMessage) msg).children().size(), is(0));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldDecodeMap() {
+        assertFalse(channel.writeInbound(byteBufOf("%2\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf("+first\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf(":1\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf("+second\r\n-err")));
+        assertTrue(channel.writeInbound(byteBufOf("or\r\n")));
+
+        MapRedisMessage msg = channel.readInbound();
+        Map<RedisMessage, RedisMessage> children = msg.children();
+
+        assertThat(children.size(), is(equalTo(2)));
+
+        for (Map.Entry<RedisMessage, RedisMessage> messageEntry : children.entrySet()) {
+            assertThat(messageEntry.getKey(), instanceOf(SimpleStringRedisMessage.class));
+            String key = ((SimpleStringRedisMessage) messageEntry.getKey()).content();
+            if ("first".equals(key)) {
+                assertThat(messageEntry.getValue(), instanceOf(IntegerRedisMessage.class));
+                assertThat(((IntegerRedisMessage) messageEntry.getValue()).value(), is(1L));
+            } else if ("second".equals(key)) {
+                assertThat(messageEntry.getValue(), instanceOf(ErrorRedisMessage.class));
+                assertThat(((ErrorRedisMessage) messageEntry.getValue()).content(), is("error"));
+            } else {
+                fail("Unexpected key");
+            }
+        }
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldDecodeEmptyMap() {
+        assertTrue(channel.writeInbound(byteBufOf("%0\r\n")));
+
+        RedisMessage msg = channel.readInbound();
+
+        assertTrue(msg instanceof MapRedisMessage);
+        assertThat(((MapRedisMessage) msg).children().size(), is(0));
+
+        ReferenceCountUtil.release(msg);
+    }
+
+    @Test
+    public void shouldNotBeDecodedMapOnNotEnoughMessage() {
+        assertFalse(channel.writeInbound(byteBufOf("%2\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf("+first\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf(":1\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf("+second\r\n")));
+
+        MapRedisMessage msg = channel.readInbound();
+
+        assertThat(msg, is(nullValue()));
+    }
+
+    @Test
+    public void shouldDecodePush() throws Exception {
+        assertFalse(channel.writeInbound(byteBufOf(">3\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf(":1234\r\n")));
+        assertFalse(channel.writeInbound(byteBufOf("+sim")));
+        assertFalse(channel.writeInbound(byteBufOf("ple\r\n-err")));
+        assertTrue(channel.writeInbound(byteBufOf("or\r\n")));
+
+        PushRedisMessage msg = channel.readInbound();
+        List<RedisMessage> children = msg.children();
+
+        assertThat(msg.children().size(), is(equalTo(3)));
+
+        assertThat(children.get(0), instanceOf(IntegerRedisMessage.class));
+        assertThat(((IntegerRedisMessage) children.get(0)).value(), is(1234L));
+        assertThat(children.get(1), instanceOf(SimpleStringRedisMessage.class));
+        assertThat(((SimpleStringRedisMessage) children.get(1)).content(), is("simple"));
+        assertThat(children.get(2), instanceOf(ErrorRedisMessage.class));
+        assertThat(((ErrorRedisMessage) children.get(2)).content(), is("error"));
+
+        ReferenceCountUtil.release(msg);
+    }
+
 }
