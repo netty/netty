@@ -164,7 +164,7 @@ public class SocketFixedLengthEchoTest extends AbstractSocketTest {
             assertEquals(1024, msg.readableBytes());
 
             byte[] actual = new byte[msg.readableBytes()];
-            msg.getBytes(0, actual);
+            msg.getBytes(msg.readerIndex(), actual);
 
             int lastIdx = counter;
             for (int i = 0; i < actual.length; i ++) {
