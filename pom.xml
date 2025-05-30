@@ -1803,14 +1803,6 @@
            <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
         </configuration>
-        <dependencies>
-          <!-- Needed for TimedOutTestsListener -->
-          <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>netty-build-common</artifactId>
-            <version>${netty.build.version}</version>
-          </dependency>
-        </dependencies>
       </plugin>
       <!-- always produce osgi bundles -->
       <plugin>
@@ -2076,6 +2068,14 @@
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
           <version>2.22.2</version>
+          <dependencies>
+            <!-- Needed for TimedOutTestsListener -->
+            <dependency>
+              <groupId>${project.groupId}</groupId>
+              <artifactId>netty-build-common</artifactId>
+              <version>${netty.build.version}</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
