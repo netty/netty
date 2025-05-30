@@ -202,9 +202,10 @@ public class OioSctpChannel extends AbstractOioMessageChannel
             boolean useInputCopy = false;
             int javaVersion = PlatformDependent.javaVersion();
             if (javaVersion >= 22 && javaVersion < 25 && data.isDirect()) {
-                // Work-around for https://bugs.openjdk.org/browse/JDK-8357268
+                // On Java 22 through 24, we need to avoid using ByteBuffer instances that are
+                // backed by MemorySegments, because of https://bugs.openjdk.org/browse/JDK-8357268
                 if (inputCopy == null || inputCopy.capacity() < data.remaining()) {
-                    inputCopy = ByteBuffer.allocate(data.remaining());
+                    inputCopy = ByteBuffer.allocateDirect(data.remaining());
                 }
                 inputCopy.clear();
                 inputCopy.limit(data.remaining());
@@ -269,6 +270,10 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 int javaVersion = PlatformDependent.javaVersion();
                 if (javaVersion >= 22 && javaVersion < 25 && data.isDirect() ||
                         !data.isDirect() || data.nioBufferCount() != 1) {
+                    // Ensure that we only use a single, direct ByteBuffer when doing SCTP IO.
+                    // If the ByteBuf is composite, or is on-heap, we do a copy.
+                    // On Java 22 through 24, we additionally need to avoid using ByteBuffer instances that are
+                    // backed by MemorySegments, because of https://bugs.openjdk.org/browse/JDK-8357268
                     if (outputCopy == null || outputCopy.capacity() < dataLen) {
                         outputCopy = ByteBuffer.allocateDirect(dataLen);
                     }
