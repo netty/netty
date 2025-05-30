@@ -107,7 +107,7 @@ public class ByteBufDerivationTest {
         assertEquals(buf.maxCapacity(), ro.maxCapacity());
 
         ro.setIndex(2, 6);
-        assertEquals(1, 1, buf.readerIndex());
+        assertEquals(1, buf.readerIndex());
     }
 
     @Test
