@@ -17,7 +17,6 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.util.AsciiString;
 
-import static io.netty5.util.internal.MathUtil.findNextPositivePowerOfTwo;
 import static io.netty5.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 
 /**
@@ -85,37 +84,24 @@ public class HttpMethod implements Comparable<HttpMethod> {
      */
     public static final HttpMethod CONNECT = new HttpMethod("CONNECT");
 
-    private static final EnumNameMap<HttpMethod> methodMap;
-
-    static {
-        methodMap = new EnumNameMap<>(
-                new EnumNameMap.Node<>(OPTIONS.toString(), OPTIONS),
-                new EnumNameMap.Node<>(GET.toString(), GET),
-                new EnumNameMap.Node<>(HEAD.toString(), HEAD),
-                new EnumNameMap.Node<>(POST.toString(), POST),
-                new EnumNameMap.Node<>(PUT.toString(), PUT),
-                new EnumNameMap.Node<>(PATCH.toString(), PATCH),
-                new EnumNameMap.Node<>(DELETE.toString(), DELETE),
-                new EnumNameMap.Node<>(TRACE.toString(), TRACE),
-                new EnumNameMap.Node<>(CONNECT.toString(), CONNECT));
-    }
-
     /**
      * Returns the {@link HttpMethod} represented by the specified name.
      * If the specified name is a standard HTTP method name, a cached instance
      * will be returned.  Otherwise, a new instance will be returned.
      */
     public static HttpMethod valueOf(String name) {
-        // fast-path
-        if (name == GET.name()) {
-            return GET;
+        switch (name) {
+            case "OPTIONS": return HttpMethod.OPTIONS;
+            case "GET":     return HttpMethod.GET;
+            case "HEAD":    return HttpMethod.HEAD;
+            case "POST":    return HttpMethod.POST;
+            case "PUT":     return HttpMethod.PUT;
+            case "PATCH":   return HttpMethod.PATCH;
+            case "DELETE":  return HttpMethod.DELETE;
+            case "TRACE":   return HttpMethod.TRACE;
+            case "CONNECT": return HttpMethod.CONNECT;
+            default:        return new HttpMethod(name);
         }
-        if (name == POST.name()) {
-            return POST;
-        }
-        // general lookup
-        HttpMethod result = methodMap.get(name);
-        return result != null ? result : new HttpMethod(name);
     }
 
     private final AsciiString name;
@@ -180,49 +166,5 @@ public class HttpMethod implements Comparable<HttpMethod> {
             return 0;
         }
         return name().compareTo(o.name());
-    }
-
-    private static final class EnumNameMap<T> {
-        private final Node<T>[] values;
-        private final int valuesMask;
-
-        @SuppressWarnings("unchecked")
-        @SafeVarargs
-        EnumNameMap(Node<T>... nodes) {
-            values = (Node<T>[]) new Node[findNextPositivePowerOfTwo(nodes.length)];
-            valuesMask = values.length - 1;
-            for (Node<T> node : nodes) {
-                int i = hashCode(node.key) & valuesMask;
-                if (values[i] != null) {
-                    throw new IllegalArgumentException("index " + i + " collision between values: [" +
-                            values[i].key + ", " + node.key + ']');
-                }
-                values[i] = node;
-            }
-        }
-
-        T get(String name) {
-            Node<T> node = values[hashCode(name) & valuesMask];
-            return node == null || !node.key.equals(name) ? null : node.value;
-        }
-
-        private static int hashCode(String name) {
-            // This hash code needs to produce a unique index in the "values" array for each HttpMethod. If new
-            // HttpMethods are added this algorithm will need to be adjusted. The constructor will "fail fast" if there
-            // are duplicates detected.
-            // For example with the current set of HttpMethods it just so happens that the String hash code value
-            // shifted right by 6 bits modulo 16 is unique relative to all other HttpMethod values.
-            return name.hashCode() >>> 6;
-        }
-
-        private static final class Node<T> {
-            final String key;
-            final T value;
-
-            Node(String key, T value) {
-                this.key = key;
-                this.value = value;
-            }
-        }
     }
 }
