@@ -21,9 +21,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLException;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 public class OpenSslRenegotiateTest extends RenegotiateTest {
 
@@ -40,6 +38,6 @@ public class OpenSslRenegotiateTest extends RenegotiateTest {
     protected void verifyResult(AtomicReference<Throwable> error) throws Throwable {
         Throwable cause = error.get();
         // Renegotiation is not supported by the OpenSslEngine.
-        assertThat(cause, is(instanceOf(SSLException.class)));
+        assertInstanceOf(SSLException.class, cause);
     }
 }

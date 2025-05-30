@@ -21,10 +21,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static io.netty.buffer.Unpooled.*;
-import static org.hamcrest.core.Is.*;
-import static org.hamcrest.core.IsNull.*;
-import static org.hamcrest.MatcherAssert.assertThat;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ProtobufVarint32FrameDecoderTest {
@@ -40,15 +40,15 @@ public class ProtobufVarint32FrameDecoderTest {
     public void testTinyDecode() {
         byte[] b = { 4, 1, 1, 1, 1 };
         assertFalse(ch.writeInbound(wrappedBuffer(b, 0, 1)));
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.writeInbound(wrappedBuffer(b, 1, 2)));
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertTrue(ch.writeInbound(wrappedBuffer(b, 3, b.length - 3)));
 
         ByteBuf expected = wrappedBuffer(new byte[] { 1, 1, 1, 1 });
         ByteBuf actual = ch.readInbound();
 
-        assertThat(expected, is(actual));
+        assertEquals(expected, actual);
         assertFalse(ch.finish());
 
         expected.release();
@@ -64,16 +64,16 @@ public class ProtobufVarint32FrameDecoderTest {
         b[0] = -2;
         b[1] = 15;
         assertFalse(ch.writeInbound(wrappedBuffer(b, 0, 1)));
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.writeInbound(wrappedBuffer(b, 1, 127)));
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.writeInbound(wrappedBuffer(b, 127, 600)));
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertTrue(ch.writeInbound(wrappedBuffer(b, 727, b.length - 727)));
 
         ByteBuf expected = wrappedBuffer(b, 2, b.length - 2);
         ByteBuf actual = ch.readInbound();
-        assertThat(expected, is(actual));
+        assertEquals(expected, actual);
         assertFalse(ch.finish());
 
         expected.release();

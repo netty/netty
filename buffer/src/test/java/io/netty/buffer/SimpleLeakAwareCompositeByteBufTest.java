@@ -17,7 +17,7 @@ package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
 import io.netty.util.ResourceLeakTracker;
-import org.hamcrest.CoreMatchers;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,8 +25,8 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -138,9 +138,9 @@ public class SimpleLeakAwareCompositeByteBufTest extends WrappedCompositeByteBuf
     @Test
     public void forEachByteUnderLeakDetectionShouldNotThrowException() {
         CompositeByteBuf buf = (CompositeByteBuf) newBuffer(8);
-        assertThat(buf, CoreMatchers.instanceOf(SimpleLeakAwareCompositeByteBuf.class));
+        assertInstanceOf(SimpleLeakAwareCompositeByteBuf.class, buf);
         CompositeByteBuf comp = (CompositeByteBuf) newBuffer(8);
-        assertThat(comp, CoreMatchers.instanceOf(SimpleLeakAwareCompositeByteBuf.class));
+        assertInstanceOf(SimpleLeakAwareCompositeByteBuf.class, comp);
 
         ByteBuf inner = comp.alloc().directBuffer(1).writeByte(0);
         comp.addComponent(true, inner);

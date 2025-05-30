@@ -33,8 +33,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.buffer.Unpooled.*;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -297,20 +296,20 @@ public class ChannelOutboundBufferTest {
         ch.write(buffer().writeZero(128));
         // Ensure exceeding the low watermark does not make channel unwritable.
         ch.write(buffer().writeZero(2));
-        assertThat(buf.toString(), is(""));
+        assertEquals("", buf.toString());
 
         ch.unsafe().outboundBuffer().addFlush();
 
         // Ensure exceeding the high watermark makes channel unwritable.
         ch.write(buffer().writeZero(127));
-        assertThat(buf.toString(), is("false "));
+        assertEquals("false ", buf.toString());
 
         // Ensure going down to the low watermark makes channel writable again by flushing the first write.
-        assertThat(ch.unsafe().outboundBuffer().remove(), is(true));
-        assertThat(ch.unsafe().outboundBuffer().remove(), is(true));
-        assertThat(ch.unsafe().outboundBuffer().totalPendingWriteBytes(),
-                is(127L + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD));
-        assertThat(buf.toString(), is("false true "));
+        assertTrue(ch.unsafe().outboundBuffer().remove());
+        assertTrue(ch.unsafe().outboundBuffer().remove());
+        assertEquals(127L + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD,
+                ch.unsafe().outboundBuffer().totalPendingWriteBytes());
+        assertEquals("false true ", buf.toString());
 
         safeClose(ch);
     }
@@ -333,18 +332,18 @@ public class ChannelOutboundBufferTest {
 
         // Ensure that the default value of a user-defined writability flag is true.
         for (int i = 1; i <= 30; i ++) {
-            assertThat(cob.getUserDefinedWritability(i), is(true));
+            assertTrue(cob.getUserDefinedWritability(i));
         }
 
         // Ensure that setting a user-defined writability flag to false affects channel.isWritable();
         cob.setUserDefinedWritability(1, false);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false "));
+        assertEquals("false ", buf.toString());
 
         // Ensure that setting a user-defined writability flag to true affects channel.isWritable();
         cob.setUserDefinedWritability(1, true);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false true "));
+        assertEquals("false true ", buf.toString());
 
         safeClose(ch);
     }
@@ -368,23 +367,23 @@ public class ChannelOutboundBufferTest {
         // Ensure that setting a user-defined writability flag to false affects channel.isWritable()
         cob.setUserDefinedWritability(1, false);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false "));
+        assertEquals("false ", buf.toString());
 
         // Ensure that setting another user-defined writability flag to false does not trigger
         // channelWritabilityChanged.
         cob.setUserDefinedWritability(2, false);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false "));
+        assertEquals("false ", buf.toString());
 
         // Ensure that setting only one user-defined writability flag to true does not affect channel.isWritable()
         cob.setUserDefinedWritability(1, true);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false "));
+        assertEquals("false ", buf.toString());
 
         // Ensure that setting all user-defined writability flags to true affects channel.isWritable()
         cob.setUserDefinedWritability(2, true);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false true "));
+        assertEquals("false true ", buf.toString());
 
         safeClose(ch);
     }
@@ -407,23 +406,23 @@ public class ChannelOutboundBufferTest {
 
         // Trigger channelWritabilityChanged() by writing a lot.
         ch.write(buffer().writeZero(257));
-        assertThat(buf.toString(), is("false "));
+        assertEquals("false ", buf.toString());
 
         // Ensure that setting a user-defined writability flag to false does not trigger channelWritabilityChanged()
         cob.setUserDefinedWritability(1, false);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false "));
+        assertEquals("false ", buf.toString());
 
         // Ensure reducing the totalPendingWriteBytes down to zero does not trigger channelWritabilityChanged()
         // because of the user-defined writability flag.
         ch.flush();
-        assertThat(cob.totalPendingWriteBytes(), is(0L));
-        assertThat(buf.toString(), is("false "));
+        assertEquals(0L, cob.totalPendingWriteBytes());
+        assertEquals("false ", buf.toString());
 
         // Ensure that setting the user-defined writability flag to true triggers channelWritabilityChanged()
         cob.setUserDefinedWritability(1, true);
         ch.runPendingTasks();
-        assertThat(buf.toString(), is("false true "));
+        assertEquals("false true ", buf.toString());
 
         safeClose(ch);
     }

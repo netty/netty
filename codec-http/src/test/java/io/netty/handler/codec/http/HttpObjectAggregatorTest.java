@@ -35,12 +35,10 @@ import java.nio.channels.ClosedChannelException;
 import java.util.List;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -172,7 +170,7 @@ public class HttpObjectAggregatorTest {
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
-        assertThat(response, instanceOf(LastHttpContent.class));
+        assertInstanceOf(LastHttpContent.class, response);
         ReferenceCountUtil.release(response);
 
         assertTrue(embedder.isOpen());
@@ -219,7 +217,7 @@ public class HttpObjectAggregatorTest {
         assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         assertEquals("0", response.headers().get(HttpHeaderNames.CONTENT_LENGTH));
 
-        assertThat(response, instanceOf(LastHttpContent.class));
+        assertInstanceOf(LastHttpContent.class, response);
         ReferenceCountUtil.release(response);
 
         if (serverShouldCloseConnection(message, response)) {
@@ -369,7 +367,7 @@ public class HttpObjectAggregatorTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpRequestDecoder(), new HttpObjectAggregator(1024 * 1024));
         ch.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.0 with extra\r\n", CharsetUtil.UTF_8));
         Object inbound = ch.readInbound();
-        assertThat(inbound, is(instanceOf(FullHttpRequest.class)));
+        assertInstanceOf(FullHttpRequest.class, inbound);
         assertTrue(((DecoderResultProvider) inbound).decoderResult().isFailure());
         assertNull(ch.readInbound());
         ch.finish();
@@ -380,7 +378,7 @@ public class HttpObjectAggregatorTest {
         EmbeddedChannel ch = new EmbeddedChannel(new HttpResponseDecoder(), new HttpObjectAggregator(1024 * 1024));
         ch.writeInbound(Unpooled.copiedBuffer("HTTP/1.0 BAD_CODE Bad Server\r\n", CharsetUtil.UTF_8));
         Object inbound = ch.readInbound();
-        assertThat(inbound, is(instanceOf(FullHttpResponse.class)));
+        assertInstanceOf(FullHttpResponse.class, inbound);
         assertTrue(((DecoderResultProvider) inbound).decoderResult().isFailure());
         assertNull(ch.readInbound());
         ch.finish();
@@ -470,9 +468,9 @@ public class HttpObjectAggregatorTest {
             assertTrue(embedder.writeInbound(Unpooled.copiedBuffer("GET / HTTP/1.1\r\n\r\n", CharsetUtil.US_ASCII)));
 
             final FullHttpRequest request = embedder.readInbound();
-            assertThat(request.method(), is(HttpMethod.GET));
-            assertThat(request.uri(), is("/"));
-            assertThat(request.content().readableBytes(), is(0));
+            assertEquals(HttpMethod.GET, request.method());
+            assertEquals("/", request.uri());
+            assertEquals(0, request.content().readableBytes());
             request.release();
         }
 
@@ -517,9 +515,9 @@ public class HttpObjectAggregatorTest {
         embedder.writeInbound(Unpooled.copiedBuffer("GET /max-upload-size HTTP/1.1\r\n\r\n", CharsetUtil.US_ASCII));
 
         FullHttpRequest request = embedder.readInbound();
-        assertThat(request.method(), is(HttpMethod.GET));
-        assertThat(request.uri(), is("/max-upload-size"));
-        assertThat(request.content().readableBytes(), is(0));
+        assertEquals(HttpMethod.GET, request.method());
+        assertEquals("/max-upload-size", request.uri());
+        assertEquals(0, request.content().readableBytes());
         request.release();
 
         assertFalse(embedder.finish());
