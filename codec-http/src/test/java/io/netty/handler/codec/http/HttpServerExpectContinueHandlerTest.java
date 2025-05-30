@@ -19,8 +19,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -42,8 +41,8 @@ public class HttpServerExpectContinueHandlerTest {
         channel.writeInbound(request);
         HttpResponse response = channel.readOutbound();
 
-        assertThat(response.status(), is(HttpResponseStatus.CONTINUE));
-        assertThat(response.headers().get("foo"), is("bar"));
+        assertEquals(HttpResponseStatus.CONTINUE, response.status());
+        assertEquals("bar", response.headers().get("foo"));
         ReferenceCountUtil.release(response);
 
         HttpRequest processedRequest = channel.readInbound();
@@ -75,7 +74,7 @@ public class HttpServerExpectContinueHandlerTest {
         channel.writeInbound(request);
         HttpResponse response = channel.readOutbound();
 
-        assertThat(response.status(), is(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE));
+        assertEquals(HttpResponseStatus.REQUEST_ENTITY_TOO_LARGE, response.status());
         ReferenceCountUtil.release(response);
 
         // request was swallowed
