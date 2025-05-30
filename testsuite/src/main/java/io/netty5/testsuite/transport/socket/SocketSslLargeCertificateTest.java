@@ -26,8 +26,6 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioServerSocketChannel;
 import io.netty5.channel.socket.nio.NioSocketChannel;
-import io.netty5.handler.logging.LogLevel;
-import io.netty5.handler.logging.LoggingHandler;
 import io.netty5.handler.ssl.ClientAuth;
 import io.netty5.handler.ssl.OpenSsl;
 import io.netty5.handler.ssl.OpenSslContextOption;
@@ -37,7 +35,7 @@ import io.netty5.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty5.handler.ssl.SslProvider;
 import io.netty5.pkitesting.CertificateBuilder;
 import io.netty5.pkitesting.X509Bundle;
-import io.netty5.util.ReferenceCountUtil;
+import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.FutureListener;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
@@ -202,7 +200,7 @@ public class SocketSslLargeCertificateTest {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                 receivedRead = true;
-                                ReferenceCountUtil.release(msg);
+                                Resource.dispose(msg);
                             }
 
                             @Override
