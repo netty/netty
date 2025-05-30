@@ -19,8 +19,7 @@ package io.netty.util.concurrent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
@@ -84,7 +83,7 @@ public class PromiseAggregatorTest {
         when(p2.isSuccess()).thenReturn(true);
         when(p.setSuccess(null)).thenReturn(p);
 
-        assertThat(a.add(p1, null, p2), is(a));
+        assertEquals(a, a.add(p1, null, p2));
         a.operationComplete(p1);
         a.operationComplete(p2);
 

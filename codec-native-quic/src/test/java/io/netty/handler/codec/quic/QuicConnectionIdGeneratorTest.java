@@ -20,8 +20,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.ByteBuffer;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -33,8 +32,8 @@ public class QuicConnectionIdGeneratorTest extends AbstractQuicTest {
         QuicConnectionIdGenerator idGenerator = QuicConnectionIdGenerator.randomGenerator();
         ByteBuffer id = idGenerator.newId(Quiche.QUICHE_MAX_CONN_ID_LEN);
         ByteBuffer id2 = idGenerator.newId(Quiche.QUICHE_MAX_CONN_ID_LEN);
-        assertThat(id.remaining(), greaterThan(0));
-        assertThat(id2.remaining(), greaterThan(0));
+        assertThat(id.remaining()).isGreaterThan(0);
+        assertThat(id2.remaining()).isGreaterThan(0);
         assertNotEquals(id, id2);
 
         id = idGenerator.newId(10);

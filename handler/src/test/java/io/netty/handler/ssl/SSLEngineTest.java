@@ -57,7 +57,6 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.conscrypt.OpenSSLProvider;
-import org.hamcrest.Matcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -133,10 +132,7 @@ import javax.net.ssl.X509TrustManager;
 import javax.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.SslUtils.*;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -3363,15 +3359,14 @@ public abstract class SSLEngineTest {
                         assertEquals(Boolean.TRUE, clientEngine.getSession().getValue(key));
                     }
 
-                    Matcher<Long> creationTimeMatcher;
                     if (clientSessionReused == SessionReusedState.REUSED) {
                         // If we know for sure it was reused so the accessedTime needs to be larger.
-                        creationTimeMatcher = greaterThan(clientEngine.getSession().getCreationTime());
+                        assertThat(clientEngine.getSession().getLastAccessedTime())
+                                .isGreaterThan(clientEngine.getSession().getCreationTime());
                     } else {
-                        creationTimeMatcher = greaterThanOrEqualTo(clientEngine.getSession().getCreationTime());
+                        assertThat(clientEngine.getSession().getLastAccessedTime())
+                                .isGreaterThanOrEqualTo(clientEngine.getSession().getCreationTime());
                     }
-                    assertThat(clientEngine.getSession().getLastAccessedTime(),
-                            is(creationTimeMatcher));
                 }
             } else {
                 // Ensure we sleep 1ms in between as getLastAccessedTime() abd getCreationTime() are in milliseconds.

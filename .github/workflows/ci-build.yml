@@ -60,10 +60,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-${{ matrix.setup }}-
-            ${{ runner.os }}-maven-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}
@@ -73,9 +73,6 @@ jobs:
 
       - name: Checking for test failures
         run: ./.github/scripts/check_build_result.sh build.output
-
-      - name: Checking bom dependency versions
-        run: ./.github/scripts/check_bom_dependencies.sh
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms

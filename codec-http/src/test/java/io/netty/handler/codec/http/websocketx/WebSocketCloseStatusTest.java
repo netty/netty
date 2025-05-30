@@ -19,11 +19,10 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import org.assertj.core.api.ThrowableAssert;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -73,12 +72,11 @@ public class WebSocketCloseStatusTest {
 
     @Test
     public void testNaturalOrder() {
-        assertThat(PROTOCOL_ERROR, Matchers.greaterThan(NORMAL_CLOSURE));
-        assertThat(PROTOCOL_ERROR, Matchers.greaterThan(valueOf(1001)));
-        assertThat(PROTOCOL_ERROR, Matchers.comparesEqualTo(PROTOCOL_ERROR));
-        assertThat(PROTOCOL_ERROR, Matchers.comparesEqualTo(valueOf(1002)));
-        assertThat(PROTOCOL_ERROR, Matchers.lessThan(INVALID_MESSAGE_TYPE));
-        assertThat(PROTOCOL_ERROR, Matchers.lessThan(valueOf(1007)));
+        assertThat(PROTOCOL_ERROR).isGreaterThan(NORMAL_CLOSURE);
+        assertThat(PROTOCOL_ERROR).isGreaterThan(valueOf(1001));
+        assertEquals(PROTOCOL_ERROR, valueOf(1002));
+        assertThat(PROTOCOL_ERROR).isLessThan(INVALID_MESSAGE_TYPE);
+        assertThat(PROTOCOL_ERROR).isLessThan(valueOf(1007));
     }
 
     @Test

@@ -18,7 +18,6 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -28,7 +27,6 @@ import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.internal.PlatformDependent;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -41,9 +39,9 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -163,7 +161,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         FileRegion region = new DefaultFileRegion(
                 new RandomAccessFile(file, "r").getChannel(), 0, data.length + 1024);
 
-        assertThat(cc.writeAndFlush(region).await().cause(), CoreMatchers.<Throwable>instanceOf(IOException.class));
+        assertInstanceOf(IOException.class, cc.writeAndFlush(region).await().cause());
         cc.close().sync();
         sc.close().sync();
     }
@@ -236,11 +234,13 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         // See https://github.com/netty/netty/issues/2769
         //     https://github.com/netty/netty/issues/2964
         if (voidPromise) {
-            assertEquals(cc.voidPromise(), cc.write(Unpooled.wrappedBuffer(data, 0, bufferSize), cc.voidPromise()));
+            assertEquals(cc.voidPromise(), cc.write(
+                    randomBufferType(cc.alloc(), data, 0, bufferSize), cc.voidPromise()));
             assertEquals(cc.voidPromise(), cc.write(emptyRegion, cc.voidPromise()));
             assertEquals(cc.voidPromise(), cc.writeAndFlush(region, cc.voidPromise()));
         } else {
-            assertNotEquals(cc.voidPromise(), cc.write(Unpooled.wrappedBuffer(data, 0, bufferSize)));
+            assertNotEquals(cc.voidPromise(), cc.write(
+                    randomBufferType(cc.alloc(), data, 0, bufferSize)));
             assertNotEquals(cc.voidPromise(), cc.write(emptyRegion));
             assertNotEquals(cc.voidPromise(), cc.writeAndFlush(region));
         }
@@ -266,7 +266,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         // Make sure we did not receive more than we expected.
-        assertThat(sh.counter, is(data.length));
+        assertEquals(data.length, sh.counter);
     }
 
     private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {
