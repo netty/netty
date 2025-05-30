@@ -17,6 +17,7 @@ package io.netty.channel.unix.tests;
 
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.Socket;
+import io.netty.util.internal.CleanableDirectBuffer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -114,7 +115,8 @@ public abstract class SocketTest<T extends Socket> {
 
     @Test
     public void testRawOpt() throws IOException {
-        ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(4);
+        CleanableDirectBuffer cleanableDirectBuffer = Buffer.allocateDirectBufferWithNativeOrder(4);
+        ByteBuffer buffer = cleanableDirectBuffer.buffer();
         buffer.putInt(1).flip();
         socket.setRawOpt(level(), optname(), buffer);
 
@@ -124,6 +126,7 @@ public abstract class SocketTest<T extends Socket> {
 
         out.flip();
         assertNotEquals(ByteBuffer.allocate(0), out);
+        cleanableDirectBuffer.clean();
     }
 
     protected int level() {
