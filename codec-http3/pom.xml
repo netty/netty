@@ -47,6 +47,7 @@
       <id>x86_64</id>
       <activation>
         <os>
+          <family>linux</family>
           <arch>x86_64</arch>
         </os>
       </activation>
