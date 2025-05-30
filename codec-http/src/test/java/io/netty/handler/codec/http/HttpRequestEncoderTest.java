@@ -30,11 +30,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -149,7 +147,7 @@ public class HttpRequestEncoderTest {
                 channel.writeAndFlush(buf).get();
             }
         });
-        assertThat(e.getCause().getCause(), is(instanceOf(IllegalReferenceCountException.class)));
+        assertInstanceOf(IllegalReferenceCountException.class, e.getCause().getCause());
 
         channel.finishAndReleaseAll();
     }

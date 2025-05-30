@@ -50,10 +50,9 @@ import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_REMOTE;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_LOCAL;
 import static io.netty.handler.codec.http2.Http2TestUtil.newVoidPromise;
 import static io.netty.util.CharsetUtil.UTF_8;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -834,7 +833,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         encoder.writeData(ctx, STREAM_ID, data, 0, false, promise);
         assertTrue(promise.isDone());
         assertFalse(promise.isSuccess());
-        assertThat(promise.cause(), instanceOf(IllegalArgumentException.class));
+        assertInstanceOf(IllegalArgumentException.class, promise.cause());
         verify(data).release();
     }
 
@@ -846,7 +845,7 @@ public class DefaultHttp2ConnectionEncoderTest {
         encoder.writeData(ctx, STREAM_ID, data, 0, false, promise);
         assertTrue(promise.isDone());
         assertFalse(promise.isSuccess());
-        assertThat(promise.cause(), instanceOf(IllegalStateException.class));
+        assertInstanceOf(IllegalStateException.class, promise.cause());
         verify(data).release();
     }
 

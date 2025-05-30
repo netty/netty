@@ -37,8 +37,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class XmlFrameDecoderTest {
@@ -208,7 +207,7 @@ public class XmlFrameDecoderTest {
         try {
             List<Object> expectedList = new ArrayList<Object>();
             Collections.addAll(expectedList, expected);
-            assertThat(actual, is(expectedList));
+            assertEquals(expectedList, actual);
         } finally {
             ch.finish();
         }

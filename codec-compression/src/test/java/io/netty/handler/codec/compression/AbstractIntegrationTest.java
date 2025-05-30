@@ -27,8 +27,6 @@ import org.junit.jupiter.api.Test;
 import java.util.Arrays;
 import java.util.Random;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -166,7 +164,6 @@ public abstract class AbstractIntegrationTest {
             while ((msg = encoder.readOutbound()) != null) {
                 compressed.addComponent(true, msg);
             }
-            assertThat(compressed, is(notNullValue()));
 
             decoder.writeInbound(compressed.retain());
             assertFalse(compressed.isReadable());

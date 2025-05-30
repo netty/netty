@@ -17,7 +17,6 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.EmptyArrays;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -37,7 +36,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -312,7 +311,7 @@ public class EnhancedX509ExtendedTrustManagerTest {
         CertificateException exception = assertThrows(CertificateException.class, executable);
         // We should wrap the original cause with our own.
         assertInstanceOf(CertificateException.class, exception.getCause());
-        assertThat(exception.getMessage(), Matchers.containsString("some.netty.io"));
+        assertThat(exception.getMessage()).contains("some.netty.io");
     }
 
     @ParameterizedTest
@@ -321,6 +320,6 @@ public class EnhancedX509ExtendedTrustManagerTest {
         CertificateException exception = assertThrows(CertificateException.class, executable);
         // We should not wrap the original cause with our own.
         assertNull(exception.getCause());
-        assertThat(exception.getMessage(), Matchers.not(Matchers.containsString("some.netty.io")));
+        assertNull(exception.getMessage());
     }
 }

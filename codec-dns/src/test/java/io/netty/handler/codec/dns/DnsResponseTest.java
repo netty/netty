@@ -26,9 +26,10 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.net.InetSocketAddress;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class DnsResponseTest {
@@ -78,16 +79,16 @@ public class DnsResponseTest {
             ByteBuf packet = embedder.alloc().buffer(512).writeBytes(p);
             embedder.writeInbound(new DatagramPacket(packet, null, new InetSocketAddress(0)));
             AddressedEnvelope<DnsResponse, InetSocketAddress> envelope = embedder.readInbound();
-            assertThat(envelope, is(instanceOf(DatagramDnsResponse.class)));
+            assertInstanceOf(DatagramDnsResponse.class, envelope);
             DnsResponse response = envelope.content();
-            assertThat(response, is(sameInstance((Object) envelope)));
+            assertSame(envelope, response);
 
             ByteBuf raw = Unpooled.wrappedBuffer(p);
-            assertThat(response.id(), is(raw.getUnsignedShort(0)));
-            assertThat(response.count(DnsSection.QUESTION), is(raw.getUnsignedShort(4)));
-            assertThat(response.count(DnsSection.ANSWER), is(raw.getUnsignedShort(6)));
-            assertThat(response.count(DnsSection.AUTHORITY), is(raw.getUnsignedShort(8)));
-            assertThat(response.count(DnsSection.ADDITIONAL), is(raw.getUnsignedShort(10)));
+            assertEquals(raw.getUnsignedShort(0), response.id());
+            assertEquals(raw.getUnsignedShort(4), response.count(DnsSection.QUESTION));
+            assertEquals(raw.getUnsignedShort(6), response.count(DnsSection.ANSWER));
+            assertEquals(raw.getUnsignedShort(8), response.count(DnsSection.AUTHORITY));
+            assertEquals(raw.getUnsignedShort(10), response.count(DnsSection.ADDITIONAL));
 
             envelope.release();
         }

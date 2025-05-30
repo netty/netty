@@ -50,11 +50,7 @@ import static io.netty.handler.codec.http2.Http2Stream.State.OPEN;
 import static io.netty.handler.codec.http2.Http2Stream.State.RESERVED_REMOTE;
 import static io.netty.util.CharsetUtil.UTF_8;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.not;
-
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -329,7 +325,7 @@ public class DefaultHttp2ConnectionDecoderTest {
                 try {
                     decode().onDataRead(ctx, STREAM_ID, data, padding, true);
                 } catch (Http2Exception ex) {
-                    assertThat(ex, not(instanceOf(Http2Exception.StreamException.class)));
+                    assertThat(ex).isNotInstanceOf(Http2Exception.StreamException.class);
                     throw ex;
                 }
             }
@@ -602,7 +598,7 @@ public class DefaultHttp2ConnectionDecoderTest {
             }
         });
         assertEquals(PROTOCOL_ERROR, ex.error());
-        assertThat(ex.getMessage(), containsString(pseudoHeader));
+        assertThat(ex.getMessage()).contains(pseudoHeader);
     }
 
     @Test

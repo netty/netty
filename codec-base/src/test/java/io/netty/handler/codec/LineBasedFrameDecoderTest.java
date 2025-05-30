@@ -22,10 +22,9 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
 import static io.netty.buffer.Unpooled.*;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.CoreMatchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -78,13 +77,13 @@ public class LineBasedFrameDecoderTest {
             ch.writeInbound(copiedBuffer("12345678901234567890\r\nfirst\nsecond", CharsetUtil.US_ASCII));
             fail();
         } catch (Exception e) {
-            assertThat(e, is(instanceOf(TooLongFrameException.class)));
+            assertInstanceOf(TooLongFrameException.class, e);
         }
 
         ByteBuf buf = ch.readInbound();
         ByteBuf buf2 = copiedBuffer("first\n", CharsetUtil.US_ASCII);
-        assertThat(buf, is(buf2));
-        assertThat(ch.finish(), is(false));
+        assertEquals(buf2, buf);
+        assertFalse(ch.finish());
 
         buf.release();
         buf2.release();
@@ -99,13 +98,13 @@ public class LineBasedFrameDecoderTest {
             ch.writeInbound(copiedBuffer("890\r\nfirst\r\n", CharsetUtil.US_ASCII));
             fail();
         } catch (Exception e) {
-            assertThat(e, is(instanceOf(TooLongFrameException.class)));
+            assertInstanceOf(TooLongFrameException.class, e);
         }
 
         ByteBuf buf = ch.readInbound();
         ByteBuf buf2 = copiedBuffer("first\r\n", CharsetUtil.US_ASCII);
-        assertThat(buf, is(buf2));
-        assertThat(ch.finish(), is(false));
+        assertEquals(buf2, buf);
+        assertFalse(ch.finish());
 
         buf.release();
         buf2.release();
@@ -119,16 +118,16 @@ public class LineBasedFrameDecoderTest {
             ch.writeInbound(copiedBuffer("12345678901234567", CharsetUtil.US_ASCII));
             fail();
         } catch (Exception e) {
-            assertThat(e, is(instanceOf(TooLongFrameException.class)));
+            assertInstanceOf(TooLongFrameException.class, e);
         }
 
-        assertThat(ch.writeInbound(copiedBuffer("890", CharsetUtil.US_ASCII)), is(false));
-        assertThat(ch.writeInbound(copiedBuffer("123\r\nfirst\r\n", CharsetUtil.US_ASCII)), is(true));
+        assertFalse(ch.writeInbound(copiedBuffer("890", CharsetUtil.US_ASCII)));
+        assertTrue(ch.writeInbound(copiedBuffer("123\r\nfirst\r\n", CharsetUtil.US_ASCII)));
 
         ByteBuf buf = ch.readInbound();
         ByteBuf buf2 = copiedBuffer("first\r\n", CharsetUtil.US_ASCII);
-        assertThat(buf, is(buf2));
-        assertThat(ch.finish(), is(false));
+        assertEquals(buf2, buf);
+        assertFalse(ch.finish());
 
         buf.release();
         buf2.release();
