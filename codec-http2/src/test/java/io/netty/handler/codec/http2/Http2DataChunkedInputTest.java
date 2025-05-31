@@ -60,23 +60,15 @@ public class Http2DataChunkedInputTest {
             BYTES[i] = (byte) i;
         }
 
-        FileOutputStream out = null;
         try {
             TMP = PlatformDependent.createTempFile("netty-chunk-", ".tmp", null);
             TMP.deleteOnExit();
-            out = new FileOutputStream(TMP);
-            out.write(BYTES);
-            out.flush();
+            try (FileOutputStream out = new FileOutputStream(TMP)) {
+                out.write(BYTES);
+                out.flush();
+            }
         } catch (IOException e) {
             throw new RuntimeException(e);
-        } finally {
-            if (out != null) {
-                try {
-                    out.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
         }
     }
 

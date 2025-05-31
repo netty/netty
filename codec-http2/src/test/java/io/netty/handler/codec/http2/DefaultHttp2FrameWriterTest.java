@@ -365,14 +365,10 @@ public class DefaultHttp2FrameWriterTest {
         }
 
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        try {
-            outputStream.write(padding);
-            outputStream.write(headerPayload(streamId, headers));
-            outputStream.write(new byte[padding]);
-            return outputStream.toByteArray();
-        } finally {
-            outputStream.close();
-        }
+        outputStream.write(padding);
+        outputStream.write(headerPayload(streamId, headers));
+        outputStream.write(new byte[padding]);
+        return outputStream.toByteArray();
     }
 
     private byte[] headerPayload(int streamId, Http2Headers headers) throws Http2Exception {
@@ -390,17 +386,13 @@ public class DefaultHttp2FrameWriterTest {
     private byte[] buildLargeHeaderPayload(int streamId, Http2Headers headers, byte padding, int maxFrameSize)
             throws Http2Exception, IOException {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        try {
-            outputStream.write(padding);
-            byte[] payload = headerPayload(streamId, headers);
-            int firstPayloadSize = maxFrameSize - (padding + 1); //1 for padding length
-            outputStream.write(payload, 0, firstPayloadSize);
-            outputStream.write(new byte[padding]);
-            outputStream.write(payload, firstPayloadSize, payload.length - firstPayloadSize);
-            return outputStream.toByteArray();
-        } finally {
-            outputStream.close();
-        }
+        outputStream.write(padding);
+        byte[] payload = headerPayload(streamId, headers);
+        int firstPayloadSize = maxFrameSize - (padding + 1); //1 for padding length
+        outputStream.write(payload, 0, firstPayloadSize);
+        outputStream.write(new byte[padding]);
+        outputStream.write(payload, firstPayloadSize, payload.length - firstPayloadSize);
+        return outputStream.toByteArray();
     }
 
     private static Http2Headers dummyHeaders(Http2Headers headers, int times) {

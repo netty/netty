@@ -64,19 +64,13 @@ public class DefaultChannelIdTest {
         ChannelId b;
 
         ByteBuf buf = Unpooled.buffer();
-        ObjectOutputStream out = new ObjectOutputStream(new ByteBufOutputStream(buf));
-        try {
+        try (ObjectOutputStream out = new ObjectOutputStream(new ByteBufOutputStream(buf))) {
             out.writeObject(a);
             out.flush();
-        } finally {
-            out.close();
         }
 
-        ObjectInputStream in = new ObjectInputStream(new ByteBufInputStream(buf, true));
-        try {
+        try (ObjectInputStream in = new ObjectInputStream(new ByteBufInputStream(buf, true))) {
             b = (ChannelId) in.readObject();
-        } finally {
-            in.close();
         }
 
         assertEquals(a, b);

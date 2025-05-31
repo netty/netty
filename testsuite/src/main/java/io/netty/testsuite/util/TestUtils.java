@@ -23,9 +23,8 @@ import org.junit.jupiter.api.TestInfo;
 import org.tukaani.xz.LZMA2Options;
 import org.tukaani.xz.XZOutputStream;
 
+import javax.management.MBeanServer;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,12 +33,13 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadInfo;
 import java.lang.reflect.Method;
 import java.nio.channels.Channel;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import javax.management.MBeanServer;
 
 public final class TestUtils {
 
@@ -165,11 +165,8 @@ public final class TestUtils {
             long lastLogTime = System.nanoTime();
             long counter = 0;
 
-            InputStream in = null;
-            OutputStream out = null;
-            try {
-                in = new FileInputStream(filename);
-                out = new XZOutputStream(new FileOutputStream(xzFilename), options);
+            try (InputStream in = Files.newInputStream(Paths.get(filename));
+                 OutputStream out = new XZOutputStream(Files.newOutputStream(Paths.get(xzFilename)), options)) {
                 for (;;) {
                     int readBytes = in.read(buf);
                     if (readBytes < 0) {
@@ -185,29 +182,12 @@ public final class TestUtils {
                     long currentTime = System.nanoTime();
                     if (currentTime - lastLogTime > DUMP_PROGRESS_LOGGING_INTERVAL) {
                         logger.info("Compressing the heap dump: {} ({}%)",
-                                    xzFilename, counter * 100 / fileLength);
+                                xzFilename, counter * 100 / fileLength);
                         lastLogTime = currentTime;
                     }
                 }
-                out.close();
-                in.close();
             } catch (Throwable t) {
                 logger.warn("Failed to compress the heap dump: {}", xzFilename, t);
-            } finally {
-                if (in != null) {
-                    try {
-                        in.close();
-                    } catch (IOException ignored) {
-                        // Ignore.
-                    }
-                }
-                if (out != null) {
-                    try {
-                        out.close();
-                    } catch (IOException ignored) {
-                        // Ignore.
-                    }
-                }
             }
 
             // Delete the uncompressed dump in favor of the compressed one.
@@ -238,7 +218,6 @@ public final class TestUtils {
 
     private static void dumpThreads(File file) {
         final String filename = file.toString();
-        OutputStream out = null;
         try {
             logger.info("Dumping threads: {}", filename);
             final StringBuilder buf = new StringBuilder(8192);
@@ -252,18 +231,11 @@ public final class TestUtils {
                 return;
             }
 
-            out = new FileOutputStream(file);
-            out.write(buf.toString().getBytes(CharsetUtil.UTF_8));
+            try (OutputStream out = Files.newOutputStream(file.toPath())) {
+                out.write(buf.toString().getBytes(CharsetUtil.UTF_8));
+            }
         } catch (Exception e) {
             logger.warn("Failed to dump threads: {}", filename, e);
-        } finally {
-            if (out != null) {
-                try {
-                    out.close();
-                } catch (IOException ignored) {
-                    // Ignore.
-                }
-            }
         }
     }
 

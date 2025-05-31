@@ -33,7 +33,6 @@ import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.EncoderException;
-import java.util.concurrent.TimeUnit;
 import net.jpountz.lz4.LZ4BlockInputStream;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.xxhash.XXHashFactory;
@@ -44,9 +43,9 @@ import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.io.InputStream;
 import java.net.InetSocketAddress;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.Checksum;
 
@@ -90,11 +89,8 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
 
     @Override
     protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
-        InputStream is = new ByteBufInputStream(compressed, true);
-        LZ4BlockInputStream lz4Is = null;
         byte[] decompressed = new byte[originalLength];
-        try {
-            lz4Is = new LZ4BlockInputStream(is);
+        try (LZ4BlockInputStream lz4Is = new LZ4BlockInputStream(new ByteBufInputStream(compressed, true))) {
             int remaining = originalLength;
             while (remaining > 0) {
                 int read = lz4Is.read(decompressed, originalLength - remaining, remaining);
@@ -105,12 +101,6 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
                 }
             }
             assertEquals(-1, lz4Is.read());
-        } finally {
-            if (lz4Is != null) {
-                lz4Is.close();
-            } else {
-                is.close();
-            }
         }
 
         return Unpooled.wrappedBuffer(decompressed);

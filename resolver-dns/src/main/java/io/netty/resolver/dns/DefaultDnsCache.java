@@ -273,35 +273,20 @@ public class DefaultDnsCache implements DnsCache {
             copy.setStackTrace(error.getStackTrace());
             return copy;
         }
-        ObjectOutputStream oos = null;
-        ObjectInputStream ois = null;
 
         try {
             // Throwable is Serializable so lets just do a deep copy.
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            oos = new ObjectOutputStream(baos);
-            oos.writeObject(error);
+            try (ObjectOutputStream oos = new ObjectOutputStream(baos)) {
+                oos.writeObject(error);
+            }
 
             ByteArrayInputStream bais = new ByteArrayInputStream(baos.toByteArray());
-            ois = new ObjectInputStream(bais);
-            return (Throwable) ois.readObject();
+            try (ObjectInputStream ois = new ObjectInputStream(bais)) {
+                return (Throwable) ois.readObject();
+            }
         } catch (IOException | ClassNotFoundException e) {
             throw new IllegalStateException(e);
-        } finally {
-            if (oos != null) {
-                try {
-                    oos.close();
-                } catch (IOException ignore) {
-                    // noop
-                }
-            }
-            if (ois != null) {
-                try {
-                    ois.close();
-                } catch (IOException ignore) {
-                    // noop
-                }
-            }
         }
     }
 
