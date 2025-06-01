@@ -29,6 +29,7 @@ public final class IoUring {
     private static final Throwable UNAVAILABILITY_CAUSE;
     private static final boolean IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED;
     private static final boolean IORING_SPLICE_SUPPORTED;
+    private static final boolean IORING_SEND_ZC_SUPPORTED;
     private static final boolean IORING_ACCEPT_NO_WAIT_SUPPORTED;
     private static final boolean IORING_ACCEPT_MULTISHOT_SUPPORTED;
     private static final boolean IORING_RECV_MULTISHOT_SUPPORTED;
@@ -55,6 +56,7 @@ public final class IoUring {
         Throwable cause = null;
         boolean socketNonEmptySupported = false;
         boolean spliceSupported = false;
+        boolean sendZCSupported = false;
         boolean acceptSupportNoWait = false;
         boolean acceptMultishotSupported = false;
         boolean recvsendBundleSupported = false;
@@ -93,6 +95,7 @@ public final class IoUring {
                         socketNonEmptySupported = Native.isCqeFSockNonEmptySupported(ringBuffer.fd());
                         spliceSupported = Native.isSpliceSupported(ringBuffer.fd());
                         recvsendBundleSupported = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
+                        sendZCSupported = Native.isIOUringSupportSendZC(ringBuffer.fd());
                         // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
                         acceptSupportNoWait = recvsendBundleSupported;
                         acceptMultishotSupported = Native.isAcceptMultishotSupported(ringBuffer.fd());
@@ -147,16 +150,20 @@ public final class IoUring {
                         "SETUP_DEFER_TASKRUN_SUPPORTED={}, " +
                         "REGISTER_BUFFER_RING_SUPPORTED={}, " +
                         "REGISTER_BUFFER_RING_INC_SUPPORTED={}" +
+                        "SEND_ZC_SUPPORTED={}" +
                         ")", kernelVersion, socketNonEmptySupported, spliceSupported, acceptSupportNoWait,
                         acceptMultishotSupported, pollAddMultishotSupported, recvMultishotSupported,
                         recvsendBundleSupported, registerIowqWorkersSupported, submitAllSupported,
                         singleIssuerSupported, deferTaskrunSupported,
-                        registerBufferRingSupported, registerBufferRingIncSupported);
+                        registerBufferRingSupported, registerBufferRingIncSupported,
+                        sendZCSupported
+                );
             }
         }
         UNAVAILABILITY_CAUSE = cause;
         IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED = socketNonEmptySupported;
         IORING_SPLICE_SUPPORTED = spliceSupported;
+        IORING_SEND_ZC_SUPPORTED = sendZCSupported;
         IORING_ACCEPT_NO_WAIT_SUPPORTED = acceptSupportNoWait;
         IORING_ACCEPT_MULTISHOT_SUPPORTED = acceptMultishotSupported;
         IORING_RECV_MULTISHOT_SUPPORTED = recvMultishotSupported;
@@ -216,6 +223,14 @@ public final class IoUring {
      */
     public static boolean isSpliceSupported() {
         return IORING_SPLICE_SUPPORTED;
+    }
+
+    /**
+     * Returns {@code true} if the io_uring native transport supports IO_URING_SENDZC
+     * @return {@code true} if the io_uring native transport supports IO_URING_SENDZC, otherwise {@code false}.
+     */
+    public static boolean isIOUringSendZCSupported() {
+        return IORING_SEND_ZC_SUPPORTED;
     }
 
     static boolean isAcceptNoWaitSupported() {

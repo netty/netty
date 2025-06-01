@@ -206,6 +206,7 @@ final class Native {
     static final byte IORING_CQE_F_BUFFER = 1 << 0;
     static final byte IORING_CQE_F_MORE = 1 << 1;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
+    static final byte IORING_CQE_F_NOTIF = 1 << 3;
     static final byte IORING_CQE_F_BUF_MORE = 1 << 4;
 
     static final int IORING_SETUP_CQSIZE = 1 << 3;
@@ -222,6 +223,9 @@ final class Native {
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
     static final short IORING_RECVSEND_BUNDLE = 1 << 4;
     static final short IORING_RECV_MULTISHOT = 1 << 1;
+    static final short IORING_SEND_ZC_REPORT_USAGE = 1 << 3;
+
+    static final int IORING_NOTIF_USAGE_ZC_COPIED = 1 << 31;
 
     static final short IORING_ACCEPT_MULTISHOT = 1 << 0;
     static final short IORING_ACCEPT_DONTWAIT = 1 << 1;
@@ -420,6 +424,11 @@ final class Native {
     static boolean isPollAddMultiShotSupported(int ringfd) {
         // Was added in the same release and we also need this feature to correctly handle edge-triggered mode.
         return isCqeFSockNonEmptySupported(ringfd);
+    }
+
+    static boolean isIOUringSupportSendZC(int ringFd) {
+        // IORING_OP_SEND_ZC Available since 6.0
+        return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SEND_ZC });
     }
 
     /**

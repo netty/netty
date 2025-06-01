@@ -15,6 +15,7 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
@@ -39,6 +40,19 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
     IoUringSocketChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
         super(parent, fd, remote);
         this.config = new IoUringSocketChannelConfig(this);
+    }
+
+    @Override
+    protected Object filterOutboundMessage(Object msg) {
+        Object outboundMessage = super.filterOutboundMessage(msg);
+        if (IoUring.isIOUringSendZCSupported() && msg instanceof ByteBuf) {
+            ByteBuf sendBuffer = (ByteBuf) msg;
+            if (sendBuffer.nioBufferCount() == 1 && config.shouldSendCC(sendBuffer.readableBytes())) {
+                return new IoUringSendZCMessage(sendBuffer);
+            }
+        }
+
+        return outboundMessage;
     }
 
     @Override

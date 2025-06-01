@@ -465,6 +465,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 case Native.IORING_OP_SENDMSG:
                 case Native.IORING_OP_WRITE:
                 case Native.IORING_OP_SPLICE:
+                case Native.IORING_OP_SEND_ZC:
                     writeComplete(op, res, flags, data);
                     break;
                 case Native.IORING_OP_POLL_ADD:
@@ -975,7 +976,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 return;
             }
             assert numOutstandingWrites > 0;
-            --numOutstandingWrites;
+            if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
+                --numOutstandingWrites;
+            }
 
             boolean writtenAll = writeComplete0(op, res, flags, data, numOutstandingWrites);
             if (!writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {

@@ -23,7 +23,11 @@ import java.util.Map;
 
 abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
+    static final int DISABLE_SEND_ZC = -1;
+
     private volatile short bufferGroupId = -1;
+
+    private volatile int sendZcThreshold = DISABLE_SEND_ZC;
 
     IoUringStreamChannelConfig(AbstractIoUringChannel channel) {
         super(channel);
@@ -39,6 +43,11 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
         if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
             return (T) Short.valueOf(getBufferGroupId());
         }
+
+        if (option == IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD) {
+            return (T) Integer.valueOf(getSendZcThreshold());
+        }
+
         return super.getOption(option);
     }
 
@@ -48,20 +57,48 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
             setBufferGroupId((Short) value);
             return true;
         }
+
+        if (option == IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD) {
+            setSendZcThreshold((Integer) value);
+            return true;
+        }
+
         return super.setOption(option, value);
     }
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), IoUringChannelOption.IO_URING_BUFFER_GROUP_ID);
+        return getOptions(super.getOptions(),
+                IoUringChannelOption.IO_URING_BUFFER_GROUP_ID,
+                IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD
+        );
     }
 
     short getBufferGroupId() {
         return bufferGroupId;
     }
 
+    int getSendZcThreshold() {
+        return sendZcThreshold;
+    }
+
     IoUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
         this.bufferGroupId = (short) ObjectUtil.checkPositiveOrZero(bufferGroupId, "bufferGroupId");
         return this;
+    }
+
+    IoUringStreamChannelConfig setSendZcThreshold(int sendZcThreshold) {
+        if (sendZcThreshold == DISABLE_SEND_ZC) {
+            this.sendZcThreshold = DISABLE_SEND_ZC;
+        } else {
+            this.sendZcThreshold = ObjectUtil.checkPositiveOrZero(sendZcThreshold, "sendZcThreshold");
+        }
+        return this;
+    }
+
+    boolean shouldSendCC(int waitSend) {
+        // This can reduce one read operation on a volatile field.
+        int threshold = this.getSendZcThreshold();
+        return threshold != DISABLE_SEND_ZC && waitSend >= threshold;
     }
 }

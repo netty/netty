@@ -29,11 +29,14 @@ import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Limits;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.util.ArrayDeque;
+import java.util.Queue;
 
 import static io.netty.channel.unix.Errors.ioResult;
 
@@ -235,6 +238,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         private ByteBuf readBuffer;
 
+        private Queue<IoUringSendZCMessage> zcSendQueue;
+
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
             assert writeId == 0;
@@ -278,6 +283,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     return 0;
                 }
                 ops = fileRegion.splice(fd);
+            } else if (msg instanceof IoUringSendZCMessage) {
+                ByteBuf buf = ((IoUringSendZCMessage) msg).buf;
+                int zcFlags = Native.IORING_SEND_ZC_REPORT_USAGE;
+                long messageAddress =  IoUring.memoryAddress(buf) + buf.readerIndex();
+                int length = buf.readableBytes();
+                ops = IoUringIoOps.newSendZC(fd, messageAddress, length, 0, nextOpsId(), zcFlags);
             } else {
                 ByteBuf buf = (ByteBuf) msg;
                 ops = IoUringIoOps.newWrite(fd, (byte) 0, 0,
@@ -568,8 +579,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         @Override
         boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
-            writeId = 0;
-            writeOpCode = 0;
+            if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
+                writeId = 0;
+                writeOpCode = 0;
+            }
 
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
             Object current = channelOutboundBuffer.current();
@@ -594,7 +607,45 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 return true;
             }
 
+            boolean fallbackToCopy = false;
+            if (IoUring.isIOUringSendZCSupported() && (flags & Native.IORING_CQE_F_NOTIF) != 0) {
+                fallbackToCopy = checkZCReport(res);
+                res &= ~Native.IORING_NOTIF_USAGE_ZC_COPIED;
+            }
             if (res >= 0) {
+                // First CQE with standard res semantics and the IORING_CQE_F_MORE flag set, and
+                if ((flags & Native.IORING_CQE_F_MORE) != 0) {
+                    IoUringSendZCMessage ioUringSendZCMessage = (IoUringSendZCMessage) channelOutboundBuffer.current();
+                    // For TCP, io_uring will try to hide a short send, i.e. retry internally, but it can fail. IOW, in theory can happen but should be rare
+                    ioUringSendZCMessage.handSendResult(res);
+                    // https://github.com/axboe/liburing/issues/801#issuecomment-1462057203
+                    // If we're streaming data, we don't have to wait for the prev notification
+                    // But can push more data using another buffer
+                    if (ioUringSendZCMessage.needRemove()) {
+                        channelOutboundBuffer.remove();
+                        // In a copy mode the kernel will allocate that memory internally and keep it until it gets an ACK
+                        // So we can release the buffer safely
+                        if (fallbackToCopy) {
+                            ioUringSendZCMessage.release();
+                        } else {
+                            if (zcSendQueue == null) {
+                                zcSendQueue = new ArrayDeque<>(4);
+                            }
+                            zcSendQueue.offer(ioUringSendZCMessage);
+                        }
+                    }
+                    return true;
+                }
+
+                // Second CQE with res set to 0 and the IORING_CQE_F_NOTIF flag set.
+                if ((flags & Native.IORING_CQE_F_NOTIF) != 0) {
+                    IoUringSendZCMessage ioUringSendZCMessage = zcSendQueue.poll();
+                    if (ioUringSendZCMessage != null) {
+                        ioUringSendZCMessage.release();
+                    }
+                    return true;
+                }
+
                 channelOutboundBuffer.removeBytes(res);
             } else if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return true;
@@ -613,7 +664,55 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         @Override
         protected void freeResourcesNow(IoRegistration reg) {
             super.freeResourcesNow(reg);
+            if (zcSendQueue != null) {
+                zcSendQueue.forEach(IoUringSendZCMessage::release);
+                zcSendQueue = null;
+            }
             assert readBuffer == null;
+        }
+    }
+
+    private boolean checkZCReport(int res) {
+        /*
+         * IORING_SEND_ZC_REPORT_USAGE
+         * If set, SEND[MSG]_ZC should report the zerocopy usage in cqe.res for the IORING_CQE_F_NOTIF cqe.
+         * 0 is reported if zerocopy was actually possible.
+         * IORING_NOTIF_USAGE_ZC_COPIED if data was copied(at least partially).
+         */
+        if (res == 0) {
+            return false;
+        }
+
+        /*
+         * cqe.res for IORING_CQE_F_NOTIF if IORING_SEND_ZC_REPORT_USAGE was requested
+         *
+         * It should be treated as a flag, all other bits of cqe.res should be treated as reserved!
+         */
+        boolean isCopy = (res & Native.IORING_NOTIF_USAGE_ZC_COPIED) != 0;
+        if (isCopy) {
+            pipeline().fireUserEventTriggered(IoUringSendZCFallbackEvent.INSTANCE);
+        }
+
+        return isCopy;
+    }
+
+    static final class IoUringSendZCMessage {
+        private final ByteBuf buf;
+
+        IoUringSendZCMessage(ByteBuf buf) {
+           this.buf = buf;
+        }
+
+        void handSendResult(int res) {
+            buf.readerIndex(buf.readerIndex() + res);
+        }
+
+        boolean needRemove() {
+            return buf.readableBytes() == 0;
+        }
+
+        void release() {
+            ReferenceCountUtil.safeRelease(buf);
         }
     }
 
