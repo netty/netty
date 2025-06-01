@@ -44,6 +44,7 @@ public class CompatibleMarshallingEncoder extends MessageToByteEncoder<Object> {
      * @param provider  the {@link MarshallerProvider} to use to get the {@link Marshaller} for a {@link Channel}
      */
     public CompatibleMarshallingEncoder(MarshallerProvider provider) {
+        super(Object.class);
         this.provider = provider;
     }
 

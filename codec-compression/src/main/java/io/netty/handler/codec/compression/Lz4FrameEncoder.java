@@ -156,6 +156,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
          */
     public Lz4FrameEncoder(LZ4Factory factory, boolean highCompressor, int blockSize,
                            Checksum checksum, int maxEncodeSize) {
+        super(ByteBuf.class);
         ObjectUtil.checkNotNull(factory, "factory");
         ObjectUtil.checkNotNull(checksum, "checksum");
 

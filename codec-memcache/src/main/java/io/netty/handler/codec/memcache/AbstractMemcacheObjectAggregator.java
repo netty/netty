@@ -47,7 +47,7 @@ public abstract class AbstractMemcacheObjectAggregator<H extends MemcacheMessage
         MessageAggregator<MemcacheObject, H, MemcacheContent, FullMemcacheMessage> {
 
     protected AbstractMemcacheObjectAggregator(int maxContentLength) {
-        super(maxContentLength);
+        super(maxContentLength, MemcacheObject.class);
     }
 
     @Override

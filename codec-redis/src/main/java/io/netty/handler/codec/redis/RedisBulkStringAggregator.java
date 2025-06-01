@@ -47,7 +47,7 @@ public final class RedisBulkStringAggregator extends MessageAggregator<RedisMess
      * Creates a new instance.
      */
     public RedisBulkStringAggregator() {
-        super(RedisConstants.REDIS_MESSAGE_MAX_LENGTH);
+        super(RedisConstants.REDIS_MESSAGE_MAX_LENGTH, RedisMessage.class);
     }
 
     @Override

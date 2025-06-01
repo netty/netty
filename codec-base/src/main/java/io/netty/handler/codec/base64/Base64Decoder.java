@@ -54,6 +54,7 @@ public class Base64Decoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     public Base64Decoder(Base64Dialect dialect) {
+        super(ByteBuf.class);
         this.dialect = ObjectUtil.checkNotNull(dialect, "dialect");
     }
 

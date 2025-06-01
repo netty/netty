@@ -47,6 +47,7 @@ public class RedisEncoder extends MessageToMessageEncoder<RedisMessage> {
      * @param messagePool the predefined message pool.
      */
     public RedisEncoder(RedisMessagePool messagePool) {
+        super(RedisMessage.class);
         this.messagePool = ObjectUtil.checkNotNull(messagePool, "messagePool");
     }
 

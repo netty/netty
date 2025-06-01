@@ -66,6 +66,7 @@ public class CompatibleObjectEncoder extends MessageToByteEncoder<Serializable> 
      *        the long term.
      */
     public CompatibleObjectEncoder(int resetInterval) {
+        super(Serializable.class);
         this.resetInterval = checkPositiveOrZero(resetInterval, "resetInterval");
     }
 
