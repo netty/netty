@@ -236,14 +236,26 @@ public class StreamBufferingEncoder extends DecoratingHttp2ConnectionEncoder {
     }
 
     @Override
+    public Future<Void> writeSettingsAck(ChannelHandlerContext ctx) {
+        final Future<Void> future = super.writeSettingsAck(ctx);
+        // In case autoAckSettings was set to false, decorated DefaultHttp2ConnectionEncoder will dequeue pending
+        // settings and call remoteSettings on its own instance. Therefore, we need to consume potentially updated value
+        // after this method returns.
+        updateMaxConcurrentStreams();
+        return future;
+    }
+
+    @Override
     public void remoteSettings(Http2Settings settings) throws Http2Exception {
         // Need to let the delegate decoder handle the settings first, so that it sees the
         // new setting before we attempt to create any new streams.
         super.remoteSettings(settings);
+        updateMaxConcurrentStreams();
+    }
 
+    private void updateMaxConcurrentStreams() {
         // Get the updated value for SETTINGS_MAX_CONCURRENT_STREAMS.
         maxConcurrentStreams = connection().local().maxActiveStreams();
-
         // Try to create new streams up to the new threshold.
         tryCreatePendingStreams();
     }
