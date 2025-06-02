@@ -368,7 +368,7 @@ public class FixedChannelPoolTest {
 
     @ParameterizedTest
     @ValueSource(booleans = { true, false })
-    public void testChannelProcessingOrder(boolean orderingType) {
+    public void testChannelProcessingOrder(boolean lastInFirstOutOrdering) {
         Tuple t = bootstrap();
 
         // Start server
@@ -376,7 +376,7 @@ public class FixedChannelPoolTest {
 
         FixedChannelPool pool = new FixedChannelPool(t.cb, new TestChannelPoolHandler(),
                 ChannelHealthChecker.ACTIVE, AcquireTimeoutAction.NEW, 500, 1,
-                Integer.MAX_VALUE, false, orderingType);
+                Integer.MAX_VALUE, false, lastInFirstOutOrdering);
 
         // create
         int totalChannels = 5;
@@ -392,7 +392,7 @@ public class FixedChannelPoolTest {
         // test logic
         for (int i = 0; i < totalChannels; i++) {
             Channel channel = pool.acquire().syncUninterruptibly().getNow();
-            if (orderingType) {
+            if (lastInFirstOutOrdering) {
                 assertSame(channel, channels.get(totalChannels - 1 - i));
             } else {
                 assertSame(channel, channels.get(i));
