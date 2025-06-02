@@ -27,6 +27,9 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.pool.FixedChannelPool.AcquireTimeoutAction;
+import io.netty.channel.pool.processingorder.ChannelProcessingOrder;
+import io.netty.channel.pool.processingorder.FifoChannelProcessingOrder;
+import io.netty.channel.pool.processingorder.LifoChannelProcessingOrder;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 
@@ -35,6 +38,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
@@ -42,6 +47,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Stream;
 
 import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
 
@@ -367,8 +373,8 @@ public class FixedChannelPoolTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = { true, false })
-    public void testChannelProcessingOrder(boolean lastInFirstOutOrdering) {
+    @MethodSource("channelProcessingProvider")
+    public void testChannelProcessingOrder(ChannelProcessingOrder channelProcessingOrder) {
         Tuple t = bootstrap();
 
         // Start server
@@ -376,7 +382,7 @@ public class FixedChannelPoolTest {
 
         FixedChannelPool pool = new FixedChannelPool(t.cb, new TestChannelPoolHandler(),
                 ChannelHealthChecker.ACTIVE, AcquireTimeoutAction.NEW, 500, 1,
-                Integer.MAX_VALUE, false, lastInFirstOutOrdering);
+                Integer.MAX_VALUE, false, channelProcessingOrder);
 
         // create
         int totalChannels = 5;
@@ -392,7 +398,7 @@ public class FixedChannelPoolTest {
         // test logic
         for (int i = 0; i < totalChannels; i++) {
             Channel channel = pool.acquire().syncUninterruptibly().getNow();
-            if (lastInFirstOutOrdering) {
+            if (channelProcessingOrder instanceof LifoChannelProcessingOrder) {
                 assertSame(channel, channels.get(totalChannels - 1 - i));
             } else {
                 assertSame(channel, channels.get(i));
@@ -406,6 +412,13 @@ public class FixedChannelPoolTest {
         }
         sc.close().syncUninterruptibly();
         pool.close();
+    }
+
+    private static Stream<Arguments> channelProcessingProvider() {
+        return Stream.of(
+                Arguments.of(new LifoChannelProcessingOrder()),
+                Arguments.of(new FifoChannelProcessingOrder())
+        );
     }
 
     private Tuple bootstrap() {
