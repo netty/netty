@@ -22,5 +22,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
  * Convenient class for <tt>io.netty.handler.codec.http.websocketx.extensions.WebSocketExtension</tt> encoder.
  */
 public abstract class WebSocketExtensionEncoder extends MessageToMessageEncoder<WebSocketFrame> {
-
+    public WebSocketExtensionEncoder() {
+        super(WebSocketFrame.class);
+    }
 }

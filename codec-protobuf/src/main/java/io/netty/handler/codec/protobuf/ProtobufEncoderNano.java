@@ -58,6 +58,10 @@ import io.netty.handler.codec.MessageToMessageEncoder;
  */
 @ChannelHandler.Sharable
 public class ProtobufEncoderNano extends MessageToMessageEncoder<MessageNano> {
+    public ProtobufEncoderNano() {
+        super(MessageNano.class);
+    }
+
     @Override
     protected void encode(
             ChannelHandlerContext ctx, MessageNano msg, List<Object> out) throws Exception {

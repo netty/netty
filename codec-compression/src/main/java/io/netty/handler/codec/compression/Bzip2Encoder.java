@@ -94,6 +94,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
      *        but give better compression ratios. {@code 9} will usually be the best value to use.
      */
     public Bzip2Encoder(final int blockSizeMultiplier) {
+        super(ByteBuf.class);
         if (blockSizeMultiplier < MIN_BLOCK_SIZE || blockSizeMultiplier > MAX_BLOCK_SIZE) {
             throw new IllegalArgumentException(
                     "blockSizeMultiplier: " + blockSizeMultiplier + " (expected: 1-9)");

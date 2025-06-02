@@ -69,6 +69,10 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private EmbeddedChannel encoder;
     private State state = State.AWAIT_HEADERS;
 
+    public HttpContentEncoder() {
+        super(HttpRequest.class, HttpObject.class);
+    }
+
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         return msg instanceof HttpContent || msg instanceof HttpResponse;

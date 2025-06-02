@@ -43,6 +43,7 @@ public final class HAProxyMessageEncoder extends MessageToByteEncoder<HAProxyMes
     public static final HAProxyMessageEncoder INSTANCE = new HAProxyMessageEncoder();
 
     private HAProxyMessageEncoder() {
+        super(HAProxyMessage.class);
     }
 
     @Override

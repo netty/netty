@@ -135,6 +135,7 @@ public class LzmaFrameEncoder extends MessageToByteEncoder<ByteBuf> {
      *        available values [{@value #MIN_FAST_BYTES}, {@value #MAX_FAST_BYTES}].
      */
     public LzmaFrameEncoder(int lc, int lp, int pb, int dictionarySize, boolean endMarkerMode, int numFastBytes) {
+        super(ByteBuf.class);
         if (lc < 0 || lc > 8) {
             throw new IllegalArgumentException("lc: " + lc + " (expected: 0-8)");
         }
