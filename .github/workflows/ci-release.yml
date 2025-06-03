@@ -254,7 +254,7 @@ jobs:
 
       - name: Stage snapshots to local staging directory
         working-directory: ./prepare-release-workspace/
-        run: ./mvnw -B -ntp clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true
+        run: ./mvnw -B -ntp clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -355,7 +355,7 @@ jobs:
 
       - name: Generate netty-bom and netty-all and deploy to local staging.
         working-directory: ./prepare-release-workspace/
-        run: ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -pl bom,all clean package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
+        run: ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -pl bom,all clean package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
 
       # This step takes care of merging all the previous staged repositories in a way that will allow us to deploy
       # all together with one maven command.
