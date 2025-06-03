@@ -34,7 +34,11 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -314,6 +318,96 @@ public class FixedChannelPoolTest {
         pool.close();
     }
 
+    @Test
+    public void testChannelReleaseHealthCheck() {
+        Tuple t = bootstrap();
+
+        // Start server
+        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        ChannelPoolHandler handler = new TestChannelPoolHandler();
+        InnerFixedChannelPool pool = new InnerFixedChannelPool(t.cb, handler, ChannelHealthChecker.ACTIVE,
+                AcquireTimeoutAction.NEW, 500, 1, Integer.MAX_VALUE, true);
+
+        // releaseHealthCheck=true,channel=open,doHealthCheckOnRelease
+        Channel channel = pool.acquire().syncUninterruptibly().getNow();
+        pool.release(channel).syncUninterruptibly().getNow();
+        Channel sameChannel = pool.acquire().syncUninterruptibly().getNow();
+        assertSame(sameChannel, channel);
+
+        // releaseHealthCheck=true,channel=close,doHealthCheckOnRelease
+        sameChannel.close().syncUninterruptibly();
+        pool.release(channel).syncUninterruptibly().getNow();
+        sameChannel = pool.acquire().syncUninterruptibly().getNow();
+        assertNotSame(sameChannel, channel);
+
+        // close all and create a new poll
+        sameChannel.close().syncUninterruptibly();
+        channel.close().syncUninterruptibly();
+        pool.close();
+        pool = new InnerFixedChannelPool(t.cb, handler, ChannelHealthChecker.ACTIVE,
+                AcquireTimeoutAction.NEW, 500, 1, Integer.MAX_VALUE, false);
+
+        // releaseHealthCheck=false,channel=open,releaseAndOffer
+        channel = pool.acquire().syncUninterruptibly().getNow();
+        pool.release(channel).syncUninterruptibly().getNow();
+        sameChannel = pool.acquire().syncUninterruptibly().getNow();
+        assertSame(sameChannel, channel);
+
+        // releaseHealthCheck=false,channel=close,releaseAndOffer
+        sameChannel.close().syncUninterruptibly();
+        pool.release(channel).syncUninterruptibly().getNow();
+        // the acquire will do a heath check.. this is why we call the special method
+        sameChannel = pool.pollChannel();
+        assertSame(sameChannel, channel);
+
+        sc.close().syncUninterruptibly();
+        sameChannel.close().syncUninterruptibly();
+        channel.close().syncUninterruptibly();
+        pool.close();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    public void testChannelProcessingOrder(boolean lastInFirstOutOrdering) {
+        Tuple t = bootstrap();
+
+        // Start server
+        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+
+        FixedChannelPool pool = new FixedChannelPool(t.cb, new TestChannelPoolHandler(),
+                ChannelHealthChecker.ACTIVE, AcquireTimeoutAction.NEW, 500, 1,
+                Integer.MAX_VALUE, false, lastInFirstOutOrdering);
+
+        // create
+        int totalChannels = 5;
+        List<Channel> channels = new ArrayList<>();
+        for (int i = 0; i < totalChannels; i++) {
+            Channel channel = pool.acquire().syncUninterruptibly().getNow();
+            channels.add(channel);
+        }
+        for (int i = 0; i < totalChannels; i++) {
+            pool.release(channels.get(i)).syncUninterruptibly().getNow();
+        }
+
+        // test logic
+        for (int i = 0; i < totalChannels; i++) {
+            Channel channel = pool.acquire().syncUninterruptibly().getNow();
+            if (lastInFirstOutOrdering) {
+                assertSame(channel, channels.get(totalChannels - 1 - i));
+            } else {
+                assertSame(channel, channels.get(i));
+            }
+        }
+
+        // close all
+        for (int i = 0; i < totalChannels; i++) {
+            channels.get(i).close().syncUninterruptibly();
+            pool.release(channels.get(i)).syncUninterruptibly();
+        }
+        sc.close().syncUninterruptibly();
+        pool.close();
+    }
+
     private Tuple bootstrap() {
         LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
@@ -350,6 +444,26 @@ public class FixedChannelPoolTest {
             this.address = address;
             this.cb = cb;
             this.sb = sb;
+        }
+    }
+
+    private static final class InnerFixedChannelPool extends FixedChannelPool {
+
+        InnerFixedChannelPool(Bootstrap bootstrap, ChannelPoolHandler handler, ChannelHealthChecker healthCheck,
+                                     AcquireTimeoutAction action, long acquireTimeoutMillis, int maxConnections,
+                                     int maxPendingAcquires, boolean releaseHealthCheck) {
+            super(bootstrap, handler, healthCheck, action, acquireTimeoutMillis, maxConnections, maxPendingAcquires,
+                    releaseHealthCheck);
+        }
+
+        /**
+         * The acquire always do a health check.
+         * Only for testing purpose.
+         *
+         * @return channel
+         */
+        public Channel pollChannel() {
+            return super.pollChannel();
         }
     }
 }
