@@ -616,14 +616,17 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 // First CQE with standard res semantics and the IORING_CQE_F_MORE flag set, and
                 if ((flags & Native.IORING_CQE_F_MORE) != 0) {
                     IoUringSendZCMessage ioUringSendZCMessage = (IoUringSendZCMessage) channelOutboundBuffer.current();
-                    // For TCP, io_uring will try to hide a short send, i.e. retry internally, but it can fail. IOW, in theory can happen but should be rare
+                    // For TCP, io_uring will try to hide a short send,
+                    // i.e. retry internally, but it can fail.
+                    // IOW, in theory can happen but should be rare
                     ioUringSendZCMessage.handSendResult(res);
                     // https://github.com/axboe/liburing/issues/801#issuecomment-1462057203
                     // If we're streaming data, we don't have to wait for the prev notification
                     // But can push more data using another buffer
                     if (ioUringSendZCMessage.needRemove()) {
                         channelOutboundBuffer.remove();
-                        // In a copy mode the kernel will allocate that memory internally and keep it until it gets an ACK
+                        // In a copy mode the kernel will allocate that memory internally
+                        // and keep it until it gets an ACK
                         // So we can release the buffer safely
                         if (fallbackToCopy) {
                             ioUringSendZCMessage.release();
