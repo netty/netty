@@ -621,7 +621,7 @@ final class AdaptivePoolingAllocator {
         }
 
         private boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf) {
-            recordAllocationSize(buf.length);
+            recordAllocationSize(size);
             int startingCapacity = getStartingCapacity(size, maxCapacity);
             Chunk curr = current;
             if (curr != null) {
