@@ -216,4 +216,4 @@ jobs:
         run: bash ./.github/scripts/local_staging_merge_snapshot.sh ~/local-staging ~/macos-aarch64-java8-local-staging ~/macos-x86_64-java8-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java8-local-staging ~/all-local-staging
 
       - name: Deploy local staged artifacts
-        run: ./mvnw -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$HOME/local-staging  -DserverId=central-portal-snapshots
+        run: ./mvnw -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$HOME/local-staging  -DserverId=central-portal-snapshots -DnexusUrl=https://central.sonatype.com/repository/maven-snapshots
