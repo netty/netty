@@ -1737,6 +1737,23 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
     public abstract CharSequence readCharSequence(int length, Charset charset);
 
     /**
+     * Gets a {@link String} with the given length at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by the given length.
+     *
+     * @param length the length to read
+     * @param charset that should be used
+     * @return the string
+     * @throws IndexOutOfBoundsException
+     *         if {@code length} is greater than {@code this.readableBytes}
+     */
+    public String readString(int length, Charset charset) {
+        int readerIndex = readerIndex();
+        String string = toString(readerIndex, length, charset);
+        readerIndex(readerIndex + length);
+        return string;
+    }
+
+    /**
      * Transfers this buffer's data starting at the current {@code readerIndex}
      * to the specified channel starting at the given file position.
      * This method does not modify the channel's position.

@@ -17,6 +17,7 @@ package io.netty.handler.ssl;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -181,6 +182,26 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
     public void testRSASSAPSS(SSLEngineTestParam param) throws Exception {
         checkShouldUseKeyManagerFactory();
         super.testRSASSAPSS(param);
+    }
+
+    private static boolean isWrappingTrustManagerSupported() {
+        return OpenSslX509TrustManagerWrapper.isWrappingSupported();
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    @EnabledIf("isWrappingTrustManagerSupported")
+    @Override
+    public void testUsingX509TrustManagerVerifiesHostname(SSLEngineTestParam param) throws Exception {
+        super.testUsingX509TrustManagerVerifiesHostname(param);
+    }
+
+    @MethodSource("newTestParams")
+    @ParameterizedTest
+    @EnabledIf("isWrappingTrustManagerSupported")
+    @Override
+    public void testUsingX509TrustManagerVerifiesSNIHostname(SSLEngineTestParam param) throws Exception {
+        super.testUsingX509TrustManagerVerifiesSNIHostname(param);
     }
 
     @Override

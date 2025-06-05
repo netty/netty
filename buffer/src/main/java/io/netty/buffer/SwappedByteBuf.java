@@ -694,6 +694,11 @@ public class SwappedByteBuf extends ByteBuf {
     }
 
     @Override
+    public String readString(int length, Charset charset) {
+        return buf.readString(length, charset);
+    }
+
+    @Override
     public ByteBuf skipBytes(int length) {
         buf.skipBytes(length);
         return this;

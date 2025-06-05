@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,18 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.kqueue;
+package io.netty.channel.uring;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.testsuite.transport.TestsuitePermutation;
 
-public class KQueueRcvAllocatorOverrideSocketSslEchoTest extends KQueueSocketSslEchoTest {
+import java.net.SocketAddress;
+import java.util.List;
+
+public class IoUringDomainSocketEchoTest extends IoUringSocketEchoTest {
     @Override
-    protected void configure(ServerBootstrap bootstrap, Bootstrap bootstrap2, ByteBufAllocator allocator) {
-        super.configure(bootstrap, bootstrap2, allocator);
-        bootstrap.option(KQueueChannelOption.RCV_ALLOC_TRANSPORT_PROVIDES_GUESS, true);
-        bootstrap.childOption(KQueueChannelOption.RCV_ALLOC_TRANSPORT_PROVIDES_GUESS, true);
-        bootstrap2.option(KQueueChannelOption.RCV_ALLOC_TRANSPORT_PROVIDES_GUESS, true);
+    protected SocketAddress newSocketAddress() {
+        return IoUringSocketTestPermutation.newDomainSocketAddress();
+    }
+
+    @Override
+    protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
+        return IoUringSocketTestPermutation.INSTANCE.domainSocket();
     }
 }

@@ -45,14 +45,16 @@ final class OpenSslX509TrustManagerWrapper {
             .getInstance(OpenSslX509TrustManagerWrapper.class);
     private static final TrustManagerWrapper WRAPPER;
 
+    private static final TrustManagerWrapper DEFAULT = new TrustManagerWrapper() {
+        @Override
+        public X509TrustManager wrapIfNeeded(X509TrustManager manager) {
+            return manager;
+        }
+    };
+
     static {
         // By default we will not do any wrapping but just return the passed in manager.
-        TrustManagerWrapper wrapper = new TrustManagerWrapper() {
-            @Override
-            public X509TrustManager wrapIfNeeded(X509TrustManager manager) {
-                return manager;
-            }
-        };
+        TrustManagerWrapper wrapper = DEFAULT;
 
         Throwable cause = null;
         Throwable unsafeCause = PlatformDependent.getUnsafeUnavailabilityCause();
@@ -122,9 +124,7 @@ final class OpenSslX509TrustManagerWrapper {
                                 } while (clazz != null);
                             }
                             throw new NoSuchFieldException();
-                        } catch (NoSuchFieldException e) {
-                            return e;
-                        } catch (SecurityException e) {
+                        } catch (NoSuchFieldException | SecurityException e) {
                             return e;
                         }
                     }
@@ -139,6 +139,10 @@ final class OpenSslX509TrustManagerWrapper {
             LOGGER.debug("Unable to access wrapped TrustManager", cause);
         }
         WRAPPER = wrapper;
+    }
+
+    static boolean isWrappingSupported() {
+        return WRAPPER != DEFAULT;
     }
 
     private OpenSslX509TrustManagerWrapper() { }
@@ -179,15 +183,7 @@ final class OpenSslX509TrustManagerWrapper {
                             return (X509TrustManager) tm;
                         }
                     }
-                } catch (NoSuchAlgorithmException e) {
-                    // This should never happen as we did the same in the static block
-                    // before.
-                    PlatformDependent.throwException(e);
-                } catch (KeyManagementException e) {
-                    // This should never happen as we did the same in the static block
-                    // before.
-                    PlatformDependent.throwException(e);
-                } catch (NoSuchProviderException e) {
+                } catch (NoSuchAlgorithmException | NoSuchProviderException | KeyManagementException e) {
                     // This should never happen as we did the same in the static block
                     // before.
                     PlatformDependent.throwException(e);

@@ -32,6 +32,33 @@ import static io.netty.handler.codec.mqtt.MqttCodecUtil.getMqttVersion;
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.isValidClientId;
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.setMqttVersion;
 import static io.netty.handler.codec.mqtt.MqttConstant.DEFAULT_MAX_CLIENT_ID_LENGTH;
+import static io.netty.handler.codec.mqtt.MqttProperties.ASSIGNED_CLIENT_IDENTIFIER;
+import static io.netty.handler.codec.mqtt.MqttProperties.AUTHENTICATION_DATA;
+import static io.netty.handler.codec.mqtt.MqttProperties.AUTHENTICATION_METHOD;
+import static io.netty.handler.codec.mqtt.MqttProperties.CONTENT_TYPE;
+import static io.netty.handler.codec.mqtt.MqttProperties.CORRELATION_DATA;
+import static io.netty.handler.codec.mqtt.MqttProperties.MAXIMUM_PACKET_SIZE;
+import static io.netty.handler.codec.mqtt.MqttProperties.MAXIMUM_QOS;
+import static io.netty.handler.codec.mqtt.MqttProperties.PAYLOAD_FORMAT_INDICATOR;
+import static io.netty.handler.codec.mqtt.MqttProperties.PUBLICATION_EXPIRY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.REASON_STRING;
+import static io.netty.handler.codec.mqtt.MqttProperties.RECEIVE_MAXIMUM;
+import static io.netty.handler.codec.mqtt.MqttProperties.REQUEST_PROBLEM_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.REQUEST_RESPONSE_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.RESPONSE_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.RESPONSE_TOPIC;
+import static io.netty.handler.codec.mqtt.MqttProperties.RETAIN_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SERVER_KEEP_ALIVE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SERVER_REFERENCE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SESSION_EXPIRY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.SHARED_SUBSCRIPTION_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SUBSCRIPTION_IDENTIFIER;
+import static io.netty.handler.codec.mqtt.MqttProperties.SUBSCRIPTION_IDENTIFIER_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.TOPIC_ALIAS;
+import static io.netty.handler.codec.mqtt.MqttProperties.TOPIC_ALIAS_MAXIMUM;
+import static io.netty.handler.codec.mqtt.MqttProperties.USER_PROPERTY;
+import static io.netty.handler.codec.mqtt.MqttProperties.WILDCARD_SUBSCRIPTION_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.WILL_DELAY_INTERVAL;
 
 /**
  * Encodes Mqtt messages into bytes following the protocol specification v3.1
@@ -434,8 +461,9 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                 message.variableHeader().properties());
 
         try {
+            boolean qosLevelGreaterZero = mqttFixedHeader.qosLevel().value() > 0;
             int variableHeaderBufferSize = 2 + topicNameBytes +
-                    (mqttFixedHeader.qosLevel().value() > 0 ? 2 : 0) + propertiesBuf.readableBytes();
+                    (qosLevelGreaterZero ? 2 : 0) + propertiesBuf.readableBytes();
             int payloadBufferSize = payload.readableBytes();
             int variablePartSize = variableHeaderBufferSize + payloadBufferSize;
             int fixedHeaderBufferSize = 1 + getVariableLengthInt(variablePartSize);
@@ -444,7 +472,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             buf.writeByte(getFixedHeaderByte1(mqttFixedHeader));
             writeVariableLengthInt(buf, variablePartSize);
             writeExactUTF8String(buf, topicName, topicNameBytes);
-            if (mqttFixedHeader.qosLevel().value() > 0) {
+            if (qosLevelGreaterZero) {
                 buf.writeShort(variableHeader.packetId());
             }
             buf.writeBytes(propertiesBuf);
@@ -588,9 +616,8 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             ByteBuf propertiesBuf = byteBufAllocator.buffer();
             try {
                 for (MqttProperties.MqttProperty property : mqttProperties.listAll()) {
-                    MqttProperties.MqttPropertyType propertyType =
-                            MqttProperties.MqttPropertyType.valueOf(property.propertyId);
-                    switch (propertyType) {
+                    int propertyId = property.propertyId;
+                    switch (propertyId) {
                         case PAYLOAD_FORMAT_INDICATOR:
                         case REQUEST_PROBLEM_INFORMATION:
                         case REQUEST_RESPONSE_INFORMATION:
@@ -599,7 +626,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                         case WILDCARD_SUBSCRIPTION_AVAILABLE:
                         case SUBSCRIPTION_IDENTIFIER_AVAILABLE:
                         case SHARED_SUBSCRIPTION_AVAILABLE:
-                            writeVariableLengthInt(propertiesBuf, property.propertyId);
+                            writeVariableLengthInt(propertiesBuf, propertyId);
                             final byte bytePropValue = ((MqttProperties.IntegerProperty) property).value.byteValue();
                             propertiesBuf.writeByte(bytePropValue);
                             break;
@@ -607,7 +634,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                         case RECEIVE_MAXIMUM:
                         case TOPIC_ALIAS_MAXIMUM:
                         case TOPIC_ALIAS:
-                            writeVariableLengthInt(propertiesBuf, property.propertyId);
+                            writeVariableLengthInt(propertiesBuf, propertyId);
                             final short twoBytesInPropValue =
                                     ((MqttProperties.IntegerProperty) property).value.shortValue();
                             propertiesBuf.writeShort(twoBytesInPropValue);
@@ -616,12 +643,12 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                         case SESSION_EXPIRY_INTERVAL:
                         case WILL_DELAY_INTERVAL:
                         case MAXIMUM_PACKET_SIZE:
-                            writeVariableLengthInt(propertiesBuf, property.propertyId);
+                            writeVariableLengthInt(propertiesBuf, propertyId);
                             final int fourBytesIntPropValue = ((MqttProperties.IntegerProperty) property).value;
                             propertiesBuf.writeInt(fourBytesIntPropValue);
                             break;
                         case SUBSCRIPTION_IDENTIFIER:
-                            writeVariableLengthInt(propertiesBuf, property.propertyId);
+                            writeVariableLengthInt(propertiesBuf, propertyId);
                             final int vbi = ((MqttProperties.IntegerProperty) property).value;
                             writeVariableLengthInt(propertiesBuf, vbi);
                             break;
@@ -632,28 +659,28 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                         case RESPONSE_INFORMATION:
                         case SERVER_REFERENCE:
                         case REASON_STRING:
-                            writeVariableLengthInt(propertiesBuf, property.propertyId);
+                            writeVariableLengthInt(propertiesBuf, propertyId);
                             writeEagerUTF8String(propertiesBuf, ((MqttProperties.StringProperty) property).value);
                             break;
                         case USER_PROPERTY:
                             final List<MqttProperties.StringPair> pairs =
                                     ((MqttProperties.UserProperties) property).value;
                             for (MqttProperties.StringPair pair : pairs) {
-                                writeVariableLengthInt(propertiesBuf, property.propertyId);
+                                writeVariableLengthInt(propertiesBuf, propertyId);
                                 writeEagerUTF8String(propertiesBuf, pair.key);
                                 writeEagerUTF8String(propertiesBuf, pair.value);
                             }
                             break;
                         case CORRELATION_DATA:
                         case AUTHENTICATION_DATA:
-                            writeVariableLengthInt(propertiesBuf, property.propertyId);
+                            writeVariableLengthInt(propertiesBuf, propertyId);
                             final byte[] binaryPropValue = ((MqttProperties.BinaryProperty) property).value;
                             propertiesBuf.writeShort(binaryPropValue.length);
                             propertiesBuf.writeBytes(binaryPropValue, 0, binaryPropValue.length);
                             break;
                         default:
                             //shouldn't reach here
-                            throw new EncoderException("Unknown property type: " + propertyType);
+                            throw new EncoderException("Unknown property type: " + propertyId);
                     }
                 }
                 writeVariableLengthInt(propertiesHeaderBuf, propertiesBuf.readableBytes());
@@ -684,8 +711,8 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
     private static void writeVariableLengthInt(ByteBuf buf, int num) {
         do {
-            int digit = num % 128;
-            num /= 128;
+            int digit = num & 0x7F;
+            num >>>= 7;
             if (num > 0) {
                 digit |= 0x80;
             }
@@ -730,12 +757,16 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
     }
 
     private static int getVariableLengthInt(int num) {
-        int count = 0;
-        do {
-            num /= 128;
-            count++;
-        } while (num > 0);
-        return count;
+        if (num < 128) {
+            return 1;
+        }
+        if (num < 16_384) { // 128 * 128
+            return 2;
+        }
+        if (num < 2_097_152) { // 128 * 128 * 128
+            return 3;
+        }
+        return 4;
     }
 
 }

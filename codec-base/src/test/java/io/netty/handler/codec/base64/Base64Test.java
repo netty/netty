@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 
@@ -30,6 +29,7 @@ import java.io.IOException;
 import java.nio.ByteOrder;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -161,7 +161,7 @@ public class Base64Test {
     private static void testEncodeDecode(
             int size, ByteOrder order, Base64Dialect dialect, boolean breakLines, boolean padded) throws IOException {
         byte[] bytes = new byte[size];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
 
         // JDK encoder / decoder
         java.util.Base64.Encoder jdkEncoder =

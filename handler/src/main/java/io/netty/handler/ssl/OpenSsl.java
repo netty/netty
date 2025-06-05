@@ -35,6 +35,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.ByteArrayInputStream;
+import java.nio.ByteBuffer;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -362,8 +363,14 @@ public final class OpenSsl {
             for (String cipher: AVAILABLE_OPENSSL_CIPHER_SUITES) {
                 // Included converted but also openssl cipher name
                 if (!isTLSv13Cipher(cipher)) {
-                    availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "TLS"));
-                    availableJavaCipherSuites.add(CipherSuiteConverter.toJava(cipher, "SSL"));
+                    final String tlsConversion = CipherSuiteConverter.toJava(cipher, "TLS");
+                    if (tlsConversion != null) {
+                        availableJavaCipherSuites.add(tlsConversion);
+                    }
+                    final String sslConversion = CipherSuiteConverter.toJava(cipher, "SSL");
+                    if (sslConversion != null) {
+                        availableJavaCipherSuites.add(sslConversion);
+                    }
                 } else {
                     // TLSv1.3 ciphers have the correct format.
                     availableJavaCipherSuites.add(cipher);
@@ -667,9 +674,14 @@ public final class OpenSsl {
 
     static long memoryAddress(ByteBuf buf) {
         assert buf.isDirect();
-        return buf.hasMemoryAddress() ? buf.memoryAddress() :
-                // Use internalNioBuffer to reduce object creation.
-                Buffer.address(buf.internalNioBuffer(0, buf.readableBytes()));
+        if (buf.hasMemoryAddress()) {
+            return buf.memoryAddress();
+        }
+        // Use internalNioBuffer to reduce object creation.
+        // It is important to add the position as the returned ByteBuffer might be shared by multiple ByteBuf
+        // instances and so has an address that starts before the start of the ByteBuf itself.
+        ByteBuffer byteBuffer = buf.internalNioBuffer(0, buf.readableBytes());
+        return Buffer.address(byteBuffer) + byteBuffer.position();
     }
 
     private OpenSsl() { }

@@ -22,17 +22,20 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.PlatformDependent;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Queue;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.zip.Deflater;
 import java.util.zip.GZIPOutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -68,8 +71,8 @@ public class JdkZlibTest extends ZlibTest {
     public void testConcatenatedStreamsReadFirstOnly() throws IOException {
         EmbeddedChannel chDecoderGZip = new EmbeddedChannel(createDecoder(ZlibWrapper.GZIP));
 
-        try {
-            byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("/multiple.gz")) {
+            byte[] bytes = IOUtils.toByteArray(resourceAsStream);
 
             assertTrue(chDecoderGZip.writeInbound(Unpooled.copiedBuffer(bytes)));
             Queue<Object> messages = chDecoderGZip.inboundMessages();
@@ -86,10 +89,10 @@ public class JdkZlibTest extends ZlibTest {
 
     @Test
     public void testConcatenatedStreamsReadFully() throws IOException {
-        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true));
+        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
 
-        try {
-            byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("/multiple.gz")) {
+            byte[] bytes = IOUtils.toByteArray(resourceAsStream);
 
             assertTrue(chDecoderGZip.writeInbound(Unpooled.copiedBuffer(bytes)));
             Queue<Object> messages = chDecoderGZip.inboundMessages();
@@ -108,10 +111,10 @@ public class JdkZlibTest extends ZlibTest {
 
     @Test
     public void testConcatenatedStreamsReadFullyWhenFragmented() throws IOException {
-        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true));
+        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
 
-        try {
-            byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("/multiple.gz")) {
+            byte[] bytes = IOUtils.toByteArray(resourceAsStream);
 
             // Let's feed the input byte by byte to simulate fragmentation.
             ByteBuf buf = Unpooled.copiedBuffer(bytes);
@@ -139,7 +142,7 @@ public class JdkZlibTest extends ZlibTest {
     @Test
     public void testDecodeWithHeaderFollowingFooter() throws Exception {
         byte[] bytes = new byte[1024];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         ByteArrayOutputStream bytesOut = new ByteArrayOutputStream();
         GZIPOutputStream out = new GZIPOutputStream(bytesOut);
         out.write(bytes);
@@ -147,7 +150,7 @@ public class JdkZlibTest extends ZlibTest {
 
         byte[] compressed = bytesOut.toByteArray();
         ByteBuf buffer = Unpooled.buffer().writeBytes(compressed).writeBytes(compressed);
-        EmbeddedChannel channel = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, true));
+        EmbeddedChannel channel = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, true, 0));
         // Write it into the Channel in a way that we were able to decompress the first data completely but not the
         // whole footer.
         assertTrue(channel.writeInbound(buffer.readRetainedSlice(compressed.length - 1)));
@@ -181,6 +184,11 @@ public class JdkZlibTest extends ZlibTest {
         assertTrue(channel.finish());
         channel.checkException();
         assertTrue(channel.releaseOutbound());
+    }
+
+    @Test
+    void testAllowDefaultCompression() {
+        assertDoesNotThrow(() -> new JdkZlibEncoder(Deflater.DEFAULT_COMPRESSION));
     }
 
     /**

@@ -50,11 +50,15 @@ final class IoUringBufferRing {
     private boolean closed;
     private int numBuffers;
     private boolean expanded;
+    private boolean needsLazyExpansion;
+    private short lastGeneratedBid;
+    private short lastAddedBid;
 
     IoUringBufferRing(int ringFd, ByteBuffer ioUringBufRing,
                       short entries, int batchSize, int maxUnreleasedBuffers, short bufferGroupId, boolean incremental,
                       IoUringBufferRingAllocator allocator) {
         assert entries % 2 == 0;
+        assert batchSize % 2 == 0;
         this.ioUringBufRing = ioUringBufRing;
         this.tailFieldPosition = Native.IO_URING_BUFFER_RING_TAIL;
         this.entries = entries;
@@ -74,28 +78,42 @@ final class IoUringBufferRing {
     }
 
     void initialize() {
-        fillBuffers();
+        for (short i = 0; i < batchSize; i++) {
+            addBuffer(i);
+            numBuffers++;
+            lastGeneratedBid = i;
+        }
+        assert numBuffers % 2 == 0;
         usable = true;
     }
 
     /**
      * Try to expand by adding more buffers to the ring if there is any space left.
-     * This method might be called multiple times before we call {@link #fillBuffer()} again.
+     * This method might be called multiple times before we call {@link #useBuffer(short, int, boolean)} again.
      */
     void expand() {
-        // TODO: We could also shrink the number of elements again if we find out we not use all of it frequently.
         if (!expanded) {
-            // Only expand once before we reset expanded in fillBuffer() which is called once a buffer was completely
+            // Only expand once before we reset expanded in addBuffer() which is called once a buffer was completely
             // used and moved out of the buffer ring.
-            fillBuffers();
-            expanded = true;
+            tryExpand();
         }
     }
 
-    private void fillBuffers() {
-        int num = Math.min(batchSize, entries - numBuffers);
-        for (short i = 0; i < num; i++) {
-            fillBuffer();
+    private void tryExpand() {
+        // We only expand if the last added BID is the last generated BID. The reason for this is as we want to
+        // ensure we have a sequential ordering of BIDs as this is required for our nextBid(...) to work correctly when
+        // RECVSEND_BUNDLE is used.
+        if (lastAddedBid == lastGeneratedBid) {
+            needsLazyExpansion = false;
+            // TODO: We could also shrink the number of elements again if we find out we not use all of it frequently.
+            int num = Math.min(batchSize, entries - numBuffers);
+            assert num % 2 == 0;
+            for (short i = 0; i < num; i++) {
+                addBuffer(++lastGeneratedBid);
+                numBuffers++;
+            }
+        } else {
+            needsLazyExpansion = true;
         }
     }
 
@@ -107,13 +125,13 @@ final class IoUringBufferRing {
         return exhaustedEvent;
     }
 
-    void fillBuffer() {
+    private void addBuffer(short bid) {
         if (corrupted || closed) {
             return;
         }
         short oldTail = (short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition);
         short ringIndex = (short) (oldTail & mask);
-        assert buffers[ringIndex] == null;
+        assert buffers[bid] == null;
         final ByteBuf byteBuf;
         try {
             byteBuf = allocator.allocate();
@@ -124,24 +142,28 @@ final class IoUringBufferRing {
             corrupted = true;
             throw e;
         }
-        byteBuf.writerIndex(byteBuf.capacity());
-        buffers[ringIndex] = new IoUringBufferRingByteBuf(byteBuf);
+
+        IoUringBufferRingByteBuf ioUringBuf = new IoUringBufferRingByteBuf(byteBuf.writerIndex(byteBuf.capacity()));
 
         //  see:
         //  https://github.com/axboe/liburing/
         //      blob/19134a8fffd406b22595a5813a3e319c19630ac9/src/include/liburing.h#L1561
-        int  position = Native.SIZEOF_IOURING_BUF * ringIndex;
+        int position = Native.SIZEOF_IOURING_BUF * ringIndex;
         ioUringBufRing.putLong(position + Native.IOURING_BUFFER_OFFSETOF_ADDR,
-                IoUring.memoryAddress(byteBuf) + byteBuf.readerIndex());
-        ioUringBufRing.putInt(position + Native.IOURING_BUFFER_OFFSETOF_LEN, byteBuf.capacity());
-        ioUringBufRing.putShort(position + Native.IOURING_BUFFER_OFFSETOF_BID, ringIndex);
+                IoUring.memoryAddress(ioUringBuf) + ioUringBuf.readerIndex());
+        ioUringBufRing.putInt(position + Native.IOURING_BUFFER_OFFSETOF_LEN, ioUringBuf.readableBytes());
+        ioUringBufRing.putShort(position + Native.IOURING_BUFFER_OFFSETOF_BID, bid);
 
+        buffers[bid] = ioUringBuf;
+        lastAddedBid = bid;
         // Now advanced the tail by the number of buffers that we just added.
         SHORT_HANDLE.setRelease(ioUringBufRing, tailFieldPosition, (short) (oldTail + 1));
-        numBuffers++;
         // We added a buffer to the ring, let's reset the expanded variable so we can expand it if we receive
         // ENOBUFS.
         expanded = false;
+        if (needsLazyExpansion) {
+            tryExpand();
+        }
     }
 
     /**
@@ -177,14 +199,14 @@ final class IoUringBufferRing {
 
         // The buffer is considered to be used, null out the slot.
         buffers[bid] = null;
-        numBuffers--;
+        addBuffer(bid);
         byteBuf.markUsed();
         return byteBuf.writerIndex(byteBuf.readerIndex() +
                 Math.min(readableBytes, byteBuf.readableBytes()));
     }
 
     short nextBid(short bid) {
-        return (short) ((bid + 1) & mask);
+        return (short) ((bid + 1) & numBuffers - 1);
     }
 
     /**

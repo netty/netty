@@ -50,7 +50,7 @@ class Log4JLogger extends AbstractInternalLogger {
 
     private static final long serialVersionUID = 2851357342488183058L;
 
-    final transient Logger logger;
+    private final transient Logger logger;
 
     /**
      * Following the pattern discussed in pages 162 through 168 of "The complete

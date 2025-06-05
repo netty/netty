@@ -94,6 +94,7 @@ public final class PlatformDependent {
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE = unsafeUnavailabilityCause0();
     private static final boolean DIRECT_BUFFER_PREFERRED;
+    private static final boolean EXPLICIT_NO_PREFER_DIRECT;
     private static final long MAX_DIRECT_MEMORY = estimateMaxDirectMemory();
 
     private static final int MPSC_CHUNK_SIZE =  1024;
@@ -108,8 +109,6 @@ public final class PlatformDependent {
     private static final String NORMALIZED_ARCH = normalizeArch(SystemPropertyUtil.get("os.arch", ""));
     private static final String NORMALIZED_OS = normalizeOs(SystemPropertyUtil.get("os.name", ""));
 
-    // keep in sync with maven's pom.xml via os.detection.classifierWithLikes!
-    private static final String[] ALLOWED_LINUX_OS_CLASSIFIERS = {"fedora", "suse", "arch"};
     private static final Set<String> LINUX_OS_CLASSIFIERS;
 
     private static final boolean IS_WINDOWS = isWindows0();
@@ -180,11 +179,12 @@ public final class PlatformDependent {
             CLEANER = NOOP;
         }
 
+        EXPLICIT_NO_PREFER_DIRECT = SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
         // We should always prefer direct buffers by default if we can use a Cleaner to release direct buffers.
         DIRECT_BUFFER_PREFERRED = CLEANER != NOOP
-                                  && !SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
+                                  && !EXPLICIT_NO_PREFER_DIRECT;
         if (logger.isDebugEnabled()) {
-            logger.debug("-Dio.netty.noPreferDirect: {}", !DIRECT_BUFFER_PREFERRED);
+            logger.debug("-Dio.netty.noPreferDirect: {}", EXPLICIT_NO_PREFER_DIRECT);
         }
 
         /*
@@ -198,18 +198,15 @@ public final class PlatformDependent {
                     "instability.");
         }
 
-        final Set<String> allowedClassifiers = Collections.unmodifiableSet(
-                new HashSet<String>(Arrays.asList(ALLOWED_LINUX_OS_CLASSIFIERS)));
-        final Set<String> availableClassifiers = new LinkedHashSet<String>();
+        final Set<String> availableClassifiers = new LinkedHashSet<>();
 
-        if (!addPropertyOsClassifiers(allowedClassifiers, availableClassifiers)) {
-            addFilesystemOsClassifiers(allowedClassifiers, availableClassifiers);
+        if (!addPropertyOsClassifiers(availableClassifiers)) {
+            addFilesystemOsClassifiers(availableClassifiers);
         }
         LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
     }
 
-    static void addFilesystemOsClassifiers(final Set<String> allowedClassifiers,
-                                           final Set<String> availableClassifiers) {
+    static void addFilesystemOsClassifiers(final Set<String> availableClassifiers) {
         for (final String osReleaseFileName : OS_RELEASE_FILES) {
             final Path file = Paths.get(osReleaseFileName);
             boolean found = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
@@ -218,22 +215,18 @@ public final class PlatformDependent {
                     Pattern lineSplitPattern = Pattern.compile("[ ]+");
                     try {
                         if (Files.exists(file)) {
-                            BufferedReader reader = null;
-                            try {
-                                reader = new BufferedReader(new InputStreamReader(
-                                        new BoundedInputStream(Files.newInputStream(file)), StandardCharsets.UTF_8));
-
+                            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                                    new BoundedInputStream(Files.newInputStream(file)), StandardCharsets.UTF_8))) {
                                 String line;
                                 while ((line = reader.readLine()) != null) {
                                     if (line.startsWith(LINUX_ID_PREFIX)) {
                                         String id = normalizeOsReleaseVariableValue(
                                                 line.substring(LINUX_ID_PREFIX.length()));
-                                        addClassifier(allowedClassifiers, availableClassifiers, id);
+                                        addClassifier(availableClassifiers, id);
                                     } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
                                         line = normalizeOsReleaseVariableValue(
                                                 line.substring(LINUX_ID_LIKE_PREFIX.length()));
-                                        addClassifier(allowedClassifiers, availableClassifiers,
-                                                lineSplitPattern.split(line));
+                                        addClassifier(availableClassifiers, lineSplitPattern.split(line));
                                     }
                                 }
                             } catch (SecurityException e) {
@@ -257,7 +250,7 @@ public final class PlatformDependent {
         }
     }
 
-    static boolean addPropertyOsClassifiers(Set<String> allowedClassifiers, Set<String> availableClassifiers) {
+    static boolean addPropertyOsClassifiers(Set<String> availableClassifiers) {
         // empty: -Dio.netty.osClassifiers (no distro specific classifiers for native libs)
         // single ID: -Dio.netty.osClassifiers=ubuntu
         // pair ID, ID_LIKE: -Dio.netty.osClassifiers=ubuntu,debian
@@ -283,7 +276,7 @@ public final class PlatformDependent {
                     osClassifiersPropertyName + " property contains more than 2 classifiers: " + osClassifiers);
         }
         for (String classifier : classifiers) {
-            addClassifier(allowedClassifiers, availableClassifiers, classifier);
+            addClassifier(availableClassifiers, classifier);
         }
         return true;
     }
@@ -384,6 +377,14 @@ public final class PlatformDependent {
     }
 
     /**
+     * Returns {@code true} if user has specified
+     * {@code -Dio.netty.noPreferDirect=true} option.
+     */
+    public static boolean isExplicitNoPreferDirect() {
+        return EXPLICIT_NO_PREFER_DIRECT;
+    }
+
+    /**
      * Returns the maximum memory reserved for direct buffer allocation.
      */
     public static long maxDirectMemory() {
@@ -443,45 +444,57 @@ public final class PlatformDependent {
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap() {
-        return new ConcurrentHashMap<K, V>();
+        return new ConcurrentHashMap<>();
     }
 
     /**
      * Creates a new fastest {@link LongCounter} implementation for the current platform.
+     * @deprecated please use {@link java.util.concurrent.atomic.LongAdder} instead.
      */
+    @Deprecated
     public static LongCounter newLongCounter() {
         return new LongAdderCounter();
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity) {
-        return new ConcurrentHashMap<K, V>(initialCapacity);
+        return new ConcurrentHashMap<>(initialCapacity);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(int initialCapacity, float loadFactor) {
-        return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor);
+        return new ConcurrentHashMap<>(initialCapacity, loadFactor);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(
             int initialCapacity, float loadFactor, int concurrencyLevel) {
-        return new ConcurrentHashMap<K, V>(initialCapacity, loadFactor, concurrencyLevel);
+        return new ConcurrentHashMap<>(initialCapacity, loadFactor, concurrencyLevel);
     }
 
     /**
      * Creates a new fastest {@link ConcurrentMap} implementation for the current platform.
+     * @deprecated please use new ConcurrentHashMap<K, V>() directly.
      */
+    @Deprecated
     public static <K, V> ConcurrentMap<K, V> newConcurrentHashMap(Map<? extends K, ? extends V> map) {
-        return new ConcurrentHashMap<K, V>(map);
+        return new ConcurrentHashMap<>(map);
     }
 
     /**
@@ -1097,7 +1110,9 @@ public final class PlatformDependent {
 
     /**
      * Return a {@link Random} which is not-threadsafe and so can only be used from the same thread.
+     * @deprecated Use ThreadLocalRandom.current() instead.
      */
+    @Deprecated
     public static Random threadLocalRandom() {
         return ThreadLocalRandom.current();
     }
@@ -1146,7 +1161,7 @@ public final class PlatformDependent {
         try {
             boolean hasUnsafe = PlatformDependent0.hasUnsafe();
             logger.debug("sun.misc.Unsafe: {}", hasUnsafe ? "available" : "unavailable");
-            return hasUnsafe ? null : PlatformDependent0.getUnsafeUnavailabilityCause();
+            return null;
         } catch (Throwable t) {
             logger.trace("Could not determine if Unsafe is available", t);
             // Probably failed to initialize PlatformDependent0.
@@ -1472,74 +1487,117 @@ public final class PlatformDependent {
     /**
      * Adds only those classifier strings to <tt>dest</tt> which are present in <tt>allowed</tt>.
      *
-     * @param allowed          allowed classifiers
      * @param dest             destination set
      * @param maybeClassifiers potential classifiers to add
      */
-    private static void addClassifier(Set<String> allowed, Set<String> dest, String... maybeClassifiers) {
+    private static void addClassifier(Set<String> dest, String... maybeClassifiers) {
         for (String id : maybeClassifiers) {
-            if (allowed.contains(id)) {
+            if (isAllowedClassifier(id)) {
                 dest.add(id);
             }
         }
     }
-
-    private static String normalizeOsReleaseVariableValue(String value) {
-        // Variable assignment values may be enclosed in double or single quotes.
-        return value.trim().replaceAll("[\"']", "");
+    // keep in sync with maven's pom.xml via os.detection.classifierWithLikes!
+    private static boolean isAllowedClassifier(String classifier) {
+        switch (classifier) {
+            case "fedora":
+            case "suse":
+            case "arch":
+                return true;
+            default:
+                return false;
+        }
     }
 
+    //replaces value.trim().replaceAll("[\"']", "") to avoid regexp overhead
+    private static String normalizeOsReleaseVariableValue(String value) {
+        String trimmed = value.trim();
+        StringBuilder sb = new StringBuilder(trimmed.length());
+        for (int i = 0; i < trimmed.length(); i++) {
+            char c = trimmed.charAt(i);
+            if (c != '"' && c != '\'') {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
+    }
+
+    //replaces value.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", "") to avoid regexp overhead
     private static String normalize(String value) {
-        return value.toLowerCase(Locale.US).replaceAll("[^a-z0-9]+", "");
+        StringBuilder sb = new StringBuilder(value.length());
+        for (int i = 0; i < value.length(); i++) {
+            char c = Character.toLowerCase(value.charAt(i));
+            if ((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9')) {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     private static String normalizeArch(String value) {
         value = normalize(value);
-        if (value.matches("^(x8664|amd64|ia32e|em64t|x64)$")) {
-            return "x86_64";
-        }
-        if (value.matches("^(x8632|x86|i[3-6]86|ia32|x32)$")) {
-            return "x86_32";
-        }
-        if (value.matches("^(ia64|itanium64)$")) {
-            return "itanium_64";
-        }
-        if (value.matches("^(sparc|sparc32)$")) {
-            return "sparc_32";
-        }
-        if (value.matches("^(sparcv9|sparc64)$")) {
-            return "sparc_64";
-        }
-        if (value.matches("^(arm|arm32)$")) {
-            return "arm_32";
-        }
-        if ("aarch64".equals(value)) {
-            return "aarch_64";
-        }
-        if ("riscv64".equals(value)) {
-            // os.detected.arch is riscv64 for RISC-V, no underscore
-            return "riscv64";
-        }
-        if (value.matches("^(ppc|ppc32)$")) {
-            return "ppc_32";
-        }
-        if ("ppc64".equals(value)) {
-            return "ppc_64";
-        }
-        if ("ppc64le".equals(value)) {
-            return "ppcle_64";
-        }
-        if ("s390".equals(value)) {
-            return "s390_32";
-        }
-        if ("s390x".equals(value)) {
-            return "s390_64";
-        }
-        if ("loongarch64".equals(value)) {
-            return "loongarch_64";
-        }
+        switch (value) {
+            case "x8664":
+            case "amd64":
+            case "ia32e":
+            case "em64t":
+            case "x64":
+                return "x86_64";
 
-        return "unknown";
+            case "x8632":
+            case "x86":
+            case "i386":
+            case "i486":
+            case "i586":
+            case "i686":
+            case "ia32":
+            case "x32":
+                return "x86_32";
+
+            case "ia64":
+            case "itanium64":
+                return "itanium_64";
+
+            case "sparc":
+            case "sparc32":
+                return "sparc_32";
+
+            case "sparcv9":
+            case "sparc64":
+                return "sparc_64";
+
+            case "arm":
+            case "arm32":
+                return "arm_32";
+
+            case "aarch64":
+                return "aarch_64";
+
+            case "riscv64":
+                return "riscv64";
+
+            case "ppc":
+            case "ppc32":
+                return "ppc_32";
+
+            case "ppc64":
+                return "ppc_64";
+
+            case "ppc64le":
+                return "ppcle_64";
+
+            case "s390":
+                return "s390_32";
+
+            case "s390x":
+                return "s390_64";
+
+            case "loongarch64":
+                return "loongarch_64";
+
+            default:
+                return "unknown";
+        }
     }
 
     private static String normalizeOs(String value) {

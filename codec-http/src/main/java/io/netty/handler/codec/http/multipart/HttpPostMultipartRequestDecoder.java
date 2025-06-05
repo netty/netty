@@ -560,9 +560,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
             if (charsetAttribute != null) {
                 try {
                     localCharset = Charset.forName(charsetAttribute.getValue());
-                } catch (IOException e) {
-                    throw new ErrorDataDecoderException(e);
-                } catch (UnsupportedCharsetException e) {
+                } catch (IOException | UnsupportedCharsetException e) {
                     throw new ErrorDataDecoderException(e);
                 }
             }
@@ -587,11 +585,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                         currentAttribute = factory.createAttribute(request,
                                 cleanString(nameAttribute.getValue()));
                     }
-                } catch (NullPointerException e) {
-                    throw new ErrorDataDecoderException(e);
-                } catch (IllegalArgumentException e) {
-                    throw new ErrorDataDecoderException(e);
-                } catch (IOException e) {
+                } catch (NullPointerException | IllegalArgumentException | IOException e) {
                     throw new ErrorDataDecoderException(e);
                 }
                 if (localCharset != null) {
@@ -757,9 +751,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                         Attribute attribute;
                         try {
                             attribute = getContentDispositionAttribute(values);
-                        } catch (NullPointerException e) {
-                            throw new ErrorDataDecoderException(e);
-                        } catch (IllegalArgumentException e) {
+                        } catch (NullPointerException | IllegalArgumentException e) {
                             throw new ErrorDataDecoderException(e);
                         }
                         currentFieldAttributes.put(attribute.getName(), attribute);
@@ -770,9 +762,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 try {
                     attribute = factory.createAttribute(request, HttpHeaderNames.CONTENT_TRANSFER_ENCODING.toString(),
                             cleanString(contents[1]));
-                } catch (NullPointerException e) {
-                    throw new ErrorDataDecoderException(e);
-                } catch (IllegalArgumentException e) {
+                } catch (NullPointerException | IllegalArgumentException e) {
                     throw new ErrorDataDecoderException(e);
                 }
 
@@ -782,9 +772,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 try {
                     attribute = factory.createAttribute(request, HttpHeaderNames.CONTENT_LENGTH.toString(),
                             cleanString(contents[1]));
-                } catch (NullPointerException e) {
-                    throw new ErrorDataDecoderException(e);
-                } catch (IllegalArgumentException e) {
+                } catch (NullPointerException | IllegalArgumentException e) {
                     throw new ErrorDataDecoderException(e);
                 }
 
@@ -808,9 +796,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                             Attribute attribute;
                             try {
                                 attribute = factory.createAttribute(request, charsetHeader, cleanString(values));
-                            } catch (NullPointerException e) {
-                                throw new ErrorDataDecoderException(e);
-                            } catch (IllegalArgumentException e) {
+                            } catch (NullPointerException | IllegalArgumentException e) {
                                 throw new ErrorDataDecoderException(e);
                             }
                             currentFieldAttributes.put(HttpHeaderValues.CHARSET, attribute);
@@ -820,9 +806,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                             Attribute attribute;
                             try {
                                 attribute = factory.createAttribute(request, cleanString(name), values);
-                            } catch (NullPointerException e) {
-                                throw new ErrorDataDecoderException(e);
-                            } catch (IllegalArgumentException e) {
+                            } catch (NullPointerException | IllegalArgumentException e) {
                                 throw new ErrorDataDecoderException(e);
                             }
                             currentFieldAttributes.put(name, attribute);
@@ -831,9 +815,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                             try {
                                 attribute = factory.createAttribute(request,
                                         cleanString(contents[0]), contents[i]);
-                            } catch (NullPointerException e) {
-                                throw new ErrorDataDecoderException(e);
-                            } catch (IllegalArgumentException e) {
+                            } catch (NullPointerException | IllegalArgumentException e) {
                                 throw new ErrorDataDecoderException(e);
                             }
                             currentFieldAttributes.put(attribute.getName(), attribute);
@@ -889,10 +871,8 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                 name = HttpHeaderValues.FILENAME.toString();
                 String[] split = cleanString(value).split("'", 3);
                 value = QueryStringDecoder.decodeComponent(split[2], Charset.forName(split[0]));
-            } catch (ArrayIndexOutOfBoundsException e) {
+            } catch (ArrayIndexOutOfBoundsException | UnsupportedCharsetException e) {
                  throw new ErrorDataDecoderException(e);
-            } catch (UnsupportedCharsetException e) {
-                throw new ErrorDataDecoderException(e);
             }
         } else {
             // otherwise we need to clean the value
@@ -939,9 +919,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
         if (charsetAttribute != null) {
             try {
                 localCharset = Charset.forName(charsetAttribute.getValue());
-            } catch (IOException e) {
-                throw new ErrorDataDecoderException(e);
-            } catch (UnsupportedCharsetException e) {
+            } catch (IOException | UnsupportedCharsetException e) {
                 throw new ErrorDataDecoderException(e);
             }
         }
@@ -969,11 +947,7 @@ public class HttpPostMultipartRequestDecoder implements InterfaceHttpPostRequest
                         cleanString(nameAttribute.getValue()), cleanString(filenameAttribute.getValue()),
                         contentType, mechanism.value(), localCharset,
                         size);
-            } catch (NullPointerException e) {
-                throw new ErrorDataDecoderException(e);
-            } catch (IllegalArgumentException e) {
-                throw new ErrorDataDecoderException(e);
-            } catch (IOException e) {
+            } catch (NullPointerException | IllegalArgumentException | IOException e) {
                 throw new ErrorDataDecoderException(e);
             }
         }

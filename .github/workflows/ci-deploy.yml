@@ -30,6 +30,12 @@ permissions: read-all
 env:
   MAVEN_OPTS: -Xmx6g -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
 
+# Cancel running jobs when a new push happens to the same branch as otherwise it will
+# tie up too many resources without providing much value.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   stage-snapshot-linux:
     runs-on: ubuntu-latest
@@ -117,7 +123,7 @@ jobs:
         run: mkdir -p ~/local-staging
 
       - name: Stage snapshots to local staging directory
-        run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/local-staging -DskipRemoteStaging=true -DskipTests=true
+        run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/local-staging -DskipTests=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -162,7 +168,7 @@ jobs:
           args: install ninja nasm
 
       - name: Stage snapshots to local staging directory
-        run: ./mvnw.cmd -B -ntp --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/local-staging -DskipRemoteStaging=true -DskipTests=true
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=/local-staging -DskipTests=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -196,10 +202,14 @@ jobs:
             ${{ runner.os }}-maven-deploy-staged-snapshots-
             ${{ runner.os }}-maven-
 
-      # Setup some env to re-use later.
-      - name: Prepare environment variables
-        run: |
-          echo "LOCAL_STAGING_DIR=$HOME/local-staging" >> $GITHUB_ENV
+      - uses: s4u/maven-settings-action@v3.0.0
+        with:
+          servers: |
+            [{
+              "id": "central-portal-snapshots",
+              "username": "${{ secrets.MAVEN_CENTRAL_USERNAME }}",
+              "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
+            }]
 
       # Hardcode the staging artifacts that need to be downloaded.
       # These must match the matrix setups. There is currently no way to pull this out of the config.
@@ -240,45 +250,15 @@ jobs:
           path: ~/linux-x86_64-java11-local-staging
 
       - name: Copy previous build artifacts to local maven repository
-        run: |
-          cp -r ~/windows-x86_64-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/macos-aarch64-java11-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/macos-x86_64-java11-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/linux-aarch64-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/linux-riscv64-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/linux-x86_64-java11-local-staging/deferred/* ~/.m2/repository/
+        run: bash ./.github/scripts/local_staging_install_snapshot.sh ~/.m2/repository ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging
 
       - name: Generate netty-all and deploy to local staging.
         run: |
           mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Pnative-dependencies -am -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
+          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/all-local-staging -DskipTests=true
 
       - name: Merge staging repositories
-        run: |
-          mkdir -p ~/local-staging/deferred
-          cat ~/windows-x86_64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/windows-x86_64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/macos-aarch64-java11-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/macos-aarch64-java11-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/macos-x86_64-java11-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/macos-x86_64-java11-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-aarch64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-aarch64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-riscv64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-riscv64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-x86_64-java11-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-x86_64-java11-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/all-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/all-local-staging/deferred/io/netty/netty-all/* ~/local-staging/deferred/io/netty/netty-all/
-
-      - uses: s4u/maven-settings-action@v3.0.0
-        with:
-          servers: |
-            [{
-              "id": "sonatype-nexus-snapshots",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
-            }]
+        run: bash ./.github/scripts/local_staging_merge_snapshot.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ~/all-local-staging
 
       - name: Deploy local staged artifacts
-        run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR
+        run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$HOME/local-staging -DserverId=central-portal-snapshots

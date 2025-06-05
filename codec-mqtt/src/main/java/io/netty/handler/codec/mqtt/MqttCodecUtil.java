@@ -25,8 +25,6 @@ import static io.netty.handler.codec.mqtt.MqttConstant.MIN_CLIENT_ID_LENGTH;
 
 final class MqttCodecUtil {
 
-    private static final char[] TOPIC_WILDCARDS = {'#', '+'};
-
     static final AttributeKey<MqttVersion> MQTT_VERSION_KEY = AttributeKey.valueOf("NETTY_CODEC_MQTT_VERSION");
 
     static MqttVersion getMqttVersion(ChannelHandlerContext ctx) {
@@ -45,8 +43,9 @@ final class MqttCodecUtil {
 
     static boolean isValidPublishTopicName(String topicName) {
         // publish topic name must not contain any wildcard
-        for (char c : TOPIC_WILDCARDS) {
-            if (topicName.indexOf(c) >= 0) {
+        for (int i = 0; i < topicName.length(); i++) {
+            char c = topicName.charAt(i);
+            if (c == '#' || c == '+') {
                 return false;
             }
         }

@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http.multipart;
 
 import java.io.File;
-import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -24,7 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * DeleteFileOnExitHook.
  */
 final class DeleteFileOnExitHook {
-    private static final Set<String> FILES = Collections.newSetFromMap(new ConcurrentHashMap<String, Boolean>());
+    private static final Set<String> FILES = ConcurrentHashMap.newKeySet();
 
     private DeleteFileOnExitHook() {
     }

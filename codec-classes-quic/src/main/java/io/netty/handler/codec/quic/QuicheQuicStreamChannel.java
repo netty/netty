@@ -410,10 +410,31 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     /**
-     * Stream is writable.
+     * Stream writability changed.
      */
     boolean writable(int capacity) {
         assert eventLoop().inEventLoop();
+        if (capacity < 0) {
+            // If the value is negative its a quiche error.
+            if (capacity != Quiche.QUICHE_ERR_DONE) {
+                if (!queue.isEmpty()) {
+                    if (capacity == Quiche.QUICHE_ERR_STREAM_STOPPED) {
+                        queue.removeAndFailAll(new ChannelOutputShutdownException("STOP_SENDING frame received"));
+                        // If STOP_SENDING is received we should not close the channel but just fail all queued writes.
+                        return false;
+                    } else {
+                        queue.removeAndFailAll(Quiche.convertToException(capacity));
+                    }
+                } else if (capacity == Quiche.QUICHE_ERR_STREAM_STOPPED) {
+                    // If STOP_SENDING is received we should not close the channel
+                    return false;
+                }
+                // IF this error was not QUICHE_ERR_STREAM_STOPPED we should close the channel.
+                finSent = true;
+                unsafe().close(unsafe().voidPromise());
+            }
+            return false;
+        }
         this.capacity = capacity;
         boolean mayNeedWrite = unsafe().writeQueued();
         // we need to re-read this.capacity as writeQueued() may update the capacity.
@@ -428,19 +449,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
     }
 
-    void forceClose(int error) {
-        if (!queue.isEmpty()) {
-            if (error != Quiche.QUICHE_ERR_DONE) {
-                if (error == Quiche.QUICHE_ERR_STREAM_STOPPED) {
-                    queue.removeAndFailAll(new ChannelOutputShutdownException("STOP_SENDING frame received"));
-                } else {
-                    queue.removeAndFailAll(Quiche.convertToException(error));
-                }
-            }
-        }
-        forceClose();
-    }
-
     /**
      * Stream is readable.
      */
@@ -451,13 +459,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         if (readPending) {
             unsafe().recv();
         }
-    }
-
-    void forceClose() {
-        assert eventLoop().inEventLoop();
-        // Set received to true to ensure we will remove it from the internal map once we send the fin.
-        finSent = true;
-        unsafe().close(unsafe().voidPromise());
     }
 
     final class QuicStreamChannelUnsafe implements Unsafe {
@@ -696,10 +697,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                             break;
                         } else if (res == Quiche.QUICHE_ERR_STREAM_STOPPED) {
                             // Once its signaled that the stream is stopped we can just fail everything.
-                            // We can also force the close as quiche will generate a RESET_STREAM frame.
+                            // That said we should not close the channel yet as there might be some data that is
+                            // not read yet by the user.
                             queue.removeAndFailAll(
                                     new ChannelOutputShutdownException("STOP_SENDING frame received"));
-                            forceClose();
                             break;
                         } else {
                             queue.remove().setFailure(Quiche.convertToException(res));

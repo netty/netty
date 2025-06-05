@@ -64,7 +64,7 @@
 
 #define NATIVE_CLASSNAME "io/netty/channel/uring/Native"
 #define STATICALLY_CLASSNAME "io/netty/channel/uring/NativeStaticallyReferencedJniMethods"
-#define LIBRARYNAME "netty_transport_native_io_uring"
+#define LIBRARYNAME "netty_transport_native_io_uring42"
 
 static jclass longArrayClass = NULL;
 static char* staticPackagePrefix = NULL;
@@ -473,6 +473,10 @@ static jint netty_io_uring_afInet6(JNIEnv* env, jclass clazz) {
     return AF_INET6;
 }
 
+static jint netty_io_uring_afUnix(JNIEnv* env, jclass clazz) {
+    return AF_UNIX;
+}
+
 static jint netty_io_uring_sizeofSockaddrIn(JNIEnv* env, jclass clazz) {
     return sizeof(struct sockaddr_in);
 }
@@ -523,6 +527,23 @@ static jint netty_io_uring_in6AddressOffsetofS6Addr(JNIEnv* env, jclass clazz) {
 
 static jint netty_io_uring_sizeofSockaddrStorage(JNIEnv* env, jclass clazz) {
     return sizeof(struct sockaddr_storage);
+}
+
+static jint netty_io_uring_sizeofSockaddrUn(JNIEnv* env, jclass clazz) {
+    return sizeof(struct sockaddr_un);
+}
+
+static jint netty_io_uring_sockaddrUnOffsetofSunFamily(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_un, sun_family);
+}
+
+static jint netty_io_uring_sockaddrUnOffsetofSunPath(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_un, sun_path);
+}
+
+static jint netty_io_uring_max_sun_path_len(JNIEnv* env, jclass clazz) {
+     struct sockaddr_un addr;
+     return sizeof(addr.sun_path);
 }
 
 static jint netty_io_uring_sizeofSizeT(JNIEnv* env, jclass clazz) {
@@ -683,16 +704,37 @@ static jint netty_io_uring_cmsgSpace(JNIEnv* env, jclass clazz) {
     return CMSG_SPACE(sizeof(uint16_t));
 }
 
+static jint netty_io_uring_cmsgSpace_for_fd(JNIEnv* env, jclass clazz) {
+    return CMSG_SPACE(sizeof(int));
+}
+
+static jint netty_io_uring_msg_controllen_for_fd(JNIEnv* env, jclass clazz) {
+    char control[CMSG_SPACE(sizeof(int))] = { 0 };
+    return sizeof(control);
+}
+
 static jint netty_io_uring_cmsgLen(JNIEnv* env, jclass clazz) {
     return CMSG_LEN(sizeof(uint16_t));
+}
+
+static jint netty_io_uring_cmsgLen_for_fd(JNIEnv* env, jclass clazz) {
+    return CMSG_LEN(sizeof(int));
 }
 
 static jint netty_io_uring_solUdp(JNIEnv* env, jclass clazz) {
     return SOL_UDP;
 }
 
+static jint netty_io_uring_solSocket(JNIEnv* env, jclass clazz) {
+    return SOL_SOCKET;
+}
+
 static jint netty_io_uring_udpSegment(JNIEnv* env, jclass clazz) {
     return UDP_SEGMENT;
+}
+
+static jint netty_io_uring_ScmRights(JNIEnv* env, jclass clazz) {
+    return SCM_RIGHTS;
 }
 
 // JNI Method Registration Table Begin
@@ -701,6 +743,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockCloexec", "()I", (void *) netty_io_uring_sockCloexec },
   { "afInet", "()I", (void *) netty_io_uring_afInet },
   { "afInet6", "()I", (void *) netty_io_uring_afInet6 },
+  { "afUnix", "()I", (void*) netty_io_uring_afUnix},
   { "sizeofSockaddrIn", "()I", (void *) netty_io_uring_sizeofSockaddrIn },
   { "sizeofSockaddrIn6", "()I", (void *) netty_io_uring_sizeofSockaddrIn6 },
   { "pageSize", "()I", (void*) netty_io_uring_pageSize},
@@ -715,10 +758,17 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockaddrIn6OffsetofSin6ScopeId", "()I", (void *) netty_io_uring_sockaddrIn6OffsetofSin6ScopeId },
   { "in6AddressOffsetofS6Addr", "()I", (void *) netty_io_uring_in6AddressOffsetofS6Addr },
   { "sizeofSockaddrStorage", "()I", (void *) netty_io_uring_sizeofSockaddrStorage },
+  { "sizeofSockaddrUn", "()I", (void *) netty_io_uring_sizeofSockaddrUn },
+  { "sockaddrUnOffsetofSunFamily", "()I", (void *) netty_io_uring_sockaddrUnOffsetofSunFamily },
+  { "sockaddrUnOffsetofSunPath", "()I", (void *) netty_io_uring_sockaddrUnOffsetofSunPath },
+  { "maxSunPathLen", "()I", (void *) netty_io_uring_max_sun_path_len },
   { "sizeofSizeT", "()I", (void *) netty_io_uring_sizeofSizeT },
   { "sizeofIovec", "()I", (void *) netty_io_uring_sizeofIovec },
   { "cmsgSpace", "()I", (void *) netty_io_uring_cmsgSpace},
+  { "cmsgSpaceForFd", "()I", (void *) netty_io_uring_cmsgSpace_for_fd},
+  { "msgControlLenForFd", "()I", (void *) netty_io_uring_msg_controllen_for_fd},
   { "cmsgLen", "()I", (void *) netty_io_uring_cmsgLen},
+  { "cmsgLenForFd", "()I", (void *) netty_io_uring_cmsgLen_for_fd},
   { "iovecOffsetofIovBase", "()I", (void *) netty_io_uring_iovecOffsetofIovBase },
   { "iovecOffsetofIovLen", "()I", (void *) netty_io_uring_iovecOffsetofIovLen },
   { "sizeofMsghdr", "()I", (void *) netty_io_uring_sizeofMsghdr },
@@ -743,7 +793,9 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "msgDontwait", "()I", (void *) netty_io_uring_msgDontwait },
   { "msgFastopen", "()I", (void *) netty_io_uring_msgFastopen },
   { "solUdp", "()I", (void *) netty_io_uring_solUdp },
+  { "solSocket", "()I", (void *) netty_io_uring_solSocket },
   { "udpSegment", "()I", (void *) netty_io_uring_udpSegment },
+  { "scmRights", "()I", (void *) netty_io_uring_ScmRights },
   { "cmsghdrOffsetofCmsgLen", "()I", (void *) netty_io_uring_cmsghdrOffsetofCmsgLen },
   { "cmsghdrOffsetofCmsgLevel", "()I", (void *) netty_io_uring_cmsghdrOffsetofCmsgLevel },
   { "cmsghdrOffsetofCmsgType", "()I", (void *) netty_io_uring_cmsghdrOffsetofCmsgType },

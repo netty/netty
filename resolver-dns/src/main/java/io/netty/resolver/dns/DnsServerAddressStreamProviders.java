@@ -102,11 +102,7 @@ public final class DnsServerAddressStreamProviders {
         if (STREAM_PROVIDER_CONSTRUCTOR != null) {
             try {
                 return STREAM_PROVIDER_CONSTRUCTOR.newInstance();
-            } catch (IllegalAccessException e) {
-                // ignore
-            } catch (InstantiationException e) {
-                // ignore
-            } catch (InvocationTargetException e) {
+            } catch (IllegalAccessException | InstantiationException | InvocationTargetException e) {
                 // ignore
             }
         }

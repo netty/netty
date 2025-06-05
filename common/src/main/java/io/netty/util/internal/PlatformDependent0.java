@@ -46,11 +46,11 @@ final class PlatformDependent0 {
     private static final long LONG_ARRAY_BASE_OFFSET;
     private static final long LONG_ARRAY_INDEX_SCALE;
     private static final MethodHandle DIRECT_BUFFER_CONSTRUCTOR;
-    private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final MethodHandle ALLOCATE_ARRAY_METHOD;
     private static final MethodHandle ALIGN_SLICE;
-    private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
+    private static final int JAVA_VERSION = javaVersion0();
+    private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
 
@@ -109,11 +109,7 @@ final class PlatformDependent0 {
                         }
                         // the unsafe instance
                         return unsafeField.get(null);
-                    } catch (NoSuchFieldException e) {
-                        return e;
-                    } catch (SecurityException e) {
-                        return e;
-                    } catch (IllegalAccessException e) {
+                    } catch (NoSuchFieldException | IllegalAccessException | SecurityException e) {
                         return e;
                     } catch (NoClassDefFoundError e) {
                         // Also catch NoClassDefFoundError in case someone uses for example OSGI and it made
@@ -131,7 +127,7 @@ final class PlatformDependent0 {
                 unsafe = null;
                 unsafeUnavailabilityCause = (Throwable) maybeUnsafe;
                 if (logger.isTraceEnabled()) {
-                    logger.debug("sun.misc.Unsafe.theUnsafe: unavailable", (Throwable) maybeUnsafe);
+                    logger.debug("sun.misc.Unsafe.theUnsafe: unavailable", unsafeUnavailabilityCause);
                 } else {
                     logger.debug("sun.misc.Unsafe.theUnsafe: unavailable: {}", unsafeUnavailabilityCause.getMessage());
                 }
@@ -189,11 +185,7 @@ final class PlatformDependent0 {
                                 finalUnsafe.freeMemory(address);
                             }
                             return null;
-                        } catch (UnsupportedOperationException e) {
-                            return e;
-                        } catch (NoSuchMethodException e) {
-                            return e;
-                        } catch (SecurityException e) {
+                        } catch (UnsupportedOperationException | SecurityException | NoSuchMethodException e) {
                             return e;
                         }
                     }
@@ -208,8 +200,7 @@ final class PlatformDependent0 {
                     if (logger.isTraceEnabled()) {
                         logger.debug("sun.misc.Unsafe method unavailable:", unsafeUnavailabilityCause);
                     } else {
-                        logger.debug("sun.misc.Unsafe method unavailable: {}",
-                                ((Throwable) maybeException).getMessage());
+                        logger.debug("sun.misc.Unsafe method unavailable: {}", unsafeUnavailabilityCause.getMessage());
                     }
                 }
             }
@@ -233,9 +224,7 @@ final class PlatformDependent0 {
                                 return null;
                             }
                             return field;
-                        } catch (NoSuchFieldException e) {
-                            return e;
-                        } catch (SecurityException e) {
+                        } catch (NoSuchFieldException | SecurityException e) {
                             return e;
                         }
                     }
@@ -387,15 +376,8 @@ final class PlatformDependent0 {
                             return cause;
                         }
                         return unalignedMethod.invoke(null);
-                    } catch (NoSuchMethodException e) {
-                        return e;
-                    } catch (SecurityException e) {
-                        return e;
-                    } catch (IllegalAccessException e) {
-                        return e;
-                    } catch (ClassNotFoundException e) {
-                        return e;
-                    } catch (InvocationTargetException e) {
+                    } catch (NoSuchMethodException | SecurityException | IllegalAccessException |
+                             InvocationTargetException | ClassNotFoundException e) {
                         return e;
                     }
                 }
@@ -748,8 +730,8 @@ final class PlatformDependent0 {
         return UNSAFE.getIntVolatile(null, address);
     }
 
-    static void putIntOrdered(long adddress, int newValue) {
-        UNSAFE.putOrderedInt(null, adddress, newValue);
+    static void putIntOrdered(long address, int newValue) {
+        UNSAFE.putOrderedInt(null, address, newValue);
     }
 
     static long getLong(byte[] data, int index) {
@@ -768,9 +750,9 @@ final class PlatformDependent0 {
         UNSAFE.putShort(address, value);
     }
 
-    static void putShortOrdered(long adddress, short newValue) {
+    static void putShortOrdered(long address, short newValue) {
         UNSAFE.storeFence();
-        UNSAFE.putShort(null, adddress, newValue);
+        UNSAFE.putShort(null, address, newValue);
     }
 
     static void putInt(long address, int value) {
@@ -1076,7 +1058,7 @@ final class PlatformDependent0 {
     private static int javaVersion0() {
         final int majorVersion;
 
-        if (isAndroid0()) {
+        if (isAndroid()) {
             majorVersion = 6;
         } else {
             majorVersion = majorVersionFromJavaSpecificationVersion();

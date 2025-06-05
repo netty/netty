@@ -100,6 +100,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -110,7 +111,6 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.KeyManagerFactorySpi;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SNIHostName;
-import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -318,7 +318,7 @@ public abstract class SSLEngineTest {
             case Heap:
                 return ByteBuffer.allocate(len);
             case Mixed:
-                return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                return ThreadLocalRandom.current().nextBoolean() ?
                         ByteBuffer.allocateDirect(len) : ByteBuffer.allocate(len);
             default:
                 throw new Error();
@@ -343,7 +343,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.heapBuffer();
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer() : allocator.heapBuffer();
                 default:
                     throw new Error();
@@ -358,7 +358,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.heapBuffer(initialCapacity);
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer(initialCapacity) : allocator.heapBuffer(initialCapacity);
                 default:
                     throw new Error();
@@ -373,7 +373,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.heapBuffer(initialCapacity, maxCapacity);
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer(initialCapacity, maxCapacity) :
                             allocator.heapBuffer(initialCapacity, maxCapacity);
                 default:
@@ -434,7 +434,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.compositeHeapBuffer();
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.compositeDirectBuffer() :
                             allocator.compositeHeapBuffer();
                 default:
@@ -450,7 +450,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.compositeHeapBuffer(maxNumComponents);
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.compositeDirectBuffer(maxNumComponents) :
                             allocator.compositeHeapBuffer(maxNumComponents);
                 default:
@@ -636,7 +636,11 @@ public abstract class SSLEngineTest {
             serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
             // Set the server to only support a single TLSv1.2 cipher
-            final String serverCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+            final String serverCipher =
+                    // JDK24+ does not support TLS_RSA_* ciphers by default anymore:
+                    // See https://www.java.com/en/configure_crypto.html
+                    PlatformDependent.javaVersion() >= 24 ? "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" :
+                            "TLS_RSA_WITH_AES_128_CBC_SHA";
             serverEngine.setEnabledCipherSuites(new String[] { serverCipher });
 
             // Set the client to only support a single TLSv1.3 cipher
@@ -742,9 +746,13 @@ public abstract class SSLEngineTest {
     private void testMutualAuthInvalidClientCertSucceed(SSLEngineTestParam param, ClientAuth auth) throws Exception {
         char[] password = "example".toCharArray();
         final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
-        serverKeyStore.load(getClass().getResourceAsStream("mutual_auth_server.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("mutual_auth_server.p12")) {
+            serverKeyStore.load(resourceAsStream, password);
+        }
         final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
-        clientKeyStore.load(getClass().getResourceAsStream("mutual_auth_invalid_client.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("mutual_auth_invalid_client.p12")) {
+            clientKeyStore.load(resourceAsStream, password);
+        }
         final KeyManagerFactory serverKeyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         serverKeyManagerFactory.init(serverKeyStore, password);
@@ -770,9 +778,13 @@ public abstract class SSLEngineTest {
             throws Exception {
         char[] password = "example".toCharArray();
         final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
-        serverKeyStore.load(getClass().getResourceAsStream("mutual_auth_server.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("mutual_auth_server.p12")) {
+            serverKeyStore.load(resourceAsStream, password);
+        }
         final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
-        clientKeyStore.load(getClass().getResourceAsStream(clientCert), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream(clientCert)) {
+            clientKeyStore.load(resourceAsStream, password);
+        }
         final KeyManagerFactory serverKeyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         serverKeyManagerFactory.init(serverKeyStore, password);
@@ -2257,7 +2269,11 @@ public abstract class SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
         // due to no shared/supported cipher.
-        final String sharedCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        final String sharedCipher =
+                // JDK24+ does not support TLS_RSA_* ciphers by default anymore:
+                // See https://www.java.com/en/configure_crypto.html
+                PlatformDependent.javaVersion() >= 24 ? "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" :
+                "TLS_RSA_WITH_AES_128_CBC_SHA";
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher))
@@ -2290,7 +2306,11 @@ public abstract class SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
         // due to no shared/supported cipher.
-        final String sharedCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        final String sharedCipher =
+                // JDK24+ does not support TLS_RSA_* ciphers by default anymore:
+                // See https://www.java.com/en/configure_crypto.html
+                PlatformDependent.javaVersion() >= 24 ? "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" :
+                        "TLS_RSA_WITH_AES_128_CBC_SHA";
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher), SupportedCipherSuiteFilter.INSTANCE)
@@ -3177,9 +3197,7 @@ public abstract class SSLEngineTest {
                     .ciphers(cipherList).build());
             server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             fail();
-        } catch (IllegalArgumentException expected) {
-            // expected when invalid cipher is used.
-        } catch (SSLException expected) {
+        } catch (IllegalArgumentException | SSLException expected) {
             // expected when invalid cipher is used.
         } finally {
             cleanupServerSslEngine(server);
@@ -4715,10 +4733,14 @@ public abstract class SSLEngineTest {
         char[] password = "password".toCharArray();
 
         final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
-        serverKeyStore.load(getClass().getResourceAsStream("rsaValidations-server-keystore.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("rsaValidations-server-keystore.p12")) {
+            serverKeyStore.load(resourceAsStream, password);
+        }
 
         final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
-        clientKeyStore.load(getClass().getResourceAsStream("rsaValidation-user-certs.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("rsaValidation-user-certs.p12")) {
+            clientKeyStore.load(resourceAsStream, password);
+        }
 
         final KeyManagerFactory serverKeyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());

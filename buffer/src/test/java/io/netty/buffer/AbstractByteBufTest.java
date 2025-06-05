@@ -48,6 +48,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -2690,7 +2691,7 @@ public abstract class AbstractByteBufTest {
         assertEquals(1, buf.remaining());
 
         byte[] data = new byte[a];
-        PlatformDependent.threadLocalRandom().nextBytes(data);
+        ThreadLocalRandom.current().nextBytes(data);
         buffer.writeBytes(data);
 
         buf = buffer.internalNioBuffer(buffer.readerIndex(), a);
@@ -4831,6 +4832,37 @@ public abstract class AbstractByteBufTest {
         int bytes = buf.writeCharSequence(sequence, charset);
         buf.readerIndex(1);
         assertEquals(sequence, CharBuffer.wrap(buf.readCharSequence(bytes, charset)));
+        buf.release();
+    }
+
+    @Test
+    public void testWriteReadUsAsciiString() {
+        testWriteReadString(CharsetUtil.US_ASCII);
+    }
+
+    @Test
+    public void testWriteReadUtf8String() {
+        testWriteReadString(CharsetUtil.UTF_8);
+    }
+
+    @Test
+    public void testWriteReadIso88591String() {
+        testWriteReadString(CharsetUtil.ISO_8859_1);
+    }
+
+    @Test
+    public void testWriteReadUtf16String() {
+        testWriteReadString(CharsetUtil.UTF_16);
+    }
+
+    private void testWriteReadString(Charset charset) {
+        ByteBuf buf = newBuffer(1024);
+        CharBuffer sequence = CharsetUtil.US_ASCII.equals(charset)
+                ? ASCII_CHARS : EXTENDED_ASCII_CHARS;
+        buf.writerIndex(1);
+        int bytes = buf.writeCharSequence(sequence, charset);
+        buf.readerIndex(1);
+        assertEquals(sequence, CharBuffer.wrap(buf.readString(bytes, charset)));
         buf.release();
     }
 

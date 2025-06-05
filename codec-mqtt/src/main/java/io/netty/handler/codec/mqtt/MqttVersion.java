@@ -48,7 +48,7 @@ public enum MqttVersion {
     }
 
     public static MqttVersion fromProtocolNameAndLevel(String protocolName, byte protocolLevel) {
-        MqttVersion mv = null;
+        MqttVersion mv;
         switch (protocolLevel) {
         case 3:
             mv = MQTT_3_1;
@@ -60,9 +60,6 @@ public enum MqttVersion {
             mv = MQTT_5;
             break;
         default:
-            break;
-        }
-        if (mv == null) {
             throw new MqttUnacceptableProtocolVersionException(protocolName + " is an unknown protocol name");
         }
         if (mv.name.equals(protocolName)) {

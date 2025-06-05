@@ -89,7 +89,15 @@ final class Native {
     static final int SOCK_CLOEXEC = NativeStaticallyReferencedJniMethods.sockCloexec();
     static final short AF_INET = (short) NativeStaticallyReferencedJniMethods.afInet();
     static final short AF_INET6 = (short) NativeStaticallyReferencedJniMethods.afInet6();
+    static final short AF_UNIX = (short) NativeStaticallyReferencedJniMethods.afUnix();
     static final int SIZEOF_SOCKADDR_STORAGE = NativeStaticallyReferencedJniMethods.sizeofSockaddrStorage();
+    static final int SIZEOF_SOCKADDR_UN = NativeStaticallyReferencedJniMethods.sizeofSockaddrUn();
+    static final int SOCKADDR_UN_OFFSETOF_SUN_FAMILY =
+            NativeStaticallyReferencedJniMethods.sockaddrUnOffsetofSunFamily();
+    static final int SOCKADDR_UN_OFFSETOF_SUN_PATH =
+            NativeStaticallyReferencedJniMethods.sockaddrUnOffsetofSunPath();
+    static final int MAX_SUN_PATH_LEN =
+            NativeStaticallyReferencedJniMethods.maxSunPathLen();
     static final int SIZEOF_SOCKADDR_IN = NativeStaticallyReferencedJniMethods.sizeofSockaddrIn();
     static final int SIZEOF_SOCKADDR_IN6 = NativeStaticallyReferencedJniMethods.sizeofSockaddrIn6();
     static final int SOCKADDR_IN_OFFSETOF_SIN_FAMILY =
@@ -111,7 +119,10 @@ final class Native {
     static final int SIZEOF_SIZE_T = NativeStaticallyReferencedJniMethods.sizeofSizeT();
     static final int SIZEOF_IOVEC = NativeStaticallyReferencedJniMethods.sizeofIovec();
     static final int CMSG_SPACE = NativeStaticallyReferencedJniMethods.cmsgSpace();
+    static final int CMSG_SPACE_FOR_FD = NativeStaticallyReferencedJniMethods.cmsgSpaceForFd();
     static final int CMSG_LEN = NativeStaticallyReferencedJniMethods.cmsgLen();
+    static final int CMSG_LEN_FOR_FD = NativeStaticallyReferencedJniMethods.cmsgLenForFd();
+    static final int MSG_CONTROL_LEN_FOR_FD = NativeStaticallyReferencedJniMethods.msgControlLenForFd();
     static final int CMSG_OFFSETOF_CMSG_LEN = NativeStaticallyReferencedJniMethods.cmsghdrOffsetofCmsgLen();
     static final int CMSG_OFFSETOF_CMSG_LEVEL = NativeStaticallyReferencedJniMethods.cmsghdrOffsetofCmsgLevel();
     static final int CMSG_OFFSETOF_CMSG_TYPE = NativeStaticallyReferencedJniMethods.cmsghdrOffsetofCmsgType();
@@ -293,7 +304,9 @@ final class Native {
     static final int MSG_DONTWAIT = NativeStaticallyReferencedJniMethods.msgDontwait();
     static final int MSG_FASTOPEN = NativeStaticallyReferencedJniMethods.msgFastopen();
     static final int SOL_UDP = NativeStaticallyReferencedJniMethods.solUdp();
+    static final int SOL_SOCKET = NativeStaticallyReferencedJniMethods.solSocket();
     static final int UDP_SEGMENT = NativeStaticallyReferencedJniMethods.udpSegment();
+    static final int SCM_RIGHTS = NativeStaticallyReferencedJniMethods.scmRights();
     private static final int TFO_ENABLED_CLIENT_MASK = 0x1;
     private static final int TFO_ENABLED_SERVER_MASK = 0x2;
     private static final int TCP_FASTOPEN_MODE = NativeStaticallyReferencedJniMethods.tcpFastopenMode();
@@ -554,7 +567,7 @@ final class Native {
         if (!name.startsWith("linux")) {
             throw new IllegalStateException("Only supported on Linux");
         }
-        String staticLibName = "netty_transport_native_io_uring";
+        String staticLibName = "netty_transport_native_io_uring42";
         String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
         ClassLoader cl = PlatformDependent.getClassLoader(Native.class);
         try {

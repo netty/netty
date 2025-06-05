@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.1.Final-SNAPSHOT</version>
+    <version>4.2.2.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-io_uring</artifactId>
 
@@ -41,7 +41,7 @@
     <skipTests>true</skipTests>
     <jniArch>${os.detected.arch}</jniArch>
     <jni.classifier>${os.detected.name}-${jniArch}</jni.classifier>
-    <jniLibName>netty_transport_native_io_uring_${jniArch}</jniLibName>
+    <jniLibName>netty_transport_native_io_uring42_${jniArch}</jniLibName>
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <extraConfigureArg />
     <extraConfigureArg2 />
@@ -59,6 +59,7 @@
         </os>
       </activation>
       <properties>
+        <!-- Enable testsuite -->
         <skipTests>false</skipTests>
       </properties>
 
@@ -148,7 +149,7 @@
                 </goals>
                 <configuration>
                   <instructions>
-                    <Bundle-NativeCode>META-INF/native/libnetty_transport_native_io_uring_${os.detected.arch}.so; osname=Linux; processor=${os.detected.arch},*</Bundle-NativeCode>
+                    <Bundle-NativeCode>META-INF/native/libnetty_transport_native_io_uring42_${os.detected.arch}.so; osname=Linux; processor=${os.detected.arch},*</Bundle-NativeCode>
                     <Bundle-SymbolicName>${maven-symbolicname}.${jni.classifier}</Bundle-SymbolicName>
                     <Fragment-Host>io.netty.transport-classes-io_uring</Fragment-Host>
                   </instructions>
@@ -375,6 +376,31 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>${tcnative.artifactId}</artifactId>
       <classifier>${tcnative.classifier}</classifier>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-library</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
