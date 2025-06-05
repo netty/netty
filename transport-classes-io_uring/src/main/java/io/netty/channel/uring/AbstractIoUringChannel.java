@@ -980,8 +980,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 }
                 return;
             }
-            assert numOutstandingWrites > 0;
+
             if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
+                assert numOutstandingWrites > 0;
                 --numOutstandingWrites;
             }
 

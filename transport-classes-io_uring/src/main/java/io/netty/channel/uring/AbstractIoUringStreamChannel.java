@@ -285,11 +285,19 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 }
                 ops = fileRegion.splice(fd);
             } else if (msg instanceof IoUringSendZCMessage) {
-                ByteBuf buf = ((IoUringSendZCMessage) msg).buf;
-                int zcFlags = Native.IORING_SEND_ZC_REPORT_USAGE;
-                long messageAddress =  IoUring.memoryAddress(buf) + buf.readerIndex();
-                int length = buf.readableBytes();
-                ops = IoUringIoOps.newSendZC(fd, messageAddress, length, 0, nextOpsId(), zcFlags);
+                IoUringSendZCMessage ioUringSendZCMessage = (IoUringSendZCMessage) msg;
+                ByteBuf buf = ioUringSendZCMessage.buf;
+                // In the case of a short send,
+                // we fall back to io_uring_op_write to simplify handling and ensure reliability.
+                if (ioUringSendZCMessage.isShortSend) {
+                    ops = IoUringIoOps.newWrite(fd, (byte) 0, 0,
+                            IoUring.memoryAddress(buf) + buf.readerIndex(), buf.readableBytes(), nextOpsId());
+                } else {
+                    int zcFlags = Native.IORING_SEND_ZC_REPORT_USAGE;
+                    long messageAddress =  IoUring.memoryAddress(buf) + buf.readerIndex();
+                    int length = buf.readableBytes();
+                    ops = IoUringIoOps.newSendZC(fd, messageAddress, length, 0, nextOpsId(), zcFlags);
+                }
             } else {
                 ByteBuf buf = (ByteBuf) msg;
                 ops = IoUringIoOps.newWrite(fd, (byte) 0, 0,
@@ -594,48 +602,21 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 return true;
             }
 
-            boolean fallbackToCopy = false;
-            if (IoUring.isIOUringSendZCSupported() && (flags & Native.IORING_CQE_F_NOTIF) != 0) {
-                fallbackToCopy = checkZCReport(res);
-                res &= ~Native.IORING_NOTIF_USAGE_ZC_COPIED;
+            // If current instanceof IoUringSendZCMessage is true,
+            // it means either io_uring_op_send is currently being used to send the ByteBuf,
+            // or a short-send is being handled.
+
+            // If current instanceof IoUringSendZCMessage is false
+            // but op == IORING_OP_SEND_ZC,
+            // it means we are handling an IORING_CQE_F_NOTIF.
+            if (current instanceof IoUringSendZCMessage || op == Native.IORING_OP_SEND_ZC) {
+                IoUringSendZCMessage currentMessage = current instanceof IoUringSendZCMessage
+                        ? (IoUringSendZCMessage) current
+                        : null;
+                return handleSendZC(res, flags, currentMessage, channelOutboundBuffer);
             }
+
             if (res >= 0) {
-                // First CQE with standard res semantics and the IORING_CQE_F_MORE flag set, and
-                if ((flags & Native.IORING_CQE_F_MORE) != 0) {
-                    IoUringSendZCMessage ioUringSendZCMessage = (IoUringSendZCMessage) channelOutboundBuffer.current();
-                    // For TCP, io_uring will try to hide a short send,
-                    // i.e. retry internally, but it can fail.
-                    // IOW, in theory can happen but should be rare
-                    ioUringSendZCMessage.handSendResult(res);
-                    // https://github.com/axboe/liburing/issues/801#issuecomment-1462057203
-                    // If we're streaming data, we don't have to wait for the prev notification
-                    // But can push more data using another buffer
-                    if (ioUringSendZCMessage.needRemove()) {
-                        channelOutboundBuffer.remove();
-                        // In a copy mode the kernel will allocate that memory internally
-                        // and keep it until it gets an ACK
-                        // So we can release the buffer safely
-                        if (fallbackToCopy) {
-                            ioUringSendZCMessage.release();
-                        } else {
-                            if (zcSendQueue == null) {
-                                zcSendQueue = new ArrayDeque<>(4);
-                            }
-                            zcSendQueue.offer(ioUringSendZCMessage);
-                        }
-                    }
-                    return true;
-                }
-
-                // Second CQE with res set to 0 and the IORING_CQE_F_NOTIF flag set.
-                if ((flags & Native.IORING_CQE_F_NOTIF) != 0) {
-                    IoUringSendZCMessage ioUringSendZCMessage = zcSendQueue.poll();
-                    if (ioUringSendZCMessage != null) {
-                        ioUringSendZCMessage.release();
-                    }
-                    return true;
-                }
-
                 channelOutboundBuffer.removeBytes(res);
             } else if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return true;
@@ -651,6 +632,65 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             return true;
         }
 
+        private boolean handleSendZC(int res, int flags,
+                                     IoUringSendZCMessage currentMessage, ChannelOutboundBuffer channelOutboundBuffer) {
+            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                return true;
+            }
+
+            // Second CQE with res set to 0 and the IORING_CQE_F_NOTIF flag set.
+            if ((flags & Native.IORING_CQE_F_NOTIF) != 0) {
+                res = reportAndMaskZCResult(res);
+                IoUringSendZCMessage ioUringSendZCMessage = zcSendQueue.poll();
+                if (ioUringSendZCMessage != null) {
+                    ioUringSendZCMessage.release();
+                }
+                return true;
+            }
+
+            if (res < 0) {
+                try {
+                    if (ioResult("io_uring write", res) == 0) {
+                        return false;
+                    }
+                } catch (Throwable cause) {
+                    handleWriteError(cause);
+                }
+                return true;
+            }
+
+            boolean isShortSend = currentMessage.isShortSend;
+            // First CQE with standard res semantics and the IORING_CQE_F_MORE flag set
+            if ((flags & Native.IORING_CQE_F_MORE) != 0 || isShortSend) {
+                currentMessage.handSendResult(res);
+                // https://github.com/axboe/liburing/issues/801#issuecomment-1462057203
+                // If we're streaming data, we don't have to wait for the prev notification
+                // But can push more data using another buffer
+                if (currentMessage.needRemove()) {
+                    channelOutboundBuffer.remove();
+                    if (isShortSend) {
+                        currentMessage.release();
+                    } else {
+                        if (zcSendQueue == null) {
+                            zcSendQueue = new ArrayDeque<>(4);
+                        }
+                        // all data sent by io_uring_send_zc
+                        // waiting cqe with IORING_CQE_F_NOTIF
+                        zcSendQueue.offer(currentMessage);
+                    }
+                } else {
+                    // https://github.com/axboe/liburing/issues/801#issuecomment-1462059127
+                    // For TCP, io_uring will try to hide a short send, i.e. retry internally, but it can fail.
+                    // IOW, in theory can happen but should be rare
+                    currentMessage.markShortSend();
+                }
+                return true;
+            }
+
+            // should not reach here
+            throw new IllegalStateException("should not reach here");
+        }
+
         @Override
         protected void freeResourcesNow(IoRegistration reg) {
             super.freeResourcesNow(reg);
@@ -662,7 +702,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
     }
 
-    private boolean checkZCReport(int res) {
+    private int reportAndMaskZCResult(int res) {
         /*
          * IORING_SEND_ZC_REPORT_USAGE
          * If set, SEND[MSG]_ZC should report the zerocopy usage in cqe.res for the IORING_CQE_F_NOTIF cqe.
@@ -670,7 +710,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
          * IORING_NOTIF_USAGE_ZC_COPIED if data was copied(at least partially).
          */
         if (res == 0) {
-            return false;
+            return res;
         }
 
         /*
@@ -683,14 +723,21 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             pipeline().fireUserEventTriggered(IoUringSendZCFallbackEvent.INSTANCE);
         }
 
-        return isCopy;
+        res &= ~Native.IORING_NOTIF_USAGE_ZC_COPIED;
+        return res;
     }
 
     static final class IoUringSendZCMessage {
         private final ByteBuf buf;
+        private boolean isShortSend;
 
         IoUringSendZCMessage(ByteBuf buf) {
            this.buf = buf;
+           this.isShortSend = false;
+        }
+
+        void markShortSend() {
+            isShortSend = true;
         }
 
         void handSendResult(int res) {
@@ -698,7 +745,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         boolean needRemove() {
-            return buf.readableBytes() == 0;
+            return !buf.isReadable();
         }
 
         void release() {

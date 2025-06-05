@@ -62,6 +62,15 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
      * Check
      * <a href="https://man.archlinux.org/man/io_uring_enter.2.en#IORING_OP_SEND_ZC"> man io_uring_enter</a>
      * for more details.
+     * <p>
+     * If then kernel does not support sendzc and fallbacks to copy mode,
+     * we will fire an {@link IoUringSendZCFallbackEvent} in the pipeline.
+     * <p>
+     * Check
+     * <a href="https://github.com/axboe/liburing/discussions/1348">
+     *     io_uring_sendzc always report IORING_NOTIF_USAGE_ZC_COPIED
+     * </a>
+     * for more details.
      */
     public static final ChannelOption<Integer> IO_URING_SEND_ZC_THRESHOLD =
             ChannelOption.valueOf(IoUringChannelOption.class, "IOURING_SEND_ZC_THRESHOLD");

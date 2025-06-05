@@ -96,7 +96,7 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
         return this;
     }
 
-    boolean shouldSendCC(int waitSend) {
+    boolean shouldSendZC(int waitSend) {
         // This can reduce one read operation on a volatile field.
         int threshold = this.getSendZcThreshold();
         return threshold != DISABLE_SEND_ZC && waitSend >= threshold;
