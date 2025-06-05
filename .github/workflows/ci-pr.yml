@@ -64,7 +64,7 @@ jobs:
         if: ${{ cancelled() }}
 
   build-pr-windows:
-    runs-on: windows-2019
+    runs-on: windows-2022
     name: windows-x86_64-java11-boringssl
     needs: verify-pr
     env:
