@@ -1306,10 +1306,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     private static boolean isIgnorableClassInStack(String classname) {
-        return (classname.contains("SocketChannel") ||
-                classname.contains("DatagramChannel") ||
-                classname.contains("SctpChannel") ||
-                classname.contains("UdtChannel"));
+        return classname.contains("SocketChannel") ||
+               classname.contains("DatagramChannel") ||
+               classname.contains("SctpChannel") ||
+               classname.contains("UdtChannel");
     }
 
     /**
