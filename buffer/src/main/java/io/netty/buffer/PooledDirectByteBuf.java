@@ -303,11 +303,16 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
 
     @Override
     public boolean hasMemoryAddress() {
-        return false;
+        PoolChunk<ByteBuffer> chunk = this.chunk;
+        return chunk != null && chunk.cleanable.hasMemoryAddress();
     }
 
     @Override
     public long memoryAddress() {
-        throw new UnsupportedOperationException();
+        ensureAccessible();
+        if (!hasMemoryAddress()) {
+            throw new UnsupportedOperationException();
+        }
+        return chunk.cleanable.memoryAddress() + offset;
     }
 }

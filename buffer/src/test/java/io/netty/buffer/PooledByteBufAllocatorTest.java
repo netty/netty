@@ -42,6 +42,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -723,6 +724,21 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         int afterFreeBytes = chunk.freeBytes();
 
         assertTrue(beforeFreeBytes < afterFreeBytes);
+    }
+
+    @Test
+    void directBuffersMustHaveMemoryAddress() throws Exception {
+        // The memory address must always be available when we either have Unsafe available,
+        // or when we have memory segments available (though CleanerJava24 only enables for Java 24+).
+        assumeTrue(PlatformDependent.hasUnsafe() || PlatformDependent.javaVersion() >= 24);
+        PooledByteBufAllocator allocator = newAllocator(true);
+        ByteBuf buf = allocator.directBuffer();
+        try {
+            assertTrue(buf.hasMemoryAddress());
+            assertNotEquals(0L, buf.memoryAddress());
+        } finally {
+            buf.release();
+        }
     }
 
     @Override
