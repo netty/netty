@@ -60,6 +60,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     WebSocketProtocolHandler(boolean dropPongFrames,
                              WebSocketCloseStatus closeStatus,
                              long forceCloseTimeoutMillis) {
+        super(WebSocketFrame.class);
         this.dropPongFrames = dropPongFrames;
         this.closeStatus = closeStatus;
         this.forceCloseTimeoutMillis = forceCloseTimeoutMillis;

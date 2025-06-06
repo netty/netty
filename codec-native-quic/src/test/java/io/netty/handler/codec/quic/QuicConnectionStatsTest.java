@@ -29,11 +29,9 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 
 public class QuicConnectionStatsTest extends AbstractQuicTest {
 
@@ -134,10 +132,10 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
 
     private static void assertStats(QuicConnectionStats stats) {
         assertNotNull(stats);
-        assertThat(stats.lost(), greaterThanOrEqualTo(0L));
-        assertThat(stats.recv(), greaterThan(0L));
-        assertThat(stats.sent(), greaterThan(0L));
-        assertThat(stats.sentBytes(), greaterThan(0L));
-        assertThat(stats.recvBytes(), greaterThan(0L));
+        assertThat(stats.lost()).isGreaterThanOrEqualTo(0L);
+        assertThat(stats.recv()).isGreaterThan(0L);
+        assertThat(stats.sent()).isGreaterThan(0L);
+        assertThat(stats.sentBytes()).isGreaterThan(0L);
+        assertThat(stats.recvBytes()).isGreaterThan(0L);
     }
 }

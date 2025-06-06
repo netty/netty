@@ -51,10 +51,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.Checksum;
 
 import static io.netty.handler.codec.compression.Lz4Constants.DEFAULT_SEED;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.core.Is.is;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -309,7 +307,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
             assertNotNull(writeFailCause);
             Throwable writeFailCauseCause = writeFailCause.getCause();
             if (writeFailCauseCause != null) {
-                assertThat(writeFailCauseCause, is(not(instanceOf(NullPointerException.class))));
+                assertThat(writeFailCauseCause).isNotInstanceOf(NullPointerException.class);
             }
         } finally {
             if (serverChannel != null) {

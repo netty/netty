@@ -23,8 +23,8 @@ import org.junit.jupiter.api.Test;
 import java.util.Random;
 
 import static io.netty.buffer.Unpooled.*;
-import static org.hamcrest.core.Is.*;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class ByteArrayDecoderTest {
 
@@ -40,19 +40,19 @@ public class ByteArrayDecoderTest {
         byte[] b = new byte[2048];
         new Random().nextBytes(b);
         ch.writeInbound(wrappedBuffer(b));
-        assertThat((byte[]) ch.readInbound(), is(b));
+        assertArrayEquals(b, ch.readInbound());
     }
 
     @Test
     public void testDecodeEmpty() {
         ch.writeInbound(EMPTY_BUFFER);
-        assertThat((byte[]) ch.readInbound(), is(EmptyArrays.EMPTY_BYTES));
+        assertArrayEquals(EmptyArrays.EMPTY_BYTES, ch.readInbound());
     }
 
     @Test
     public void testDecodeOtherType() {
         String str = "Meep!";
         ch.writeInbound(str);
-        assertThat(ch.readInbound(), is((Object) str));
+        assertSame(str, ch.readInbound());
     }
 }

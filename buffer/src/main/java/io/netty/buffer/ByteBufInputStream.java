@@ -207,10 +207,7 @@ public class ByteBufInputStream extends InputStream implements DataInput {
 
     @Override
     public byte readByte() throws IOException {
-        int available = available();
-        if (available == 0) {
-            throw new EOFException();
-        }
+        checkAvailable(1);
         return buffer.readByte();
     }
 

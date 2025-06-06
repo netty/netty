@@ -25,8 +25,9 @@ import org.junit.jupiter.api.Test;
 import java.util.Random;
 
 import static io.netty.buffer.Unpooled.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 public class ByteArrayEncoderTest {
 
@@ -39,7 +40,7 @@ public class ByteArrayEncoderTest {
 
     @AfterEach
     public void tearDown() {
-        assertThat(ch.finish(), is(false));
+        assertFalse(ch.finish());
     }
 
     @Test
@@ -48,20 +49,20 @@ public class ByteArrayEncoderTest {
         new Random().nextBytes(b);
         ch.writeOutbound(b);
         ByteBuf encoded = ch.readOutbound();
-        assertThat(encoded, is(wrappedBuffer(b)));
+        assertEquals(wrappedBuffer(b), encoded);
         encoded.release();
     }
 
     @Test
     public void testEncodeEmpty() {
         ch.writeOutbound(EmptyArrays.EMPTY_BYTES);
-        assertThat((ByteBuf) ch.readOutbound(), is(sameInstance(EMPTY_BUFFER)));
+        assertSame(EMPTY_BUFFER, ch.readOutbound());
     }
 
     @Test
     public void testEncodeOtherType() {
         String str = "Meep!";
         ch.writeOutbound(str);
-        assertThat(ch.readOutbound(), is((Object) str));
+        assertSame(str, ch.readOutbound());
     }
 }

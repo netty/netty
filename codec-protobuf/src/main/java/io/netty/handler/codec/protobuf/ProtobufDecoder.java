@@ -96,6 +96,7 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
     }
 
     public ProtobufDecoder(MessageLite prototype, ExtensionRegistryLite extensionRegistry) {
+        super(ByteBuf.class);
         this.prototype = ObjectUtil.checkNotNull(prototype, "prototype").getDefaultInstanceForType();
         this.extensionRegistry = extensionRegistry;
     }

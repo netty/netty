@@ -26,8 +26,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.concurrent.Executor;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -78,18 +77,18 @@ public class QuicTransportParametersTest extends AbstractQuicTest {
 
     private static void assertTransportParameters(@Nullable QuicTransportParameters parameters) {
         assertNotNull(parameters);
-        assertThat(parameters.maxIdleTimeout(), greaterThanOrEqualTo(1L));
-        assertThat(parameters.maxUdpPayloadSize(), greaterThanOrEqualTo(1L));
-        assertThat(parameters.initialMaxData(), greaterThanOrEqualTo(1L));
-        assertThat(parameters.initialMaxStreamDataBidiLocal(), greaterThanOrEqualTo(1L));
-        assertThat(parameters.initialMaxStreamDataBidiRemote(), greaterThanOrEqualTo(1L));
-        assertThat(parameters.initialMaxStreamDataUni(), greaterThanOrEqualTo(1L));
-        assertThat(parameters.initialMaxStreamsBidi(), greaterThanOrEqualTo(1L));
-        assertThat(parameters.initialMaxStreamsUni(), greaterThanOrEqualTo(1L));
-        assertThat(parameters.ackDelayExponent(), greaterThanOrEqualTo(1L));
-        assertThat(parameters.maxAckDelay(), greaterThanOrEqualTo(1L));
+        assertThat(parameters.maxIdleTimeout()).isGreaterThanOrEqualTo(1L);
+        assertThat(parameters.maxUdpPayloadSize()).isGreaterThanOrEqualTo(1L);
+        assertThat(parameters.initialMaxData()).isGreaterThanOrEqualTo(1L);
+        assertThat(parameters.initialMaxStreamDataBidiLocal()).isGreaterThanOrEqualTo(1L);
+        assertThat(parameters.initialMaxStreamDataBidiRemote()).isGreaterThanOrEqualTo(1L);
+        assertThat(parameters.initialMaxStreamDataUni()).isGreaterThanOrEqualTo(1L);
+        assertThat(parameters.initialMaxStreamsBidi()).isGreaterThanOrEqualTo(1L);
+        assertThat(parameters.initialMaxStreamsUni()).isGreaterThanOrEqualTo(1L);
+        assertThat(parameters.ackDelayExponent()).isGreaterThanOrEqualTo(1L);
+        assertThat(parameters.maxAckDelay()).isGreaterThanOrEqualTo(1L);
         assertFalse(parameters.disableActiveMigration());
-        assertThat(parameters.activeConnIdLimit(), greaterThanOrEqualTo(1L));
-        assertThat(parameters.maxDatagramFrameSize(), greaterThanOrEqualTo(0L));
+        assertThat(parameters.activeConnIdLimit()).isGreaterThanOrEqualTo(1L);
+        assertThat(parameters.maxDatagramFrameSize()).isGreaterThanOrEqualTo(0L);
     }
 }

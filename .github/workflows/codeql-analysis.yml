@@ -64,10 +64,10 @@ jobs:
       continue-on-error: true
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ matrix.language }} ${{ hashFiles('**/pom.xml') }}
+        key: cache-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
-          ${{ runner.os }}-maven-${{ matrix.language }}
-          ${{ runner.os }}-maven-
+          cache-maven-${{ hashFiles('**/pom.xml') }}
+          cache-maven-
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
@@ -102,7 +102,7 @@ jobs:
       run: sudo apt-get update && sudo apt-get -y install autoconf automake libtool make tar cmake perl ninja-build git cargo
 
     - name: Compile project
-      run: ./mvnw -B -ntp clean package -DskipTests=true
+      run: ./mvnw -B -ntp clean package -DskipTests=true -DskipH3Spec=true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
