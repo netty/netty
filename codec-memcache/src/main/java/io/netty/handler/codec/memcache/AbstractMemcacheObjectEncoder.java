@@ -37,6 +37,10 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
 
     private boolean expectingMoreContent;
 
+    public AbstractMemcacheObjectEncoder() {
+        super(Object.class);
+    }
+
     @Override
     protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
         if (msg instanceof MemcacheMessage) {

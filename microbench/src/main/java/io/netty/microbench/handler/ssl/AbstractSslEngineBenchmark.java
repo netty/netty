@@ -22,6 +22,7 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.Param;
 
@@ -102,25 +103,29 @@ public class AbstractSslEngineBenchmark extends AbstractMicrobenchmark {
     public enum BufferType {
         HEAP {
             @Override
-            ByteBuffer newBuffer(int size) {
-                return ByteBuffer.allocate(size);
+            CleanableDirectBuffer newBuffer(int size) {
+                ByteBuffer byteBuffer = ByteBuffer.allocate(size);
+                return new CleanableDirectBuffer() {
+                    @Override
+                    public ByteBuffer buffer() {
+                        return byteBuffer;
+                    }
+
+                    @Override
+                    public void clean() {
+                        // NOOP
+                    }
+                };
             }
         },
         DIRECT {
             @Override
-            ByteBuffer newBuffer(int size) {
-                return ByteBuffer.allocateDirect(size);
-            }
-
-            @Override
-            void freeBuffer(ByteBuffer buffer) {
-                PlatformDependent.freeDirectBuffer(buffer);
+            CleanableDirectBuffer newBuffer(int size) {
+                return PlatformDependent.allocateDirect(size);
             }
         };
 
-        abstract ByteBuffer newBuffer(int size);
-
-        void freeBuffer(ByteBuffer buffer) { }
+        abstract CleanableDirectBuffer newBuffer(int size);
     }
 
     @Param
@@ -135,6 +140,12 @@ public class AbstractSslEngineBenchmark extends AbstractMicrobenchmark {
 
     protected SSLEngine clientEngine;
     protected SSLEngine serverEngine;
+
+    private CleanableDirectBuffer cleanableCTOs;
+    private CleanableDirectBuffer cleanableSTOc;
+    private CleanableDirectBuffer cleanableServerAppReadBuffer;
+    private CleanableDirectBuffer cleanableClientAppReadBuffer;
+    private CleanableDirectBuffer cleanableEmpty;
 
     private ByteBuffer cTOs;
     private ByteBuffer sTOc;
@@ -153,22 +164,27 @@ public class AbstractSslEngineBenchmark extends AbstractMicrobenchmark {
     }
 
     protected final void initHandshakeBuffers() {
-        cTOs = allocateBuffer(clientEngine.getSession().getPacketBufferSize());
-        sTOc = allocateBuffer(serverEngine.getSession().getPacketBufferSize());
-
-        serverAppReadBuffer = allocateBuffer(
+        cleanableCTOs = allocateBuffer(clientEngine.getSession().getPacketBufferSize());
+        cleanableSTOc = allocateBuffer(serverEngine.getSession().getPacketBufferSize());
+        cleanableServerAppReadBuffer = allocateBuffer(
                 serverEngine.getSession().getApplicationBufferSize());
-        clientAppReadBuffer = allocateBuffer(
+        cleanableClientAppReadBuffer = allocateBuffer(
                 clientEngine.getSession().getApplicationBufferSize());
-        empty = allocateBuffer(0);
+        cleanableEmpty = allocateBuffer(0);
+
+        cTOs = cleanableCTOs.buffer();
+        sTOc = cleanableSTOc.buffer();
+        serverAppReadBuffer = cleanableServerAppReadBuffer.buffer();
+        clientAppReadBuffer = cleanableClientAppReadBuffer.buffer();
+        empty = cleanableEmpty.buffer();
     }
 
     protected final void destroyHandshakeBuffers() {
-        freeBuffer(cTOs);
-        freeBuffer(sTOc);
-        freeBuffer(serverAppReadBuffer);
-        freeBuffer(clientAppReadBuffer);
-        freeBuffer(empty);
+        cleanableCTOs.clean();
+        cleanableSTOc.clean();
+        cleanableServerAppReadBuffer.clean();
+        cleanableClientAppReadBuffer.clean();
+        cleanableEmpty.clean();
     }
 
     protected final boolean doHandshake() throws SSLException {
@@ -253,12 +269,8 @@ public class AbstractSslEngineBenchmark extends AbstractMicrobenchmark {
         return result.getStatus() == SSLEngineResult.Status.OK && !src.hasRemaining() && dst.hasRemaining();
     }
 
-    protected final ByteBuffer allocateBuffer(int size) {
+    protected final CleanableDirectBuffer allocateBuffer(int size) {
         return bufferType.newBuffer(size);
-    }
-
-    protected final void freeBuffer(ByteBuffer buffer) {
-        bufferType.freeBuffer(buffer);
     }
 
     private static boolean isHandshakeFinished(SSLEngineResult result) {

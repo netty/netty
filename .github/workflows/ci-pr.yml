@@ -57,7 +57,7 @@ jobs:
             cache-maven-
 
       - name: Verify with Maven
-        run: ./mvnw -B -ntp --file pom.xml verify -DskipTests=true
+        run: ./mvnw -B -ntp --file pom.xml verify -DskipTests=true -DskipH3Spec=true
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms

@@ -132,13 +132,6 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         return true;
     }
 
-    private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
-        ChannelFuture f = ctx.writeAndFlush(res);
-        if (!isKeepAlive(req) || res.status().code() != 200) {
-            f.addListener(ChannelFutureListener.CLOSE);
-        }
-    }
-
     private static String getWebSocketLocation(ChannelPipeline cp, HttpRequest req, String path) {
         String protocol = "ws";
         if (cp.get(SslHandler.class) != null) {

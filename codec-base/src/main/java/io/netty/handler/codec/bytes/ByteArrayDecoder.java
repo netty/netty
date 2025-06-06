@@ -50,6 +50,10 @@ import java.util.List;
  * </pre>
  */
 public class ByteArrayDecoder extends MessageToMessageDecoder<ByteBuf> {
+    public ByteArrayDecoder() {
+        super(ByteBuf.class);
+    }
+
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
          // copy the ByteBuf content to a byte array

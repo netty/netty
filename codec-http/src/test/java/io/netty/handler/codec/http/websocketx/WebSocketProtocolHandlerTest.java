@@ -25,15 +25,14 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.flow.FlowControlHandler;
 import io.netty.util.ReferenceCountUtil;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.util.CharsetUtil.UTF_8;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -173,7 +172,7 @@ public class WebSocketProtocolHandlerTest {
             channel.runPendingTasks();
         } while (!future.isDone());
 
-        assertThat(future.cause(), Matchers.instanceOf(WebSocketHandshakeException.class));
+        assertInstanceOf(WebSocketHandshakeException.class, future.cause());
         assertFalse(ref.get().isDone());
         assertFalse(channel.finish());
     }

@@ -60,6 +60,10 @@ import static io.netty.buffer.Unpooled.*;
  */
 @Sharable
 public class ProtobufEncoder extends MessageToMessageEncoder<MessageLiteOrBuilder> {
+    public ProtobufEncoder() {
+        super(MessageLiteOrBuilder.class);
+    }
+
     @Override
     protected void encode(ChannelHandlerContext ctx, MessageLiteOrBuilder msg, List<Object> out)
             throws Exception {

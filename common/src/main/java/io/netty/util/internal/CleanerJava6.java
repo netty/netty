@@ -27,7 +27,6 @@ import java.util.Objects;
 
 import static java.lang.invoke.MethodType.methodType;
 
-
 /**
  * Allows to free direct {@link ByteBuffer} by using Cleaner. This is encapsulated in an extra class to be able
  * to use {@link PlatformDependent0} on Android without problems.
@@ -101,7 +100,17 @@ final class CleanerJava6 implements Cleaner {
     }
 
     @Override
+    public CleanableDirectBuffer allocate(int capacity) {
+        return new CleanableDirectBufferImpl(ByteBuffer.allocateDirect(capacity));
+    }
+
+    @Deprecated
+    @Override
     public void freeDirectBuffer(ByteBuffer buffer) {
+        freeDirectBufferStatic(buffer);
+    }
+
+    private static void freeDirectBufferStatic(ByteBuffer buffer) {
         if (!buffer.isDirect()) {
             return;
         }
@@ -135,5 +144,23 @@ final class CleanerJava6 implements Cleaner {
 
     private static void freeDirectBuffer0(ByteBuffer buffer) throws Throwable {
         CLEAN_METHOD.invokeExact(buffer);
+    }
+
+    private static final class CleanableDirectBufferImpl implements CleanableDirectBuffer {
+        private final ByteBuffer buffer;
+
+        private CleanableDirectBufferImpl(ByteBuffer buffer) {
+            this.buffer = buffer;
+        }
+
+        @Override
+        public ByteBuffer buffer() {
+            return buffer;
+        }
+
+        @Override
+        public void clean() {
+            freeDirectBufferStatic(buffer);
+        }
     }
 }

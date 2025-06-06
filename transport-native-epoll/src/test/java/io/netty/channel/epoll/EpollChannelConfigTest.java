@@ -20,6 +20,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.IntegerUnixChannelOption;
 import io.netty.channel.unix.RawUnixChannelOption;
+import io.netty.util.internal.CleanableDirectBuffer;
 import org.junit.jupiter.api.Test;
 
 import java.nio.ByteBuffer;
@@ -78,16 +79,20 @@ public class EpollChannelConfigTest {
         // See https://github.com/torvalds/linux/blob/v5.17/include/uapi/asm-generic/socket.h
         RawUnixChannelOption opt = new RawUnixChannelOption("RAW_OPT", 1, 2, 4);
 
-        ByteBuffer disabled = Buffer.allocateDirectWithNativeOrder(4);
+        CleanableDirectBuffer disabledCleanable = Buffer.allocateDirectBufferWithNativeOrder(4);
+        ByteBuffer disabled = disabledCleanable.buffer();
         disabled.putInt(0).flip();
         assertEquals(disabled, channel.config().getOption(opt));
 
-        ByteBuffer enabled = Buffer.allocateDirectWithNativeOrder(4);
+        CleanableDirectBuffer enabledCleanable = Buffer.allocateDirectBufferWithNativeOrder(4);
+        ByteBuffer enabled = enabledCleanable.buffer();
         enabled.putInt(1).flip();
 
         channel.config().setOption(opt, enabled);
         assertNotEquals(disabled, channel.config().getOption(opt));
         channel.fd().close();
+        disabledCleanable.clean();
+        enabledCleanable.clean();
     }
 }
 

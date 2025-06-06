@@ -16,7 +16,7 @@
 
 package io.netty.buffer;
 
-import io.netty.util.internal.LongCounter;
+import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -685,12 +685,12 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 return chunk; // The parameters are always the same, so it's fine to reuse a previously allocated chunk.
             }
             return new PoolChunk<byte[]>(
-                    this, null, newByteArray(chunkSize), pageSize, pageShifts, chunkSize, maxPageIdx);
+                    this, null, null, newByteArray(chunkSize), pageSize, pageShifts, chunkSize, maxPageIdx);
         }
 
         @Override
         protected PoolChunk<byte[]> newUnpooledChunk(int capacity) {
-            return new PoolChunk<byte[]>(this, null, newByteArray(capacity), capacity);
+            return new PoolChunk<byte[]>(this, null, null, newByteArray(capacity), capacity);
         }
 
         @Override
@@ -731,41 +731,42 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         @Override
         protected PoolChunk<ByteBuffer> newChunk(int pageSize, int maxPageIdx, int pageShifts, int chunkSize) {
             if (sizeClass.directMemoryCacheAlignment == 0) {
-                ByteBuffer memory = allocateDirect(chunkSize);
-                return new PoolChunk<ByteBuffer>(this, memory, memory, pageSize, pageShifts,
+                CleanableDirectBuffer cleanableDirectBuffer = allocateDirect(chunkSize);
+                ByteBuffer memory = cleanableDirectBuffer.buffer();
+                return new PoolChunk<ByteBuffer>(this, cleanableDirectBuffer, memory, memory, pageSize, pageShifts,
                         chunkSize, maxPageIdx);
             }
 
-            final ByteBuffer base = allocateDirect(chunkSize + sizeClass.directMemoryCacheAlignment);
+            CleanableDirectBuffer cleanableDirectBuffer = allocateDirect(
+                    chunkSize + sizeClass.directMemoryCacheAlignment);
+            final ByteBuffer base = cleanableDirectBuffer.buffer();
             final ByteBuffer memory = PlatformDependent.alignDirectBuffer(base, sizeClass.directMemoryCacheAlignment);
-            return new PoolChunk<ByteBuffer>(this, base, memory, pageSize,
+            return new PoolChunk<ByteBuffer>(this, cleanableDirectBuffer, base, memory, pageSize,
                     pageShifts, chunkSize, maxPageIdx);
         }
 
         @Override
         protected PoolChunk<ByteBuffer> newUnpooledChunk(int capacity) {
             if (sizeClass.directMemoryCacheAlignment == 0) {
-                ByteBuffer memory = allocateDirect(capacity);
-                return new PoolChunk<ByteBuffer>(this, memory, memory, capacity);
+                CleanableDirectBuffer cleanableDirectBuffer = allocateDirect(capacity);
+                ByteBuffer memory = cleanableDirectBuffer.buffer();
+                return new PoolChunk<ByteBuffer>(this, cleanableDirectBuffer, memory, memory, capacity);
             }
 
-            final ByteBuffer base = allocateDirect(capacity + sizeClass.directMemoryCacheAlignment);
+            CleanableDirectBuffer cleanableDirectBuffer = allocateDirect(
+                    capacity + sizeClass.directMemoryCacheAlignment);
+            final ByteBuffer base = cleanableDirectBuffer.buffer();
             final ByteBuffer memory = PlatformDependent.alignDirectBuffer(base, sizeClass.directMemoryCacheAlignment);
-            return new PoolChunk<ByteBuffer>(this, base, memory, capacity);
+            return new PoolChunk<ByteBuffer>(this, cleanableDirectBuffer, base, memory, capacity);
         }
 
-        private static ByteBuffer allocateDirect(int capacity) {
-            return PlatformDependent.useDirectBufferNoCleaner() ?
-                    PlatformDependent.allocateDirectNoCleaner(capacity) : ByteBuffer.allocateDirect(capacity);
+        private static CleanableDirectBuffer allocateDirect(int capacity) {
+            return PlatformDependent.allocateDirect(capacity);
         }
 
         @Override
         protected void destroyChunk(PoolChunk<ByteBuffer> chunk) {
-            if (PlatformDependent.useDirectBufferNoCleaner()) {
-                PlatformDependent.freeDirectNoCleaner((ByteBuffer) chunk.base);
-            } else {
-                PlatformDependent.freeDirectBuffer((ByteBuffer) chunk.base);
-            }
+            chunk.cleanable.clean();
         }
 
         @Override

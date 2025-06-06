@@ -28,8 +28,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -123,7 +121,7 @@ public class PendingWriteQueueTest {
                     return;
                 }
 
-                assertThat(msg.refCnt(), is(1));
+                assertEquals(1, msg.refCnt());
 
                 // This call will trigger another channelWritabilityChanged() event because the number of
                 // pending bytes will go below the low watermark.
@@ -133,7 +131,7 @@ public class PendingWriteQueueTest {
                 // element twice, resulting in the double release.
                 queue.remove();
 
-                assertThat(msg.refCnt(), is(0));
+                assertEquals(0, msg.refCnt());
             }
         });
 
@@ -147,7 +145,7 @@ public class PendingWriteQueueTest {
 
         channel.finish();
 
-        assertThat(msg.refCnt(), is(0));
+        assertEquals(0, msg.refCnt());
     }
 
     private static void assertWrite(ChannelHandler handler, int count) {

@@ -69,7 +69,7 @@ jobs:
 
       - name: Prepare release with Maven
         run: |
-          ./mvnw -B -ntp --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true
+          ./mvnw -B -ntp --file pom.xml release:prepare -DpreparationGoals=clean -DskipTests=true -DskipH3Spec=true
           ./mvnw -B -ntp clean
 
       - name: Checkout tag
@@ -255,7 +255,7 @@ jobs:
 
       - name: Stage release to local staging directory
         working-directory: ./prepare-release-workspace/
-        run: ./mvnw -B -ntp clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true
+        run: ./mvnw -B -ntp clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true -DskipH3Spec=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -350,7 +350,7 @@ jobs:
 
       - name: Stage release to local staging directory
         working-directory: ${{ github.workspace }}/prepare-release-workspace
-        run: ./mvnw.cmd -B -ntp --file pom.xml clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true -D'checkstyle.skip=true'
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true -D'checkstyle.skip=true' -DskipH3Spec=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -470,7 +470,7 @@ jobs:
         working-directory: ./prepare-release-workspace/
         run: |
           mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -pl all clean package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
+          ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -pl all clean package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true -DskipH3Spec=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
 
       # This step takes care of merging all the previous staged repositories in a way that will allow us to deploy
       # all together with one maven command.

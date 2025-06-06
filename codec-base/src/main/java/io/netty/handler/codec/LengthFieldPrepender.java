@@ -143,6 +143,7 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
     public LengthFieldPrepender(
             ByteOrder byteOrder, int lengthFieldLength,
             int lengthAdjustment, boolean lengthIncludesLengthFieldLength) {
+        super(ByteBuf.class);
         if (lengthFieldLength != 1 && lengthFieldLength != 2 &&
             lengthFieldLength != 3 && lengthFieldLength != 4 &&
             lengthFieldLength != 8) {
