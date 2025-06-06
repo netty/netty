@@ -136,7 +136,8 @@ public class HttpVersion implements Comparable<HttpVersion> {
             int slashIndex = text.indexOf('/');
             int dotIndex = text.indexOf('.', slashIndex + 1);
 
-            if (slashIndex <= 0 || dotIndex <= slashIndex + 1 || dotIndex >= text.length() - 1) {
+            if (slashIndex <= 0 || dotIndex <= slashIndex + 1
+                    || dotIndex >= text.length() - 1 || hasWhitespace(text, slashIndex)) {
                 throw new IllegalArgumentException("invalid version format: " + text);
             }
 
@@ -148,6 +149,15 @@ public class HttpVersion implements Comparable<HttpVersion> {
         this.text = protocolName + '/' + majorVersion + '.' + minorVersion;
         this.keepAliveDefault = keepAliveDefault;
         bytes = null;
+    }
+
+    private static boolean hasWhitespace(String s, int end) {
+        for (int i = 0; i < end; i++) {
+            if (Character.isWhitespace(s.charAt(i))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static int parseInt(String text, int start, int end) {
