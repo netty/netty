@@ -42,11 +42,9 @@ import java.util.Iterator;
 import java.util.List;
 
 import static io.netty.util.internal.StringUtil.NEWLINE;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.CoreMatchers.sameInstance;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
@@ -219,8 +217,8 @@ public class LoggingHandlerTest {
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg + '$')));
 
         String handledMsg = channel.readInbound();
-        assertThat(msg, is(sameInstance(handledMsg)));
-        assertThat(channel.readInbound(), is(nullValue()));
+        assertSame(msg, handledMsg);
+        assertNull(channel.readInbound());
     }
 
     @Test
@@ -231,9 +229,9 @@ public class LoggingHandlerTest {
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", true)));
 
         ByteBuf handledMsg = channel.readInbound();
-        assertThat(msg, is(sameInstance(handledMsg)));
+        assertSame(msg, handledMsg);
         handledMsg.release();
-        assertThat(channel.readInbound(), is(nullValue()));
+        assertNull(channel.readInbound());
     }
 
     @Test
@@ -244,9 +242,9 @@ public class LoggingHandlerTest {
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: " + msg.readableBytes() + "B$", false)));
 
         ByteBuf handledMsg = channel.readInbound();
-        assertThat(msg, is(sameInstance(handledMsg)));
+        assertSame(msg, handledMsg);
         handledMsg.release();
-        assertThat(channel.readInbound(), is(nullValue()));
+        assertNull(channel.readInbound());
     }
 
     @Test
@@ -257,8 +255,8 @@ public class LoggingHandlerTest {
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: 0B$", false)));
 
         ByteBuf handledMsg = channel.readInbound();
-        assertThat(msg, is(sameInstance(handledMsg)));
-        assertThat(channel.readInbound(), is(nullValue()));
+        assertSame(msg, handledMsg);
+        assertNull(channel.readInbound());
     }
 
     @Test
@@ -275,9 +273,9 @@ public class LoggingHandlerTest {
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: foobar, 5B$", true)));
 
         ByteBufHolder handledMsg = channel.readInbound();
-        assertThat(msg, is(sameInstance(handledMsg)));
+        assertSame(msg, handledMsg);
         handledMsg.release();
-        assertThat(channel.readInbound(), is(nullValue()));
+        assertNull(channel.readInbound());
     }
 
     @Test

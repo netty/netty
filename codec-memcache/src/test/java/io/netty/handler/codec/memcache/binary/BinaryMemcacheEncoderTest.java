@@ -27,10 +27,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.core.IsEqual.equalTo;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the correct functionality of the {@link AbstractBinaryMemcacheEncoder}.
@@ -56,12 +55,12 @@ public class BinaryMemcacheEncoderTest {
         BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest();
 
         boolean result = channel.writeOutbound(request);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = channel.readOutbound();
-        assertThat(written.readableBytes(), is(DEFAULT_HEADER_SIZE));
-        assertThat(written.readByte(), is((byte) 0x80));
-        assertThat(written.readByte(), is((byte) 0x00));
+        assertEquals(DEFAULT_HEADER_SIZE, written.readableBytes());
+        assertEquals((byte) 0x80, written.readByte());
+        assertEquals((byte) 0x00, written.readByte());
         written.release();
     }
 
@@ -72,12 +71,12 @@ public class BinaryMemcacheEncoderTest {
         request.setOpcode(BinaryMemcacheOpcodes.GET);
 
         boolean result = channel.writeOutbound(request);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = channel.readOutbound();
-        assertThat(written.readableBytes(), is(DEFAULT_HEADER_SIZE));
-        assertThat(written.readByte(), is((byte) 0xAA));
-        assertThat(written.readByte(), is(BinaryMemcacheOpcodes.GET));
+        assertEquals(DEFAULT_HEADER_SIZE, written.readableBytes());
+        assertEquals((byte) 0xAA, written.readByte());
+        assertEquals(BinaryMemcacheOpcodes.GET, written.readByte());
         written.release();
     }
 
@@ -90,12 +89,12 @@ public class BinaryMemcacheEncoderTest {
         BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest(Unpooled.EMPTY_BUFFER, extras);
 
         boolean result = channel.writeOutbound(request);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = channel.readOutbound();
-        assertThat(written.readableBytes(), is(DEFAULT_HEADER_SIZE + extrasLength));
+        assertEquals(DEFAULT_HEADER_SIZE + extrasLength, written.readableBytes());
         written.skipBytes(DEFAULT_HEADER_SIZE);
-        assertThat(written.readSlice(extrasLength).toString(CharsetUtil.UTF_8), equalTo(extrasContent));
+        assertEquals(extrasContent, written.readSlice(extrasLength).toString(CharsetUtil.UTF_8));
         written.release();
     }
 
@@ -107,12 +106,12 @@ public class BinaryMemcacheEncoderTest {
         BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest(key);
 
         boolean result = channel.writeOutbound(request);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = channel.readOutbound();
-        assertThat(written.readableBytes(), is(DEFAULT_HEADER_SIZE + keyLength));
+        assertEquals(DEFAULT_HEADER_SIZE + keyLength, written.readableBytes());
         written.skipBytes(DEFAULT_HEADER_SIZE);
-        assertThat(written.readSlice(keyLength).toString(CharsetUtil.UTF_8), equalTo("netty"));
+        assertEquals("netty", written.readSlice(keyLength).toString(CharsetUtil.UTF_8));
         written.release();
     }
 
@@ -128,29 +127,27 @@ public class BinaryMemcacheEncoderTest {
         request.setTotalBodyLength(totalBodyLength);
 
         boolean result = channel.writeOutbound(request);
-        assertThat(result, is(true));
+        assertTrue(result);
         result = channel.writeOutbound(content1);
-        assertThat(result, is(true));
+        assertTrue(result);
         result = channel.writeOutbound(content2);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = channel.readOutbound();
-        assertThat(written.readableBytes(), is(DEFAULT_HEADER_SIZE));
+        assertEquals(DEFAULT_HEADER_SIZE, written.readableBytes());
         written.release();
 
         written = channel.readOutbound();
-        assertThat(written.readableBytes(), is(content1.content().readableBytes()));
-        assertThat(
-                written.readSlice(content1.content().readableBytes()).toString(CharsetUtil.UTF_8),
-                is("Netty")
+        assertEquals(content1.content().readableBytes(), written.readableBytes());
+        assertEquals("Netty",
+                written.readSlice(content1.content().readableBytes()).toString(CharsetUtil.UTF_8)
         );
         written.release();
 
         written = channel.readOutbound();
-        assertThat(written.readableBytes(), is(content2.content().readableBytes()));
-        assertThat(
-                written.readSlice(content2.content().readableBytes()).toString(CharsetUtil.UTF_8),
-                is(" Rocks!")
+        assertEquals(content2.content().readableBytes(), written.readableBytes());
+        assertEquals(" Rocks!",
+                written.readSlice(content2.content().readableBytes()).toString(CharsetUtil.UTF_8)
         );
         written.release();
     }

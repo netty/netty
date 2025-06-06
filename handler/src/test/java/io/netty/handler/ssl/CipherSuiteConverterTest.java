@@ -21,11 +21,10 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Isolated;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @Isolated
 public class CipherSuiteConverterTest {
@@ -135,7 +134,7 @@ public class CipherSuiteConverterTest {
     private static void testJ2OMapping(String javaCipherSuite, String openSslCipherSuite) {
         final String actual = CipherSuiteConverter.toOpenSslUncached(javaCipherSuite, false);
         logger.info("{} => {}", javaCipherSuite, actual);
-        assertThat(actual, is(openSslCipherSuite));
+        assertEquals(openSslCipherSuite, actual);
     }
 
     @Test
@@ -292,7 +291,7 @@ public class CipherSuiteConverterTest {
     private static void testO2JMapping(String javaCipherSuite, String openSslCipherSuite) {
         final String actual = CipherSuiteConverter.toJavaUncached(openSslCipherSuite);
         logger.info("{} => {}", openSslCipherSuite, actual);
-        assertThat(actual, is(javaCipherSuite));
+        assertEquals(javaCipherSuite, actual);
     }
 
     @Test
@@ -333,22 +332,22 @@ public class CipherSuiteConverterTest {
 
         // For TLSv1.3 this should make no diffierence if boringSSL is true or false
         final String actual1 = CipherSuiteConverter.toOpenSsl(javaCipherSuite, false);
-        assertThat(actual1, is(openSslCipherSuite));
+        assertEquals(openSslCipherSuite, actual1);
         final String actual2 = CipherSuiteConverter.toOpenSsl(javaCipherSuite, true);
         assertEquals(actual1, actual2);
 
         // Ensure that the cache entries have been created.
-        assertThat(CipherSuiteConverter.isJ2OCached(javaCipherSuite, actual1), is(true));
-        assertThat(CipherSuiteConverter.isO2JCached(actual1, "", javaCipherSuite.substring(4)), is(true));
-        assertThat(CipherSuiteConverter.isO2JCached(actual1, "SSL", "SSL_" + javaCipherSuite.substring(4)), is(true));
-        assertThat(CipherSuiteConverter.isO2JCached(actual1, "TLS", "TLS_" + javaCipherSuite.substring(4)), is(true));
+        assertTrue(CipherSuiteConverter.isJ2OCached(javaCipherSuite, actual1));
+        assertTrue(CipherSuiteConverter.isO2JCached(actual1, "", javaCipherSuite.substring(4)));
+        assertTrue(CipherSuiteConverter.isO2JCached(actual1, "SSL", "SSL_" + javaCipherSuite.substring(4)));
+        assertTrue(CipherSuiteConverter.isO2JCached(actual1, "TLS", "TLS_" + javaCipherSuite.substring(4)));
 
         final String actual3 = CipherSuiteConverter.toOpenSsl(javaCipherSuite, false);
-        assertThat(actual3, is(openSslCipherSuite));
+        assertEquals(openSslCipherSuite, actual3);
 
         // Test if the returned cipher strings are identical,
         // so that the TLS sessions with the same cipher suite do not create many strings.
-        assertThat(actual1, is(sameInstance(actual3)));
+        assertSame(actual1, actual3);
     }
 
     @Test
@@ -364,25 +363,25 @@ public class CipherSuiteConverterTest {
 
         final String tlsActual1 = CipherSuiteConverter.toJava(openSslCipherSuite, "TLS");
         final String sslActual1 = CipherSuiteConverter.toJava(openSslCipherSuite, "SSL");
-        assertThat(tlsActual1, is(tlsExpected));
-        assertThat(sslActual1, is(sslExpected));
+        assertEquals(tlsExpected, tlsActual1);
+        assertEquals(sslExpected, sslActual1);
 
         // Ensure that the cache entries have been created.
-        assertThat(CipherSuiteConverter.isO2JCached(openSslCipherSuite, "", javaCipherSuite), is(true));
-        assertThat(CipherSuiteConverter.isO2JCached(openSslCipherSuite, "SSL", sslExpected), is(true));
-        assertThat(CipherSuiteConverter.isO2JCached(openSslCipherSuite, "TLS", tlsExpected), is(true));
-        assertThat(CipherSuiteConverter.isJ2OCached(tlsExpected, openSslCipherSuite), is(true));
-        assertThat(CipherSuiteConverter.isJ2OCached(sslExpected, openSslCipherSuite), is(true));
+        assertTrue(CipherSuiteConverter.isO2JCached(openSslCipherSuite, "", javaCipherSuite));
+        assertTrue(CipherSuiteConverter.isO2JCached(openSslCipherSuite, "SSL", sslExpected));
+        assertTrue(CipherSuiteConverter.isO2JCached(openSslCipherSuite, "TLS", tlsExpected));
+        assertTrue(CipherSuiteConverter.isJ2OCached(tlsExpected, openSslCipherSuite));
+        assertTrue(CipherSuiteConverter.isJ2OCached(sslExpected, openSslCipherSuite));
 
         final String tlsActual2 = CipherSuiteConverter.toJava(openSslCipherSuite, "TLS");
         final String sslActual2 = CipherSuiteConverter.toJava(openSslCipherSuite, "SSL");
-        assertThat(tlsActual2, is(tlsExpected));
-        assertThat(sslActual2, is(sslExpected));
+        assertEquals(tlsExpected, tlsActual2);
+        assertEquals(sslExpected, sslActual2);
 
         // Test if the returned cipher strings are identical,
         // so that the TLS sessions with the same cipher suite do not create many strings.
-        assertThat(tlsActual1, is(sameInstance(tlsActual2)));
-        assertThat(sslActual1, is(sameInstance(sslActual2)));
+        assertSame(tlsActual1, tlsActual2);
+        assertSame(sslActual1, sslActual2);
     }
 
     @Test

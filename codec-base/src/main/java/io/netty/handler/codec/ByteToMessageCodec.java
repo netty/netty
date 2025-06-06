@@ -86,7 +86,7 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
     protected ByteToMessageCodec(Class<? extends I> outboundMessageType, boolean preferDirect) {
         ensureNotSharable();
         outboundMsgMatcher = TypeParameterMatcher.get(outboundMessageType);
-        encoder = new Encoder(preferDirect);
+        encoder = new Encoder(preferDirect, outboundMessageType);
     }
 
     /**
@@ -160,6 +160,10 @@ public abstract class ByteToMessageCodec<I> extends ChannelDuplexHandler {
     private final class Encoder extends MessageToByteEncoder<I> {
         Encoder(boolean preferDirect) {
             super(preferDirect);
+        }
+
+        Encoder(boolean preferDirect, Class<? extends I> outboundMessageType) {
+            super(outboundMessageType, preferDirect);
         }
 
         @Override

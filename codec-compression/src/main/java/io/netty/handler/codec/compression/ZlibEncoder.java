@@ -26,7 +26,7 @@ import io.netty.handler.codec.MessageToByteEncoder;
 public abstract class ZlibEncoder extends MessageToByteEncoder<ByteBuf> {
 
     protected ZlibEncoder() {
-        super(false);
+        super(ByteBuf.class, false);
     }
 
     /**

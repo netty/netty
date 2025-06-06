@@ -67,6 +67,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
 
     public Http2StreamFrameToHttpObjectCodec(final boolean isServer,
                                              final boolean validateHeaders) {
+        super(Http2StreamFrame.class, HttpObject.class);
         this.isServer = isServer;
         this.validateHeaders = validateHeaders;
     }

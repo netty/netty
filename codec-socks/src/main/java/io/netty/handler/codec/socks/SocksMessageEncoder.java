@@ -28,6 +28,10 @@ import io.netty.handler.codec.MessageToByteEncoder;
  */
 @ChannelHandler.Sharable
 public class SocksMessageEncoder extends MessageToByteEncoder<SocksMessage> {
+    public SocksMessageEncoder() {
+        super(SocksMessage.class);
+    }
+
     @Override
     @SuppressWarnings("deprecation")
     protected void encode(ChannelHandlerContext ctx, SocksMessage msg, ByteBuf out) throws Exception {

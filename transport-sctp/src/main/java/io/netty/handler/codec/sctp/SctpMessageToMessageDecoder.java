@@ -22,6 +22,10 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 
 public abstract class SctpMessageToMessageDecoder extends MessageToMessageDecoder<SctpMessage> {
 
+    public SctpMessageToMessageDecoder() {
+        super(SctpMessage.class);
+    }
+
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {
         if (msg instanceof SctpMessage) {

@@ -18,19 +18,16 @@ package io.netty.channel.socket;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.Test;
 
-import java.net.InetAddress;
-
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class InternetProtocolFamilyTest {
     @Test
     public void ipv4ShouldHaveLocalhostOfIpV4() {
-        assertThat(InternetProtocolFamily.IPv4.localhost(), is((InetAddress) NetUtil.LOCALHOST4));
+        assertEquals(NetUtil.LOCALHOST4, InternetProtocolFamily.IPv4.localhost());
     }
 
     @Test
     public void ipv6ShouldHaveLocalhostOfIpV6() {
-        assertThat(InternetProtocolFamily.IPv6.localhost(), is((InetAddress) NetUtil.LOCALHOST6));
+        assertEquals(NetUtil.LOCALHOST6, InternetProtocolFamily.IPv6.localhost());
     }
 }

@@ -125,7 +125,7 @@ public class HttpObjectAggregator
      * consumed and discarded until the next request is received.
      */
     public HttpObjectAggregator(int maxContentLength, boolean closeOnExpectationFailed) {
-        super(maxContentLength);
+        super(maxContentLength, HttpObject.class);
         this.closeOnExpectationFailed = closeOnExpectationFailed;
     }
 

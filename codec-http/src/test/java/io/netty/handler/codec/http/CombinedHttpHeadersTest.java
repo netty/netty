@@ -25,8 +25,6 @@ import java.util.Iterator;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.SET_COOKIE;
 import static io.netty.util.AsciiString.contentEquals;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -79,7 +77,7 @@ public class CombinedHttpHeadersTest {
         otherHeaders.add(SET_COOKIE, "b");
         otherHeaders.add(SET_COOKIE, "c");
         headers.add(otherHeaders);
-        assertThat(headers.getAll(SET_COOKIE), hasSize(3));
+        assertEquals(3, headers.getAll(SET_COOKIE).size());
     }
 
     @Test
@@ -90,7 +88,7 @@ public class CombinedHttpHeadersTest {
         otherHeaders.add("set-cookie", "b");
         otherHeaders.add("SET-COOKIE", "c");
         headers.add(otherHeaders);
-        assertThat(headers.getAll(SET_COOKIE), hasSize(3));
+        assertEquals(3, headers.getAll(SET_COOKIE).size());
     }
 
     @Test
@@ -311,7 +309,7 @@ public class CombinedHttpHeadersTest {
         final CombinedHttpHeaders headers = newCombinedHttpHeaders();
         headers.add(SET_COOKIE, "a");
         headers.add(SET_COOKIE, "b");
-        assertThat(headers.getAll(SET_COOKIE), hasSize(2));
+        assertEquals(2, headers.getAll(SET_COOKIE).size());
         assertEquals(Arrays.asList("a", "b"), headers.getAll(SET_COOKIE));
     }
 

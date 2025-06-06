@@ -34,8 +34,7 @@ import io.netty.util.internal.SocketUtils;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 final class Socks4ProxyServer extends ProxyServer {
 
@@ -68,7 +67,7 @@ final class Socks4ProxyServer extends ProxyServer {
     }
 
     private boolean authenticate(ChannelHandlerContext ctx, Socks4CommandRequest req) {
-        assertThat(req.type(), is(Socks4CommandType.CONNECT));
+        assertEquals(Socks4CommandType.CONNECT, req.type());
 
         if (testMode != TestMode.INTERMEDIARY) {
             ctx.pipeline().addBefore(ctx.name(), "lineDecoder", new LineBasedFrameDecoder(64, false, true));

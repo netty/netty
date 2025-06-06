@@ -43,8 +43,7 @@ import io.netty.util.internal.SocketUtils;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 final class Socks5ProxyServer extends ProxyServer {
 
@@ -118,7 +117,7 @@ final class Socks5ProxyServer extends ProxyServer {
             }
 
             Socks5CommandRequest req = (Socks5CommandRequest) msg;
-            assertThat(req.type(), is(Socks5CommandType.CONNECT));
+            assertEquals(Socks5CommandType.CONNECT, req.type());
 
             Socks5CommandResponse res =
                     new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4);
@@ -150,7 +149,7 @@ final class Socks5ProxyServer extends ProxyServer {
             }
 
             Socks5CommandRequest req = (Socks5CommandRequest) msg;
-            assertThat(req.type(), is(Socks5CommandType.CONNECT));
+            assertEquals(Socks5CommandType.CONNECT, req.type());
 
             ctx.pipeline().addBefore(ctx.name(), "lineDecoder", new LineBasedFrameDecoder(64, false, true));
 

@@ -15,6 +15,7 @@
  */
 package io.netty.microbench.handler.ssl;
 
+import io.netty.util.internal.CleanableDirectBuffer;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
@@ -31,16 +32,18 @@ public class SslEngineEchoBenchmark extends AbstractSslEngineThroughputBenchmark
 
     @Param({ "1", "2", "5", "10" })
     public int numWraps;
+    private CleanableDirectBuffer cleanableUnwrapDstBuffer;
     private ByteBuffer unwrapDstBuffer;
 
     @Override
     protected void doSetup()  {
-        unwrapDstBuffer = allocateBuffer(serverEngine.getSession().getApplicationBufferSize() << 2);
+        cleanableUnwrapDstBuffer = allocateBuffer(serverEngine.getSession().getApplicationBufferSize() << 2);
+        unwrapDstBuffer = cleanableUnwrapDstBuffer.buffer();
     }
 
     @Override
     protected void doTearDown() {
-        freeBuffer(unwrapDstBuffer);
+        cleanableUnwrapDstBuffer.clean();
     }
 
     @Benchmark
