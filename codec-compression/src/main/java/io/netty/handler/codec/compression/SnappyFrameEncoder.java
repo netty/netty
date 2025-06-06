@@ -67,6 +67,7 @@ public class SnappyFrameEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     private SnappyFrameEncoder(int sliceSize) {
+        super(ByteBuf.class);
         this.sliceSize = sliceSize;
     }
 

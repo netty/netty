@@ -91,6 +91,10 @@ public class StompSubframeEncoder extends MessageToMessageEncoder<StompSubframe>
                 }
             };
 
+    public StompSubframeEncoder() {
+        super(StompSubframe.class);
+    }
+
     @Override
     protected void encode(ChannelHandlerContext ctx, StompSubframe msg, List<Object> out) throws Exception {
         if (msg instanceof StompFrame) {
