@@ -55,11 +55,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -74,10 +70,10 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)));
 
         Http2HeadersFrame headersFrame = ch.readOutbound();
-        assertThat(headersFrame.headers().status().toString(), is("200"));
+        assertEquals("200", headersFrame.headers().status().toString());
         assertTrue(headersFrame.isEndStream());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -88,10 +84,10 @@ public class Http2StreamFrameToHttpObjectCodecTest {
                 HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE)));
 
         Http2HeadersFrame headersFrame = ch.readOutbound();
-        assertThat(headersFrame.headers().status().toString(), is("100"));
+        assertEquals("100", headersFrame.headers().status().toString());
         assertFalse(headersFrame.isEndStream());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -115,18 +111,18 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertTrue(ch.writeOutbound(new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK, hello)));
 
         Http2HeadersFrame headersFrame = ch.readOutbound();
-        assertThat(headersFrame.headers().status().toString(), is("200"));
+        assertEquals("200", headersFrame.headers().status().toString());
         assertFalse(headersFrame.isEndStream());
 
         Http2DataFrame dataFrame = ch.readOutbound();
         try {
-            assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
+            assertEquals("hello world", dataFrame.content().toString(CharsetUtil.UTF_8));
             assertTrue(dataFrame.isEndStream());
         } finally {
             dataFrame.release();
         }
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -139,14 +135,14 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertTrue(ch.writeOutbound(response));
 
         Http2HeadersFrame headersFrame = ch.readOutbound();
-        assertThat(headersFrame.headers().status().toString(), is("200"));
+        assertEquals("200", headersFrame.headers().status().toString());
         assertFalse(headersFrame.isEndStream());
 
         Http2HeadersFrame trailersFrame = ch.readOutbound();
-        assertThat(trailersFrame.headers().get("key").toString(), is("value"));
+        assertEquals("value", trailersFrame.headers().get("key").toString());
         assertTrue(trailersFrame.isEndStream());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -160,22 +156,22 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertTrue(ch.writeOutbound(response));
 
         Http2HeadersFrame headersFrame = ch.readOutbound();
-        assertThat(headersFrame.headers().status().toString(), is("200"));
+        assertEquals("200", headersFrame.headers().status().toString());
         assertFalse(headersFrame.isEndStream());
 
         Http2DataFrame dataFrame = ch.readOutbound();
         try {
-            assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
+            assertEquals("hello world", dataFrame.content().toString(CharsetUtil.UTF_8));
             assertFalse(dataFrame.isEndStream());
         } finally {
             dataFrame.release();
         }
 
         Http2HeadersFrame trailersFrame = ch.readOutbound();
-        assertThat(trailersFrame.headers().get("key").toString(), is("value"));
+        assertEquals("value", trailersFrame.headers().get("key").toString());
         assertTrue(trailersFrame.isEndStream());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -186,10 +182,10 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertTrue(ch.writeOutbound(response));
 
         Http2HeadersFrame headersFrame = ch.readOutbound();
-        assertThat(headersFrame.headers().status().toString(), is("200"));
+        assertEquals("200", headersFrame.headers().status().toString());
         assertFalse(headersFrame.isEndStream());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -202,13 +198,13 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         Http2DataFrame dataFrame = ch.readOutbound();
         try {
-            assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
+            assertEquals("hello world", dataFrame.content().toString(CharsetUtil.UTF_8));
             assertFalse(dataFrame.isEndStream());
         } finally {
             dataFrame.release();
         }
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -220,13 +216,13 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         Http2DataFrame emptyFrame = ch.readOutbound();
         try {
-            assertThat(emptyFrame.content().readableBytes(), is(0));
+            assertEquals(0, emptyFrame.content().readableBytes());
             assertTrue(emptyFrame.isEndStream());
         } finally {
             emptyFrame.release();
         }
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -239,13 +235,13 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         Http2DataFrame dataFrame = ch.readOutbound();
         try {
-            assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
+            assertEquals("hello world", dataFrame.content().toString(CharsetUtil.UTF_8));
             assertTrue(dataFrame.isEndStream());
         } finally {
             dataFrame.release();
         }
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -258,10 +254,10 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertTrue(ch.writeOutbound(trailers));
 
         Http2HeadersFrame headerFrame = ch.readOutbound();
-        assertThat(headerFrame.headers().get("key").toString(), is("value"));
+        assertEquals("value", headerFrame.headers().get("key").toString());
         assertTrue(headerFrame.isEndStream());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -276,17 +272,17 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         Http2DataFrame dataFrame = ch.readOutbound();
         try {
-            assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
+            assertEquals("hello world", dataFrame.content().toString(CharsetUtil.UTF_8));
             assertFalse(dataFrame.isEndStream());
         } finally {
             dataFrame.release();
         }
 
         Http2HeadersFrame headerFrame = ch.readOutbound();
-        assertThat(headerFrame.headers().get("key").toString(), is("value"));
+        assertEquals("value", headerFrame.headers().get("key").toString());
         assertTrue(headerFrame.isEndStream());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -300,13 +296,13 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers)));
 
         HttpRequest request = ch.readInbound();
-        assertThat(request.uri(), is("/"));
-        assertThat(request.method(), is(HttpMethod.GET));
-        assertThat(request.protocolVersion(), is(HttpVersion.HTTP_1_1));
-        assertFalse(request instanceof FullHttpRequest);
+        assertEquals("/", request.uri());
+        assertEquals(HttpMethod.GET, request.method());
+        assertEquals(HttpVersion.HTTP_1_1, request.protocolVersion());
+        assertThat(request).isNotInstanceOf(FullHttpRequest.class);
         assertTrue(HttpUtil.isTransferEncodingChunked(request));
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -321,13 +317,13 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers)));
 
         HttpRequest request = ch.readInbound();
-        assertThat(request.uri(), is("/"));
-        assertThat(request.method(), is(HttpMethod.GET));
-        assertThat(request.protocolVersion(), is(HttpVersion.HTTP_1_1));
-        assertFalse(request instanceof FullHttpRequest);
+        assertEquals("/", request.uri());
+        assertEquals(HttpMethod.GET, request.method());
+        assertEquals(HttpVersion.HTTP_1_1, request.protocolVersion());
+        assertThat(request).isNotInstanceOf(FullHttpRequest.class);
         assertFalse(HttpUtil.isTransferEncodingChunked(request));
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -342,17 +338,17 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         FullHttpRequest request = ch.readInbound();
         try {
-            assertThat(request.uri(), is("/"));
-            assertThat(request.method(), is(HttpMethod.GET));
-            assertThat(request.protocolVersion(), is(HttpVersion.HTTP_1_1));
-            assertThat(request.content().readableBytes(), is(0));
+            assertEquals("/", request.uri());
+            assertEquals(HttpMethod.GET, request.method());
+            assertEquals(HttpVersion.HTTP_1_1, request.protocolVersion());
+            assertEquals(0, request.content().readableBytes());
             assertTrue(request.trailingHeaders().isEmpty());
             assertFalse(HttpUtil.isTransferEncodingChunked(request));
         } finally {
             request.release();
         }
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -365,14 +361,14 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         LastHttpContent trailers = ch.readInbound();
         try {
-            assertThat(trailers.content().readableBytes(), is(0));
-            assertThat(trailers.trailingHeaders().get("key"), is("value"));
-            assertFalse(trailers instanceof FullHttpRequest);
+            assertEquals(0, trailers.content().readableBytes());
+            assertEquals("value", trailers.trailingHeaders().get("key"));
+            assertThat(trailers).isNotInstanceOf(FullHttpRequest.class);
         } finally {
             trailers.release();
         }
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -384,13 +380,13 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         HttpContent content = ch.readInbound();
         try {
-            assertThat(content.content().toString(CharsetUtil.UTF_8), is("hello world"));
+            assertEquals("hello world", content.content().toString(CharsetUtil.UTF_8));
             assertFalse(content instanceof LastHttpContent);
         } finally {
             content.release();
         }
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -402,13 +398,13 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         LastHttpContent content = ch.readInbound();
         try {
-            assertThat(content.content().toString(CharsetUtil.UTF_8), is("hello world"));
+            assertEquals("hello world", content.content().toString(CharsetUtil.UTF_8));
             assertTrue(content.trailingHeaders().isEmpty());
         } finally {
             content.release();
         }
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -425,7 +421,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         Http2GoAwayFrame frame = ch.readInbound();
         try {
             assertEquals(goaway, frame);
-            assertThat(ch.readInbound(), is(nullValue()));
+            assertNull(ch.readInbound());
             assertFalse(ch.finish());
         } finally {
             goaway.release();
@@ -442,12 +438,12 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         Http2HeadersFrame headersFrame = ch.readOutbound();
         Http2Headers headers = headersFrame.headers();
 
-        assertThat(headers.scheme().toString(), is("http"));
-        assertThat(headers.method().toString(), is("GET"));
-        assertThat(headers.path().toString(), is("/hello/world"));
+        assertEquals("http", headers.scheme().toString());
+        assertEquals("GET", headers.method().toString());
+        assertEquals("/hello/world", headers.path().toString());
         assertTrue(headersFrame.isEndStream());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -478,9 +474,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
             Http2HeadersFrame headersFrame = (Http2HeadersFrame) frames.poll();
             Http2Headers headers = headersFrame.headers();
 
-            assertThat(headers.scheme().toString(), is("https"));
-            assertThat(headers.method().toString(), is("GET"));
-            assertThat(headers.path().toString(), is("/hello/world"));
+            assertEquals("https", headers.scheme().toString());
+            assertEquals("GET", headers.method().toString());
+            assertEquals("/hello/world", headers.path().toString());
             assertTrue(headersFrame.isEndStream());
             assertNull(frames.poll());
         } finally {
@@ -498,20 +494,20 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         Http2HeadersFrame headersFrame = ch.readOutbound();
         Http2Headers headers = headersFrame.headers();
 
-        assertThat(headers.scheme().toString(), is("http"));
-        assertThat(headers.method().toString(), is("PUT"));
-        assertThat(headers.path().toString(), is("/hello/world"));
+        assertEquals("http", headers.scheme().toString());
+        assertEquals("PUT", headers.method().toString());
+        assertEquals("/hello/world", headers.path().toString());
         assertFalse(headersFrame.isEndStream());
 
         Http2DataFrame dataFrame = ch.readOutbound();
         try {
-            assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
+            assertEquals("hello world", dataFrame.content().toString(CharsetUtil.UTF_8));
             assertTrue(dataFrame.isEndStream());
         } finally {
             dataFrame.release();
         }
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -528,16 +524,16 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         Http2HeadersFrame headersFrame = ch.readOutbound();
         Http2Headers headers = headersFrame.headers();
 
-        assertThat(headers.scheme().toString(), is("http"));
-        assertThat(headers.method().toString(), is("PUT"));
-        assertThat(headers.path().toString(), is("/hello/world"));
+        assertEquals("http", headers.scheme().toString());
+        assertEquals("PUT", headers.method().toString());
+        assertEquals("/hello/world", headers.path().toString());
         assertFalse(headersFrame.isEndStream());
 
         Http2HeadersFrame trailersFrame = ch.readOutbound();
-        assertThat(trailersFrame.headers().get("key").toString(), is("value"));
+        assertEquals("value", trailersFrame.headers().get("key").toString());
         assertTrue(trailersFrame.isEndStream());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -555,24 +551,24 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         Http2HeadersFrame headersFrame = ch.readOutbound();
         Http2Headers headers = headersFrame.headers();
 
-        assertThat(headers.scheme().toString(), is("http"));
-        assertThat(headers.method().toString(), is("PUT"));
-        assertThat(headers.path().toString(), is("/hello/world"));
+        assertEquals("http", headers.scheme().toString());
+        assertEquals("PUT", headers.method().toString());
+        assertEquals("/hello/world", headers.path().toString());
         assertFalse(headersFrame.isEndStream());
 
         Http2DataFrame dataFrame = ch.readOutbound();
         try {
-            assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
+            assertEquals("hello world", dataFrame.content().toString(CharsetUtil.UTF_8));
             assertFalse(dataFrame.isEndStream());
         } finally {
             dataFrame.release();
         }
 
         Http2HeadersFrame trailersFrame = ch.readOutbound();
-        assertThat(trailersFrame.headers().get("key").toString(), is("value"));
+        assertEquals("value", trailersFrame.headers().get("key").toString());
         assertTrue(trailersFrame.isEndStream());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -585,12 +581,12 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         Http2HeadersFrame headersFrame = ch.readOutbound();
         Http2Headers headers = headersFrame.headers();
 
-        assertThat(headers.scheme().toString(), is("http"));
-        assertThat(headers.method().toString(), is("GET"));
-        assertThat(headers.path().toString(), is("/hello/world"));
+        assertEquals("http", headers.scheme().toString());
+        assertEquals("GET", headers.method().toString());
+        assertEquals("/hello/world", headers.path().toString());
         assertFalse(headersFrame.isEndStream());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -603,13 +599,13 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         Http2DataFrame dataFrame = ch.readOutbound();
         try {
-            assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
+            assertEquals("hello world", dataFrame.content().toString(CharsetUtil.UTF_8));
             assertFalse(dataFrame.isEndStream());
         } finally {
             dataFrame.release();
         }
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -621,13 +617,13 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         Http2DataFrame emptyFrame = ch.readOutbound();
         try {
-            assertThat(emptyFrame.content().readableBytes(), is(0));
+            assertEquals(0, emptyFrame.content().readableBytes());
             assertTrue(emptyFrame.isEndStream());
         } finally {
             emptyFrame.release();
         }
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -640,13 +636,13 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         Http2DataFrame dataFrame = ch.readOutbound();
         try {
-            assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
+            assertEquals("hello world", dataFrame.content().toString(CharsetUtil.UTF_8));
             assertTrue(dataFrame.isEndStream());
         } finally {
             dataFrame.release();
         }
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -659,10 +655,10 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertTrue(ch.writeOutbound(trailers));
 
         Http2HeadersFrame headerFrame = ch.readOutbound();
-        assertThat(headerFrame.headers().get("key").toString(), is("value"));
+        assertEquals("value", headerFrame.headers().get("key").toString());
         assertTrue(headerFrame.isEndStream());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -677,17 +673,17 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         Http2DataFrame dataFrame = ch.readOutbound();
         try {
-            assertThat(dataFrame.content().toString(CharsetUtil.UTF_8), is("hello world"));
+            assertEquals("hello world", dataFrame.content().toString(CharsetUtil.UTF_8));
             assertFalse(dataFrame.isEndStream());
         } finally {
             dataFrame.release();
         }
 
         Http2HeadersFrame headerFrame = ch.readOutbound();
-        assertThat(headerFrame.headers().get("key").toString(), is("value"));
+        assertEquals("value", headerFrame.headers().get("key").toString());
         assertTrue(headerFrame.isEndStream());
 
-        assertThat(ch.readOutbound(), is(nullValue()));
+        assertNull(ch.readOutbound());
         assertFalse(ch.finish());
     }
 
@@ -702,13 +698,13 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         final FullHttpResponse response = ch.readInbound();
         try {
-            assertThat(response.status(), is(HttpResponseStatus.CONTINUE));
-            assertThat(response.protocolVersion(), is(HttpVersion.HTTP_1_1));
+            assertEquals(HttpResponseStatus.CONTINUE, response.status());
+            assertEquals(HttpVersion.HTTP_1_1, response.protocolVersion());
         } finally {
             response.release();
         }
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -733,14 +729,14 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         final FullHttpResponse response = ch.readInbound();
         try {
-            assertThat(response.status(), is(HttpResponseStatus.EARLY_HINTS));
-            assertThat(response.protocolVersion(), is(HttpVersion.HTTP_1_1));
-            assertThat(response.headers().get("key"), is("value"));
+            assertEquals(HttpResponseStatus.EARLY_HINTS, response.status());
+            assertEquals(HttpVersion.HTTP_1_1, response.protocolVersion());
+            assertEquals("value", response.headers().get("key"));
         } finally {
             response.release();
         }
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -754,12 +750,12 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers)));
 
         HttpResponse response = ch.readInbound();
-        assertThat(response.status(), is(HttpResponseStatus.OK));
-        assertThat(response.protocolVersion(), is(HttpVersion.HTTP_1_1));
+        assertEquals(HttpResponseStatus.OK, response.status());
+        assertEquals(HttpVersion.HTTP_1_1, response.protocolVersion());
         assertFalse(response instanceof FullHttpResponse);
         assertTrue(HttpUtil.isTransferEncodingChunked(response));
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -774,12 +770,12 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers)));
 
         HttpResponse response = ch.readInbound();
-        assertThat(response.status(), is(HttpResponseStatus.OK));
-        assertThat(response.protocolVersion(), is(HttpVersion.HTTP_1_1));
-        assertFalse(response instanceof FullHttpResponse);
+        assertEquals(HttpResponseStatus.OK, response.status());
+        assertEquals(HttpVersion.HTTP_1_1, response.protocolVersion());
+        assertThat(response).isNotInstanceOf(FullHttpResponse.class);
         assertFalse(HttpUtil.isTransferEncodingChunked(response));
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -794,12 +790,12 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         assertTrue(ch.writeInbound(new DefaultHttp2HeadersFrame(headers)));
 
         HttpResponse request = ch.readInbound();
-        assertThat(request.status().codeAsText().toString(), is(statusCode));
-        assertThat(request.protocolVersion(), is(HttpVersion.HTTP_1_1));
-        assertThat(request, is(not(instanceOf(FullHttpResponse.class))));
+        assertEquals(statusCode, request.status().codeAsText().toString());
+        assertEquals(HttpVersion.HTTP_1_1, request.protocolVersion());
+        assertThat(request).isNotInstanceOf(FullHttpResponse.class);
         assertFalse(HttpUtil.isTransferEncodingChunked(request));
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -838,9 +834,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         FullHttpResponse response = ch.readInbound();
         try {
-            assertThat(response.status(), is(HttpResponseStatus.OK));
-            assertThat(response.protocolVersion(), is(HttpVersion.HTTP_1_1));
-            assertThat(response.content().readableBytes(), is(0));
+            assertEquals(HttpResponseStatus.OK, response.status());
+            assertEquals(HttpVersion.HTTP_1_1, response.protocolVersion());
+            assertEquals(0, response.content().readableBytes());
             assertTrue(response.trailingHeaders().isEmpty());
             assertFalse(HttpUtil.isTransferEncodingChunked(response));
             if (withStreamId) {
@@ -851,7 +847,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
             response.release();
         }
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -864,14 +860,14 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         LastHttpContent trailers = ch.readInbound();
         try {
-            assertThat(trailers.content().readableBytes(), is(0));
-            assertThat(trailers.trailingHeaders().get("key"), is("value"));
-            assertFalse(trailers instanceof FullHttpRequest);
+            assertEquals(0, trailers.content().readableBytes());
+            assertEquals("value", trailers.trailingHeaders().get("key"));
+            assertThat(trailers).isNotInstanceOf(FullHttpRequest.class);
         } finally {
             trailers.release();
         }
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -883,13 +879,13 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         HttpContent content = ch.readInbound();
         try {
-            assertThat(content.content().toString(CharsetUtil.UTF_8), is("hello world"));
-            assertFalse(content instanceof LastHttpContent);
+            assertEquals("hello world", content.content().toString(CharsetUtil.UTF_8));
+            assertThat(content).isNotInstanceOf(LastHttpContent.class);
         } finally {
             content.release();
         }
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -901,13 +897,13 @@ public class Http2StreamFrameToHttpObjectCodecTest {
 
         LastHttpContent content = ch.readInbound();
         try {
-            assertThat(content.content().toString(CharsetUtil.UTF_8), is("hello world"));
+            assertEquals("hello world", content.content().toString(CharsetUtil.UTF_8));
             assertTrue(content.trailingHeaders().isEmpty());
         } finally {
             content.release();
         }
 
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -924,7 +920,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         Http2GoAwayFrame frame = ch.readInbound();
         try {
             assertEquals(goaway, frame);
-            assertThat(ch.readInbound(), is(nullValue()));
+            assertNull(ch.readInbound());
             assertFalse(ch.finish());
         } finally {
             goaway.release();
@@ -972,9 +968,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         Http2HeadersFrame headersFrame = (Http2HeadersFrame) frames.poll();
         Http2Headers headers = headersFrame.headers();
 
-        assertThat(headers.scheme().toString(), is("https"));
-        assertThat(headers.method().toString(), is("GET"));
-        assertThat(headers.path().toString(), is("/hello/world"));
+        assertEquals("https", headers.scheme().toString());
+        assertEquals("GET", headers.method().toString());
+        assertEquals("/hello/world", headers.path().toString());
         assertTrue(headersFrame.isEndStream());
         assertNull(frames.poll());
 
@@ -986,9 +982,9 @@ public class Http2StreamFrameToHttpObjectCodecTest {
         headersFrame = (Http2HeadersFrame) frames.poll();
         headers = headersFrame.headers();
 
-        assertThat(headers.scheme().toString(), is("http"));
-        assertThat(headers.method().toString(), is("GET"));
-        assertThat(headers.path().toString(), is("/hello/world"));
+        assertEquals("http", headers.scheme().toString());
+        assertEquals("GET", headers.method().toString());
+        assertEquals("/hello/world", headers.path().toString());
         assertTrue(headersFrame.isEndStream());
         assertNull(frames.poll());
     }

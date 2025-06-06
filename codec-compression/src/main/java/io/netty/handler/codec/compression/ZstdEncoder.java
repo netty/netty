@@ -88,7 +88,7 @@ public final class ZstdEncoder extends MessageToByteEncoder<ByteBuf> {
      *           specifies the level of the compression
      */
     public ZstdEncoder(int compressionLevel, int blockSize, int maxEncodeSize) {
-        super(true);
+        super(ByteBuf.class, true);
         this.compressionLevel = ObjectUtil.checkInRange(compressionLevel,
                 MIN_COMPRESSION_LEVEL, MAX_COMPRESSION_LEVEL, "compressionLevel");
         this.blockSize = ObjectUtil.checkPositive(blockSize, "blockSize");

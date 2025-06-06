@@ -43,6 +43,7 @@ public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPac
      * Creates a new decoder with the specified {@code recordDecoder}.
      */
     public DatagramDnsQueryDecoder(DnsRecordDecoder recordDecoder) {
+        super(DatagramPacket.class);
         this.recordDecoder = checkNotNull(recordDecoder, "recordDecoder");
     }
 

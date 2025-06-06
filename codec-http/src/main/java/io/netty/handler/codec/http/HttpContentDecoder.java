@@ -53,6 +53,10 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
     private boolean continueResponse;
     private boolean needRead = true;
 
+    public HttpContentDecoder() {
+        super(HttpObject.class);
+    }
+
     @Override
     protected void decode(ChannelHandlerContext ctx, HttpObject msg, List<Object> out) throws Exception {
         try {

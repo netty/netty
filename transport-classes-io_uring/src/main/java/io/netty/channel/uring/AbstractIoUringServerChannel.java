@@ -25,6 +25,7 @@ import io.netty.channel.IoRegistration;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.Errors;
+import io.netty.util.internal.CleanableDirectBuffer;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -36,15 +37,19 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private static final class AcceptedAddressMemory {
+        private final CleanableDirectBuffer acceptedAddressMemoryCleanable;
         private final ByteBuffer acceptedAddressMemory;
+        private final CleanableDirectBuffer acceptedAddressLengthMemoryCleanable;
         private final ByteBuffer acceptedAddressLengthMemory;
         private final long acceptedAddressMemoryAddress;
         private final long acceptedAddressLengthMemoryAddress;
 
         AcceptedAddressMemory() {
-            acceptedAddressMemory = Buffer.allocateDirectWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
+            acceptedAddressMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
+            acceptedAddressMemory = acceptedAddressMemoryCleanable.buffer();
             acceptedAddressMemoryAddress = Buffer.memoryAddress(acceptedAddressMemory);
-            acceptedAddressLengthMemory = Buffer.allocateDirectWithNativeOrder(Long.BYTES);
+            acceptedAddressLengthMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Long.BYTES);
+            acceptedAddressLengthMemory = acceptedAddressLengthMemoryCleanable.buffer();
             // Needs to be initialized to the size of acceptedAddressMemory.
             // See https://man7.org/linux/man-pages/man2/accept.2.html
             acceptedAddressLengthMemory.putLong(0, Native.SIZEOF_SOCKADDR_STORAGE);
@@ -52,8 +57,8 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         }
 
         void free() {
-            Buffer.free(acceptedAddressMemory);
-            Buffer.free(acceptedAddressLengthMemory);
+            acceptedAddressMemoryCleanable.clean();
+            acceptedAddressLengthMemoryCleanable.clean();
         }
     }
     private final AcceptedAddressMemory acceptedAddressMemory;

@@ -46,6 +46,7 @@ public class MarshallingEncoder extends MessageToByteEncoder<Object> {
      * @param provider the {@link MarshallerProvider} to use
      */
     public MarshallingEncoder(MarshallerProvider provider) {
+        super(Object.class);
         this.provider = provider;
     }
 

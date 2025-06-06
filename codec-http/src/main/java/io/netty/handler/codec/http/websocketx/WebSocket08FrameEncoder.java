@@ -109,6 +109,7 @@ public class WebSocket08FrameEncoder extends MessageToMessageEncoder<WebSocketFr
      *            Server implementations must set this to {@code null}.
      */
     public WebSocket08FrameEncoder(WebSocketFrameMaskGenerator maskGenerator) {
+        super(WebSocketFrame.class);
         this.maskGenerator = maskGenerator;
     }
 

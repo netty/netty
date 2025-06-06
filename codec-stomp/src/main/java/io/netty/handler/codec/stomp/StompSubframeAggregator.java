@@ -39,7 +39,7 @@ public class StompSubframeAggregator
      *        a {@link TooLongFrameException} will be raised.
      */
     public StompSubframeAggregator(int maxContentLength) {
-        super(maxContentLength);
+        super(maxContentLength, StompSubframe.class);
     }
 
     @Override

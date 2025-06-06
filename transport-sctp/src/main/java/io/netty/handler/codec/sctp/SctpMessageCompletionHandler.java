@@ -35,6 +35,10 @@ import java.util.List;
 public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMessage> {
     private final IntObjectMap<ByteBuf> fragments = new IntObjectHashMap<ByteBuf>();
 
+    public SctpMessageCompletionHandler() {
+        super(SctpMessage.class);
+    }
+
     @Override
     protected void decode(ChannelHandlerContext ctx, SctpMessage msg, List<Object> out) throws Exception {
         final ByteBuf byteBuf = msg.content();

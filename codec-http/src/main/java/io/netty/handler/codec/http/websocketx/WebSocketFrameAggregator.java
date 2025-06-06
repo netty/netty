@@ -36,7 +36,7 @@ public class WebSocketFrameAggregator
      *                         a {@link TooLongFrameException} is thrown.
      */
     public WebSocketFrameAggregator(int maxContentLength) {
-        super(maxContentLength);
+        super(maxContentLength, WebSocketFrame.class);
     }
 
     @Override
