@@ -20,16 +20,6 @@ import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.util.internal.EmptyArrays;
 
-import java.security.KeyStore;
-import java.security.PrivateKey;
-import java.security.cert.X509Certificate;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLException;
@@ -37,6 +27,13 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import javax.security.auth.x500.X500Principal;
+import java.security.KeyStore;
+import java.security.PrivateKey;
+import java.security.cert.X509Certificate;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * A client-side {@link SslContext} which uses OpenSSL's SSL/TLS implementation.
@@ -48,12 +45,13 @@ import javax.security.auth.x500.X500Principal;
  */
 public final class ReferenceCountedOpenSslClientContext extends ReferenceCountedOpenSslContext {
 
-    private static final Set<String> SUPPORTED_KEY_TYPES = Collections.unmodifiableSet(new LinkedHashSet<String>(
-            Arrays.asList(OpenSslKeyMaterialManager.KEY_TYPE_RSA,
-                          OpenSslKeyMaterialManager.KEY_TYPE_DH_RSA,
-                          OpenSslKeyMaterialManager.KEY_TYPE_EC,
-                          OpenSslKeyMaterialManager.KEY_TYPE_EC_RSA,
-                          OpenSslKeyMaterialManager.KEY_TYPE_EC_EC)));
+    private static final String[] SUPPORTED_KEY_TYPES = {
+            OpenSslKeyMaterialManager.KEY_TYPE_RSA,
+            OpenSslKeyMaterialManager.KEY_TYPE_DH_RSA,
+            OpenSslKeyMaterialManager.KEY_TYPE_EC,
+            OpenSslKeyMaterialManager.KEY_TYPE_EC_RSA,
+            OpenSslKeyMaterialManager.KEY_TYPE_EC_EC
+    };
 
     private final OpenSslSessionContext sessionContext;
 
@@ -255,8 +253,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 return;
             }
             try {
-                final Set<String> keyTypesSet = supportedClientKeyTypes(keyTypeBytes);
-                final String[] keyTypes = keyTypesSet.toArray(EmptyArrays.EMPTY_STRINGS);
+                final String[] keyTypes = supportedClientKeyTypes(keyTypeBytes);
                 final X500Principal[] issuers;
                 if (asn1DerEncodedPrincipals == null) {
                     issuers = null;
@@ -284,12 +281,12 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
          * @return supported key types that can be used in {@code X509KeyManager.chooseClientAlias} and
          *         {@code X509ExtendedKeyManager.chooseEngineClientAlias}.
          */
-        private static Set<String> supportedClientKeyTypes(byte[] clientCertificateTypes) {
+        private static String[] supportedClientKeyTypes(byte[] clientCertificateTypes) {
             if (clientCertificateTypes == null) {
                 // Try all of the supported key types.
-                return SUPPORTED_KEY_TYPES;
+                return SUPPORTED_KEY_TYPES.clone();
             }
-            Set<String> result = new HashSet<String>(clientCertificateTypes.length);
+            Set<String> result = new HashSet<>(clientCertificateTypes.length);
             for (byte keyTypeCode : clientCertificateTypes) {
                 String keyType = clientKeyType(keyTypeCode);
                 if (keyType == null) {
@@ -298,7 +295,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 }
                 result.add(keyType);
             }
-            return result;
+            return result.toArray(EmptyArrays.EMPTY_STRINGS);
         }
 
         private static String clientKeyType(byte clientCertificateType) {
