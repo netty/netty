@@ -120,7 +120,7 @@ public final class DnsNameResolverBuilder {
      * Sets the {@link ChannelFactory} that will create a {@link DatagramChannel}.
      * <p>
      * If <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should be supported as well it is required
-     * to call the {@link #socketChannelFactory(ChannelFactory) or {@link #socketChannelType(Class)}} method.
+     * to call the {@link #socketChannelFactory(ChannelFactory)} or {@link #socketChannelType(Class)} method.
      *
      * @param datagramChannelFactory the {@link ChannelFactory}
      * @return {@code this}
@@ -136,7 +136,7 @@ public final class DnsNameResolverBuilder {
      * Sets the {@link ChannelFactory} that will create a {@link DatagramChannel}.
      * <p>
      * If <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should be supported as well it is required
-     * to call the {@link #socketChannelFactory(ChannelFactory) or {@link #socketChannelType(Class)}} method.
+     * to call the {@link #socketChannelFactory(ChannelFactory)} or {@link #socketChannelType(Class)} method.
      *
      * @param datagramChannelFactory the {@link ChannelFactory}
      * @return {@code this}
@@ -152,7 +152,7 @@ public final class DnsNameResolverBuilder {
      * Use as an alternative to {@link #channelFactory(ChannelFactory)}.
      * <p>
      * If <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should be supported as well it is required
-     * to call the {@link #socketChannelFactory(ChannelFactory) or {@link #socketChannelType(Class)}} method.
+     * to call the {@link #socketChannelFactory(ChannelFactory)} or {@link #socketChannelType(Class)} method.
      *
      * @param channelType the type
      * @return {@code this}
@@ -168,7 +168,7 @@ public final class DnsNameResolverBuilder {
      * Use as an alternative to {@link #datagramChannelFactory(ChannelFactory)}.
      * <p>
      * If <a href="https://tools.ietf.org/html/rfc7766">TCP fallback</a> should be supported as well it is required
-     * to call the {@link #socketChannelFactory(ChannelFactory) or {@link #socketChannelType(Class)}} method.
+     * to call the {@link #socketChannelFactory(ChannelFactory)} or {@link #socketChannelType(Class)} method.
      *
      * @param channelType the type
      * @return {@code this}
