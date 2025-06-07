@@ -149,6 +149,9 @@ final class Http3CodecUtils {
                 encodeLengthIntoBuffer(out, writerIndex, (byte) 0x40);
                 break;
             case 4:
+                if (value < Integer.MIN_VALUE || value > Integer.MAX_VALUE) {
+                    throw new IllegalArgumentException("Value out of range for int: " + value);
+                }
                 out.writeInt((int) value);
                 encodeLengthIntoBuffer(out, writerIndex, (byte) 0x80);
                 break;
