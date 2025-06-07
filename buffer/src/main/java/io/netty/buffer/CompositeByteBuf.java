@@ -2252,6 +2252,30 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     }
 
     @Override
+    public CompositeByteBuf replaceRange(int fromIndex, int toIndex, ByteReplacer replacer) {
+        super.replaceRange(fromIndex, toIndex, replacer);
+        return this;
+    }
+
+    @Override
+    public CompositeByteBuf replaceRange(int fromIndex, int toIndex, ShortReplacer replacer) {
+        super.replaceRange(fromIndex, toIndex, replacer);
+        return this;
+    }
+
+    @Override
+    public CompositeByteBuf replaceRange(int fromIndex, int toIndex, IntReplacer replacer) {
+        super.replaceRange(fromIndex, toIndex, replacer);
+        return this;
+    }
+
+    @Override
+    public CompositeByteBuf replaceRange(int fromIndex, int toIndex, LongReplacer replacer) {
+        super.replaceRange(fromIndex, toIndex, replacer);
+        return this;
+    }
+
+    @Override
     protected void deallocate() {
         if (freed) {
             return;
