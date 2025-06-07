@@ -58,7 +58,6 @@ class PemReaderTest {
                 "-----END CERTIFICATE-----\n").getBytes(CharsetUtil.US_ASCII);
         ByteArrayInputStream in = new ByteArrayInputStream(certs);
         ByteBuf[] bufs = PemReader.readCertificates(in);
-        in.close();
         assertThat(bufs.length).isEqualTo(2);
         for (ByteBuf buf : bufs) {
             buf.release();
@@ -84,7 +83,6 @@ class PemReaderTest {
                 "-----END PRIVATE KEY-----\n").getBytes(CharsetUtil.US_ASCII);
         ByteArrayInputStream in = new ByteArrayInputStream(key);
         ByteBuf buf = PemReader.readPrivateKey(in);
-        in.close();
         assertThat(buf.readableBytes()).isEqualTo(686);
         buf.release();
     }

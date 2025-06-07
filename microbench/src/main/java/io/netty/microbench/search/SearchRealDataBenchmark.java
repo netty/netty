@@ -41,6 +41,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.concurrent.TimeUnit;
 
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
@@ -99,7 +100,7 @@ public class SearchRealDataBenchmark extends AbstractMicrobenchmark {
     @Setup
     public void setup() throws IOException {
         File haystackFile = ResourcesUtil.getFile(SearchRealDataBenchmark.class, "netty-io-news.html");
-        byte[] haystackBytes = readBytes(haystackFile);
+        byte[] haystackBytes = Files.readAllBytes(haystackFile.toPath());
         haystack = bufferType.newBuffer(haystackBytes);
 
         needleId = 0;
@@ -146,40 +147,6 @@ public class SearchRealDataBenchmark extends AbstractMicrobenchmark {
             pos = haystack.forEachByte(pos, haystackLength - pos, searchProcessor) + 1;
             blackHole.consume(pos);
         } while (pos > 0);
-    }
-
-    private static byte[] readBytes(File file) throws IOException {
-        InputStream in = new FileInputStream(file);
-        try {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            try {
-                byte[] buf = new byte[8192];
-                for (;;) {
-                    int ret = in.read(buf);
-                    if (ret < 0) {
-                        break;
-                    }
-                    out.write(buf, 0, ret);
-                }
-                return out.toByteArray();
-            } finally {
-                safeClose(out);
-            }
-        } finally {
-            safeClose(in);
-        }
-    }
-
-    private static void safeClose(InputStream in) {
-        try {
-            in.close();
-        } catch (IOException ignored) { }
-    }
-
-    private static void safeClose(OutputStream out) {
-        try {
-            out.close();
-        } catch (IOException ignored) { }
     }
 
 }
