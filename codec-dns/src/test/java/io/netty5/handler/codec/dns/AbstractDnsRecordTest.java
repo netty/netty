@@ -72,4 +72,16 @@ public class AbstractDnsRecordTest {
             return this; // This class is immutable.
         }
     }
+
+    /*
+     * RFC-1034 Section 3.1 (page 7 & 8)
+     * RFC-1035 Section 2.3.3 (page 9 & 10)
+     */
+    @Test
+    public void testEqualsAndHashCodeIgnoreCase() {
+        AbstractDnsRecord lowerCase = new AbstractDnsRecord("example.com.", DnsRecordType.A, 0) { };
+        AbstractDnsRecord upperCase = new AbstractDnsRecord("EXAMPLE.COM.", DnsRecordType.A, 0) { };
+        assertEquals(lowerCase.hashCode(), upperCase.hashCode());
+        assertEquals(lowerCase, upperCase);
+    }
 }

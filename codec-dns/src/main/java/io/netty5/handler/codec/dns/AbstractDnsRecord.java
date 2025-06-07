@@ -131,7 +131,7 @@ public abstract class AbstractDnsRecord implements DnsRecord {
 
         return type().intValue() == that.type().intValue() &&
                dnsClass() == that.dnsClass() &&
-               name().equals(that.name());
+               name().equalsIgnoreCase(that.name());
     }
 
     @Override
@@ -141,7 +141,7 @@ public abstract class AbstractDnsRecord implements DnsRecord {
             return hashCode;
         }
 
-        return this.hashCode = name.hashCode() * 31 + type().intValue() * 31 + dnsClass();
+        return this.hashCode = name.toLowerCase().hashCode() * 31 + type().intValue() * 31 + dnsClass();
     }
 
     @Override
