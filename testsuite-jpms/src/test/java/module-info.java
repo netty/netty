@@ -40,6 +40,8 @@ open module io.netty.testsuite_jpms.test {
     requires io.netty.resolver.dns;
     requires io.netty.codec.http;
     requires io.netty.codec.http2;
+    requires io.netty.codec.http3;
+    requires io.netty.codec.classes.quic;
     requires jboss.marshalling;
     requires org.bouncycastle.pkix;
 

@@ -16,29 +16,44 @@
 
 package io.netty.testsuite_jpms.main;
 
+import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.IoHandlerFactory;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.Channel;
-import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoHandlerFactory;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.epoll.EpollIoHandler;
 import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.kqueue.KQueueIoHandler;
 import io.netty.channel.kqueue.KQueueServerSocketChannel;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.uring.IoUringIoHandler;
 import io.netty.channel.uring.IoUringServerSocketChannel;
+import io.netty.handler.codec.http3.Http3;
+import io.netty.handler.codec.quic.InsecureQuicTokenHandler;
+import io.netty.handler.codec.quic.QuicSslContext;
+import io.netty.handler.codec.quic.QuicSslContextBuilder;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
+
+import java.net.InetSocketAddress;
+import java.security.Security;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static io.netty.handler.ssl.SslContextBuilder.forServer;
 
@@ -69,9 +84,12 @@ public final class HttpHelloWorldServer {
 
     public static void main(String[] args) throws Exception {
 
+        Security.addProvider(new BouncyCastleProvider());
+
         String transport = "nio";
         boolean ssl = false;
         SslProvider sslProvider = SslProvider.JDK;
+        boolean http3 = false;
 
         Integer port = null;
         for (int i = 0; i < args.length; i++) {
@@ -81,6 +99,7 @@ public final class HttpHelloWorldServer {
                 System.out.println("--ssl-provider [ JDK | OPENSSL ]");
                 System.out.println("--port <port>");
                 System.out.println("--transport [ nio | kqueue | epoll | io_uring ]");
+                System.out.println("--http3");
                 System.exit(0);
             }
             if (args[i].equals("--ssl")) {
@@ -106,6 +125,9 @@ public final class HttpHelloWorldServer {
                 } else {
                     System.exit(1);
                 }
+            }
+            if (args[i].equals("--http3")) {
+                http3 = true;
             }
         }
 
@@ -142,40 +164,81 @@ public final class HttpHelloWorldServer {
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
 
-        SslContext sslContext;
-        if (ssl) {
-            sslContext = forServer(cert.toKeyManagerFactory())
-                    .sslProvider(sslProvider)
-                    .protocols("TLSv1.2")
-                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                    .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
-                    .sessionCacheSize(0)
-                    .sessionTimeout(0)
-                    .build();
-        } else {
-            sslContext = null;
-        }
-
         // Configure the server.
         EventLoopGroup bossGroup = new MultiThreadIoEventLoopGroup(1, ioHandlerFactory);
         EventLoopGroup workerGroup = new MultiThreadIoEventLoopGroup(ioHandlerFactory);
         try {
-            ServerBootstrap b = new ServerBootstrap();
-            b.option(ChannelOption.SO_BACKLOG, 1024);
-            b.group(bossGroup, workerGroup)
-             .channel(serverSocketChannelFactory)
-             .handler(new LoggingHandler(LogLevel.INFO))
-             .childHandler(new HttpHelloWorldServerInitializer(sslContext));
+            Channel ch;
+            if (http3) {
+                QuicSslContext quicCslContext = QuicSslContextBuilder.forServer(cert.toKeyManagerFactory(), null)
+                        .applicationProtocols(Http3.supportedApplicationProtocols()).build();
+                ChannelHandler codec = Http3.newQuicServerCodecBuilder()
+                        .sslContext(quicCslContext)
+                        .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
+                        .initialMaxData(10000000)
+                        .initialMaxStreamDataBidirectionalLocal(1000000)
+                        .initialMaxStreamDataBidirectionalRemote(1000000)
+                        .initialMaxStreamsBidirectional(100)
+                        .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
+                        .handler(new Http3HelloWorldServerInitializer())
+                        .build();
 
-            Channel ch = b.bind(port).sync().channel();
+                Bootstrap bs = new Bootstrap();
+                ch = bs.group(workerGroup)
+                        .channel(NioDatagramChannel.class)
+                        .handler(codec)
+                        .bind(new InetSocketAddress(port)).sync().channel();
+            } else {
+                SslContext sslContext;
+                if (ssl) {
+                    sslContext = forServer(cert.toKeyManagerFactory())
+                            .sslProvider(sslProvider)
+                            .protocols("TLSv1.2")
+                            .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                            .ciphers(null, IdentityCipherSuiteFilter.INSTANCE)
+                            .sessionCacheSize(0)
+                            .sessionTimeout(0)
+                            .build();
+                } else {
+                    sslContext = null;
+                }
+                ServerBootstrap b = new ServerBootstrap();
+                b.option(ChannelOption.SO_BACKLOG, 1024);
+                b.group(bossGroup, workerGroup)
+                        .channel(serverSocketChannelFactory)
+                        .handler(new LoggingHandler(LogLevel.INFO))
+                        .childHandler(new HttpHelloWorldServerInitializer(sslContext));
+
+                ch = b.bind(port).sync().channel();
+            }
 
             System.err.println("Open your web browser and navigate to " +
-                    (ssl? "https" : "http") + "://127.0.0.1:" + port + '/');
+                    ((ssl || http3)? "https" : "http") + "://127.0.0.1:" + port + '/');
 
             ch.closeFuture().sync();
         } finally {
             bossGroup.shutdownGracefully();
             workerGroup.shutdownGracefully();
         }
+    }
+
+    static String content(ChannelHandlerContext ctx) {
+        String modulesInfo = ModuleLayer.boot().modules().stream()
+                .map(module -> "- " + module.getName() + " " +
+                        (module.getDescriptor().isAutomatic() ? "(automatic)" : ""))
+                .collect(Collectors.joining("\r\n", "Boot layer:\r\n", "\r\n"));
+
+        String channelType = ctx.channel().getClass().getName();
+
+        String sslEngineInfo = "";
+        SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
+        if (sslHandler != null) {
+            sslEngineInfo = "SSL Engine: " + sslHandler.engine().getClass().getName() + "\r\n";
+        }
+
+        return "Hello World\r\n" +
+                "Transport: " + channelType + "\r\n" +
+                sslEngineInfo +
+                modulesInfo;
     }
 }

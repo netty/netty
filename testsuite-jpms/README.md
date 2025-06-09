@@ -20,6 +20,7 @@ historical reasons. They are listed below:
 * `io.netty.codec.haproxy`
 * `io.netty.codec.http`
 * `io.netty.codec.http2`
+* `io.netty.codec.http3`
 * `io.netty.codec.memcache`
 * `io.netty.codec.mqtt`
 * `io.netty.codec.redis`
@@ -30,6 +31,8 @@ historical reasons. They are listed below:
 * `io.netty.codec.compression`
 * `io.netty.codec.marshalling`
 * `io.netty.codec.protobuf`
+* `io.netty.codec.quic.${os.name}.${os.arch}`
+* `io.netty.codec.classes.quic`
 * `io.netty.common`
 * `io.netty.handler`
 * `io.netty.handler.proxy`
@@ -120,6 +123,15 @@ is only required at runtime. It can be added as module required declaration or a
 It is convenient to only depend on the transport classes and add the required transport native at runtime since the
 `os` and `arch` will vary.
 
+### HTTP/3
+
+HTTP/3 is supported.
+
+The module `io.netty.codec.quic.${os.name}.${os.arch}` contains the native library and its presence
+is only required at runtime. It can be added as module required declaration or at runtime on the module path.
+It is convenient to only depend on the classes and add the required transport native at runtime since the
+`os` and `arch` will vary.
+
 ### OpenSSL
 
 OpenSSL is supported.
@@ -182,12 +194,14 @@ usage: [options]
 --ssl-provider [ JDK | OPENSSL ]
 --port <port>
 --transport [ nio | kqueue | epoll | io_uring ]
+--http3
 ```
 
 - changing port `-m io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer --port 80`
 - using SSL `-m io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer --ssl`
 - using Open SSL `--add-modules io.netty.internal.tcnative.openssl.osx.aarch_64 -m io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer --ssl --ssl-provider OPENSSL`
 - using native transport `--add-modules io.netty.transport.kqueue.osx.aarch_64 -m io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer --transport kqueue`
+- using HTTP/3 `--add-modules io.netty.handler.codec.quic.osx.aarch_64 -m io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer --http3`
 
 ## Developer guide
 
@@ -247,5 +261,8 @@ due to the lack of module-info.java descriptors for Netty modules.
 You can however load the [pom.xml](pom.xml) file as a standalone project, the IDE will usually find the modules
 since they will be loaded from the local snapshot repository. 
 
+### Native library loading
 
-
+Netty native library resources are located outside their package structure, e.g. `META-INF/native/libnetty_quiche42_osx_aarch_64.jnilib`.
+As consequence native library modules do not need exports and can be loaded by any other module. These modules do not need
+to be present at compilation time and need only need to be present at runtime.

@@ -18,6 +18,6 @@ requires:
   - module: io.netty.buffer
   - module: io.netty.transport
   - module: io.netty.codec
+  - module: io.netty.codec.http
   - module: io.netty.handler
-  - module: io.netty.classes.epoll
-    static: true
+  - module: io.netty.codec.classes.quic
