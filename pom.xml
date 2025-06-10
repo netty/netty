@@ -210,7 +210,8 @@
         <argLine.java9>${argLine.java9.extras}</argLine.java9>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <!-- 1.4.x does not work in Java10+ -->
-        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <!-- 2.0.x does not work in Java25+ -->
+        <jboss.marshalling.version>2.2.3.Final</jboss.marshalling.version>
         <!-- We need to use 1.8 as otherwise default methods are not picked up and so result in compile errors for
              our EventExecutorGroup implementations
         -->
