@@ -41,21 +41,25 @@ final class CleanerJava24 implements Cleaner {
                 // Here we compose and construct a MethodHandle that takes an 'int' capacity argument,
                 // and produces a 'CleanableDirectBufferImpl' instance.
                 // The method handle will create a new shared Arena instance, allocate a MemorySegment from it,
-                // convert the MemorySegment to a ByteBuffer, and then pass both the Arena and the ByteBuffer to
-                // the CleanableDirectBufferImpl constructor, returning the resulting object.
+                // convert the MemorySegment to a ByteBuffer and a memory address, and then pass both the Arena,
+                // the ByteBuffer, and the memory address to the CleanableDirectBufferImpl constructor,
+                // returning the resulting object.
                 //
                 // Effectively, we are recreating the following the Java code through MethodHandles alone:
                 //
                 //    Arena arena = Arena.ofShared();
+                //    MemorySegment segment = arena.allocate(size);
                 //    return new CleanableDirectBufferImpl(
                 //              (AutoCloseable) arena,
-                //              arena.allocate(size).asByteBuffer());
+                //              segment.asByteBuffer(),
+                //              segment.address());
                 //
                 // First, we need the types we'll use to set this all up.
                 Class<?> arenaCls = Class.forName("java.lang.foreign.Arena");
                 Class<?> memsegCls = Class.forName("java.lang.foreign.MemorySegment");
                 Class<CleanableDirectBufferImpl> bufCls = CleanableDirectBufferImpl.class;
-                // Acquire the private look up, so we can access the private 'CleanableDirectBufferImpl' constructor.
+                // Acquire the private look up, so we can access the package-private 'CleanableDirectBufferImpl'
+                // constructor.
                 MethodHandles.Lookup lookup = MethodHandles.lookup();
 
                 // ofShared.type() = ()Arena
@@ -64,20 +68,34 @@ final class CleanerJava24 implements Cleaner {
                 MethodHandle allocate = lookup.findVirtual(arenaCls, "allocate", methodType(memsegCls, long.class));
                 // asByteBuffer.type() = (MemorySegment)ByteBuffer
                 MethodHandle asByteBuffer = lookup.findVirtual(memsegCls, "asByteBuffer", methodType(ByteBuffer.class));
-                // bufClsCtor.type() = (AutoCloseable,ByteBuffer)CleanableDirectBufferImpl
+                // address.type() = (MemorySegment)long
+                MethodHandle address = lookup.findVirtual(memsegCls, "address", methodType(long.class));
+                // bufClsCtor.type() = (AutoCloseable,ByteBuffer,long)CleanableDirectBufferImpl
                 MethodHandle bufClsCtor = lookup.findConstructor(bufCls,
-                        methodType(void.class, AutoCloseable.class, ByteBuffer.class));
-                // The 'allocate' method takes a 'long' capacity but we'll be providing an 'int'.
+                        methodType(void.class, AutoCloseable.class, ByteBuffer.class, long.class));
+                // The 'allocate' method takes a 'long' capacity, but we'll be providing an 'int'.
                 // Explicitly cast the 'long' to 'int' so we can use 'invokeExact'.
                 // allocateInt.type() = (Arena,int)MemorySegment
                 MethodHandle allocateInt = MethodHandles.explicitCastArguments(allocate,
                         methodType(memsegCls, arenaCls, int.class));
-                // Use the 'asByteBuffer' method as a filter, to transform the constructor into a method that takes a
-                // MemorySegment argument instead of a ByteBuffer argument.
-                // ctorArenaMemseg.type() = (Arena,MemorySegment)CleanableDirectBufferImpl
-                MethodHandle ctorArenaMemseg = MethodHandles.explicitCastArguments(
-                        MethodHandles.filterArguments(bufClsCtor, 1, asByteBuffer),
-                        methodType(bufCls, arenaCls, memsegCls));
+                // Use the 'asByteBuffer' and 'address' methods as a filter, to transform the constructor into a method
+                // that takes two MemorySegment arguments instead of a ByteBuffer and a long argument.
+                // ctorArenaMemsegMemseg.type() = (Arena,MemorySegment,MemorySegment)CleanableDirectBufferImpl
+                MethodHandle ctorArenaMemsegMemseg = MethodHandles.explicitCastArguments(
+                        MethodHandles.filterArguments(bufClsCtor, 1, asByteBuffer, address),
+                        methodType(bufCls, arenaCls, memsegCls, memsegCls));
+                // Our method now takes two MemorySegment arguments, but we actually only want to pass one.
+                // Specifically, we want to get both the ByteBuffer and the memory address from the same MemorySegment
+                // instance.
+                // We permute the argument array such that the first MemorySegment argument gest passed to both
+                // parameters, and then the second parameter value gets ignored.
+                // ctorArenaMemsegNull.type() = (Arena,MemorySegment,MemorySegment)CleanableDirectBufferImpl
+                MethodHandle ctorArenaMemsegNull = MethodHandles.permuteArguments(ctorArenaMemsegMemseg,
+                        methodType(bufCls, arenaCls, memsegCls, memsegCls), 0, 1, 1);
+                // With the second MemorySegment argument ignored, we can statically bind it to 'null' to effectively
+                // drop it from our parameter list.
+                MethodHandle ctorArenaMemseg = MethodHandles.insertArguments(
+                        ctorArenaMemsegNull, 2, new Object[]{null});
                 // Use the 'allocateInt' method to transform the last MemorySegment argument of the constructor,
                 // into an (Arena,int) argument pair.
                 // ctorArenaArenaInt.type() = (Arena,Arena,int)CleanableDirectBufferImpl
@@ -140,11 +158,13 @@ final class CleanerJava24 implements Cleaner {
     private static final class CleanableDirectBufferImpl implements CleanableDirectBuffer {
         private final AutoCloseable closeable;
         private final ByteBuffer buffer;
+        private final long memoryAddress;
 
         // NOTE: must be at least package-protected to allow calls from the method handles!
-        CleanableDirectBufferImpl(AutoCloseable closeable, ByteBuffer buffer) {
+        CleanableDirectBufferImpl(AutoCloseable closeable, ByteBuffer buffer, long memoryAddress) {
             this.closeable = closeable;
             this.buffer = buffer;
+            this.memoryAddress = memoryAddress;
         }
 
         @Override
@@ -161,6 +181,16 @@ final class CleanerJava24 implements Cleaner {
             } catch (Exception e) {
                 throw new IllegalStateException("Unexpected close exception", e);
             }
+        }
+
+        @Override
+        public boolean hasMemoryAddress() {
+            return true;
+        }
+
+        @Override
+        public long memoryAddress() {
+            return memoryAddress;
         }
     }
 }
