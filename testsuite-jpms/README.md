@@ -201,7 +201,7 @@ usage: [options]
 - using SSL `-m io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer --ssl`
 - using Open SSL `--add-modules io.netty.internal.tcnative.openssl.osx.aarch_64 -m io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer --ssl --ssl-provider OPENSSL`
 - using native transport `--add-modules io.netty.transport.kqueue.osx.aarch_64 -m io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer --transport kqueue`
-- using HTTP/3 `--add-modules io.netty.handler.codec.quic.osx.aarch_64 -m io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer --http3`
+- using HTTP/3 `--add-modules io.netty.codec.quic.osx.aarch_64 -m io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer --http3`
 
 ## Developer guide
 

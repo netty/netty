@@ -48,10 +48,8 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 import java.net.InetSocketAddress;
-import java.security.Security;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -83,8 +81,6 @@ public final class HttpHelloWorldServer {
     }
 
     public static void main(String[] args) throws Exception {
-
-        Security.addProvider(new BouncyCastleProvider());
 
         String transport = "nio";
         boolean ssl = false;
