@@ -15,8 +15,7 @@
  */
 package io.netty.handler.codec.http.cookie;
 
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -142,7 +141,7 @@ public class ServerCookieEncoderTest {
         try {
             ServerCookieEncoder.STRICT.encode(new DefaultCookie("name", "\"value,\""));
         } catch (IllegalArgumentException e) {
-            assertThat(e.getMessage().toLowerCase(), containsString("cookie value contains an invalid char: ,"));
+            assertThat(e.getMessage().toLowerCase()).contains("cookie value contains an invalid char: ,");
         }
     }
 

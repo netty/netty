@@ -145,6 +145,7 @@ public class SpdyHttpEncoder extends MessageToMessageEncoder<HttpObject> {
      * @param validateHeaders    validate the header names and values when adding them to the {@link SpdyHeaders}
      */
     public SpdyHttpEncoder(SpdyVersion version, boolean headersToLowerCase, boolean validateHeaders) {
+        super(HttpObject.class);
         ObjectUtil.checkNotNull(version, "version");
         this.headersToLowerCase = headersToLowerCase;
         this.validateHeaders = validateHeaders;

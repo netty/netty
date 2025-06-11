@@ -34,10 +34,6 @@ import java.util.Map;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -244,7 +240,7 @@ public class HttpRequestDecoderTest {
                 "Content-Length: 1048576000\r\n\r\n";
 
         channel.writeInbound(Unpooled.copiedBuffer(oversized, CharsetUtil.US_ASCII));
-        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
+        assertInstanceOf(HttpRequest.class, channel.readInbound());
 
         // At this point, we assume that we sent '413 Entity Too Large' to the peer without closing the connection
         // so that the client can try again.
@@ -252,10 +248,10 @@ public class HttpRequestDecoderTest {
 
         String query = "GET /max-file-size HTTP/1.1\r\n\r\n";
         channel.writeInbound(Unpooled.copiedBuffer(query, CharsetUtil.US_ASCII));
-        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
-        assertThat(channel.readInbound(), is(instanceOf(LastHttpContent.class)));
+        assertInstanceOf(HttpRequest.class, channel.readInbound());
+        assertInstanceOf(LastHttpContent.class, channel.readInbound());
 
-        assertThat(channel.finish(), is(false));
+        assertFalse(channel.finish());
     }
 
     @Test
@@ -269,12 +265,12 @@ public class HttpRequestDecoderTest {
                 "WAY_TOO_LARGE_DATA_BEGINS";
 
         channel.writeInbound(Unpooled.copiedBuffer(oversized, CharsetUtil.US_ASCII));
-        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
+        assertInstanceOf(HttpRequest.class, channel.readInbound());
 
         HttpContent prematureData = channel.readInbound();
         prematureData.release();
 
-        assertThat(channel.readInbound(), is(nullValue()));
+        assertNull(channel.readInbound());
 
         // At this point, we assume that we sent '413 Entity Too Large' to the peer without closing the connection
         // so that the client can try again.
@@ -282,10 +278,10 @@ public class HttpRequestDecoderTest {
 
         String query = "GET /max-file-size HTTP/1.1\r\n\r\n";
         channel.writeInbound(Unpooled.copiedBuffer(query, CharsetUtil.US_ASCII));
-        assertThat(channel.readInbound(), is(instanceOf(HttpRequest.class)));
-        assertThat(channel.readInbound(), is(instanceOf(LastHttpContent.class)));
+        assertInstanceOf(HttpRequest.class, channel.readInbound());
+        assertInstanceOf(LastHttpContent.class, channel.readInbound());
 
-        assertThat(channel.finish(), is(false));
+        assertFalse(channel.finish());
     }
 
     @Test
@@ -328,7 +324,7 @@ public class HttpRequestDecoderTest {
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isFailure());
-        assertThat(request.decoderResult().cause(), instanceOf(TooLongHttpLineException.class));
+        assertInstanceOf(TooLongHttpLineException.class, request.decoderResult().cause());
         assertFalse(channel.finish());
     }
 
@@ -627,11 +623,11 @@ public class HttpRequestDecoderTest {
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
         assertTrue(request.decoderResult().isSuccess());
-        assertThat(request.decoderResult(), instanceOf(HttpMessageDecoderResult.class));
+        assertInstanceOf(HttpMessageDecoderResult.class, request.decoderResult());
         HttpMessageDecoderResult decoderResult = (HttpMessageDecoderResult) request.decoderResult();
-        assertThat(decoderResult.initialLineLength(), is(23));
-        assertThat(decoderResult.headerSize(), is(35));
-        assertThat(decoderResult.totalSize(), is(58));
+        assertEquals(23, decoderResult.initialLineLength());
+        assertEquals(35, decoderResult.headerSize());
+        assertEquals(58, decoderResult.totalSize());
         HttpContent c = channel.readInbound();
         c.release();
         assertFalse(channel.finish());
@@ -775,7 +771,7 @@ public class HttpRequestDecoderTest {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         assertTrue(channel.writeInbound(requestBuffer));
         HttpRequest request = channel.readInbound();
-        assertThat(request.decoderResult().cause(), instanceOf(IllegalArgumentException.class));
+        assertInstanceOf(IllegalArgumentException.class, request.decoderResult().cause());
         assertTrue(request.decoderResult().isFailure());
         assertFalse(channel.finish());
     }

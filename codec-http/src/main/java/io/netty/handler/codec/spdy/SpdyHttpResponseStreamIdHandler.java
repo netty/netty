@@ -35,6 +35,10 @@ public class SpdyHttpResponseStreamIdHandler extends
     private static final Integer NO_ID = -1;
     private final Queue<Integer> ids = new ArrayDeque<Integer>();
 
+    public SpdyHttpResponseStreamIdHandler() {
+        super(Object.class, HttpMessage.class);
+    }
+
     @Override
     public boolean acceptInboundMessage(Object msg) throws Exception {
         return msg instanceof HttpMessage || msg instanceof SpdyRstStreamFrame;

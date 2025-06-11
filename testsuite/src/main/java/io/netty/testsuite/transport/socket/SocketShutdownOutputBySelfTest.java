@@ -41,6 +41,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -73,7 +74,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             assertFalse(ch.isOutputShutdown());
 
             s = ss.accept();
-            ch.writeAndFlush(Unpooled.wrappedBuffer(new byte[] { 1 })).sync();
+            ch.writeAndFlush(randomBufferType(ch.alloc(), new byte[] { 1 }, 0, 1)).sync();
             assertEquals(1, s.getInputStream().read());
 
             assertTrue(h.ch.isOpen());
@@ -199,7 +200,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
             try {
                 // If half-closed, the local endpoint shouldn't be able to write
-                ch.writeAndFlush(Unpooled.wrappedBuffer(new byte[]{ 2 })).sync();
+                ch.writeAndFlush(randomBufferType(ch.alloc(), new byte[]{ 2 }, 0 , 2)).sync();
                 fail();
             } catch (Throwable cause) {
                 checkThrowable(cause);

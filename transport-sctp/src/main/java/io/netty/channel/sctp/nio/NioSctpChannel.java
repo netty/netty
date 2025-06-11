@@ -20,7 +20,6 @@ import com.sun.nio.sctp.MessageInfo;
 import com.sun.nio.sctp.NotificationHandler;
 import com.sun.nio.sctp.SctpChannel;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -68,6 +67,8 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     private final SctpChannelConfig config;
 
     private final NotificationHandler<?> notificationHandler;
+    private ByteBuffer inputCopy;
+    private ByteBuffer outputCopy;
 
     private static SctpChannel newSctpChannel() {
         try {
@@ -269,11 +270,27 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         boolean free = true;
         try {
             ByteBuffer data = buffer.internalNioBuffer(buffer.writerIndex(), buffer.writableBytes());
+            boolean useInputCopy = false;
+            int javaVersion = PlatformDependent.javaVersion();
+            if (javaVersion >= 22 && javaVersion < 25 && data.isDirect()) {
+                // On Java 22 through 24, we need to avoid using ByteBuffer instances that are
+                // backed by MemorySegments, because of https://bugs.openjdk.org/browse/JDK-8357268
+                if (inputCopy == null || inputCopy.capacity() < data.remaining()) {
+                    inputCopy = ByteBuffer.allocateDirect(data.remaining());
+                }
+                inputCopy.clear();
+                inputCopy.limit(data.remaining());
+                useInputCopy = true;
+            }
             int pos = data.position();
 
-            MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
+            MessageInfo messageInfo = ch.receive(useInputCopy ? inputCopy : data, null, notificationHandler);
             if (messageInfo == null) {
                 return 0;
+            }
+            if (useInputCopy) {
+                inputCopy.flip();
+                data.put(inputCopy);
             }
 
             allocHandle.lastBytesRead(data.position() - pos);
@@ -300,18 +317,26 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             return true;
         }
 
-        ByteBufAllocator alloc = alloc();
-        boolean needsCopy = data.nioBufferCount() != 1;
-        if (!needsCopy) {
-            if (!data.isDirect() && alloc.isDirectBufferPooled()) {
-                needsCopy = true;
-            }
-        }
         ByteBuffer nioData;
-        if (needsCopy) {
-            data = alloc.directBuffer(dataLen).writeBytes(data);
+        int javaVersion = PlatformDependent.javaVersion();
+        if (javaVersion >= 22 && javaVersion < 25 && data.isDirect() ||
+                !data.isDirect() || data.nioBufferCount() != 1) {
+            // Ensure that we only use a single, direct ByteBuffer when doing SCTP IO.
+            // If the ByteBuf is composite, or is on-heap, we do a copy.
+            // On Java 22 through 24, we additionally need to avoid using ByteBuffer instances that are
+            // backed by MemorySegments, because of https://bugs.openjdk.org/browse/JDK-8357268
+            if (outputCopy == null || outputCopy.capacity() < dataLen) {
+                outputCopy = ByteBuffer.allocateDirect(dataLen);
+            }
+            outputCopy.clear();
+            outputCopy.limit(dataLen);
+            data.readBytes(outputCopy);
+            outputCopy.flip();
+            nioData = outputCopy;
+        } else {
+            nioData = data.nioBuffer();
         }
-        nioData = data.nioBuffer();
+
         final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());
         mi.payloadProtocolID(packet.protocolIdentifier());
         mi.streamNumber(packet.streamIdentifier());

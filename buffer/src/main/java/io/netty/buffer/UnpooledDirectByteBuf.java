@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
@@ -39,6 +40,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     private final ByteBufAllocator alloc;
 
+    CleanableDirectBuffer cleanable;
     ByteBuffer buffer; // accessed by UnpooledUnsafeNoCleanerDirectByteBuf.reallocateDirect()
     private ByteBuffer tmpNioBuf;
     private int capacity;
@@ -61,7 +63,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         }
 
         this.alloc = alloc;
-        setByteBuffer(allocateDirect(initialCapacity), false);
+        setByteBuffer(allocateDirectBuffer(initialCapacity), false);
     }
 
     /**
@@ -99,16 +101,47 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     /**
      * Allocate a new direct {@link ByteBuffer} with the given initialCapacity.
+     * @deprecated Use {@link #allocateDirectBuffer(int)} instead.
      */
+    @Deprecated
     protected ByteBuffer allocateDirect(int initialCapacity) {
         return ByteBuffer.allocateDirect(initialCapacity);
     }
 
     /**
      * Free a direct {@link ByteBuffer}
+     * @deprecated Use {@link #allocateDirectBuffer(int)} instead.
      */
+    @Deprecated
     protected void freeDirect(ByteBuffer buffer) {
         PlatformDependent.freeDirectBuffer(buffer);
+    }
+
+    protected CleanableDirectBuffer allocateDirectBuffer(int capacity) {
+        return PlatformDependent.allocateDirect(capacity);
+    }
+
+    void setByteBuffer(CleanableDirectBuffer cleanableDirectBuffer, boolean tryFree) {
+        if (tryFree) {
+            CleanableDirectBuffer oldCleanable = cleanable;
+            ByteBuffer oldBuffer = buffer;
+            if (oldBuffer != null) {
+                if (doNotFree) {
+                    doNotFree = false;
+                } else {
+                    if (oldCleanable != null) {
+                        oldCleanable.clean();
+                    } else {
+                        freeDirect(oldBuffer);
+                    }
+                }
+            }
+        }
+
+        cleanable = cleanableDirectBuffer;
+        buffer = cleanableDirectBuffer.buffer();
+        tmpNioBuf = null;
+        capacity = buffer.remaining();
     }
 
     void setByteBuffer(ByteBuffer buffer, boolean tryFree) {
@@ -153,10 +186,10 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
             bytesToCopy = newCapacity;
         }
         ByteBuffer oldBuffer = buffer;
-        ByteBuffer newBuffer = allocateDirect(newCapacity);
+        CleanableDirectBuffer newBuffer = allocateDirectBuffer(newCapacity);
         oldBuffer.position(0).limit(bytesToCopy);
-        newBuffer.position(0).limit(bytesToCopy);
-        newBuffer.put(oldBuffer).clear();
+        newBuffer.buffer().position(0).limit(bytesToCopy);
+        newBuffer.buffer().put(oldBuffer).clear();
         setByteBuffer(newBuffer, true);
         return this;
     }
@@ -188,12 +221,17 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     public boolean hasMemoryAddress() {
-        return false;
+        CleanableDirectBuffer cleanable = this.cleanable;
+        return cleanable != null && cleanable.hasMemoryAddress();
     }
 
     @Override
     public long memoryAddress() {
-        throw new UnsupportedOperationException();
+        ensureAccessible();
+        if (!hasMemoryAddress()) {
+            throw new UnsupportedOperationException();
+        }
+        return cleanable.memoryAddress();
     }
 
     @Override
@@ -643,7 +681,12 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         this.buffer = null;
 
         if (!doNotFree) {
-            freeDirect(buffer);
+            if (cleanable != null) {
+                cleanable.clean();
+                cleanable = null;
+            } else {
+                freeDirect(buffer);
+            }
         }
     }
 

@@ -52,6 +52,10 @@ import java.util.List;
  */
 @Sharable
 public class ByteArrayEncoder extends MessageToMessageEncoder<byte[]> {
+    public ByteArrayEncoder() {
+        super(byte[].class);
+    }
+
     @Override
     protected void encode(ChannelHandlerContext ctx, byte[] msg, List<Object> out) throws Exception {
         out.add(Unpooled.wrappedBuffer(msg));

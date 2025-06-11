@@ -25,7 +25,9 @@ import java.lang.reflect.Method;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.abort;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -109,6 +111,21 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
     protected static void assertSameBuffer(ByteBuf expected, ByteBuf buffer) {
         // Unwrap if needed
         assertSame(expected, buffer instanceof SimpleLeakAwareByteBuf ? buffer.unwrap() : buffer);
+    }
+
+    @Test
+    void directBuffersMustHaveMemoryAddress() throws Exception {
+        // The memory address must always be available when we either have Unsafe available,
+        // or when we have memory segments available (though CleanerJava24 only enables for Java 24+).
+        assumeTrue(PlatformDependent.hasUnsafe() || PlatformDependent.javaVersion() >= 24);
+        T allocator = newAllocator(true);
+        ByteBuf buf = allocator.directBuffer();
+        try {
+            assertTrue(buf.hasMemoryAddress());
+            assertNotEquals(0L, buf.memoryAddress());
+        } finally {
+            buf.release();
+        }
     }
 
     @Test

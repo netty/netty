@@ -91,7 +91,7 @@ public final class IoUring {
                         // IOV_MAX should be 1024 and an IOV is 16 bytes which means that by default we reserve around
                         // 160kb.
                         numElementsIoVec = SystemPropertyUtil.getInt(
-                                "io.netty.iouring.numElementsIoVec", 10 *  Limits.IOV_MAX);
+                                "io.netty.iouring.numElementsIoVec", 10 * Limits.IOV_MAX);
                         Native.checkAllIOSupported(ringBuffer.fd());
                         socketNonEmptySupported = Native.isCqeFSockNonEmptySupported(ringBuffer.fd());
                         spliceSupported = Native.isSpliceSupported(ringBuffer.fd());

@@ -50,7 +50,6 @@ import java.security.PrivilegedAction;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -121,14 +120,31 @@ public final class PlatformDependent {
     private static final AtomicLong DIRECT_MEMORY_COUNTER;
     private static final long DIRECT_MEMORY_LIMIT;
     private static final Cleaner CLEANER;
+    private static final Cleaner DIRECT_CLEANER;
+    private static final Cleaner LEGACY_CLEANER;
     private static final boolean HAS_ALLOCATE_UNINIT_ARRAY;
-    // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
-    private static final String[] OS_RELEASE_FILES = {"/etc/os-release", "/usr/lib/os-release"};
     private static final String LINUX_ID_PREFIX = "ID=";
     private static final String LINUX_ID_LIKE_PREFIX = "ID_LIKE=";
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
     private static final Cleaner NOOP = new Cleaner() {
+        @Override
+        public CleanableDirectBuffer allocate(int capacity) {
+            return new CleanableDirectBuffer() {
+                private final ByteBuffer byteBuffer = ByteBuffer.allocateDirect(capacity);
+
+                @Override
+                public ByteBuffer buffer() {
+                    return byteBuffer;
+                }
+
+                @Override
+                public void clean() {
+                    // NOOP
+                }
+            };
+        }
+
         @Override
         public void freeDirectBuffer(ByteBuffer buffer) {
             // NOOP
@@ -147,9 +163,11 @@ public final class PlatformDependent {
 
         if (maxDirectMemory == 0 || !hasUnsafe() || !PlatformDependent0.hasDirectBufferNoCleanerConstructor()) {
             USE_DIRECT_BUFFER_NO_CLEANER = false;
+            DIRECT_CLEANER = NOOP;
             DIRECT_MEMORY_COUNTER = null;
         } else {
             USE_DIRECT_BUFFER_NO_CLEANER = true;
+            DIRECT_CLEANER = new DirectCleaner();
             if (maxDirectMemory < 0) {
                 maxDirectMemory = MAX_DIRECT_MEMORY;
                 if (maxDirectMemory <= 0) {
@@ -171,13 +189,22 @@ public final class PlatformDependent {
             // only direct to method if we are not running on android.
             // See https://github.com/netty/netty/issues/2604
             if (javaVersion() >= 9) {
-                CLEANER = CleanerJava9.isSupported() ? new CleanerJava9() : NOOP;
+                // Try Java 9 cleaner first, because it's based on Unsafe and can skip a few steps.
+                if (CleanerJava9.isSupported()) {
+                    LEGACY_CLEANER = new CleanerJava9();
+                } else if (CleanerJava24.isSupported()) {
+                    // On Java 24+ we can't use Unsafe, but we have MemorySegment.
+                    LEGACY_CLEANER = new CleanerJava24();
+                } else {
+                    LEGACY_CLEANER = NOOP;
+                }
             } else {
-                CLEANER = CleanerJava6.isSupported() ? new CleanerJava6() : NOOP;
+                LEGACY_CLEANER = CleanerJava6.isSupported() ? new CleanerJava6() : NOOP;
             }
         } else {
-            CLEANER = NOOP;
+            LEGACY_CLEANER = NOOP;
         }
+        CLEANER = USE_DIRECT_BUFFER_NO_CLEANER ? DIRECT_CLEANER : LEGACY_CLEANER;
 
         EXPLICIT_NO_PREFER_DIRECT = SystemPropertyUtil.getBoolean("io.netty.noPreferDirect", false);
         // We should always prefer direct buffers by default if we can use a Cleaner to release direct buffers.
@@ -206,48 +233,47 @@ public final class PlatformDependent {
         LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
     }
 
+    // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
     static void addFilesystemOsClassifiers(final Set<String> availableClassifiers) {
-        for (final String osReleaseFileName : OS_RELEASE_FILES) {
-            final Path file = Paths.get(osReleaseFileName);
-            boolean found = AccessController.doPrivileged(new PrivilegedAction<Boolean>() {
-                @Override
-                public Boolean run() {
-                    Pattern lineSplitPattern = Pattern.compile("[ ]+");
-                    try {
-                        if (Files.exists(file)) {
-                            try (BufferedReader reader = new BufferedReader(new InputStreamReader(
-                                    new BoundedInputStream(Files.newInputStream(file)), StandardCharsets.UTF_8))) {
-                                String line;
-                                while ((line = reader.readLine()) != null) {
-                                    if (line.startsWith(LINUX_ID_PREFIX)) {
-                                        String id = normalizeOsReleaseVariableValue(
-                                                line.substring(LINUX_ID_PREFIX.length()));
-                                        addClassifier(availableClassifiers, id);
-                                    } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
-                                        line = normalizeOsReleaseVariableValue(
-                                                line.substring(LINUX_ID_LIKE_PREFIX.length()));
-                                        addClassifier(availableClassifiers, lineSplitPattern.split(line));
-                                    }
-                                }
-                            } catch (SecurityException e) {
-                                logger.debug("Unable to read {}", osReleaseFileName, e);
-                            } catch (IOException e) {
-                                logger.debug("Error while reading content of {}", osReleaseFileName, e);
+        if (processOsReleaseFile("/etc/os-release", availableClassifiers)) {
+            return;
+        }
+        processOsReleaseFile("/usr/lib/os-release", availableClassifiers);
+    }
+
+    private static boolean processOsReleaseFile(String osReleaseFileName, Set<String> availableClassifiers) {
+        Path file = Paths.get(osReleaseFileName);
+        return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
+            Pattern lineSplitPattern = Pattern.compile("[ ]+");
+            try {
+                if (Files.exists(file)) {
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                            new BoundedInputStream(Files.newInputStream(file)), StandardCharsets.UTF_8))) {
+                        String line;
+                        while ((line = reader.readLine()) != null) {
+                            if (line.startsWith(LINUX_ID_PREFIX)) {
+                                String id = normalizeOsReleaseVariableValue(
+                                        line.substring(LINUX_ID_PREFIX.length()));
+                                addClassifier(availableClassifiers, id);
+                            } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
+                                line = normalizeOsReleaseVariableValue(
+                                        line.substring(LINUX_ID_LIKE_PREFIX.length()));
+                                addClassifier(availableClassifiers, lineSplitPattern.split(line));
                             }
-                            // specification states we should only fall back if /etc/os-release does not exist
-                            return true;
                         }
                     } catch (SecurityException e) {
-                        logger.debug("Unable to check if {} exists", osReleaseFileName, e);
+                        logger.debug("Unable to read {}", osReleaseFileName, e);
+                    } catch (IOException e) {
+                        logger.debug("Error while reading content of {}", osReleaseFileName, e);
                     }
-                    return false;
+                    // specification states we should only fall back if /etc/os-release does not exist
+                    return true;
                 }
-            });
-
-            if (found) {
-                break;
+            } catch (SecurityException e) {
+                logger.debug("Unable to check if {} exists", osReleaseFileName, e);
             }
-        }
+            return false;
+        });
     }
 
     static boolean addPropertyOsClassifiers(Set<String> availableClassifiers) {
@@ -498,11 +524,25 @@ public final class PlatformDependent {
     }
 
     /**
+     * Allocate a direct {@link ByteBuffer} of the given capacity, and return it alongside its deallocation mechanism.
+     * @param capacity The desired capacity of the direct byte buffer.
+     * @return The {@link CleanableDirectBuffer} instance that contain the buffer and its deallocation mechanism.
+     */
+    public static CleanableDirectBuffer allocateDirect(int capacity) {
+        return CLEANER.allocate(capacity);
+    }
+
+    /**
      * Try to deallocate the specified direct {@link ByteBuffer}. Please note this method does nothing if
      * the current platform does not support this operation or the specified buffer is not a direct buffer.
+     *
+     * @deprecated Use the {@link CleanableDirectBuffer#clean()} from {@link #allocateDirect(int)} instead.
      */
+    @Deprecated
     public static void freeDirectBuffer(ByteBuffer buffer) {
-        CLEANER.freeDirectBuffer(buffer);
+        // Use the LEGACY_CLEANER reference to avoid using the DIRECT_CLEANER implementation
+        // that just calls #freeDirectNoCleaner(ByteBuffer).
+        LEGACY_CLEANER.freeDirectBuffer(buffer);
     }
 
     public static long directBufferAddress(ByteBuffer buffer) {
@@ -772,6 +812,16 @@ public final class PlatformDependent {
     }
 
     /**
+     * Allocate a new {@link ByteBuffer} with the given {@code capacity}, inside a {@link CleanableDirectBuffer}.
+     * The {@link ByteBuffer} <strong>MUST</strong> be deallocated via the {@link CleanableDirectBuffer#clean()}
+     * of the returned {@link CleanableDirectBuffer} object.
+     */
+    public static CleanableDirectBuffer allocateDirectBufferNoCleaner(int capacity) {
+        assert USE_DIRECT_BUFFER_NO_CLEANER;
+        return DIRECT_CLEANER.allocate(capacity);
+    }
+
+    /**
      * Reallocate a new {@link ByteBuffer} with the given {@code capacity}. {@link ByteBuffer}s reallocated with
      * this method <strong>MUST</strong> be deallocated via {@link #freeDirectNoCleaner(ByteBuffer)}.
      */
@@ -787,6 +837,18 @@ public final class PlatformDependent {
             throwException(e);
             return null;
         }
+    }
+
+    /**
+     * Reallocate a new {@link ByteBuffer} with the given {@code capacity}.
+     * The {@link ByteBuffer} is given as wrapped in its associated {@link CleanableDirectBuffer},
+     * and a new {@link CleanableDirectBuffer} instance will be returned.
+     * The {@link ByteBuffer}s reallocated with this method <strong>MUST</strong> be deallocated
+     * via the {@link CleanableDirectBuffer#clean()} method on the returned object.
+     */
+    public static CleanableDirectBuffer reallocateDirectBufferNoCleaner(CleanableDirectBuffer buffer, int capacity) {
+        assert USE_DIRECT_BUFFER_NO_CLEANER;
+        return ((DirectCleaner) DIRECT_CLEANER).reallocate(buffer, capacity);
     }
 
     /**

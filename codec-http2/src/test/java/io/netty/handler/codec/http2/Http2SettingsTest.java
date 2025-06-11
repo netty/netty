@@ -61,6 +61,7 @@ public class Http2SettingsTest {
         assertNull(settings.pushEnabled());
         assertNull(settings.maxFrameSize());
         assertNull(settings.maxHeaderListSize());
+        assertNull(settings.connectProtocolEnabled());
     }
 
     @Test
@@ -71,12 +72,14 @@ public class Http2SettingsTest {
         settings.headerTableSize(3);
         settings.maxFrameSize(MAX_FRAME_SIZE_UPPER_BOUND);
         settings.maxHeaderListSize(4);
+        settings.connectProtocolEnabled(true);
         assertEquals(1, (int) settings.initialWindowSize());
         assertEquals(2L, (long) settings.maxConcurrentStreams());
         assertTrue(settings.pushEnabled());
         assertEquals(3L, (long) settings.headerTableSize());
         assertEquals(MAX_FRAME_SIZE_UPPER_BOUND, (int) settings.maxFrameSize());
         assertEquals(4L, (long) settings.maxHeaderListSize());
+        assertTrue(settings.connectProtocolEnabled());
     }
 
     @Test
@@ -227,6 +230,32 @@ public class Http2SettingsTest {
             @Override
             public void execute() {
                 settings.put(Http2CodecUtil.SETTINGS_MAX_FRAME_SIZE, (Long) value);
+            }
+        });
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] value={0}")
+    @ValueSource(booleans = {false, true})
+    public void connectProtocolEnabled(final boolean value) {
+        settings.connectProtocolEnabled(value);
+        assertEquals(value, settings.connectProtocolEnabled());
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] value={0}")
+    @ValueSource(longs = {0, 1})
+    public void enableConnectProtocol(final long value) {
+        settings.put(Http2CodecUtil.SETTINGS_ENABLE_CONNECT_PROTOCOL, (Long) value);
+        assertEquals(value, (long) settings.get(Http2CodecUtil.SETTINGS_ENABLE_CONNECT_PROTOCOL));
+        assertEquals(value == 1, settings.connectProtocolEnabled());
+    }
+
+    @ParameterizedTest(name = "{displayName} [{index}] value={0}")
+    @ValueSource(longs = {MIN_VALUE, -1, 2, MAX_VALUE})
+    public void enableConnectProtocolBoundCheck(final long value) {
+        assertThrows(IllegalArgumentException.class, new Executable() {
+            @Override
+            public void execute() {
+                settings.put(Http2CodecUtil.SETTINGS_ENABLE_CONNECT_PROTOCOL, (Long) value);
             }
         });
     }

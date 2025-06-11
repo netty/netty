@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.2.Final-SNAPSHOT</version>
+  <version>4.2.3.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -591,6 +591,21 @@
         <tcnative.version>2.0.73.Final-SNAPSHOT</tcnative.version>
         <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
       </properties>
+
+      <!-- tcnative uses maven central for snapshots already -->
+      <repositories>
+        <repository>
+          <name>Central Portal Snapshots</name>
+          <id>central-portal-snapshots</id>
+          <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+          <snapshots>
+            <enabled>true</enabled>
+          </snapshots>
+          <releases>
+            <enabled>false</enabled>
+          </releases>
+        </repository>
+      </repositories>
     </profile>
     <profile>
       <id>leak</id>
@@ -755,6 +770,7 @@
     <module>codec-mqtt</module>
     <module>codec-classes-quic</module>
     <module>codec-native-quic</module>
+    <module>codec-http3</module>
     <module>codec-redis</module>
     <module>codec-smtp</module>
     <module>codec-socks</module>
@@ -1130,12 +1146,6 @@
         <scope>test</scope>
       </dependency>
       <dependency>
-        <groupId>org.hamcrest</groupId>
-        <artifactId>hamcrest-library</artifactId>
-        <version>2.2</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
         <groupId>org.assertj</groupId>
         <artifactId>assertj-core</artifactId>
         <version>3.18.0</version>
@@ -1144,7 +1154,7 @@
       <dependency>
         <groupId>org.mockito</groupId>
         <artifactId>mockito-core</artifactId>
-        <version>2.18.3</version>
+        <version>3.6.28</version>
         <scope>test</scope>
       </dependency>
       <dependency>
@@ -1335,6 +1345,15 @@
                   <code>java.class.nonPublicPartOfAPI</code>
                   <new>interface com.google.protobuf.MutabilityOracle</new>
                   <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.field.constantValueChanged</code>
+                  <classQualifiedName>io.netty.handler.codec.http2.Http2CodecUtil</classQualifiedName>
+                  <field>NUM_STANDARD_SETTINGS</field>
+                  <oldValue>6</oldValue>
+                  <newValue>7</newValue>
+                  <justification>SETTINGS_ENABLE_CONNECT_PROTOCOL was added to the standard HTTP/2 settings.</justification>
                 </item>
               </differences>
             </revapi.differences>

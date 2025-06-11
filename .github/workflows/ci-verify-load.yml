@@ -45,9 +45,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: sinstall-jars-linux-aarch64-maven-cache-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            install-jars-linux-aarch64-maven-cache-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - name: Build docker image
         run: docker compose -f docker/docker-compose.centos-7-cross.yaml build

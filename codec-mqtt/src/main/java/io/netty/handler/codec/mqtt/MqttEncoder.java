@@ -71,7 +71,9 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
 
     public static final MqttEncoder INSTANCE = new MqttEncoder();
 
-    private MqttEncoder() { }
+    private MqttEncoder() {
+        super(MqttMessage.class);
+    }
 
     @Override
     protected void encode(ChannelHandlerContext ctx, MqttMessage msg, List<Object> out) throws Exception {

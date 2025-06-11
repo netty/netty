@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.2.Final-SNAPSHOT</version>
+    <version>4.2.3.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-buffer</artifactId>
@@ -39,6 +39,8 @@
       <version>${graalvm.version}</version>
       <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
       <scope>provided</scope>
+      <!-- Optional so maven-bundle-plugin does not make com.oracle.svm.core.annotate a required import -->
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -62,11 +64,6 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-library</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

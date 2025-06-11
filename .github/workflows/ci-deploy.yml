@@ -62,10 +62,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-${{ matrix.setup }}-
-            ${{ runner.os }}-maven-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - name: Create local staging directory
         run: mkdir -p ~/local-staging
@@ -112,9 +112,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: pr-${{ matrix.setup }}-maven-cache-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            pr-${{ matrix.setup }}-maven-cache-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - name: Install tools via brew
         run: brew bundle
@@ -134,7 +135,7 @@ jobs:
           include-hidden-files: true
 
   stage-snapshot-windows-x86_64:
-    runs-on: windows-2019
+    runs-on: windows-2022
     name: stage-snapshot-windows-x86_64
     env:
       # Let's limit the amount of ram that is used to unpack rustup as we saw
@@ -148,6 +149,17 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: 11
+
+      # Cache .m2/repository
+      - name: Cache local Maven repository
+        uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: ~/.m2/repository
+          key: cache-windows-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            cache-windows-maven-${{ hashFiles('**/pom.xml') }}
+            cache-windows-maven-
 
       - name: Install stable rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -197,10 +209,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-deploy-staged-snapshots-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-deploy-staged-snapshots-
-            ${{ runner.os }}-maven-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - uses: s4u/maven-settings-action@v3.0.0
         with:
