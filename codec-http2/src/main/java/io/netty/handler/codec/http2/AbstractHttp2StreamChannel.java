@@ -1026,14 +1026,16 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                             return;
                         }
                         try {
-                            ObjectUtil.checkInRange(updateFrame.windowSizeIncrement(), 0,
-                                    flowControlledBytes, "windowSizeIncrement");
+                            ObjectUtil.checkPositiveOrZero(updateFrame.windowSizeIncrement(), "windowSizeIncrement");
                         } catch (RuntimeException e) {
                             ReferenceCountUtil.release(updateFrame);
                             promise.setFailure(e);
                             return;
                         }
-                        flowControlledBytes -= updateFrame.windowSizeIncrement();
+                        // we allow window size increment to be bigger than the current flowControlledBytes
+                        // so that we can expand the control flow window size if needed, otherwise,
+                        // we will not be able to make the control flow window bigger for the current stream
+                        flowControlledBytes -= Math.min(updateFrame.windowSizeIncrement(), flowControlledBytes);
                         if (parentContext().isRemoved()) {
                             ReferenceCountUtil.release(msg);
                             promise.setFailure(new ClosedChannelException());
