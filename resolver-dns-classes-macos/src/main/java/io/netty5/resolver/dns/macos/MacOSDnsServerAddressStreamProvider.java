@@ -83,7 +83,7 @@ public final class MacOSDnsServerAddressStreamProvider implements DnsServerAddre
         }
         String staticLibName = "netty5_resolver_dns_native_macos";
         String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
-        ClassLoader cl = PlatformDependent.getClassLoader(MacOSDnsServerAddressStreamProvider.class);
+        ClassLoader cl = MacOSDnsServerAddressStreamProvider.class.getClassLoader();
         try {
             NativeLibraryLoader.load(sharedLibName, cl);
         } catch (UnsatisfiedLinkError e1) {

@@ -1043,30 +1043,6 @@ public final class PlatformDependent {
     }
 
     /**
-     * Return the {@link ClassLoader} for the given {@link Class}.
-     */
-    @Deprecated
-    public static ClassLoader getClassLoader(final Class<?> clazz) {
-        return PlatformDependent0.getClassLoader(clazz);
-    }
-
-    /**
-     * Return the context {@link ClassLoader} for the current {@link Thread}.
-     */
-    @Deprecated
-    public static ClassLoader getContextClassLoader() {
-        return PlatformDependent0.getContextClassLoader();
-    }
-
-    /**
-     * Return the system {@link ClassLoader}.
-     */
-    @Deprecated
-    public static ClassLoader getSystemClassLoader() {
-        return PlatformDependent0.getSystemClassLoader();
-    }
-
-    /**
      * Returns a new concurrent {@link Deque}.
      */
     public static <C> Deque<C> newConcurrentDeque() {
@@ -1188,7 +1164,7 @@ public final class PlatformDependent {
 
         ClassLoader systemClassLoader = null;
         try {
-            systemClassLoader = getSystemClassLoader();
+            systemClassLoader = ClassLoader.getSystemClassLoader();
 
             // When using IBM J9 / Eclipse OpenJ9 we should not use VM.maxDirectMemory() as it not reflects the
             // correct value.

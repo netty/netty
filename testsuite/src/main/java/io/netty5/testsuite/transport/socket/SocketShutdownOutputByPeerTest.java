@@ -15,8 +15,6 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty5.util.internal.SocketUtils;
-
 import java.io.IOException;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -30,7 +28,7 @@ public class SocketShutdownOutputByPeerTest extends AbstractSocketShutdownOutput
 
     @Override
     protected void connect(Socket s, SocketAddress address) throws IOException {
-        SocketUtils.connect(s, address, 10000);
+        s.connect(address, 10000);
     }
 
     @Override

@@ -25,7 +25,6 @@ import io.netty5.channel.socket.DatagramChannel;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.util.NetUtil;
-import io.netty5.util.internal.SocketUtils;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -86,7 +85,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         DatagramChannel cc = (DatagramChannel) cb.bind().asStage().get();
         assertEquals(iface, cc.getOption(ChannelOption.IP_MULTICAST_IF));
 
-        InetAddress groupAddress = SocketUtils.addressByName(groupAddress());
+        InetAddress groupAddress = InetAddress.getByName(groupAddress());
         cc.joinGroup(groupAddress, iface, null).asStage().sync();
 
         InetSocketAddress destAddress = new InetSocketAddress(groupAddress, addr.getPort());

@@ -17,9 +17,9 @@ package io.netty5.handler.ipfilter;
 
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
@@ -62,7 +62,7 @@ public class UniqueIpFilterTest {
             return new EmbeddedChannel(handler) {
                 @Override
                 protected SocketAddress remoteAddress0() {
-                    return isActive() ? SocketUtils.socketAddress("91.92.93.1", 5421) : null;
+                    return isActive() ? new InetSocketAddress("91.92.93.1", 5421) : null;
                 }
             };
         });

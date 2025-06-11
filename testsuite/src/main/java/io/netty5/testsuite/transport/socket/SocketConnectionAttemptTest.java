@@ -25,13 +25,13 @@ import io.netty5.util.NetUtil;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.LoggerFactory;
 
 import java.net.ConnectException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
@@ -105,7 +105,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
         // See https://github.com/netty/netty/issues/1474
         boolean badHostTimedOut = true;
         try (Socket socket = new Socket()) {
-            SocketUtils.connect(socket, SocketUtils.socketAddress(BAD_HOST, BAD_PORT), 10);
+            socket.connect(new InetSocketAddress(BAD_HOST, BAD_PORT), 10);
         } catch (ConnectException e) {
             badHostTimedOut = false;
             // is thrown for no route to host when using Socket connect

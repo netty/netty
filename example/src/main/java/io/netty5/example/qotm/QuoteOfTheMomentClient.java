@@ -25,8 +25,8 @@ import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
-import io.netty5.util.internal.SocketUtils;
 
+import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -55,7 +55,7 @@ public final class QuoteOfTheMomentClient {
 
             // Broadcast the QOTM request to port 8080.
             Buffer message = DefaultBufferAllocators.preferredAllocator().copyOf("QOTM?", UTF_8);
-            ch.writeAndFlush(new DatagramPacket(message, SocketUtils.socketAddress("255.255.255.255", PORT)))
+            ch.writeAndFlush(new DatagramPacket(message, new InetSocketAddress("255.255.255.255", PORT)))
               .asStage().sync();
 
             // QuoteOfTheMomentClientHandler will close the DatagramChannel when a

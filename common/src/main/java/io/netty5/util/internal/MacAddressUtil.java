@@ -73,7 +73,7 @@ public final class MacAddressUtil {
 
             byte[] macAddr;
             try {
-                macAddr = SocketUtils.hardwareAddressFromNetworkInterface(iface);
+                macAddr = iface.getHardwareAddress();
             } catch (SocketException e) {
                 logger.debug("Failed to get the hardware address of a network interface: {}", iface, e);
                 continue;

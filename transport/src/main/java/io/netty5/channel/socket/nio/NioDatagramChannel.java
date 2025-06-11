@@ -31,7 +31,6 @@ import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -334,7 +333,7 @@ public final class NioDatagramChannel
         if (isDomainSocket(family)) {
             localAddress = toUnixDomainSocketAddress(localAddress);
         }
-        SocketUtils.bind(javaChannel(), localAddress);
+        javaChannel().bind(localAddress);
         bound = true;
     }
 

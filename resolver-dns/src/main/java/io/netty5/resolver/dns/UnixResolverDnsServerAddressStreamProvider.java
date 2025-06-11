@@ -16,7 +16,6 @@
 package io.netty5.resolver.dns;
 
 import io.netty5.util.NetUtil;
-import io.netty5.util.internal.SocketUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -211,7 +210,7 @@ public final class UnixResolverDnsServerAddressStreamProvider implements DnsServ
                                 port = Integer.parseInt(maybeIP.substring(i + 1));
                                 maybeIP = maybeIP.substring(0, i);
                             }
-                            InetSocketAddress addr = SocketUtils.socketAddress(maybeIP, port);
+                            InetSocketAddress addr = new InetSocketAddress(maybeIP, port);
                             // Check if the address is resolved and only if this is the case use it. Otherwise just
                             // ignore it. This is needed to filter out invalid entries, as if for example an ipv6
                             // address is used with a scope that represent a network interface that does not exists

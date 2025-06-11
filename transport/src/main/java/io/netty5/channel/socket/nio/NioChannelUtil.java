@@ -47,7 +47,7 @@ final class NioChannelUtil {
         if (PlatformDependent.javaVersion() >= 16) {
             try {
                 Class<?> clazz = Class.forName("java.net.UnixDomainSocketAddress", false,
-                        PlatformDependent.getClassLoader(NioChannelUtil.class));
+                                               NioChannelUtil.class.getClassLoader());
                 MethodHandles.Lookup lookup = MethodHandles.lookup();
                 MethodType type = MethodType.methodType(clazz, String.class);
                 ofMethodHandle = lookup.findStatic(clazz, "of", type);

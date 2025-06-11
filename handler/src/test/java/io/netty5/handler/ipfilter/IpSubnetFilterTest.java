@@ -20,7 +20,6 @@ import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
@@ -209,12 +208,12 @@ public class IpSubnetFilterTest {
         return new EmbeddedChannel(handlers) {
             @Override
             protected SocketAddress remoteAddress0() {
-                return isActive()? SocketUtils.socketAddress(ipAddress, 5421) : null;
+                return isActive()? new InetSocketAddress(ipAddress, 5421) : null;
             }
         };
     }
 
     private static InetSocketAddress newSockAddress(String ipAddress) {
-        return SocketUtils.socketAddress(ipAddress, 1234);
+        return new InetSocketAddress(ipAddress, 1234);
     }
 }

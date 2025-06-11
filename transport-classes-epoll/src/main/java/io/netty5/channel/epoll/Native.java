@@ -295,7 +295,7 @@ public final class Native {
         }
         String staticLibName = "netty5_transport_native_epoll";
         String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
-        ClassLoader cl = PlatformDependent.getClassLoader(Native.class);
+        ClassLoader cl = Native.class.getClassLoader();
         try {
             NativeLibraryLoader.load(sharedLibName, cl);
         } catch (UnsatisfiedLinkError e1) {

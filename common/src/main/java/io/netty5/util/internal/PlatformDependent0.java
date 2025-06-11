@@ -263,7 +263,7 @@ final class PlatformDependent0 {
             Object maybeUnaligned = null;
             try {
                 Class<?> bitsClass =
-                        Class.forName("java.nio.Bits", false, getSystemClassLoader());
+                        Class.forName("java.nio.Bits", false, ClassLoader.getSystemClassLoader());
                 if (unsafeStaticFieldOffsetSupported()) {
                     try {
                         Field maxMemoryField = bitsClass.getDeclaredField("MAX_MEMORY");
@@ -324,7 +324,7 @@ final class PlatformDependent0 {
             try {
                 // Java9 has jdk.internal.misc.Unsafe and not all methods are propagated to
                 // sun.misc.Unsafe
-                Class<?> internalUnsafeClass = getClassLoader(PlatformDependent0.class)
+                Class<?> internalUnsafeClass = PlatformDependent0.class.getClassLoader()
                         .loadClass("jdk.internal.misc.Unsafe");
                 Method method = internalUnsafeClass.getDeclaredMethod("getUnsafe");
                 Object theInternalUnsafe = method.invoke(null);
@@ -777,21 +777,6 @@ final class PlatformDependent0 {
 
     static int hashCodeAsciiSanitize(byte value) {
         return value & 0x1f;
-    }
-
-    @Deprecated
-    static ClassLoader getClassLoader(final Class<?> clazz) {
-        return clazz.getClassLoader();
-    }
-
-    @Deprecated
-    static ClassLoader getContextClassLoader() {
-        return Thread.currentThread().getContextClassLoader();
-    }
-
-    @Deprecated
-    static ClassLoader getSystemClassLoader() {
-        return ClassLoader.getSystemClassLoader();
     }
 
     static int addressSize() {
