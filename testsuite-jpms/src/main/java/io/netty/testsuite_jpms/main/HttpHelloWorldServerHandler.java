@@ -26,10 +26,8 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
-import io.netty.handler.ssl.SslHandler;
 
 import java.nio.charset.StandardCharsets;
-import java.util.stream.Collectors;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
@@ -51,23 +49,7 @@ public class HttpHelloWorldServerHandler extends SimpleChannelInboundHandler<Htt
         if (msg instanceof HttpRequest) {
             HttpRequest req = (HttpRequest) msg;
 
-            String modulesInfo = ModuleLayer.boot().modules().stream()
-                    .map(module -> "- " + module.getName() + " " +
-                            (module.getDescriptor().isAutomatic() ? "(automatic)" : ""))
-                    .collect(Collectors.joining("\r\n", "Boot layer:\r\n", "\r\n"));
-
-            String channelType = ctx.channel().getClass().getName();
-
-            String sslEngineInfo = "";
-            SslHandler sslHandler = ctx.pipeline().get(SslHandler.class);
-            if (sslHandler != null) {
-                sslEngineInfo = "SSL Engine: " + sslHandler.engine().getClass().getName() + "\r\n";
-            }
-
-            String hello = "Hello World\r\n" +
-                    "Transport: " + channelType + "\r\n" +
-                    sslEngineInfo +
-                    modulesInfo;
+            String hello = HttpHelloWorldServer.content(ctx);
 
             boolean keepAlive = HttpUtil.isKeepAlive(req);
             FullHttpResponse response = new DefaultFullHttpResponse(
