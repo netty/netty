@@ -244,7 +244,6 @@ public final class PlatformDependent {
     private static boolean processOsReleaseFile(String osReleaseFileName, Set<String> availableClassifiers) {
         Path file = Paths.get(osReleaseFileName);
         return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-            Pattern lineSplitPattern = Pattern.compile("[ ]+");
             try {
                 if (Files.exists(file)) {
                     try (BufferedReader reader = new BufferedReader(new InputStreamReader(
@@ -258,7 +257,7 @@ public final class PlatformDependent {
                             } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
                                 line = normalizeOsReleaseVariableValue(
                                         line.substring(LINUX_ID_LIKE_PREFIX.length()));
-                                addClassifier(availableClassifiers, lineSplitPattern.split(line));
+                                addClassifier(availableClassifiers, line.split(" "));
                             }
                         }
                     } catch (SecurityException e) {
