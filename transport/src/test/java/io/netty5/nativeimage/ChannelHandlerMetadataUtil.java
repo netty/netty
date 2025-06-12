@@ -15,9 +15,9 @@
  */
 package io.netty5.nativeimage;
 
-import com.google.common.reflect.TypeToken;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.NativeImageHandlerMetadataTest;
 import org.junit.jupiter.api.Assertions;
@@ -51,7 +51,6 @@ import java.util.stream.Stream;
  */
 public final class ChannelHandlerMetadataUtil {
 
-    @SuppressWarnings("UnstableApiUsage")
     private static final Type HANDLER_METADATA_LIST_TYPE = new TypeToken<List<HandlerMetadata>>() {
     }.getType();
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
