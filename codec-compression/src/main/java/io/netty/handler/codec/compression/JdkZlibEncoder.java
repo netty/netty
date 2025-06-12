@@ -187,12 +187,9 @@ public class JdkZlibEncoder extends ZlibEncoder {
             return finishEncode(ctx, promise);
         } else {
             final ChannelPromise p = ctx.newPromise();
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelFuture f = finishEncode(ctx(), p);
-                    PromiseNotifier.cascade(f, promise);
-                }
+            executor.execute(() -> {
+                ChannelFuture f = finishEncode(ctx(), p);
+                PromiseNotifier.cascade(f, promise);
             });
             return p;
         }
