@@ -705,10 +705,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
         @Override
         public void close(final ChannelPromise promise) {
-            close(promise, Http2Error.CANCEL);
+            close(promise, null);
         }
 
-        void close(final ChannelPromise promise, Http2Error error) {
+        private void close(final ChannelPromise promise, Http2Error error) {
             if (!promise.setUncancellable()) {
                 return;
             }
@@ -738,12 +738,21 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
             // Only ever send a reset frame if the connection is still alive and if the stream was created before
             // as otherwise we may send a RST on a stream in an invalid state and cause a connection error.
-            if (parent().isActive() && isStreamIdValid(stream.id()) &&
-                    // Also ensure the stream was never "closed" before.
-                    !readEOS && !(receivedEndOfStream && sentEndOfStream)) {
-                Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(error).stream(stream());
-                write(resetFrame, unsafe().voidPromise());
-                flush();
+            if (parent().isActive() && isStreamIdValid(stream.id())) {
+                // If error is null we know that the close was not triggered by an error and so we should only
+                // try to send a RST frame if we didn't signal the end of the stream before.
+                if (error == null) {
+                    if (!readEOS && !(receivedEndOfStream && sentEndOfStream)) {
+                        Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(Http2Error.CANCEL).stream(stream());
+                        write(resetFrame, unsafe().voidPromise());
+                        flush();
+                    }
+                } else {
+                    // Close was triggered by a stream error, in this case we always want to send a RST frame.
+                    Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(error).stream(stream());
+                    write(resetFrame, unsafe().voidPromise());
+                    flush();
+                }
             }
 
             if (inboundBuffer != null) {
