@@ -163,8 +163,7 @@ import static java.util.Objects.requireNonNull;
  */
 public class SslHandler extends ByteToMessageDecoder {
     private static final Logger logger = LoggerFactory.getLogger(SslHandler.class);
-    private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(
-            "^.*(?:Socket|Datagram)Channel.*$");
+
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
             "^.*(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe).*$", Pattern.CASE_INSENSITIVE);
     private static final int STATE_SENT_FIRST_MESSAGE = 1;
@@ -1100,9 +1099,7 @@ public class SslHandler extends ByteToMessageDecoder {
                     continue;
                 }
 
-                // This will also match against SocketInputStream which is used by openjdk 7 and maybe
-                // also others
-                if (IGNORABLE_CLASS_IN_STACK.matcher(classname).matches()) {
+                if (isIgnorableClassInStack(classname)) {
                     return true;
                 }
 
@@ -1126,6 +1123,13 @@ public class SslHandler extends ByteToMessageDecoder {
         }
 
         return false;
+    }
+
+    private static boolean isIgnorableClassInStack(String classname) {
+        return classname.contains("SocketChannel") ||
+               classname.contains("DatagramChannel") ||
+               classname.contains("SctpChannel") ||
+               classname.contains("UdtChannel");
     }
 
     /**
