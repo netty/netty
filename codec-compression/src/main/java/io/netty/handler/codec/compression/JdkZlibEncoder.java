@@ -333,14 +333,8 @@ public class JdkZlibEncoder extends ZlibEncoder {
         if (wrapper == ZlibWrapper.GZIP) {
             int crcValue = (int) crc.getValue();
             int uncBytes = deflater.getTotalIn();
-            footer.writeByte(crcValue);
-            footer.writeByte(crcValue >>> 8);
-            footer.writeByte(crcValue >>> 16);
-            footer.writeByte(crcValue >>> 24);
-            footer.writeByte(uncBytes);
-            footer.writeByte(uncBytes >>> 8);
-            footer.writeByte(uncBytes >>> 16);
-            footer.writeByte(uncBytes >>> 24);
+            footer.writeIntLE(crcValue);
+            footer.writeIntLE(uncBytes);
         }
         deflater.end();
         return ctx.writeAndFlush(footer, promise);
