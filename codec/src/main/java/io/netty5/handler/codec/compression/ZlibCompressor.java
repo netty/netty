@@ -48,7 +48,7 @@ public final class ZlibCompressor implements Compressor {
     /*
      * GZIP support
      */
-    private final CRC32 crc = new CRC32();
+    private final CRC32 crc;
     private static final byte[] gzipHeader = {0x1f, (byte) 0x8b, Deflater.DEFLATED, 0, 0, 0, 0, 0, 0, 0};
 
     private enum State {
@@ -72,12 +72,14 @@ public final class ZlibCompressor implements Compressor {
     private ZlibCompressor(ZlibWrapper wrapper, int compressionLevel) {
         this.wrapper = wrapper;
         deflater = new Deflater(compressionLevel, wrapper != ZlibWrapper.ZLIB);
+        this.crc = wrapper == ZlibWrapper.GZIP ? new CRC32() : null;
     }
 
     private ZlibCompressor(int compressionLevel, byte[] dictionary) {
         wrapper = ZlibWrapper.ZLIB;
         deflater = new Deflater(compressionLevel);
         deflater.setDictionary(dictionary);
+        this.crc = null;
     }
 
     /**
