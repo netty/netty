@@ -1066,7 +1066,7 @@
               <customPackageDirectory>${templateDir}</customPackageDirectory>
               <windowsBuildTool>msbuild</windowsBuildTool>
               <windowsCustomProps>true</windowsCustomProps>
-              <windowsPlatformToolset>v142</windowsPlatformToolset>
+              <windowsPlatformToolset>v143</windowsPlatformToolset>
               <libDirectory>${nativeLibOnlyDir}</libDirectory>
               <verbose>true</verbose>
               <configureArgs>

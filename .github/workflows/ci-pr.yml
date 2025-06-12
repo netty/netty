@@ -111,7 +111,7 @@ jobs:
             **/core.*
 
   build-pr-windows:
-    runs-on: windows-2019
+    runs-on: windows-2022
     name: windows-x86_64 build
     env:
       # Let's limit the amount of ram that is used to unpack rustup as we saw
