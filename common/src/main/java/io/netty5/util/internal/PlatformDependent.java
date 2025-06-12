@@ -32,7 +32,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.StackWalker.Option;
@@ -44,7 +43,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.LinkedHashSet;
@@ -203,7 +201,6 @@ public final class PlatformDependent {
 
     private static boolean processOsReleaseFile(String osReleaseFileName, Set<String> availableClassifiers) {
         Path file = Paths.get(osReleaseFileName);
-        Pattern lineSplitPattern = Pattern.compile("[ ]+");
         if (Files.exists(file)) {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(
                     new BoundedInputStream(Files.newInputStream(file)), StandardCharsets.UTF_8))) {
@@ -216,7 +213,7 @@ public final class PlatformDependent {
                     } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
                         line = normalizeOsReleaseVariableValue(
                                 line.substring(LINUX_ID_LIKE_PREFIX.length()));
-                        addClassifier(availableClassifiers, lineSplitPattern.split(line));
+                        addClassifier(availableClassifiers, line.split(" "));
                     }
                 }
             } catch (SecurityException e) {
