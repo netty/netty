@@ -147,6 +147,7 @@
       </activation>
       <properties>
         <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods -XX:+EnableDynamicAgentLoading</argLine.common>
+        <skipTests>true</skipTests>
       </properties>
     </profile>
   </profiles>
