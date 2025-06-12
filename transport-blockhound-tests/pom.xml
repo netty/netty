@@ -146,7 +146,7 @@
         <jdk>25</jdk>
       </activation>
       <properties>
-        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods</argLine.common>
+        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods -XX:+EnableDynamicAgentLoading</argLine.common>
       </properties>
     </profile>
   </profiles>
