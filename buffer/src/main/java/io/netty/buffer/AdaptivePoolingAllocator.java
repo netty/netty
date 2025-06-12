@@ -860,7 +860,9 @@ final class AdaptivePoolingAllocator {
                     }
                     @Override
                     protected long unsafeOffset() {
-                        return REFCNT_FIELD_OFFSET;
+                        // on native image, REFCNT_FIELD_OFFSET can be recomputed even with Unsafe unavailable, so we
+                        // need to guard here
+                        return PlatformDependent.hasUnsafe() ? REFCNT_FIELD_OFFSET : -1;
                     }
                 };
 
