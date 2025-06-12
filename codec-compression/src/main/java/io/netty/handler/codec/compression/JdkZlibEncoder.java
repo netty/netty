@@ -55,7 +55,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     /*
      * GZIP support
      */
-    private final CRC32 crc = new CRC32();
+    private final CRC32 crc;
     private static final byte[] gzipHeader = {0x1f, (byte) 0x8b, Deflater.DEFLATED, 0, 0, 0, 0, 0, 0, 0};
     private boolean writeHeader = true;
 
@@ -133,6 +133,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
 
         this.wrapper = wrapper;
         deflater = new Deflater(compressionLevel, wrapper != ZlibWrapper.ZLIB);
+        this.crc = wrapper == ZlibWrapper.GZIP ? new CRC32() : null;
     }
 
     /**
@@ -172,6 +173,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
         wrapper = ZlibWrapper.ZLIB;
         deflater = new Deflater(compressionLevel);
         deflater.setDictionary(dictionary);
+        crc = null;
     }
 
     @Override

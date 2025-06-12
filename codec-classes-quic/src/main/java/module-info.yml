@@ -17,6 +17,7 @@ requires:
   - module: io.netty.common
   - module: io.netty.buffer
   - module: io.netty.transport
+  - module: io.netty.codec
   - module: io.netty.handler
   - module: io.netty.classes.epoll
     static: true

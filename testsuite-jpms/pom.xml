@@ -100,6 +100,11 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-http3</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-xml</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
@@ -329,6 +334,7 @@
                 <addModules>
                   <addModule>jdk.jdwp.agent</addModule>
                   <addModule>io.netty.internal.tcnative.openssl.${os.detected.name}.${os.detected.arch}</addModule>
+                  <addModule>io.netty.codec.quic.${os.detected.name}.${os.detected.arch}</addModule>
                 </addModules>
                 <ignoreSigningInformation>true</ignoreSigningInformation>
                 <launcher>http=io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer</launcher>

@@ -11,6 +11,7 @@ Netty is an asynchronous event-driven network application framework for rapid de
 * [Documentation](https://netty.io/wiki/)
 * [@netty_project](https://twitter.com/netty_project)
 * [Official Discord server](https://discord.gg/q4aQ2XjaCa)
+* [Modular Netty guide](testsuite-jpms/README.md)
 
 ## How to build
 

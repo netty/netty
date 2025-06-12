@@ -30,10 +30,12 @@
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
     <javaModuleNameWithClassifier>${javaModuleName}.${javaModuleNameClassifier}</javaModuleNameWithClassifier>
-    <javaModuleName>io.netty.handler.codec.quic</javaModuleName>
+    <fallbackModuleName>io.netty.codec.quic</fallbackModuleName>
+    <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
     <fragmentHost>io.netty.netty-codec-classes-quic</fragmentHost>
     <logging.config>${project.basedir}/../codec-native-quic/src/test/resources/logback-test.xml</logging.config>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+    <fallbackOutputDirectory>${project.build.directory}/fallback-classes</fallbackOutputDirectory>
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <skipTests>false</skipTests>
     <packaging.type>jar</packaging.type>
@@ -388,6 +390,26 @@
                 <goals>
                   <goal>generate</goal>
                   <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>io.github.dmlloyd.module-info</groupId>
+            <artifactId>module-info</artifactId>
+            <executions>
+              <execution>
+                <id>module-info</id>
+              </execution>
+              <execution>
+                <id>fallback-module-info</id>
+                <phase>process-classes</phase>
+                <configuration>
+                  <moduleName>${fallbackModuleName}</moduleName>
+                  <outputDirectory>${fallbackOutputDirectory}/META-INF/versions/11/</outputDirectory>
+                </configuration>
+                <goals>
+                  <goal>generate</goal>
                 </goals>
               </execution>
             </executions>
@@ -992,6 +1014,25 @@
               </target>
             </configuration>
           </execution>
+          <!-- Copy files for the fallback JAR that does not contain the native library
+               and a different module declaration -->
+          <execution>
+            <id>copy-to-native-output</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+
+                <copy todir="${fallbackOutputDirectory}" includeEmptyDirs="false">
+                  <!-- Exclude native lib and attribution for the jar without classifier-->
+                  <zipfileset dir="${project.build.outputDirectory}" excludes="META-INF/versions/**,META-INF/native/**,META-INF/license/**,META-INF/NOTICE.txt,META-INF/LICENSE.txt" />
+                </copy>
+              </target>
+            </configuration>
+          </execution>
           <!-- Copy the manifest file that we populated so far so we can use it as a starting point when generating the jars and adding more things to it. -->
           <execution>
             <id>copy-manifest</id>
@@ -1102,25 +1143,40 @@
       </plugin>
 
       <plugin>
+        <groupId>io.github.dmlloyd.module-info</groupId>
+        <artifactId>module-info</artifactId>
+        <executions>
+          <execution>
+            <id>module-info</id>
+          </execution>
+          <execution>
+            <id>fallback-module-info</id>
+            <phase>process-classes</phase>
+            <configuration>
+              <moduleName>${fallbackModuleName}</moduleName>
+              <outputDirectory>${fallbackOutputDirectory}/META-INF/versions/11/</outputDirectory>
+            </configuration>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+
+      <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
           <execution>
             <id>default-jar</id>
             <configuration>
-              <!-- Exclude native lib and attribution for the jar without classifier-->
-              <excludes>
-                <exclude>META-INF/native/**</exclude>
-                <exclude>META-INF/license/**</exclude>
-                <exclude>META-INF/NOTICE.txt</exclude>
-                <exclude>META-INF/LICENSE.txt</exclude>
-              </excludes>
+              <classesDirectory>${fallbackOutputDirectory}</classesDirectory>
               <archive>
                 <manifest>
                   <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                   <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                 </manifest>
                 <manifestEntries>
-                  <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                  <Multi-Release>true</Multi-Release>
                 </manifestEntries>
                 <index>true</index>
                 <manifestFile>${project.build.directory}/manifests/MANIFEST.MF</manifestFile>
@@ -1140,7 +1196,7 @@
                   <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                 </manifest>
                 <manifestEntries>
-                  <Automatic-Module-Name>${javaModuleNameWithClassifier}</Automatic-Module-Name>
+                  <Multi-Release>true</Multi-Release>
                   <Fragment-Host>${fragmentHost}</Fragment-Host>
                   <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
                 </manifestEntries>
