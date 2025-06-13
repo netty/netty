@@ -21,11 +21,11 @@ import io.netty5.channel.nio.NioIoHandler;
 import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.handler.codec.dns.DefaultDnsOptEcsRecord;
 import io.netty5.util.concurrent.Future;
-import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -47,7 +47,7 @@ public class DnsNameResolverClientSubnetTest {
                             // Suggest max payload size of 1024
                             // 157.88.0.0 / 24
                             new DefaultDnsOptEcsRecord(1024, 24,
-                                                       SocketUtils.addressByName("157.88.0.0").getAddress())));
+                                                       InetAddress.getByName("157.88.0.0").getAddress())));
             for (InetAddress address: future.asStage().get()) {
                 System.out.println(address);
             }
@@ -61,7 +61,7 @@ public class DnsNameResolverClientSubnetTest {
         return new DnsNameResolverBuilder(group.next())
                 .datagramChannelType(NioDatagramChannel.class)
                 .nameServerProvider(
-                        new SingletonDnsServerAddressStreamProvider(SocketUtils.socketAddress("8.8.8.8", 53)))
+                        new SingletonDnsServerAddressStreamProvider(new InetSocketAddress("8.8.8.8", 53)))
                 .maxQueriesPerResolve(1)
                 .optResourceEnabled(false)
                 .ndots(1);

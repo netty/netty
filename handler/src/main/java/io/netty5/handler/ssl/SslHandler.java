@@ -1107,7 +1107,7 @@ public class SslHandler extends ByteToMessageDecoder {
                     // No match by now.. Try to load the class via classloader and inspect it.
                     // This is mainly done as other JDK implementations may differ in name of
                     // the impl.
-                    Class<?> clazz = PlatformDependent.getClassLoader(getClass()).loadClass(classname);
+                    Class<?> clazz = getClass().getClassLoader().loadClass(classname);
 
                     if (SocketChannel.class.isAssignableFrom(clazz)
                             || DatagramChannel.class.isAssignableFrom(clazz)) {

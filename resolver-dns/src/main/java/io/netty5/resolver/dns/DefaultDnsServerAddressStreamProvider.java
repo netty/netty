@@ -17,7 +17,6 @@ package io.netty5.resolver.dns;
 
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.SystemPropertyUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,7 +82,7 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
                         throw new ExceptionInInitializerError(DEFAULT_FALLBACK_SERVER_PROPERTY + " doesn't" +
                                 " contain a valid list of NameServers: " + defaultNameserverString);
                     }
-                    defaultNameServers.add(SocketUtils.socketAddress(server.trim(), DNS_PORT));
+                    defaultNameServers.add(new InetSocketAddress(server.trim(), DNS_PORT));
                 }
                 if (defaultNameServers.isEmpty()) {
                     throw new ExceptionInInitializerError(DEFAULT_FALLBACK_SERVER_PROPERTY + " doesn't" +
@@ -103,13 +102,13 @@ public final class DefaultDnsServerAddressStreamProvider implements DnsServerAdd
                         (NetUtil.LOCALHOST instanceof Inet6Address && !NetUtil.isIpV4StackPreferred())) {
                     Collections.addAll(
                             defaultNameServers,
-                            SocketUtils.socketAddress("2001:4860:4860::8888", DNS_PORT),
-                            SocketUtils.socketAddress("2001:4860:4860::8844", DNS_PORT));
+                            new InetSocketAddress("2001:4860:4860::8888", DNS_PORT),
+                            new InetSocketAddress("2001:4860:4860::8844", DNS_PORT));
                 } else {
                     Collections.addAll(
                             defaultNameServers,
-                            SocketUtils.socketAddress("8.8.8.8", DNS_PORT),
-                            SocketUtils.socketAddress("8.8.4.4", DNS_PORT));
+                            new InetSocketAddress("8.8.8.8", DNS_PORT),
+                            new InetSocketAddress("8.8.4.4", DNS_PORT));
                 }
 
                 if (logger.isWarnEnabled()) {

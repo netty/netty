@@ -16,7 +16,6 @@
 
 package io.netty5.handler.codec.compression;
 
-import io.netty5.util.internal.PlatformDependent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,8 +28,7 @@ public final class Zstd {
         Throwable t = null;
 
         try {
-            Class.forName("com.github.luben.zstd.Zstd", false,
-                PlatformDependent.getClassLoader(Zstd.class));
+            Class.forName("com.github.luben.zstd.Zstd", false, Zstd.class.getClassLoader());
         } catch (ClassNotFoundException e) {
             t = e;
             logger.debug(

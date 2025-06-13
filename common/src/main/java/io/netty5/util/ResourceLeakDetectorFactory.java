@@ -17,7 +17,6 @@
 package io.netty5.util;
 
 import io.netty5.util.internal.ObjectUtil;
-import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -100,7 +99,7 @@ public abstract class ResourceLeakDetectorFactory {
         private static Constructor<?> customClassConstructor(String customLeakDetector) {
             try {
                 final Class<?> detectorClass = Class.forName(customLeakDetector, true,
-                        PlatformDependent.getSystemClassLoader());
+                        ClassLoader.getSystemClassLoader());
 
                 if (ResourceLeakDetector.class.isAssignableFrom(detectorClass)) {
                     return detectorClass.getConstructor(Class.class, int.class);

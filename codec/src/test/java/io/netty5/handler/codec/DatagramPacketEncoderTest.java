@@ -22,7 +22,6 @@ import io.netty5.channel.DefaultAddressedEnvelope;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.handler.codec.string.StringEncoder;
-import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -63,8 +62,8 @@ public class DatagramPacketEncoderTest {
     }
 
     private void testEncode(boolean senderIsNull) {
-        InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
-        InetSocketAddress sender = senderIsNull ? null : SocketUtils.socketAddress("127.0.0.1", 20000);
+        InetSocketAddress recipient = new InetSocketAddress("127.0.0.1", 10000);
+        InetSocketAddress sender = senderIsNull ? null : new InetSocketAddress("127.0.0.1", 20000);
         assertTrue(channel.writeOutbound(
                 new DefaultAddressedEnvelope<>("netty", recipient, sender)));
         try (DatagramPacket packet = channel.readOutbound()) {
@@ -76,8 +75,8 @@ public class DatagramPacketEncoderTest {
 
     @Test
     public void testUnmatchedMessageType() {
-        InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
-        InetSocketAddress sender = SocketUtils.socketAddress("127.0.0.1", 20000);
+        InetSocketAddress recipient = new InetSocketAddress("127.0.0.1", 10000);
+        InetSocketAddress sender = new InetSocketAddress("127.0.0.1", 20000);
         DefaultAddressedEnvelope<Long, InetSocketAddress> envelope =
                 new DefaultAddressedEnvelope<>(1L, recipient, sender);
         assertTrue(channel.writeOutbound(envelope));

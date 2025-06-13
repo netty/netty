@@ -15,7 +15,6 @@
  */
 package io.netty5.resolver.dns;
 
-import io.netty5.util.internal.SocketUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +59,7 @@ final class DirContextUtils {
                             continue;
                         }
                         int port  = uri.getPort();
-                        defaultNameServers.add(SocketUtils.socketAddress(uri.getHost(), port == -1 ?
+                        defaultNameServers.add(new InetSocketAddress(uri.getHost(), port == -1 ?
                                 defaultPort : port));
                     } catch (URISyntaxException e) {
                         logger.debug("Skipping a malformed nameserver URI: {}", server, e);

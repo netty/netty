@@ -18,7 +18,6 @@ package io.netty5.resolver;
 
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.internal.SocketUtils;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -38,7 +37,7 @@ public class DefaultNameResolver extends InetNameResolver {
     @Override
     protected void doResolve(String inetHost, Promise<InetAddress> promise) throws Exception {
         try {
-            promise.setSuccess(SocketUtils.addressByName(inetHost));
+            promise.setSuccess(InetAddress.getByName(inetHost));
         } catch (UnknownHostException e) {
             promise.setFailure(e);
         }
@@ -47,7 +46,7 @@ public class DefaultNameResolver extends InetNameResolver {
     @Override
     protected void doResolveAll(String inetHost, Promise<List<InetAddress>> promise) throws Exception {
         try {
-            promise.setSuccess(Arrays.asList(SocketUtils.allAddressesByName(inetHost)));
+            promise.setSuccess(Arrays.asList(InetAddress.getAllByName(inetHost)));
         } catch (UnknownHostException e) {
             promise.setFailure(e);
         }

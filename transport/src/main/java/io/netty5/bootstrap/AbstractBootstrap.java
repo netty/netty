@@ -25,7 +25,6 @@ import io.netty5.channel.EventLoopGroup;
 import io.netty5.util.AttributeKey;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
-import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.StringUtil;
 import org.slf4j.Logger;
 
@@ -117,7 +116,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * @see #localAddress(SocketAddress)
      */
     public B localAddress(String inetHost, int inetPort) {
-        return localAddress(SocketUtils.socketAddress(inetHost, inetPort));
+        return localAddress(new InetSocketAddress(inetHost, inetPort));
     }
 
     /**
@@ -232,7 +231,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
      * Create a new {@link Channel} and bind it.
      */
     public Future<Channel> bind(String inetHost, int inetPort) {
-        return bind(SocketUtils.socketAddress(inetHost, inetPort));
+        return bind(new InetSocketAddress(inetHost, inetPort));
     }
 
     /**

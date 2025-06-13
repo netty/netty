@@ -21,7 +21,6 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.socket.DatagramPacket;
 import io.netty5.handler.codec.string.StringDecoder;
-import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -51,8 +50,8 @@ public class DatagramPacketDecoderTest {
 
     @Test
     public void testDecode() {
-        InetSocketAddress recipient = SocketUtils.socketAddress("127.0.0.1", 10000);
-        InetSocketAddress sender = SocketUtils.socketAddress("127.0.0.1", 20000);
+        InetSocketAddress recipient = new InetSocketAddress("127.0.0.1", 10000);
+        InetSocketAddress sender = new InetSocketAddress("127.0.0.1", 20000);
         Buffer content = DefaultBufferAllocators.preferredAllocator().copyOf("netty", StandardCharsets.UTF_8);
         assertTrue(channel.writeInbound(new DatagramPacket(content, recipient, sender)));
         assertEquals("netty", channel.readInbound());

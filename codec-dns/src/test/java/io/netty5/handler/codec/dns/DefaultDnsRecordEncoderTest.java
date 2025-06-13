@@ -17,7 +17,6 @@ package io.netty5.handler.codec.dns;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.channel.socket.SocketProtocolFamily;
-import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 
@@ -98,14 +97,14 @@ public class DefaultDnsRecordEncoderTest {
 
     @Test
     public void testOptEcsRecordIpv4() throws Exception {
-        testOptEcsRecordIp(SocketUtils.addressByName("1.2.3.4"));
-        testOptEcsRecordIp(SocketUtils.addressByName("1.2.3.255"));
+        testOptEcsRecordIp(InetAddress.getByName("1.2.3.4"));
+        testOptEcsRecordIp(InetAddress.getByName("1.2.3.255"));
     }
 
     @Test
     public void testOptEcsRecordIpv6() throws Exception {
-        testOptEcsRecordIp(SocketUtils.addressByName("::0"));
-        testOptEcsRecordIp(SocketUtils.addressByName("::FF"));
+        testOptEcsRecordIp(InetAddress.getByName("::0"));
+        testOptEcsRecordIp(InetAddress.getByName("::FF"));
     }
 
     private static void testOptEcsRecordIp(InetAddress address) throws Exception {

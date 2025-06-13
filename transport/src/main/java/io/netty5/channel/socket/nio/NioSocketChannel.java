@@ -29,7 +29,6 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.GlobalEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.SocketUtils;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -229,7 +228,7 @@ public class NioSocketChannel
         if (isDomainSocket(family)) {
             localAddress = toUnixDomainSocketAddress(localAddress);
         }
-        SocketUtils.bind(javaChannel(), localAddress);
+        javaChannel().bind(localAddress);
     }
 
     @Override
@@ -243,7 +242,7 @@ public class NioSocketChannel
             if (isDomainSocket(family)) {
                 remoteAddress = toUnixDomainSocketAddress(remoteAddress);
             }
-            boolean connected = SocketUtils.connect(javaChannel(), remoteAddress);
+            boolean connected = javaChannel().connect(remoteAddress);
             if (!connected) {
                 addAndSubmit(NioIoOps.CONNECT);
             }

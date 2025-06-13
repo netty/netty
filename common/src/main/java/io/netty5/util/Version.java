@@ -16,8 +16,6 @@
 
 package io.netty5.util;
 
-import io.netty5.util.internal.PlatformDependent;
-
 import java.io.InputStream;
 import java.net.URL;
 import java.text.ParseException;
@@ -34,7 +32,7 @@ import java.util.TreeMap;
  * <p>
  * This class retrieves the version information from {@code META-INF/io.netty5.versions.properties}, which is
  * generated in build time.  Note that it may not be possible to retrieve the information completely, depending on
- * your environment, such as the specified {@link ClassLoader}, the current {@link SecurityManager}.
+ * your environment, such as the specified {@link ClassLoader}.
  * </p>
  */
 public final class Version {
@@ -63,7 +61,7 @@ public final class Version {
      */
     public static Map<String, Version> identify(ClassLoader classLoader) {
         if (classLoader == null) {
-            classLoader = PlatformDependent.getContextClassLoader();
+            classLoader = Thread.currentThread().getContextClassLoader();
         }
 
         // Collect all properties.

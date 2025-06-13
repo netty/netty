@@ -16,7 +16,6 @@
 package io.netty5.handler.ipfilter;
 
 import io.netty5.util.NetUtil;
-import io.netty5.util.internal.SocketUtils;
 
 import java.math.BigInteger;
 import java.net.Inet4Address;
@@ -52,7 +51,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
 
             ipAddress = ipAndCidr[0];
             int cidrPrefix = Integer.parseInt(ipAndCidr[1]);
-            filterRule = selectFilterRule(SocketUtils.addressByName(ipAddress), cidrPrefix, ruleType);
+            filterRule = selectFilterRule(InetAddress.getByName(ipAddress), cidrPrefix, ruleType);
         } catch (UnknownHostException e) {
             throw new IllegalArgumentException("ipAddressWithCidr", e);
         }
@@ -68,7 +67,7 @@ public final class IpSubnetFilterRule implements IpFilterRule, Comparable<IpSubn
     public IpSubnetFilterRule(String ipAddress, int cidrPrefix, IpFilterRuleType ruleType) {
         try {
             this.ipAddress = ipAddress;
-            filterRule = selectFilterRule(SocketUtils.addressByName(ipAddress), cidrPrefix, ruleType);
+            filterRule = selectFilterRule(InetAddress.getByName(ipAddress), cidrPrefix, ruleType);
         } catch (UnknownHostException e) {
             throw new IllegalArgumentException("ipAddress", e);
         }

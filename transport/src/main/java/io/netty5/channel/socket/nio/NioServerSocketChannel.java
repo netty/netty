@@ -28,7 +28,6 @@ import io.netty5.channel.nio.AbstractNioMessageChannel;
 import io.netty5.channel.nio.NioIoHandle;
 import io.netty5.channel.nio.NioIoOps;
 import io.netty5.util.NetUtil;
-import io.netty5.util.internal.SocketUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -240,7 +239,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel<Channel, S
 
     @Override
     protected int doReadMessages(ReadSink readSink) throws Exception {
-        SocketChannel ch = SocketUtils.accept(javaChannel());
+        SocketChannel ch = javaChannel().accept();
         try {
             if (ch != null) {
                 readSink.processRead(0, 0,

@@ -17,7 +17,6 @@ package io.netty5.handler.codec.dns;
 
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.channel.socket.DatagramPacket;
-import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
@@ -33,7 +32,7 @@ public class DnsQueryTest {
 
     @Test
     public void testEncodeAndDecodeQuery() {
-        InetSocketAddress addr = SocketUtils.socketAddress("8.8.8.8", 53);
+        InetSocketAddress addr = new InetSocketAddress("8.8.8.8", 53);
         EmbeddedChannel writeChannel = new EmbeddedChannel(new DatagramDnsQueryEncoder());
         EmbeddedChannel readChannel = new EmbeddedChannel(new DatagramDnsQueryDecoder());
 

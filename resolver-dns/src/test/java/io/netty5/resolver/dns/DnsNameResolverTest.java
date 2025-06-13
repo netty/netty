@@ -47,7 +47,6 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
-import io.netty5.util.internal.SocketUtils;
 import io.netty5.util.internal.StringUtil;
 
 import org.apache.directory.server.dns.DnsException;
@@ -580,7 +579,7 @@ public class DnsNameResolverTest {
         DnsNameResolver resolver = newNonCachedResolver(ResolvedAddressTypes.IPV4_ONLY).build();
         try {
             InetAddress addr = resolver.resolve(inetHost).asStage().get();
-            assertEquals(SocketUtils.addressByName(inetHost), addr);
+            assertEquals(InetAddress.getByName(inetHost), addr);
         } finally {
             resolver.close();
         }
@@ -603,7 +602,7 @@ public class DnsNameResolverTest {
         try {
             List<InetAddress> addrs = resolver.resolveAll(inetHost).asStage().get();
             assertEquals(asList(
-                    SocketUtils.allAddressesByName(inetHost)), addrs);
+                    InetAddress.getAllByName(inetHost)), addrs);
         } finally {
             resolver.close();
         }

@@ -29,7 +29,7 @@ public final class ClassInitializerUtil {
      * @param classes           the classes to load.
      */
     public static void tryLoadClasses(Class<?> loadingClass, Class<?>... classes) {
-        ClassLoader loader = PlatformDependent.getClassLoader(loadingClass);
+        ClassLoader loader = loadingClass.getClassLoader();
         for (Class<?> clazz: classes) {
             tryLoadClass(loader, clazz.getName());
         }

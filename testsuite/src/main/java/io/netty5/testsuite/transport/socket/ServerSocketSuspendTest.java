@@ -20,7 +20,6 @@ import io.netty5.channel.Channel;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.ChannelOption;
-import io.netty5.util.internal.SocketUtils;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -58,7 +57,7 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
             long startTime = System.nanoTime();
             for (int i = 0; i < NUM_CHANNELS; i ++) {
                 Socket s = new Socket();
-                SocketUtils.connect(s, sc.localAddress(), 10000);
+                s.connect(sc.localAddress(), 10000);
                 sockets.add(s);
             }
 

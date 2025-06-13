@@ -39,11 +39,11 @@ final class Conscrypt {
             try {
                 MethodHandles.Lookup lookup = MethodHandles.lookup();
                 Class<?> providerClass = Class.forName("org.conscrypt.OpenSSLProvider", true,
-                        PlatformDependent.getClassLoader(ConscryptAlpnSslEngine.class));
+                                                       ConscryptAlpnSslEngine.class.getClassLoader());
                 lookup.findConstructor(providerClass, MethodType.methodType(void.class)).invoke();
 
                 Class<?> conscryptClass = Class.forName("org.conscrypt.Conscrypt", true,
-                        PlatformDependent.getClassLoader(ConscryptAlpnSslEngine.class));
+                                                        ConscryptAlpnSslEngine.class.getClassLoader());
                 isConscryptSSLEngine = lookup.findStatic(conscryptClass, "isConscrypt",
                         MethodType.methodType(boolean.class, SSLEngine.class));
             } catch (Throwable ignore) {

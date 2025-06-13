@@ -172,7 +172,7 @@ public final class NioIoHandler implements IoHandler {
             maybeSelectorImplClass = Class.forName(
                     "sun.nio.ch.SelectorImpl",
                     false,
-                    PlatformDependent.getSystemClassLoader());
+                    ClassLoader.getSystemClassLoader());
         } catch (Throwable cause) {
             maybeSelectorImplClass = cause;
         }

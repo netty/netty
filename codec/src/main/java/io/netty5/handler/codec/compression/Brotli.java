@@ -17,7 +17,6 @@
 package io.netty5.handler.codec.compression;
 
 import com.aayushatharva.brotli4j.Brotli4jLoader;
-import io.netty5.util.internal.PlatformDependent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,8 +30,7 @@ public final class Brotli {
         ClassNotFoundException cnfe = null;
 
         try {
-            Class.forName("com.aayushatharva.brotli4j.Brotli4jLoader", false,
-                PlatformDependent.getClassLoader(Brotli.class));
+            Class.forName("com.aayushatharva.brotli4j.Brotli4jLoader", false, Brotli.class.getClassLoader());
         } catch (ClassNotFoundException t) {
             cnfe = t;
             logger.debug(

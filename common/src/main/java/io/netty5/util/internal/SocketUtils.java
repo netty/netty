@@ -15,26 +15,13 @@
  */
 package io.netty5.util.internal;
 
-import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
-import java.net.Socket;
-import java.net.SocketAddress;
-import java.net.SocketException;
-import java.net.SocketPermission;
-import java.net.UnknownHostException;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 import java.util.Collections;
 import java.util.Enumeration;
 
 /**
- * Provides socket operations with privileges enabled. This is necessary for applications that use the
- * {@link SecurityManager} to restrict {@link SocketPermission} to their application. By asserting that these
- * operations are privileged, the operations can proceed even if some code in the calling chain lacks the appropriate
- * {@link SocketPermission}.
+ * Provides utlity operations related to sockets.
  */
 public final class SocketUtils {
 
@@ -48,53 +35,6 @@ public final class SocketUtils {
         return (Enumeration<T>) EMPTY;
     }
 
-    @Deprecated
-    public static void connect(final Socket socket, final SocketAddress remoteAddress, final int timeout)
-            throws IOException {
-        socket.connect(remoteAddress, timeout);
-    }
-
-    @Deprecated
-    public static void bind(final Socket socket, final SocketAddress bindpoint) throws IOException {
-        socket.bind(bindpoint);
-    }
-
-    @Deprecated
-    public static boolean connect(final SocketChannel socketChannel, final SocketAddress remoteAddress)
-            throws IOException {
-        return socketChannel.connect(remoteAddress);
-    }
-
-    @Deprecated
-    public static void bind(final SocketChannel socketChannel, final SocketAddress address) throws IOException {
-        socketChannel.bind(address);
-    }
-
-    @Deprecated
-    public static SocketChannel accept(final ServerSocketChannel serverSocketChannel) throws IOException {
-        return serverSocketChannel.accept();
-    }
-
-    @Deprecated
-    public static void bind(final DatagramChannel networkChannel, final SocketAddress address) throws IOException {
-        networkChannel.bind(address);
-    }
-
-    @Deprecated
-    public static InetAddress addressByName(final String hostname) throws UnknownHostException {
-        return InetAddress.getByName(hostname);
-    }
-
-    @Deprecated
-    public static InetAddress[] allAddressesByName(final String hostname) throws UnknownHostException {
-        return InetAddress.getAllByName(hostname);
-    }
-
-    @Deprecated
-    public static InetSocketAddress socketAddress(final String hostname, final int port) {
-        return new InetSocketAddress(hostname, port);
-    }
-
     public static Enumeration<InetAddress> addressesFromNetworkInterface(final NetworkInterface intf) {
         Enumeration<InetAddress> addresses = intf.getInetAddresses();
         // Android seems to sometimes return null even if this is not a valid return value by the api docs.
@@ -104,10 +44,5 @@ public final class SocketUtils {
             return empty();
         }
         return addresses;
-    }
-
-    @Deprecated
-    public static byte[] hardwareAddressFromNetworkInterface(final NetworkInterface intf) throws SocketException {
-        return intf.getHardwareAddress();
     }
 }
