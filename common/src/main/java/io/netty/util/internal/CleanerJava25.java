@@ -51,7 +51,7 @@ final class CleanerJava25 implements Cleaner {
             // - https://bugs.openjdk.org/browse/JDK-8357145
             // - https://bugs.openjdk.org/browse/JDK-8357268
             suitableJavaVersion = PlatformDependent0.javaVersion() >= 25;
-            logger = InternalLoggerFactory.getInstance(CleanerJava24.class);
+            logger = InternalLoggerFactory.getInstance(CleanerJava25.class);
         }
 
         MethodHandle method;
