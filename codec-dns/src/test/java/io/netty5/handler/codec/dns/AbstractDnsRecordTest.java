@@ -79,8 +79,18 @@ public class AbstractDnsRecordTest {
      */
     @Test
     public void testEqualsAndHashCodeIgnoreCase() {
-        AbstractDnsRecord lowerCase = new AbstractDnsRecord("example.com.", DnsRecordType.A, 0) { };
-        AbstractDnsRecord upperCase = new AbstractDnsRecord("EXAMPLE.COM.", DnsRecordType.A, 0) { };
+        AbstractDnsRecord lowerCase = new AbstractDnsRecord("example.com.", DnsRecordType.A, 0) {
+            @Override
+            public DnsRecord copy() {
+                return null;
+            }
+        };
+        AbstractDnsRecord upperCase = new AbstractDnsRecord("EXAMPLE.COM.", DnsRecordType.A, 0) {
+            @Override
+            public DnsRecord copy() {
+                return null;
+            }
+        };
         assertEquals(lowerCase.hashCode(), upperCase.hashCode());
         assertEquals(lowerCase, upperCase);
     }
