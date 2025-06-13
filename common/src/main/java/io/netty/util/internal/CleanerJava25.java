@@ -37,7 +37,7 @@ final class CleanerJava25 implements Cleaner {
         boolean suitableJavaVersion;
         if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
             // native image supports this since 25, but we don't use PlatformDependent0 here, since
-            // we need to initialize CleanerJava24 at build time.
+            // we need to initialize CleanerJava25 at build time.
             String v = System.getProperty("java.specification.version");
             try {
                 suitableJavaVersion = Integer.parseInt(v) >= 25;
