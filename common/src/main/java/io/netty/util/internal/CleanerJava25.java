@@ -28,15 +28,18 @@ import static java.lang.invoke.MethodType.methodType;
  * Provide a way to clean direct {@link ByteBuffer} instances on Java 24+,
  * where we don't have {@code Unsafe} available, but we have memory segments.
  */
-final class CleanerJava24 implements Cleaner {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CleanerJava24.class);
+final class CleanerJava25 implements Cleaner {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CleanerJava25.class);
 
     private static final MethodHandle INVOKE_ALLOCATOR;
 
     static {
         MethodHandle method;
         Throwable error;
-        if (PlatformDependent0.javaVersion() >= 24) {
+        // Only attempt to use MemorySegments on Java 25 or greater, because of the following JDK bugs:
+        // - https://bugs.openjdk.org/browse/JDK-8357145
+        // - https://bugs.openjdk.org/browse/JDK-8357268
+        if (PlatformDependent0.javaVersion() >= 25) {
             try {
                 // Here we compose and construct a MethodHandle that takes an 'int' capacity argument,
                 // and produces a 'CleanableDirectBufferImpl' instance.
