@@ -192,9 +192,9 @@ public final class PlatformDependent {
                 // Try Java 9 cleaner first, because it's based on Unsafe and can skip a few steps.
                 if (CleanerJava9.isSupported()) {
                     LEGACY_CLEANER = new CleanerJava9();
-                } else if (CleanerJava24.isSupported()) {
-                    // On Java 24+ we can't use Unsafe, but we have MemorySegment.
-                    LEGACY_CLEANER = new CleanerJava24();
+                } else if (CleanerJava25.isSupported()) {
+                    // On Java 25+ we can't use Unsafe, but we have MemorySegment.
+                    LEGACY_CLEANER = new CleanerJava25();
                 } else {
                     LEGACY_CLEANER = NOOP;
                 }
