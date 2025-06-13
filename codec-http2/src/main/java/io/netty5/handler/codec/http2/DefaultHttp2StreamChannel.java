@@ -497,7 +497,7 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
     }
 
     private void closeTransport(Promise<Void> promise) {
-        closeTransport(Http2Error.CANCEL, promise);
+        closeTransport(null, promise);
     }
 
     private void closeTransport(Http2Error error, final Promise<Void> promise) {
@@ -525,12 +525,21 @@ final class DefaultHttp2StreamChannel extends DefaultAttributeMap implements Htt
 
         // Only ever send a reset frame if the connection is still alive and if the stream was created before
         // as otherwise we may send a RST on a stream in an invalid state and cause a connection error.
-        if (parent().isActive() && isStreamIdValid(stream.id()) &&
-                // Also ensure the stream was never "closed" before.
-                !readEOS && !(receivedEndOfStream && sentEndOfStream)) {
-            Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(error).stream(stream());
-            writeTransport(resetFrame, newPromise());
-            flush();
+        if (parent().isActive() && isStreamIdValid(stream.id())) {
+            // If error is null we know that the close was not triggered by an error and so we should only
+            // try to send a RST frame if we didn't signal the end of the stream before.
+            if (error == null) {
+                if (!readEOS && !(receivedEndOfStream && sentEndOfStream)) {
+                    Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(Http2Error.CANCEL).stream(stream());
+                    writeTransport(resetFrame, newPromise());
+                    flush();
+                }
+            } else {
+                // Close was triggered by a stream error, in this case we always want to send a RST frame.
+                Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(error).stream(stream());
+                writeTransport(resetFrame, newPromise());
+                flush();
+            }
         }
 
         if (inboundBuffer != null) {
