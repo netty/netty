@@ -120,6 +120,20 @@ public final class ReferenceCountUtil {
     }
 
     /**
+     * Calls {@link ReferenceCounted#release()}. Unlike {@link ReferenceCounted#release()} this method
+     * catches an exception raised by {@link ReferenceCounted#release()} and logs it, rather than rethrowing
+     * it to the caller. It is usually recommended to use {@link ReferenceCounted#release()} instead,
+     * unless you absolutely need to swallow an exception.
+     */
+    public static void safeRelease(ReferenceCounted msg) {
+        try {
+            msg.release();
+        } catch (Throwable t) {
+            logger.warn("Failed to release a message: {}", msg, t);
+        }
+    }
+
+    /**
      * Try to call {@link ReferenceCounted#release(int)} if the specified message implements {@link ReferenceCounted}.
      * If the specified message doesn't implement {@link ReferenceCounted}, this method does nothing.
      * Unlike {@link #release(Object)} this method catches an exception raised by {@link ReferenceCounted#release(int)}
