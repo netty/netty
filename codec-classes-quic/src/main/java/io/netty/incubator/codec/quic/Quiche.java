@@ -416,7 +416,7 @@ final class Quiche {
      * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L274">quiche_conn_stream_capacity</a>.
      */
-    static native int quiche_conn_stream_capacity(long connAddr, long streamId);
+    static native long quiche_conn_stream_capacity(long connAddr, long streamId);
 
     /**
      * See
