@@ -269,6 +269,16 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
             delegate.clean();
             alloc.decrementDirect(capacity);
         }
+
+        @Override
+        public boolean hasMemoryAddress() {
+            return delegate.hasMemoryAddress();
+        }
+
+        @Override
+        public long memoryAddress() {
+            return delegate.memoryAddress();
+        }
     }
 
     private static final class UnpooledByteBufAllocatorMetric implements ByteBufAllocatorMetric {

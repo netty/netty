@@ -36,4 +36,21 @@ public interface CleanableDirectBuffer {
      * and the buffer must not be accessed again after this method has been called.
      */
     void clean();
+
+    /**
+     * @return {@code true} if the {@linkplain #memoryAddress() native memory address} is available,
+     * otherwise {@code false}.
+     */
+    default boolean hasMemoryAddress() {
+        return false;
+    }
+
+    /**
+     * Get the native memory address, but only if {@link #hasMemoryAddress()} returns true,
+     * otherwise this may return an unspecified value or throw an exception.
+     * @return The native memory address of this buffer, if available.
+     */
+    default long memoryAddress() {
+        return 0;
+    }
 }

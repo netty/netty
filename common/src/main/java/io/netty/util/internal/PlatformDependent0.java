@@ -534,11 +534,13 @@ final class PlatformDependent0 {
 
         // See JDK 23 JEP 471 https://openjdk.org/jeps/471 and sun.misc.Unsafe.beforeMemoryAccess() on JDK 23+.
         // And JDK 24 JEP 498 https://openjdk.org/jeps/498, that enable warnings by default.
+        // Due to JDK bugs, we only actually disable Unsafe by default on Java 25+, where we have memory segment APIs
+        // available, and working.
         String reason = "io.netty.noUnsafe";
         String unspecified = "<unspecified>";
         String unsafeMemoryAccess = SystemPropertyUtil.get("sun.misc.unsafe.memory.access", unspecified);
-        if (!explicitProperty && unspecified.equals(unsafeMemoryAccess) && javaVersion() >= 24) {
-            reason = "io.netty.noUnsafe=true by default on Java 24+";
+        if (!explicitProperty && unspecified.equals(unsafeMemoryAccess) && javaVersion() >= 25) {
+            reason = "io.netty.noUnsafe=true by default on Java 25+";
             noUnsafe = true;
         } else if (!("allow".equals(unsafeMemoryAccess) || unspecified.equals(unsafeMemoryAccess))) {
             reason = "--sun-misc-unsafe-memory-access=" + unsafeMemoryAccess;
