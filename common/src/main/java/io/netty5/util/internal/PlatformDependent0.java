@@ -50,7 +50,6 @@ final class PlatformDependent0 {
     private static final MethodHandle DIRECT_BUFFER_CONSTRUCTOR_HANDLE;
     private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final MethodHandle ALLOCATE_ARRAY_HANDLE;
-    private static final MethodHandle THREAD_ID;
     private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
 
@@ -351,18 +350,6 @@ final class PlatformDependent0 {
             ALLOCATE_ARRAY_HANDLE = allocateArrayHandle;
         }
 
-        MethodHandle threadId = null;
-        try {
-            if (PlatformDependent.javaVersion() < 19) {
-                threadId = lookup().findVirtual(Thread.class, "getId", MethodType.methodType(long.class));
-            } else {
-                threadId = lookup().findVirtual(Thread.class, "threadId", MethodType.methodType(long.class));
-            }
-        } catch (Exception e) {
-            logger.debug("threadId method handle unavailable", e);
-        }
-        THREAD_ID = threadId;
-
         logger.debug("java.nio.DirectByteBuffer.<init>(long, {int,long}): {}",
                 DIRECT_BUFFER_CONSTRUCTOR_HANDLE != null ? "available" : "unavailable");
     }
@@ -431,17 +418,6 @@ final class PlatformDependent0 {
         // Just use 1 to make it safe to use in all cases:
         // See: https://pubs.opengroup.org/onlinepubs/009695399/functions/malloc.html
         return newDirectBuffer(UNSAFE.allocateMemory(Math.max(1, capacity)), capacity, null);
-    }
-
-    static long threadId(Thread thread) {
-        if (THREAD_ID == null) {
-            return thread.getId();
-        }
-        try {
-            return (long) THREAD_ID.invokeExact(thread);
-        } catch (Throwable e) {
-            throw new Error(e);
-        }
     }
 
     static boolean hasAllocateArrayMethod() {

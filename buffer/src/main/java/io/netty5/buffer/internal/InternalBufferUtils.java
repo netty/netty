@@ -27,10 +27,7 @@ import io.netty5.util.internal.PlatformDependent;
 import org.jetbrains.annotations.NotNull;
 
 import java.lang.foreign.MemorySegment;
-import java.lang.invoke.MethodHandle;
-import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
-import java.lang.invoke.MethodType;
 import java.lang.invoke.VarHandle;
 import java.lang.ref.Cleaner;
 import java.nio.ByteBuffer;
@@ -70,48 +67,12 @@ public interface InternalBufferUtils {
             return "NO_OP_DROP";
         }
     };
-    MethodHandle BB_SLICE_OFFSETS = getByteBufferSliceOffsetsMethodHandle();
-    MethodHandle BB_PUT_OFFSETS = getByteBufferPutOffsetsMethodHandle();
-    MethodHandle BB_PUT_ARRAY_OFFSETS = getByteBufferPutArrayOffsetsMethodHandle();
+
     /**
      * The maximum buffer size we support is the maximum array length generally supported by JVMs,
      * because on-heap buffers will be backed by byte-arrays.
      */
     int MAX_BUFFER_SIZE = Integer.MAX_VALUE - 8;
-
-    static MethodHandle getByteBufferSliceOffsetsMethodHandle() {
-        try {
-            Lookup lookup = MethodHandles.lookup();
-            MethodType type = MethodType.methodType(ByteBuffer.class, int.class, int.class);
-            return lookup.findVirtual(ByteBuffer.class, "slice", type);
-        } catch (Exception ignore) {
-            return null;
-        }
-    }
-
-    @SuppressWarnings("JavaLangInvokeHandleSignature")
-    static MethodHandle getByteBufferPutOffsetsMethodHandle() {
-        try {
-            Lookup lookup = MethodHandles.lookup();
-            MethodType type = MethodType.methodType(
-                    ByteBuffer.class, int.class, ByteBuffer.class, int.class, int.class);
-            return lookup.findVirtual(ByteBuffer.class, "put", type);
-        } catch (Exception ignore) {
-            return null;
-        }
-    }
-
-    @SuppressWarnings("JavaLangInvokeHandleSignature")
-    static MethodHandle getByteBufferPutArrayOffsetsMethodHandle() {
-        try {
-            Lookup lookup = MethodHandles.lookup();
-            MethodType type = MethodType.methodType(
-                    ByteBuffer.class, int.class, byte[].class, int.class, int.class);
-            return lookup.findVirtual(ByteBuffer.class, "put", type);
-        } catch (Exception ignore) {
-            return null;
-        }
-    }
 
     static Function<Drop<Buffer>, Drop<Buffer>> standardDrop(MemoryManager manager) {
         return drop -> CleanerDrop.wrap(drop, manager);
@@ -198,92 +159,6 @@ public interface InternalBufferUtils {
             return ((NotReadOnlyReadableComponent) component).mutableReadableBuffer();
         }
         return null;
-    }
-
-    /**
-     * The ByteBuffer slice-with-offset-and-length method is only available from Java 13 and onwards, but we need to
-     * support Java 11.
-     */
-    static ByteBuffer bbslice(ByteBuffer buffer, int fromOffset, int length) {
-        if (BB_SLICE_OFFSETS != null) {
-            return bbsliceJdk13(buffer, fromOffset, length);
-        }
-        return bbsliceFallback(buffer, fromOffset, length);
-    }
-
-    @SuppressWarnings("DataFlowIssue")
-    private static ByteBuffer bbsliceJdk13(ByteBuffer buffer, int fromOffset, int length) {
-        try {
-            return (ByteBuffer) BB_SLICE_OFFSETS.invokeExact(buffer, fromOffset, length);
-        } catch (RuntimeException re) {
-            throw re;
-        } catch (Throwable throwable) {
-            throw new LinkageError("Unexpected exception from ByteBuffer.slice(int,int).", throwable);
-        }
-    }
-
-    private static ByteBuffer bbsliceFallback(ByteBuffer buffer, int fromOffset, int length) {
-        if (fromOffset < 0) {
-            throw new IndexOutOfBoundsException("The fromOffset must be positive: " + fromOffset + '.');
-        }
-        int newLimit = fromOffset + length;
-        if (newLimit > buffer.capacity()) {
-            throw new IndexOutOfBoundsException(
-                    "The limit of " + newLimit + " would be greater than capacity: " + buffer.capacity() + '.');
-        }
-        return buffer.duplicate().clear().position(fromOffset).limit(newLimit).slice();
-    }
-
-    /**
-     * The ByteBuffer put-buffer-with-offset-and-length method is not available in Java 11.
-     */
-    static void bbput(ByteBuffer dest, int destPos, ByteBuffer src, int srcPos, int length) {
-        if (BB_PUT_OFFSETS != null) {
-            bbputJdk16(dest, destPos, src, srcPos, length);
-        } else {
-            bbputFallback(dest, destPos, src, srcPos, length);
-        }
-    }
-
-    private static void bbputJdk16(ByteBuffer dest, int destPos, ByteBuffer src, int srcPos, int length) {
-        try {
-            @SuppressWarnings("unused") // We need to cast the return type in order to invokeExact.
-            ByteBuffer ignore = (ByteBuffer) BB_PUT_OFFSETS.invokeExact(dest, destPos, src, srcPos, length);
-        } catch (RuntimeException re) {
-            throw re;
-        } catch (Throwable throwable) {
-            throw new LinkageError("Unexpected exception from ByteBuffer.put(int,ByteBuffer,int,int).", throwable);
-        }
-    }
-
-    private static void bbputFallback(ByteBuffer dest, int destPos, ByteBuffer src, int srcPos, int length) {
-        dest.position(destPos).put(bbslice(src, srcPos, length));
-    }
-
-    /**
-     * The ByteBuffer put-with-array-offset-and-length method is not available in Java 11.
-     */
-    static void bbput(ByteBuffer dest, int destPos, byte[] src, int srcPos, int length) {
-        if (BB_PUT_ARRAY_OFFSETS != null) {
-            bbputJdk16(dest, destPos, src, srcPos, length);
-        } else {
-            bbputFallback(dest, destPos, src, srcPos, length);
-        }
-    }
-
-    private static void bbputJdk16(ByteBuffer dest, int destPos, byte[] src, int srcPos, int length) {
-        try {
-            @SuppressWarnings("unused") // We need to cast the return type in order to invokeExact.
-            ByteBuffer ignore = (ByteBuffer) BB_PUT_ARRAY_OFFSETS.invokeExact(dest, destPos, src, srcPos, length);
-        } catch (RuntimeException re) {
-            throw re;
-        } catch (Throwable throwable) {
-            throw new LinkageError("Unexpected exception from ByteBuffer.put(int,byte[],int,int).", throwable);
-        }
-    }
-
-    private static void bbputFallback(ByteBuffer dest, int destPos, byte[] src, int srcPos, int length) {
-        dest.position(destPos).put(src, srcPos, length);
     }
 
     static void setMemory(ByteBuffer buffer, int length, byte value) {

@@ -29,7 +29,6 @@ import io.netty5.buffer.internal.WrappingAllocation;
 import java.nio.ByteBuffer;
 import java.util.function.Function;
 
-import static io.netty5.buffer.internal.InternalBufferUtils.bbslice;
 import static io.netty5.buffer.internal.InternalBufferUtils.convert;
 
 /**
@@ -90,7 +89,7 @@ public final class ByteBufferMemoryManager implements MemoryManager {
     @Override
     public Object sliceMemory(Object memory, int offset, int length) {
         var buffer = (ByteBuffer) memory;
-        return bbslice(buffer, offset, length);
+        return buffer.slice(offset, length);
     }
 
     @Override

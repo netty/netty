@@ -339,7 +339,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     @Override
     public String getApplicationProtocol() {
         try {
-            return JdkAlpnSslUtils.getApplicationProtocol(getWrappedEngine());
+            return getWrappedEngine().getApplicationProtocol();
         } finally {
             assertErrorStackEmpty();
         }
@@ -348,7 +348,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     @Override
     public String getHandshakeApplicationProtocol() {
         try {
-            return JdkAlpnSslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
+            return getWrappedEngine().getHandshakeApplicationProtocol();
         } finally {
             assertErrorStackEmpty();
         }
@@ -357,7 +357,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     @Override
     public void setHandshakeApplicationProtocolSelector(BiFunction<SSLEngine, List<String>, String> selector) {
         try {
-            JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
+            getWrappedEngine().setHandshakeApplicationProtocolSelector(selector);
         } finally {
             assertErrorStackEmpty();
         }
@@ -366,7 +366,7 @@ final class OpenSslErrorStackAssertSSLEngine extends JdkSslEngine implements Ref
     @Override
     public BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector() {
         try {
-            return JdkAlpnSslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
+            return getWrappedEngine().getHandshakeApplicationProtocolSelector();
         } finally {
             assertErrorStackEmpty();
         }
