@@ -27,6 +27,7 @@ import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectPool.Handle;
 import io.netty.util.internal.ObjectPool.ObjectCreator;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SWARUtil;
 import io.netty.util.internal.StringUtil;
@@ -2011,6 +2012,15 @@ public final class ByteBufUtil {
      */
     public static void setLeakListener(ResourceLeakDetector.LeakListener leakListener) {
         AbstractByteBuf.leakDetector.setLeakListener(leakListener);
+    }
+
+    static void checkRange(int fromIndex, int toIndex, int numBytes, ByteBuf buffer) {
+        ObjectUtil.checkInRange(fromIndex, 0, toIndex, "fromIndex");
+        ObjectUtil.checkInRange(toIndex, fromIndex, buffer.capacity(), "toIndex");
+        int range = toIndex - fromIndex;
+        if (range % numBytes != 0) {
+            throw new IllegalArgumentException("range must be a multiple of " + numBytes);
+        }
     }
 
     private ByteBufUtil() { }
