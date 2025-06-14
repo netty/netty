@@ -1239,13 +1239,6 @@
         <scope>test</scope>
       </dependency>
 
-      <dependency>
-        <groupId>com.google.guava</groupId>
-        <artifactId>guava</artifactId>
-        <version>33.4.8-jre</version>
-        <scope>test</scope>
-      </dependency>
-
       <!-- Test suite dependency for generating a compressed heap dump file -->
       <dependency>
         <groupId>org.tukaani</groupId>
