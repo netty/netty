@@ -32,6 +32,7 @@ import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.zip.CRC32;
 import java.util.zip.Deflater;
 import java.util.zip.GZIPOutputStream;
 
@@ -189,6 +190,149 @@ public class JdkZlibTest extends ZlibTest {
     @Test
     void testAllowDefaultCompression() {
         assertDoesNotThrow(() -> new JdkZlibEncoder(Deflater.DEFAULT_COMPRESSION));
+    }
+
+    @Test
+    public void testGzipFooterValidationSuccess() throws Exception {
+        byte[] data = "hello gzip world".getBytes(CharsetUtil.UTF_8);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOut = new GZIPOutputStream(baos);
+        gzipOut.write(data);
+        gzipOut.close();
+
+        byte[] compressed = baos.toByteArray();
+        EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, Integer.MAX_VALUE));
+        assertTrue(ch.writeInbound(Unpooled.wrappedBuffer(compressed)));
+        ByteBuf result = ch.readInbound();
+        assertEquals(Unpooled.wrappedBuffer(data), result);
+        result.release();
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testGzipFooterCrcMismatchThrows() throws Exception {
+        byte[] data = "corrupted gzip".getBytes(CharsetUtil.UTF_8);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOut = new GZIPOutputStream(baos);
+        gzipOut.write(data);
+        gzipOut.close();
+
+        byte[] compressed = baos.toByteArray();
+        // Corrupt the CRC
+        compressed[compressed.length - 8] ^= 0xFF;
+
+        EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, Integer.MAX_VALUE));
+        assertThrows(DecompressionException.class, () -> {
+            ch.writeInbound(Unpooled.wrappedBuffer(compressed));
+        });
+        ch.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testGzipFooterISizeMismatchThrows() throws Exception {
+        byte[] data = "wrong size".getBytes(CharsetUtil.UTF_8);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOut = new GZIPOutputStream(baos);
+        gzipOut.write(data);
+        gzipOut.close();
+
+        byte[] compressed = baos.toByteArray();
+        // Corrupt the ISIZE
+        compressed[compressed.length - 4] ^= 0xFF;
+
+        EmbeddedChannel ch = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, Integer.MAX_VALUE));
+        assertThrows(DecompressionException.class, () -> {
+            ch.writeInbound(Unpooled.wrappedBuffer(compressed));
+        });
+        ch.finishAndReleaseAll();
+    }
+
+    @Test
+    public void testRoundTripCompressionGzipContentMatch() throws Exception {
+        byte[] input = "Hello, Netty gzip roundtrip!".getBytes(CharsetUtil.UTF_8);
+
+        EmbeddedChannel encoder = new EmbeddedChannel(new JdkZlibEncoder(ZlibWrapper.GZIP));
+        assertTrue(encoder.writeOutbound(Unpooled.wrappedBuffer(input)));
+        assertTrue(encoder.finish());
+
+        ByteBuf compressed = Unpooled.buffer();
+        for (;;) {
+            ByteBuf part = encoder.readOutbound();
+            if (part == null) {
+                break;
+            }
+            compressed.writeBytes(part);
+            part.release();
+        }
+
+        EmbeddedChannel decoder = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, Integer.MAX_VALUE));
+        assertTrue(decoder.writeInbound(compressed));
+        ByteBuf result = decoder.readInbound();
+        assertEquals(Unpooled.wrappedBuffer(input), result);
+        result.release();
+        decoder.finish();
+    }
+
+    @Test
+    public void testFragmentedGzipStreamStillYieldsCorrectContent() throws Exception {
+        String text = "Fragmented input stream for GZIP!";
+        byte[] input = text.getBytes(CharsetUtil.UTF_8);
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOut = new GZIPOutputStream(baos);
+        gzipOut.write(input);
+        gzipOut.close();
+        byte[] compressed = baos.toByteArray();
+
+        EmbeddedChannel decoder = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, Integer.MAX_VALUE));
+
+        for (byte b : compressed) {
+            decoder.writeInbound(Unpooled.wrappedBuffer(new byte[]{ b }));
+        }
+        assertTrue(decoder.finish());
+
+        ByteBuf result = Unpooled.buffer();
+        ByteBuf chunk;
+        while ((chunk = decoder.readInbound()) != null) {
+            result.writeBytes(chunk);
+            chunk.release();
+        }
+
+        assertEquals(text, result.toString(CharsetUtil.UTF_8));
+        result.release();
+    }
+
+    @Test
+    public void testMultipleConcatenatedGzipMessagesDecompressedIndividually() throws Exception {
+        String first = "first message";
+        String second = "second message";
+
+        byte[] c1 = gzipCompress(first.getBytes(CharsetUtil.UTF_8));
+        byte[] c2 = gzipCompress(second.getBytes(CharsetUtil.UTF_8));
+        byte[] combined = new byte[c1.length + c2.length];
+        System.arraycopy(c1, 0, combined, 0, c1.length);
+        System.arraycopy(c2, 0, combined, c1.length, c2.length);
+
+        EmbeddedChannel decoder = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
+        assertTrue(decoder.writeInbound(Unpooled.wrappedBuffer(combined)));
+
+        ByteBuf m1 = decoder.readInbound();
+        ByteBuf m2 = decoder.readInbound();
+
+        assertEquals(first, m1.toString(CharsetUtil.UTF_8));
+        assertEquals(second, m2.toString(CharsetUtil.UTF_8));
+
+        m1.release();
+        m2.release();
+        decoder.finish();
+    }
+
+    private static byte[] gzipCompress(byte[] input) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        GZIPOutputStream gzipOut = new GZIPOutputStream(baos);
+        gzipOut.write(input);
+        gzipOut.close();
+        return baos.toByteArray();
     }
 
     /**
