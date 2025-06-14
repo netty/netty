@@ -92,7 +92,36 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-codec-native-quic</artifactId>
       <version>${project.version}</version>
-      <classifier>${netty.quic.classifier}</classifier>
+      <classifier>linux-aarch_64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-native-quic</artifactId>
+      <version>${project.version}</version>
+      <classifier>linux-x86_64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-native-quic</artifactId>
+      <version>${project.version}</version>
+      <classifier>osx-aarch_64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-native-quic</artifactId>
+      <version>${project.version}</version>
+      <classifier>osx-x86_64</classifier>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-native-quic</artifactId>
+      <version>${project.version}</version>
+      <classifier>windows-x86_64</classifier>
+      <scope>runtime</scope>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
