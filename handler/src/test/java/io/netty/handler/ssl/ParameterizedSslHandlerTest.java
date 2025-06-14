@@ -699,11 +699,6 @@ public class ParameterizedSslHandlerTest {
                 readQueue.append(cause);
             } finally {
                 doneLatch.countDown();
-                try {
-                    out.close();
-                } catch (IOException ignore) {
-                    // ignore
-                }
             }
         }
     }

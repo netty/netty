@@ -1288,16 +1288,11 @@ public abstract class SslContext {
 
         try {
             for (int i = 0; i < certs.length; i++) {
-                InputStream is = new ByteBufInputStream(certs[i], false);
-                try {
+                try (InputStream is = new ByteBufInputStream(certs[i], false)) {
                     x509Certs[i] = (X509Certificate) cf.generateCertificate(is);
-                } finally {
-                    try {
-                        is.close();
-                    } catch (IOException e) {
-                        // This is not expected to happen, but re-throw in case it does.
-                        throw new RuntimeException(e);
-                    }
+                } catch (IOException e) {
+                    // This is not expected to happen, but re-throw in case it does.
+                    throw new RuntimeException(e);
                 }
             }
         } finally {

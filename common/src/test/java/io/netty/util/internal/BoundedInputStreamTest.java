@@ -17,7 +17,6 @@ package io.netty.util.internal;
 
 import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -35,21 +34,18 @@ public class BoundedInputStreamTest {
     void testBoundEnforced() throws IOException {
         final byte[] bytes = new byte[64];
         ThreadLocalRandom.current().nextBytes(bytes);
-        final BoundedInputStream reader = new BoundedInputStream(new ByteArrayInputStream(bytes), bytes.length - 1);
-        assertEquals(bytes[0], (byte) reader.read());
+        try (BoundedInputStream reader = new BoundedInputStream(new ByteArrayInputStream(bytes), bytes.length - 1)) {
+            assertEquals(bytes[0], (byte) reader.read());
 
-        assertThrows(IOException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
+            assertThrows(IOException.class, () -> {
                 int max = bytes.length;
                 do {
                     int result = reader.read(new byte[max], 0, max);
                     assertThat(result).isNotEqualTo(-1);
                     max -= result;
                 } while (max > 0);
-            }
-        });
-        reader.close();
+            });
+        }
     }
 
     @Test
@@ -58,34 +54,24 @@ public class BoundedInputStreamTest {
         for (int i = 0; i < bytes.length; i++) {
             bytes[i] = (byte) i;
         }
-        final BoundedInputStream reader = new BoundedInputStream(new ByteArrayInputStream(bytes), bytes.length - 1);
-        for (byte expectedByte : bytes) {
-            assertEquals(expectedByte, (byte) reader.read());
-        }
+        try (BoundedInputStream reader = new BoundedInputStream(new ByteArrayInputStream(bytes), bytes.length - 1)) {
+            for (byte expectedByte : bytes) {
+                assertEquals(expectedByte, (byte) reader.read());
+            }
 
-        assertThrows(IOException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                reader.read();
-            }
-        });
-        assertThrows(IOException.class, new Executable() {
-            @Override
-            public void execute() throws Throwable {
-                reader.read(new byte[1], 0, 1);
-            }
-        });
-        reader.close();
+            assertThrows(IOException.class, reader::read);
+            assertThrows(IOException.class, () -> reader.read(new byte[1], 0, 1));
+        }
     }
 
     @RepeatedTest(50)
     void testBigReadsPermittedIfUnderlyingStreamIsSmall() throws IOException {
         final byte[] bytes = new byte[64];
         ThreadLocalRandom.current().nextBytes(bytes);
-        final BoundedInputStream reader = new BoundedInputStream(new ByteArrayInputStream(bytes), 8192);
-        final byte[] buffer = new byte[10000];
-        assertThat(reader.read(buffer, 0, 10000)).isEqualTo(64);
-        assertArrayEquals(bytes, Arrays.copyOfRange(buffer, 0, 64));
-        reader.close();
+        try (BoundedInputStream reader = new BoundedInputStream(new ByteArrayInputStream(bytes), 8192)) {
+            final byte[] buffer = new byte[10000];
+            assertThat(reader.read(buffer, 0, 10000)).isEqualTo(64);
+            assertArrayEquals(bytes, Arrays.copyOfRange(buffer, 0, 64));
+        }
     }
 }
