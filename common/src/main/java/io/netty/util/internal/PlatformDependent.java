@@ -194,8 +194,15 @@ public final class PlatformDependent {
                 // Try Java 9 cleaner first, because it's based on Unsafe and can skip a few steps.
                 if (CleanerJava9.isSupported()) {
                     LEGACY_CLEANER = new CleanerJava9();
+                } else if (CleanerJava25Linker.isSupported()) {
+                    // On Java 25+ we can't use Unsafe, but we have MemorySegment.
+                    // If the "linker" implementation is supported, then we also have native access permissions
+                    // in the "io.netty.common" module, and we can link to malloc and free directly.
+                    LEGACY_CLEANER = new CleanerJava25Linker();
                 } else if (CleanerJava25.isSupported()) {
                     // On Java 25+ we can't use Unsafe, but we have MemorySegment.
+                    // We don't have native access permissions to link malloc and free directly, but we can
+                    // use shared memory segment instances.
                     LEGACY_CLEANER = new CleanerJava25();
                 } else {
                     LEGACY_CLEANER = NOOP;
