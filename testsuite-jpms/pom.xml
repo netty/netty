@@ -284,6 +284,13 @@
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
         </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <scope>compile</scope>
+        </dependency>
       </dependencies>
     </profile>
 
@@ -306,6 +313,13 @@
         <dependency>
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-resolver-dns-native-macos</artifactId>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <scope>compile</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
