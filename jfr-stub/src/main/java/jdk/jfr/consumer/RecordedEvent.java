@@ -16,7 +16,19 @@
 package jdk.jfr.consumer;
 
 public class RecordedEvent {
+    public RecordedEvent() {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
+
     public String getString(String fieldName) {
-        return null;
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
+
+    public boolean getBoolean(String fieldName) {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
+
+    public int getInt(String fieldName) {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 }

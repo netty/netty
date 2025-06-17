@@ -16,23 +16,31 @@
 package jdk.jfr;
 
 public abstract class Event {
+    public Event() {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
+
     public final void begin() {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 
     public final void end() {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 
     public final void commit() {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 
     public final boolean isEnabled() {
-        return false;
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 
     public final boolean shouldCommit() {
-        return false;
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 
     public final void set(int index, Object value) {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 }

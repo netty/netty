@@ -29,6 +29,8 @@ import io.netty.util.internal.ReferenceCountUpdater;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.UnstableApi;
+import jdk.jfr.Enabled;
+import jdk.jfr.Event;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -93,7 +95,7 @@ final class AdaptivePoolingAllocator {
      * which is a much, much larger space. Chunks are also allocated in whole multiples of the minimum
      * chunk size, which itself is a whole multiple of popular page sizes like 4 KiB, 16 KiB, and 64 KiB.
      */
-    private static final int MIN_CHUNK_SIZE = 128 * 1024;
+    static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int EXPANSION_ATTEMPTS = 3;
     private static final int INITIAL_MAGAZINES = 4;
     private static final int RETIRE_CAPACITY = 256;
@@ -886,6 +888,16 @@ final class AdaptivePoolingAllocator {
             updater.setInitialValue(this);
             allocator = magazine.parent;
             attachToMagazine(magazine);
+
+            AllocateChunkEvent event = new AllocateChunkEvent();
+            if (event.isEnabled()) {
+                event.pooled = pooled;
+                event.capacity = capacity;
+                event.threadLocal = magazine.allocationLock == null;
+                event.direct = delegate.isDirect();
+                event.address = delegate.hasMemoryAddress() ? delegate.memoryAddress() : 0;
+                event.commit();
+            }
         }
 
         Magazine currentMagazine()  {
@@ -1012,6 +1024,16 @@ final class AdaptivePoolingAllocator {
         public int capacity() {
             return capacity;
         }
+    }
+
+    @Enabled(false)
+    @SuppressWarnings("Since15")
+    static final class AllocateChunkEvent extends Event {
+        int capacity;
+        boolean pooled;
+        boolean threadLocal;
+        boolean direct;
+        long address;
     }
 
     static final class AdaptiveByteBuf extends AbstractReferenceCountedByteBuf {

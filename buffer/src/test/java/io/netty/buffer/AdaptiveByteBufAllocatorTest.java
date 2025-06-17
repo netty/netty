@@ -16,21 +16,25 @@
 package io.netty.buffer;
 
 import io.netty.util.NettyRuntime;
+import io.netty.util.internal.PlatformDependent;
+import jdk.jfr.consumer.RecordedEvent;
+import jdk.jfr.consumer.RecordingStream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<AdaptiveByteBufAllocator> {
     @Override
@@ -156,6 +160,30 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         Throwable throwable = throwableAtomicReference.get();
         if (throwable != null) {
             fail("Expected no exception, but got", throwable);
+        }
+    }
+
+    @SuppressWarnings("Since15")
+    @Test
+    @Timeout(10)
+    public void jfrChunkAllocation() {
+        assumeTrue(PlatformDependent.javaVersion() >= 17);
+
+        try (RecordingStream stream = new RecordingStream()) {
+            CompletableFuture<RecordedEvent> future = new  CompletableFuture<>();
+
+            stream.enable(AdaptivePoolingAllocator.AllocateChunkEvent.class);
+            stream.onEvent(AdaptivePoolingAllocator.AllocateChunkEvent.class.getName(), future::complete);
+            stream.startAsync();
+
+            AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, false);
+            alloc.directBuffer(128).release();
+
+            RecordedEvent event = future.join();
+            assertEquals(AdaptivePoolingAllocator.MIN_CHUNK_SIZE, event.getInt("capacity"));
+            assertTrue(event.getBoolean("pooled"));
+            assertFalse(event.getBoolean("threadLocal"));
+            assertTrue(event.getBoolean("direct"));
         }
     }
 }

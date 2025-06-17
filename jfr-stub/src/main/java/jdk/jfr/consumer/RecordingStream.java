@@ -15,27 +15,39 @@
  */
 package jdk.jfr.consumer;
 
+import jdk.jfr.Event;
 import jdk.jfr.EventSettings;
 
 import java.util.function.Consumer;
 
 @SuppressWarnings("Since15")
 public class RecordingStream implements AutoCloseable {
+    public RecordingStream() {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
+
     public void startAsync() {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 
     @Override
     public void close() {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 
     public EventSettings enable(String s) {
-        return null;
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
+
+    public EventSettings enable(Class<? extends Event> c) {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 
     public EventSettings disable(String s) {
-        return null;
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 
     public void onEvent(String name, Consumer<RecordedEvent> consumer) {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 }
