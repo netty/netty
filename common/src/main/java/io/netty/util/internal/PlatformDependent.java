@@ -1710,7 +1710,7 @@ public final class PlatformDependent {
     /**
      * Check if JFR events are supported on this platform.
      */
-    public static boolean jfrEnabled() {
+    public static boolean isJfrEnabled() {
         return JFR;
     }
 

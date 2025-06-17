@@ -889,14 +889,16 @@ final class AdaptivePoolingAllocator {
             allocator = magazine.parent;
             attachToMagazine(magazine);
 
-            AllocateChunkEvent event = new AllocateChunkEvent();
-            if (event.isEnabled()) {
-                event.pooled = pooled;
-                event.capacity = capacity;
-                event.threadLocal = magazine.allocationLock == null;
-                event.direct = delegate.isDirect();
-                event.address = delegate.hasMemoryAddress() ? delegate.memoryAddress() : 0;
-                event.commit();
+            if (PlatformDependent.isJfrEnabled()) {
+                AllocateChunkEvent event = new AllocateChunkEvent();
+                if (event.isEnabled()) {
+                    event.pooled = pooled;
+                    event.capacity = capacity;
+                    event.threadLocal = magazine.allocationLock == null;
+                    event.direct = delegate.isDirect();
+                    event.address = delegate.hasMemoryAddress() ? delegate.memoryAddress() : 0;
+                    event.commit();
+                }
             }
         }
 
@@ -1015,6 +1017,21 @@ final class AdaptivePoolingAllocator {
                     chunk.release();
                 }
             }
+
+            if (PlatformDependent.isJfrEnabled()) {
+                AllocateBufferEvent event = new AllocateBufferEvent();
+                if (event.isEnabled()) {
+                    event.size = size;
+                    event.startingCapacity = startingCapacity;
+                    event.maxCapacity = maxCapacity;
+                    event.chunkPooled = pooled;
+                    event.direct = buf.isDirect();
+                    event.address = buf.hasMemoryAddress() ? buf.memoryAddress() : 0;
+                    Magazine m = magazine;
+                    event.chunkThreadLocal = m != null && m.allocationLock == null;
+                    event.commit();
+                }
+            }
         }
 
         public int remainingCapacity() {
@@ -1032,6 +1049,18 @@ final class AdaptivePoolingAllocator {
         int capacity;
         boolean pooled;
         boolean threadLocal;
+        boolean direct;
+        long address;
+    }
+
+    @Enabled(false)
+    @SuppressWarnings("Since15")
+    static final class AllocateBufferEvent extends Event {
+        int size;
+        int startingCapacity;
+        int maxCapacity;
+        boolean chunkPooled;
+        boolean chunkThreadLocal;
         boolean direct;
         long address;
     }

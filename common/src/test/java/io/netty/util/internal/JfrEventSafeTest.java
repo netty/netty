@@ -31,7 +31,7 @@ public class JfrEventSafeTest {
     @Test
     public void test() {
         // This code should work even on java 8. Other details are tested in JfrEventTest.
-        if (PlatformDependent.jfrEnabled()) {
+        if (PlatformDependent.isJfrEnabled()) {
             MyEvent event = new MyEvent();
             event.foo = "bar";
             event.commit();

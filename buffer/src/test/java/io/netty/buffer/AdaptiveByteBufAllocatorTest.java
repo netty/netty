@@ -170,7 +170,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         assumeTrue(PlatformDependent.javaVersion() >= 17);
 
         try (RecordingStream stream = new RecordingStream()) {
-            CompletableFuture<RecordedEvent> future = new  CompletableFuture<>();
+            CompletableFuture<RecordedEvent> future = new CompletableFuture<>();
 
             stream.enable(AdaptivePoolingAllocator.AllocateChunkEvent.class);
             stream.onEvent(AdaptivePoolingAllocator.AllocateChunkEvent.class.getName(), future::complete);
@@ -183,6 +183,32 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             assertEquals(AdaptivePoolingAllocator.MIN_CHUNK_SIZE, event.getInt("capacity"));
             assertTrue(event.getBoolean("pooled"));
             assertFalse(event.getBoolean("threadLocal"));
+            assertTrue(event.getBoolean("direct"));
+        }
+    }
+
+    @SuppressWarnings("Since15")
+    @Test
+    @Timeout(10)
+    public void jfrBufferAllocation() {
+        assumeTrue(PlatformDependent.javaVersion() >= 17);
+
+        try (RecordingStream stream = new RecordingStream()) {
+            CompletableFuture<RecordedEvent> future = new CompletableFuture<>();
+
+            stream.enable(AdaptivePoolingAllocator.AllocateBufferEvent.class);
+            stream.onEvent(AdaptivePoolingAllocator.AllocateBufferEvent.class.getName(), future::complete);
+            stream.startAsync();
+
+            AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, false);
+            alloc.directBuffer(128).release();
+
+            RecordedEvent event = future.join();
+            assertEquals(128, event.getInt("size"));
+            assertEquals(128, event.getInt("startingCapacity"));
+            assertEquals(Integer.MAX_VALUE, event.getInt("maxCapacity"));
+            assertTrue(event.getBoolean("chunkPooled"));
+            assertFalse(event.getBoolean("chunkThreadLocal"));
             assertTrue(event.getBoolean("direct"));
         }
     }
