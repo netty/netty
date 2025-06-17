@@ -127,6 +127,8 @@ public final class PlatformDependent {
     private static final String LINUX_ID_LIKE_PREFIX = "ID_LIKE=";
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
+    private static final boolean JFR;
+
     private static final Cleaner NOOP = new Cleaner() {
         @Override
         public CleanableDirectBuffer allocate(int capacity) {
@@ -231,6 +233,11 @@ public final class PlatformDependent {
             addFilesystemOsClassifiers(availableClassifiers);
         }
         LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
+
+        JFR = SystemPropertyUtil.getBoolean("io.netty.jfr.enabled", javaVersion() >= 9);
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.jfr.enabled: {}", JFR);
+        }
     }
 
     // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
@@ -1698,6 +1705,13 @@ public final class PlatformDependent {
         }
 
         return "unknown";
+    }
+
+    /**
+     * Check if {@link JfrEvent} is enabled on this platform.
+     */
+    public static boolean jfrEnabled() {
+        return JFR;
     }
 
     private PlatformDependent() {
