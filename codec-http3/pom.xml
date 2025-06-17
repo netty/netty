@@ -62,32 +62,37 @@
         <!-- As this is executed on either macOS or Linux we directly need to specify the classifier -->
         <!-- These dependencies will also be "merged" into the dependency section by the flatten plugin -->
         <dependency>
-          <groupId>io.netty</groupId>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
           <classifier>linux-x86_64</classifier>
           <scope>runtime</scope>
         </dependency>
         <dependency>
-          <groupId>io.netty</groupId>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
           <classifier>linux-aarch_64</classifier>
           <scope>runtime</scope>
         </dependency>
         <dependency>
-          <groupId>io.netty</groupId>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
           <classifier>osx-x86_64</classifier>
           <scope>runtime</scope>
         </dependency>
         <dependency>
-          <groupId>io.netty</groupId>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
           <classifier>osx-aarch_64</classifier>
           <scope>runtime</scope>
         </dependency>
         <dependency>
-          <groupId>io.netty</groupId>
+          <groupId>${project.groupId}</groupId>
           <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
           <classifier>windows-x86_64</classifier>
           <scope>runtime</scope>
         </dependency>
