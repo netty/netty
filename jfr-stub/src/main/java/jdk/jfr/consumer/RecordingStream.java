@@ -32,6 +32,10 @@ public class RecordingStream implements AutoCloseable {
         return null;
     }
 
+    public EventSettings disable(String s) {
+        return null;
+    }
+
     public void onEvent(String name, Consumer<RecordedEvent> consumer) {
     }
 }
