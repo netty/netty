@@ -1087,7 +1087,14 @@ final class AdaptivePoolingAllocator {
             int oldCapacity = length;
             AbstractByteBuf oldRoot = rootParent();
             length = 0; // Don't record buffer size statistics for this allocation.
-            allocator.allocate(newCapacity, maxCapacity(), this);
+            try {
+                allocator.allocate(newCapacity, maxCapacity(), this);
+            } finally {
+                if (length == 0) {
+                    // Allocation failed. Restore capacity.
+                    length = oldCapacity;
+                }
+            }
             oldRoot.getBytes(baseOldRootIndex, this, 0, oldCapacity);
             chunk.release();
             this.readerIndex = readerIndex;
