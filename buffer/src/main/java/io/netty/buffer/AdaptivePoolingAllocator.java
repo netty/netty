@@ -889,7 +889,7 @@ final class AdaptivePoolingAllocator {
             allocator = magazine.parent;
             attachToMagazine(magazine);
 
-            if (PlatformDependent.isJfrEnabled()) {
+            if (PlatformDependent.isJfrEnabled() && AllocateChunkEvent.INSTANCE.isEnabled()) {
                 AllocateChunkEvent event = new AllocateChunkEvent();
                 if (event.isEnabled()) {
                     event.pooled = pooled;
@@ -1018,7 +1018,7 @@ final class AdaptivePoolingAllocator {
                 }
             }
 
-            if (PlatformDependent.isJfrEnabled()) {
+            if (PlatformDependent.isJfrEnabled() && AllocateBufferEvent.INSTANCE.isEnabled()) {
                 AllocateBufferEvent event = new AllocateBufferEvent();
                 if (event.isEnabled()) {
                     event.size = size;
@@ -1046,6 +1046,8 @@ final class AdaptivePoolingAllocator {
     @Enabled(false)
     @SuppressWarnings("Since15")
     static final class AllocateChunkEvent extends Event {
+        static final AllocateChunkEvent INSTANCE = new AllocateChunkEvent();
+
         int capacity;
         boolean pooled;
         boolean threadLocal;
@@ -1056,6 +1058,8 @@ final class AdaptivePoolingAllocator {
     @Enabled(false)
     @SuppressWarnings("Since15")
     static final class AllocateBufferEvent extends Event {
+        static final AllocateBufferEvent INSTANCE = new AllocateBufferEvent();
+
         int size;
         int startingCapacity;
         int maxCapacity;
