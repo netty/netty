@@ -19,12 +19,13 @@ import jdk.jfr.Enabled;
 import jdk.jfr.Event;
 import jdk.jfr.consumer.RecordingStream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 @SuppressWarnings("Since15")
 public class JfrEventSafeTest {
@@ -39,9 +40,8 @@ public class JfrEventSafeTest {
     }
 
     @Test
+    @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     public void simple() throws Throwable {
-        assumeTrue(PlatformDependent.javaVersion() >= 17);
-
         try (RecordingStream stream = new RecordingStream()) {
             stream.enable(MyEvent.class.getName());
             CompletableFuture<String> result = new CompletableFuture<>();
@@ -57,9 +57,8 @@ public class JfrEventSafeTest {
     }
 
     @Test
+    @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     public void enableDefaults() throws Throwable {
-        assumeTrue(PlatformDependent.javaVersion() >= 17);
-
         try (RecordingStream stream = new RecordingStream()) {
             CompletableFuture<String> result = new CompletableFuture<>();
             stream.onEvent(DisabledEvent.class.getName(),

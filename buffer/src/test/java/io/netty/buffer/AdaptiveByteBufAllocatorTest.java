@@ -21,6 +21,8 @@ import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -34,7 +36,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<AdaptiveByteBufAllocator> {
     @Override
@@ -165,10 +166,9 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
 
     @SuppressWarnings("Since15")
     @Test
+    @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void jfrChunkAllocation() {
-        assumeTrue(PlatformDependent.javaVersion() >= 17);
-
         try (RecordingStream stream = new RecordingStream()) {
             CompletableFuture<RecordedEvent> future = new CompletableFuture<>();
 
@@ -189,10 +189,9 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
 
     @SuppressWarnings("Since15")
     @Test
+    @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void jfrBufferAllocation() {
-        assumeTrue(PlatformDependent.javaVersion() >= 17);
-
         try (RecordingStream stream = new RecordingStream()) {
             CompletableFuture<RecordedEvent> future = new CompletableFuture<>();
 
