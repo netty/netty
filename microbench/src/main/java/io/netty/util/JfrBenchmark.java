@@ -27,6 +27,8 @@ import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.TearDown;
+import org.openjdk.jmh.profile.GCProfiler;
+import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 
 import java.util.concurrent.TimeUnit;
 
@@ -40,6 +42,12 @@ public class JfrBenchmark extends AbstractMicrobenchmark {
     boolean enabled;
 
     private RecordingStream stream;
+
+    @Override
+    protected ChainedOptionsBuilder newOptionsBuilder() throws Exception {
+        return super.newOptionsBuilder()
+                .addProfiler(GCProfiler.class);
+    }
 
     @Setup
     public void setup() {
