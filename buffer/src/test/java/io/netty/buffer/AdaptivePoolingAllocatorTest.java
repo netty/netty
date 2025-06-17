@@ -37,24 +37,27 @@ class AdaptivePoolingAllocatorTest implements Supplier<String> {
 
     @Test
     void sizeBucketComputations() throws Exception {
-        assertSizeBucket(0, 8 * 1024);
-        assertSizeBucket(1, 16 * 1024);
-        assertSizeBucket(2, 32 * 1024);
-        assertSizeBucket(3, 64 * 1024);
-        assertSizeBucket(4, 128 * 1024);
-        assertSizeBucket(5, 256 * 1024);
-        assertSizeBucket(6, 512 * 1024);
-        assertSizeBucket(7, 1024 * 1024);
-        // The sizeBucket function will be used for sizes up to 10 MiB
-        assertSizeBucket(7, 2 * 1024 * 1024);
-        assertSizeBucket(7, 3 * 1024 * 1024);
-        assertSizeBucket(7, 4 * 1024 * 1024);
-        assertSizeBucket(7, 5 * 1024 * 1024);
-        assertSizeBucket(7, 6 * 1024 * 1024);
-        assertSizeBucket(7, 7 * 1024 * 1024);
-        assertSizeBucket(7, 8 * 1024 * 1024);
-        assertSizeBucket(7, 9 * 1024 * 1024);
-        assertSizeBucket(7, 10 * 1024 * 1024);
+        assertSizeBucket(0, 256);
+        assertSizeBucket(1, 512);
+        assertSizeBucket(2, 1024);
+        assertSizeBucket(3, 2048);
+        assertSizeBucket(4, 4096);
+        assertSizeBucket(5, 8 * 1024);
+        assertSizeBucket(6, 16 * 1024);
+        assertSizeBucket(7, 32 * 1024);
+        assertSizeBucket(8, 64 * 1024);
+        assertSizeBucket(9, 128 * 1024);
+        assertSizeBucket(10, 256 * 1024);
+        assertSizeBucket(11, 512 * 1024);
+        assertSizeBucket(12, 1024 * 1024);
+        // The sizeBucket function will be used for sizes up to 8 MiB
+        assertSizeBucket(13, 2 * 1024 * 1024);
+        assertSizeBucket(14, 3 * 1024 * 1024);
+        assertSizeBucket(14, 4 * 1024 * 1024);
+        assertSizeBucket(15, 5 * 1024 * 1024);
+        assertSizeBucket(15, 6 * 1024 * 1024);
+        assertSizeBucket(15, 7 * 1024 * 1024);
+        assertSizeBucket(15, 8 * 1024 * 1024);
     }
 
     private void assertSizeBucket(int expectedSizeBucket, int maxSizeIncluded) {
