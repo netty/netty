@@ -896,7 +896,7 @@ final class AdaptivePoolingAllocator {
 
             if (PlatformDependent.isJfrEnabled() && AllocateChunkEvent.INSTANCE.isEnabled()) {
                 AllocateChunkEvent event = new AllocateChunkEvent();
-                if (event.isEnabled()) {
+                if (event.shouldCommit()) {
                     event.fill(this);
                     event.pooled = pooled;
                     event.threadLocal = magazine.allocationLock == null;
@@ -1002,7 +1002,7 @@ final class AdaptivePoolingAllocator {
         private void onReturn(boolean returnedToMagazine) {
             if (PlatformDependent.isJfrEnabled() && ReturnChunkEvent.INSTANCE.isEnabled()) {
                 ReturnChunkEvent event = new ReturnChunkEvent();
-                if (event.isEnabled()) {
+                if (event.shouldCommit()) {
                     event.fill(this);
                     event.returnedToMagazine = returnedToMagazine;
                     event.commit();
@@ -1013,7 +1013,7 @@ final class AdaptivePoolingAllocator {
         private void onRelease() {
             if (PlatformDependent.isJfrEnabled() && FreeChunkEvent.INSTANCE.isEnabled()) {
                 FreeChunkEvent event = new FreeChunkEvent();
-                if (event.isEnabled()) {
+                if (event.shouldCommit()) {
                     event.fill(this);
                     event.pooled = pooled;
                     event.commit();
@@ -1060,7 +1060,7 @@ final class AdaptivePoolingAllocator {
     }
 
     @SuppressWarnings("Since15")
-    static abstract class BaseChunkEvent extends Event {
+    abstract static class BaseChunkEvent extends Event {
         @DataAmount
         @Description("Size of the chunk")
         int capacity;
@@ -1151,7 +1151,7 @@ final class AdaptivePoolingAllocator {
 
             if (PlatformDependent.isJfrEnabled() && AllocateBufferEvent.INSTANCE.isEnabled()) {
                 AllocateBufferEvent event = new AllocateBufferEvent();
-                if (event.isEnabled()) {
+                if (event.shouldCommit()) {
                     event.fill(this);
                     event.chunkPooled = wrapped.pooled;
                     Magazine m = wrapped.magazine;
@@ -1195,7 +1195,7 @@ final class AdaptivePoolingAllocator {
 
             if (PlatformDependent.isJfrEnabled() && ReallocateBufferEvent.INSTANCE.isEnabled()) {
                 ReallocateBufferEvent event = new ReallocateBufferEvent();
-                if (event.isEnabled()) {
+                if (event.shouldCommit()) {
                     event.fill(this);
                     event.newCapacity = newCapacity;
                     event.commit();
@@ -1536,7 +1536,7 @@ final class AdaptivePoolingAllocator {
         protected void deallocate() {
             if (PlatformDependent.isJfrEnabled() && FreeBufferEvent.INSTANCE.isEnabled()) {
                 FreeBufferEvent event = new FreeBufferEvent();
-                if (event.isEnabled()) {
+                if (event.shouldCommit()) {
                     event.fill(this);
                     event.commit();
                 }
@@ -1558,7 +1558,7 @@ final class AdaptivePoolingAllocator {
     }
 
     @SuppressWarnings("Since15")
-    static abstract class AbstractBufferEvent extends Event {
+    abstract static class AbstractBufferEvent extends Event {
         @DataAmount
         @Description("Configured buffer capacity")
         int size;
