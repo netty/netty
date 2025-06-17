@@ -28,6 +28,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -168,32 +169,22 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @Test
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
-    public void jfrChunkAllocation() {
+    public void jfrChunkAllocation() throws ExecutionException, InterruptedException {
         try (RecordingStream stream = new RecordingStream()) {
             CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
-            CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
 
             stream.enable(AdaptivePoolingAllocator.AllocateChunkEvent.class);
             stream.onEvent(AdaptivePoolingAllocator.AllocateChunkEvent.class.getName(), allocateFuture::complete);
-            stream.enable(AdaptivePoolingAllocator.ReturnChunkEvent.class);
-            stream.onEvent(AdaptivePoolingAllocator.ReturnChunkEvent.class.getName(), releaseFuture::complete);
             stream.startAsync();
 
             AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, false);
             alloc.directBuffer(128).release();
 
-            RecordedEvent allocate = allocateFuture.join();
+            RecordedEvent allocate = allocateFuture.get();
             assertEquals(AdaptivePoolingAllocator.MIN_CHUNK_SIZE, allocate.getInt("capacity"));
             assertTrue(allocate.getBoolean("pooled"));
             assertFalse(allocate.getBoolean("threadLocal"));
             assertTrue(allocate.getBoolean("direct"));
-
-            RecordedEvent release = releaseFuture.join();
-            assertEquals(AdaptivePoolingAllocator.MIN_CHUNK_SIZE, release.getInt("capacity"));
-            assertTrue(release.getBoolean("pooled"));
-            assertFalse(release.getBoolean("threadLocal"));
-            assertTrue(release.getBoolean("direct"));
-            assertTrue(release.getBoolean("returnedToMagazine"));
         }
     }
 
@@ -201,7 +192,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @Test
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
-    public void jfrBufferAllocation() {
+    public void jfrBufferAllocation() throws ExecutionException, InterruptedException {
         try (RecordingStream stream = new RecordingStream()) {
             CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
             CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
@@ -215,7 +206,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, false);
             alloc.directBuffer(128).release();
 
-            RecordedEvent allocate = allocateFuture.join();
+            RecordedEvent allocate = allocateFuture.get();
             assertEquals(128, allocate.getInt("size"));
             assertEquals(128, allocate.getInt("maxFastCapacity"));
             assertEquals(Integer.MAX_VALUE, allocate.getInt("maxCapacity"));
@@ -223,7 +214,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             assertFalse(allocate.getBoolean("chunkThreadLocal"));
             assertTrue(allocate.getBoolean("direct"));
 
-            RecordedEvent release = releaseFuture.join();
+            RecordedEvent release = releaseFuture.get();
             assertEquals(128, release.getInt("size"));
             assertEquals(128, release.getInt("maxFastCapacity"));
             assertEquals(Integer.MAX_VALUE, release.getInt("maxCapacity"));

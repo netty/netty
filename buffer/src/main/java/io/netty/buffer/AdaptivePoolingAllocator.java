@@ -1060,7 +1060,7 @@ final class AdaptivePoolingAllocator {
     }
 
     @SuppressWarnings("Since15")
-    abstract static class BaseChunkEvent extends Event {
+    abstract static class AbstractChunkEvent extends Event {
         @DataAmount
         @Description("Size of the chunk")
         int capacity;
@@ -1085,7 +1085,7 @@ final class AdaptivePoolingAllocator {
     @Category("Netty")
     @Label("Chunk Allocation")
     @Description("Triggered when a new memory chunk is allocated for the adaptive allocator")
-    static final class AllocateChunkEvent extends BaseChunkEvent {
+    static final class AllocateChunkEvent extends AbstractChunkEvent {
         static final AllocateChunkEvent INSTANCE = new AllocateChunkEvent();
 
         @Description("Is this chunk pooled, or is it a one-off allocation for a single buffer?")
@@ -1099,7 +1099,7 @@ final class AdaptivePoolingAllocator {
     @Category("Netty")
     @Label("Chunk Free")
     @Description("Triggered when a memory chunk is freed for the adaptive allocator")
-    static final class FreeChunkEvent extends BaseChunkEvent {
+    static final class FreeChunkEvent extends AbstractChunkEvent {
         static final FreeChunkEvent INSTANCE = new FreeChunkEvent();
 
         @Description("Was this chunk pooled, or was it a one-off allocation for a single buffer?")
@@ -1111,7 +1111,7 @@ final class AdaptivePoolingAllocator {
     @Category("Netty")
     @Label("Chunk Return")
     @Description("Triggered when a memory chunk is freed for the adaptive allocator")
-    static final class ReturnChunkEvent extends BaseChunkEvent {
+    static final class ReturnChunkEvent extends AbstractChunkEvent {
         static final FreeChunkEvent INSTANCE = new FreeChunkEvent();
 
         @Description("Was this chunk returned to its previous magazine?")
