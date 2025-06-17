@@ -170,20 +170,30 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @Timeout(10)
     public void jfrChunkAllocation() {
         try (RecordingStream stream = new RecordingStream()) {
-            CompletableFuture<RecordedEvent> future = new CompletableFuture<>();
+            CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
+            CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
 
             stream.enable(AdaptivePoolingAllocator.AllocateChunkEvent.class);
-            stream.onEvent(AdaptivePoolingAllocator.AllocateChunkEvent.class.getName(), future::complete);
+            stream.onEvent(AdaptivePoolingAllocator.AllocateChunkEvent.class.getName(), allocateFuture::complete);
+            stream.enable(AdaptivePoolingAllocator.ReturnChunkEvent.class);
+            stream.onEvent(AdaptivePoolingAllocator.ReturnChunkEvent.class.getName(), releaseFuture::complete);
             stream.startAsync();
 
             AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, false);
             alloc.directBuffer(128).release();
 
-            RecordedEvent event = future.join();
-            assertEquals(AdaptivePoolingAllocator.MIN_CHUNK_SIZE, event.getInt("capacity"));
-            assertTrue(event.getBoolean("pooled"));
-            assertFalse(event.getBoolean("threadLocal"));
-            assertTrue(event.getBoolean("direct"));
+            RecordedEvent allocate = allocateFuture.join();
+            assertEquals(AdaptivePoolingAllocator.MIN_CHUNK_SIZE, allocate.getInt("capacity"));
+            assertTrue(allocate.getBoolean("pooled"));
+            assertFalse(allocate.getBoolean("threadLocal"));
+            assertTrue(allocate.getBoolean("direct"));
+
+            RecordedEvent release = releaseFuture.join();
+            assertEquals(AdaptivePoolingAllocator.MIN_CHUNK_SIZE, release.getInt("capacity"));
+            assertTrue(release.getBoolean("pooled"));
+            assertFalse(release.getBoolean("threadLocal"));
+            assertTrue(release.getBoolean("direct"));
+            assertTrue(release.getBoolean("returnedToMagazine"));
         }
     }
 
@@ -193,22 +203,31 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @Timeout(10)
     public void jfrBufferAllocation() {
         try (RecordingStream stream = new RecordingStream()) {
-            CompletableFuture<RecordedEvent> future = new CompletableFuture<>();
+            CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
+            CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
 
             stream.enable(AdaptivePoolingAllocator.AllocateBufferEvent.class);
-            stream.onEvent(AdaptivePoolingAllocator.AllocateBufferEvent.class.getName(), future::complete);
+            stream.onEvent(AdaptivePoolingAllocator.AllocateBufferEvent.class.getName(), allocateFuture::complete);
+            stream.enable(AdaptivePoolingAllocator.FreeBufferEvent.class);
+            stream.onEvent(AdaptivePoolingAllocator.FreeBufferEvent.class.getName(), releaseFuture::complete);
             stream.startAsync();
 
             AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, false);
             alloc.directBuffer(128).release();
 
-            RecordedEvent event = future.join();
-            assertEquals(128, event.getInt("size"));
-            assertEquals(128, event.getInt("startingCapacity"));
-            assertEquals(Integer.MAX_VALUE, event.getInt("maxCapacity"));
-            assertTrue(event.getBoolean("chunkPooled"));
-            assertFalse(event.getBoolean("chunkThreadLocal"));
-            assertTrue(event.getBoolean("direct"));
+            RecordedEvent allocate = allocateFuture.join();
+            assertEquals(128, allocate.getInt("size"));
+            assertEquals(128, allocate.getInt("maxFastCapacity"));
+            assertEquals(Integer.MAX_VALUE, allocate.getInt("maxCapacity"));
+            assertTrue(allocate.getBoolean("chunkPooled"));
+            assertFalse(allocate.getBoolean("chunkThreadLocal"));
+            assertTrue(allocate.getBoolean("direct"));
+
+            RecordedEvent release = releaseFuture.join();
+            assertEquals(128, release.getInt("size"));
+            assertEquals(128, release.getInt("maxFastCapacity"));
+            assertEquals(Integer.MAX_VALUE, release.getInt("maxCapacity"));
+            assertTrue(release.getBoolean("direct"));
         }
     }
 }
