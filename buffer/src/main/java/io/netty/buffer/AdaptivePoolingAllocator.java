@@ -1176,7 +1176,7 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public int maxFastWritableBytes() {
-            return maxFastCapacity;
+            return Math.min(maxFastCapacity, maxCapacity()) - writerIndex;
         }
 
         @Override
