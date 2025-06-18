@@ -799,6 +799,7 @@
     <module>testsuite-native-image-client-runtime-init</module>
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
+    <module>jfr-stub</module>
     <module>bom</module>
   </modules>
 
@@ -1999,7 +2000,7 @@
               <configuration>
                 <targetVersion>${maven.compiler.target}</targetVersion>
                 <!-- allow undocumented classes like sun.misc.Unsafe: -->
-                <internalRuntimeForbidden>true</internalRuntimeForbidden>
+                <internalRuntimeForbidden>false</internalRuntimeForbidden>
                 <!-- if the used Java version is too new, don't fail, just do nothing: -->
                 <failOnUnsupportedJava>false</failOnUnsupportedJava>
                 <bundledSignatures>

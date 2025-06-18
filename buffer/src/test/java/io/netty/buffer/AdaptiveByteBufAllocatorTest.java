@@ -16,18 +16,24 @@
 package io.netty.buffer;
 
 import io.netty.util.NettyRuntime;
+import io.netty.util.internal.PlatformDependent;
+import jdk.jfr.consumer.RecordedEvent;
+import jdk.jfr.consumer.RecordingStream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -156,6 +162,63 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         Throwable throwable = throwableAtomicReference.get();
         if (throwable != null) {
             fail("Expected no exception, but got", throwable);
+        }
+    }
+
+    @SuppressWarnings("Since15")
+    @Test
+    @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
+    @Timeout(10)
+    public void jfrChunkAllocation() throws ExecutionException, InterruptedException {
+        try (RecordingStream stream = new RecordingStream()) {
+            CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
+
+            stream.enable(AdaptivePoolingAllocator.AllocateChunkEvent.class);
+            stream.onEvent(AdaptivePoolingAllocator.AllocateChunkEvent.class.getName(), allocateFuture::complete);
+            stream.startAsync();
+
+            AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, false);
+            alloc.directBuffer(128).release();
+
+            RecordedEvent allocate = allocateFuture.get();
+            assertEquals(AdaptivePoolingAllocator.MIN_CHUNK_SIZE, allocate.getInt("capacity"));
+            assertTrue(allocate.getBoolean("pooled"));
+            assertFalse(allocate.getBoolean("threadLocal"));
+            assertTrue(allocate.getBoolean("direct"));
+        }
+    }
+
+    @SuppressWarnings("Since15")
+    @Test
+    @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
+    @Timeout(10)
+    public void jfrBufferAllocation() throws ExecutionException, InterruptedException {
+        try (RecordingStream stream = new RecordingStream()) {
+            CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
+            CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
+
+            stream.enable(AdaptivePoolingAllocator.AllocateBufferEvent.class);
+            stream.onEvent(AdaptivePoolingAllocator.AllocateBufferEvent.class.getName(), allocateFuture::complete);
+            stream.enable(AdaptivePoolingAllocator.FreeBufferEvent.class);
+            stream.onEvent(AdaptivePoolingAllocator.FreeBufferEvent.class.getName(), releaseFuture::complete);
+            stream.startAsync();
+
+            AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, false);
+            alloc.directBuffer(128).release();
+
+            RecordedEvent allocate = allocateFuture.get();
+            assertEquals(128, allocate.getInt("size"));
+            assertEquals(128, allocate.getInt("maxFastCapacity"));
+            assertEquals(Integer.MAX_VALUE, allocate.getInt("maxCapacity"));
+            assertTrue(allocate.getBoolean("chunkPooled"));
+            assertFalse(allocate.getBoolean("chunkThreadLocal"));
+            assertTrue(allocate.getBoolean("direct"));
+
+            RecordedEvent release = releaseFuture.get();
+            assertEquals(128, release.getInt("size"));
+            assertEquals(128, release.getInt("maxFastCapacity"));
+            assertEquals(Integer.MAX_VALUE, release.getInt("maxCapacity"));
+            assertTrue(release.getBoolean("direct"));
         }
     }
 }
