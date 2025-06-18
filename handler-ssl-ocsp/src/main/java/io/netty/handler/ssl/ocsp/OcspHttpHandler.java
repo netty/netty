@@ -43,6 +43,7 @@ final class OcspHttpHandler extends SimpleChannelInboundHandler<FullHttpResponse
      * @param responsePromise {@link Promise} of {@link OCSPResp}
      */
     OcspHttpHandler(Promise<OCSPResp> responsePromise) {
+        super(FullHttpResponse.class);
         this.responseFuture = checkNotNull(responsePromise, "ResponsePromise");
     }
 

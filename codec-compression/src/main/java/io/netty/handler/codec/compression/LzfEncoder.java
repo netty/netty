@@ -145,7 +145,7 @@ public class LzfEncoder extends MessageToByteEncoder<ByteBuf> {
      */
     @Deprecated
     public LzfEncoder(boolean safeInstance, int totalLength, int compressThreshold) {
-        super(false);
+        super(ByteBuf.class, false);
         if (totalLength < MIN_BLOCK_TO_COMPRESS || totalLength > MAX_CHUNK_LEN) {
             throw new IllegalArgumentException("totalLength: " + totalLength +
                     " (expected: " + MIN_BLOCK_TO_COMPRESS + '-' + MAX_CHUNK_LEN + ')');

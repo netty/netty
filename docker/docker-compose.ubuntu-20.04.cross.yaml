@@ -44,7 +44,7 @@ services:
       - ~/.m2:/root/.m2
       - ~/local-staging:/root/local-staging
       - ..:/code
-    command: /bin/bash -cl "cat <(echo -e \"${GPG_PRIVATE_KEY}\") | gpg --batch --import && ./mvnw -B -ntp -Plinux-riscv64 -pl transport-native-unix-common,transport-native-epoll,transport-native-io_uring -am clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true -Dgpg.passphrase=${GPG_PASSPHRASE} -Dgpg.keyname=${GPG_KEYNAME}"
+    command: /bin/bash -cl "cat <(echo -e \"${GPG_PRIVATE_KEY}\") | gpg --batch --import && ./mvnw -B -ntp -Plinux-riscv64 -pl transport-native-unix-common,transport-native-epoll,transport-native-io_uring -am clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true -Dgpg.passphrase=${GPG_PASSPHRASE} -Dgpg.keyname=${GPG_KEYNAME}"
 
   cross-compile-riscv64-shell:
     <<: *cross-compile-riscv64-common

@@ -255,7 +255,7 @@ jobs:
 
       - name: Stage release to local staging directory
         working-directory: ./prepare-release-workspace/
-        run: ./mvnw -B -ntp clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true -DskipH3Spec=true
+        run: ./mvnw -B -ntp clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true -DskipH3Spec=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -273,7 +273,7 @@ jobs:
 
   stage-release-windows:
     needs: prepare-release
-    runs-on: windows-2019
+    runs-on: windows-2022
     name: stage-release-windows-x86_64
     env:
       # Let's limit the amount of ram that is used to unpack rustup as we saw
@@ -350,7 +350,7 @@ jobs:
 
       - name: Stage release to local staging directory
         working-directory: ${{ github.workspace }}/prepare-release-workspace
-        run: ./mvnw.cmd -B -ntp --file pom.xml clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true -D'checkstyle.skip=true' -DskipH3Spec=true
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true -D'checkstyle.skip=true' -DskipH3Spec=true
 
       - name: Upload local staging directory
         uses: actions/upload-artifact@v4
@@ -466,17 +466,25 @@ jobs:
         working-directory: ./prepare-release-workspace/
         run: bash ./.github/scripts/local_staging_install_release.sh ~/.m2/repository ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging
 
+      - name: Generate netty-codec-http3 and deploy to local staging.
+        working-directory: ./prepare-release-workspace/
+        run: |
+          mkdir -p ~/codec-http3-local-staging
+          ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -pl all clean package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true -DskipH3Spec=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
+          cp -r ./codec-http3/target/central-staging/* ~/codec-http3-local-staging
+
       - name: Generate netty-all and deploy to local staging.
         working-directory: ./prepare-release-workspace/
         run: |
           mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -pl all clean package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipTests=true -DskipH3Spec=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
+          ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -pl all clean package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true -DskipH3Spec=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
+          cp -r ./all/target/central-staging/* ~/all-local-staging
 
       # This step takes care of merging all the previous staged repositories in a way that will allow us to deploy
       # all together with one maven command.
       - name: Merge staging repositories
         working-directory: ./prepare-release-workspace/
-        run: bash ./.github/scripts/local_staging_merge_release.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ./all/target/central-staging
+        run: bash ./.github/scripts/local_staging_merge_release.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ~/codec-http3-local-staging ~/all-local-staging
 
       - name: Create bundle
         working-directory: ./prepare-release-workspace/

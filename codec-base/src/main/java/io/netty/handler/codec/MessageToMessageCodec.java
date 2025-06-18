@@ -54,7 +54,7 @@ import java.util.List;
  */
 public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends ChannelDuplexHandler {
 
-    private final MessageToMessageDecoder<Object> decoder = new MessageToMessageDecoder<Object>() {
+    private final MessageToMessageDecoder<Object> decoder = new MessageToMessageDecoder<Object>(Object.class) {
 
         @Override
         public boolean acceptInboundMessage(Object msg) throws Exception {
@@ -72,7 +72,7 @@ public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends Cha
             return MessageToMessageCodec.this.isSharable();
         }
     };
-    private final MessageToMessageEncoder<Object> encoder = new MessageToMessageEncoder<Object>() {
+    private final MessageToMessageEncoder<Object> encoder = new MessageToMessageEncoder<Object>(Object.class) {
 
         @Override
         public boolean acceptOutboundMessage(Object msg) throws Exception {

@@ -30,7 +30,7 @@ import java.util.List;
 public class NoopAddressResolver extends AbstractAddressResolver<SocketAddress> {
 
     public NoopAddressResolver(EventExecutor executor) {
-        super(executor);
+        super(executor, SocketAddress.class);
     }
 
     @Override

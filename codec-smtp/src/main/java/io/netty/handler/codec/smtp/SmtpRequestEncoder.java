@@ -38,6 +38,10 @@ public final class SmtpRequestEncoder extends MessageToMessageEncoder<Object> {
 
     private boolean contentExpected;
 
+    public SmtpRequestEncoder() {
+        super(Object.class);
+    }
+
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         return msg instanceof SmtpRequest || msg instanceof SmtpContent;

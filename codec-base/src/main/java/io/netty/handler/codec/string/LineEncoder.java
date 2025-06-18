@@ -81,6 +81,7 @@ public class LineEncoder extends MessageToMessageEncoder<CharSequence> {
      * Creates a new instance with the specified line separator and character set.
      */
     public LineEncoder(LineSeparator lineSeparator, Charset charset) {
+        super(CharSequence.class);
         this.charset = ObjectUtil.checkNotNull(charset, "charset");
         this.lineSeparator = ObjectUtil.checkNotNull(lineSeparator, "lineSeparator").value().getBytes(charset);
     }

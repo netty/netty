@@ -127,6 +127,8 @@ public final class PlatformDependent {
     private static final String LINUX_ID_LIKE_PREFIX = "ID_LIKE=";
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
+    private static final boolean JFR;
+
     private static final Cleaner NOOP = new Cleaner() {
         @Override
         public CleanableDirectBuffer allocate(int capacity) {
@@ -192,9 +194,9 @@ public final class PlatformDependent {
                 // Try Java 9 cleaner first, because it's based on Unsafe and can skip a few steps.
                 if (CleanerJava9.isSupported()) {
                     LEGACY_CLEANER = new CleanerJava9();
-                } else if (CleanerJava24.isSupported()) {
-                    // On Java 24+ we can't use Unsafe, but we have MemorySegment.
-                    LEGACY_CLEANER = new CleanerJava24();
+                } else if (CleanerJava25.isSupported()) {
+                    // On Java 25+ we can't use Unsafe, but we have MemorySegment.
+                    LEGACY_CLEANER = new CleanerJava25();
                 } else {
                     LEGACY_CLEANER = NOOP;
                 }
@@ -231,6 +233,11 @@ public final class PlatformDependent {
             addFilesystemOsClassifiers(availableClassifiers);
         }
         LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
+
+        JFR = SystemPropertyUtil.getBoolean("io.netty.jfr.enabled", javaVersion() >= 9);
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.jfr.enabled: {}", JFR);
+        }
     }
 
     // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
@@ -244,7 +251,6 @@ public final class PlatformDependent {
     private static boolean processOsReleaseFile(String osReleaseFileName, Set<String> availableClassifiers) {
         Path file = Paths.get(osReleaseFileName);
         return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-            Pattern lineSplitPattern = Pattern.compile("[ ]+");
             try {
                 if (Files.exists(file)) {
                     try (BufferedReader reader = new BufferedReader(new InputStreamReader(
@@ -258,7 +264,7 @@ public final class PlatformDependent {
                             } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
                                 line = normalizeOsReleaseVariableValue(
                                         line.substring(LINUX_ID_LIKE_PREFIX.length()));
-                                addClassifier(availableClassifiers, lineSplitPattern.split(line));
+                                addClassifier(availableClassifiers, line.split(" "));
                             }
                         }
                     } catch (SecurityException e) {
@@ -1699,6 +1705,13 @@ public final class PlatformDependent {
         }
 
         return "unknown";
+    }
+
+    /**
+     * Check if JFR events are supported on this platform.
+     */
+    public static boolean isJfrEnabled() {
+        return JFR;
     }
 
     private PlatformDependent() {

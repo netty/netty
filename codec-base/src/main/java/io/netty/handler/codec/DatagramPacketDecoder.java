@@ -42,6 +42,7 @@ public class DatagramPacketDecoder extends MessageToMessageDecoder<DatagramPacke
      * @param decoder the specified {@link ByteBuf} decoder
      */
     public DatagramPacketDecoder(MessageToMessageDecoder<ByteBuf> decoder) {
+        super(DatagramPacket.class);
         this.decoder = checkNotNull(decoder, "decoder");
     }
 

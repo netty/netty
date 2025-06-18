@@ -29,7 +29,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class CheckModuleDescriptorTest {
 
     private static final Set<String> AUTOMATIC_MODULES_ALLOWED = Set.of(
-            "com.google.protobuf", "protobuf.javanano", "jboss.marshalling", "jboss.marshalling.serial");
+            "com.google.protobuf", "protobuf.javanano", "org.jboss.marshalling", "org.jboss.marshalling.serial");
 
     /**
      * Ensure that classpath is empty and all module are named and not automatic.

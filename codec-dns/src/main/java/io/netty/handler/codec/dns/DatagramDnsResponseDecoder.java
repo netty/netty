@@ -43,6 +43,7 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
      * Creates a new decoder with the specified {@code recordDecoder}.
      */
     public DatagramDnsResponseDecoder(DnsRecordDecoder recordDecoder) {
+        super(DatagramPacket.class);
         this.responseDecoder = new DnsResponseDecoder<InetSocketAddress>(recordDecoder) {
             @Override
             protected DnsResponse newResponse(InetSocketAddress sender, InetSocketAddress recipient,

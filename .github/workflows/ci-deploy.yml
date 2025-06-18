@@ -135,7 +135,7 @@ jobs:
           include-hidden-files: true
 
   stage-snapshot-windows-x86_64:
-    runs-on: windows-2019
+    runs-on: windows-2022
     name: stage-snapshot-windows-x86_64
     env:
       # Let's limit the amount of ram that is used to unpack rustup as we saw
@@ -264,13 +264,18 @@ jobs:
       - name: Copy previous build artifacts to local maven repository
         run: bash ./.github/scripts/local_staging_install_snapshot.sh ~/.m2/repository ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging
 
+      - name: Generate netty-codec-http3 and deploy to local staging.
+        run: |
+          mkdir -p ~/codec-http3-local-staging
+          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/codec-http3-local-staging -DskipTests=true
+
       - name: Generate netty-all and deploy to local staging.
         run: |
           mkdir -p ~/all-local-staging
           ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/all-local-staging -DskipTests=true
 
       - name: Merge staging repositories
-        run: bash ./.github/scripts/local_staging_merge_snapshot.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ~/all-local-staging
+        run: bash ./.github/scripts/local_staging_merge_snapshot.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ~/codec-http3-local-staging ~/all-local-staging
 
       - name: Deploy local staged artifacts
         run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$HOME/local-staging -DserverId=central-portal-snapshots
