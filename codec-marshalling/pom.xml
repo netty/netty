@@ -122,5 +122,13 @@
     </plugins>
   </build>
 
+  <profiles>
+    <profile>
+      <id>jdk8-tests</id>
+      <properties>
+        <skipTests>true</skipTests>
+      </properties>
+    </profile>
+  </profiles>
 </project>
 

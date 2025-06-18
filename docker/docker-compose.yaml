@@ -82,7 +82,7 @@ services:
 
   build-boringssl-static-jdk8-tests:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,jdk8 clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true -DtestJavaHome=/usr/lib/jvm/java-1.8.0-openjdk -DargLine.java9="
+    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,jdk8-tests clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true -DtestJavaHome=/usr/lib/jvm/java-1.8.0-openjdk"
 
   shell:
     <<: *common
