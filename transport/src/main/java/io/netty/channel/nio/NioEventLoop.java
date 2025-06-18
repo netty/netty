@@ -22,7 +22,6 @@ import io.netty.channel.IoRegistration;
 import io.netty.channel.SingleThreadIoEventLoop;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -67,17 +66,6 @@ public final class NioEventLoop extends SingleThreadIoEventLoop {
      */
     public SelectorProvider selectorProvider() {
         return ((NioIoHandler) ioHandler()).selectorProvider();
-    }
-
-    @Override
-    protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
-        return newTaskQueue0(maxPendingTasks);
-    }
-
-    private static Queue<Runnable> newTaskQueue0(int maxPendingTasks) {
-        // This event loop never calls takeTask()
-        return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.<Runnable>newMpscQueue()
-                : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
     }
 
     /**
