@@ -107,7 +107,7 @@
                     <logLevel>debug</logLevel>
                   </systemPropertyVariables>
                   <!-- Give native access to unnamed modules, which will be the case with how the tests are run. -->
-                  <argLine>--enable-native-access=ALL-UNNAMED</argLine>
+                  <argLine>--enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=deny</argLine>
                   <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
                   <trimStackTrace>false</trimStackTrace>
                 </configuration>
