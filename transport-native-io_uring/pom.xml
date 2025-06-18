@@ -321,6 +321,12 @@
         <jni.compiler.args.cflags>CFLAGS=${env.CFLAGS} -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
       </properties>
     </profile>
+    <profile>
+      <id>jdk8-tests</id>
+      <properties>
+        <skipTests>true</skipTests>
+      </properties>
+    </profile>
   </profiles>
 
   <dependencies>

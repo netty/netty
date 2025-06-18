@@ -6312,4 +6312,13 @@ public abstract class AbstractByteBufTest {
             assertTrue(nioBuffer.isReadOnly());
         }
     }
+
+    @Test
+    public void testMaxFastWritableBytesTracksWrittenBytes() {
+        final ByteBuf buf = newBuffer(4, 10);
+        int max = buf.maxFastWritableBytes();
+        buf.writeByte(1);
+        assertEquals(max - 1, buf.maxFastWritableBytes());
+        buf.release();
+    }
 }

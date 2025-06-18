@@ -673,6 +673,15 @@
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
       </properties>
     </profile>
+    <profile>
+      <id>jdk8-tests</id>
+      <properties>
+        <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
+        <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
+        <argLine.java9/>
+        <argLine.java9.extras/>
+      </properties>
+    </profile>
   </profiles>
 
   <properties>
@@ -799,6 +808,7 @@
     <module>testsuite-native-image-client-runtime-init</module>
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
+    <module>jfr-stub</module>
     <module>bom</module>
   </modules>
 
@@ -1999,7 +2009,7 @@
               <configuration>
                 <targetVersion>${maven.compiler.target}</targetVersion>
                 <!-- allow undocumented classes like sun.misc.Unsafe: -->
-                <internalRuntimeForbidden>true</internalRuntimeForbidden>
+                <internalRuntimeForbidden>false</internalRuntimeForbidden>
                 <!-- if the used Java version is too new, don't fail, just do nothing: -->
                 <failOnUnsupportedJava>false</failOnUnsupportedJava>
                 <bundledSignatures>
@@ -2024,6 +2034,11 @@
           <groupId>com.simpligility.maven.plugins</groupId>
           <artifactId>android-maven-plugin</artifactId>
           <version>4.6.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>flatten-maven-plugin</artifactId>
+          <version>1.2.2</version>
         </plugin>
       </plugins>
     </pluginManagement>
