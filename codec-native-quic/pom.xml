@@ -19,11 +19,11 @@
   <parent>
     <groupId>io.netty.incubator</groupId>
     <artifactId>netty-incubator-codec-parent-quic</artifactId>
-    <version>0.0.73.Final-SNAPSHOT</version>
+    <version>0.0.73.Final</version>
   </parent>
 
   <artifactId>netty-incubator-codec-native-quic</artifactId>
-  <version>0.0.73.Final-SNAPSHOT</version>
+  <version>0.0.73.Final</version>
   <name>Netty/Incubator/Codec/Native/Quic</name>
   <packaging>${packaging.type}</packaging>
 
@@ -734,7 +734,7 @@
                     </copy>
 
                     <!-- Delete boringssl source directory after build to free up space -->
-                    <delete dir="${boringsslSourceDir}"/>
+                    <delete dir="${boringsslSourceDir}" />
                   </else>
                 </if>
               </target>
@@ -857,7 +857,7 @@
                     </copy>
 
                     <!-- Delete quiche source directory after build to free up space -->
-                    <delete dir="${quicheSourceDir}"/>
+                    <delete dir="${quicheSourceDir}" />
                   </else>
                 </if>
               </target>
