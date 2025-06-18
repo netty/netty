@@ -440,5 +440,12 @@
         </plugins>
       </build>
     </profile>
+    <profile>
+      <id>jdk8-tests</id>
+      <properties>
+        <skipTests>true</skipTests>
+        <skipJpmsTestsuite>true</skipJpmsTestsuite>
+      </properties>
+    </profile>
   </profiles>
 </project>
