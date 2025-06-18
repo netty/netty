@@ -1346,6 +1346,12 @@
                   <new>interface com.google.protobuf.MutabilityOracle</new>
                   <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <new>method java.util.Queue<![CDATA[<java.lang.Runnable>]]> io.netty.channel.SingleThreadIoEventLoop::newTaskQueue0(int) @ io.netty.channel.nio.NioEventLoop</new>
+                  <justification>Improved default performance behavior</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
