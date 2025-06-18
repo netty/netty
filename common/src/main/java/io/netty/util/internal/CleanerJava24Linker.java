@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 
 import static java.lang.invoke.MethodType.methodType;
 
-public class CleanerJava25Linker implements Cleaner {
+public class CleanerJava24Linker implements Cleaner {
     private static final InternalLogger logger;
 
     private static final MethodHandle INVOKE_MALLOC;
@@ -36,7 +36,7 @@ public class CleanerJava25Linker implements Cleaner {
         boolean suitableJavaVersion;
         if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
             // native image supports this since 25, but we don't use PlatformDependent0 here, since
-            // we need to initialize CleanerJava25Linker at build time.
+            // we need to initialize CleanerJava24Linker at build time.
             String v = System.getProperty("java.specification.version");
             try {
                 suitableJavaVersion = Integer.parseInt(v) >= 25;
@@ -46,11 +46,14 @@ public class CleanerJava25Linker implements Cleaner {
             // also need to prevent initializing the logger at build time
             logger = null;
         } else {
-            // Only attempt to use MemorySegments on Java 25 or greater, because of the following JDK bugs:
+            // Only attempt to use MemorySegments on Java 24 or greater, where warnings about Unsafe
+            // memory access operations start to appear.
+            // The following JDK bugs do NOT affect our implementation because the memory segments we
+            // create are associated with the GLOBAL_SESSION:
             // - https://bugs.openjdk.org/browse/JDK-8357145
             // - https://bugs.openjdk.org/browse/JDK-8357268
-            suitableJavaVersion = PlatformDependent0.javaVersion() >= 25;
-            logger = InternalLoggerFactory.getInstance(CleanerJava25Linker.class);
+            suitableJavaVersion = PlatformDependent0.javaVersion() >= 24;
+            logger = InternalLoggerFactory.getInstance(CleanerJava24Linker.class);
         }
 
         MethodHandle mallocMethod;
@@ -70,7 +73,7 @@ public class CleanerJava25Linker implements Cleaner {
                 MethodHandle isNativeAccessEnabledForClass = MethodHandles.filterArguments(
                         isNativeAccessEnabledModule, 0, getModule);
                 boolean isNativeAccessEnabled =
-                        (boolean) isNativeAccessEnabledForClass.invokeExact(CleanerJava25Linker.class);
+                        (boolean) isNativeAccessEnabledForClass.invokeExact(CleanerJava24Linker.class);
                 if (!isNativeAccessEnabled) {
                     throw new UnsupportedOperationException(
                             "Native access (restricted methods) is not enabled for the io.netty.common module.");
@@ -109,12 +112,9 @@ public class CleanerJava25Linker implements Cleaner {
                 Class<?> linkerOptionCls = Class.forName("java.lang.foreign.Linker$Option");
                 Class<?> linkerOptionArrayCls = Class.forName("[Ljava.lang.foreign.Linker$Option;");
                 Class<?> symbolLookupCls = Class.forName("java.lang.foreign.SymbolLookup");
-                Class<?> optionalCls = Class.forName("java.util.Optional");
                 Class<?> memSegCls = Class.forName("java.lang.foreign.MemorySegment");
                 Class<?> funcDescCls = Class.forName("java.lang.foreign.FunctionDescriptor");
 
-                MethodHandle optGetMemSeg = lookup.findVirtual(optionalCls, "get", methodType(Object.class))
-                        .asType(methodType(memSegCls, optionalCls));
                 MethodHandle nativeLinker = lookup.findStatic(linkerCls, "nativeLinker", methodType(linkerCls));
                 MethodHandle defaultLookupStatic = MethodHandles.foldArguments(
                         lookup.findVirtual(linkerCls, "defaultLookup", methodType(symbolLookupCls)),
@@ -123,11 +123,9 @@ public class CleanerJava25Linker implements Cleaner {
                         lookup.findVirtual(linkerCls, "downcallHandle",
                                 methodType(MethodHandle.class, memSegCls, funcDescCls, linkerOptionArrayCls)),
                         nativeLinker);
-                MethodHandle findSymbol = MethodHandles.filterReturnValue(
-                        MethodHandles.foldArguments(
-                                lookup.findVirtual(symbolLookupCls, "find", methodType(optionalCls, String.class)),
-                                defaultLookupStatic),
-                        optGetMemSeg);
+                MethodHandle findSymbol = MethodHandles.foldArguments(
+                        lookup.findVirtual(symbolLookupCls, "findOrThrow", methodType(memSegCls, String.class)),
+                        defaultLookupStatic);
 
                 // Constructing the malloc (long)long handle
                 Object longLayout = lookup.findStaticGetter(valueLayoutCls, "JAVA_LONG", ofLongValueLayoutCls).invoke();

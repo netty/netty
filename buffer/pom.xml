@@ -86,9 +86,9 @@
 
   <profiles>
     <profile>
-      <id>java25</id>
+      <id>java24</id>
       <activation>
-        <jdk>[25,)</jdk>
+        <jdk>[24,)</jdk>
       </activation>
       <build>
         <plugins>
@@ -96,7 +96,7 @@
             <artifactId>maven-surefire-plugin</artifactId>
             <executions>
               <execution>
-                <id>test-java25-native-access</id>
+                <id>test-java24-native-access</id>
                 <goals>
                   <goal>test</goal>
                 </goals>
