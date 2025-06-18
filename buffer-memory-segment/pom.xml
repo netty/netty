@@ -65,7 +65,11 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <argLine>-Dio.netty5.buffer.MemoryManager=MemorySegment</argLine>
+          <!-- Give native access to unnamed modules, which will be the case with how the tests are run. -->
+          <argLine>--enable-native-access=ALL-UNNAMED</argLine>
+          <systemPropertyVariables>
+            <io.netty5.buffer.MemoryManager>MemorySegment</io.netty5.buffer.MemoryManager>
+          </systemPropertyVariables>
           <dependenciesToScan>
             <dependency>io.netty:netty5-buffer</dependency>
           </dependenciesToScan>
