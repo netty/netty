@@ -1066,7 +1066,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         @Override
         public int maxFastWritableBytes() {
-            return maxFastCapacity;
+            return Math.min(maxFastCapacity, maxCapacity()) - writerIndex;
         }
 
         @Override
