@@ -83,8 +83,7 @@ public class AbstractMemoryHttpDataTest {
             test.setContent(content);
             boolean succ = test.renameTo(tmpFile);
             assertTrue(succ);
-            FileInputStream fis = new FileInputStream(tmpFile);
-            try {
+            try (FileInputStream fis = new FileInputStream(tmpFile)) {
                 byte[] buf = new byte[totalByteCount];
                 int count = 0;
                 int offset = 0;
@@ -98,8 +97,6 @@ public class AbstractMemoryHttpDataTest {
                 }
                 assertArrayEquals(bytes, buf);
                 assertEquals(0, fis.available());
-            } finally {
-                fis.close();
             }
         } finally {
             //release the ByteBuf in AbstractMemoryHttpData
@@ -118,15 +115,12 @@ public class AbstractMemoryHttpDataTest {
         String contentStr = "foo_test";
         ByteBuf buf = Unpooled.wrappedBuffer(contentStr.getBytes(UTF_8));
         buf.markReaderIndex();
-        ByteBufInputStream is = new ByteBufInputStream(buf);
-        try {
+        try (ByteBufInputStream is = new ByteBufInputStream(buf)) {
             test.setContent(is);
             assertFalse(buf.isReadable());
-            assertEquals(test.getString(UTF_8), contentStr);
+            assertEquals(contentStr, test.getString(UTF_8));
             buf.resetReaderIndex();
             assertTrue(ByteBufUtil.equals(buf, test.getByteBuf()));
-        } finally {
-            is.close();
         }
 
         Random random = new SecureRandom();

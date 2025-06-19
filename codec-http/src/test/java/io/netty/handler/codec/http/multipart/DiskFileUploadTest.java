@@ -124,8 +124,7 @@ public class DiskFileUploadTest {
             File file = f1.getFile();
             assertEquals(jsonBytes.length, file.length());
 
-            FileInputStream fis = new FileInputStream(file);
-            try {
+            try (FileInputStream fis = new FileInputStream(file)) {
                 byte[] buf = new byte[jsonBytes.length];
                 int offset = 0;
                 int read = 0;
@@ -138,8 +137,6 @@ public class DiskFileUploadTest {
                     }
                 }
                 assertArrayEquals(jsonBytes, buf);
-            } finally {
-                fis.close();
             }
         } finally {
             f1.delete();
@@ -170,8 +167,7 @@ public class DiskFileUploadTest {
         try {
             byte[] bytes = json.getBytes(CharsetUtil.UTF_8);
             ByteBuf buf = Unpooled.wrappedBuffer(bytes);
-            InputStream is = new ByteBufInputStream(buf);
-            try {
+            try (InputStream is = new ByteBufInputStream(buf)) {
                 f1.setContent(is);
                 assertEquals(json, f1.getString());
                 assertArrayEquals(bytes, f1.get());
@@ -180,7 +176,6 @@ public class DiskFileUploadTest {
                 assertArrayEquals(bytes, doReadFile(file, bytes.length));
             } finally {
                 buf.release();
-                is.close();
             }
         } finally {
             f1.delete();
@@ -224,11 +219,10 @@ public class DiskFileUploadTest {
     }
 
     private static byte[] doReadFile(File file, int maxRead) throws Exception {
-        FileInputStream fis = new FileInputStream(file);
-        try {
+        try (FileInputStream fis = new FileInputStream(file)) {
             byte[] buf = new byte[maxRead];
             int offset = 0;
-            int read = 0;
+            int read;
             int len = buf.length;
             while ((read = fis.read(buf, offset, len)) > 0) {
                 len -= read;
@@ -238,8 +232,6 @@ public class DiskFileUploadTest {
                 }
             }
             return buf;
-        } finally {
-            fis.close();
         }
     }
 

@@ -19,6 +19,7 @@ RUN yum install -y \
  git \
  glibc-devel \
  gnupg \
+ java-1.8.0-openjdk-devel \
  libtool \
  lksctp-tools \
  lsb-core \

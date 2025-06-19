@@ -673,6 +673,15 @@
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
       </properties>
     </profile>
+    <profile>
+      <id>jdk8-tests</id>
+      <properties>
+        <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
+        <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
+        <argLine.java9/>
+        <argLine.java9.extras/>
+      </properties>
+    </profile>
   </profiles>
 
   <properties>

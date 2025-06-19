@@ -130,13 +130,11 @@ public final class OcspUtils {
             connection.setRequestProperty("accept", OCSP_RESPONSE_TYPE);
             connection.setRequestProperty("content-length", String.valueOf(encoded.length));
 
-            OutputStream out = connection.getOutputStream();
-            try {
+            try (OutputStream out = connection.getOutputStream()) {
                 out.write(encoded);
                 out.flush();
 
-                InputStream in = connection.getInputStream();
-                try {
+                try (InputStream in = connection.getInputStream()) {
                     int code = connection.getResponseCode();
                     if (code != HttpsURLConnection.HTTP_OK) {
                         throw new IOException("Unexpected status-code=" + code);
@@ -154,26 +152,18 @@ public final class OcspUtils {
                     }
 
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    try {
-                        byte[] buffer = new byte[8192];
-                        int length = -1;
+                    byte[] buffer = new byte[8192];
+                    int length;
 
-                        while ((length = in.read(buffer)) != -1) {
-                            baos.write(buffer, 0, length);
+                    while ((length = in.read(buffer)) != -1) {
+                        baos.write(buffer, 0, length);
 
-                            if (baos.size() >= contentLength) {
-                                break;
-                            }
+                        if (baos.size() >= contentLength) {
+                            break;
                         }
-                    } finally {
-                        baos.close();
                     }
                     return new OCSPResp(baos.toByteArray());
-                } finally {
-                    in.close();
                 }
-            } finally {
-                out.close();
             }
         } finally {
             connection.disconnect();

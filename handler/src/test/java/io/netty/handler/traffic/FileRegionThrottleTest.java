@@ -66,21 +66,11 @@ public class FileRegionThrottleTest {
 
         tmp = PlatformDependent.createTempFile("netty-traffic", ".tmp", null);
         tmp.deleteOnExit();
-        FileOutputStream out = null;
-        try {
-            out = new FileOutputStream(tmp);
+        try (FileOutputStream out = new FileOutputStream(tmp)) {
             out.write(BYTES);
             out.flush();
         } catch (IOException e) {
             throw new RuntimeException(e);
-        } finally {
-            if (out != null) {
-                try {
-                    out.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
         }
     }
 

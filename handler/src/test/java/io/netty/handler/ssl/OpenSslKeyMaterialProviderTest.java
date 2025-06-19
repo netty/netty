@@ -140,13 +140,17 @@ public class OpenSslKeyMaterialProviderTest {
     public void testChooseOpenSslPrivateKeyMaterial() throws Exception {
         PrivateKey privateKey;
         try (InputStream keyInputStream = getClass().getResourceAsStream("localhost_server.key")) {
-            privateKey = SslContext.toPrivateKey(keyInputStream, null);
-            assertNotNull(privateKey);
-            assertEquals("PKCS#8", privateKey.getFormat());
+            privateKey = SslContext.toPrivateKey(
+                    keyInputStream,
+                    null);
         }
+
+        assertNotNull(privateKey);
+        assertEquals("PKCS#8", privateKey.getFormat());
 
         try (InputStream resourceAsStream = getClass().getResourceAsStream("localhost_server.pem")) {
             final X509Certificate[] certChain = SslContext.toX509Certificates(resourceAsStream);
+
             assertNotNull(certChain);
             PemEncoded pemKey = null;
             long pkeyBio = 0L;

@@ -460,10 +460,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
         assert enoughData;
 
         // read ISIZE and verify
-        int dataLength = 0;
-        for (int i = 0; i < 4; ++i) {
-            dataLength |= in.readUnsignedByte() << i * 8;
-        }
+        int dataLength = in.readIntLE();
         int readLength = inflater.getTotalOut();
         if (dataLength != readLength) {
             throw new DecompressionException(
@@ -483,10 +480,8 @@ public class JdkZlibDecoder extends ZlibDecoder {
         if (in.readableBytes() < 4) {
             return false;
         }
-        long crcValue = 0;
-        for (int i = 0; i < 4; ++i) {
-            crcValue |= (long) in.readUnsignedByte() << i * 8;
-        }
+        long crcValue = in.readUnsignedIntLE();
+
         long readCrc = crc.getValue();
         if (crcValue != readCrc) {
             throw new DecompressionException(
@@ -499,13 +494,10 @@ public class JdkZlibDecoder extends ZlibDecoder {
         if (in.readableBytes() < 2) {
             return false;
         }
-        long readCrc32 = crc.getValue();
-        long crc16Value = 0;
-        long readCrc16 = 0; // the two least significant bytes from the CRC32
-        for (int i = 0; i < 2; ++i) {
-            crc16Value |= (long) in.readUnsignedByte() << (i * 8);
-            readCrc16 |= ((readCrc32 >> (i * 8)) & 0xff) << (i * 8);
-        }
+
+        int crc16Value = in.readUnsignedShortLE();
+        // the two least significant bytes from the CRC32
+        int readCrc16 = (int) (crc.getValue() & 0xFFFF);
 
         if (crc16Value != readCrc16) {
             throw new DecompressionException(

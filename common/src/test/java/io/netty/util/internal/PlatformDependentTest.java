@@ -163,7 +163,7 @@ public class PlatformDependentTest {
 
     @EnabledForJreRange(min = JRE.JAVA_25)
     @Test
-    void java24MustHaveCleanerImplAvailable() throws Exception {
+    void java25MustHaveCleanerImplAvailable() throws Exception {
         assertTrue(CleanerJava25.isSupported(),
                 "The CleanerJava25 implementation must be supported on Java 25+");
         // Note: we're not testing on `PlatformDependent.directBufferPreferred()` because some builds

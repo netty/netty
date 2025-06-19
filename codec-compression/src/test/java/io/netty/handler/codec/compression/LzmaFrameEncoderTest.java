@@ -80,11 +80,10 @@ public class LzmaFrameEncoderTest extends AbstractEncoderTest {
 
     @Override
     protected ByteBuf decompress(ByteBuf compressed, int originalLength) throws Exception {
-        InputStream is = new ByteBufInputStream(compressed, true);
-        LzmaInputStream lzmaIs = null;
         byte[] decompressed = new byte[originalLength];
-        try {
-            lzmaIs = new LzmaInputStream(is, new Decoder());
+        try (InputStream is = new ByteBufInputStream(compressed, true);
+             LzmaInputStream lzmaIs = new LzmaInputStream(is, new Decoder())) {
+
             int remaining = originalLength;
             while (remaining > 0) {
                 int read = lzmaIs.read(decompressed, originalLength - remaining, remaining);
@@ -95,16 +94,6 @@ public class LzmaFrameEncoderTest extends AbstractEncoderTest {
                 }
             }
             assertEquals(-1, lzmaIs.read());
-        } finally {
-            if (lzmaIs != null) {
-                lzmaIs.close();
-            }
-            // LzmaInputStream does not close the stream it wraps, so we should always close.
-            // The close operation should be safe to call multiple times anyways so lets just call it and be safe.
-            // https://github.com/jponge/lzma-java/issues/14
-            if (is != null) {
-                is.close();
-            }
         }
 
         return Unpooled.wrappedBuffer(decompressed);
