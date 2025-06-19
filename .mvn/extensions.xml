@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extensions>
+    <extension>
+        <groupId>eu.maveniverse.maven.nisse</groupId>
+        <artifactId>extension</artifactId>
+        <version>0.4.6</version>
+    </extension>
+</extensions>
