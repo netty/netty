@@ -69,10 +69,10 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             }
 
             try {
-                final WebSocketServerHandshakerFactory wsFactory = new WebSocketServerHandshakerFactory(
+                final WebSocketServerHandshaker handshaker = WebSocketServerHandshakerFactory.resolveHandshaker(
+                        req,
                         getWebSocketLocation(ctx.pipeline(), req, serverConfig.websocketPath()),
                         serverConfig.subprotocols(), serverConfig.decoderConfig());
-                final WebSocketServerHandshaker handshaker = wsFactory.newHandshaker(req);
                 final ChannelPromise localHandshakePromise = handshakePromise;
                 if (handshaker == null) {
                     WebSocketServerHandshakerFactory.sendUnsupportedVersionResponse(ctx.channel());
@@ -130,13 +130,6 @@ class WebSocketServerProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
             return nextUri == '/' || nextUri == '?';
         }
         return true;
-    }
-
-    private static void sendHttpResponse(ChannelHandlerContext ctx, HttpRequest req, HttpResponse res) {
-        ChannelFuture f = ctx.writeAndFlush(res);
-        if (!isKeepAlive(req) || res.status().code() != 200) {
-            f.addListener(ChannelFutureListener.CLOSE);
-        }
     }
 
     private static String getWebSocketLocation(ChannelPipeline cp, HttpRequest req, String path) {

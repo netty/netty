@@ -26,11 +26,9 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.TimeZone;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -54,7 +52,7 @@ public class ClientCookieDecoderTest {
         assertEquals("/apathsomewhere", cookie.path());
         assertTrue(cookie.isSecure());
 
-        assertThat(cookie, is(instanceOf(DefaultCookie.class)));
+        assertInstanceOf(DefaultCookie.class, cookie);
         DefaultCookie c = (DefaultCookie) cookie;
         assertEquals(SameSite.None, c.sameSite());
         assertTrue(c.isPartitioned());

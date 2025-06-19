@@ -38,12 +38,10 @@ import static io.netty.buffer.Unpooled.compositeBuffer;
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -651,10 +649,10 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     public void testComponentMustBeDuplicate() {
         CompositeByteBuf buf = compositeBuffer();
         buf.addComponent(buffer(4, 6).setIndex(1, 3));
-        assertThat(buf.component(0), is(instanceOf(AbstractDerivedByteBuf.class)));
-        assertThat(buf.component(0).capacity(), is(4));
-        assertThat(buf.component(0).maxCapacity(), is(6));
-        assertThat(buf.component(0).readableBytes(), is(2));
+        assertInstanceOf(AbstractDerivedByteBuf.class, buf.component(0));
+        assertEquals(4, buf.component(0).capacity());
+        assertEquals(6, buf.component(0).maxCapacity());
+        assertEquals(2, buf.component(0).readableBytes());
         buf.release();
     }
 
@@ -665,19 +663,19 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         ByteBuf c3 = buffer().writeByte(3).retain(2);
 
         CompositeByteBuf buf = compositeBuffer();
-        assertThat(buf.refCnt(), is(1));
+        assertEquals(1, buf.refCnt());
         buf.addComponents(c1, c2, c3);
 
-        assertThat(buf.refCnt(), is(1));
+        assertEquals(1, buf.refCnt());
 
         // Ensure that c[123]'s refCount did not change.
-        assertThat(c1.refCnt(), is(1));
-        assertThat(c2.refCnt(), is(2));
-        assertThat(c3.refCnt(), is(3));
+        assertEquals(1, c1.refCnt());
+        assertEquals(2, c2.refCnt());
+        assertEquals(3, c3.refCnt());
 
-        assertThat(buf.component(0).refCnt(), is(1));
-        assertThat(buf.component(1).refCnt(), is(2));
-        assertThat(buf.component(2).refCnt(), is(3));
+        assertEquals(1, buf.component(0).refCnt());
+        assertEquals(2, buf.component(1).refCnt());
+        assertEquals(3, buf.component(2).refCnt());
 
         c3.release(2);
         c2.release();
@@ -697,24 +695,24 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         bufB.addComponents(bufA);
 
         // Ensure that bufA.refCnt() did not change.
-        assertThat(bufA.refCnt(), is(1));
+        assertEquals(1, bufA.refCnt());
 
         // Ensure that c[123]'s refCnt did not change.
-        assertThat(c1.refCnt(), is(1));
-        assertThat(c2.refCnt(), is(2));
-        assertThat(c3.refCnt(), is(3));
+        assertEquals(1, c1.refCnt());
+        assertEquals(2, c2.refCnt());
+        assertEquals(3, c3.refCnt());
 
         // This should decrease bufA.refCnt().
         bufB.release();
-        assertThat(bufB.refCnt(), is(0));
+        assertEquals(0, bufB.refCnt());
 
         // Ensure bufA.refCnt() changed.
-        assertThat(bufA.refCnt(), is(0));
+        assertEquals(0, bufA.refCnt());
 
         // Ensure that c[123]'s refCnt also changed due to the deallocation of bufA.
-        assertThat(c1.refCnt(), is(0));
-        assertThat(c2.refCnt(), is(1));
-        assertThat(c3.refCnt(), is(2));
+        assertEquals(0, c1.refCnt());
+        assertEquals(1, c2.refCnt());
+        assertEquals(2, c3.refCnt());
 
         c3.release(2);
         c2.release();
@@ -727,20 +725,20 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         ByteBuf c3 = buffer().writeByte(3).retain(2);
 
         CompositeByteBuf buf = compositeBuffer();
-        assertThat(buf.refCnt(), is(1));
+        assertEquals(1, buf.refCnt());
 
         List<ByteBuf> components = new ArrayList<ByteBuf>();
         Collections.addAll(components, c1, c2, c3);
         buf.addComponents(components);
 
         // Ensure that c[123]'s refCount did not change.
-        assertThat(c1.refCnt(), is(1));
-        assertThat(c2.refCnt(), is(2));
-        assertThat(c3.refCnt(), is(3));
+        assertEquals(1, c1.refCnt());
+        assertEquals(2, c2.refCnt());
+        assertEquals(3, c3.refCnt());
 
-        assertThat(buf.component(0).refCnt(), is(1));
-        assertThat(buf.component(1).refCnt(), is(2));
-        assertThat(buf.component(2).refCnt(), is(3));
+        assertEquals(1, buf.component(0).refCnt());
+        assertEquals(2, buf.component(1).refCnt());
+        assertEquals(3, buf.component(2).refCnt());
 
         c3.release(2);
         c2.release();
@@ -756,11 +754,11 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
                         .addComponent(wrappedBuffer(new byte[]{3, 4})).slice(1, 2));
 
         ByteBuffer[] nioBuffers = buf.nioBuffers(0, 2);
-        assertThat(nioBuffers.length, is(2));
-        assertThat(nioBuffers[0].remaining(), is(1));
-        assertThat(nioBuffers[0].get(), is((byte) 2));
-        assertThat(nioBuffers[1].remaining(), is(1));
-        assertThat(nioBuffers[1].get(), is((byte) 3));
+        assertEquals(2, nioBuffers.length);
+        assertEquals(1, nioBuffers[0].remaining());
+        assertEquals(2, nioBuffers[0].get());
+        assertEquals(1, nioBuffers[1].remaining());
+        assertEquals(3, nioBuffers[1].get());
 
         buf.release();
     }

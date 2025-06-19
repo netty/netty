@@ -10,6 +10,7 @@ RUN yum install -y \
  automake \
  git \
  glibc-devel \
+ java-1.8.0-openjdk-devel \
  libtool \
  lksctp-tools \
  lsb-core \

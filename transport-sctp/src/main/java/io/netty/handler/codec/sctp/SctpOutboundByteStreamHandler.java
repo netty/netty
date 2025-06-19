@@ -46,6 +46,7 @@ public class SctpOutboundByteStreamHandler extends MessageToMessageEncoder<ByteB
      * @param unordered             if {@literal true}, SCTP Data Chunks will be sent with the U (unordered) flag set.
      */
     public SctpOutboundByteStreamHandler(int streamIdentifier, int protocolIdentifier, boolean unordered) {
+        super(ByteBuf.class);
         this.streamIdentifier = streamIdentifier;
         this.protocolIdentifier = protocolIdentifier;
         this.unordered = unordered;

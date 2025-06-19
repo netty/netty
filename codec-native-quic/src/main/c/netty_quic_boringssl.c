@@ -356,12 +356,12 @@ enum ssl_verify_result_t quic_SSL_cert_custom_verify(SSL* ssl, uint8_t *out_aler
     }
 
     const char* authentication_method = NULL;
-    STACK_OF(SSL_CIPHER) *ciphers = SSL_get_ciphers(ssl);
-    if (ciphers == NULL || sk_SSL_CIPHER_num(ciphers) <= 0) {
+    const SSL_CIPHER* cipher = SSL_get_current_cipher(ssl);
+    if (cipher == NULL) {
         // No cipher available so return UNKNOWN.
         authentication_method = "UNKNOWN";
     } else {
-        authentication_method = SSL_CIPHER_get_kx_name(sk_SSL_CIPHER_value(ciphers, 0));
+        authentication_method = SSL_CIPHER_get_kx_name(cipher);
         if (authentication_method == NULL) {
             authentication_method = "UNKNOWN";
         }

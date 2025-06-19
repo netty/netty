@@ -60,12 +60,9 @@ import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -107,8 +104,8 @@ public abstract class AbstractByteBufTest {
     @AfterEach
     public void dispose() {
         if (buffer != null) {
-            assertThat(buffer.release(), is(true));
-            assertThat(buffer.refCnt(), is(0));
+            assertTrue(buffer.release());
+            assertEquals(0, buffer.refCnt());
 
             try {
                 buffer.release();
@@ -2613,19 +2610,19 @@ public abstract class AbstractByteBufTest {
 
         final AtomicInteger lastIndex = new AtomicInteger();
         buffer.setIndex(CAPACITY / 4, CAPACITY * 3 / 4);
-        assertThat(buffer.forEachByte(new ByteProcessor() {
+        assertEquals(-1, buffer.forEachByte(new ByteProcessor() {
             int i = CAPACITY / 4;
 
             @Override
             public boolean process(byte value) throws Exception {
-                assertThat(value, is((byte) (i + 1)));
+                assertEquals((byte) (i + 1), value);
                 lastIndex.set(i);
                 i ++;
                 return true;
             }
-        }), is(-1));
+        }));
 
-        assertThat(lastIndex.get(), is(CAPACITY * 3 / 4 - 1));
+        assertEquals(CAPACITY * 3 / 4 - 1, lastIndex.get());
     }
 
     @Test
@@ -2636,12 +2633,12 @@ public abstract class AbstractByteBufTest {
         }
 
         final int stop = CAPACITY / 2;
-        assertThat(buffer.forEachByte(CAPACITY / 3, CAPACITY / 3, new ByteProcessor() {
+        assertEquals(stop, buffer.forEachByte(CAPACITY / 3, CAPACITY / 3, new ByteProcessor() {
             int i = CAPACITY / 3;
 
             @Override
             public boolean process(byte value) throws Exception {
-                assertThat(value, is((byte) (i + 1)));
+                assertEquals((byte) (i + 1), value);
                 if (i == stop) {
                     return false;
                 }
@@ -2649,7 +2646,7 @@ public abstract class AbstractByteBufTest {
                 i++;
                 return true;
             }
-        }), is(stop));
+        }));
     }
 
     @Test
@@ -2660,19 +2657,19 @@ public abstract class AbstractByteBufTest {
         }
 
         final AtomicInteger lastIndex = new AtomicInteger();
-        assertThat(buffer.forEachByteDesc(CAPACITY / 4, CAPACITY * 2 / 4, new ByteProcessor() {
+        assertEquals(-1, buffer.forEachByteDesc(CAPACITY / 4, CAPACITY * 2 / 4, new ByteProcessor() {
             int i = CAPACITY * 3 / 4 - 1;
 
             @Override
             public boolean process(byte value) throws Exception {
-                assertThat(value, is((byte) (i + 1)));
+                assertEquals((byte) (i + 1), value);
                 lastIndex.set(i);
                 i --;
                 return true;
             }
-        }), is(-1));
+        }));
 
-        assertThat(lastIndex.get(), is(CAPACITY / 4));
+        assertEquals(CAPACITY / 4, lastIndex.get());
     }
 
     @Test
@@ -6314,5 +6311,14 @@ public abstract class AbstractByteBufTest {
         for (ByteBuffer nioBuffer: buffer.asReadOnly().nioBuffers(0, buffer.capacity())) {
             assertTrue(nioBuffer.isReadOnly());
         }
+    }
+
+    @Test
+    public void testMaxFastWritableBytesTracksWrittenBytes() {
+        final ByteBuf buf = newBuffer(4, 10);
+        int max = buf.maxFastWritableBytes();
+        buf.writeByte(1);
+        assertEquals(max - 1, buf.maxFastWritableBytes());
+        buf.release();
     }
 }

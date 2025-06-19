@@ -22,17 +22,14 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -68,7 +65,7 @@ public class IdleStateHandlerTest {
     }
 
     private static void anyIdle(IdleStateHandler idleStateHandler, Object... expected) throws Exception {
-        assertThat(expected.length,  greaterThanOrEqualTo(1));
+        assertThat(expected.length).isGreaterThanOrEqualTo(1);
 
         final List<Object> events = new ArrayList<Object>();
         ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {

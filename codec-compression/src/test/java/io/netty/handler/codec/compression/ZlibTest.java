@@ -367,8 +367,7 @@ public abstract class ZlibTest {
         }
 
         ByteBuf decoded = Unpooled.buffer();
-        GZIPInputStream stream = new GZIPInputStream(new ByteBufInputStream(encoded, true));
-        try {
+        try (GZIPInputStream stream = new GZIPInputStream(new ByteBufInputStream(encoded, true))) {
             byte[] buf = new byte[8192];
             for (;;) {
                 int readBytes = stream.read(buf);
@@ -377,8 +376,6 @@ public abstract class ZlibTest {
                 }
                 decoded.writeBytes(buf, 0, readBytes);
             }
-        } finally {
-            stream.close();
         }
 
         if (data != null) {
@@ -441,9 +438,9 @@ public abstract class ZlibTest {
 
     private static byte[] deflate(byte[] bytes) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        OutputStream stream = new DeflaterOutputStream(out);
-        stream.write(bytes);
-        stream.close();
+        try (OutputStream stream = new DeflaterOutputStream(out)) {
+            stream.write(bytes);
+        }
         return out.toByteArray();
     }
 

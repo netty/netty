@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.2.Final-SNAPSHOT</version>
+    <version>4.2.3.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-buffer</artifactId>
@@ -39,11 +39,19 @@
       <version>${graalvm.version}</version>
       <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
       <scope>provided</scope>
+      <!-- Optional so maven-bundle-plugin does not make com.oracle.svm.core.annotate a required import -->
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-common</artifactId>
       <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-jfr-stub</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
@@ -65,16 +73,51 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-library</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>org.assertj</groupId>
       <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <scope>test</scope>
+    </dependency>
   </dependencies>
+
+  <profiles>
+    <profile>
+      <id>java24</id>
+      <activation>
+        <jdk>[24,)</jdk>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>test-java24-native-access</id>
+                <goals>
+                  <goal>test</goal>
+                </goals>
+                <configuration>
+                  <runOrder>random</runOrder>
+                  <systemPropertyVariables>
+                    <logback.configurationFile>${logging.config}</logback.configurationFile>
+                    <logLevel>warn</logLevel>
+                  </systemPropertyVariables>
+                  <!-- Give native access to unnamed modules, which will be the case with how the tests are run. -->
+                  <argLine>--enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=deny</argLine>
+                  <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
+                  <trimStackTrace>false</trimStackTrace>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 
   <build>
     <plugins>

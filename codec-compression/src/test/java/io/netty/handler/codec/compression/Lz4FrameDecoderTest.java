@@ -150,10 +150,10 @@ public class Lz4FrameDecoderTest extends AbstractDecoderTest {
     protected byte[] compress(byte[] data) throws Exception {
         ByteArrayOutputStream os = new ByteArrayOutputStream();
         int size = MAX_BLOCK_SIZE + 1;
-        LZ4BlockOutputStream lz4Os = new LZ4BlockOutputStream(os,
-                rand.nextInt(size - MIN_BLOCK_SIZE) + MIN_BLOCK_SIZE);
-        lz4Os.write(data);
-        lz4Os.close();
+        try (LZ4BlockOutputStream lz4Os = new LZ4BlockOutputStream(os,
+                rand.nextInt(size - MIN_BLOCK_SIZE) + MIN_BLOCK_SIZE)) {
+            lz4Os.write(data);
+        }
 
         return os.toByteArray();
     }

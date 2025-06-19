@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.2.Final-SNAPSHOT</version>
+    <version>4.2.3.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-jpms</artifactId>
@@ -97,6 +97,11 @@
       <artifactId>netty-codec-http2</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-http3</artifactId>
+      <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -279,6 +284,13 @@
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
         </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <scope>compile</scope>
+        </dependency>
       </dependencies>
     </profile>
 
@@ -305,9 +317,33 @@
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
         </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <scope>compile</scope>
+        </dependency>
       </dependencies>
     </profile>
 
+    <profile>
+      <id>windows</id>
+      <activation>
+        <os>
+          <family>windows</family>
+        </os>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>${jni.classifier}</classifier>
+          <scope>compile</scope>
+        </dependency>
+      </dependencies>
+    </profile>
     <profile>
       <id>testsuite-jpms</id>
       <activation>
@@ -329,6 +365,7 @@
                 <addModules>
                   <addModule>jdk.jdwp.agent</addModule>
                   <addModule>io.netty.internal.tcnative.openssl.${os.detected.name}.${os.detected.arch}</addModule>
+                  <addModule>io.netty.codec.quic.${os.detected.name}.${os.detected.arch}</addModule>
                 </addModules>
                 <ignoreSigningInformation>true</ignoreSigningInformation>
                 <launcher>http=io.netty.testsuite_jpms.main/io.netty.testsuite_jpms.main.HttpHelloWorldServer</launcher>
@@ -346,7 +383,7 @@
               <version>3.4.0</version>
               <configuration>
                 <!-- Exclude all dependencies which are automatic modules -->
-                <classpathDependencyExcludes>org.hamcrest:*,net.sf.saxon:Saxon-HE,org.checkerframework:checker-qual,commons-logging:commons-logging,com.google.errorprone:error_prone_annotations,io.netty:netty-build-common,antlr:antlr,org.antlr:antlr4-runtime,com.google.guava:*,com.puppycrawl.tools:checkstyle,commons-beanutils:commons-beanutils,commons-collections:commons-collections,com.google.code.findbugs:jsr305,com.google.j2objc:j2objc-annotations</classpathDependencyExcludes>
+                <classpathDependencyExcludes>org.hamcrest:*,net.sf.saxon:Saxon-HE,org.checkerframework:checker-qual,commons-logging:commons-logging,com.google.errorprone:error_prone_annotations,io.netty:netty-build-common,antlr:antlr,org.antlr:antlr4-runtime,com.puppycrawl.tools:checkstyle,commons-beanutils:commons-beanutils,commons-collections:commons-collections,com.google.code.findbugs:jsr305,com.google.j2objc:j2objc-annotations</classpathDependencyExcludes>
                 <useModulePath>${useTestModulePath}</useModulePath>
               </configuration>
               <executions>
@@ -402,6 +439,13 @@
           </plugin>
         </plugins>
       </build>
+    </profile>
+    <profile>
+      <id>jdk8-tests</id>
+      <properties>
+        <skipTests>true</skipTests>
+        <skipJpmsTestsuite>true</skipJpmsTestsuite>
+      </properties>
     </profile>
   </profiles>
 </project>

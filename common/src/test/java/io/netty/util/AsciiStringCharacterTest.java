@@ -23,8 +23,6 @@ import java.util.Random;
 
 import static io.netty.util.AsciiString.contains;
 import static io.netty.util.AsciiString.containsIgnoreCase;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -245,23 +243,23 @@ public class AsciiStringCharacterTest {
 
     @Test
     public void testEqualsIgnoreCase() {
-        assertThat(AsciiString.contentEqualsIgnoreCase(null, null), is(true));
-        assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
-        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "bar"), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("Foo", "foobar"), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("foobar", "Foo"), is(false));
+        assertTrue(AsciiString.contentEqualsIgnoreCase(null, null));
+        assertFalse(AsciiString.contentEqualsIgnoreCase(null, "foo"));
+        assertFalse(AsciiString.contentEqualsIgnoreCase("bar", null));
+        assertTrue(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"));
+        assertFalse(AsciiString.contentEqualsIgnoreCase("FoO", "bar"));
+        assertFalse(AsciiString.contentEqualsIgnoreCase("Foo", "foobar"));
+        assertFalse(AsciiString.contentEqualsIgnoreCase("foobar", "Foo"));
 
         // Test variations (Ascii + String, Ascii + Ascii, String + Ascii)
-        assertThat(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), "fOo"), is(true));
-        assertThat(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), new AsciiString("fOo")), is(true));
-        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", new AsciiString("fOo")), is(true));
+        assertTrue(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), "fOo"));
+        assertTrue(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), new AsciiString("fOo")));
+        assertTrue(AsciiString.contentEqualsIgnoreCase("FoO", new AsciiString("fOo")));
 
         // Test variations (Ascii + String, Ascii + Ascii, String + Ascii)
-        assertThat(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), "bAr"), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), new AsciiString("bAr")), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", new AsciiString("bAr")), is(false));
+        assertFalse(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), "bAr"));
+        assertFalse(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), new AsciiString("bAr")));
+        assertFalse(AsciiString.contentEqualsIgnoreCase("FoO", new AsciiString("bAr")));
     }
 
     @Test

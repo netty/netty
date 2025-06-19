@@ -107,11 +107,7 @@ public class Base64Test {
     private static X509Certificate certFromString(String string) throws Exception {
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
         ByteArrayInputStream bin = new ByteArrayInputStream(string.getBytes(CharsetUtil.US_ASCII));
-        try {
-            return (X509Certificate) factory.generateCertificate(bin);
-        } finally {
-            bin.close();
-        }
+        return (X509Certificate) factory.generateCertificate(bin);
     }
 
     private static void testEncode(ByteBuf src, ByteBuf expectedEncoded) {

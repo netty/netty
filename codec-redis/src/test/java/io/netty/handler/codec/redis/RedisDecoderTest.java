@@ -30,10 +30,12 @@ import org.junit.jupiter.api.function.Executable;
 import java.util.List;
 
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -99,7 +101,7 @@ public class RedisDecoderTest {
 
         InlineCommandRedisMessage msg = channel.readInbound();
 
-        assertThat(msg.content(), is("PING"));
+        assertEquals("PING", msg.content());
 
         ReferenceCountUtil.release(msg);
     }
@@ -113,7 +115,7 @@ public class RedisDecoderTest {
 
         SimpleStringRedisMessage msg = channel.readInbound();
 
-        assertThat(msg.content(), is("OK"));
+        assertEquals("OK", msg.content());
 
         ReferenceCountUtil.release(msg);
     }
@@ -127,11 +129,11 @@ public class RedisDecoderTest {
         assertTrue(channel.writeInbound(byteBufOf("OND\r\n")));
 
         SimpleStringRedisMessage msg1 = channel.readInbound();
-        assertThat(msg1.content(), is("OK"));
+        assertEquals("OK", msg1.content());
         ReferenceCountUtil.release(msg1);
 
         SimpleStringRedisMessage msg2 = channel.readInbound();
-        assertThat(msg2.content(), is("SECOND"));
+        assertEquals("SECOND", msg2.content());
         ReferenceCountUtil.release(msg2);
     }
 
@@ -145,7 +147,7 @@ public class RedisDecoderTest {
 
         ErrorRedisMessage msg = channel.readInbound();
 
-        assertThat(msg.content(), is(content));
+        assertEquals(content, msg.content());
 
         ReferenceCountUtil.release(msg);
     }
@@ -160,7 +162,7 @@ public class RedisDecoderTest {
 
         IntegerRedisMessage msg = channel.readInbound();
 
-        assertThat(msg.value(), is(value));
+        assertEquals(value, msg.value());
 
         ReferenceCountUtil.release(msg);
     }
@@ -179,7 +181,7 @@ public class RedisDecoderTest {
 
         FullBulkStringRedisMessage msg = channel.readInbound();
 
-        assertThat(bytesOf(msg.content()), is(content));
+        assertArrayEquals(content, bytesOf(msg.content()));
 
         ReferenceCountUtil.release(msg);
     }
@@ -195,7 +197,7 @@ public class RedisDecoderTest {
 
         FullBulkStringRedisMessage msg = channel.readInbound();
 
-        assertThat(bytesOf(msg.content()), is(content));
+        assertArrayEquals(content, bytesOf(msg.content()));
 
         ReferenceCountUtil.release(msg);
     }
@@ -211,15 +213,15 @@ public class RedisDecoderTest {
         assertTrue(channel.writeInbound(byteBufOf("\r\n")));
 
         FullBulkStringRedisMessage msg1 = channel.readInbound();
-        assertThat(msg1.isNull(), is(true));
+        assertTrue(msg1.isNull());
         ReferenceCountUtil.release(msg1);
 
         FullBulkStringRedisMessage msg2 = channel.readInbound();
-        assertThat(msg2.isNull(), is(true));
+        assertTrue(msg2.isNull());
         ReferenceCountUtil.release(msg2);
 
         FullBulkStringRedisMessage msg3 = channel.readInbound();
-        assertThat(msg3, is(nullValue()));
+        assertNull(msg3);
     }
 
     @Test
@@ -233,14 +235,14 @@ public class RedisDecoderTest {
         ArrayRedisMessage msg = channel.readInbound();
         List<RedisMessage> children = msg.children();
 
-        assertThat(msg.children().size(), is(equalTo(3)));
+        assertEquals(3, msg.children().size());
 
-        assertThat(children.get(0), instanceOf(IntegerRedisMessage.class));
-        assertThat(((IntegerRedisMessage) children.get(0)).value(), is(1234L));
-        assertThat(children.get(1), instanceOf(SimpleStringRedisMessage.class));
-        assertThat(((SimpleStringRedisMessage) children.get(1)).content(), is("simple"));
-        assertThat(children.get(2), instanceOf(ErrorRedisMessage.class));
-        assertThat(((ErrorRedisMessage) children.get(2)).content(), is("error"));
+        assertInstanceOf(IntegerRedisMessage.class, children.get(0));
+        assertEquals(1234L, ((IntegerRedisMessage) children.get(0)).value());
+        assertInstanceOf(SimpleStringRedisMessage.class, children.get(1));
+        assertEquals("simple", ((SimpleStringRedisMessage) children.get(1)).content());
+        assertInstanceOf(ErrorRedisMessage.class, children.get(2));
+        assertEquals("error", ((ErrorRedisMessage) children.get(2)).content());
 
         ReferenceCountUtil.release(msg);
     }
@@ -256,19 +258,19 @@ public class RedisDecoderTest {
         ArrayRedisMessage msg = channel.readInbound();
         List<RedisMessage> children = msg.children();
 
-        assertThat(msg.children().size(), is(2));
+        assertEquals(2, msg.children().size());
 
         ArrayRedisMessage intArray = (ArrayRedisMessage) children.get(0);
         ArrayRedisMessage strArray = (ArrayRedisMessage) children.get(1);
 
-        assertThat(intArray.children().size(), is(3));
-        assertThat(((IntegerRedisMessage) intArray.children().get(0)).value(), is(1L));
-        assertThat(((IntegerRedisMessage) intArray.children().get(1)).value(), is(2L));
-        assertThat(((IntegerRedisMessage) intArray.children().get(2)).value(), is(3L));
+        assertEquals(3, intArray.children().size());
+        assertEquals(1L, ((IntegerRedisMessage) intArray.children().get(0)).value());
+        assertEquals(2L, ((IntegerRedisMessage) intArray.children().get(1)).value());
+        assertEquals(3L, ((IntegerRedisMessage) intArray.children().get(2)).value());
 
-        assertThat(strArray.children().size(), is(2));
-        assertThat(((SimpleStringRedisMessage) strArray.children().get(0)).content(), is("Foo"));
-        assertThat(((ErrorRedisMessage) strArray.children().get(1)).content(), is("Bar"));
+        assertEquals(2, strArray.children().size());
+        assertEquals("Foo", ((SimpleStringRedisMessage) strArray.children().get(0)).content());
+        assertEquals("Bar", ((ErrorRedisMessage) strArray.children().get(1)).content());
 
         ReferenceCountUtil.release(msg);
     }

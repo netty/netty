@@ -37,6 +37,7 @@ public class SctpInboundByteStreamHandler extends MessageToMessageDecoder<SctpMe
      * @param protocolIdentifier supported application protocol.
      */
     public SctpInboundByteStreamHandler(int protocolIdentifier, int streamIdentifier) {
+        super(SctpMessage.class);
         this.protocolIdentifier = protocolIdentifier;
         this.streamIdentifier = streamIdentifier;
     }

@@ -14,6 +14,7 @@
  * under the License.
  */
 module io.netty.testsuite_jpms.main {
+    requires io.netty.common;
     requires io.netty.buffer;
     requires io.netty.codec;
     requires io.netty.codec.http;
@@ -24,4 +25,7 @@ module io.netty.testsuite_jpms.main {
     requires io.netty.transport.classes.epoll;
     requires io.netty.transport.classes.io_uring;
     requires io.netty.tcnative.classes.openssl;
+    requires io.netty.codec.http3;
+    requires io.netty.codec.classes.quic;
+    requires org.bouncycastle.provider;
 }

@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Copyright 2020 The Netty Project
+  ~
+  ~ The Netty Project licenses this file to you under the Apache License,
+  ~ version 2.0 (the "License"); you may not use this file except in compliance
+  ~ with the License. You may obtain a copy of the License at:
+  ~
+  ~   https://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+  ~ WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+  ~ License for the specific language governing permissions and limitations
+  ~ under the License.
+  -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>io.netty</groupId>
+    <artifactId>netty-parent</artifactId>
+    <version>4.2.3.Final-SNAPSHOT</version>
+  </parent>
+
+  <artifactId>netty-codec-http3</artifactId>
+  <packaging>jar</packaging>
+
+  <name>Netty/Codec/Http3</name>
+
+  <properties>
+    <javaModuleName>io.netty.codec.http3</javaModuleName>
+    <skipTests>false</skipTests>
+    <netty.quic.classifier>${os.detected.name}-${os.detected.arch}</netty.quic.classifier>
+    <test.argLine>-D_</test.argLine>
+    <!-- Will be enabled by a profile when running on x86_64-->
+    <skipH3Spec>true</skipH3Spec>
+  </properties>
+
+  <profiles>
+    <profile>
+      <id>leak</id>
+      <properties>
+        <test.argLine>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32</test.argLine>
+      </properties>
+    </profile>
+    <profile>
+      <id>x86_64</id>
+      <activation>
+        <os>
+          <family>linux</family>
+          <arch>x86_64</arch>
+        </os>
+      </activation>
+      <properties>
+        <skipH3Spec>false</skipH3Spec>
+      </properties>
+    </profile>
+    <profile>
+      <id>native-dependencies</id>
+      <dependencies>
+        <!-- Depend on all our native jars -->
+        <!-- As this is executed on either macOS or Linux we directly need to specify the classifier -->
+        <!-- These dependencies will also be "merged" into the dependency section by the flatten plugin -->
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>linux-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>linux-aarch_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>osx-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>osx-aarch_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>windows-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+      </dependencies>
+    </profile>
+  </profiles>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-common</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-buffer</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-base</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-http</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-transport</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-classes-quic</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-codec-native-quic</artifactId>
+      <version>${project.version}</version>
+      <classifier>${netty.quic.classifier}</classifier>
+      <scope>runtime</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-library</artifactId>
+      <version>1.3</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-build-common</artifactId>
+      <version>${netty.build.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.bouncycastle</groupId>
+      <artifactId>bcpkix-jdk18on</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.jetbrains</groupId>
+      <artifactId>annotations</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>jsr305</artifactId>
+      <version>3.0.2</version>
+      <scope>provided</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <configuration>
+          <!-- We need to also merge the dependencies defined by our profile. -->
+          <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
+          <!-- Ensure excludes are set correctly -->
+          <flattenDependencyMode>all</flattenDependencyMode>
+          <flattenMode>ossrh</flattenMode>
+        </configuration>
+        <executions>
+          <!-- enable flattening -->
+          <execution>
+            <id>flatten</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+          </execution>
+          <!-- ensure proper cleanup -->
+          <execution>
+            <id>flatten.clean</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>io.github.dmlloyd.module-info</groupId>
+        <artifactId>module-info</artifactId>
+        <executions>
+          <execution>
+            <id>module-info</id>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>io.netty.incubator</groupId>
+        <artifactId>netty-incubator-h3spec-maven-plugin</artifactId>
+        <version>0.0.7.Final</version>
+        <configuration>
+          <delay>1000</delay>
+          <readyMessage>H3SPEC_SERVER_READY</readyMessage>
+          <mainClass>io.netty.handler.codec.http3.Http3SpecTestServer</mainClass>
+          <excludeSpecs>
+            <!-- Let's only run the HTTP3 tests -->
+            <excludeSpec>/QUIC</excludeSpec>
+          </excludeSpecs>
+
+          <skip>${skipH3Spec}</skip>
+        </configuration>
+        <executions>
+          <execution>
+            <phase>test</phase>
+            <goals>
+              <goal>h3spec</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+
+</project>

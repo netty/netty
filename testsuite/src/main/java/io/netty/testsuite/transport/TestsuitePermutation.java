@@ -17,12 +17,15 @@ package io.netty.testsuite.transport;
 
 import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.buffer.AdaptiveByteBufAllocator;
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class TestsuitePermutation {
     private static final AdaptiveByteBufAllocator DEFAULT_ADAPTIVE_ALLOCATOR = new AdaptiveByteBufAllocator();
@@ -44,5 +47,12 @@ public final class TestsuitePermutation {
     public interface BootstrapComboFactory<SB extends AbstractBootstrap<?, ?>, CB extends AbstractBootstrap<?, ?>> {
         SB newServerInstance();
         CB newClientInstance();
+    }
+
+    public static ByteBuf randomBufferType(ByteBufAllocator allocator, byte[] data, int offset, int length) {
+        if (ThreadLocalRandom.current().nextBoolean()) {
+            return allocator.directBuffer().writeBytes(data, offset, length);
+        }
+        return Unpooled.wrappedBuffer(data, offset, length);
     }
 }

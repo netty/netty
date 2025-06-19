@@ -93,6 +93,10 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         return state == ST_CONTENT_CHUNK || state == ST_CONTENT_NON_CHUNK || state == ST_CONTENT_ALWAYS_EMPTY;
     }
 
+    public HttpObjectEncoder() {
+        super(Object.class);
+    }
+
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         try {

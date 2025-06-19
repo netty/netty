@@ -22,12 +22,10 @@ import io.netty.handler.codec.compression.StandardCompressionOptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @EnabledIf("isBrotiAvailable")
@@ -137,16 +135,16 @@ class HttpContentCompressorOptionsTest {
 
     private static void assertEncodedResponse(EmbeddedChannel ch) {
         Object o = ch.readOutbound();
-        assertThat(o, is(instanceOf(HttpResponse.class)));
+        assertInstanceOf(HttpResponse.class, o);
 
         assertEncodedResponse((HttpResponse) o);
     }
 
     private static void assertEncodedResponse(HttpResponse res) {
-        assertThat(res, is(not(instanceOf(HttpContent.class))));
-        assertThat(res.headers().get(HttpHeaderNames.TRANSFER_ENCODING), is("chunked"));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH), is(nullValue()));
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING), is("br"));
+        assertThat(res).isNotInstanceOf(HttpContent.class);
+        assertEquals("chunked", res.headers().get(HttpHeaderNames.TRANSFER_ENCODING));
+        assertNull(res.headers().get(HttpHeaderNames.CONTENT_LENGTH));
+        assertEquals("br", res.headers().get(HttpHeaderNames.CONTENT_ENCODING));
     }
 
     private static FullHttpRequest newRequest() {

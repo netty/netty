@@ -63,10 +63,9 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.handler.codec.http2.Http2TestUtil.of;
 import static io.netty.util.CharsetUtil.UTF_8;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
@@ -374,12 +373,12 @@ public class HttpToHttp2ConnectionHandlerTest {
         assertTrue(writePromise.isDone());
         assertFalse(writePromise.isSuccess());
         Throwable cause = writePromise.cause();
-        assertThat(cause, instanceOf(Http2NoMoreStreamIdsException.class));
+        assertInstanceOf(Http2NoMoreStreamIdsException.class, cause);
 
         assertTrue(writeFuture.isDone());
         assertFalse(writeFuture.isSuccess());
         cause = writeFuture.cause();
-        assertThat(cause, instanceOf(Http2NoMoreStreamIdsException.class));
+        assertInstanceOf(Http2NoMoreStreamIdsException.class, cause);
     }
 
     @Test

@@ -21,9 +21,21 @@ import java.nio.ByteBuffer;
  * Allows to free direct {@link ByteBuffer}s.
  */
 interface Cleaner {
+    /**
+     * Create a direct {@link ByteBuffer} and return it alongside its cleaning mechanism,
+     * in a {@link CleanableDirectBuffer}.
+     *
+     * @param capacity The desired capacity of the direct buffer.
+     * @return The new {@link CleanableDirectBuffer} instance.
+     */
+    CleanableDirectBuffer allocate(int capacity);
 
     /**
      * Free a direct {@link ByteBuffer} if possible
+     *
+     * @deprecated Instead allocate buffers from {@link #allocate(int)}
+     * and use the associated {@link CleanableDirectBuffer#clean()} method.
      */
+    @Deprecated
     void freeDirectBuffer(ByteBuffer buffer);
 }

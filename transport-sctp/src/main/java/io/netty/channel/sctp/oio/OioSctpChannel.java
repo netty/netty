@@ -79,6 +79,8 @@ public class OioSctpChannel extends AbstractOioMessageChannel
     private final Selector connectSelector;
 
     private final NotificationHandler<?> notificationHandler;
+    private ByteBuffer inputCopy;
+    private ByteBuffer outputCopy;
 
     private static SctpChannel openChannel() {
         try {
@@ -197,9 +199,25 @@ public class OioSctpChannel extends AbstractOioMessageChannel
 
         try {
             ByteBuffer data = buffer.nioBuffer(buffer.writerIndex(), buffer.writableBytes());
-            MessageInfo messageInfo = ch.receive(data, null, notificationHandler);
+            boolean useInputCopy = false;
+            int javaVersion = PlatformDependent.javaVersion();
+            if (javaVersion >= 22 && javaVersion < 25 && data.isDirect()) {
+                // On Java 22 through 24, we need to avoid using ByteBuffer instances that are
+                // backed by MemorySegments, because of https://bugs.openjdk.org/browse/JDK-8357268
+                if (inputCopy == null || inputCopy.capacity() < data.remaining()) {
+                    inputCopy = ByteBuffer.allocateDirect(data.remaining());
+                }
+                inputCopy.clear();
+                inputCopy.limit(data.remaining());
+                useInputCopy = true;
+            }
+            MessageInfo messageInfo = ch.receive(useInputCopy ? inputCopy : data, null, notificationHandler);
             if (messageInfo == null) {
                 return readMessages;
+            }
+            if (useInputCopy) {
+                inputCopy.flip();
+                data.put(inputCopy);
             }
 
             data.flip();
@@ -249,12 +267,23 @@ public class OioSctpChannel extends AbstractOioMessageChannel
                 int dataLen = data.readableBytes();
                 ByteBuffer nioData;
 
-                if (data.nioBufferCount() != -1) {
-                    nioData = data.nioBuffer();
+                int javaVersion = PlatformDependent.javaVersion();
+                if (javaVersion >= 22 && javaVersion < 25 && data.isDirect() ||
+                        !data.isDirect() || data.nioBufferCount() != 1) {
+                    // Ensure that we only use a single, direct ByteBuffer when doing SCTP IO.
+                    // If the ByteBuf is composite, or is on-heap, we do a copy.
+                    // On Java 22 through 24, we additionally need to avoid using ByteBuffer instances that are
+                    // backed by MemorySegments, because of https://bugs.openjdk.org/browse/JDK-8357268
+                    if (outputCopy == null || outputCopy.capacity() < dataLen) {
+                        outputCopy = ByteBuffer.allocateDirect(dataLen);
+                    }
+                    outputCopy.clear();
+                    outputCopy.limit(dataLen);
+                    data.readBytes(outputCopy);
+                    outputCopy.flip();
+                    nioData = outputCopy;
                 } else {
-                    nioData = ByteBuffer.allocate(dataLen);
-                    data.getBytes(data.readerIndex(), nioData);
-                    nioData.flip();
+                    nioData = data.nioBuffer();
                 }
 
                 final MessageInfo mi = MessageInfo.createOutgoing(association(), null, packet.streamIdentifier());

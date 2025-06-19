@@ -17,7 +17,6 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -32,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.TestInfo;
 
+import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -59,7 +59,7 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
             cb.handler(new MyInitializer());
             clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
 
-            clientChannel.writeAndFlush(Unpooled.wrappedBuffer(new byte[1024]));
+            clientChannel.writeAndFlush(randomBufferType(clientChannel.alloc(), new byte[1024], 0, 1024));
 
             // We expect to get 2 exceptions (1 from BuggyChannelHandler and 1 from ExceptionHandler).
             assertTrue(serverInitializer.exceptionHandler.latch1.await(5, TimeUnit.SECONDS));

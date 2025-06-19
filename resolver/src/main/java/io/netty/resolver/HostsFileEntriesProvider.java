@@ -189,15 +189,12 @@ public final class HostsFileEntriesProvider {
             }
             if (file.exists() && file.isFile()) {
                 for (Charset charset : charsets) {
-                    BufferedReader reader = new BufferedReader(
-                            new InputStreamReader(new FileInputStream(file), charset));
-                    try {
+                    try (BufferedReader reader = new BufferedReader(
+                            new InputStreamReader(new FileInputStream(file), charset))) {
                         HostsFileEntriesProvider entries = parse(reader);
                         if (entries != HostsFileEntriesProvider.EMPTY) {
                             return entries;
                         }
-                    } finally {
-                        reader.close();
                     }
                 }
             }
@@ -207,10 +204,9 @@ public final class HostsFileEntriesProvider {
         @Override
         public HostsFileEntriesProvider parse(Reader reader) throws IOException {
             checkNotNull(reader, "reader");
-            BufferedReader buff = new BufferedReader(reader);
-            try {
-                Map<String, List<InetAddress>> ipv4Entries = new HashMap<String, List<InetAddress>>();
-                Map<String, List<InetAddress>> ipv6Entries = new HashMap<String, List<InetAddress>>();
+            try (BufferedReader buff = new BufferedReader(reader)) {
+                Map<String, List<InetAddress>> ipv4Entries = new HashMap<>();
+                Map<String, List<InetAddress>> ipv6Entries = new HashMap<>();
                 String line;
                 while ((line = buff.readLine()) != null) {
                     // remove comment
@@ -225,7 +221,7 @@ public final class HostsFileEntriesProvider {
                     }
 
                     // split
-                    List<String> lineParts = new ArrayList<String>();
+                    List<String> lineParts = new ArrayList<>();
                     for (String s : WHITESPACES.split(line)) {
                         if (!s.isEmpty()) {
                             lineParts.add(s);
@@ -254,13 +250,13 @@ public final class HostsFileEntriesProvider {
                         if (address instanceof Inet4Address) {
                             addresses = ipv4Entries.get(hostnameLower);
                             if (addresses == null) {
-                                addresses = new ArrayList<InetAddress>();
+                                addresses = new ArrayList<>();
                                 ipv4Entries.put(hostnameLower, addresses);
                             }
                         } else {
                             addresses = ipv6Entries.get(hostnameLower);
                             if (addresses == null) {
-                                addresses = new ArrayList<InetAddress>();
+                                addresses = new ArrayList<>();
                                 ipv6Entries.put(hostnameLower, addresses);
                             }
                         }
@@ -270,12 +266,6 @@ public final class HostsFileEntriesProvider {
                 return ipv4Entries.isEmpty() && ipv6Entries.isEmpty() ?
                         HostsFileEntriesProvider.EMPTY :
                         new HostsFileEntriesProvider(ipv4Entries, ipv6Entries);
-            } finally {
-                try {
-                    buff.close();
-                } catch (IOException e) {
-                    logger.warn("Failed to close a reader", e);
-                }
             }
         }
 
