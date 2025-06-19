@@ -42,12 +42,10 @@ public class CompatibleObjectEncoderTest {
         channel.writeOutbound(original);
         Object o = channel.readOutbound();
         ByteBuf buf = (ByteBuf) o;
-        ObjectInputStream ois = new ObjectInputStream(new ByteBufInputStream(buf));
-        try {
+        try (ObjectInputStream ois = new ObjectInputStream(new ByteBufInputStream(buf))) {
             assertEquals(original, ois.readObject());
         } finally {
             buf.release();
-            ois.close();
         }
     }
 

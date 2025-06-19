@@ -1085,7 +1085,6 @@ public class Http2ConnectionRoundtripTest {
             // Don't wait for server to close streams
             setClientGracefulShutdownTime(0);
             data.release();
-            out.close();
         }
     }
 
