@@ -150,12 +150,12 @@
             <dependency>
               <groupId>org.apache.ant</groupId>
               <artifactId>ant</artifactId>
-              <version>1.10.12</version>
+              <version>1.10.15</version>
             </dependency>
             <dependency>
               <groupId>org.apache.ant</groupId>
               <artifactId>ant-launcher</artifactId>
-              <version>1.10.12</version>
+              <version>1.10.15</version>
             </dependency>
             <dependency>
               <groupId>ant-contrib</groupId>
@@ -169,12 +169,6 @@
               </exclusions>
             </dependency>
           </dependencies>
-        </plugin>
-
-        <plugin>
-          <groupId>org.codehaus.mojo</groupId>
-          <artifactId>animal-sniffer-maven-plugin</artifactId>
-          <version>1.24</version>
         </plugin>
         <plugin>
           <groupId>org.codehaus.mojo</groupId>
@@ -215,7 +209,7 @@
             <dependency>
               <groupId>org.revapi</groupId>
               <artifactId>revapi-java</artifactId>
-              <version>0.26.1</version>
+              <version>0.28.4</version>
             </dependency>
           </dependencies>
         </plugin>
@@ -274,18 +268,6 @@
           <allowTimestampedSnapshots>false</allowTimestampedSnapshots>
           <tagNameFormat>netty-@{project.version}</tagNameFormat>
         </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-api</artifactId>
-            <version>2.1.0</version>
-          </dependency>
-          <dependency>
-            <groupId>org.apache.maven.scm</groupId>
-            <artifactId>maven-scm-provider-gitexe</artifactId>
-            <version>2.1.0</version>
-          </dependency>
-        </dependencies>
       </plugin>
       <plugin>
         <artifactId>maven-enforcer-plugin</artifactId>
