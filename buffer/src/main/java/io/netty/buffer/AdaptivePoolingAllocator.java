@@ -225,6 +225,7 @@ final class AdaptivePoolingAllocator {
     }
 
     private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
+        boolean reallocate = buf != null;
         if (size <= MAX_POOLED_BUF_SIZE) {
             FastThreadLocal<Object> threadLocalMagazine = this.threadLocalMagazine;
             if (threadLocalMagazine != null && FastThreadLocalThread.currentThreadHasFastThreadLocal()) {
@@ -234,7 +235,7 @@ final class AdaptivePoolingAllocator {
                     if (buf == null) {
                         buf = magazine.newBuffer();
                     }
-                    boolean allocated = magazine.tryAllocate(size, maxCapacity, buf);
+                    boolean allocated = magazine.tryAllocate(size, maxCapacity, buf, reallocate);
                     assert allocated : "Allocation of threadLocalMagazine must always succeed";
                     return buf;
                 }
@@ -251,7 +252,7 @@ final class AdaptivePoolingAllocator {
                     if (buf == null) {
                         buf = mag.newBuffer();
                     }
-                    if (mag.tryAllocate(size, maxCapacity, buf)) {
+                    if (mag.tryAllocate(size, maxCapacity, buf, reallocate)) {
                         // Was able to allocate.
                         return buf;
                     }
@@ -261,10 +262,11 @@ final class AdaptivePoolingAllocator {
         }
 
         // The magazines failed us, or the buffer is too big to be pooled.
-        return allocateFallback(size, maxCapacity, currentThread, buf);
+        return allocateFallback(size, maxCapacity, currentThread, buf, reallocate);
     }
 
-    private AdaptiveByteBuf allocateFallback(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
+    private AdaptiveByteBuf allocateFallback(int size, int maxCapacity, Thread currentThread,
+                                             AdaptiveByteBuf buf, boolean reallocate) {
         // If we don't already have a buffer, obtain one from the most conveniently available magazine.
         Magazine magazine;
         if (buf != null) {
@@ -305,7 +307,7 @@ final class AdaptivePoolingAllocator {
     /**
      * Allocate into the given buffer. Used by {@link AdaptiveByteBuf#capacity(int)}.
      */
-    void allocate(int size, int maxCapacity, AdaptiveByteBuf into) {
+    void reallocate(int size, int maxCapacity, AdaptiveByteBuf into) {
         AdaptiveByteBuf result = allocate(size, maxCapacity, Thread.currentThread(), into);
         assert result == into: "Re-allocation created separate buffer instance";
     }
@@ -575,17 +577,17 @@ final class AdaptivePoolingAllocator {
             usedMemory = new AtomicLong();
         }
 
-        public boolean tryAllocate(int size, int maxCapacity, AdaptiveByteBuf buf) {
+        public boolean tryAllocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
             if (allocationLock == null) {
                 // This magazine is not shared across threads, just allocate directly.
-                return allocate(size, maxCapacity, buf);
+                return allocate(size, maxCapacity, buf, reallocate);
             }
 
             // Try to retrieve the lock and if successful allocate.
             long writeLock = allocationLock.tryWriteLock();
             if (writeLock != 0) {
                 try {
-                    return allocate(size, maxCapacity, buf);
+                    return allocate(size, maxCapacity, buf, reallocate);
                 } finally {
                     allocationLock.unlockWrite(writeLock);
                 }
@@ -627,8 +629,12 @@ final class AdaptivePoolingAllocator {
             return allocated;
         }
 
-        private boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf) {
-            recordAllocationSize(buf.length);
+        private boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
+            if (!reallocate) {
+                // Only record allocation size if it's not caused by a reallocation that was triggered by capacity
+                // change of the buffer.
+                recordAllocationSize(buf.length);
+            }
             int startingCapacity = getStartingCapacity(size, maxCapacity);
             Chunk curr = current;
             if (curr != null) {
@@ -1210,15 +1216,7 @@ final class AdaptivePoolingAllocator {
             int baseOldRootIndex = adjustment;
             int oldCapacity = length;
             AbstractByteBuf oldRoot = rootParent();
-            length = 0; // Don't record buffer size statistics for this allocation.
-            try {
-                allocator.allocate(newCapacity, maxCapacity(), this);
-            } finally {
-                if (length == 0) {
-                    // Allocation failed. Restore capacity.
-                    length = oldCapacity;
-                }
-            }
+            allocator.reallocate(newCapacity, maxCapacity(), this);
             oldRoot.getBytes(baseOldRootIndex, this, 0, oldCapacity);
             chunk.release();
             this.readerIndex = readerIndex;
