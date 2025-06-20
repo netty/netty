@@ -107,7 +107,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     }
 
     @Test
-    public void testIOBuffersAreDirectWhenUnsafeAvailableOrDirectBuffersPooled() {
+    public void testIOBuffersAreDirectWhenCleanerAvailableOrDirectBuffersPooled() {
         PooledByteBufAllocator allocator = newAllocator(true);
         ByteBuf ioBuffer = allocator.ioBuffer();
 
@@ -117,7 +117,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
         PooledByteBufAllocator unpooledAllocator = newUnpooledAllocator();
         ioBuffer = unpooledAllocator.ioBuffer();
 
-        if (PlatformDependent.hasUnsafe()) {
+        if (PlatformDependent.canReliabilyFreeDirectBuffers()) {
             assertTrue(ioBuffer.isDirect());
         } else {
             assertFalse(ioBuffer.isDirect());

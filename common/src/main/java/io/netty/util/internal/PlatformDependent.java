@@ -425,6 +425,15 @@ public final class PlatformDependent {
     }
 
     /**
+     * Return {@code true} if the selected cleaner can free direct buffers in a controlled way. This guarantee only
+     * applies for buffers allocated via {@link #allocateDirect(int)} and when using the {@code clean} method of the
+     * returned {@link CleanableDirectBuffer}.
+     */
+    public static boolean canReliabilyFreeDirectBuffers() {
+        return CLEANER != NOOP;
+    }
+
+    /**
      * Returns the maximum memory reserved for direct buffer allocation.
      */
     public static long maxDirectMemory() {
