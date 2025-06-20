@@ -34,8 +34,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -374,9 +372,10 @@ public class SingleThreadEventExecutorTest {
 
         f.sync();
 
-        assertThat(beforeTask.ran.get(), is(true));
-        assertThat(scheduledTask.ran.get(), is(true));
-        assertThat(afterTask.ran.get(), is(true));
+        assertTrue(beforeTask.ran.get());
+        assertTrue(scheduledTask.ran.get());
+        assertTrue(afterTask.ran.get());
+        executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
     }
 
     @Test
@@ -414,7 +413,8 @@ public class SingleThreadEventExecutorTest {
 
         f.sync();
 
-        assertThat(t.ran.get(), is(true));
+        assertTrue(t.ran.get());
+        executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
     }
 
     private static final class TestRunnable implements Runnable {

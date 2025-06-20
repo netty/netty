@@ -24,9 +24,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class ThreadDeathWatcherTest {
@@ -68,7 +68,7 @@ public class ThreadDeathWatcherTest {
         ThreadDeathWatcher.watch(t, task);
 
         // As long as the thread is alive, the task should not run.
-        assertThat(latch.await(750, TimeUnit.MILLISECONDS), is(false));
+        assertFalse(latch.await(750, TimeUnit.MILLISECONDS));
 
         // Interrupt the thread to terminate it.
         t.interrupt();
@@ -114,10 +114,10 @@ public class ThreadDeathWatcherTest {
         t.join();
 
         // Wait until the watcher thread terminates itself.
-        assertThat(ThreadDeathWatcher.awaitInactivity(Long.MAX_VALUE, TimeUnit.SECONDS), is(true));
+        assertTrue(ThreadDeathWatcher.awaitInactivity(Long.MAX_VALUE, TimeUnit.SECONDS));
 
         // And the task should not run.
-        assertThat(run.get(), is(false));
+        assertFalse(run.get());
     }
 
     @Test

@@ -49,7 +49,7 @@ public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
     private final AdaptiveAllocatorApi heap;
 
     public AdaptiveByteBufAllocator() {
-        this(PlatformDependent.directBufferPreferred());
+        this(!PlatformDependent.isExplicitNoPreferDirect());
     }
 
     public AdaptiveByteBufAllocator(boolean preferDirect) {

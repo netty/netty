@@ -21,8 +21,11 @@ import org.junit.jupiter.api.Test;
 import java.nio.ByteOrder;
 import java.util.Random;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 /**
  * Tests wrapping a wrapped buffer does not go way too deep chaining.
@@ -34,16 +37,16 @@ public class ByteBufDerivationTest {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf slice = buf.slice(1, 7);
 
-        assertThat(slice, instanceOf(AbstractUnpooledSlicedByteBuf.class));
-        assertThat(slice.unwrap(), sameInstance(buf));
-        assertThat(slice.readerIndex(), is(0));
-        assertThat(slice.writerIndex(), is(7));
-        assertThat(slice.capacity(), is(7));
-        assertThat(slice.maxCapacity(), is(7));
+        assertInstanceOf(AbstractUnpooledSlicedByteBuf.class, slice);
+        assertSame(buf, slice.unwrap());
+        assertEquals(0, slice.readerIndex());
+        assertEquals(7, slice.writerIndex());
+        assertEquals(7, slice.capacity());
+        assertEquals(7, slice.maxCapacity());
 
         slice.setIndex(1, 6);
-        assertThat(buf.readerIndex(), is(1));
-        assertThat(buf.writerIndex(), is(7));
+        assertEquals(1, buf.readerIndex());
+        assertEquals(7, buf.writerIndex());
     }
 
     @Test
@@ -52,11 +55,11 @@ public class ByteBufDerivationTest {
         ByteBuf slice = buf.slice(1, 7);
         ByteBuf slice2 = slice.slice(0, 6);
 
-        assertThat(slice2, not(sameInstance(slice)));
-        assertThat(slice2, instanceOf(AbstractUnpooledSlicedByteBuf.class));
-        assertThat(slice2.unwrap(), sameInstance(buf));
-        assertThat(slice2.writerIndex(), is(6));
-        assertThat(slice2.capacity(), is(6));
+        assertNotSame(slice, slice2);
+        assertInstanceOf(AbstractUnpooledSlicedByteBuf.class, slice2);
+        assertSame(buf, slice2.unwrap());
+        assertEquals(6, slice2.writerIndex());
+        assertEquals(6, slice2.capacity());
     }
 
     @Test
@@ -64,16 +67,16 @@ public class ByteBufDerivationTest {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf dup = buf.duplicate();
 
-        assertThat(dup, instanceOf(DuplicatedByteBuf.class));
-        assertThat(dup.unwrap(), sameInstance(buf));
-        assertThat(dup.readerIndex(), is(buf.readerIndex()));
-        assertThat(dup.writerIndex(), is(buf.writerIndex()));
-        assertThat(dup.capacity(), is(buf.capacity()));
-        assertThat(dup.maxCapacity(), is(buf.maxCapacity()));
+        assertInstanceOf(DuplicatedByteBuf.class, dup);
+        assertSame(buf, dup.unwrap());
+        assertEquals(buf.readerIndex(), dup.readerIndex());
+        assertEquals(buf.writerIndex(), dup.writerIndex());
+        assertEquals(buf.capacity(), dup.capacity());
+        assertEquals(buf.maxCapacity(), dup.maxCapacity());
 
         dup.setIndex(2, 6);
-        assertThat(buf.readerIndex(), is(1));
-        assertThat(buf.writerIndex(), is(7));
+        assertEquals(1, buf.readerIndex());
+        assertEquals(7, buf.writerIndex());
     }
 
     @Test
@@ -82,13 +85,13 @@ public class ByteBufDerivationTest {
         ByteBuf dup = buf.duplicate().setIndex(2, 6);
         ByteBuf dup2 = dup.duplicate();
 
-        assertThat(dup2, not(sameInstance(dup)));
-        assertThat(dup2, instanceOf(DuplicatedByteBuf.class));
-        assertThat(dup2.unwrap(), sameInstance(buf));
-        assertThat(dup2.readerIndex(), is(dup.readerIndex()));
-        assertThat(dup2.writerIndex(), is(dup.writerIndex()));
-        assertThat(dup2.capacity(), is(dup.capacity()));
-        assertThat(dup2.maxCapacity(), is(dup.maxCapacity()));
+        assertNotSame(dup, dup2);
+        assertInstanceOf(DuplicatedByteBuf.class, dup2);
+        assertSame(buf, dup2.unwrap());
+        assertEquals(dup.readerIndex(), dup2.readerIndex());
+        assertEquals(dup.writerIndex(), dup2.writerIndex());
+        assertEquals(dup.capacity(), dup2.capacity());
+        assertEquals(dup.maxCapacity(), dup2.maxCapacity());
     }
 
     @Test
@@ -96,15 +99,15 @@ public class ByteBufDerivationTest {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf ro = Unpooled.unmodifiableBuffer(buf);
 
-        assertThat(ro, instanceOf(ReadOnlyByteBuf.class));
-        assertThat(ro.unwrap(), sameInstance(buf));
-        assertThat(ro.readerIndex(), is(buf.readerIndex()));
-        assertThat(ro.writerIndex(), is(buf.writerIndex()));
-        assertThat(ro.capacity(), is(buf.capacity()));
-        assertThat(ro.maxCapacity(), is(buf.maxCapacity()));
+        assertInstanceOf(ReadOnlyByteBuf.class, ro);
+        assertSame(buf, ro.unwrap());
+        assertEquals(buf.readerIndex(), ro.readerIndex());
+        assertEquals(buf.writerIndex(), ro.writerIndex());
+        assertEquals(buf.capacity(), ro.capacity());
+        assertEquals(buf.maxCapacity(), ro.maxCapacity());
 
         ro.setIndex(2, 6);
-        assertThat(buf.readerIndex(), is(1));
+        assertEquals(1, buf.readerIndex());
     }
 
     @Test
@@ -113,13 +116,13 @@ public class ByteBufDerivationTest {
         ByteBuf ro = Unpooled.unmodifiableBuffer(buf).setIndex(2, 6);
         ByteBuf ro2 = Unpooled.unmodifiableBuffer(ro);
 
-        assertThat(ro2, not(sameInstance(ro)));
-        assertThat(ro2, instanceOf(ReadOnlyByteBuf.class));
-        assertThat(ro2.unwrap(), sameInstance(buf));
-        assertThat(ro2.readerIndex(), is(ro.readerIndex()));
-        assertThat(ro2.writerIndex(), is(ro.writerIndex()));
-        assertThat(ro2.capacity(), is(ro.capacity()));
-        assertThat(ro2.maxCapacity(), is(ro.maxCapacity()));
+        assertNotSame(ro, ro2);
+        assertInstanceOf(ReadOnlyByteBuf.class, ro2);
+        assertSame(buf, ro2.unwrap());
+        assertEquals(ro.readerIndex(), ro2.readerIndex());
+        assertEquals(ro.writerIndex(), ro2.writerIndex());
+        assertEquals(ro.capacity(), ro2.capacity());
+        assertEquals(ro.maxCapacity(), ro2.maxCapacity());
     }
 
     @Test
@@ -128,12 +131,12 @@ public class ByteBufDerivationTest {
         ByteBuf dup = buf.duplicate().setIndex(2, 6);
         ByteBuf ro = Unpooled.unmodifiableBuffer(dup);
 
-        assertThat(ro, instanceOf(ReadOnlyByteBuf.class));
-        assertThat(ro.unwrap(), sameInstance(buf));
-        assertThat(ro.readerIndex(), is(dup.readerIndex()));
-        assertThat(ro.writerIndex(), is(dup.writerIndex()));
-        assertThat(ro.capacity(), is(dup.capacity()));
-        assertThat(ro.maxCapacity(), is(dup.maxCapacity()));
+        assertInstanceOf(ReadOnlyByteBuf.class, ro);
+        assertSame(buf, ro.unwrap());
+        assertEquals(dup.readerIndex(), ro.readerIndex());
+        assertEquals(dup.writerIndex(), ro.writerIndex());
+        assertEquals(dup.capacity(), ro.capacity());
+        assertEquals(dup.maxCapacity(), ro.maxCapacity());
     }
 
     @Test
@@ -142,12 +145,12 @@ public class ByteBufDerivationTest {
         ByteBuf ro = Unpooled.unmodifiableBuffer(buf).setIndex(2, 6);
         ByteBuf dup = ro.duplicate();
 
-        assertThat(dup, instanceOf(ReadOnlyByteBuf.class));
-        assertThat(dup.unwrap(), sameInstance(buf));
-        assertThat(dup.readerIndex(), is(ro.readerIndex()));
-        assertThat(dup.writerIndex(), is(ro.writerIndex()));
-        assertThat(dup.capacity(), is(ro.capacity()));
-        assertThat(dup.maxCapacity(), is(ro.maxCapacity()));
+        assertInstanceOf(ReadOnlyByteBuf.class, ro);
+        assertSame(buf, ro.unwrap());
+        assertEquals(dup.readerIndex(), ro.readerIndex());
+        assertEquals(dup.writerIndex(), ro.writerIndex());
+        assertEquals(dup.capacity(), ro.capacity());
+        assertEquals(dup.maxCapacity(), ro.maxCapacity());
     }
 
     @Test
@@ -155,14 +158,14 @@ public class ByteBufDerivationTest {
         ByteBuf buf = Unpooled.buffer(8).setIndex(1, 7);
         ByteBuf swapped = buf.order(ByteOrder.LITTLE_ENDIAN);
 
-        assertThat(swapped, instanceOf(SwappedByteBuf.class));
-        assertThat(swapped.unwrap(), sameInstance(buf));
-        assertThat(swapped.order(ByteOrder.LITTLE_ENDIAN), sameInstance(swapped));
-        assertThat(swapped.order(ByteOrder.BIG_ENDIAN), sameInstance(buf));
+        assertInstanceOf(SwappedByteBuf.class, swapped);
+        assertSame(buf, swapped.unwrap());
+        assertSame(swapped, swapped.order(ByteOrder.LITTLE_ENDIAN));
+        assertSame(buf, swapped.order(ByteOrder.BIG_ENDIAN));
 
         buf.setIndex(2, 6);
-        assertThat(swapped.readerIndex(), is(2));
-        assertThat(swapped.writerIndex(), is(6));
+        assertEquals(2, swapped.readerIndex());
+        assertEquals(6, swapped.writerIndex());
     }
 
     @Test
@@ -190,10 +193,8 @@ public class ByteBufDerivationTest {
                 throw new Error();
             }
 
-            assertThat("nest level of " + newDerived, nestLevel(newDerived), is(lessThanOrEqualTo(3)));
-            assertThat(
-                    "nest level of " + newDerived.order(ByteOrder.BIG_ENDIAN),
-                    nestLevel(newDerived.order(ByteOrder.BIG_ENDIAN)), is(lessThanOrEqualTo(2)));
+            assertThat(nestLevel(newDerived)).isLessThanOrEqualTo(3);
+            assertThat(nestLevel(newDerived.order(ByteOrder.BIG_ENDIAN))).isLessThanOrEqualTo(2);
 
             derived = newDerived;
         }

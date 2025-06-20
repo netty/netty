@@ -28,7 +28,6 @@ import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.FileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.internal.PlatformDependent;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -40,9 +39,8 @@ import java.nio.channels.WritableByteChannel;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class SocketFileRegionTest extends AbstractSocketTest {
@@ -156,7 +154,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         FileRegion region = new DefaultFileRegion(
                 new RandomAccessFile(file, "r").getChannel(), 0, data.length + 1024);
 
-        assertThat(cc.writeAndFlush(region).await().cause(), CoreMatchers.<Throwable>instanceOf(IOException.class));
+        assertInstanceOf(IOException.class, cc.writeAndFlush(region).await().cause());
         cc.close().sync();
         sc.close().sync();
     }
@@ -259,7 +257,7 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         }
 
         // Make sure we did not receive more than we expected.
-        assertThat(sh.counter, is(data.length));
+        assertEquals(data.length, sh.counter);
     }
 
     private static class TestHandler extends SimpleChannelInboundHandler<ByteBuf> {

@@ -24,11 +24,17 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-  
+
 permissions: read-all
 
 env:
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
+# Cancel running jobs when a new push happens to the same branch as otherwise it will
+# tie up too many resources without providing much value.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   stage-snapshot-linux:
@@ -56,10 +62,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-${{ matrix.setup }}-
-            ${{ runner.os }}-maven-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - name: Create local staging directory
         run: mkdir -p ~/local-staging
@@ -106,9 +112,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: pr-${{ matrix.setup }}-maven-cache-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            pr-${{ matrix.setup }}-maven-cache-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - name: Install tools via brew
         run: brew bundle
@@ -146,18 +153,18 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-deploy-staged-snapshots-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-deploy-staged-snapshots-
-            ${{ runner.os }}-maven-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - uses: s4u/maven-settings-action@v3.0.0
         with:
           servers: |
             [{
-              "id": "sonatype-nexus-snapshots",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+              "id": "central-portal-snapshots",
+              "username": "${{ secrets.MAVEN_CENTRAL_USERNAME }}",
+              "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
             }]
 
       # Setup some env to re-use later.
@@ -198,7 +205,7 @@ jobs:
           path: ~/linux-x86_64-java8-local-staging
 
       - name: Copy previous build artifacts to local maven repository
-        run: bash ./.github/scripts/install_local_staging.sh ~/.m2/repository ~/macos-aarch64-java8-local-staging ~/macos-x86_64-java8-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java8-local-staging
+        run: bash ./.github/scripts//local_staging_install_snapshot.sh ~/.m2/repository ~/macos-aarch64-java8-local-staging ~/macos-x86_64-java8-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java8-local-staging
 
       - name: Generate netty-all and deploy to local staging.
         run: |
@@ -206,7 +213,7 @@ jobs:
           ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
 
       - name: Merge staging repositories
-        run: bash ./.github/scripts/merge_local_staging.sh ~/local-staging ~/macos-aarch64-java8-local-staging ~/macos-x86_64-java8-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java8-local-staging ~/all-local-staging
+        run: bash ./.github/scripts/local_staging_merge_snapshot.sh ~/local-staging ~/macos-aarch64-java8-local-staging ~/macos-x86_64-java8-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java8-local-staging ~/all-local-staging
 
       - name: Deploy local staged artifacts
-        run: ./mvnw -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR
+        run: ./mvnw -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$HOME/local-staging  -DserverId=central-portal-snapshots -DnexusUrl=https://central.sonatype.com/repository/maven-snapshots

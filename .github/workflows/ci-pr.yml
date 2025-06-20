@@ -28,6 +28,12 @@ permissions:
 env:
   MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
 
+# Cancel running jobs when a new push happens to the same branch as otherwise it will
+# tie up too many resources without providing much value.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify-pr:
     runs-on: ubuntu-latest
@@ -45,10 +51,11 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-verify-pr-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-verify-pr-
-            ${{ runner.os }}-maven-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
+
       - name: Verify with Maven
         run: ./mvnw -B -ntp --file pom.xml verify -DskipTests=true
 
@@ -60,7 +67,7 @@ jobs:
         if: ${{ cancelled() }}
 
   build-pr-windows:
-    runs-on: windows-2019
+    runs-on: windows-2022
     name: windows-x86_64-java11-boringssl
     needs: verify-pr
     steps:
@@ -73,14 +80,15 @@ jobs:
           java-version: '11'
 
       # Cache .m2/repository
-      # Caching of maven dependencies
-      - uses: actions/cache@v4
+      - name: Cache local Maven repository
+        uses: actions/cache@v4
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: pr-windows-x86_64-maven-cache-${{ hashFiles('**/pom.xml') }}
+          key: cache-windows-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            pr-windows-x86_64-maven-cache-
+            cache-windows-maven-${{ hashFiles('**/pom.xml') }}
+            cache-windows-maven-
 
       - name: Build project
         run: ./mvnw.cmd -B -ntp --file pom.xml clean package -Pboringssl -DskipHttp2Testsuite=true -DskipAutobahnTestsuite=true
@@ -128,10 +136,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-build-pr-${{ matrix.arch }}-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-build-pr-${{ matrix.arch }}-
-            ${{ runner.os }}-maven-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - uses: uraimo/run-on-arch-action@v2
         name: Run commands
@@ -202,10 +210,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-${{ matrix.setup }}-
-            ${{ runner.os }}-maven-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}
@@ -269,9 +277,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: pr-${{ matrix.setup }}-maven-cache-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            pr-${{ matrix.setup }}-maven-cache-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - name: Install tools via brew
         run: brew bundle

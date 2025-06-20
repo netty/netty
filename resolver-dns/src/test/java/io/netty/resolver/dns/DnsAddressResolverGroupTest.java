@@ -32,8 +32,7 @@ import java.net.SocketAddress;
 import java.nio.channels.UnsupportedAddressTypeException;
 import java.util.concurrent.ExecutionException;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -55,8 +54,7 @@ public class DnsAddressResolverGroupTest {
                 @Override
                 public void operationComplete(Future<Object> future) {
                     try {
-                        assertThat(future.cause(),
-                                instanceOf(UnsupportedAddressTypeException.class));
+                        assertInstanceOf(UnsupportedAddressTypeException.class, future.cause());
                         assertTrue(loop.inEventLoop());
                         promise.setSuccess(null);
                     } catch (Throwable cause) {

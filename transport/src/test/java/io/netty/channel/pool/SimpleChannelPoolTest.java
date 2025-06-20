@@ -26,7 +26,6 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -35,7 +34,6 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.pool.ChannelPoolTestUtils.getLocalAddrId;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -234,7 +232,7 @@ public class SimpleChannelPoolTest {
         channel1.close().syncUninterruptibly();
         Future<Void> releaseFuture =
                 pool.release(channel1, channel1.eventLoop().<Void>newPromise()).syncUninterruptibly();
-        assertThat(releaseFuture.isSuccess(), CoreMatchers.is(true));
+        assertTrue(releaseFuture.isSuccess());
 
         Channel channel2 = pool.acquire().syncUninterruptibly().getNow();
         //verifying that in fact the channel2 is different that means is not pulled from the pool

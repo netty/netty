@@ -32,10 +32,9 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.CountDownLatch;
 
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 
 public class OioEventLoopTest {
     @Test
@@ -51,8 +50,8 @@ public class OioEventLoopTest {
         ChannelFuture f2 = b.bind(0);
         f2.await();
 
-        assertThat(f2.cause(), is(instanceOf(ChannelException.class)));
-        assertThat(f2.cause().getMessage().toLowerCase(), containsString("too many channels"));
+        assertInstanceOf(ChannelException.class, f2.cause());
+        assertThat(f2.cause().getMessage().toLowerCase()).contains("too many channels");
 
         final CountDownLatch notified = new CountDownLatch(1);
         f2.addListener(new ChannelFutureListener() {
@@ -83,8 +82,8 @@ public class OioEventLoopTest {
         ChannelFuture f2 = cb.connect(NetUtil.LOCALHOST, ((InetSocketAddress) f1.channel().localAddress()).getPort());
         f2.await();
 
-        assertThat(f2.cause(), is(instanceOf(ChannelException.class)));
-        assertThat(f2.cause().getMessage().toLowerCase(), containsString("too many channels"));
+        assertInstanceOf(ChannelException.class, f2.cause());
+        assertThat(f2.cause().getMessage().toLowerCase()).contains("too many channels");
 
         final CountDownLatch notified = new CountDownLatch(1);
         f2.addListener(new ChannelFutureListener() {
@@ -109,7 +108,7 @@ public class OioEventLoopTest {
         f1.sync();
 
         Socket s = new Socket(NetUtil.LOCALHOST, ((InetSocketAddress) f1.channel().localAddress()).getPort());
-        assertThat(s.getInputStream().read(), is(-1));
+        assertEquals(-1, s.getInputStream().read());
         s.close();
 
         g.shutdownGracefully();
