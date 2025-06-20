@@ -280,12 +280,13 @@ public class SocketEchoTest extends AbstractSocketTest {
                 assertEquals(data[i + lastIdx], actual[i]);
             }
 
-            if (channel.parent() != null) {
+            // Update the counter before calling write(...) as write could in theory trigger another channelRead(...)
+            // which then would use the wrong lastIdx.
+            counter += actual.length;
 
+            if (channel.parent() != null) {
                 channel.write(randomBufferType(channel.alloc(), actual, 0, actual.length));
             }
-
-            counter += actual.length;
         }
 
         @Override
