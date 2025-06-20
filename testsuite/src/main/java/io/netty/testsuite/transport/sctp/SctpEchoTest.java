@@ -171,11 +171,13 @@ public class SctpEchoTest extends AbstractSctpTest {
                 assertEquals(data[i + lastIdx], actual[i]);
             }
 
+            // Update the counter before calling write(...) as write could in theory trigger another channelRead(...)
+            // which then would use the wrong lastIdx.
+            counter += actual.length;
+
             if (channel.parent() != null) {
                 channel.writeAndFlush(Unpooled.wrappedBuffer(actual));
             }
-
-            counter += actual.length;
         }
 
         @Override
