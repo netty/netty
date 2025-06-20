@@ -41,7 +41,7 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
 
     @Override
     protected boolean isDirectExpected(boolean preferDirect) {
-        return preferDirect && PlatformDependent.hasUnsafe();
+        return preferDirect && PlatformDependent.canReliabilyFreeDirectBuffers();
     }
 
     @Override
