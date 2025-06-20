@@ -1251,6 +1251,15 @@
         <artifactId>blockhound</artifactId>
         <version>1.0.13.RELEASE</version>
       </dependency>
+
+      <dependency>
+        <groupId>org.graalvm.nativeimage</groupId>
+        <artifactId>svm</artifactId>
+        <version>${graalvm.version}</version>
+        <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
+        <scope>provided</scope>
+      </dependency>
+
     </dependencies>
   </dependencyManagement>
 
@@ -1825,6 +1834,56 @@
 
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>com.github.veithen.alta</groupId>
+          <artifactId>alta-maven-plugin</artifactId>
+          <version>0.6.2</version>
+        </plugin>
+        <plugin>
+          <groupId>com.github.madgnome</groupId>
+          <artifactId>h2spec-maven-plugin</artifactId>
+          <version>0.6</version>
+        </plugin>
+        <plugin>
+          <groupId>me.normanmaurer.maven.autobahntestsuite</groupId>
+          <artifactId>autobahntestsuite-maven-plugin</artifactId>
+          <version>0.1.5</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.gmaven</groupId>
+          <artifactId>groovy-maven-plugin</artifactId>
+          <version>2.1.1</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.codehaus.groovy</groupId>
+              <artifactId>groovy</artifactId>
+              <version>3.0.9</version>
+            </dependency>
+            <dependency>
+              <groupId>ant</groupId>
+              <artifactId>ant-optional</artifactId>
+              <version>1.5.3-1</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>com.soebes.maven.plugins</groupId>
+          <artifactId>iterator-maven-plugin</artifactId>
+          <!-- Don't use 0.5.1, it contains a change that merges all properties,
+            and therefore doesn't re-evaluates "nested" properties (e.g. cargoTarget, which uses ${quicheTarget}).
+            Keep this version or provide a fix to disable merging of properties in iterator-maven-plugin -->
+          <version>0.5.0</version>
+        </plugin>
+        <plugin>
+          <groupId>io.netty.incubator</groupId>
+          <artifactId>netty-incubator-h3spec-maven-plugin</artifactId>
+          <version>0.0.7.Final</version>
+        </plugin>
+        <plugin>
+          <groupId>org.basepom.maven</groupId>
+          <artifactId>duplicate-finder-maven-plugin</artifactId>
+          <version>1.3.0</version>
+        </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>

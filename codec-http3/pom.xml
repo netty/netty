@@ -38,12 +38,6 @@
 
   <profiles>
     <profile>
-      <id>leak</id>
-      <properties>
-        <test.argLine>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32</test.argLine>
-      </properties>
-    </profile>
-    <profile>
       <id>x86_64</id>
       <activation>
         <os>
@@ -235,7 +229,6 @@
       <plugin>
         <groupId>io.netty.incubator</groupId>
         <artifactId>netty-incubator-h3spec-maven-plugin</artifactId>
-        <version>0.0.7.Final</version>
         <configuration>
           <delay>1000</delay>
           <readyMessage>H3SPEC_SERVER_READY</readyMessage>

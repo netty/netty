@@ -319,10 +319,6 @@
           <plugin>
             <groupId>com.soebes.maven.plugins</groupId>
             <artifactId>iterator-maven-plugin</artifactId>
-            <!-- Don't use 0.5.1, it contains a change that merges all properties, 
-              and therefore doesn't re-evaluates "nested" properties (e.g. cargoTarget, which uses ${quicheTarget}).
-              Keep this version or provide a fix to disable merging of properties in iterator-maven-plugin -->
-            <version>0.5.0</version>
             <executions>
               <execution>
                 <phase>package</phase>
@@ -616,13 +612,6 @@
   </profiles>
 
   <build>
-    <extensions>
-      <extension>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
-        <version>1.7.0</version>
-      </extension>
-    </extensions>
     <plugins>
       <!-- Also include c files in source jar -->
       <plugin>
