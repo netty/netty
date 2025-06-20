@@ -76,7 +76,6 @@
       <plugin>
         <groupId>me.normanmaurer.maven.autobahntestsuite</groupId>
         <artifactId>autobahntestsuite-maven-plugin</artifactId>
-        <version>0.1.5</version>
         <configuration>
           <mainClass>io.netty5.testsuite.autobahn.AutobahnServer</mainClass>
           <cases>

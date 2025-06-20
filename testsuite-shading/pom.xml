@@ -45,13 +45,6 @@
   </properties>
 
   <build>
-    <extensions>
-      <extension>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
-        <version>${osmaven.version}</version>
-      </extension>
-    </extensions>
     <plugins>
       <!-- Do not deploy this module -->
       <plugin>
