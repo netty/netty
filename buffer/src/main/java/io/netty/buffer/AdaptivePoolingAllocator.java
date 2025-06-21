@@ -1079,7 +1079,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             checkNewCapacity(newCapacity);
             if (newCapacity < capacity()) {
                 length = newCapacity;
-                setIndex0(Math.min(readerIndex(), newCapacity), Math.min(writerIndex(), newCapacity));
+                trimIndicesToCapacity(newCapacity);
                 return this;
             }
 
@@ -1402,6 +1402,21 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             checkIndex(index, length);
             int ret = rootParent().forEachByteDesc(idx(index), length, processor);
             return forEachResult(ret);
+        }
+
+        @Override
+        public ByteBuf setZero(int index, int length) {
+            checkIndex(index, length);
+            rootParent().setZero(idx(index), length);
+            return this;
+        }
+
+        @Override
+        public ByteBuf writeZero(int length) {
+            ensureWritable(length);
+            rootParent().setZero(idx(writerIndex), length);
+            writerIndex += length;
+            return this;
         }
 
         private int forEachResult(int ret) {
