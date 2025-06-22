@@ -35,7 +35,7 @@ public class DirectSegmentAllocatorTest {
     }
 
     static Stream<DirectSegmentAllocator> allocators() {
-        return Stream.of(new JdkSegmentAllocator(), new NativeSegmnentAllocator());
+        return Stream.of(new JdkSegmentAllocator(), new NativeSegmentAllocator());
     }
 
     @ParameterizedTest

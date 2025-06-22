@@ -29,8 +29,8 @@ import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
 import java.util.NoSuchElementException;
 
-final class NativeSegmnentAllocator implements DirectSegmentAllocator {
-    private static final Logger logger = LoggerFactory.getLogger(NativeSegmnentAllocator.class);
+final class NativeSegmentAllocator implements DirectSegmentAllocator {
+    private static final Logger logger = LoggerFactory.getLogger(NativeSegmentAllocator.class);
 
     private static final boolean AVAILABLE;
     private static final MethodHandle MALLOC;
@@ -90,7 +90,7 @@ final class NativeSegmnentAllocator implements DirectSegmentAllocator {
             return true;
         }
 
-        final Module module = NativeSegmnentAllocator.class.getModule();
+        final Module module = NativeSegmentAllocator.class.getModule();
         final boolean nativeAccessEnabled = module.isNativeAccessEnabled();
         logger.debug("--enable-native-access for {}: {}", module, nativeAccessEnabled);
         if (!nativeAccessEnabled) {

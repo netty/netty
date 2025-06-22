@@ -31,7 +31,7 @@ import java.util.function.Function;
 
 public class SegmentMemoryManager implements MemoryManager {
     private static final DirectSegmentAllocator DIRECT_SEGMENT_ALLOCATOR
-            = NativeSegmnentAllocator.isAvailable()? new NativeSegmnentAllocator() : new JdkSegmentAllocator();
+            = NativeSegmentAllocator.isAvailable()? new NativeSegmentAllocator() : new JdkSegmentAllocator();
 
     private static Buffer createHeapBuffer(
             long size, Function<Drop<Buffer>, Drop<Buffer>> adaptor, AllocatorControl control) {
