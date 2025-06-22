@@ -1350,6 +1350,20 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method java.util.Queue<![CDATA[<java.lang.Runnable>]]> io.netty.channel.nio.NioEventLoop::newTaskQueue0(int)</old>
+                  <new>method java.util.Queue<![CDATA[<java.lang.Runnable>]]> io.netty.channel.SingleThreadIoEventLoop::newTaskQueue0(int) @ io.netty.channel.nio.NioEventLoop</new>
+                  <justification>Improved default performance behavior</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method java.util.Queue<![CDATA[<java.lang.Runnable>]]> io.netty.channel.epoll.EpollEventLoop::newTaskQueue0(int)</old>
+                  <new>method java.util.Queue<![CDATA[<java.lang.Runnable>]]> io.netty.channel.SingleThreadIoEventLoop::newTaskQueue0(int) @ io.netty.channel.epoll.EpollEventLoop</new>
+                  <justification>Improved default performance behavior</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.field.constantValueChanged</code>
                   <classQualifiedName>io.netty.handler.codec.http2.Http2CodecUtil</classQualifiedName>
                   <field>NUM_STANDARD_SETTINGS</field>
