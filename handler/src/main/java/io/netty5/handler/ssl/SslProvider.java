@@ -44,15 +44,10 @@ public enum SslProvider {
      */
     @SuppressWarnings("deprecation")
     public static boolean isAlpnSupported(final SslProvider provider) {
-        switch (provider) {
-            case JDK:
-                return JdkAlpnApplicationProtocolNegotiator.isAlpnSupported();
-            case OPENSSL:
-            case OPENSSL_REFCNT:
-                return OpenSsl.isAlpnSupported();
-            default:
-                throw new Error("Unknown SslProvider: " + provider);
-        }
+      return switch (provider) {
+        case JDK -> true;
+        case OPENSSL, OPENSSL_REFCNT -> OpenSsl.isAlpnSupported();
+      };
     }
 
     /**

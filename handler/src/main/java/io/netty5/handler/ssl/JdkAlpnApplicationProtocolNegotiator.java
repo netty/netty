@@ -111,15 +111,6 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
         super(ALPN_WRAPPER, selectorFactory, listenerFactory, protocols);
     }
 
-    private static final class FailureWrapper extends AllocatorAwareSslEngineWrapperFactory {
-        @Override
-        public SSLEngine wrapSslEngine(SSLEngine engine, BufferAllocator alloc,
-                                       JdkApplicationProtocolNegotiator applicationNegotiator, boolean isServer) {
-            throw new RuntimeException("ALPN unsupported. Does your JDK version support it?"
-                    + " For Conscrypt, add the appropriate Conscrypt JAR to classpath and set the security provider.");
-        }
-    }
-
     private static final class AlpnWrapper extends AllocatorAwareSslEngineWrapperFactory {
         @Override
         public SSLEngine wrapSslEngine(SSLEngine engine, BufferAllocator alloc,
