@@ -56,7 +56,7 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
             assertFalse(serverSocketChannel.closeOnReadError(new IOException()));
             serverSocketChannel.close().syncUninterruptibly();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             file.delete();
         }
     }
@@ -77,7 +77,7 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
             assertFalse(channel.isOpen());
             assertFalse(channel.isActive());
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             file.delete();
         }
     }
@@ -103,7 +103,7 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
             assertFalse(serverSocketChannel.isOpen());
             assertFalse(serverSocketChannel.isActive());
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             file.delete();
         }
     }

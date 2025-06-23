@@ -36,7 +36,7 @@ import io.netty.channel.nio.NioIoHandler;
  */
 public final class Launcher {
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws Exception{
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         Http2Server http2 = new Http2Server(group);
         HttpServer http = new HttpServer(group);
@@ -47,7 +47,7 @@ public final class Launcher {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

@@ -86,7 +86,7 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
             assertTrue(future.cancel(true));
             assertNull(capture.get());
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

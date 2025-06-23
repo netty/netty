@@ -73,7 +73,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     }
 
     @Test
-    public void testRebuildSelector() {
+    public void testRebuildSelector() throws Exception {
         EventLoopGroup group = new NioEventLoopGroup(1);
         final NioEventLoop loop = (NioEventLoop) group.next();
         try {
@@ -99,12 +99,12 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
             channel.close().syncUninterruptibly();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
     @Test
-    public void testScheduleBigDelayNotOverflow() {
+    public void testScheduleBigDelayNotOverflow() throws Exception {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
 
         final EventLoop el = group.next();
@@ -117,7 +117,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
         assertFalse(future.awaitUninterruptibly(1000));
         assertTrue(future.cancel(true));
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
     }
 
     @Test
@@ -159,7 +159,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             assertSame(selector, loop.unwrappedSelector());
             assertTrue(selector.isOpen());
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -195,7 +195,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             selectableChannel.close();
             channel.close().syncUninterruptibly();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -236,7 +236,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     }
 
     @Test
-    public void testRebuildSelectorOnIOException() {
+    public void testRebuildSelectorOnIOException() throws Exception {
         SelectStrategyFactory selectStrategyFactory = new SelectStrategyFactory() {
             @Override
             public SelectStrategy newSelectStrategy() {
@@ -272,7 +272,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
 
             channel.close().syncUninterruptibly();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -301,7 +301,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             }
             assertEquals(1, registered);
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

@@ -54,7 +54,7 @@ public class DefaultDnsCnameCacheTest {
                 throw error;
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -74,7 +74,7 @@ public class DefaultDnsCnameCacheTest {
             cache.cache("netty.io", "mapping.netty.io", TimeUnit.DAYS.toSeconds(days), loop);
             assertEquals("mapping.netty.io", cache.get("netty.io"));
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -90,7 +90,7 @@ public class DefaultDnsCnameCacheTest {
 
             assertEquals("mapping2.netty.io", cache.get("netty.io"));
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -106,7 +106,7 @@ public class DefaultDnsCnameCacheTest {
 
             assertEquals("mapping.netty.io", cache.get("netty.io"));
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -129,7 +129,7 @@ public class DefaultDnsCnameCacheTest {
             cache.clear();
             assertNull(cache.get("y.netty.io"));
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

@@ -80,8 +80,8 @@ public final class FileServer {
             f.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            bossGroup.shutdownGracefully().sync();
+            workerGroup.shutdownGracefully().sync();
         }
     }
 }

@@ -30,7 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class SingleThreadIoEventLoopTest {
 
     @Test
-    void testIsIoType() {
+    void testIsIoType() throws Exception {
         class TestIoHandler2 extends TestIoHandler {
             TestIoHandler2(ThreadAwareExecutor executor) {
                 super(executor);
@@ -41,7 +41,7 @@ public class SingleThreadIoEventLoopTest {
                 Executors.defaultThreadFactory(), TestIoHandler::new);
         assertTrue(group.isIoType(TestIoHandler.class));
         assertFalse(group.isIoType(TestIoHandler2.class));
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
     }
 
     static final class CompatibleTestIoHandler extends TestIoHandler {
@@ -56,14 +56,13 @@ public class SingleThreadIoEventLoopTest {
     }
 
     @Test
-    void testIsCompatible() {
-
+    void testIsCompatible() throws Exception {
         IoHandle handle = new TestIoHandle() { };
         IoEventLoopGroup group = new SingleThreadIoEventLoop(null,
                 Executors.defaultThreadFactory(), CompatibleTestIoHandler::new);
         assertTrue(group.isCompatible(TestIoHandle.class));
         assertFalse(group.isCompatible(handle.getClass()));
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
     }
 
     private static final class TestThreadFactory implements ThreadFactory {
@@ -103,7 +102,7 @@ public class SingleThreadIoEventLoopTest {
         currentThread.join();
 
         assertTrue(threadFactory.threads.isEmpty());
-        loop.shutdownGracefully();
+        loop.shutdownGracefully().sync();
     }
 
     private static class TestIoHandler implements IoHandler {

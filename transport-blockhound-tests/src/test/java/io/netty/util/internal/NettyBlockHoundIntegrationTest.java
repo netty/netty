@@ -355,7 +355,7 @@ public class NettyBlockHoundIntegrationTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             ReferenceCountUtil.release(sslClientCtx);
         }
     }
@@ -412,7 +412,7 @@ public class NettyBlockHoundIntegrationTest {
                     .datagramChannelFactory(NioDatagramChannel::new);
             doTestParseResolverFilesAllowsBlockingCalls(builder::build);
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -446,7 +446,7 @@ public class NettyBlockHoundIntegrationTest {
             assertEquals(0, error.size());
             assertEquals(1, result.size());
         } finally {
-            executor.shutdownGracefully();
+            executor.shutdownGracefully().sync();
         }
     }
 
@@ -535,7 +535,7 @@ public class NettyBlockHoundIntegrationTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             ReferenceCountUtil.release(sslClientCtx);
         }
     }

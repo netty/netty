@@ -131,8 +131,8 @@ public abstract class AbstractEventLoopTest {
                 fail(caughtThrowable);
             }
         } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            bossGroup.shutdownGracefully().syncUninterruptibly();
+            workerGroup.shutdownGracefully().syncUninterruptibly();
         }
     }
 

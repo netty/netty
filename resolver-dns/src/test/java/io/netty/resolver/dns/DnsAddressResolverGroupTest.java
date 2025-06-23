@@ -67,8 +67,8 @@ public class DnsAddressResolverGroupTest {
             promise.sync();
         } finally {
             resolverGroup.close();
-            group.shutdownGracefully();
-            defaultEventLoopGroup.shutdownGracefully();
+            group.shutdownGracefully().sync();
+            defaultEventLoopGroup.shutdownGracefully().sync();
         }
     }
 
@@ -94,8 +94,8 @@ public class DnsAddressResolverGroupTest {
             assertSame(address1, address2);
         } finally {
             resolverGroup.close();
-            group.shutdownGracefully();
-            defaultEventLoopGroup.shutdownGracefully();
+            group.shutdownGracefully().sync();
+            defaultEventLoopGroup.shutdownGracefully().sync();
         }
     }
 

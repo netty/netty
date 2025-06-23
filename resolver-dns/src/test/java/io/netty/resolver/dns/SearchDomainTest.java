@@ -61,7 +61,7 @@ public class SearchDomainTest {
     }
 
     @AfterEach
-    public void destroy() {
+    public void destroy() throws Exception {
         if (dnsServer != null) {
             dnsServer.stop();
             dnsServer = null;
@@ -69,7 +69,7 @@ public class SearchDomainTest {
         if (resolver != null) {
             resolver.close();
         }
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
     }
 
     @Test

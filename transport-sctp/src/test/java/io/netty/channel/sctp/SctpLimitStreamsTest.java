@@ -72,7 +72,7 @@ public abstract class SctpLimitStreamsTest {
             serverChannel.close().syncUninterruptibly();
             clientChannel.close().syncUninterruptibly();
         } finally {
-            loop.shutdownGracefully();
+            loop.shutdownGracefully().sync();
         }
     }
 

@@ -86,8 +86,8 @@ public class CipherSuiteCanaryTest {
     }
 
     @AfterAll
-    public static void destroy() {
-        GROUP.shutdownGracefully();
+    public static void destroy() throws Exception {
+        GROUP.shutdownGracefully().sync();
     }
 
     private static void assumeCipherAvailable(SslProvider provider, String cipher) throws NoSuchAlgorithmException {

@@ -250,13 +250,13 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             if (sc != null) {
                 sc.close();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testShutdownOutputAndClose() throws IOException {
+    public void testShutdownOutputAndClose() throws Exception {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         ServerSocket socket = new ServerSocket();
         socket.bind(new InetSocketAddress(0));
@@ -286,7 +286,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
             } catch (IOException ignore) {
                 // ignore
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

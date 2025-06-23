@@ -43,7 +43,7 @@ public final class QuoteOfTheMomentServer {
 
             b.bind(PORT).sync().channel().closeFuture().await();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

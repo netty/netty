@@ -301,12 +301,12 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
             }
         } finally {
             if (serverChannel != null) {
-                serverChannel.close();
+                serverChannel.close().sync();
             }
             if (clientChannel != null) {
-                clientChannel.close();
+                clientChannel.close().sync();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

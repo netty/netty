@@ -148,7 +148,7 @@ public final class TcpDnsServer {
                 ch.close().sync();
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

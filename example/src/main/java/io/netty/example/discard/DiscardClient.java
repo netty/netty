@@ -62,7 +62,7 @@ public final class DiscardClient {
             // Wait until the connection is closed.
             f.channel().closeFuture().sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

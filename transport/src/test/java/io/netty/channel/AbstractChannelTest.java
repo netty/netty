@@ -162,7 +162,7 @@ public class AbstractChannelTest {
             assertClosedChannelException(channel.bind(new InetSocketAddress(NetUtil.LOCALHOST, 8888)), ioException);
         } finally {
             channel.close();
-            loop.shutdownGracefully();
+            loop.shutdownGracefully().syncUninterruptibly();
         }
     }
 

@@ -110,7 +110,7 @@ public class OcspClientExample {
                     channel.close();
                 }
             } finally {
-                group.shutdownGracefully();
+                group.shutdownGracefully().sync();
             }
         } finally {
             context.release();

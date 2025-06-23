@@ -46,12 +46,12 @@ public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServer
             assertTrue(serverSocketChannel.closeOnReadError(new IllegalArgumentException()));
             serverSocketChannel.close().syncUninterruptibly();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
     @Test
-    public void testIsActiveFalseAfterClose()  {
+    public void testIsActiveFalseAfterClose() throws Exception {
         NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel();
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         try {
@@ -63,7 +63,7 @@ public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServer
             assertFalse(channel.isOpen());
             assertFalse(channel.isActive());
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

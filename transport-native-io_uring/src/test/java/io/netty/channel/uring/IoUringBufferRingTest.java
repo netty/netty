@@ -162,7 +162,7 @@ public class IoUringBufferRingTest {
 
         serverChannel.close().syncUninterruptibly();
         clientChannel.close().syncUninterruptibly();
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
     }
 
     static boolean recvsendBundleEnabled() {
@@ -233,7 +233,7 @@ public class IoUringBufferRingTest {
             assertEquals(writeBuffer, received);
             serverChannel.close().syncUninterruptibly();
             clientChannel.close().syncUninterruptibly();
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             assertTrue(buffers.isEmpty());
         } finally {
             writeBuffer.release();

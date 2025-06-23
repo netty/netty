@@ -71,8 +71,8 @@ public final class MsgEchoServer {
             future.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            acceptGroup.shutdownGracefully();
-            connectGroup.shutdownGracefully();
+            acceptGroup.shutdownGracefully().sync();
+            connectGroup.shutdownGracefully().sync();
         }
     }
 }

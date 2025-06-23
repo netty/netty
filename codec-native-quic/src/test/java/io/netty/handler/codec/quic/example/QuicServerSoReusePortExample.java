@@ -150,7 +150,7 @@ public final class QuicServerSoReusePortExample {
                 channel.closeFuture().sync();
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

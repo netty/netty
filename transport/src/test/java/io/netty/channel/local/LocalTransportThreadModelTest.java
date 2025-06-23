@@ -223,9 +223,9 @@ public class LocalTransportThreadModelTest {
             System.out.println("H3R: " + h3.removalThreadNames);
             throw e;
         } finally {
-            l.shutdownGracefully();
-            e1.shutdownGracefully();
-            e2.shutdownGracefully();
+            l.shutdownGracefully().sync();
+            e1.shutdownGracefully().sync();
+            e2.shutdownGracefully().sync();
 
             l.terminationFuture().sync();
             e1.terminationFuture().sync();
@@ -347,12 +347,12 @@ public class LocalTransportThreadModelTest {
 
             ch.close().sync();
         } finally {
-            l.shutdownGracefully();
-            e1.shutdownGracefully();
-            e2.shutdownGracefully();
-            e3.shutdownGracefully();
-            e4.shutdownGracefully();
-            e5.shutdownGracefully();
+            l.shutdownGracefully().sync();
+            e1.shutdownGracefully().sync();
+            e2.shutdownGracefully().sync();
+            e3.shutdownGracefully().sync();
+            e4.shutdownGracefully().sync();
+            e5.shutdownGracefully().sync();
 
             l.terminationFuture().sync();
             e1.terminationFuture().sync();

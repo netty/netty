@@ -141,7 +141,7 @@ public abstract class RenegotiateTest {
             channel.close().syncUninterruptibly();
             verifyResult(error);
         } finally  {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

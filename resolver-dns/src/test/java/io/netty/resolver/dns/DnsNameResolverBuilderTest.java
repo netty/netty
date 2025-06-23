@@ -52,8 +52,8 @@ class DnsNameResolverBuilderTest {
     }
 
     @AfterAll
-    static void shutdownEventLoopGroup() {
-        GROUP.shutdownGracefully();
+    static void shutdownEventLoopGroup() throws Exception {
+        GROUP.shutdownGracefully().sync();
     }
 
     @Test

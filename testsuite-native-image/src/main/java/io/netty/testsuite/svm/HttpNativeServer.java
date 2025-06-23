@@ -107,8 +107,8 @@ public final class HttpNativeServer {
             httpClient.close().sync();
             serverStartSucess = true;
         } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            bossGroup.shutdownGracefully().sync();
+            workerGroup.shutdownGracefully().sync();
         }
         return serverStartSucess;
     }

@@ -71,7 +71,7 @@ public class IoUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
             loop.submit(EMPTY_RUNNABLE).sync();
             loop.submit(EMPTY_RUNNABLE).sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -99,7 +99,7 @@ public class IoUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
             EventLoop loop = group.next();
             loop.schedule(EMPTY_RUNNABLE, 1, TimeUnit.SECONDS).sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

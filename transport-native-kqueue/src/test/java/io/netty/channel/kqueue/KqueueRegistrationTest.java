@@ -65,7 +65,7 @@ public class KqueueRegistrationTest {
             Throwable cause = promise.sync().getNow();
             assertInstanceOf(ConnectException.class, cause);
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

@@ -433,9 +433,9 @@ public class DnsNameResolverTest {
     }
 
     @AfterAll
-    public static void destroy() {
+    public static void destroy() throws Exception {
         dnsServer.stop();
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
     }
 
     @ParameterizedTest

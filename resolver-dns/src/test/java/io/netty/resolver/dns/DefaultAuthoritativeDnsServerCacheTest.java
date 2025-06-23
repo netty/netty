@@ -63,7 +63,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
                 throw error;
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -82,7 +82,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
             final DefaultAuthoritativeDnsServerCache cache = new DefaultAuthoritativeDnsServerCache();
             cache.cache("netty.io", new InetSocketAddress(NetUtil.LOCALHOST, 53), days, loop);
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -105,7 +105,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
             assertEquals(resolved1, entries.next());
             assertEquals(resolved2, entries.next());
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -136,7 +136,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
             assertEquals(resolved2, entries2.next());
             assertEquals(resolved1, entries2.next());
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -192,7 +192,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
                 assertEquals(unresolved, entries.next());
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

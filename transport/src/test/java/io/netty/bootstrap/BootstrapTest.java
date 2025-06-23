@@ -79,8 +79,8 @@ public class BootstrapTest {
 
     @AfterAll
     public static void destroy() {
-        groupA.shutdownGracefully();
-        groupB.shutdownGracefully();
+        groupA.shutdownGracefully().syncUninterruptibly();
+        groupB.shutdownGracefully().syncUninterruptibly();
         groupA.terminationFuture().syncUninterruptibly();
         groupB.terminationFuture().syncUninterruptibly();
     }
@@ -223,7 +223,7 @@ public class BootstrapTest {
             assertTrue(queue.take());
             assertTrue(queue.take());
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             group.terminationFuture().sync();
         }
     }
@@ -272,7 +272,7 @@ public class BootstrapTest {
             assertTrue(queue.take());
             assertFalse(queue.take());
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             group.terminationFuture().sync();
         }
     }
@@ -293,7 +293,7 @@ public class BootstrapTest {
                 }
             });
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

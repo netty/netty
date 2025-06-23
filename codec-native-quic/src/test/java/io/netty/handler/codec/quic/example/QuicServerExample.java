@@ -118,7 +118,7 @@ public final class QuicServerExample {
                     .bind(new InetSocketAddress(9999)).sync().channel();
             channel.closeFuture().sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

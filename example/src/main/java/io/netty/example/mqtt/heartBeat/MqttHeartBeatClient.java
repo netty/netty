@@ -60,7 +60,7 @@ public final class MqttHeartBeatClient {
             System.out.println("Client connected");
             f.channel().closeFuture().sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

@@ -135,7 +135,7 @@ public final class HttpUploadClient {
             formpostmultipart(b, host, port, uriFile, factory, headers, bodylist);
         } finally {
             // Shut down executor threads to exit.
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
 
             // Really clean all temporary files if they still exist
             factory.cleanAllHttpData();

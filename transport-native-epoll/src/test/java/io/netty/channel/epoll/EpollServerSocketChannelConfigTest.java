@@ -49,11 +49,11 @@ public class EpollServerSocketChannelConfigTest {
     }
 
     @AfterAll
-    public static void after() {
+    public static void after() throws Exception {
         try {
             ch.close().syncUninterruptibly();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

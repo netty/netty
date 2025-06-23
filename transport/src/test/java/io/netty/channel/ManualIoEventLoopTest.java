@@ -244,7 +244,7 @@ public class ManualIoEventLoopTest {
         thread.start();
         cf.get();
 
-        eventLoop.shutdownGracefully();
+        eventLoop.shutdownGracefully().sync();
         thread.join();
     }
 
@@ -260,11 +260,11 @@ public class ManualIoEventLoopTest {
 
         eventLoop.runNow(); // runs fine
 
-        eventLoop.shutdownGracefully();
+        eventLoop.shutdownGracefully().sync();
     }
 
     @Test
-    public void testRunNonIoTasksSetupEventExecutor() {
+    public void testRunNonIoTasksSetupEventExecutor() throws Exception {
         MockTicker ticker = Ticker.newMockTicker();
         ManualIoEventLoop eventLoop = new ManualIoEventLoop(
                 null, Thread.currentThread(), LocalIoHandler.newFactory(), ticker);
@@ -276,7 +276,7 @@ public class ManualIoEventLoopTest {
         });
         assertEquals(1, eventLoop.runNonBlockingTasks(0));
         assertTrue(executed.get());
-        eventLoop.shutdownGracefully();
+        eventLoop.shutdownGracefully().sync();
     }
 
     private enum RunMode {
@@ -300,7 +300,7 @@ public class ManualIoEventLoopTest {
 
     @ParameterizedTest
     @EnumSource(RunMode.class)
-    public void testTasksWhileExpiringTimeout(RunMode mode) {
+    public void testTasksWhileExpiringTimeout(RunMode mode) throws Exception {
         MockTicker ticker = Ticker.newMockTicker();
         ManualIoEventLoop eventLoop = new ManualIoEventLoop(
                 null, Thread.currentThread(), LocalIoHandler.newFactory(), ticker);
@@ -323,21 +323,21 @@ public class ManualIoEventLoopTest {
         assertFalse(executedSecond.get());
         canExecute.set(true);
         assertEquals(1, mode.runWith(eventLoop, 1));
-        eventLoop.shutdownGracefully();
+        eventLoop.shutdownGracefully().sync();
     }
 
     @Test
-    public void testSetOwnerMultipleTimes() {
+    public void testSetOwnerMultipleTimes() throws Exception {
         ManualIoEventLoop eventLoop = new ManualIoEventLoop(null, executor ->
                 new TestIoHandler(new Semaphore(0)));
         eventLoop.setOwningThread(Thread.currentThread());
         assertThrows(IllegalStateException.class, () -> eventLoop.setOwningThread(Thread.currentThread()));
 
-        eventLoop.shutdownGracefully();
+        eventLoop.shutdownGracefully().sync();
     }
 
     @Test
-    public void testTicker() {
+    public void testTicker() throws Exception {
         MockTicker ticker = Ticker.newMockTicker();
         ManualIoEventLoop eventLoop = new ManualIoEventLoop(
                 null, Thread.currentThread(), NioIoHandler.newFactory(), ticker);
@@ -356,7 +356,7 @@ public class ManualIoEventLoopTest {
         eventLoop.runNow();
         assertEquals(1, counter.get());
 
-        eventLoop.shutdownGracefully();
+        eventLoop.shutdownGracefully().sync();
     }
 
     private static final class TestRunnable implements Runnable {

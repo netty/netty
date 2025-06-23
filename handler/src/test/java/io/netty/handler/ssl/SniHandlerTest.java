@@ -598,7 +598,7 @@ public class SniHandlerTest {
                     if (sslContext != null) {
                         ReferenceCountUtil.release(sslContext);
                     }
-                    group.shutdownGracefully();
+                    group.shutdownGracefully().sync();
                 }
             case JDK:
                 return;

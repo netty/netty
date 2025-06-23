@@ -68,18 +68,18 @@ public class DefaultDnsCacheTest {
                 throw error;
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
     @Test
-    public void testExpireWithDifferentTTLs() {
+    public void testExpireWithDifferentTTLs() throws Exception {
         testExpireWithTTL0(1);
         testExpireWithTTL0(1000);
         testExpireWithTTL0(1000000);
     }
 
-    private static void testExpireWithTTL0(int days) {
+    private static void testExpireWithTTL0(int days) throws Exception {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
 
         try {
@@ -87,12 +87,12 @@ public class DefaultDnsCacheTest {
             final DefaultDnsCache cache = new DefaultDnsCache();
             assertNotNull(cache.cache("netty.io", null, NetUtil.LOCALHOST, days, loop));
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
     @Test
-    public void testExpireWithToBigMinTTL() {
+    public void testExpireWithToBigMinTTL() throws Exception {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
 
         try {
@@ -100,7 +100,7 @@ public class DefaultDnsCacheTest {
             final DefaultDnsCache cache = new DefaultDnsCache(Integer.MAX_VALUE, Integer.MAX_VALUE, Integer.MAX_VALUE);
             assertNotNull(cache.cache("netty.io", null, NetUtil.LOCALHOST, 100, loop));
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -121,7 +121,7 @@ public class DefaultDnsCacheTest {
             assertEntry(entries.get(0), addr1);
             assertEntry(entries.get(1), addr2);
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -140,7 +140,7 @@ public class DefaultDnsCacheTest {
             assertEquals(1, entries.size());
             assertEntry(entries.get(0), addr1);
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -174,7 +174,7 @@ public class DefaultDnsCacheTest {
             assertThrowable(exception, entry.cause());
             assertNull(entry.address());
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -200,7 +200,7 @@ public class DefaultDnsCacheTest {
             assertEntry(entries2.get(0), addr1);
             assertEntry(entries2.get(1), addr2);
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -215,7 +215,7 @@ public class DefaultDnsCacheTest {
             testSuppressed(cache, new UnknownHostException("test"), loop);
             testSuppressed(cache, new Throwable("test"), loop);
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

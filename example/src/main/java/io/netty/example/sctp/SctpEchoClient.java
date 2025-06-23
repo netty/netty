@@ -63,7 +63,7 @@ public final class SctpEchoClient {
             f.channel().closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

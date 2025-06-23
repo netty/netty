@@ -83,7 +83,7 @@ public final class SctpMultiHomingEchoClient {
             connectFuture.channel().closeFuture().sync();
         } finally {
             // Shut down the event loop to terminate all threads.
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

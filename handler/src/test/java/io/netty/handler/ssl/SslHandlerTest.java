@@ -504,7 +504,7 @@ public class SslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -685,7 +685,7 @@ public class SslHandlerTest {
             if (clientChannel != null) {
                 clientChannel.close();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -752,7 +752,7 @@ public class SslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
 
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
@@ -818,7 +818,7 @@ public class SslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
 
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
@@ -906,7 +906,7 @@ public class SslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
 
             ReferenceCountUtil.release(sslClientCtx);
         }
@@ -981,7 +981,7 @@ public class SslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             ReferenceCountUtil.release(sslClientCtx);
         }
     }
@@ -1173,7 +1173,7 @@ public class SslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             ReferenceCountUtil.release(sslClientCtx);
         }
     }
@@ -1258,7 +1258,7 @@ public class SslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             ReferenceCountUtil.release(sslClientCtx);
         }
     }
@@ -1373,7 +1373,7 @@ public class SslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             ReferenceCountUtil.release(sslClientCtx);
         }
     }
@@ -1556,7 +1556,7 @@ public class SslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -1678,7 +1678,7 @@ public class SslHandlerTest {
             assertInstanceOf(SSLException.class, serverEventCause);
             assertNull(serverEventCause.getCause());
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             ReferenceCountUtil.release(sslClientCtx);
         }
     }
@@ -1875,7 +1875,7 @@ public class SslHandlerTest {
             assertEquals(0, clientCloseCompletionEvents.size());
             assertEquals(0, serverCloseCompletionEvents.size());
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
             ReferenceCountUtil.release(sslClientCtx);
             ReferenceCountUtil.release(sslServerCtx);
         }

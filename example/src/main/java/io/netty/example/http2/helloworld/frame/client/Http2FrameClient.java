@@ -118,7 +118,7 @@ public final class Http2FrameClient {
             // Wait until the connection is closed.
             channel.close().syncUninterruptibly();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

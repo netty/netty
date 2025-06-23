@@ -99,10 +99,10 @@ public abstract class DetectPeerCloseWithoutReadTest {
                 serverChannel.close().syncUninterruptibly();
             }
             if (serverGroup != null) {
-                serverGroup.shutdownGracefully();
+                serverGroup.shutdownGracefully().sync();
             }
             if (clientGroup != null) {
-                clientGroup.shutdownGracefully();
+                clientGroup.shutdownGracefully().sync();
             }
         }
     }
@@ -176,10 +176,10 @@ public abstract class DetectPeerCloseWithoutReadTest {
                 clientChannel.close().syncUninterruptibly();
             }
             if (serverGroup != null) {
-                serverGroup.shutdownGracefully();
+                serverGroup.shutdownGracefully().sync();
             }
             if (clientGroup != null) {
-                clientGroup.shutdownGracefully();
+                clientGroup.shutdownGracefully().sync();
             }
         }
     }

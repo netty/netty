@@ -98,7 +98,7 @@ public class IoUringFileRegionTest {
 
         serverChannel.close().syncUninterruptibly();
         clientChannel.close().syncUninterruptibly();
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
     }
 }
 

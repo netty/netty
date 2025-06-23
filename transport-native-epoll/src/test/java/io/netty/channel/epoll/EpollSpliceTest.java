@@ -168,7 +168,7 @@ public class EpollSpliceTest {
         ch.channel.close().sync();
         sc.close().sync();
         pc.close().sync();
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
 
         if (sh.exception.get() != null && !(sh.exception.get() instanceof IOException)) {
             throw sh.exception.get();
@@ -231,7 +231,7 @@ public class EpollSpliceTest {
             assertEquals(written.length, in.read(written));
             assertArrayEquals(data, written);
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

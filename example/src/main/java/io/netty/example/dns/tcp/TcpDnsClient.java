@@ -106,7 +106,7 @@ public final class TcpDnsClient {
                 ch.close().sync();
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

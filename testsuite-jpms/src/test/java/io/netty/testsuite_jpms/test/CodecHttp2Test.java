@@ -159,7 +159,7 @@ public class CodecHttp2Test {
             server.channel().close().syncUninterruptibly();
             client.close().syncUninterruptibly();
         } finally {
-            eventLoopGroup.shutdownGracefully();
+            eventLoopGroup.shutdownGracefully().sync();
         }
     }
 }

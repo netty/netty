@@ -73,7 +73,7 @@ public class ServerBootstrapTest {
             latch.await();
             assertNull(error.get());
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -145,7 +145,7 @@ public class ServerBootstrapTest {
             if (cch != null) {
                 cch.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().syncUninterruptibly();
         }
     }
 
@@ -178,7 +178,7 @@ public class ServerBootstrapTest {
         Channel clientChannel = cb.connect(addr).syncUninterruptibly().channel();
         serverChannel.close().syncUninterruptibly();
         clientChannel.close().syncUninterruptibly();
-        group.shutdownGracefully();
+        group.shutdownGracefully().syncUninterruptibly();
         assertTrue(requestServed.get());
     }
 
@@ -238,6 +238,6 @@ public class ServerBootstrapTest {
 
         serverChannel.close().syncUninterruptibly();
         clientChannel.close().syncUninterruptibly();
-        group.shutdownGracefully();
+        group.shutdownGracefully().syncUninterruptibly();
     }
 }

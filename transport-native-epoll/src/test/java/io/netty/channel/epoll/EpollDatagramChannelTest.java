@@ -92,7 +92,7 @@ public class EpollDatagramChannelTest {
 
             future.channel().close().syncUninterruptibly();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

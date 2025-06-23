@@ -98,7 +98,7 @@ public final class MemcacheClient {
                 lastWriteFuture.sync();
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

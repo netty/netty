@@ -66,7 +66,7 @@ public final class WorldClockClient {
                 System.out.format("%28s: %s%n", CITIES.get(i), response.get(i));
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

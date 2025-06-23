@@ -194,7 +194,7 @@ public class SslErrorTest {
             if (serverChannel != null) {
                 serverChannel.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
 
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);

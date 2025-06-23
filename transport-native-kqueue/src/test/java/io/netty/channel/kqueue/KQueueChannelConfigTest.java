@@ -81,7 +81,7 @@ public class KQueueChannelConfigTest {
                     .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
             ch.close().syncUninterruptibly();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

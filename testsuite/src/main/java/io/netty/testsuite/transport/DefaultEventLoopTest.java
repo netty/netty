@@ -47,7 +47,7 @@ public class DefaultEventLoopTest extends AbstractSingleThreadEventLoopTest {
                 }
             });
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

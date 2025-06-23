@@ -49,8 +49,8 @@ public class EpollSocketTcpMd5Test {
     }
 
     @AfterAll
-    public static void afterClass() {
-        GROUP.shutdownGracefully();
+    public static void afterClass() throws Exception {
+        GROUP.shutdownGracefully().sync();
     }
 
     @BeforeEach

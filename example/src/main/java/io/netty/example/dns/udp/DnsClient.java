@@ -102,7 +102,7 @@ public final class DnsClient {
                 ch.close().sync();
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

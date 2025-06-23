@@ -93,7 +93,7 @@ public class RedisClient {
                 lastWriteFuture.sync();
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

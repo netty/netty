@@ -95,7 +95,7 @@ public final class Http2Server {
 
             ch.closeFuture().sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

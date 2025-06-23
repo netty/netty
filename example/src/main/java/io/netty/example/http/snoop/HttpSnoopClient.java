@@ -104,7 +104,7 @@ public final class HttpSnoopClient {
             ch.closeFuture().sync();
         } finally {
             // Shut down executor threads to exit.
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

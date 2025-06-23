@@ -80,8 +80,8 @@ public class FileRegionThrottleTest {
     }
 
     @AfterEach
-    public void tearDown() {
-        group.shutdownGracefully();
+    public void tearDown() throws Exception {
+        group.shutdownGracefully().sync();
     }
 
     @Disabled("This test is flaky, need more investigation")

@@ -43,7 +43,7 @@ public class EpollSocketChannelTest {
             assertTcpInfo0(info);
             ch.close().syncUninterruptibly();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -62,7 +62,7 @@ public class EpollSocketChannelTest {
             assertTcpInfo0(info);
             ch.close().syncUninterruptibly();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -117,7 +117,7 @@ public class EpollSocketChannelTest {
                     .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
             ch.close().syncUninterruptibly();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

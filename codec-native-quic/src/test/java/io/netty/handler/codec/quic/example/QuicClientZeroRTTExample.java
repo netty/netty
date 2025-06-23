@@ -113,7 +113,7 @@ public final class QuicClientZeroRTTExample {
             quicChannel.closeFuture().sync();
             channel.close().sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

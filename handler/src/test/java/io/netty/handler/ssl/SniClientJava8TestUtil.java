@@ -163,7 +163,7 @@ final class SniClientJava8TestUtil {
             ReferenceCountUtil.release(sslServerContext);
             ReferenceCountUtil.release(sslClientContext);
 
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

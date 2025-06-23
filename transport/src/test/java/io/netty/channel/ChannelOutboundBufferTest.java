@@ -522,7 +522,7 @@ public class ChannelOutboundBufferTest {
 
         safeClose(ch);
 
-        executor.shutdownGracefully();
+        executor.shutdownGracefully().sync();
     }
 
     private static void safeClose(EmbeddedChannel ch) {

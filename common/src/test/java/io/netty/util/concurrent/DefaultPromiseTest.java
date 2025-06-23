@@ -330,7 +330,7 @@ public class DefaultPromiseTest {
     }
 
     @Test
-    public void testSignalRace() {
+    public void testSignalRace() throws Exception {
         final long wait = TimeUnit.NANOSECONDS.convert(10, TimeUnit.SECONDS);
         EventExecutor executor = null;
         try {
@@ -357,7 +357,7 @@ public class DefaultPromiseTest {
             }
         } finally {
             if (executor != null) {
-                executor.shutdownGracefully();
+                executor.shutdownGracefully().sync();
             }
         }
     }

@@ -91,7 +91,7 @@ public class SimpleChannelPoolTest {
 
         sc.close().sync();
         pool.close();
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
     }
 
     @Test
@@ -150,7 +150,7 @@ public class SimpleChannelPoolTest {
         channel.close().sync();
         channel2.close().sync();
         pool.close();
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
     }
 
     /**
@@ -196,7 +196,7 @@ public class SimpleChannelPoolTest {
         sc.close().syncUninterruptibly();
         channel3.close().syncUninterruptibly();
         pool.close();
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
     }
 
     /**
@@ -240,7 +240,7 @@ public class SimpleChannelPoolTest {
         sc.close().syncUninterruptibly();
         channel2.close().syncUninterruptibly();
         pool.close();
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
     }
 
     @Test
@@ -349,7 +349,7 @@ public class SimpleChannelPoolTest {
 
         sc.close().sync();
         pool.close();
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
     }
 
     @Test
@@ -394,6 +394,6 @@ public class SimpleChannelPoolTest {
 
         sc.close().sync();
         pool.close();
-        group.shutdownGracefully();
+        group.shutdownGracefully().sync();
     }
 }

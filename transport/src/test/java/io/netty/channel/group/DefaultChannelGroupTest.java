@@ -53,8 +53,8 @@ public class DefaultChannelGroupTest {
             allChannels.close().awaitUninterruptibly();
         }
 
-        bossGroup.shutdownGracefully();
-        workerGroup.shutdownGracefully();
+        bossGroup.shutdownGracefully().sync();
+        workerGroup.shutdownGracefully().sync();
         bossGroup.terminationFuture().sync();
         workerGroup.terminationFuture().sync();
     }

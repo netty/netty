@@ -68,7 +68,7 @@ public class CodecHttp3Test {
             runClient(group, port);
             serverChannel.close().sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

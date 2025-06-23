@@ -54,8 +54,8 @@ public class WriteTimeoutHandlerTest {
             latch.await();
             assertTrue(channel.finishAndReleaseAll());
         } finally {
-            group1.shutdownGracefully();
-            group2.shutdownGracefully();
+            group1.shutdownGracefully().sync();
+            group2.shutdownGracefully().sync();
         }
     }
 }

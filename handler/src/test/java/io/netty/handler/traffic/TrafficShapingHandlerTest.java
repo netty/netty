@@ -47,8 +47,8 @@ public class TrafficShapingHandlerTest {
     private static final EventLoopGroup GROUP = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
     @AfterAll
-    public static void destroy() {
-        GROUP.shutdownGracefully();
+    public static void destroy() throws Exception {
+        GROUP.shutdownGracefully().sync();
         SES.shutdown();
     }
 

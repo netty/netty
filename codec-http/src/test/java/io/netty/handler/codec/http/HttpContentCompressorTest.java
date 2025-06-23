@@ -512,8 +512,8 @@ public class HttpContentCompressorTest {
             if (server != null) {
                 server.close().sync();
             }
-            compressorGroup.shutdownGracefully();
-            localGroup.shutdownGracefully();
+            compressorGroup.shutdownGracefully().sync();
+            localGroup.shutdownGracefully().sync();
         }
     }
 

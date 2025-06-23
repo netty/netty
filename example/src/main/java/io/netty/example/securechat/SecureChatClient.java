@@ -79,7 +79,7 @@ public final class SecureChatClient {
             }
         } finally {
             // The connection is closed automatically on shutdown.
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

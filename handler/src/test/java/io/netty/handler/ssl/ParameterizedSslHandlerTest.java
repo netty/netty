@@ -273,7 +273,7 @@ public class ParameterizedSslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
 
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
@@ -373,7 +373,7 @@ public class ParameterizedSslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
 
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
@@ -513,7 +513,7 @@ public class ParameterizedSslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
 
             ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
@@ -539,7 +539,7 @@ public class ParameterizedSslHandlerTest {
             reentryOnHandshakeComplete(clientProvider, serverProvider, group, bindAddress,
                     serverClass, clientClass, true, true);
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -563,7 +563,7 @@ public class ParameterizedSslHandlerTest {
             reentryOnHandshakeComplete(clientProvider, serverProvider, group, bindAddress,
                     serverClass, clientClass, true, true);
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

@@ -112,7 +112,7 @@ public final class Http3SpecTestServer {
             channel.eventLoop().submit(() -> System.out.println("H3SPEC_SERVER_READY"));
             channel.closeFuture().sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

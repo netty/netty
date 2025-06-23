@@ -334,7 +334,7 @@ public class OpenSslCertificateCompressionTest {
             clientChannel.close().syncUninterruptibly();
             serverChannel.close().syncUninterruptibly();
         } finally  {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

@@ -38,7 +38,7 @@ public class NonStickyEventExecutorGroupTest {
     private static final String PARAMETERIZED_NAME = "{index}: maxTaskExecutePerRun = {0}";
 
     @Test
-    public void testInvalidGroup() {
+    public void testInvalidGroup() throws Exception {
         final EventExecutorGroup group = new DefaultEventExecutorGroup(1);
         try {
             assertThrows(IllegalArgumentException.class, new Executable() {
@@ -48,7 +48,7 @@ public class NonStickyEventExecutorGroupTest {
                 }
             });
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -95,7 +95,7 @@ public class NonStickyEventExecutorGroupTest {
                 throw cause;
             }
         } finally {
-            nonStickyGroup.shutdownGracefully();
+            nonStickyGroup.shutdownGracefully().sync();
         }
     }
 
@@ -125,7 +125,7 @@ public class NonStickyEventExecutorGroupTest {
                 assertTrue(latch.await(5, TimeUnit.SECONDS));
             }
         } finally {
-            nonStickyGroup.shutdownGracefully();
+            nonStickyGroup.shutdownGracefully().sync();
         }
     }
 

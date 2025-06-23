@@ -96,7 +96,7 @@ public final class SpdyClient {
             // Wait until the connection is closed.
             channel.close().syncUninterruptibly();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

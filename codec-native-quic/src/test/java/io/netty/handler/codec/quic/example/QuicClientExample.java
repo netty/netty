@@ -105,7 +105,7 @@ public final class QuicClientExample {
             quicChannel.closeFuture().sync();
             channel.close().sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

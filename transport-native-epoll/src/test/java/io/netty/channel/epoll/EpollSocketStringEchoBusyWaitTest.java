@@ -55,7 +55,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
     @AfterAll
     public static void teardown() throws Exception {
         if (EPOLL_LOOP != null) {
-            EPOLL_LOOP.shutdownGracefully();
+            EPOLL_LOOP.shutdownGracefully().sync();
         }
     }
 

@@ -113,9 +113,9 @@ public class OpenSslPrivateKeyMethodTest {
     }
 
     @AfterAll
-    public static void destroy() {
+    public static void destroy() throws Exception {
         if (OpenSsl.isBoringSSL()) {
-            GROUP.shutdownGracefully();
+            GROUP.shutdownGracefully().sync();
             EXECUTOR.shutdown();
         }
     }

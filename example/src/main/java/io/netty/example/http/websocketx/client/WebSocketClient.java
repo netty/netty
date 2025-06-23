@@ -141,7 +141,7 @@ public final class WebSocketClient {
                 }
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

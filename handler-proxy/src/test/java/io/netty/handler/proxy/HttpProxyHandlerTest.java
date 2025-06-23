@@ -229,7 +229,7 @@ public class HttpProxyHandlerTest {
                 serverChannel.close();
             }
             if (group != null) {
-                group.shutdownGracefully();
+                group.shutdownGracefully().sync();
             }
         }
     }

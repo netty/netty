@@ -73,7 +73,7 @@ public final class ObjectEchoClient {
             // Start the connection attempt.
             b.connect(HOST, PORT).sync().channel().closeFuture().sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

@@ -78,7 +78,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
                 checkNumRegisteredChannels(loop, 1);
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -187,7 +187,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
                 }
             });
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -234,7 +234,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
                 }
             });
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -262,7 +262,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
                 }
             });
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

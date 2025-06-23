@@ -108,7 +108,7 @@ public class IoUringRemoteIpTest {
             f.channel().close().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            bossGroup.shutdownGracefully();
+            bossGroup.shutdownGracefully().sync();
 
             socket.close();
         }

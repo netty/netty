@@ -84,8 +84,8 @@ public final class IpSubnetFilterExample {
             // shut down your server.
             f.channel().closeFuture().sync();
         } finally {
-            workerGroup.shutdownGracefully();
-            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully().sync();
+            bossGroup.shutdownGracefully().sync();
         }
     }
 }

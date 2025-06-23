@@ -1071,7 +1071,7 @@ data.release();
             assertThat(last, notNullValue());
             last.release();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 

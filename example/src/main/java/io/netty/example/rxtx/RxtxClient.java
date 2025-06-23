@@ -55,7 +55,7 @@ public final class RxtxClient {
 
             f.channel().closeFuture().sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

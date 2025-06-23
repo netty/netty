@@ -236,11 +236,8 @@ public class UDTClientServerConnectionTest {
             } catch (final Throwable e) {
                 log.error("Server failure.", e);
             } finally {
-                acceptGroup.shutdownGracefully();
-                connectGroup.shutdownGracefully();
-
-                acceptGroup.terminationFuture().syncUninterruptibly();
-                connectGroup.terminationFuture().syncUninterruptibly();
+                acceptGroup.shutdownGracefully().syncUninterruptibly();
+                connectGroup.shutdownGracefully().syncUninterruptibly();
             }
         }
 

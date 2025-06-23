@@ -59,8 +59,8 @@ public final class MqttHeartBeatBroker {
 
             f.channel().closeFuture().sync();
         } finally {
-            workerGroup.shutdownGracefully();
-            bossGroup.shutdownGracefully();
+            workerGroup.shutdownGracefully().sync();
+            bossGroup.shutdownGracefully().sync();
         }
     }
 }

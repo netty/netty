@@ -106,7 +106,7 @@ public final class Http3ClientExample {
             quicChannel.close().sync();
             channel.close().sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

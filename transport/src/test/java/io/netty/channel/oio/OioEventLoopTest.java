@@ -62,7 +62,7 @@ public class OioEventLoopTest {
         });
 
         notified.await();
-        g.shutdownGracefully();
+        g.shutdownGracefully().sync();
     }
 
     @Test
@@ -94,7 +94,7 @@ public class OioEventLoopTest {
         });
 
         notified.await();
-        g.shutdownGracefully();
+        g.shutdownGracefully().sync();
     }
 
     @Test
@@ -111,6 +111,6 @@ public class OioEventLoopTest {
         assertEquals(-1, s.getInputStream().read());
         s.close();
 
-        g.shutdownGracefully();
+        g.shutdownGracefully().sync();
     }
 }

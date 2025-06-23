@@ -1006,14 +1006,14 @@ public class DefaultChannelPipelineTest {
             assertHandler(removedQueue.take(), handler1);
             assertTrue(removedQueue.isEmpty());
         } finally {
-            group1.shutdownGracefully();
-            group2.shutdownGracefully();
+            group1.shutdownGracefully().sync();
+            group2.shutdownGracefully().sync();
         }
     }
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testHandlerAddedExceptionFromChildHandlerIsPropagated() {
+    public void testHandlerAddedExceptionFromChildHandlerIsPropagated() throws Exception {
         final EventExecutorGroup group1 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         try {
             final Promise<Void> promise = group1.next().newPromise();
@@ -1032,13 +1032,13 @@ public class DefaultChannelPipelineTest {
             group.register(pipeline.channel());
             promise.syncUninterruptibly();
         } finally {
-            group1.shutdownGracefully();
+            group1.shutdownGracefully().sync();
         }
     }
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testHandlerRemovedExceptionFromChildHandlerIsPropagated() {
+    public void testHandlerRemovedExceptionFromChildHandlerIsPropagated() throws Exception {
         final EventExecutorGroup group1 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         try {
             final Promise<Void> promise = group1.next().newPromise();
@@ -1056,7 +1056,7 @@ public class DefaultChannelPipelineTest {
             pipeline.remove(handlerName);
             promise.syncUninterruptibly();
         } finally {
-            group1.shutdownGracefully();
+            group1.shutdownGracefully().sync();
         }
     }
 
@@ -1095,7 +1095,7 @@ public class DefaultChannelPipelineTest {
             assertNull(pipeline.context(handlerName));
             promise.syncUninterruptibly();
         } finally {
-            group1.shutdownGracefully();
+            group1.shutdownGracefully().sync();
         }
     }
 
@@ -1177,7 +1177,7 @@ public class DefaultChannelPipelineTest {
             }
             latch.await();
         } finally {
-            defaultGroup.shutdownGracefully();
+            defaultGroup.shutdownGracefully().sync();
         }
     }
 
@@ -1237,7 +1237,7 @@ public class DefaultChannelPipelineTest {
             assertSame(event, promise.syncUninterruptibly().getNow());
         } finally {
             pipeline1.channel().close().syncUninterruptibly();
-            group.shutdownGracefully();
+            group.shutdownGracefully().syncUninterruptibly();
         }
     }
 
@@ -1351,7 +1351,7 @@ public class DefaultChannelPipelineTest {
             assertSame(exception, promise.syncUninterruptibly().getNow());
         } finally {
             pipeline1.channel().close().syncUninterruptibly();
-            defaultGroup.shutdownGracefully();
+            defaultGroup.shutdownGracefully().syncUninterruptibly();
         }
     }
 
@@ -1417,7 +1417,7 @@ public class DefaultChannelPipelineTest {
                 }
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 
@@ -1874,7 +1874,7 @@ public class DefaultChannelPipelineTest {
                 assertNull(channel.pipeline().get("h" + i));
             }
         } finally {
-            executorGroup.shutdownGracefully();
+            executorGroup.shutdownGracefully().sync();
         }
     }
 

@@ -91,7 +91,7 @@ class OcspServerCertificateValidatorTest {
             // Wait for Channel to be closed
             channelFuture.channel().closeFuture().sync();
         } finally {
-            eventLoopGroup.shutdownGracefully();
+            eventLoopGroup.shutdownGracefully().sync();
         }
     }
 }

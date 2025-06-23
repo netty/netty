@@ -50,8 +50,8 @@ public class KQueueSocketChannelConfigTest {
     }
 
     @AfterAll
-    public static void afterClass() {
-        group.shutdownGracefully();
+    public static void afterClass() throws Exception{
+        group.shutdownGracefully().sync();
     }
 
     @BeforeEach

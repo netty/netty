@@ -75,7 +75,7 @@ public class IoUringAutoReadTest {
                 Assertions.assertEquals(2, in.read());
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

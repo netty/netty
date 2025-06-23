@@ -117,7 +117,7 @@ public final class Http3ServerExample {
                     .bind(new InetSocketAddress(port)).sync().channel();
             channel.closeFuture().sync();
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

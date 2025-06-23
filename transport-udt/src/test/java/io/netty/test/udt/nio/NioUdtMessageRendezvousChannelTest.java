@@ -117,8 +117,8 @@ public class NioUdtMessageRendezvousChannelTest extends AbstractUdtTest {
 
         assertEquals(handler1.meter().count(), handler2.meter().count());
 
-        group1.shutdownGracefully();
-        group2.shutdownGracefully();
+        group1.shutdownGracefully().sync();
+        group2.shutdownGracefully().sync();
 
         group1.terminationFuture().sync();
         group2.terminationFuture().sync();

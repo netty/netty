@@ -112,7 +112,7 @@ public final class DoTClient {
                 ch.close().sync();
             }
         } finally {
-            group.shutdownGracefully();
+            group.shutdownGracefully().sync();
         }
     }
 }

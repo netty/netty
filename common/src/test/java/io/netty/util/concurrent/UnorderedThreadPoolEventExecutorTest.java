@@ -74,7 +74,7 @@ public class UnorderedThreadPoolEventExecutorTest {
                 assertTrue(executor.getQueue().isEmpty());
             }
         } finally {
-            executor.shutdownGracefully();
+            executor.shutdownGracefully().sync();
         }
     }
 
@@ -93,7 +93,7 @@ public class UnorderedThreadPoolEventExecutorTest {
             latch.await();
         } finally {
             future.cancel(true);
-            executor.shutdownGracefully();
+            executor.shutdownGracefully().sync();
         }
     }
 
@@ -111,7 +111,7 @@ public class UnorderedThreadPoolEventExecutorTest {
 
             assertEquals(expected, f.get());
         } finally {
-            executor.shutdownGracefully();
+            executor.shutdownGracefully().sync();
         }
     }
 
@@ -129,7 +129,7 @@ public class UnorderedThreadPoolEventExecutorTest {
 
             assertSame(cause, f.await().cause());
         } finally {
-            executor.shutdownGracefully();
+            executor.shutdownGracefully().sync();
         }
     }
 
@@ -140,7 +140,7 @@ public class UnorderedThreadPoolEventExecutorTest {
             Future<Boolean> future = executor.submit(() -> executor.inEventLoop());
             assertTrue(future.get());
         } finally {
-            executor.shutdownGracefully();
+            executor.shutdownGracefully().sync();
         }
     }
 }
