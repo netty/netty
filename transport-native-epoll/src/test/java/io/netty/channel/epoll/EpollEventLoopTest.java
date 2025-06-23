@@ -60,7 +60,7 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
     }
 
     @Test
-    public void testScheduleBigDelayNotOverflow() {
+    public void testScheduleBigDelayNotOverflow() throws Exception {
         final AtomicReference<Throwable> capture = new AtomicReference<Throwable>();
 
         final EventLoopGroup group = new EpollEventLoop(null,

@@ -51,7 +51,7 @@ public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
     }
 
     @Test
-    public void testScheduleBigDelayNotOverflow() {
+    public void testScheduleBigDelayNotOverflow() throws Exception {
         EventLoopGroup group = new KQueueEventLoopGroup(1);
 
         final EventLoop el = group.next();

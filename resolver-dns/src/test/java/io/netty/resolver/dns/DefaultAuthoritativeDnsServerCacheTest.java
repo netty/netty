@@ -68,13 +68,13 @@ public class DefaultAuthoritativeDnsServerCacheTest {
     }
 
     @Test
-    public void testExpireWithDifferentTTLs() {
+    public void testExpireWithDifferentTTLs() throws Exception {
         testExpireWithTTL0(1);
         testExpireWithTTL0(1000);
         testExpireWithTTL0(1000000);
     }
 
-    private static void testExpireWithTTL0(int days) {
+    private static void testExpireWithTTL0(int days) throws InterruptedException {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
         try {

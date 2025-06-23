@@ -59,13 +59,13 @@ public class DefaultDnsCnameCacheTest {
     }
 
     @Test
-    public void testExpireWithDifferentTTLs() {
+    public void testExpireWithDifferentTTLs() throws Exception {
         testExpireWithTTL0(1);
         testExpireWithTTL0(1000);
         testExpireWithTTL0(1000000);
     }
 
-    private static void testExpireWithTTL0(int days) {
+    private static void testExpireWithTTL0(int days) throws Exception {
         EventLoopGroup group = new DefaultEventLoopGroup(1);
 
         try {
