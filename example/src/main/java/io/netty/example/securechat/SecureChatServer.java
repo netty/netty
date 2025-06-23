@@ -43,19 +43,17 @@ public final class SecureChatServer {
         SslContext sslCtx = SslContextBuilder.forServer(ssc.toKeyManagerFactory())
             .build();
 
-        EventLoopGroup bossGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
-        EventLoopGroup workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         try {
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
+            b.group(group)
              .channel(NioServerSocketChannel.class)
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new SecureChatServerInitializer(sslCtx));
 
             b.bind(PORT).sync().channel().closeFuture().sync();
         } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 }

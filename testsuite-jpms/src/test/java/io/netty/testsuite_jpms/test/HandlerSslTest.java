@@ -123,8 +123,7 @@ public class HandlerSslTest {
         ServerBootstrap sb = new ServerBootstrap();
         Bootstrap cb = new Bootstrap();
 
-        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()),
-                new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
+        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer() {
             @Override

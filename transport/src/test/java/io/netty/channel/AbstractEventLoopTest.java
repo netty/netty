@@ -78,13 +78,12 @@ public abstract class AbstractEventLoopTest {
     @ParameterizedTest
     @EnumSource(DeregisterMethod.class)
     void testReregisterOnChannelHandlerContext(DeregisterMethod method) throws Exception {
-        EventLoopGroup bossGroup = newEventLoopGroup();
-        EventLoopGroup workerGroup = newEventLoopGroup();
+        EventLoopGroup group = newEventLoopGroup();
         AtomicReference<Throwable> throwable = new AtomicReference<>();
         try {
             ServerBootstrap b = new ServerBootstrap();
-            ReRegisterHandler reRegisterHandler = new ReRegisterHandler(workerGroup, method, throwable);
-            b.group(bossGroup, workerGroup)
+            ReRegisterHandler reRegisterHandler = new ReRegisterHandler(group, method, throwable);
+            b.group(group)
                     .channel(newChannel())
                     .childHandler(new ChannelInitializer<SocketChannel>() {
                         @Override
@@ -98,7 +97,7 @@ public abstract class AbstractEventLoopTest {
             ChannelFuture f = b.bind(0).sync();
 
             Channel client = new Bootstrap()
-                    .group(workerGroup)
+                    .group(group)
                     .channel(newSocketChannel())
                     .handler(new ChannelInboundHandlerAdapter() {
                         @Override
@@ -131,8 +130,7 @@ public abstract class AbstractEventLoopTest {
                 fail(caughtThrowable);
             }
         } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 

@@ -36,12 +36,11 @@ public final class MqttHeartBeatBroker {
     }
 
     public static void main(String[] args) throws Exception {
-        EventLoopGroup bossGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
-        EventLoopGroup workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
 
         try {
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup);
+            b.group(group);
             b.option(ChannelOption.SO_BACKLOG, 1024);
             b.channel(NioServerSocketChannel.class);
             b.childHandler(new ChannelInitializer<SocketChannel>() {
@@ -59,8 +58,7 @@ public final class MqttHeartBeatBroker {
 
             f.channel().closeFuture().sync();
         } finally {
-            workerGroup.shutdownGracefully();
-            bossGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 }
