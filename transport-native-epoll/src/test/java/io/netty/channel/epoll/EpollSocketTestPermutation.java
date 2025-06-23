@@ -127,7 +127,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
             factories.add(insertIndex, new BootstrapFactory<Bootstrap>() {
                 @Override
                 public Bootstrap newInstance() {
-                    return new Bootstrap().group(NIO_GROUP).channel(EpollSocketChannel.class)
+                    return new Bootstrap().group(EPOLL_GROUP).channel(EpollSocketChannel.class)
                             .option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
                 }
             });
