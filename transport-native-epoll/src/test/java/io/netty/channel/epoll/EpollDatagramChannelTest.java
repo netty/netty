@@ -69,7 +69,7 @@ public class EpollDatagramChannelTest {
     }
 
     @Test
-    public void testLocalAddressBeforeAndAfterBind() {
+    public void testLocalAddressBeforeAndAfterBind() throws Exception {
         EventLoopGroup group = new EpollEventLoopGroup(1);
         try {
             TestHandler handler = new TestHandler();
