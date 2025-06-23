@@ -42,7 +42,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.FileChannel;
 import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
@@ -1421,24 +1420,21 @@ final class AdaptivePoolingAllocator {
         @Override
         public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
             checkIndex(index, length);
-            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
-            tmp.put(src, srcIndex, length);
+            rootParent().setBytes(idx(index), src, srcIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
             checkIndex(index, length);
-            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
-            tmp.put(src.nioBuffer(srcIndex, length));
+            rootParent().setBytes(idx(index), src, srcIndex, length);
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuffer src) {
             checkIndex(index, src.remaining());
-            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
-            tmp.put(src);
+            rootParent().setBytes(idx(index), src);
             return this;
         }
 
@@ -1446,59 +1442,43 @@ final class AdaptivePoolingAllocator {
         public ByteBuf getBytes(int index, OutputStream out, int length)
                 throws IOException {
             checkIndex(index, length);
-            if (length != 0) {
-                ByteBufUtil.readBytes(alloc(), internalNioBuffer().duplicate(), index, length, out);
-            }
+            rootParent().getBytes(idx(index), out, length);
             return this;
         }
 
         @Override
         public int getBytes(int index, GatheringByteChannel out, int length)
                 throws IOException {
-            return out.write(internalNioBuffer(index, length).duplicate());
+            checkIndex(index, length);
+            return rootParent().getBytes(idx(index), out, length);
         }
 
         @Override
         public int getBytes(int index, FileChannel out, long position, int length)
                 throws IOException {
-            return out.write(internalNioBuffer(index, length).duplicate(), position);
+            checkIndex(index, length);
+            return rootParent().getBytes(idx(index), out, position, length);
         }
 
         @Override
         public int setBytes(int index, InputStream in, int length)
                 throws IOException {
             checkIndex(index, length);
-            final AbstractByteBuf rootParent = rootParent();
-            if (rootParent.hasArray()) {
-                return rootParent.setBytes(idx(index), in, length);
-            }
-            byte[] tmp = ByteBufUtil.threadLocalTempArray(length);
-            int readBytes = in.read(tmp, 0, length);
-            if (readBytes <= 0) {
-                return readBytes;
-            }
-            setBytes(index, tmp, 0, readBytes);
-            return readBytes;
+            return rootParent().setBytes(idx(index), in, length);
         }
 
         @Override
         public int setBytes(int index, ScatteringByteChannel in, int length)
                 throws IOException {
-            try {
-                return in.read(internalNioBuffer(index, length).duplicate());
-            } catch (ClosedChannelException ignored) {
-                return -1;
-            }
+            checkIndex(index, length);
+            return rootParent().setBytes(idx(index), in, length);
         }
 
         @Override
         public int setBytes(int index, FileChannel in, long position, int length)
                 throws IOException {
-            try {
-                return in.read(internalNioBuffer(index, length).duplicate(), position);
-            } catch (ClosedChannelException ignored) {
-                return -1;
-            }
+            checkIndex(index, length);
+            return rootParent().setBytes(idx(index), in, position, length);
         }
 
         @Override
