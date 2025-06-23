@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.ByteProcessor;
+import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
 import io.netty.util.Recycler.EnhancedHandle;
@@ -1386,8 +1387,46 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         @Override
         public int setCharSequence(int index, CharSequence sequence, Charset charset) {
-            checkIndex(index, sequence.length());
-            return rootParent().setCharSequence(idx(index), sequence, charset);
+            return setCharSequence0(index, sequence, charset, false);
+        }
+
+        private int setCharSequence0(int index, CharSequence sequence, Charset charset, boolean expand) {
+            if (charset.equals(CharsetUtil.UTF_8)) {
+                int length = ByteBufUtil.utf8MaxBytes(sequence);
+                if (expand) {
+                    ensureWritable0(length);
+                    checkIndex0(index, length);
+                } else {
+                    checkIndex(index, length);
+                }
+                // Directly pass in the rootParent() with the adjusted index
+                return ByteBufUtil.writeUtf8(rootParent(), idx(index), length, sequence, sequence.length());
+            }
+            if (charset.equals(CharsetUtil.US_ASCII) || charset.equals(CharsetUtil.ISO_8859_1)) {
+                int length = sequence.length();
+                if (expand) {
+                    ensureWritable0(length);
+                    checkIndex0(index, length);
+                } else {
+                    checkIndex(index, length);
+                }
+                // Directly pass in the rootParent() with the adjusted index
+                return ByteBufUtil.writeAscii(rootParent(), idx(index), sequence, length);
+            }
+            byte[] bytes = sequence.toString().getBytes(charset);
+            if (expand) {
+                ensureWritable0(bytes.length);
+                // setBytes(...) will take care of checking the indices.
+            }
+            setBytes(index, bytes);
+            return bytes.length;
+        }
+
+        @Override
+        public int writeCharSequence(CharSequence sequence, Charset charset) {
+            int written = setCharSequence0(writerIndex, sequence, charset, true);
+            writerIndex += written;
+            return written;
         }
 
         @Override
