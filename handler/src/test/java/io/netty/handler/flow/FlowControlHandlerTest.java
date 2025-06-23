@@ -67,7 +67,7 @@ public class FlowControlHandlerTest {
     }
 
     @AfterAll
-    public static void destroy() throws Exception{
+    public static void destroy() throws Exception {
         GROUP.shutdownGracefully().sync();
     }
 

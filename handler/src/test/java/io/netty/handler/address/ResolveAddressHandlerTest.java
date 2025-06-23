@@ -59,7 +59,7 @@ public class ResolveAddressHandlerTest {
     }
 
     @AfterAll
-    public static void destroyEventLoop() throws Exception{
+    public static void destroyEventLoop() throws Exception {
         if (group != null) {
             group.shutdownGracefully().sync();
         }
