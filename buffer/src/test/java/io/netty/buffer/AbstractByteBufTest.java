@@ -40,7 +40,6 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -6295,12 +6294,16 @@ public abstract class AbstractByteBufTest {
 
     @Test
     public void testSetCharSequenceWithTooLongSequence() {
-        ByteBuf buffer = buffer(4, 128);
-        CharSequence sequence = "ÖÄÜ€";
+        final ByteBuf buffer = buffer(4, 128);
+        final CharSequence sequence = "ÖÄÜ€";
         int maxBytes = ByteBufUtil.utf8MaxBytes(sequence);
         assertThat(buffer.writableBytes()).isLessThan(maxBytes);
-        assertThrows(IndexOutOfBoundsException.class,
-                () -> buffer.setCharSequence(0, sequence, StandardCharsets.UTF_8));
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buffer.setCharSequence(0, sequence, CharsetUtil.UTF_8);
+            }
+        });
         buffer.release();
     }
 
@@ -6312,7 +6315,7 @@ public abstract class AbstractByteBufTest {
         assertThat(buffer.writableBytes()).isLessThan(maxBytes);
         int capacity = buffer.capacity();
         // This should expand the buffer.
-        buffer.writeCharSequence(sequence, StandardCharsets.UTF_8);
+        buffer.writeCharSequence(sequence, CharsetUtil.UTF_8);
         assertNotSame(capacity, buffer.capacity());
         buffer.release();
     }
