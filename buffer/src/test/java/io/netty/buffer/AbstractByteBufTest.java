@@ -59,9 +59,11 @@ import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -6288,5 +6290,33 @@ public abstract class AbstractByteBufTest {
         buf.writeByte(1);
         assertEquals(max - 1, buf.maxFastWritableBytes());
         buf.release();
+    }
+
+    @Test
+    public void testSetCharSequenceWithTooLongSequence() {
+        final ByteBuf buffer = buffer(4, 128);
+        final CharSequence sequence = "ÖÄÜ€";
+        int maxBytes = ByteBufUtil.utf8MaxBytes(sequence);
+        assertThat(buffer.writableBytes()).isLessThan(maxBytes);
+        assertThrows(IndexOutOfBoundsException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                buffer.setCharSequence(0, sequence, CharsetUtil.UTF_8);
+            }
+        });
+        buffer.release();
+    }
+
+    @Test
+    public void testWriteCharSequence() {
+        ByteBuf buffer = buffer(4, 128);
+        CharSequence sequence = "ÖÄÜ€";
+        int maxBytes = ByteBufUtil.utf8MaxBytes(sequence);
+        assertThat(buffer.writableBytes()).isLessThan(maxBytes);
+        int capacity = buffer.capacity();
+        // This should expand the buffer.
+        buffer.writeCharSequence(sequence, CharsetUtil.UTF_8);
+        assertNotSame(capacity, buffer.capacity());
+        buffer.release();
     }
 }
