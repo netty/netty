@@ -1113,13 +1113,6 @@
         <optional>true</optional>
       </dependency>
 
-      <!-- Metrics providers -->
-      <dependency>
-        <groupId>com.yammer.metrics</groupId>
-        <artifactId>metrics-core</artifactId>
-        <version>2.2.0</version>
-      </dependency>
-
       <!-- Common test dependencies -->
       <dependency>
         <groupId>org.junit.jupiter</groupId>
