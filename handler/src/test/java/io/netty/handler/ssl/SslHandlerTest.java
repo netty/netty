@@ -488,7 +488,7 @@ public class SslHandlerTest {
             SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
             final Promise<Void> serverPromise = group.next().newPromise();
             ServerBootstrap serverBootstrap = new ServerBootstrap()
-                    .group(group, group)
+                    .group(group)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(newHandler(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build(),
                             serverPromise));

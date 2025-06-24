@@ -40,19 +40,15 @@ public final class MsgEchoServer {
     static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
 
     public static void main(String[] args) throws Exception {
-        final ThreadFactory acceptFactory = new DefaultThreadFactory("accept");
-        final ThreadFactory connectFactory = new DefaultThreadFactory("connect");
-        final EventLoopGroup acceptGroup =
+        final ThreadFactory factory = new DefaultThreadFactory("udt");
+        final EventLoopGroup group =
                 new MultiThreadIoEventLoopGroup(
-                        1, acceptFactory, NioIoHandler.newFactory(NioUdtProvider.MESSAGE_PROVIDER));
-        final EventLoopGroup connectGroup =
-                new MultiThreadIoEventLoopGroup(
-                        1, connectFactory, NioIoHandler.newFactory(NioUdtProvider.MESSAGE_PROVIDER));
+                        1, factory, NioIoHandler.newFactory(NioUdtProvider.MESSAGE_PROVIDER));
 
         // Configure the server.
         try {
             final ServerBootstrap boot = new ServerBootstrap();
-            boot.group(acceptGroup, connectGroup)
+            boot.group(group)
                     .channelFactory(NioUdtProvider.MESSAGE_ACCEPTOR)
                     .option(ChannelOption.SO_BACKLOG, 10)
                     .handler(new LoggingHandler(LogLevel.INFO))
@@ -71,8 +67,7 @@ public final class MsgEchoServer {
             future.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            acceptGroup.shutdownGracefully();
-            connectGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 }
