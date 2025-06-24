@@ -1313,9 +1313,10 @@ final class AdaptivePoolingAllocator {
 
         @Override
         boolean releaseSegment(int segmentId) {
+            boolean released = release();
             boolean segmentReturned = freeList.offer(segmentId);
             assert segmentReturned: "Unable to return segment " + segmentId + " to free list";
-            return release();
+            return released;
         }
 
         boolean isEmpty() {
