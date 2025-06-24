@@ -475,14 +475,18 @@ final class AdaptivePoolingAllocator {
 
         private void free() {
             freed = true;
-            long stamp = magazineExpandLock.writeLock();
-            try {
-                Magazine[] mags = magazines;
-                for (Magazine magazine : mags) {
-                    magazine.free();
+            if (threadLocalMagazine != null) {
+                threadLocalMagazine.free();
+            } else {
+                long stamp = magazineExpandLock.writeLock();
+                try {
+                    Magazine[] mags = magazines;
+                    for (Magazine magazine : mags) {
+                        magazine.free();
+                    }
+                } finally {
+                    magazineExpandLock.unlockWrite(stamp);
                 }
-            } finally {
-                magazineExpandLock.unlockWrite(stamp);
             }
             freeCentralQueue();
         }
@@ -1017,14 +1021,16 @@ final class AdaptivePoolingAllocator {
         void free() {
             // Release the current Chunk and the next that was stored for later usage.
             restoreMagazineFreed();
-            long stamp = allocationLock.writeLock();
+            long stamp = allocationLock != null ? allocationLock.writeLock() : 0;
             try {
                 if (current != null) {
                     current.release();
                     current = null;
                 }
             } finally {
-                allocationLock.unlockWrite(stamp);
+                if (allocationLock != null) {
+                    allocationLock.unlockWrite(stamp);
+                }
             }
         }
 
