@@ -373,7 +373,7 @@ final class AdaptivePoolingAllocator {
             }
         }
 
-        private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
+        public AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
             boolean reallocate = buf != null;
 
             // Path for thread-local allocation.
