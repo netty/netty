@@ -19,6 +19,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.udt.UdtChannel;
 import io.netty.channel.udt.nio.NioUdtProvider;
@@ -38,17 +39,13 @@ public final class MsgEchoServer {
     static final int PORT = Integer.parseInt(System.getProperty("port", "8007"));
 
     public static void main(String[] args) throws Exception {
-        final ThreadFactory acceptFactory = new DefaultThreadFactory("accept");
-        final ThreadFactory connectFactory = new DefaultThreadFactory("connect");
-        final NioEventLoopGroup acceptGroup =
-                new NioEventLoopGroup(1, acceptFactory, NioUdtProvider.MESSAGE_PROVIDER);
-        final NioEventLoopGroup connectGroup =
-                new NioEventLoopGroup(1, connectFactory, NioUdtProvider.MESSAGE_PROVIDER);
-
+        final ThreadFactory factory = new DefaultThreadFactory("udt");
+        final EventLoopGroup group =
+                new NioEventLoopGroup(1, factory, NioUdtProvider.MESSAGE_PROVIDER);
         // Configure the server.
         try {
             final ServerBootstrap boot = new ServerBootstrap();
-            boot.group(acceptGroup, connectGroup)
+            boot.group(group)
                     .channelFactory(NioUdtProvider.MESSAGE_ACCEPTOR)
                     .option(ChannelOption.SO_BACKLOG, 10)
                     .handler(new LoggingHandler(LogLevel.INFO))
@@ -67,8 +64,7 @@ public final class MsgEchoServer {
             future.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            acceptGroup.shutdownGracefully();
-            connectGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 }

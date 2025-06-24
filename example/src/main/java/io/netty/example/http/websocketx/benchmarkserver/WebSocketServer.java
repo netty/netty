@@ -40,11 +40,10 @@ public final class WebSocketServer {
         // Configure SSL.
         final SslContext sslCtx = ServerUtil.buildSslContext();
 
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
+            b.group(group)
              .channel(NioServerSocketChannel.class)
              .childHandler(new WebSocketServerInitializer(sslCtx));
 
@@ -55,8 +54,7 @@ public final class WebSocketServer {
 
             ch.closeFuture().sync();
         } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 }

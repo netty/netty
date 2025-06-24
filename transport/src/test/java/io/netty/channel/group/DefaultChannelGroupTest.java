@@ -30,13 +30,11 @@ public class DefaultChannelGroupTest {
     // Test for #1183
     @Test
     public void testNotThrowBlockingOperationException() throws Exception {
-        EventLoopGroup bossGroup = new NioEventLoopGroup();
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
-
+        EventLoopGroup group = new NioEventLoopGroup();
         final ChannelGroup allChannels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
         ServerBootstrap b = new ServerBootstrap();
-        b.group(bossGroup, workerGroup);
+        b.group(group);
         b.childHandler(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
@@ -52,9 +50,7 @@ public class DefaultChannelGroupTest {
             allChannels.close().awaitUninterruptibly();
         }
 
-        bossGroup.shutdownGracefully();
-        workerGroup.shutdownGracefully();
-        bossGroup.terminationFuture().sync();
-        workerGroup.terminationFuture().sync();
+        group.shutdownGracefully();
+        group.terminationFuture().sync();
     }
 }

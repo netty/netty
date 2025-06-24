@@ -44,7 +44,7 @@ public class LocalTransportThreadModelTest2 {
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         LocalHandler serverHandler = new LocalHandler("SERVER");
         serverBootstrap
-                .group(new DefaultEventLoopGroup(), new DefaultEventLoopGroup())
+                .group(new DefaultEventLoopGroup())
                 .channel(LocalServerChannel.class)
                 .childHandler(serverHandler);
 
