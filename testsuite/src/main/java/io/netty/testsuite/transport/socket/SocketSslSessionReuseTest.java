@@ -68,6 +68,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -154,15 +155,16 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
         try {
             SSLSessionContext clientSessionCtx = clientCtx.sessionContext();
-            ByteBuf msg = Unpooled.wrappedBuffer(new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
             Channel cc = cb.connect(sc.localAddress()).sync().channel();
+            ByteBuf msg = randomBufferType(cc.alloc(), new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
+
             cc.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE).sync();
             cc.closeFuture().sync();
             rethrowHandlerExceptions(sh, ch);
             Set<String> sessions = sessionIdSet(clientSessionCtx.getIds());
 
-            msg = Unpooled.wrappedBuffer(new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
             cc = cb.connect(sc.localAddress()).sync().channel();
+            msg = randomBufferType(cc.alloc(), new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
             cc.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE).sync();
             cc.closeFuture().sync();
             assertEquals(sessions, sessionIdSet(clientSessionCtx.getIds()), "Expected no new sessions");
@@ -236,15 +238,15 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         });
 
         try {
-            ByteBuf msg = Unpooled.wrappedBuffer(new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
             Channel cc = cb.connect(sc.localAddress()).sync().channel();
+            ByteBuf msg = randomBufferType(cc.alloc(), new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
             cc.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE).sync();
             cc.closeFuture().sync();
             rethrowHandlerExceptions(sh, ch);
             assertEquals("value", sessionValue.poll(10, TimeUnit.SECONDS));
 
-            msg = Unpooled.wrappedBuffer(new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
             cc = cb.connect(sc.localAddress()).sync().channel();
+            msg = randomBufferType(cc.alloc(), new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
             cc.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE).sync();
             cc.closeFuture().sync();
             rethrowHandlerExceptions(sh, ch);
