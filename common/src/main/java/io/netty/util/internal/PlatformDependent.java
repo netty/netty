@@ -253,8 +253,10 @@ public final class PlatformDependent {
             jfrAvailable = false;
         }
         JFR = SystemPropertyUtil.getBoolean("io.netty.jfr.enabled", jfrAvailable);
-        if (logger.isDebugEnabled()) {
+        if (logger.isTraceEnabled() && jfrFailure != null) {
             logger.debug("-Dio.netty.jfr.enabled: {}", JFR, jfrFailure);
+        } else if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.jfr.enabled: {}", JFR);
         }
     }
 
