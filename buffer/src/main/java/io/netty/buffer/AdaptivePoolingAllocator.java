@@ -1191,7 +1191,7 @@ final class AdaptivePoolingAllocator {
         private void deallocate() {
             Magazine mag = magazine;
             int chunkSize = delegate.capacity();
-            if (!pooled || chunkReleasePredicate.shouldReleaseChunk(chunkSize)) {
+            if (!pooled || chunkReleasePredicate.shouldReleaseChunk(chunkSize) || mag == null) {
                 // Drop the chunk if the parent allocator is closed,
                 // or if the chunk deviates too much from the preferred chunk size.
                 detachFromMagazine();
