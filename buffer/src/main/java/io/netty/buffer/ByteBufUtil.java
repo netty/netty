@@ -1976,7 +1976,7 @@ public final class ByteBufUtil {
             out.write(buffer.array(), position + buffer.arrayOffset(), length);
         } else {
             int chunkLen = Math.min(length, WRITE_CHUNK_SIZE);
-            buffer.clear().position(position).limit(position - length);
+            buffer.clear().position(position).limit(position + length);
 
             if (length <= MAX_TL_ARRAY_LEN || !allocator.isDirectBufferPooled()) {
                 getBytes(buffer, threadLocalTempArray(chunkLen), 0, chunkLen, out, length);
