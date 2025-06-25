@@ -627,9 +627,7 @@ final class AdaptivePoolingAllocator {
             // Predict starting capacity from localUpperBufSize, but place limits on the max starting capacity
             // based on the requested size, because localUpperBufSize can potentially be quite large.
             int startCapLimits;
-            if (requestedSize <= 2048) { // Less than or equal to 2 KiB.
-                startCapLimits = 16384; // Use at most 16 KiB.
-            } else if (requestedSize <= 32768) { // Less than or equal to 32 KiB.
+            if (requestedSize <= 32768) { // Less than or equal to 32 KiB.
                 startCapLimits = 65536; // Use at most 64 KiB, which is also the AdaptiveRecvByteBufAllocator max.
             } else {
                 startCapLimits = requestedSize * 2; // Otherwise use at most twice the requested memory.
@@ -869,7 +867,6 @@ final class AdaptivePoolingAllocator {
         }
 
         private boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
-
             int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, buf.length, reallocate);
             Chunk curr = current;
             if (curr != null) {
