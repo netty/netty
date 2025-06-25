@@ -10,11 +10,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Check latest JDK 25 EA version"
-        run: |
-          curl -s "https://get.sdkman.io" | bash
-          source "$HOME/.sdkman/bin/sdkman-init.sh"
-          # Make sure sdkman works
-          sdk help > /dev/null
-          export JAVA_VERSION=$(sdk list java | grep 25.*-open|head -n 1|cut -f 3 -d '|')
-          # Keep this version in sync with docker-compose.centos-7.25.yaml
-          echo "'$JAVA_VERSION'" | fgrep 25.ea.26
+        run: ./.github/scripts/check_java_ea_version.sh
