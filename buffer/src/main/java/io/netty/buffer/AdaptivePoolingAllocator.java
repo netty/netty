@@ -510,7 +510,7 @@ final class AdaptivePoolingAllocator {
         /**
          * Compute the "fast max capacity" value for the buffer.
          */
-        int computeBufferCapacity(int requestedSize, int maxCapacity, int historicalSize, boolean isReallocation);
+        int computeBufferCapacity(int requestedSize, int maxCapacity, boolean isReallocation);
 
         /**
          * Initialize the given chunk factory with shared statistics state (if any) from this factory.
@@ -553,7 +553,7 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public int computeBufferCapacity(
-                int requestedSize, int maxCapacity, int historicalSize, boolean isReallocation) {
+                int requestedSize, int maxCapacity, boolean isReallocation) {
             return Math.min(segmentSize, maxCapacity);
         }
 
@@ -617,11 +617,11 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public int computeBufferCapacity(
-                int requestedSize, int maxCapacity, int historicalSize, boolean isReallocation) {
+                int requestedSize, int maxCapacity, boolean isReallocation) {
             if (!isReallocation) {
                 // Only record allocation size if it's not caused by a reallocation that was triggered by capacity
                 // change of the buffer.
-                recordAllocationSize(historicalSize);
+                recordAllocationSize(requestedSize);
             }
 
             // Predict starting capacity from localUpperBufSize, but place limits on the max starting capacity
@@ -848,7 +848,7 @@ final class AdaptivePoolingAllocator {
             boolean allocated = false;
             int remainingCapacity = curr.remainingCapacity();
             int startingCapacity = chunkController.computeBufferCapacity(
-                    size, maxCapacity, buf.length, true /* never update stats as we don't hold the magazine lock */);
+                    size, maxCapacity, true /* never update stats as we don't hold the magazine lock */);
             if (remainingCapacity >= size) {
                 curr.readInitInto(buf, size, Math.min(remainingCapacity, startingCapacity), maxCapacity);
                 allocated = true;
@@ -867,7 +867,7 @@ final class AdaptivePoolingAllocator {
         }
 
         private boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
-            int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, buf.length, reallocate);
+            int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
             Chunk curr = current;
             if (curr != null) {
                 // We have a Chunk that has some space left.
