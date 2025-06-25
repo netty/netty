@@ -1464,7 +1464,7 @@ final class AdaptivePoolingAllocator {
         @Override
         public int getBytes(int index, FileChannel out, long position, int length)
                 throws IOException {
-            ByteBuffer buf = internalNioBuffer(index, length).duplicate();
+            ByteBuffer buf = internalNioBuffer().duplicate();
             buf.clear().position(index).limit(index + length);
             return out.write(buf, position);
         }
