@@ -17,6 +17,7 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import jdk.jfr.FlightRecorder;
 import org.jctools.queues.MpmcArrayQueue;
 import org.jctools.queues.MpscArrayQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
@@ -242,8 +243,19 @@ public final class PlatformDependent {
         }
         LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
 
-        JFR = SystemPropertyUtil.getBoolean("io.netty.jfr.enabled", javaVersion() >= 9);
-        if (logger.isDebugEnabled()) {
+        boolean jfrAvailable;
+        Throwable jfrFailure = null;
+        try {
+            //noinspection Since15
+            jfrAvailable = FlightRecorder.isAvailable();
+        } catch (Throwable t) {
+            jfrFailure = t;
+            jfrAvailable = false;
+        }
+        JFR = SystemPropertyUtil.getBoolean("io.netty.jfr.enabled", jfrAvailable);
+        if (logger.isTraceEnabled() && jfrFailure != null) {
+            logger.debug("-Dio.netty.jfr.enabled: {}", JFR, jfrFailure);
+        } else if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.jfr.enabled: {}", JFR);
         }
     }
