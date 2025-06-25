@@ -9,11 +9,9 @@ jobs:
   check-jdk-early-access-version:
     runs-on: ubuntu-latest
     steps:
-      - name: "Install SDK Man"
-        run: |
-          curl -s "https://get.sdkman.io" | bash
       - name: "Check latest JDK 25 EA version"
         run: |
+          curl -s "https://get.sdkman.io" | bash
           source "$HOME/.sdkman/bin/sdkman-init.sh"
           # Make sure sdkman works
           sdk help > /dev/null
