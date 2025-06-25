@@ -40,11 +40,8 @@ import java.util.List;
 class KQueueSocketTestPermutation extends SocketTestPermutation {
 
     static final KQueueSocketTestPermutation INSTANCE = new KQueueSocketTestPermutation();
-
-    static final EventLoopGroup KQUEUE_BOSS_GROUP =
-            new KQueueEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-KQueue-boss", true));
-    static final EventLoopGroup KQUEUE_WORKER_GROUP =
-            new KQueueEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-KQueue-worker", true));
+    static final EventLoopGroup KQUEUE_GROUP = new KQueueEventLoopGroup(
+            NUM_THREADS, new DefaultThreadFactory("testsuite-KQueue-group", true));
 
     @Override
     public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> socket() {
@@ -63,7 +60,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
         toReturn.add(new BootstrapFactory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
-                return new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
+                return new ServerBootstrap().group(KQUEUE_GROUP)
                                             .channel(KQueueServerSocketChannel.class);
             }
         });
@@ -72,7 +69,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                 @Override
                 public ServerBootstrap newInstance() {
                     ServerBootstrap serverBootstrap = new ServerBootstrap()
-                            .group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
+                            .group(KQUEUE_GROUP)
                             .channel(KQueueServerSocketChannel.class);
                     serverBootstrap.option(ChannelOption.TCP_FASTOPEN, 1);
                     return serverBootstrap;
@@ -83,7 +80,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
         toReturn.add(new BootstrapFactory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
-                return new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
+                return new ServerBootstrap().group(NIO_GROUP)
                                             .channel(NioServerSocketChannel.class);
             }
         });
@@ -98,14 +95,14 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
         toReturn.add(new BootstrapFactory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class);
+                return new Bootstrap().group(KQUEUE_GROUP).channel(KQueueSocketChannel.class);
             }
         });
 
         toReturn.add(new BootstrapFactory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
+                return new Bootstrap().group(NIO_GROUP).channel(NioSocketChannel.class);
             }
         });
 
@@ -121,7 +118,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
             factories.add(insertIndex, new BootstrapFactory<Bootstrap>() {
                 @Override
                 public Bootstrap newInstance() {
-                    return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueSocketChannel.class)
+                    return new Bootstrap().group(KQUEUE_GROUP).channel(KQueueSocketChannel.class)
                             .option(ChannelOption.TCP_FASTOPEN_CONNECT, true);
                 }
             });
@@ -138,7 +135,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
+                        return new Bootstrap().group(NIO_GROUP).channelFactory(new ChannelFactory<Channel>() {
                             @Override
                             public Channel newChannel() {
                                 return new NioDatagramChannel(family);
@@ -154,7 +151,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDatagramChannel.class);
+                        return new Bootstrap().group(KQUEUE_GROUP).channel(KQueueDatagramChannel.class);
                     }
                 }
         );
@@ -170,7 +167,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<ServerBootstrap>() {
                     @Override
                     public ServerBootstrap newInstance() {
-                        return new ServerBootstrap().group(KQUEUE_BOSS_GROUP, KQUEUE_WORKER_GROUP)
+                        return new ServerBootstrap().group(KQUEUE_GROUP)
                                 .channel(KQueueServerDomainSocketChannel.class);
                     }
                 }
@@ -182,7 +179,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDomainSocketChannel.class);
+                        return new Bootstrap().group(KQUEUE_GROUP).channel(KQueueDomainSocketChannel.class);
                     }
                 }
         );
@@ -194,7 +191,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDatagramChannel.class);
+                        return new Bootstrap().group(KQUEUE_GROUP).channel(KQueueDatagramChannel.class);
                     }
                 }
         );
@@ -209,7 +206,7 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(KQUEUE_WORKER_GROUP).channel(KQueueDomainDatagramChannel.class);
+                        return new Bootstrap().group(KQUEUE_GROUP).channel(KQueueDomainDatagramChannel.class);
                     }
                 }
         );

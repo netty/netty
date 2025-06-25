@@ -845,7 +845,7 @@ public abstract class SSLEngineTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.group(new NioEventLoopGroup());
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1012,7 +1012,7 @@ public abstract class SSLEngineTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.group(new NioEventLoopGroup());
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1200,7 +1200,7 @@ public abstract class SSLEngineTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.group(new NioEventLoopGroup());
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1899,7 +1899,7 @@ public abstract class SSLEngineTest {
     private void setupServer(final BufferType type, final boolean delegate) {
         serverConnectedChannel = null;
         sb = new ServerBootstrap();
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.group(new NioEventLoopGroup());
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1991,7 +1991,7 @@ public abstract class SSLEngineTest {
                                  .ciphers(param.ciphers()).build());
 
         sb = new ServerBootstrap();
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.group(new NioEventLoopGroup());
         sb.channel(NioServerSocketChannel.class);
 
         final Promise<String> promise = sb.config().group().next().newPromise();
@@ -4515,7 +4515,7 @@ public abstract class SSLEngineTest {
 
         try {
             sb = new ServerBootstrap();
-            sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+            sb.group(new NioEventLoopGroup());
             sb.channel(NioServerSocketChannel.class);
 
             final Promise<SecretKey> promise = sb.config().group().next().newPromise();

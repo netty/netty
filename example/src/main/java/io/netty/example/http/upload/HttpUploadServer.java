@@ -37,11 +37,10 @@ public final class HttpUploadServer {
         // Configure SSL.
         final SslContext sslCtx = ServerUtil.buildSslContext();
 
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup);
+            b.group(group);
             b.channel(NioServerSocketChannel.class);
             b.handler(new LoggingHandler(LogLevel.INFO));
             b.childHandler(new HttpUploadServerInitializer(sslCtx));
@@ -53,8 +52,7 @@ public final class HttpUploadServer {
 
             ch.closeFuture().sync();
         } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 }

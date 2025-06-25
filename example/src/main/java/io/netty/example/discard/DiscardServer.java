@@ -39,11 +39,10 @@ public final class DiscardServer {
         // Configure SSL.
         final SslContext sslCtx = ServerUtil.buildSslContext();
 
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
+            b.group(group)
              .channel(NioServerSocketChannel.class)
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new ChannelInitializer<SocketChannel>() {
@@ -65,8 +64,7 @@ public final class DiscardServer {
             // shut down your server.
             f.channel().closeFuture().sync();
         } finally {
-            workerGroup.shutdownGracefully();
-            bossGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 }

@@ -58,19 +58,14 @@ public class SocketTestPermutation {
 
     static final SocketTestPermutation INSTANCE = new SocketTestPermutation();
 
-    protected static final int BOSSES = 2;
-    protected static final int WORKERS = 3;
+    protected static final int NUM_THREADS = 4;
 
     protected static final int OIO_SO_TIMEOUT = 10;  // Use short timeout for faster runs.
 
-    protected final EventLoopGroup nioBossGroup =
-            new NioEventLoopGroup(BOSSES, new DefaultThreadFactory("testsuite-nio-boss", true));
-    protected final EventLoopGroup nioWorkerGroup =
-            new NioEventLoopGroup(WORKERS, new DefaultThreadFactory("testsuite-nio-worker", true));
-    protected final EventLoopGroup oioBossGroup =
-            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-oio-boss", true));
-    protected final EventLoopGroup oioWorkerGroup =
-            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-oio-worker", true));
+    protected final EventLoopGroup NIO_GROUP = new NioEventLoopGroup(
+            NUM_THREADS, new DefaultThreadFactory("testsuite-nio", true));
+    protected final EventLoopGroup OIO_GROUP =
+            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-oio", true));
 
     protected <A extends AbstractBootstrap<?, ?>, B extends AbstractBootstrap<?, ?>>
 
@@ -143,7 +138,7 @@ public class SocketTestPermutation {
         bfs.add(new BootstrapFactory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
+                return new Bootstrap().group(NIO_GROUP).channelFactory(new ChannelFactory<Channel>() {
                     @Override
                     public Channel newChannel() {
                         return new NioDatagramChannel(family);
@@ -160,7 +155,7 @@ public class SocketTestPermutation {
             bfs.add(new BootstrapFactory<Bootstrap>() {
                 @Override
                 public Bootstrap newInstance() {
-                    return new Bootstrap().group(oioWorkerGroup).channel(OioDatagramChannel.class)
+                    return new Bootstrap().group(OIO_GROUP).channel(OioDatagramChannel.class)
                             .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
                 }
             });
@@ -175,7 +170,7 @@ public class SocketTestPermutation {
         factories.add(new BootstrapFactory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
-                return new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
+                return new ServerBootstrap().group(NIO_GROUP)
                         .channel(NioServerSocketChannel.class);
             }
         });
@@ -183,7 +178,7 @@ public class SocketTestPermutation {
             factories.add(new BootstrapFactory<ServerBootstrap>() {
                 @Override
                 public ServerBootstrap newInstance() {
-                    return new ServerBootstrap().group(oioBossGroup, oioWorkerGroup)
+                    return new ServerBootstrap().group(OIO_GROUP)
                             .channel(OioServerSocketChannel.class)
                             .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
                 }
@@ -198,14 +193,14 @@ public class SocketTestPermutation {
         factories.add(new BootstrapFactory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
+                return new Bootstrap().group(NIO_GROUP).channel(NioSocketChannel.class);
             }
         });
         if (INCLUDE_OIO) {
             factories.add(new BootstrapFactory<Bootstrap>() {
                 @Override
                 public Bootstrap newInstance() {
-                    return new Bootstrap().group(oioWorkerGroup).channel(OioSocketChannel.class)
+                    return new Bootstrap().group(OIO_GROUP).channel(OioSocketChannel.class)
                             .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
                 }
             });
@@ -222,14 +217,14 @@ public class SocketTestPermutation {
         factories.add(new BootstrapFactory<Bootstrap>() {
             @Override
             public Bootstrap newInstance() {
-                return new Bootstrap().group(nioWorkerGroup).channel(NioDatagramChannel.class);
+                return new Bootstrap().group(NIO_GROUP).channel(NioDatagramChannel.class);
             }
         });
         if (INCLUDE_OIO) {
             factories.add(new BootstrapFactory<Bootstrap>() {
                 @Override
                 public Bootstrap newInstance() {
-                    return new Bootstrap().group(oioWorkerGroup).channel(OioDatagramChannel.class)
+                    return new Bootstrap().group(OIO_GROUP).channel(OioDatagramChannel.class)
                             .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
                 }
             });
