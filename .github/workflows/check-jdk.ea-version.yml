@@ -12,11 +12,11 @@ jobs:
       - name: "Install SDK Man"
         run: |
           curl -s "https://get.sdkman.io" | bash
+      - name: "Check latest JDK 25 EA version"
+        run: |
           source "$HOME/.sdkman/bin/sdkman-init.sh"
           # Make sure sdkman works
           sdk help > /dev/null
-      - name: "Check latest JDK 25 EA version"
-        run: |
           export JAVA_VERSION=$(sdk list java | grep 25.*-open|head -n 1|cut -f 3 -d '|')
           # Keep this version in sync with docker-compose.centos-7.25.yaml
           echo "'$JAVA_VERSION'" | fgrep 25.ea.26
