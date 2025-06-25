@@ -9,5 +9,6 @@ jobs:
   check-jdk-early-access-version:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: "Check latest JDK 25 EA version"
         run: ./.github/scripts/check_java_ea_version.sh
