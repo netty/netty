@@ -1339,13 +1339,17 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         @Override
         public int getBytes(int index, GatheringByteChannel out, int length)
                 throws IOException {
-            return out.write(internalNioBuffer(index, length).duplicate());
+            ByteBuffer buf = internalNioBuffer().duplicate();
+            buf.clear().position(index).limit(index + length);
+            return out.write(buf);
         }
 
         @Override
         public int getBytes(int index, FileChannel out, long position, int length)
                 throws IOException {
-            return out.write(internalNioBuffer(index, length).duplicate(), position);
+            ByteBuffer buf = internalNioBuffer().duplicate();
+            buf.clear().position(index).limit(index + length);
+            return out.write(buf, position);
         }
 
         @Override
