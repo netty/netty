@@ -337,8 +337,12 @@ final class AdaptivePoolingAllocator {
         largeBufferMagazineGroup.free();
     }
 
-    static int sizeBucket(int size) {
-        return HistogramChunkController.sizeBucket(size);
+    static int sizeToBucket(int size) {
+        return HistogramChunkController.sizeToBucket(size);
+    }
+
+    static int bucketToSize(int bucket) {
+        return HistogramChunkController.bucketToSize(bucket);
     }
 
     private static class MagazineGroup {
@@ -592,6 +596,24 @@ final class AdaptivePoolingAllocator {
         private static final int HISTO_BUCKET_COUNT = 1 + HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT; // 16 buckets
         private static final int HISTO_MAX_BUCKET_MASK = HISTO_BUCKET_COUNT - 1;
         private static final int SIZE_MAX_MASK = MAX_CHUNK_SIZE - 1;
+        private static final int[] HISTO_BUCKETS = {
+                16 * 1024,
+                24 * 1024,
+                32 * 1024,
+                48 * 1024,
+                64 * 1024,
+                96 * 1024,
+                128 * 1024,
+                192 * 1024,
+                256 * 1024,
+                384 * 1024,
+                512 * 1024,
+                768 * 1024,
+                1024 * 1024,
+                1792 * 1024,
+                2048 * 1024,
+                3072 * 1024
+        };
 
         private final MagazineGroup group;
         private final boolean shareable;
@@ -644,23 +666,23 @@ final class AdaptivePoolingAllocator {
             if (bufferSizeToRecord == 0) {
                 return;
             }
-            int bucket = sizeBucket(bufferSizeToRecord);
+            int bucket = sizeToBucket(bufferSizeToRecord);
             histo[bucket]++;
             if (datumCount++ == datumTarget) {
                 rotateHistograms();
             }
         }
 
-        static int sizeBucket(int size) {
-            if (size == 0) {
-                return 0;
+        static int sizeToBucket(int size) {
+            int index = Arrays.binarySearch(HISTO_BUCKETS, size);
+            if (index < 0) {
+                index = -(index + 1);
             }
-            // Minimum chunk size is 128 KiB. We'll only make bigger chunks if the 99-percentile is 16 KiB or greater.
-            // We truncate and roll up the bottom part of the histogram to 256 bytes.
-            // The upper size bound is 8 MiB, and that gives us exactly 16 size buckets,
-            // which is a magical number for JIT optimisations.
-            int normalizedSize = size - 1 >> HISTO_MIN_BUCKET_SHIFT & SIZE_MAX_MASK;
-            return Math.min(Integer.SIZE - Integer.numberOfLeadingZeros(normalizedSize), HISTO_MAX_BUCKET_MASK);
+            return index >= HISTO_BUCKETS.length ? HISTO_BUCKETS.length - 1 : index;
+        }
+
+        static int bucketToSize(int sizeBucket) {
+            return HISTO_BUCKETS[sizeBucket];
         }
 
         private void rotateHistograms() {
@@ -681,7 +703,7 @@ final class AdaptivePoolingAllocator {
                 targetPercentile -= sums[sizeBucket];
             }
             hasHadRotation = true;
-            int percentileSize = 1 << sizeBucket + HISTO_MIN_BUCKET_SHIFT;
+            int percentileSize = bucketToSize(sizeBucket);
             int prefChunkSize = Math.max(percentileSize * BUFS_PER_CHUNK, MIN_CHUNK_SIZE);
             localUpperBufSize = percentileSize;
             localPrefChunkSize = prefChunkSize;
