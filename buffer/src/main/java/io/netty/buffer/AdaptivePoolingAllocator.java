@@ -108,7 +108,7 @@ final class AdaptivePoolingAllocator {
      * <p>
      * This number is 8 MiB, and is derived from the limitations of internal histograms.
      */
-    private static final int MAX_CHUNK_SIZE = 1 << HistogramChunkController.HISTO_MAX_BUCKET_SHIFT; // 8 MiB.
+    private static final int MAX_CHUNK_SIZE = 8 * 1024 * 1024; // 8 MiB.
     private static final int MAX_POOLED_BUF_SIZE = MAX_CHUNK_SIZE / BUFS_PER_CHUNK;
 
     /**
@@ -341,11 +341,7 @@ final class AdaptivePoolingAllocator {
         return HistogramChunkController.sizeToBucket(size);
     }
 
-    static int bucketToSize(int bucket) {
-        return HistogramChunkController.bucketToSize(bucket);
-    }
-
-    private static class MagazineGroup {
+    private static final class MagazineGroup {
         private final AdaptivePoolingAllocator allocator;
         private final ChunkAllocator chunkAllocator;
         private final ChunkControllerFactory chunkControllerFactory;
@@ -413,6 +409,9 @@ final class AdaptivePoolingAllocator {
             } while (expansions <= EXPANSION_ATTEMPTS && tryExpandMagazines(mags.length));
 
             // The magazines failed us; contention too high and we don't want to spend more effort expanding the array.
+            if (!reallocate && buf != null) {
+                buf.release(); // Release the previously claimed buffer before we return.
+            }
             return null;
         }
 
@@ -535,7 +534,7 @@ final class AdaptivePoolingAllocator {
         private final int segmentSize;
 
         private SizeClassChunkControllerFactory(int segmentSize) {
-            this.segmentSize = segmentSize;
+            this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
         }
 
         @Override
@@ -591,11 +590,7 @@ final class AdaptivePoolingAllocator {
         private static final int MIN_DATUM_TARGET = 1024;
         private static final int MAX_DATUM_TARGET = 65534;
         private static final int INIT_DATUM_TARGET = 9;
-        private static final int HISTO_MIN_BUCKET_SHIFT = 8; // Smallest bucket is 1 << 8 = 256 bytes in size.
-        private static final int HISTO_MAX_BUCKET_SHIFT = 23; // Biggest bucket is 1 << 23 = 8 MiB bytes in size.
-        private static final int HISTO_BUCKET_COUNT = 1 + HISTO_MAX_BUCKET_SHIFT - HISTO_MIN_BUCKET_SHIFT; // 16 buckets
-        private static final int HISTO_MAX_BUCKET_MASK = HISTO_BUCKET_COUNT - 1;
-        private static final int SIZE_MAX_MASK = MAX_CHUNK_SIZE - 1;
+        private static final int HISTO_BUCKET_COUNT = 16;
         private static final int[] HISTO_BUCKETS = {
                 16 * 1024,
                 24 * 1024,
@@ -1289,7 +1284,7 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    private static class SizeClassedChunk extends Chunk {
+    private static final class SizeClassedChunk extends Chunk {
         private static final int FREE_LIST_EMPTY = -1;
         private final int segmentSize;
         private final MpscIntQueue freeList;
@@ -1342,10 +1337,6 @@ final class AdaptivePoolingAllocator {
             boolean segmentReturned = freeList.offer(segmentId);
             assert segmentReturned: "Unable to return segment " + segmentId + " to free list";
             return released;
-        }
-
-        boolean isEmpty() {
-            return freeList.isEmpty();
         }
     }
 

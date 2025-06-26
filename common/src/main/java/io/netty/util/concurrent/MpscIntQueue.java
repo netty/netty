@@ -26,8 +26,7 @@ import java.util.function.IntSupplier;
 
 /**
  * A multi-producer (concurrent and thread-safe {@code offer} and {@code fill}),
- * single-consumer (single-threaded {@code poll} and {@code drain}) queue of primitive integers,
- * internally represented as an array for space efficiency.
+ * single-consumer (single-threaded {@code poll} and {@code drain}) queue of primitive integers.
  */
 public interface MpscIntQueue {
     /**
