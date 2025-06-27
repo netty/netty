@@ -243,10 +243,7 @@ final class AdaptivePoolingAllocator {
     private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
         AdaptiveByteBuf allocated = null;
         if (size <= MAX_POOLED_BUF_SIZE) {
-            int index = Arrays.binarySearch(SIZE_CLASSES, size);
-            if (index < 0) {
-                index = -(index + 1);
-            }
+            int index = binarySearchInsertionPoint(Arrays.binarySearch(SIZE_CLASSES, size));
             MagazineGroup[] magazineGroups;
             if (!FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals() ||
                     (magazineGroups = threadLocalGroup.get()) == null) {
@@ -262,6 +259,13 @@ final class AdaptivePoolingAllocator {
             allocated = allocateFallback(size, maxCapacity, currentThread, buf);
         }
         return allocated;
+    }
+
+    private static int binarySearchInsertionPoint(int index) {
+        if (index < 0) {
+            index = -(index + 1);
+        }
+        return index;
     }
 
     private AdaptiveByteBuf allocateFallback(int size, int maxCapacity, Thread currentThread,
@@ -538,14 +542,18 @@ final class AdaptivePoolingAllocator {
     }
 
     private static final class SizeClassChunkController implements ChunkController {
-        private final MagazineGroup group;
+        // To amortize activation/deactivation of chunks, we should have a minimum number of segments per chunk.
+        // We choose 32 because it seems neither too small nor too big.
+        // For segments of 16 KiB, the chunks will be half a megabyte.
+        private static final int MIN_SEGMENTS_PER_CHUNK = 32;
+        private final ChunkAllocator chunkAllocator;
         private final int segmentSize;
         private final int chunkSize;
 
         private SizeClassChunkController(MagazineGroup group, int segmentSize) {
-            this.group = group;
+            chunkAllocator = group.chunkAllocator;
             this.segmentSize = segmentSize;
-            chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * 32);
+            chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
         }
 
         @Override
@@ -561,7 +569,6 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public Chunk newChunkAllocation(int promptingSize, Magazine magazine) {
-            ChunkAllocator chunkAllocator = group.chunkAllocator;
             return new SizeClassedChunk(chunkAllocator.allocate(chunkSize, chunkSize),
                     magazine, true, segmentSize, size -> false);
         }
@@ -663,10 +670,7 @@ final class AdaptivePoolingAllocator {
         }
 
         static int sizeToBucket(int size) {
-            int index = Arrays.binarySearch(HISTO_BUCKETS, size);
-            if (index < 0) {
-                index = -(index + 1);
-            }
+            int index = binarySearchInsertionPoint(Arrays.binarySearch(HISTO_BUCKETS, size));
             return index >= HISTO_BUCKETS.length ? HISTO_BUCKETS.length - 1 : index;
         }
 
