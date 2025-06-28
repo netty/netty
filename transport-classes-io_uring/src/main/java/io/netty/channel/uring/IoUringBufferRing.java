@@ -17,9 +17,9 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DuplicatedByteBuf;
-import io.netty.buffer.ReadOnlyByteBuf;
 import io.netty.buffer.SlicedByteBuf;
 import io.netty.buffer.SwappedByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.WrappedByteBuf;
 import io.netty.channel.unix.Buffer;
 
@@ -303,7 +303,7 @@ final class IoUringBufferRing {
             if (isReadOnly()) {
                 return this;
             }
-            return new ReadOnlyByteBuf(this);
+            return Unpooled.unmodifiableBuffer(this);
         }
 
         @SuppressWarnings("deprecation")
