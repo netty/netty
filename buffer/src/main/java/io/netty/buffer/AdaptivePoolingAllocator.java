@@ -1315,6 +1315,21 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         }
 
         @Override
+        public int remainingCapacity() {
+            int remainingCapacity = super.remainingCapacity();
+            if (remainingCapacity > segmentSize) {
+                return remainingCapacity;
+            }
+            int updatedRemainingCapacity = freeList.size() * segmentSize;
+            if (updatedRemainingCapacity == remainingCapacity) {
+                return remainingCapacity;
+            }
+            // update allocatedBytes based on what's available in the free list
+            allocatedBytes = capacity() - updatedRemainingCapacity;
+            return updatedRemainingCapacity;
+        }
+
+        @Override
         boolean releaseFromMagazine() {
             // Size-classed chunks can be reused before they become empty.
             // We can therefor put them in the shared queue as soon as the magazine is done with this chunk.
