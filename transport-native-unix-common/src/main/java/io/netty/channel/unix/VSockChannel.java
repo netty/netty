@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,16 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.epoll;
+package io.netty.channel.unix;
 
-/**
- * Address for <a href="https://man7.org/linux/man-pages/man7/vsock.7.html">VM sockets (Linux VSOCK address family)</a>.
- *
- * @deprecated Use {@link io.netty.channel.unix.VSockAddress}.
- */
-@Deprecated
-public final class VSockAddress extends io.netty.channel.unix.VSockAddress {
-    public VSockAddress(int cid, int port) {
-        super(cid, port);
-    }
+import io.netty.channel.socket.DuplexChannel;
+
+public interface VSockChannel extends DuplexChannel {
+    VSockAddress remoteAddress();
+
+    VSockAddress localAddress();
+
+    VSockChannelConfig config();
 }
