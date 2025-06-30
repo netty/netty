@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.buffer.AdaptivePoolingAllocator.MagazineCaching;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
@@ -62,10 +61,8 @@ public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
             // The implementation uses StampedLock, which was introduced in Java 8.
             throw new IllegalStateException("This allocator require Java 8 or newer.");
         }
-        MagazineCaching magazineCaching = useCacheForNonEventLoopThreads?
-                MagazineCaching.FastThreadLocalThreads : MagazineCaching.EventLoopThreads;
-        direct = new AdaptivePoolingAllocator(new DirectChunkAllocator(this), magazineCaching);
-        heap = new AdaptivePoolingAllocator(new HeapChunkAllocator(this), magazineCaching);
+        direct = new AdaptivePoolingAllocator(new DirectChunkAllocator(this), useCacheForNonEventLoopThreads);
+        heap = new AdaptivePoolingAllocator(new HeapChunkAllocator(this), useCacheForNonEventLoopThreads);
     }
 
     @Override
