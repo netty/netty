@@ -59,6 +59,17 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
         super(alloc, initialBuffer, maxCapacity, /* doFree = */ false, /* slice = */ true);
     }
 
+    /**
+     * Creates a new direct ByteBuf by wrapping the specified initial buffer.
+     * Allows subclasses to control if initialBuffer.slice() should be invoked.
+     *
+     * @param maxCapacity the maximum capacity of the underlying direct buffer
+     */
+    protected UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, boolean slice,
+                                          ByteBuffer initialBuffer, int maxCapacity) {
+        super(alloc, initialBuffer, maxCapacity, false, slice);
+    }
+
     UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity, boolean doFree) {
         super(alloc, initialBuffer, maxCapacity, doFree, false);
     }
