@@ -94,7 +94,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
      */
     private static final int MIN_CHUNK_SIZE = 128 * 1024;
     private static final int EXPANSION_ATTEMPTS = 3;
-    private static final int INITIAL_MAGAZINES = 4;
+    private static final int INITIAL_MAGAZINES = 1;
     private static final int RETIRE_CAPACITY = 256;
     private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
     private static final int BUFS_PER_CHUNK = 8; // For large buffers, aim to have about this many buffers per chunk.
@@ -407,7 +407,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 mags = magazines;
                 int mask = mags.length - 1;
                 int index = (int) (threadId & mask);
-                for (int i = 0, m = Integer.numberOfTrailingZeros(~mask); i < m; i++) {
+                for (int i = 0, m = mags.length << 1; i < m; i++) {
                     Magazine mag = mags[index + i & mask];
                     if (buf == null) {
                         buf = mag.newBuffer();
