@@ -901,13 +901,13 @@ final class AdaptivePoolingAllocator {
                         curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
                         return true;
                     } finally {
-                        curr.release();
+                        curr.releaseFromMagazine();
                     }
                 }
 
                 // Check if we either retain the chunk in the nextInLine cache or releasing it.
                 if (remainingCapacity < RETIRE_CAPACITY) {
-                    curr.release();
+                    curr.releaseFromMagazine();
                 } else {
                     // See if it makes sense to transfer the Chunk to the nextInLine cache for later usage.
                     // This method will release curr if this is not the case
@@ -949,11 +949,11 @@ final class AdaptivePoolingAllocator {
                     } finally {
                         // Release in a finally block so even if readInitInto(...) would throw we would still correctly
                         // release the current chunk before null it out.
-                        curr.release();
+                        curr.releaseFromMagazine();
                     }
                 } else {
                     // Release it as it's too small.
-                    curr.release();
+                    curr.releaseFromMagazine();
                 }
             }
 
@@ -968,7 +968,7 @@ final class AdaptivePoolingAllocator {
                 if (remainingCapacity < size) {
                     // Check if we either retain the chunk in the nextInLine cache or releasing it.
                     if (remainingCapacity < RETIRE_CAPACITY) {
-                        curr.release();
+                        curr.releaseFromMagazine();
                     } else {
                         // See if it makes sense to transfer the Chunk to the nextInLine cache for later usage.
                         // This method will release curr if this is not the case
@@ -992,7 +992,7 @@ final class AdaptivePoolingAllocator {
                 if (curr != null) {
                     // Release in a finally block so even if readInitInto(...) would throw we would still correctly
                     // release the current chunk before null it out.
-                    curr.release();
+                    curr.releaseFromMagazine();
                     current = null;
                 }
             }
