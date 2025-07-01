@@ -201,7 +201,21 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         }
     }
 
-    private int run(IoHandlerContext context, long runAllTasksTimeoutNanos) {
+    /**
+     * Executes IO tasks and all other tasks for this {@link IoEventLoop}.
+     * This could block and wait for IO / tasks to be ready depending on the provided @context
+     * <p>
+     * <strong>Must be called from the owning {@link Thread} that was passed as a parameter on construction.</strong>
+     * <p>
+     *
+     * @param context the {@link IoHandlerContext} used for IO operations and controlling blocking behavior.
+     * @param runAllTasksTimeoutNanos the maximum time in nanoseconds to run non-IO tasks.
+     *                                If {@code = 0}, no timeout is applied; if {@code < 0}, only IO tasks are executed.
+     * @return the number of IO and tasks executed.
+     * @throws IllegalStateException if the method is not called from the owning {@link Thread}.
+     */
+    public int run(IoHandlerContext context, long runAllTasksTimeoutNanos) {
+        checkCurrentThread();
         if (!initialized) {
             if (owningThread.get() == null) {
                 throw new IllegalStateException("Owning thread not set");
@@ -223,7 +237,6 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
             if (runAllTasksTimeoutNanos < 0) {
                 return ioTasks;
             }
-            assert runAllTasksTimeoutNanos >= 0;
             return ioTasks + runAllTasks(runAllTasksTimeoutNanos, false);
         } finally {
             ThreadExecutorMap.setCurrentExecutor(old);
@@ -267,7 +280,6 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      * @throws IllegalStateException if the method is not called from the owning {@link Thread}.
      */
     public int runNow(long runAllTasksTimeoutNanos) {
-        checkCurrentThread();
         return run(nonBlockingContext, runAllTasksTimeoutNanos);
     }
 
@@ -281,7 +293,6 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      * @return the number of IO and tasks executed.
      */
     public int runNow() {
-        checkCurrentThread();
         return run(nonBlockingContext, 0);
     }
 
@@ -290,7 +301,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      * This methods will block and wait for IO / tasks to be ready if there is nothing to process atm for the given
      * {@code waitNanos}.
      * <p>
-     * <strong>Must be called from the owning {@link Thread} that was passed as an parameter on construction.</strong>
+     * <strong>Must be called from the owning {@link Thread} that was passed as a parameter on construction.</strong>
      *
      * @param runAllTasksTimeoutNanos the maximum time in nanoseconds to run tasks.
      *                                If {@code = 0}, no timeout is applied; if {@code < 0} it just perform I/O tasks.
@@ -300,8 +311,6 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      * @return          the number of IO and tasks executed.
      */
     public int run(long waitNanos, long runAllTasksTimeoutNanos) {
-        checkCurrentThread();
-
         final IoHandlerContext context;
         if (waitNanos < 0) {
             context = nonBlockingContext;
