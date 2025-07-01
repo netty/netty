@@ -52,8 +52,8 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Queue;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
@@ -165,25 +165,23 @@ final class AdaptivePoolingAllocator {
     }
 
     private final ChunkAllocator chunkAllocator;
+    private final Set<Chunk> chunkRegistry;
     private final MagazineGroup[] sizeClassedMagazineGroups;
     private final MagazineGroup largeBufferMagazineGroup;
     private final FastThreadLocal<MagazineGroup[]> threadLocalGroup;
-    private final Set<MagazineGroup[]> allThreadLocalGroups;
 
     AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, boolean useCacheForNonEventLoopThreads) {
         this.chunkAllocator = ObjectUtil.checkNotNull(chunkAllocator, "chunkAllocator");
+        chunkRegistry = ConcurrentHashMap.newKeySet();
         sizeClassedMagazineGroups = createMagazineGroupSizeClasses(this, false);
         largeBufferMagazineGroup = new MagazineGroup(
                 this, chunkAllocator, new HistogramChunkControllerFactory(true), false);
 
-        final Set<MagazineGroup[]> liveMagazines = new CopyOnWriteArraySet<>();
         threadLocalGroup = new FastThreadLocal<MagazineGroup[]>() {
             @Override
             protected MagazineGroup[] initialValue() {
                 if (useCacheForNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null) {
-                    MagazineGroup[] groups = createMagazineGroupSizeClasses(AdaptivePoolingAllocator.this, true);
-                    liveMagazines.add(groups);
-                    return groups;
+                    return createMagazineGroupSizeClasses(AdaptivePoolingAllocator.this, true);
                 }
                 return null;
             }
@@ -194,11 +192,9 @@ final class AdaptivePoolingAllocator {
                     for (MagazineGroup group : groups) {
                         group.free();
                     }
-                    liveMagazines.remove(groups);
                 }
             }
         };
-        allThreadLocalGroups = liveMagazines;
     }
 
     private static MagazineGroup[] createMagazineGroupSizeClasses(
@@ -309,14 +305,9 @@ final class AdaptivePoolingAllocator {
     }
 
     long usedMemory() {
-        long sum = largeBufferMagazineGroup.usedMemory();
-        for (MagazineGroup group : sizeClassedMagazineGroups) {
-            sum += group.usedMemory();
-        }
-        for (MagazineGroup[] groups : allThreadLocalGroups) {
-            for (MagazineGroup group : groups) {
-                sum += group.usedMemory();
-            }
+        long sum = 0;
+        for (Chunk chunk : chunkRegistry) {
+            sum += chunk.capacity();
         }
         return sum;
     }
@@ -416,21 +407,6 @@ final class AdaptivePoolingAllocator {
             return null;
         }
 
-        long usedMemory() {
-            long sum = 0;
-            for (Chunk chunk : chunkReuseQueue) {
-                sum += chunk.capacity();
-            }
-            if (threadLocalMagazine != null) {
-                sum += threadLocalMagazine.usedMemory.get();
-            } else {
-                for (Magazine magazine : magazines) {
-                    sum += magazine.usedMemory.get();
-                }
-            }
-            return sum;
-        }
-
         private boolean tryExpandMagazines(int currentLength) {
             if (currentLength >= MAX_STRIPES) {
                 return true;
@@ -468,8 +444,8 @@ final class AdaptivePoolingAllocator {
 
             boolean isAdded = chunkReuseQueue.offer(buffer);
             if (freed && isAdded) {
-                // Help to free the centralQueue.
-                freeCentralQueue();
+                // Help to free the reuse queue.
+                freeChunkReuseQueue();
             }
             return isAdded;
         }
@@ -489,10 +465,10 @@ final class AdaptivePoolingAllocator {
                     magazineExpandLock.unlockWrite(stamp);
                 }
             }
-            freeCentralQueue();
+            freeChunkReuseQueue();
         }
 
-        private void freeCentralQueue() {
+        private void freeChunkReuseQueue() {
             for (;;) {
                 Chunk chunk = chunkReuseQueue.poll();
                 if (chunk == null) {
@@ -549,11 +525,13 @@ final class AdaptivePoolingAllocator {
         private final ChunkAllocator chunkAllocator;
         private final int segmentSize;
         private final int chunkSize;
+        private final Set<Chunk> chunkRegistry;
 
         private SizeClassChunkController(MagazineGroup group, int segmentSize) {
             chunkAllocator = group.chunkAllocator;
             this.segmentSize = segmentSize;
             chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
+            chunkRegistry = group.allocator.chunkRegistry;
         }
 
         @Override
@@ -569,8 +547,10 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public Chunk newChunkAllocation(int promptingSize, Magazine magazine) {
-            return new SizeClassedChunk(chunkAllocator.allocate(chunkSize, chunkSize),
+            SizeClassedChunk chunk = new SizeClassedChunk(chunkAllocator.allocate(chunkSize, chunkSize),
                     magazine, true, segmentSize, size -> false);
+            chunkRegistry.add(chunk);
+            return chunk;
         }
     }
 
@@ -617,6 +597,7 @@ final class AdaptivePoolingAllocator {
                 new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
                 new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
         };
+        private final Set<Chunk> chunkRegistry;
         private short[] histo = histos[0];
         private final int[] sums = new int[HISTO_BUCKET_COUNT];
 
@@ -631,6 +612,7 @@ final class AdaptivePoolingAllocator {
         private HistogramChunkController(MagazineGroup group, boolean shareable) {
             this.group = group;
             this.shareable = shareable;
+            chunkRegistry = group.allocator.chunkRegistry;
         }
 
         @Override
@@ -762,7 +744,9 @@ final class AdaptivePoolingAllocator {
             }
 
             ChunkAllocator chunkAllocator = group.chunkAllocator;
-            return new Chunk(chunkAllocator.allocate(size, size), magazine, true, this);
+            Chunk chunk = new Chunk(chunkAllocator.allocate(size, size), magazine, true, this);
+            chunkRegistry.add(chunk);
+            return chunk;
         }
 
         @Override
@@ -1037,7 +1021,7 @@ final class AdaptivePoolingAllocator {
             long stamp = allocationLock != null ? allocationLock.writeLock() : 0;
             try {
                 if (current != null) {
-                    current.release();
+                    current.releaseFromMagazine();
                     current = null;
                 }
             } finally {
@@ -1219,6 +1203,7 @@ final class AdaptivePoolingAllocator {
                 // or if the chunk deviates too much from the preferred chunk size.
                 detachFromMagazine();
                 onRelease();
+                allocator.chunkRegistry.remove(this);
                 delegate.release();
             } else {
                 updater.resetRefCnt(this);
@@ -1232,6 +1217,7 @@ final class AdaptivePoolingAllocator {
                         // which did increase the reference count by 1.
                         boolean released = updater.release(this);
                         onRelease();
+                        allocator.chunkRegistry.remove(this);
                         delegate.release();
                         assert released;
                     } else {
