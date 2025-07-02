@@ -342,12 +342,13 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void jfrBufferAllocationThreadLocal() throws Exception {
+        ByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, true);
+
         Callable<Void> allocateAndRelease = () -> {
             try (RecordingStream stream = new RecordingStream()) {
                 CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
                 CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
 
-                ByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, true);
                 // Prime the cache.
                 alloc.directBuffer(128).release();
 

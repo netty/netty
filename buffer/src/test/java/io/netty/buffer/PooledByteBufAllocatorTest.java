@@ -1126,12 +1126,13 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void jfrBufferAllocationThreadLocal() throws Exception {
+        ByteBufAllocator alloc = newAllocator(true);
+
         Callable<Void> allocateAndRelease = () -> {
             try (RecordingStream stream = new RecordingStream()) {
                 CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
                 CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
 
-                ByteBufAllocator alloc = newAllocator(true);
                 // Prime the cache.
                 alloc.directBuffer(128).release();
 
