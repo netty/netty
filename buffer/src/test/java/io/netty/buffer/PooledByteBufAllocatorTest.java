@@ -1126,12 +1126,12 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void jfrBufferAllocationThreadLocal() throws Exception {
-        try (RecordingStream stream = new RecordingStream()) {
-            CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
-            CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
+        Callable<Void> allocateAndRelease = () -> {
+            try (RecordingStream stream = new RecordingStream()) {
+                CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
+                CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
 
-            ByteBufAllocator alloc = newAllocator(true);
-            Callable<Void> allocateAndRelease = () -> {
+                ByteBufAllocator alloc = newAllocator(true);
                 // Prime the cache.
                 alloc.directBuffer(128).release();
 
@@ -1158,12 +1158,11 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
                 assertEquals(Integer.MAX_VALUE, release.getInt("maxCapacity"));
                 assertTrue(release.getBoolean("direct"));
                 return null;
-            };
-
-            FutureTask<Void> task = new FutureTask<>(allocateAndRelease);
-            FastThreadLocalThread thread = new FastThreadLocalThread(task);
-            thread.start();
-            task.get();
-        }
+            }
+        };
+        FutureTask<Void> task = new FutureTask<>(allocateAndRelease);
+        FastThreadLocalThread thread = new FastThreadLocalThread(task);
+        thread.start();
+        task.get();
     }
 }
