@@ -15,6 +15,14 @@
  */
 package io.netty.buffer;
 
+import io.netty.buffer.jfr.AllocateBufferEvent;
+import io.netty.buffer.jfr.AllocateChunkEvent;
+import io.netty.buffer.jfr.AllocatorType;
+import io.netty.buffer.jfr.ChunkInfo;
+import io.netty.buffer.jfr.FreeBufferEvent;
+import io.netty.buffer.jfr.FreeChunkEvent;
+import io.netty.buffer.jfr.ReallocateBufferEvent;
+import io.netty.buffer.jfr.ReturnChunkEvent;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
@@ -31,13 +39,6 @@ import io.netty.util.internal.ReferenceCountUpdater;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
 import io.netty.util.internal.UnstableApi;
-import jdk.jfr.Category;
-import jdk.jfr.DataAmount;
-import jdk.jfr.Description;
-import jdk.jfr.Enabled;
-import jdk.jfr.Event;
-import jdk.jfr.Label;
-import jdk.jfr.MemoryAddress;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -1055,7 +1056,7 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    private static class Chunk implements ReferenceCounted {
+    private static class Chunk implements ReferenceCounted, ChunkInfo {
         private static final long REFCNT_FIELD_OFFSET =
                 ReferenceCountUpdater.getUnsafeOffset(Chunk.class, "refCnt");
         private static final AtomicIntegerFieldUpdater<Chunk> AIF_UPDATER =
@@ -1110,10 +1111,10 @@ final class AdaptivePoolingAllocator {
 
             this.chunkReleasePredicate = chunkReleasePredicate;
 
-            if (PlatformDependent.isJfrEnabled() && AllocateChunkEvent.INSTANCE.isEnabled()) {
+            if (PlatformDependent.isJfrEnabled() && AllocateChunkEvent.isEventEnabled()) {
                 AllocateChunkEvent event = new AllocateChunkEvent();
                 if (event.shouldCommit()) {
-                    event.fill(this);
+                    event.fill(this, AllocatorType.adaptive);
                     event.pooled = pooled;
                     event.threadLocal = magazine.allocationLock == null;
                     event.commit();
@@ -1230,10 +1231,10 @@ final class AdaptivePoolingAllocator {
         }
 
         private void onReturn(boolean returnedToMagazine) {
-            if (PlatformDependent.isJfrEnabled() && ReturnChunkEvent.INSTANCE.isEnabled()) {
+            if (PlatformDependent.isJfrEnabled() && ReturnChunkEvent.isEventEnabled()) {
                 ReturnChunkEvent event = new ReturnChunkEvent();
                 if (event.shouldCommit()) {
-                    event.fill(this);
+                    event.fill(this, AllocatorType.adaptive);
                     event.returnedToMagazine = returnedToMagazine;
                     event.commit();
                 }
@@ -1241,10 +1242,10 @@ final class AdaptivePoolingAllocator {
         }
 
         private void onRelease() {
-            if (PlatformDependent.isJfrEnabled() && FreeChunkEvent.INSTANCE.isEnabled()) {
+            if (PlatformDependent.isJfrEnabled() && FreeChunkEvent.isEventEnabled()) {
                 FreeChunkEvent event = new FreeChunkEvent();
                 if (event.shouldCommit()) {
-                    event.fill(this);
+                    event.fill(this, AllocatorType.adaptive);
                     event.pooled = pooled;
                     event.commit();
                 }
@@ -1274,8 +1275,19 @@ final class AdaptivePoolingAllocator {
             return capacity - allocatedBytes;
         }
 
+        @Override
         public int capacity() {
             return capacity;
+        }
+
+        @Override
+        public boolean isDirect() {
+            return delegate.isDirect();
+        }
+
+        @Override
+        public long memoryAddress() {
+            return delegate._memoryAddress();
         }
     }
 
@@ -1362,65 +1374,6 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    @SuppressWarnings("Since15")
-    abstract static class AbstractChunkEvent extends Event {
-        @DataAmount
-        @Description("Size of the chunk")
-        int capacity;
-        @Description("Is this chunk referencing off-heap memory?")
-        boolean direct;
-        @Description("The memory address of the off-heap memory, if available")
-        @MemoryAddress
-        long address;
-
-        void fill(Chunk chunk) {
-            capacity = chunk.capacity;
-            AbstractByteBuf delegate = chunk.delegate;
-            if (delegate != null) {
-                direct = delegate.isDirect();
-                address = delegate.hasMemoryAddress() ? delegate.memoryAddress() : 0;
-            }
-        }
-    }
-
-    @Enabled(false)
-    @SuppressWarnings("Since15")
-    @Category("Netty")
-    @Label("Chunk Allocation")
-    @Description("Triggered when a new memory chunk is allocated for the adaptive allocator")
-    static final class AllocateChunkEvent extends AbstractChunkEvent {
-        static final AllocateChunkEvent INSTANCE = new AllocateChunkEvent();
-
-        @Description("Is this chunk pooled, or is it a one-off allocation for a single buffer?")
-        boolean pooled;
-        @Description("Is this chunk part of a thread-local magazine?")
-        boolean threadLocal;
-    }
-
-    @Enabled(false)
-    @SuppressWarnings("Since15")
-    @Category("Netty")
-    @Label("Chunk Free")
-    @Description("Triggered when a memory chunk is freed for the adaptive allocator")
-    static final class FreeChunkEvent extends AbstractChunkEvent {
-        static final FreeChunkEvent INSTANCE = new FreeChunkEvent();
-
-        @Description("Was this chunk pooled, or was it a one-off allocation for a single buffer?")
-        boolean pooled;
-    }
-
-    @Enabled(false)
-    @SuppressWarnings("Since15")
-    @Category("Netty")
-    @Label("Chunk Return")
-    @Description("Triggered when a memory chunk is freed for the adaptive allocator")
-    static final class ReturnChunkEvent extends AbstractChunkEvent {
-        static final FreeChunkEvent INSTANCE = new FreeChunkEvent();
-
-        @Description("Was this chunk returned to its previous magazine?")
-        boolean returnedToMagazine;
-    }
-
     static final class AdaptiveByteBuf extends AbstractReferenceCountedByteBuf {
 
         private final ObjectPool.Handle<AdaptiveByteBuf> handle;
@@ -1454,10 +1407,10 @@ final class AdaptivePoolingAllocator {
             rootParent = unwrapped;
             tmpNioBuf = null;
 
-            if (PlatformDependent.isJfrEnabled() && AllocateBufferEvent.INSTANCE.isEnabled()) {
+            if (PlatformDependent.isJfrEnabled() && AllocateBufferEvent.isEventEnabled()) {
                 AllocateBufferEvent event = new AllocateBufferEvent();
                 if (event.shouldCommit()) {
-                    event.fill(this);
+                    event.fill(this, AllocatorType.adaptive);
                     event.chunkPooled = wrapped.pooled;
                     Magazine m = wrapped.magazine;
                     event.chunkThreadLocal = m != null && m.allocationLock == null;
@@ -1498,10 +1451,10 @@ final class AdaptivePoolingAllocator {
                 return this;
             }
 
-            if (PlatformDependent.isJfrEnabled() && ReallocateBufferEvent.INSTANCE.isEnabled()) {
+            if (PlatformDependent.isJfrEnabled() && ReallocateBufferEvent.isEventEnabled()) {
                 ReallocateBufferEvent event = new ReallocateBufferEvent();
                 if (event.shouldCommit()) {
-                    event.fill(this);
+                    event.fill(this, AllocatorType.adaptive);
                     event.newCapacity = newCapacity;
                     event.commit();
                 }
@@ -1557,7 +1510,13 @@ final class AdaptivePoolingAllocator {
         @Override
         public long memoryAddress() {
             ensureAccessible();
-            return rootParent().memoryAddress() + adjustment;
+            return _memoryAddress();
+        }
+
+        @Override
+        long _memoryAddress() {
+            AbstractByteBuf root = rootParent;
+            return root != null ? root._memoryAddress() + adjustment : 0L;
         }
 
         @Override
@@ -1896,10 +1855,10 @@ final class AdaptivePoolingAllocator {
 
         @Override
         protected void deallocate() {
-            if (PlatformDependent.isJfrEnabled() && FreeBufferEvent.INSTANCE.isEnabled()) {
+            if (PlatformDependent.isJfrEnabled() && FreeBufferEvent.isEventEnabled()) {
                 FreeBufferEvent event = new FreeBufferEvent();
                 if (event.shouldCommit()) {
-                    event.fill(this);
+                    event.fill(this, AllocatorType.adaptive);
                     event.commit();
                 }
             }
@@ -1917,64 +1876,6 @@ final class AdaptivePoolingAllocator {
                 handle.recycle(this);
             }
         }
-    }
-
-    @SuppressWarnings("Since15")
-    abstract static class AbstractBufferEvent extends Event {
-        @DataAmount
-        @Description("Configured buffer capacity")
-        int size;
-        @DataAmount
-        @Description("Actual allocated buffer capacity")
-        int maxFastCapacity;
-        @DataAmount
-        @Description("Maximum buffer capacity")
-        int maxCapacity;
-        @Description("Is this buffer referencing off-heap memory?")
-        boolean direct;
-        @Description("The memory address of the off-heap memory, if available")
-        @MemoryAddress
-        long address;
-
-        void fill(AdaptiveByteBuf buf) {
-            size = buf.length;
-            maxFastCapacity = buf.maxFastCapacity;
-            maxCapacity = buf.maxCapacity();
-            direct = buf.isDirect();
-            // access rootParent directly so we can determine memory address even with refCnt==0
-            address = buf.hasMemoryAddress ? buf.rootParent.memoryAddress() + buf.adjustment : 0;
-        }
-    }
-
-    @Enabled(false)
-    @SuppressWarnings("Since15")
-    @Description("Triggered when a buffer is allocated (or reallocated) from the adaptive allocator")
-    static final class AllocateBufferEvent extends AbstractBufferEvent {
-        static final AllocateBufferEvent INSTANCE = new AllocateBufferEvent();
-
-        @Description("Is this chunk pooled, or is it a one-off allocation for this buffer?")
-        boolean chunkPooled;
-        @Description("Is this buffer's chunk part of a thread-local magazine?")
-        boolean chunkThreadLocal;
-    }
-
-    @Enabled(false)
-    @SuppressWarnings("Since15")
-    @Description("Triggered when a buffer is reallocated for resizing in the adaptive allocator. Will be followed " +
-            "by an AllocateBufferEvent")
-    static final class ReallocateBufferEvent extends AbstractBufferEvent {
-        static final ReallocateBufferEvent INSTANCE = new ReallocateBufferEvent();
-
-        @DataAmount
-        @Description("Targeted buffer capacity")
-        int newCapacity;
-    }
-
-    @Enabled(false)
-    @SuppressWarnings("Since15")
-    @Description("Triggered when a buffer is freed from the adaptive allocator")
-    static final class FreeBufferEvent extends AbstractBufferEvent {
-        static final FreeBufferEvent INSTANCE = new FreeBufferEvent();
     }
 
     /**
