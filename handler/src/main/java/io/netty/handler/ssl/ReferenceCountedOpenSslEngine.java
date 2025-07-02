@@ -247,8 +247,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             public List<SNIServerName> getRequestedServerNames() {
                 if (clientMode) {
                     List<SNIServerName> names = ReferenceCountedOpenSslEngine.this.serverNames;
-                    return names == null ? Collections.emptyList() :
-                            Collections.unmodifiableList(new ArrayList<>(names));
+                    return names == null ? Collections.emptyList() : Collections.unmodifiableList(names);
                 } else {
                     synchronized (ReferenceCountedOpenSslEngine.this) {
                         if (requestedServerNames == null) {
@@ -262,7 +261,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                     // Convert to bytes as we do not want to do any strict validation of the
                                     // SNIHostName while creating it.
                                     byte[] hostname = SSL.getSniHostname(ssl).getBytes(CharsetUtil.UTF_8);
-                                    requestedServerNames = hostname == null || hostname.length == 0 ?
+                                    requestedServerNames = hostname.length == 0 ?
                                             Collections.emptyList() :
                                                     Collections.singletonList(new SNIHostName(hostname));
                                 }
@@ -284,7 +283,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                             if (algs == null) {
                                 peerSupportedSignatureAlgorithms = EMPTY_STRINGS;
                             } else {
-                                Set<String> algorithmList = new LinkedHashSet<String>(algs.length);
+                                Set<String> algorithmList = new LinkedHashSet<>(algs.length);
                                 for (String alg: algs) {
                                     String converted = SignatureAlgorithmConverter.toJavaName(alg);
 
@@ -311,7 +310,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                 }
                 return ocspResponse == null ?
-                        Collections.<byte[]>emptyList() : Collections.singletonList(ocspResponse);
+                        Collections.emptyList() : Collections.singletonList(ocspResponse);
             }
         };
 
@@ -350,7 +349,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     if (usePeerHost) {
                         SSL.setTlsExtHostName(ssl, peerHost);
                         this.serverNames = Collections.singletonList(new SNIHostName(peerHost));
-                    } else if (useServerNames) {
+                    } else {
                         for (SNIServerName serverName : serverNames) {
                             if (serverName instanceof SNIHostName) {
                                 SNIHostName name = (SNIHostName) serverName;
@@ -434,15 +433,14 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         return SSL.authenticationMethods(ssl);
     }
 
-    final boolean setKeyMaterial(OpenSslKeyMaterial keyMaterial) throws  Exception {
+    final void setKeyMaterial(OpenSslKeyMaterial keyMaterial) throws  Exception {
         synchronized (this) {
             if (isDestroyed()) {
-                return false;
+                return;
             }
             SSL.setKeyMaterial(ssl, keyMaterial.certificateChainAddress(), keyMaterial.privateKeyAddress());
         }
         session.setLocalCertificate(keyMaterial.certificateChain());
-        return true;
     }
 
     final synchronized SecretKeySpec masterKey() {
@@ -1688,11 +1686,11 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (enabled == null) {
             return EMPTY_STRINGS;
         } else {
-            Set<String> enabledSet = new LinkedHashSet<String>(enabled.length + extraCiphers.length);
+            Set<String> enabledSet = new LinkedHashSet<>(enabled.length + extraCiphers.length);
             synchronized (this) {
-                for (int i = 0; i < enabled.length; i++) {
-                    String mapped = toJavaCipherSuite(enabled[i]);
-                    final String cipher = mapped == null ? enabled[i] : mapped;
+                for (String enabledCipher : enabled) {
+                    String mapped = toJavaCipherSuite(enabledCipher);
+                    final String cipher = mapped == null ? enabledCipher : mapped;
                     if ((!tls13Enabled || !OpenSsl.isTlsv13Supported()) && SslUtils.isTLSv13Cipher(cipher)) {
                         continue;
                     }
