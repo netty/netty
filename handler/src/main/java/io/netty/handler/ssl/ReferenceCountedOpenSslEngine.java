@@ -1511,21 +1511,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
     }
 
-    private class TaskDecorator<R extends Runnable> implements Runnable {
-        protected final R task;
-        TaskDecorator(R task) {
-            this.task = task;
-        }
+    private final class AsyncTaskDecorator implements AsyncRunnable, Runnable {
 
-        @Override
-        public void run() {
-            runAndResetNeedTask(task);
-        }
-    }
+        private final AsyncTask task;
 
-    private final class AsyncTaskDecorator extends TaskDecorator<AsyncTask> implements AsyncRunnable {
         AsyncTaskDecorator(AsyncTask task) {
-            super(task);
+            this.task = task;
         }
 
         @Override
@@ -1534,7 +1525,12 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 // The engine was destroyed in the meantime, just return.
                 return;
             }
-            task.runAsync(new TaskDecorator<Runnable>(runnable));
+            task.runAsync(() -> runAndResetNeedTask(runnable));
+        }
+
+        @Override
+        public void run() {
+            runAndResetNeedTask(task);
         }
     }
 
@@ -1575,7 +1571,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         if (task instanceof AsyncTask) {
             return new AsyncTaskDecorator((AsyncTask) task);
         }
-        return new TaskDecorator<Runnable>(task);
+        return () -> runAndResetNeedTask(task);
     }
 
     @Override
