@@ -40,7 +40,8 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -83,10 +84,10 @@ public class IoUringBufferRingTest {
         final BlockingQueue<ByteBuf> bufferSyncer = new LinkedBlockingQueue<>();
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
         IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
-                (short) 1, (short) 2, 2, 2 * 16, incremental, new IoUringFixedBufferRingAllocator(1024));
+                (short) 1, (short) 2, 2, incremental, new IoUringFixedBufferRingAllocator(1024));
 
         IoUringBufferRingConfig bufferRingConfig1 = new IoUringBufferRingConfig(
-                (short) 2, (short) 16, 8, 16 * 16, incremental, new IoUringFixedBufferRingAllocator(1024)
+                (short) 2, (short) 16, 8, incremental, new IoUringFixedBufferRingAllocator(1024)
         );
         ioUringIoHandlerConfiguration.setBufferRingConfig(bufferRingConfig, bufferRingConfig1);
 
@@ -133,16 +134,16 @@ public class IoUringBufferRingTest {
         ByteBuf userspaceIoUringBufferElement1 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         if (incremental) {
             // Need to unwrap as its a slice.
-            assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement1.unwrap());
+            assertNotNull(userspaceIoUringBufferElement1.unwrap());
         } else {
-            assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement1);
+            assertNull(userspaceIoUringBufferElement1.unwrap());
         }
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         if (incremental) {
             // Need to unwrap as its a slice.
-            assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement2.unwrap());
+            assertNotNull(userspaceIoUringBufferElement2.unwrap());
         } else {
-            assertInstanceOf(IoUringBufferRing.IoUringBufferRingByteBuf.class, userspaceIoUringBufferElement2);
+            assertNull(userspaceIoUringBufferElement2.unwrap());
         }
         ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         readBuffer.release();
