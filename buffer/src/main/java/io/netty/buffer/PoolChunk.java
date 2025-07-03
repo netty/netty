@@ -140,6 +140,9 @@ final class PoolChunk<T> implements PoolChunkMetric {
     private static final int SUBPAGE_BIT_LENGTH = 1;
     private static final int BITMAP_IDX_BIT_LENGTH = 32;
 
+    private final static boolean trackPinnedMemory =
+            SystemPropertyUtil.getBoolean("io.netty.trackPinnedMemory", true);
+
     static final int IS_SUBPAGE_SHIFT = BITMAP_IDX_BIT_LENGTH;
     static final int IS_USED_SHIFT = SUBPAGE_BIT_LENGTH + IS_SUBPAGE_SHIFT;
     static final int SIZE_SHIFT = INUSED_BIT_LENGTH + IS_USED_SHIFT;
@@ -190,9 +193,6 @@ final class PoolChunk<T> implements PoolChunkMetric {
     PoolChunkList<T> parent;
     PoolChunk<T> prev;
     PoolChunk<T> next;
-
-    private final static boolean trackPinnedMemory =
-            SystemPropertyUtil.getBoolean("io.netty.trackPinnedMemory", true);
 
     @SuppressWarnings("unchecked")
     PoolChunk(PoolArena<T> arena, CleanableDirectBuffer cleanable, Object base, T memory, int pageSize, int pageShifts,
