@@ -16,6 +16,7 @@
 package io.netty.buffer;
 
 import io.netty.util.internal.CleanableDirectBuffer;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayDeque;
@@ -170,7 +171,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     /**
      * Accounting of pinned memory – memory that is currently in use by ByteBuf instances.
      */
-    private final LongAdder pinnedBytes = new LongAdder();
+    private final LongAdder pinnedBytes;
 
     final int pageSize;
     final int pageShifts;
@@ -190,8 +191,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
     PoolChunk<T> prev;
     PoolChunk<T> next;
 
-    // TODO: Test if adding padding helps under contention
-    //private long pad0, pad1, pad2, pad3, pad4, pad5, pad6, pad7;
+    private final static boolean trackPinnedMemory =
+            SystemPropertyUtil.getBoolean("io.netty.trackPinnedMemory", true);
 
     @SuppressWarnings("unchecked")
     PoolChunk(PoolArena<T> arena, CleanableDirectBuffer cleanable, Object base, T memory, int pageSize, int pageShifts,
@@ -217,7 +218,8 @@ final class PoolChunk<T> implements PoolChunkMetric {
         long initHandle = (long) pages << SIZE_SHIFT;
         insertAvailRun(0, pages, initHandle);
 
-        cachedNioBuffers = new ArrayDeque<ByteBuffer>(8);
+        cachedNioBuffers = new ArrayDeque<>(8);
+        this.pinnedBytes = trackPinnedMemory ? new LongAdder() : null;
     }
 
     /** Creates a special chunk that is not pooled. */
@@ -236,6 +238,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         subpages = null;
         chunkSize = size;
         cachedNioBuffers = null;
+        this.pinnedBytes = trackPinnedMemory ? new LongAdder() : null;
     }
 
     private static IntPriorityQueue[] newRunsAvailqueueArray(int size) {
@@ -625,12 +628,16 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     void incrementPinnedMemory(int delta) {
         assert delta > 0;
-        pinnedBytes.add(delta);
+        if (pinnedBytes != null) {
+            pinnedBytes.add(delta);
+        }
     }
 
     void decrementPinnedMemory(int delta) {
         assert delta > 0;
-        pinnedBytes.add(-delta);
+        if (pinnedBytes != null) {
+            pinnedBytes.add(-delta);
+        }
     }
 
     @Override
@@ -652,7 +659,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     public int pinnedBytes() {
-        return (int) pinnedBytes.sum();
+        return pinnedBytes == null ? 0 : (int) pinnedBytes.sum();
     }
 
     @Override
