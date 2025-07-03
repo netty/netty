@@ -23,7 +23,7 @@ import jdk.jfr.Event;
  */
 @UnstableApi
 @SuppressWarnings("Since15")
-public abstract class AbstractAllocatorEvent extends Event {
+abstract class AbstractAllocatorEvent extends Event {
     /**
      * Obtain the memory address of the given buffer, if it has any.
      * This method is safe to call even on buffers that has a zero reference count,

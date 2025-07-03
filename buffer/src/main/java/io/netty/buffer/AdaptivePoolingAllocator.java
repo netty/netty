@@ -15,14 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.buffer.jfr.AllocateBufferEvent;
-import io.netty.buffer.jfr.AllocateChunkEvent;
-import io.netty.buffer.jfr.AllocatorType;
-import io.netty.buffer.jfr.ChunkInfo;
-import io.netty.buffer.jfr.FreeBufferEvent;
-import io.netty.buffer.jfr.FreeChunkEvent;
-import io.netty.buffer.jfr.ReallocateBufferEvent;
-import io.netty.buffer.jfr.ReturnChunkEvent;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;

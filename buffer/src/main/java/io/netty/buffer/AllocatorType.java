@@ -13,27 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer.jfr;
+package io.netty.buffer;
 
 import io.netty.util.internal.UnstableApi;
 
 /**
- * Information about an allocator chunk.
+ * The type of allocator that an event is related to.
  */
 @UnstableApi
-public interface ChunkInfo {
+enum AllocatorType {
     /**
-     * The capacity of the chunk, in bytes.
+     * The event is produced by the {@link io.netty.buffer.PooledByteBufAllocator}.
      */
-    int capacity();
-
+    pooled,
     /**
-     * {@code true} if the chunk contain native memory, otherwise {@code false}.
+     * The event is produced by the {@link io.netty.buffer.AdaptiveByteBufAllocator}.
      */
-    boolean isDirect();
-
+    adaptive,
     /**
-     * The native memory address of the chunk, if any, otherwise zero.
+     * The event is produced by an unknown or indeterminate allocator.
      */
-    long memoryAddress();
+    unknown
 }

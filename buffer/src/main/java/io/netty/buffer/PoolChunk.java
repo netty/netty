@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.buffer.jfr.ChunkInfo;
 import io.netty.util.internal.CleanableDirectBuffer;
 
 import java.nio.ByteBuffer;

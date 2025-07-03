@@ -13,8 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.buffer;
 
-/**
- * Java Flight Recorder events for the Netty {@link io.netty.buffer.ByteBufAllocator} implementations.
- */
-package io.netty.buffer.jfr;
+import io.netty.util.internal.UnstableApi;
+import jdk.jfr.Description;
+import jdk.jfr.Enabled;
+
+@UnstableApi
+@Enabled(false)
+@SuppressWarnings("Since15")
+@Description("Triggered when a buffer is freed from an allocator")
+final class FreeBufferEvent extends AbstractBufferEvent {
+    private static final FreeBufferEvent INSTANCE = new FreeBufferEvent();
+
+    /**
+     * Statically check if this event is enabled.
+     */
+    public static boolean isEventEnabled() {
+        return INSTANCE.isEnabled();
+    }
+}

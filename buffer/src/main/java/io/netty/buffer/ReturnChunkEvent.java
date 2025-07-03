@@ -13,18 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer.jfr;
+package io.netty.buffer;
 
 import io.netty.util.internal.UnstableApi;
+import jdk.jfr.Category;
 import jdk.jfr.Description;
 import jdk.jfr.Enabled;
+import jdk.jfr.Label;
 
 @UnstableApi
 @Enabled(false)
 @SuppressWarnings("Since15")
-@Description("Triggered when a buffer is freed from an allocator")
-public final class FreeBufferEvent extends AbstractBufferEvent {
-    private static final FreeBufferEvent INSTANCE = new FreeBufferEvent();
+@Category("Netty")
+@Label("Chunk Return")
+@Description("Triggered when a memory chunk is freed from an allocator")
+final class ReturnChunkEvent extends AbstractChunkEvent {
+    private static final FreeChunkEvent INSTANCE = new FreeChunkEvent();
 
     /**
      * Statically check if this event is enabled.
@@ -32,4 +36,7 @@ public final class FreeBufferEvent extends AbstractBufferEvent {
     public static boolean isEventEnabled() {
         return INSTANCE.isEnabled();
     }
+
+    @Description("Was this chunk returned to its previous magazine?")
+    public boolean returnedToMagazine;
 }

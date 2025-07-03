@@ -16,9 +16,6 @@
 
 package io.netty.buffer;
 
-import io.netty.buffer.jfr.AllocateBufferEvent;
-import io.netty.buffer.jfr.AllocateChunkEvent;
-import io.netty.buffer.jfr.FreeBufferEvent;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.PlatformDependent;

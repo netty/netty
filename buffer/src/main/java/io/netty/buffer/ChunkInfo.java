@@ -13,30 +13,27 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer.jfr;
+package io.netty.buffer;
 
 import io.netty.util.internal.UnstableApi;
-import jdk.jfr.Category;
-import jdk.jfr.Description;
-import jdk.jfr.Enabled;
-import jdk.jfr.Label;
 
+/**
+ * Information about an allocator chunk.
+ */
 @UnstableApi
-@Enabled(false)
-@SuppressWarnings("Since15")
-@Category("Netty")
-@Label("Chunk Free")
-@Description("Triggered when a memory chunk is freed from an allocator")
-public final class FreeChunkEvent extends AbstractChunkEvent {
-    private static final FreeChunkEvent INSTANCE = new FreeChunkEvent();
+interface ChunkInfo {
+    /**
+     * The capacity of the chunk, in bytes.
+     */
+    int capacity();
 
     /**
-     * Statically check if this event is enabled.
+     * {@code true} if the chunk contain native memory, otherwise {@code false}.
      */
-    public static boolean isEventEnabled() {
-        return INSTANCE.isEnabled();
-    }
+    boolean isDirect();
 
-    @Description("Was this chunk pooled, or was it a one-off allocation for a single buffer?")
-    public boolean pooled;
+    /**
+     * The native memory address of the chunk, if any, otherwise zero.
+     */
+    long memoryAddress();
 }

@@ -13,9 +13,8 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer.jfr;
+package io.netty.buffer;
 
-import io.netty.buffer.AbstractAllocatorEvent;
 import io.netty.util.internal.UnstableApi;
 import jdk.jfr.DataAmount;
 import jdk.jfr.Description;
@@ -23,22 +22,30 @@ import jdk.jfr.MemoryAddress;
 
 @UnstableApi
 @SuppressWarnings("Since15")
-public abstract class AbstractChunkEvent extends AbstractAllocatorEvent {
+abstract class AbstractBufferEvent extends AbstractAllocatorEvent {
     @Description("The type of allocator this event is for")
     public AllocatorType allocatorType;
     @DataAmount
-    @Description("Size of the chunk")
-    public int capacity;
-    @Description("Is this chunk referencing off-heap memory?")
+    @Description("Configured buffer capacity")
+    public int size;
+    @DataAmount
+    @Description("Actual allocated buffer capacity")
+    public int maxFastCapacity;
+    @DataAmount
+    @Description("Maximum buffer capacity")
+    public int maxCapacity;
+    @Description("Is this buffer referencing off-heap memory?")
     public boolean direct;
     @Description("The memory address of the off-heap memory, if available")
     @MemoryAddress
     public long address;
 
-    public void fill(ChunkInfo chunk, AllocatorType allocatorType) {
+    public void fill(AbstractByteBuf buf, AllocatorType allocatorType) {
         this.allocatorType = allocatorType;
-        capacity = chunk.capacity();
-        direct = chunk.isDirect();
-        address = chunk.memoryAddress();
+        size = buf.capacity();
+        maxFastCapacity = buf.maxFastWritableBytes() + buf.writerIndex();
+        maxCapacity = buf.maxCapacity();
+        direct = buf.isDirect();
+        address = getMemoryAddressOf(buf);
     }
 }

@@ -13,22 +13,20 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer.jfr;
+package io.netty.buffer;
 
 import io.netty.util.internal.UnstableApi;
-import jdk.jfr.Category;
+import jdk.jfr.DataAmount;
 import jdk.jfr.Description;
 import jdk.jfr.Enabled;
-import jdk.jfr.Label;
 
 @UnstableApi
 @Enabled(false)
 @SuppressWarnings("Since15")
-@Category("Netty")
-@Label("Chunk Return")
-@Description("Triggered when a memory chunk is freed from an allocator")
-public final class ReturnChunkEvent extends AbstractChunkEvent {
-    private static final FreeChunkEvent INSTANCE = new FreeChunkEvent();
+@Description("Triggered when a buffer is reallocated for resizing in an allocator. " +
+        "Will be followed by an AllocateBufferEvent")
+final class ReallocateBufferEvent extends AbstractBufferEvent {
+    private static final ReallocateBufferEvent INSTANCE = new ReallocateBufferEvent();
 
     /**
      * Statically check if this event is enabled.
@@ -37,6 +35,7 @@ public final class ReturnChunkEvent extends AbstractChunkEvent {
         return INSTANCE.isEnabled();
     }
 
-    @Description("Was this chunk returned to its previous magazine?")
-    public boolean returnedToMagazine;
+    @DataAmount
+    @Description("Targeted buffer capacity")
+    public int newCapacity;
 }

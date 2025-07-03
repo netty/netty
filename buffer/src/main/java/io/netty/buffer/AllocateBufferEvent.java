@@ -13,22 +13,18 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer.jfr;
+package io.netty.buffer;
 
 import io.netty.util.internal.UnstableApi;
-import jdk.jfr.Category;
 import jdk.jfr.Description;
 import jdk.jfr.Enabled;
-import jdk.jfr.Label;
 
 @UnstableApi
 @Enabled(false)
 @SuppressWarnings("Since15")
-@Category("Netty")
-@Label("Chunk Allocation")
-@Description("Triggered when a new memory chunk is allocated for an allocator")
-public final class AllocateChunkEvent extends AbstractChunkEvent {
-    private static final AllocateChunkEvent INSTANCE = new AllocateChunkEvent();
+@Description("Triggered when a buffer is allocated (or reallocated) from an allocator")
+final class AllocateBufferEvent extends AbstractBufferEvent {
+    private static final AllocateBufferEvent INSTANCE = new AllocateBufferEvent();
 
     /**
      * Statically check if this event is enabled.
@@ -37,8 +33,8 @@ public final class AllocateChunkEvent extends AbstractChunkEvent {
         return INSTANCE.isEnabled();
     }
 
-    @Description("Is this chunk pooled, or is it a one-off allocation for a single buffer?")
-    public boolean pooled;
-    @Description("Is this chunk part of a thread-local magazine or arena?")
-    public boolean threadLocal;
+    @Description("Is this chunk pooled, or is it a one-off allocation for this buffer?")
+    public boolean chunkPooled;
+    @Description("Is this buffer's chunk part of a thread-local magazine or arena?")
+    public boolean chunkThreadLocal;
 }

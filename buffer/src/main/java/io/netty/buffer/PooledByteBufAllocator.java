@@ -18,13 +18,6 @@ package io.netty.buffer;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
-import io.netty.buffer.jfr.AllocateBufferEvent;
-import io.netty.buffer.jfr.AllocateChunkEvent;
-import io.netty.buffer.jfr.AllocatorType;
-import io.netty.buffer.jfr.ChunkInfo;
-import io.netty.buffer.jfr.FreeBufferEvent;
-import io.netty.buffer.jfr.FreeChunkEvent;
-import io.netty.buffer.jfr.ReallocateBufferEvent;
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocal;

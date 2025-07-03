@@ -15,9 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.buffer.jfr.AllocateBufferEvent;
-import io.netty.buffer.jfr.AllocateChunkEvent;
-import io.netty.buffer.jfr.FreeBufferEvent;
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import jdk.jfr.consumer.RecordedEvent;
