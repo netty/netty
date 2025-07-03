@@ -20,11 +20,13 @@ import jdk.jfr.Category;
 import jdk.jfr.Description;
 import jdk.jfr.Enabled;
 import jdk.jfr.Label;
+import jdk.jfr.Name;
 
 @UnstableApi
 @Enabled(false)
 @SuppressWarnings("Since15")
 @Category("Netty")
+@Name("AllocateChunkEvent")
 @Label("Chunk Allocation")
 @Description("Triggered when a new memory chunk is allocated for an allocator")
 final class AllocateChunkEvent extends AbstractChunkEvent {

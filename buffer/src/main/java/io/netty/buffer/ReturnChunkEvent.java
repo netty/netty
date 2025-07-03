@@ -20,12 +20,14 @@ import jdk.jfr.Category;
 import jdk.jfr.Description;
 import jdk.jfr.Enabled;
 import jdk.jfr.Label;
+import jdk.jfr.Name;
 
 @UnstableApi
 @Enabled(false)
 @SuppressWarnings("Since15")
 @Category("Netty")
 @Label("Chunk Return")
+@Name("ReturnChunkEvent")
 @Description("Triggered when a memory chunk is freed from an allocator")
 final class ReturnChunkEvent extends AbstractChunkEvent {
     private static final FreeChunkEvent INSTANCE = new FreeChunkEvent();

@@ -18,10 +18,14 @@ package io.netty.buffer;
 import io.netty.util.internal.UnstableApi;
 import jdk.jfr.Description;
 import jdk.jfr.Enabled;
+import jdk.jfr.Label;
+import jdk.jfr.Name;
 
 @UnstableApi
 @Enabled(false)
 @SuppressWarnings("Since15")
+@Label("Buffer Allocation")
+@Name("AllocateBufferEvent")
 @Description("Triggered when a buffer is allocated (or reallocated) from an allocator")
 final class AllocateBufferEvent extends AbstractBufferEvent {
     private static final AllocateBufferEvent INSTANCE = new AllocateBufferEvent();

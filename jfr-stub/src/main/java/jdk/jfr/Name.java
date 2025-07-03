@@ -13,27 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer;
+package jdk.jfr;
 
-import io.netty.util.internal.UnstableApi;
-import jdk.jfr.Description;
-import jdk.jfr.Enabled;
-import jdk.jfr.Label;
-import jdk.jfr.Name;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-@UnstableApi
-@Enabled(false)
-@SuppressWarnings("Since15")
-@Label("Buffer Deallocation")
-@Name("FreeBufferEvent")
-@Description("Triggered when a buffer is freed from an allocator")
-final class FreeBufferEvent extends AbstractBufferEvent {
-    private static final FreeBufferEvent INSTANCE = new FreeBufferEvent();
-
-    /**
-     * Statically check if this event is enabled.
-     */
-    public static boolean isEventEnabled() {
-        return INSTANCE.isEnabled();
-    }
+@Target({ ElementType.TYPE, ElementType.FIELD, ElementType.METHOD })
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Name {
+    String value();
 }

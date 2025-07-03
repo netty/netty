@@ -19,10 +19,14 @@ import io.netty.util.internal.UnstableApi;
 import jdk.jfr.DataAmount;
 import jdk.jfr.Description;
 import jdk.jfr.Enabled;
+import jdk.jfr.Label;
+import jdk.jfr.Name;
 
 @UnstableApi
 @Enabled(false)
 @SuppressWarnings("Since15")
+@Label("Buffer Reallocation")
+@Name("ReallocateBufferEvent")
 @Description("Triggered when a buffer is reallocated for resizing in an allocator. " +
         "Will be followed by an AllocateBufferEvent")
 final class ReallocateBufferEvent extends AbstractBufferEvent {
