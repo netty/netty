@@ -114,22 +114,20 @@ class HttpRequestCompressorTest {
     }
 
     @Test
-    void testIllegalState() throws Exception {
+    void testAbsenceOfIllegalState() throws Exception {
         HttpRequestCompressor uut = new HttpRequestCompressor();
         EmbeddedChannel channel = new EmbeddedChannel();
         ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
         given(ctx.channel()).willReturn(channel);
         ChannelPromise promise = mock(ChannelPromise.class);
 
-        assertThatCode(() -> uut.write(ctx, uut, promise))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("handler not added. call handlerAdded(ctx) first");
+        assertThatCode(() -> uut.write(ctx, Unpooled.EMPTY_BUFFER, promise))
+                .doesNotThrowAnyException();
 
         uut.handlerAdded(ctx);
 
         assertThatCode(() -> uut.handlerAdded(ctx))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("handler already added");
+                .doesNotThrowAnyException();
 
         uut.handlerRemoved(ctx);
     }
