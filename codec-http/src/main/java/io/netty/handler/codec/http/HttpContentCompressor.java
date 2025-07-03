@@ -302,7 +302,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
             if (comma == -1) {
                 comma = length;
             }
-            String encoding = acceptEncoding.substring(start, comma).trim();
+            String encoding = acceptEncoding.substring(start, comma);
             float q = 1.0f;
             int equalsPos = encoding.indexOf('=');
             if (equalsPos != -1) {
