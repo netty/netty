@@ -61,6 +61,22 @@ import java.util.function.Supplier;
  * <p>
  * <b>How-To Use</b>
  * <p>
+ * Add the handler after {@code HttpClientCodec} to the pipeline.
+ * <p>
+ * <b>Example for Netty</b>
+ * <pre>
+ * Bootstrap b = new Bootstrap();
+ * b.handler(new ChannelInitializer&lt;SocketChannel&gt;() {
+ *   public void initChannel(SocketChannel ch) throws Exception {
+ *     ch.pipeline().addLast(new HttpClientCodec());
+ *     // add request compressor
+ *     ch.pipeline().addLast(new HttpRequestCompressor("gzip"));
+ *   }
+ * });
+ * </pre>
+ * <p>
+ * <b>Example for Reactor Netty</b>
+ * <p>
  * For each new connection, add the handler to the end of the user pipeline.
  * <pre>
  * HttpClient
@@ -72,8 +88,7 @@ import java.util.function.Supplier;
  *     if (newState == HttpClientState.CONFIGURED || newState == HttpClientState.STREAM_CONFIGURED) {
  *       con.addHandlerLast(new HttpRequestCompressor("gzip"));
  *     }
- *   })
- *   .build();
+ *   });
  * </pre>
  */
 public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
