@@ -93,7 +93,6 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
     private final int contentSizeThreshold;
     private final String encoding;
     private final Supplier<MessageToByteEncoder<ByteBuf>> encoderFactory;
-    private EmbeddedChannel encoderChannel;
 
     /**
      * new instance using the defaults.
@@ -204,46 +203,13 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
     }
 
     @Override
-    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        if (encoderChannel != null) {
-            throw new IllegalStateException("handler already added");
-        }
-        encoderChannel = new EmbeddedChannel(
-                ctx.channel().id(),
-                ctx.channel().metadata().hasDisconnect(),
-                ctx.channel().config(),
-                encoderFactory.get()
-        );
-        super.handlerAdded(ctx);
-    }
-
-    @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (encoderChannel == null) {
-            throw new IllegalStateException("handler not added. call handlerAdded(ctx) first");
-        }
-
         if (msg instanceof FullHttpRequest) {
             final FullHttpRequest req = (FullHttpRequest) msg;
             if (!req.headers().contains(HttpHeaderNames.CONTENT_ENCODING)
                     && req.content().isReadable()
                     && req.content().readableBytes() >= contentSizeThreshold) {
-                encoderChannel.writeOutbound(req.content().retain());
-                encoderChannel.flushOutbound();
-                encoderChannel.finish();
-
-                ByteBuf compressedContent = encoderChannel.readOutbound();
-                DefaultFullHttpRequest compressedRequest = new DefaultFullHttpRequest(
-                        req.protocolVersion(),
-                        req.method(),
-                        req.uri(),
-                        compressedContent,
-                        req.headers(),
-                        req.trailingHeaders()
-                );
-                compressedRequest.headers().set(HttpHeaderNames.CONTENT_ENCODING, encoding);
-                HttpUtil.setContentLength(compressedRequest, compressedContent.readableBytes());
-                ctx.write(compressedRequest, promise);
+                handleFullHttpRequest(ctx, promise, req);
             } else {
                 super.write(ctx, msg, promise);
             }
@@ -252,12 +218,27 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
         }
     }
 
-    @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        if (encoderChannel != null) {
-            encoderChannel.finishAndReleaseAll();
-            encoderChannel = null;
-        }
-        super.handlerRemoved(ctx);
+    private void handleFullHttpRequest(ChannelHandlerContext ctx, ChannelPromise promise, FullHttpRequest req) {
+        EmbeddedChannel encoderChannel = new EmbeddedChannel(
+                ctx.channel().id(),
+                ctx.channel().metadata().hasDisconnect(),
+                ctx.channel().config(),
+                encoderFactory.get()
+        );
+        encoderChannel.writeOutbound(req.content().retain());
+        encoderChannel.flushOutbound();
+        ByteBuf compressedContent = encoderChannel.readOutbound();
+        encoderChannel.finishAndReleaseAll();
+        DefaultFullHttpRequest compressedRequest = new DefaultFullHttpRequest(
+                req.protocolVersion(),
+                req.method(),
+                req.uri(),
+                compressedContent,
+                req.headers(),
+                req.trailingHeaders()
+        );
+        compressedRequest.headers().set(HttpHeaderNames.CONTENT_ENCODING, encoding);
+        HttpUtil.setContentLength(compressedRequest, compressedContent.readableBytes());
+        ctx.write(compressedRequest, promise);
     }
 }
