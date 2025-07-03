@@ -140,7 +140,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
     private static final int SUBPAGE_BIT_LENGTH = 1;
     private static final int BITMAP_IDX_BIT_LENGTH = 32;
 
-    private final static boolean trackPinnedMemory =
+    private static final boolean trackPinnedMemory =
             SystemPropertyUtil.getBoolean("io.netty.trackPinnedMemory", true);
 
     static final int IS_SUBPAGE_SHIFT = BITMAP_IDX_BIT_LENGTH;
