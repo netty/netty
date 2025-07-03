@@ -315,4 +315,9 @@ final class PooledDirectByteBuf extends PooledByteBuf<ByteBuffer> {
         }
         return chunk.cleanable.memoryAddress() + offset;
     }
+
+    @Override
+    long _memoryAddress() {
+        return hasMemoryAddress() ? chunk.cleanable.memoryAddress() + offset : 0L;
+    }
 }

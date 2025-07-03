@@ -133,7 +133,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * 4) save the merged run
  *
  */
-final class PoolChunk<T> implements PoolChunkMetric {
+final class PoolChunk<T> implements PoolChunkMetric, ChunkInfo {
     private static final int SIZE_BIT_LENGTH = 15;
     private static final int INUSED_BIT_LENGTH = 1;
     private static final int SUBPAGE_BIT_LENGTH = 1;
@@ -336,7 +336,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
                     handle = nextSub.allocate();
                     assert handle >= 0;
                     assert isSubpage(handle);
-                    nextSub.chunk.initBufWithSubpage(buf, null, handle, reqCapacity, cache);
+                    nextSub.chunk.initBufWithSubpage(buf, null, handle, reqCapacity, cache, false);
                     return true;
                 }
                 handle = allocateSubpage(sizeIdx, head);
@@ -359,7 +359,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         }
 
         ByteBuffer nioBuffer = cachedNioBuffers != null? cachedNioBuffers.pollLast() : null;
-        initBuf(buf, nioBuffer, handle, reqCapacity, cache);
+        initBuf(buf, nioBuffer, handle, reqCapacity, cache, false);
         return true;
     }
 
@@ -600,18 +600,18 @@ final class PoolChunk<T> implements PoolChunkMetric {
     }
 
     void initBuf(PooledByteBuf<T> buf, ByteBuffer nioBuffer, long handle, int reqCapacity,
-                 PoolThreadCache threadCache) {
+                 PoolThreadCache threadCache, boolean threadLocal) {
         if (isSubpage(handle)) {
-            initBufWithSubpage(buf, nioBuffer, handle, reqCapacity, threadCache);
+            initBufWithSubpage(buf, nioBuffer, handle, reqCapacity, threadCache, threadLocal);
         } else {
             int maxLength = runSize(pageShifts, handle);
             buf.init(this, nioBuffer, handle, runOffset(handle) << pageShifts,
-                    reqCapacity, maxLength, arena.parent.threadCache());
+                    reqCapacity, maxLength, arena.parent.threadCache(), threadLocal);
         }
     }
 
     void initBufWithSubpage(PooledByteBuf<T> buf, ByteBuffer nioBuffer, long handle, int reqCapacity,
-                            PoolThreadCache threadCache) {
+                            PoolThreadCache threadCache, boolean threadLocal) {
         int runOffset = runOffset(handle);
         int bitmapIdx = bitmapIdx(handle);
 
@@ -620,7 +620,7 @@ final class PoolChunk<T> implements PoolChunkMetric {
         assert reqCapacity <= s.elemSize : reqCapacity + "<=" + s.elemSize;
 
         int offset = (runOffset << pageShifts) + bitmapIdx * s.elemSize;
-        buf.init(this, nioBuffer, handle, offset, reqCapacity, s.elemSize, threadCache);
+        buf.init(this, nioBuffer, handle, offset, reqCapacity, s.elemSize, threadCache, threadLocal);
     }
 
     void incrementPinnedMemory(int delta) {
@@ -712,5 +712,20 @@ final class PoolChunk<T> implements PoolChunkMetric {
 
     static int bitmapIdx(long handle) {
         return (int) handle;
+    }
+
+    @Override
+    public int capacity() {
+        return chunkSize;
+    }
+
+    @Override
+    public boolean isDirect() {
+        return cleanable != null && cleanable.buffer().isDirect();
+    }
+
+    @Override
+    public long memoryAddress() {
+        return cleanable != null && cleanable.hasMemoryAddress() ? cleanable.memoryAddress() : 0L;
     }
 }

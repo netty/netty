@@ -306,7 +306,7 @@ final class PoolThreadCache {
         protected void initBuf(
                 PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, PooledByteBuf<T> buf, int reqCapacity,
                 PoolThreadCache threadCache) {
-            chunk.initBufWithSubpage(buf, nioBuffer, handle, reqCapacity, threadCache);
+            chunk.initBufWithSubpage(buf, nioBuffer, handle, reqCapacity, threadCache, true);
         }
     }
 
@@ -322,7 +322,7 @@ final class PoolThreadCache {
         protected void initBuf(
                 PoolChunk<T> chunk, ByteBuffer nioBuffer, long handle, PooledByteBuf<T> buf, int reqCapacity,
                 PoolThreadCache threadCache) {
-            chunk.initBuf(buf, nioBuffer, handle, reqCapacity, threadCache);
+            chunk.initBuf(buf, nioBuffer, handle, reqCapacity, threadCache, true);
         }
     }
 
