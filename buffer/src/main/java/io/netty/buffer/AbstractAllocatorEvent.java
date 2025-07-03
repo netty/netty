@@ -15,13 +15,11 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.UnstableApi;
 import jdk.jfr.Event;
 
 /**
  * An abstract memory allocator event.
  */
-@UnstableApi
 @SuppressWarnings("Since15")
 abstract class AbstractAllocatorEvent extends Event {
     /**

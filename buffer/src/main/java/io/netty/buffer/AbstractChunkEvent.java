@@ -15,12 +15,10 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.UnstableApi;
 import jdk.jfr.DataAmount;
 import jdk.jfr.Description;
 import jdk.jfr.MemoryAddress;
 
-@UnstableApi
 @SuppressWarnings("Since15")
 abstract class AbstractChunkEvent extends AbstractAllocatorEvent {
     @Description("The type of allocator this event is for")

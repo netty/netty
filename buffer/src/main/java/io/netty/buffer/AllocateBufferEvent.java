@@ -15,13 +15,11 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.internal.UnstableApi;
 import jdk.jfr.Description;
 import jdk.jfr.Enabled;
 import jdk.jfr.Label;
 import jdk.jfr.Name;
 
-@UnstableApi
 @Enabled(false)
 @SuppressWarnings("Since15")
 @Label("Buffer Allocation")
