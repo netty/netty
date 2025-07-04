@@ -6,7 +6,7 @@ services:
     image: netty:centos-7-25
     build:
       args:
-        java_version : "25.ea.26-open"
+        java_version : "25.ea.28-open"
 
   build:
     image: netty:centos-7-25
@@ -24,6 +24,9 @@ services:
     image: netty:centos-7-25
 
   build-boringssl-snapshot:
+    image: netty:centos-7-25
+
+  build-boringssl-static-jdk8-tests:
     image: netty:centos-7-25
 
   shell:

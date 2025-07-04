@@ -62,28 +62,23 @@ public class DefaultFileRegionTest {
     @Test
     public void testCreateFromFileChannel() throws IOException  {
         File file = newFile();
-        RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r");
-        try {
+        try (RandomAccessFile randomAccessFile = new RandomAccessFile(file, "r")) {
             testFileRegion(new DefaultFileRegion(randomAccessFile.getChannel(), 0, data.length));
         } finally {
-            randomAccessFile.close();
             file.delete();
         }
     }
 
     private static void testFileRegion(FileRegion region) throws IOException  {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        WritableByteChannel channel = Channels.newChannel(outputStream);
 
-        try {
+        try (WritableByteChannel channel = Channels.newChannel(outputStream)) {
             assertEquals(data.length, region.count());
             assertEquals(0, region.transferred());
             assertEquals(data.length, region.transferTo(channel, 0));
             assertEquals(data.length, region.count());
             assertEquals(data.length, region.transferred());
             assertArrayEquals(data, outputStream.toByteArray());
-        } finally {
-            channel.close();
         }
     }
 
@@ -91,10 +86,9 @@ public class DefaultFileRegionTest {
     public void testTruncated() throws IOException  {
         File file = newFile();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        WritableByteChannel channel = Channels.newChannel(outputStream);
-        RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw");
 
-        try {
+        try (WritableByteChannel channel = Channels.newChannel(outputStream);
+             RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rw")) {
             FileRegion region = new DefaultFileRegion(randomAccessFile.getChannel(), 0, data.length);
 
             randomAccessFile.getChannel().truncate(data.length - 1024);
@@ -112,9 +106,6 @@ public class DefaultFileRegionTest {
                 // expected
             }
         } finally {
-            channel.close();
-
-            randomAccessFile.close();
             file.delete();
         }
     }

@@ -223,12 +223,6 @@ public final class KQueueEventLoopGroup extends MultiThreadIoEventLoopGroup {
             return queueFactory.newTaskQueue(DEFAULT_MAX_PENDING_TASKS);
         }
 
-        private static Queue<Runnable> newTaskQueue0(int maxPendingTasks) {
-            // This event loop never calls takeTask()
-            return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.<Runnable>newMpscQueue()
-                    : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
-        }
-
         @Override
         public int registeredChannels() {
             assert inEventLoop();

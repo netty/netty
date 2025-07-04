@@ -226,13 +226,11 @@ public class EpollSpliceTest {
         }
 
         byte[] written = new byte[data.length];
-        FileInputStream in = new FileInputStream(file);
 
-        try {
+        try (FileInputStream in = new FileInputStream(file)) {
             assertEquals(written.length, in.read(written));
             assertArrayEquals(data, written);
         } finally {
-            in.close();
             group.shutdownGracefully();
         }
     }

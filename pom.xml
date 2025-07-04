@@ -673,6 +673,15 @@
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
       </properties>
     </profile>
+    <profile>
+      <id>jdk8-tests</id>
+      <properties>
+        <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
+        <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
+        <argLine.java9/>
+        <argLine.java9.extras/>
+      </properties>
+    </profile>
   </profiles>
 
   <properties>
@@ -799,6 +808,7 @@
     <module>testsuite-native-image-client-runtime-init</module>
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
+    <module>jfr-stub</module>
     <module>bom</module>
   </modules>
 
@@ -1103,13 +1113,6 @@
         <optional>true</optional>
       </dependency>
 
-      <!-- Metrics providers -->
-      <dependency>
-        <groupId>com.yammer.metrics</groupId>
-        <artifactId>metrics-core</artifactId>
-        <version>2.2.0</version>
-      </dependency>
-
       <!-- Common test dependencies -->
       <dependency>
         <groupId>org.junit.jupiter</groupId>
@@ -1241,6 +1244,15 @@
         <artifactId>blockhound</artifactId>
         <version>1.0.13.RELEASE</version>
       </dependency>
+
+      <dependency>
+        <groupId>org.graalvm.nativeimage</groupId>
+        <artifactId>svm</artifactId>
+        <version>${graalvm.version}</version>
+        <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
+        <scope>provided</scope>
+      </dependency>
+
     </dependencies>
   </dependencyManagement>
 
@@ -1328,6 +1340,20 @@
                   <code>java.class.nonPublicPartOfAPI</code>
                   <new>interface com.google.protobuf.MutabilityOracle</new>
                   <justification>Necessary for com.google.protobuf:protobuf-java upgrade.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method java.util.Queue<![CDATA[<java.lang.Runnable>]]> io.netty.channel.nio.NioEventLoop::newTaskQueue0(int)</old>
+                  <new>method java.util.Queue<![CDATA[<java.lang.Runnable>]]> io.netty.channel.SingleThreadIoEventLoop::newTaskQueue0(int) @ io.netty.channel.nio.NioEventLoop</new>
+                  <justification>Improved default performance behavior</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method java.util.Queue<![CDATA[<java.lang.Runnable>]]> io.netty.channel.epoll.EpollEventLoop::newTaskQueue0(int)</old>
+                  <new>method java.util.Queue<![CDATA[<java.lang.Runnable>]]> io.netty.channel.SingleThreadIoEventLoop::newTaskQueue0(int) @ io.netty.channel.epoll.EpollEventLoop</new>
+                  <justification>Improved default performance behavior</justification>
                 </item>
                 <item>
                   <ignore>true</ignore>
@@ -1815,6 +1841,56 @@
 
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>com.github.veithen.alta</groupId>
+          <artifactId>alta-maven-plugin</artifactId>
+          <version>0.6.2</version>
+        </plugin>
+        <plugin>
+          <groupId>com.github.madgnome</groupId>
+          <artifactId>h2spec-maven-plugin</artifactId>
+          <version>0.6</version>
+        </plugin>
+        <plugin>
+          <groupId>me.normanmaurer.maven.autobahntestsuite</groupId>
+          <artifactId>autobahntestsuite-maven-plugin</artifactId>
+          <version>0.1.5</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.gmaven</groupId>
+          <artifactId>groovy-maven-plugin</artifactId>
+          <version>2.1.1</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.codehaus.groovy</groupId>
+              <artifactId>groovy</artifactId>
+              <version>3.0.9</version>
+            </dependency>
+            <dependency>
+              <groupId>ant</groupId>
+              <artifactId>ant-optional</artifactId>
+              <version>1.5.3-1</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>com.soebes.maven.plugins</groupId>
+          <artifactId>iterator-maven-plugin</artifactId>
+          <!-- Don't use 0.5.1, it contains a change that merges all properties,
+            and therefore doesn't re-evaluates "nested" properties (e.g. cargoTarget, which uses ${quicheTarget}).
+            Keep this version or provide a fix to disable merging of properties in iterator-maven-plugin -->
+          <version>0.5.0</version>
+        </plugin>
+        <plugin>
+          <groupId>io.netty.incubator</groupId>
+          <artifactId>netty-incubator-h3spec-maven-plugin</artifactId>
+          <version>0.0.7.Final</version>
+        </plugin>
+        <plugin>
+          <groupId>org.basepom.maven</groupId>
+          <artifactId>duplicate-finder-maven-plugin</artifactId>
+          <version>1.3.0</version>
+        </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
@@ -1999,7 +2075,7 @@
               <configuration>
                 <targetVersion>${maven.compiler.target}</targetVersion>
                 <!-- allow undocumented classes like sun.misc.Unsafe: -->
-                <internalRuntimeForbidden>true</internalRuntimeForbidden>
+                <internalRuntimeForbidden>false</internalRuntimeForbidden>
                 <!-- if the used Java version is too new, don't fail, just do nothing: -->
                 <failOnUnsupportedJava>false</failOnUnsupportedJava>
                 <bundledSignatures>
@@ -2024,6 +2100,11 @@
           <groupId>com.simpligility.maven.plugins</groupId>
           <artifactId>android-maven-plugin</artifactId>
           <version>4.6.0</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>flatten-maven-plugin</artifactId>
+          <version>1.2.2</version>
         </plugin>
       </plugins>
     </pluginManagement>

@@ -37,23 +37,24 @@ class AdaptivePoolingAllocatorTest implements Supplier<String> {
 
     @Test
     void sizeBucketComputations() throws Exception {
-        assertSizeBucket(0, 256);
-        assertSizeBucket(1, 512);
-        assertSizeBucket(2, 1024);
-        assertSizeBucket(3, 2048);
-        assertSizeBucket(4, 4096);
-        assertSizeBucket(5, 8 * 1024);
-        assertSizeBucket(6, 16 * 1024);
-        assertSizeBucket(7, 32 * 1024);
-        assertSizeBucket(8, 64 * 1024);
-        assertSizeBucket(9, 128 * 1024);
-        assertSizeBucket(10, 256 * 1024);
-        assertSizeBucket(11, 512 * 1024);
+        assertSizeBucket(0, 16 * 1024);
+        assertSizeBucket(1, 24 * 1024);
+        assertSizeBucket(2, 32 * 1024);
+        assertSizeBucket(3, 48 * 1024);
+        assertSizeBucket(4, 64 * 1024);
+        assertSizeBucket(5, 96 * 1024);
+        assertSizeBucket(6, 128 * 1024);
+        assertSizeBucket(7, 192 * 1024);
+        assertSizeBucket(8, 256 * 1024);
+        assertSizeBucket(9, 384 * 1024);
+        assertSizeBucket(10, 512 * 1024);
+        assertSizeBucket(11, 768 * 1024);
         assertSizeBucket(12, 1024 * 1024);
+        assertSizeBucket(13, 1792 * 1024);
+        assertSizeBucket(14, 2048 * 1024);
+        assertSizeBucket(15, 3072 * 1024);
         // The sizeBucket function will be used for sizes up to 8 MiB
-        assertSizeBucket(13, 2 * 1024 * 1024);
-        assertSizeBucket(14, 3 * 1024 * 1024);
-        assertSizeBucket(14, 4 * 1024 * 1024);
+        assertSizeBucket(15, 4 * 1024 * 1024);
         assertSizeBucket(15, 5 * 1024 * 1024);
         assertSizeBucket(15, 6 * 1024 * 1024);
         assertSizeBucket(15, 7 * 1024 * 1024);
@@ -62,7 +63,7 @@ class AdaptivePoolingAllocatorTest implements Supplier<String> {
 
     private void assertSizeBucket(int expectedSizeBucket, int maxSizeIncluded) {
         for (; i <= maxSizeIncluded; i++) {
-            assertEquals(expectedSizeBucket, AdaptivePoolingAllocator.sizeBucket(i), this);
+            assertEquals(expectedSizeBucket, AdaptivePoolingAllocator.sizeToBucket(i), this);
         }
     }
 }

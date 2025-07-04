@@ -38,12 +38,6 @@
 
   <profiles>
     <profile>
-      <id>leak</id>
-      <properties>
-        <test.argLine>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32</test.argLine>
-      </properties>
-    </profile>
-    <profile>
       <id>x86_64</id>
       <activation>
         <os>
@@ -54,6 +48,49 @@
       <properties>
         <skipH3Spec>false</skipH3Spec>
       </properties>
+    </profile>
+    <profile>
+      <id>native-dependencies</id>
+      <dependencies>
+        <!-- Depend on all our native jars -->
+        <!-- As this is executed on either macOS or Linux we directly need to specify the classifier -->
+        <!-- These dependencies will also be "merged" into the dependency section by the flatten plugin -->
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>linux-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>linux-aarch_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>osx-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>osx-aarch_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>windows-x86_64</classifier>
+          <scope>runtime</scope>
+        </dependency>
+      </dependencies>
     </profile>
   </profiles>
 
@@ -93,6 +130,8 @@
       <artifactId>netty-codec-native-quic</artifactId>
       <version>${project.version}</version>
       <classifier>${netty.quic.classifier}</classifier>
+      <scope>runtime</scope>
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -150,6 +189,35 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <configuration>
+          <!-- We need to also merge the dependencies defined by our profile. -->
+          <embedBuildProfileDependencies>true</embedBuildProfileDependencies>
+          <!-- Ensure excludes are set correctly -->
+          <flattenDependencyMode>all</flattenDependencyMode>
+          <flattenMode>ossrh</flattenMode>
+        </configuration>
+        <executions>
+          <!-- enable flattening -->
+          <execution>
+            <id>flatten</id>
+            <phase>process-resources</phase>
+            <goals>
+              <goal>flatten</goal>
+            </goals>
+          </execution>
+          <!-- ensure proper cleanup -->
+          <execution>
+            <id>flatten.clean</id>
+            <phase>clean</phase>
+            <goals>
+              <goal>clean</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>io.github.dmlloyd.module-info</groupId>
         <artifactId>module-info</artifactId>
         <executions>
@@ -161,7 +229,6 @@
       <plugin>
         <groupId>io.netty.incubator</groupId>
         <artifactId>netty-incubator-h3spec-maven-plugin</artifactId>
-        <version>0.0.7.Final</version>
         <configuration>
           <delay>1000</delay>
           <readyMessage>H3SPEC_SERVER_READY</readyMessage>

@@ -28,11 +28,10 @@ public class StompWebSocketChatServer {
     static final int PORT = Integer.parseInt(System.getProperty("port", "8080"));
 
     public void start(final int port) throws Exception {
-        EventLoopGroup bossGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
-        EventLoopGroup workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         try {
             ServerBootstrap bootstrap = new ServerBootstrap()
-                    .group(bossGroup, workerGroup)
+                    .group(group)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new StompWebSocketChatServerInitializer("/chat"));
             bootstrap.bind(port).addListener(new ChannelFutureListener() {
@@ -46,8 +45,7 @@ public class StompWebSocketChatServer {
                 }
             }).channel().closeFuture().sync();
         } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 

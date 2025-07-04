@@ -63,7 +63,7 @@
           <plugins>
             <plugin>
               <artifactId>maven-enforcer-plugin</artifactId>
-              <version>3.0.0</version>
+              <version>${enforcer.plugin.version}</version>
               <dependencies>
                 <!-- Provides the 'requireFilesContent' enforcer rule. -->
                 <dependency>
@@ -250,7 +250,7 @@
           <plugins>
             <plugin>
               <artifactId>maven-enforcer-plugin</artifactId>
-              <version>3.0.0</version>
+              <version>${enforcer.plugin.version}</version>
               <dependencies>
                 <!-- Provides the 'requireFilesContent' enforcer rule. -->
                 <dependency>
@@ -423,7 +423,7 @@
           <plugins>
             <plugin>
               <artifactId>maven-enforcer-plugin</artifactId>
-              <version>3.0.0</version>
+              <version>${enforcer.plugin.version}</version>
               <dependencies>
                 <!-- Provides the 'requireFilesContent' enforcer rule. -->
                 <dependency>

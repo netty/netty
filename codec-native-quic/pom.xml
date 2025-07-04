@@ -60,7 +60,7 @@
     <quicheHomeIncludeDir>${quicheHomeDir}/quiche/include</quicheHomeIncludeDir>
     <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>68c296009f87a10e1cb935c5879e53bcc412d00c</quicheCommitSha>
+    <quicheCommitSha>70d6d3e233568e906e66179a56c93cf9b0616899</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
@@ -319,10 +319,6 @@
           <plugin>
             <groupId>com.soebes.maven.plugins</groupId>
             <artifactId>iterator-maven-plugin</artifactId>
-            <!-- Don't use 0.5.1, it contains a change that merges all properties, 
-              and therefore doesn't re-evaluates "nested" properties (e.g. cargoTarget, which uses ${quicheTarget}).
-              Keep this version or provide a fix to disable merging of properties in iterator-maven-plugin -->
-            <version>0.5.0</version>
             <executions>
               <execution>
                 <phase>package</phase>
@@ -616,13 +612,6 @@
   </profiles>
 
   <build>
-    <extensions>
-      <extension>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
-        <version>1.7.0</version>
-      </extension>
-    </extensions>
     <plugins>
       <!-- Also include c files in source jar -->
       <plugin>

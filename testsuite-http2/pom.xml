@@ -89,7 +89,6 @@
       <plugin>
         <groupId>com.github.madgnome</groupId>
         <artifactId>h2spec-maven-plugin</artifactId>
-        <version>0.6</version>
         <configuration>
           <mainClass>io.netty.testsuite.http2.Http2Server</mainClass>
           <excludeSpecs>

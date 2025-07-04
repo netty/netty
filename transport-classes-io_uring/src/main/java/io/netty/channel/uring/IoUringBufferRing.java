@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.DuplicatedByteBuf;
 import io.netty.buffer.SlicedByteBuf;
 import io.netty.buffer.SwappedByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.buffer.WrappedByteBuf;
 import io.netty.channel.unix.Buffer;
 
@@ -294,6 +295,15 @@ final class IoUringBufferRing {
                 throw cause;
             }
             return slice;
+        }
+
+        @SuppressWarnings("deprecation")
+        @Override
+        public ByteBuf asReadOnly() {
+            if (isReadOnly()) {
+                return this;
+            }
+            return Unpooled.unmodifiableBuffer(this);
         }
 
         @SuppressWarnings("deprecation")

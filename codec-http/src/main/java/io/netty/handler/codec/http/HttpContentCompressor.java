@@ -294,7 +294,15 @@ public class HttpContentCompressor extends HttpContentEncoder {
         float snappyQ = -1.0f;
         float gzipQ = -1.0f;
         float deflateQ = -1.0f;
-        for (String encoding : acceptEncoding.split(",")) {
+
+        int start = 0;
+        int length = acceptEncoding.length();
+        while (start < length) {
+            int comma = acceptEncoding.indexOf(',', start);
+            if (comma == -1) {
+                comma = length;
+            }
+            String encoding = acceptEncoding.substring(start, comma);
             float q = 1.0f;
             int equalsPos = encoding.indexOf('=');
             if (equalsPos != -1) {
@@ -318,6 +326,7 @@ public class HttpContentCompressor extends HttpContentEncoder {
             } else if (encoding.contains("deflate") && q > deflateQ) {
                 deflateQ = q;
             }
+            start = comma + 1;
         }
         if (brQ > 0.0f || zstdQ > 0.0f || snappyQ > 0.0f || gzipQ > 0.0f || deflateQ > 0.0f) {
             if (brQ != -1.0f && brQ >= zstdQ && this.brotliOptions != null) {

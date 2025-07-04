@@ -504,8 +504,8 @@ static jint netty_quiche_conn_stream_shutdown(JNIEnv* env, jclass clazz, jlong c
     return (jint) quiche_conn_stream_shutdown((quiche_conn *) conn, (uint64_t) stream_id,  (enum quiche_shutdown) direction, (uint64_t) err);
 }
 
-static jint netty_quiche_conn_stream_capacity(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id) {
-    return (jint) quiche_conn_stream_capacity((quiche_conn *) conn, (uint64_t) stream_id);
+static jlong netty_quiche_conn_stream_capacity(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id) {
+    return (jlong) quiche_conn_stream_capacity((quiche_conn *) conn, (uint64_t) stream_id);
 }
 
 static jboolean netty_quiche_conn_stream_finished(JNIEnv* env, jclass clazz, jlong conn, jlong stream_id) {
@@ -1184,7 +1184,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "quiche_conn_stream_recv", "(JJJIJ)I", (void *) netty_quiche_conn_stream_recv },
   { "quiche_conn_stream_send", "(JJJIZ)I", (void *) netty_quiche_conn_stream_send },
   { "quiche_conn_stream_shutdown", "(JJIJ)I", (void *) netty_quiche_conn_stream_shutdown },
-  { "quiche_conn_stream_capacity", "(JJ)I", (void *) netty_quiche_conn_stream_capacity },
+  { "quiche_conn_stream_capacity", "(JJ)J", (void *) netty_quiche_conn_stream_capacity },
   { "quiche_conn_stream_finished", "(JJ)Z", (void *) netty_quiche_conn_stream_finished },
   { "quiche_conn_close", "(JZJJI)I", (void *) netty_quiche_conn_close },
   { "quiche_conn_is_established", "(J)Z", (void *) netty_quiche_conn_is_established },
