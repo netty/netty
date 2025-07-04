@@ -751,28 +751,30 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelRegistered() {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelRegistered(head);
             } else {
                 head.fireChannelRegistered();
             }
         } else {
-            head.executor().execute(this::fireChannelRegistered);
+            executor.execute(this::fireChannelRegistered);
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelUnregistered() {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelUnregistered(head);
             } else {
                 head.fireChannelUnregistered();
             }
         } else {
-            head.executor().execute(this::fireChannelUnregistered);
+            executor.execute(this::fireChannelUnregistered);
         }
         return this;
     }
@@ -837,98 +839,105 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelActive() {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelActive(head);
             } else {
                 head.fireChannelActive();
             }
         } else {
-            head.executor().execute(this::fireChannelActive);
+            executor.execute(this::fireChannelActive);
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelInactive() {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelInactive(head);
             } else {
                 head.fireChannelInactive();
             }
         } else {
-            head.executor().execute(this::fireChannelInactive);
+            executor.execute(this::fireChannelInactive);
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireExceptionCaught(Throwable cause) {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.exceptionCaught(head, cause);
             } else {
                 head.fireExceptionCaught(cause);
             }
         } else {
-            head.executor().execute(() -> fireExceptionCaught(cause));
+            executor.execute(() -> fireExceptionCaught(cause));
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireUserEventTriggered(Object event) {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.userEventTriggered(head, event);
             } else {
                 head.fireUserEventTriggered(event);
             }
         } else {
-            head.executor().execute(() -> fireUserEventTriggered(event));
+            executor.execute(() -> fireUserEventTriggered(event));
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelRead(Object msg) {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelRead(head, msg);
             } else {
                 head.fireChannelRead(msg);
             }
         } else {
-            head.executor().execute(() -> fireChannelRead(msg));
+            executor.execute(() -> fireChannelRead(msg));
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelReadComplete() {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelReadComplete(head);
             } else {
                 head.fireChannelReadComplete();
             }
         } else {
-            head.executor().execute(this::fireChannelReadComplete);
+            executor.execute(this::fireChannelReadComplete);
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelWritabilityChanged() {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelWritabilityChanged(head);
             } else {
                 head.fireChannelWritabilityChanged();
             }
         } else {
-            head.executor().execute(this::fireChannelWritabilityChanged);
+            executor.execute(this::fireChannelWritabilityChanged);
         }
         return this;
     }
