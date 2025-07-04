@@ -112,7 +112,7 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
             if (!(msg instanceof TextWebSocketFrame) && !(msg instanceof BinaryWebSocketFrame)) {
                 throw new CodecException("unexpected initial frame type: " + msg.getClass().getName());
             }
-            decoder = new EmbeddedChannel(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE, maxAllocation));
+            decoder = EmbeddedChannel.Builder.of(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE, maxAllocation));
         }
 
         boolean readable = msg.content().isReadable();

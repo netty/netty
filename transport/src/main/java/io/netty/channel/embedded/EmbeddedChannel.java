@@ -218,7 +218,11 @@ public class EmbeddedChannel extends AbstractChannel {
         loop = new EmbeddedEventLoop(builder.ticker == null ? new EmbeddedEventLoop.FreezableTicker() : builder.ticker);
         metadata = metadata(builder.hasDisconnect);
         config = builder.config == null ? new DefaultChannelConfig(this) : builder.config;
-        setup(builder.register, builder.handlers);
+        if (builder.handler == null) {
+            setup(builder.register, builder.handlers);
+        } else {
+            setup(builder.register, builder.handler);
+        }
     }
 
     private static ChannelMetadata metadata(boolean hasDisconnect) {
@@ -226,11 +230,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     private void setup(boolean register, final ChannelHandler... handlers) {
-        ObjectUtil.checkNotNull(handlers, "handlers");
         ChannelPipeline p = pipeline();
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ChannelPipeline pipeline = ch.pipeline();
                 for (ChannelHandler h: handlers) {
                     if (h == null) {
@@ -238,6 +241,20 @@ public class EmbeddedChannel extends AbstractChannel {
                     }
                     pipeline.addLast(h);
                 }
+            }
+        });
+        if (register) {
+            ChannelFuture future = loop.register(this);
+            assert future.isDone();
+        }
+    }
+
+    private void setup(boolean register, final ChannelHandler handler) {
+        ChannelPipeline p = pipeline();
+        p.addLast(new ChannelInitializer<Channel>() {
+            @Override
+            protected void initChannel(Channel ch) {
+                ch.pipeline().addLast(handler);
             }
         });
         if (register) {
@@ -1066,7 +1083,9 @@ public class EmbeddedChannel extends AbstractChannel {
         ChannelId channelId = EmbeddedChannelId.INSTANCE;
         boolean register = true;
         boolean hasDisconnect;
+        //you should use either handlers or handler variable, but not both.
         ChannelHandler[] handlers = EMPTY_HANDLERS;
+        ChannelHandler handler;
         ChannelConfig config;
         Ticker ticker;
 
@@ -1133,6 +1152,17 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         /**
+         * The {@link ChannelHandler} which will be added to the {@link ChannelPipeline}.
+         *
+         * @param handler the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
+         * @return This builder
+         */
+        public Builder handlers(ChannelHandler handler) {
+            this.handler = Objects.requireNonNull(handler, "handler");
+            return this;
+        }
+
+        /**
          * The {@link ChannelConfig} which will be returned by {@link #config()}.
          *
          * @param config the {@link ChannelConfig} which will be returned by {@link #config()}
@@ -1162,6 +1192,17 @@ public class EmbeddedChannel extends AbstractChannel {
          */
         public EmbeddedChannel build() {
             return new EmbeddedChannel(this);
+        }
+
+        public static EmbeddedChannel of(ChannelId channelId, boolean hasDisconnect, ChannelConfig config,
+                                  ChannelHandler handler) {
+            return new EmbeddedChannel(
+                    builder().channelId(channelId).hasDisconnect(hasDisconnect).config(config).handlers(handler)
+            );
+        }
+
+        public static EmbeddedChannel of(ChannelHandler handler) {
+            return new EmbeddedChannel(builder().handlers(handler));
         }
     }
 
