@@ -1,0 +1,65 @@
+services:
+
+  runtime-setup:
+    image: netty-al2023:x86_64
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile.al2023
+
+  common: &common
+    image: netty-al2023:x86_64
+    depends_on: [runtime-setup]
+    environment:
+      LD_LIBRARY_PATH: /opt/aws-lc/lib64
+    volumes:
+      # Use a separate directory for the AL2023 Maven repository
+      - ~/.m2-al2023:/root/.m2
+      - ..:/netty
+      - ../../netty-tcnative:/netty-tcnative
+    working_dir: /netty
+
+  common-tcnative: &common-tcnative
+    <<: *common
+    environment:
+      MAVEN_OPTS:
+      LD_LIBRARY_PATH: /opt/aws-lc/lib64
+      LDFLAGS: -L/opt/aws-lc/lib64 -lssl -lcrypto
+      CFLAGS: -I/opt/aws-lc/include  -DHAVE_OPENSSL -lssl -lcrypto
+      CXXFLAGS: -I/opt/aws-lc/include  -DHAVE_OPENSSL -lssl -lcrypto
+
+  install-tcnative:
+    <<: *common-tcnative
+    command: '/bin/bash -cl "
+      ./mvnw -am -pl openssl-dynamic clean install &&
+      env -u LDFLAGS -u CFLAGS -u CXXFLAGS -u LD_LIBRARY_PATH ./mvnw -am -pl boringssl-static clean install
+    "'
+    working_dir: /netty-tcnative
+
+  update-tcnative-version:
+    <<: *common
+    command: '/bin/bash -cl "
+      ./mvnw versions:update-property -Dproperty=tcnative.version -DnewVersion=$(cd /netty-tcnative && ./mvnw help:evaluate -Dexpression=project.version -q -DforceStdout) -DallowSnapshots=true -DprocessParent=true -DgenerateBackupPoms=false
+    "'
+
+  build:
+    <<: *common
+    command: '/bin/bash -cl "
+      ./mvnw -B -ntp clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true
+    "'
+
+  build-leak:
+    <<: *common
+    command: '/bin/bash -cl "
+      ./mvnw -B -ntp -Pleak clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true
+    "'
+
+  shell:
+    <<: *common
+    volumes:
+      - ~/.m2-al2023:/root/.m2
+      - ~/.gitconfig:/root/.gitconfig
+      - ~/.gitignore:/root/.gitignore
+      - ..:/netty
+      - ../../netty-tcnative:/netty-tcnative
+    working_dir: /netty
+    entrypoint: /bin/bash -l

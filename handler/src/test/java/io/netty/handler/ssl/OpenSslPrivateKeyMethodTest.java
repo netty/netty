@@ -92,7 +92,7 @@ public class OpenSslPrivateKeyMethodTest {
     public static void init() throws Exception {
         checkShouldUseKeyManagerFactory();
 
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         // Check if the cipher is supported at all which may not be the case for various JDK versions and OpenSSL API
         // implementations.
         assumeCipherAvailable(SslProvider.OPENSSL);
@@ -114,7 +114,7 @@ public class OpenSslPrivateKeyMethodTest {
 
     @AfterAll
     public static void destroy() {
-        if (OpenSsl.isBoringSSL()) {
+        if (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) {
             GROUP.shutdownGracefully();
             EXECUTOR.shutdown();
         }

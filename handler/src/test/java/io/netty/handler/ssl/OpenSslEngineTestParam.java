@@ -25,7 +25,7 @@ final class OpenSslEngineTestParam extends SSLEngineTest.SSLEngineTestParam {
                                    List<? super OpenSslEngineTestParam> output) {
         output.add(new OpenSslEngineTestParam(true, false, param));
         output.add(new OpenSslEngineTestParam(false, false, param));
-        if (OpenSsl.isBoringSSL()) {
+        if (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) {
             output.add(new OpenSslEngineTestParam(true, true, param));
             output.add(new OpenSslEngineTestParam(false, true, param));
         }
