@@ -1,5 +1,5 @@
 /*
- * Copyright 2012 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,9 +13,15 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.util;
 
 /**
- * UDT Benchmarks
+ * Represents a consumer of {@code int}-values.
  */
-package io.netty.test.udt.bench;
+public interface IntConsumer {
 
+    /**
+     * Consume an {@code int}.
+     */
+    void accept(int value) throws Exception;
+}

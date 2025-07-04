@@ -38,25 +38,24 @@ public final class HttpNativeServer {
 
     public static void main(String[] args) throws Exception {
         // Configure the server.
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup group = new NioEventLoopGroup();
         // Control status.
         boolean serverStartSucess = false;
         try {
             ServerBootstrap b = new ServerBootstrap();
             b.option(ChannelOption.SO_BACKLOG, 1024);
-            b.group(bossGroup, workerGroup)
+            b.group(group)
              .channel(NioServerSocketChannel.class)
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new HttpNativeServerInitializer());
 
             Channel channel = b.bind(0).sync().channel();
             System.err.println("Server started, will shutdown now.");
+
             channel.close().sync();
             serverStartSucess = true;
         } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
         // return the right system exit code to signal success
         System.exit(serverStartSucess ? 0 : 1);

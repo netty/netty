@@ -62,6 +62,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -319,7 +320,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         clientHandshakeFuture.sync();
         clientHandshakeEventLatch.await();
 
-        clientChannel.writeAndFlush(Unpooled.wrappedBuffer(data, 0, FIRST_MESSAGE_SIZE));
+        clientChannel.writeAndFlush(randomBufferType(clientChannel.alloc(), data, 0, FIRST_MESSAGE_SIZE));
         clientSendCounter.set(FIRST_MESSAGE_SIZE);
 
         boolean needsRenegotiation = renegotiation.type == RenegotiationType.CLIENT_INITIATED;
@@ -327,7 +328,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         while (clientSendCounter.get() < data.length) {
             int clientSendCounterVal = clientSendCounter.get();
             int length = Math.min(random.nextInt(1024 * 64), data.length - clientSendCounterVal);
-            ByteBuf buf = Unpooled.wrappedBuffer(data, clientSendCounterVal, length);
+            ByteBuf buf = randomBufferType(clientChannel.alloc(), data, clientSendCounterVal, length);
             if (useCompositeByteBuf) {
                 buf = Unpooled.compositeBuffer().addComponent(true, buf);
             }
@@ -566,7 +567,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 assertEquals(data[i + lastIdx], actual[i]);
             }
 
-            ByteBuf buf = Unpooled.wrappedBuffer(actual);
+            ByteBuf buf = randomBufferType(ctx.alloc(), actual, 0, actual.length);
             if (useCompositeByteBuf) {
                 buf = Unpooled.compositeBuffer().addComponent(true, buf);
             }

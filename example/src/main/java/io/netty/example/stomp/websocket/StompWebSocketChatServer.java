@@ -18,6 +18,7 @@ package io.netty.example.stomp.websocket;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 
@@ -26,11 +27,10 @@ public class StompWebSocketChatServer {
     static final int PORT = Integer.parseInt(System.getProperty("port", "8080"));
 
     public void start(final int port) throws Exception {
-        NioEventLoopGroup boosGroup = new NioEventLoopGroup(1);
-        NioEventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
             ServerBootstrap bootstrap = new ServerBootstrap()
-                    .group(boosGroup, workerGroup)
+                    .group(group)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new StompWebSocketChatServerInitializer("/chat"));
             bootstrap.bind(port).addListener(new ChannelFutureListener() {
@@ -44,8 +44,7 @@ public class StompWebSocketChatServer {
                 }
             }).channel().closeFuture().sync();
         } finally {
-            boosGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 
