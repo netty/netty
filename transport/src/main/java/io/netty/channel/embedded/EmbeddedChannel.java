@@ -109,15 +109,6 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Create a new instance with the pipeline initialized with the specified handlers.
      *
-     * @param handler the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
-     */
-    public EmbeddedChannel(ChannelHandler handler) {
-        this(builder().handlers(handler));
-    }
-
-    /**
-     * Create a new instance with the pipeline initialized with the specified handlers.
-     *
      * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
      *                      to {@link #close()}, {@code true} otherwise.
      * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
@@ -214,21 +205,6 @@ public class EmbeddedChannel extends AbstractChannel {
     public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, final ChannelConfig config,
                            final ChannelHandler... handlers) {
         this(builder().channelId(channelId).hasDisconnect(hasDisconnect).config(config).handlers(handlers));
-    }
-
-    /**
-     * Create a new instance with the channel ID set to the given ID and the pipeline
-     * initialized with the specified handler.
-     *
-     * @param channelId the {@link ChannelId} that will be used to identify this channel
-     * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
-     *                      to {@link #close()}, {@code true} otherwise.
-     * @param config the {@link ChannelConfig} which will be returned by {@link #config()}.
-     * @param handler the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
-     */
-    public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, final ChannelConfig config,
-                           final ChannelHandler handler) {
-        this(builder().channelId(channelId).hasDisconnect(hasDisconnect).config(config).handlers(handler));
     }
 
     /**
@@ -1216,6 +1192,17 @@ public class EmbeddedChannel extends AbstractChannel {
          */
         public EmbeddedChannel build() {
             return new EmbeddedChannel(this);
+        }
+
+        public static EmbeddedChannel of(ChannelId channelId, boolean hasDisconnect, ChannelConfig config,
+                                  ChannelHandler handler) {
+            return new EmbeddedChannel(
+                    builder().channelId(channelId).hasDisconnect(hasDisconnect).config(config).handlers(handler)
+            );
+        }
+
+        public static EmbeddedChannel of(ChannelHandler handler) {
+            return new EmbeddedChannel(builder().handlers(handler));
         }
     }
 

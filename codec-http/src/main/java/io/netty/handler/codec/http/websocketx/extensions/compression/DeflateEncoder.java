@@ -116,7 +116,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
 
     private ByteBuf compressContent(ChannelHandlerContext ctx, WebSocketFrame msg) {
         if (encoder == null) {
-            encoder = new EmbeddedChannel(ZlibCodecFactory.newZlibEncoder(
+            encoder = EmbeddedChannel.Builder.of(ZlibCodecFactory.newZlibEncoder(
                     ZlibWrapper.NONE, compressionLevel, windowSize, 8));
         }
 

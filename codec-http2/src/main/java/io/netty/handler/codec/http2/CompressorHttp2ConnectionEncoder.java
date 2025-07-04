@@ -289,16 +289,16 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         }
         Channel channel = ctx.channel();
         if (Brotli.isAvailable() && brotliOptions != null && BR.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
                     channel.config(), new BrotliEncoder(brotliOptions.parameters()));
         }
         if (zstdOptions != null && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
                     channel.config(), new ZstdEncoder(zstdOptions.compressionLevel(),
                     zstdOptions.blockSize(), zstdOptions.maxEncodeSize()));
         }
         if (snappyOptions != null && SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
                     channel.config(), new SnappyFrameEncoder());
         }
         // 'identity' or unsupported
@@ -326,12 +326,12 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         Channel channel = ctx.channel();
         if (supportsCompressionOptions) {
             if (wrapper == ZlibWrapper.GZIP && gzipCompressionOptions != null) {
-                return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+                return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
                         channel.config(), ZlibCodecFactory.newZlibEncoder(wrapper,
                         gzipCompressionOptions.compressionLevel(), gzipCompressionOptions.windowBits(),
                         gzipCompressionOptions.memLevel()));
             } else if (wrapper == ZlibWrapper.ZLIB && deflateOptions != null) {
-                return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+                return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
                         channel.config(), ZlibCodecFactory.newZlibEncoder(wrapper,
                         deflateOptions.compressionLevel(), deflateOptions.windowBits(),
                         deflateOptions.memLevel()));
@@ -339,7 +339,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                 throw new IllegalArgumentException("Unsupported ZlibWrapper: " + wrapper);
             }
         } else {
-            return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
                     channel.config(), ZlibCodecFactory.newZlibEncoder(wrapper, compressionLevel, windowBits,
                     memLevel));
         }

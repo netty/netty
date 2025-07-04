@@ -94,28 +94,28 @@ public class HttpContentDecompressor extends HttpContentDecoder {
         Channel channel = ctx.channel();
         if (GZIP.contentEqualsIgnoreCase(contentEncoding) ||
             X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
                     channel.config(), ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP, maxAllocation));
         }
         if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) ||
             X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
-            return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
                     channel.config(), ZlibCodecFactory.newZlibDecoder(wrapper, maxAllocation));
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
               channel.config(), new BrotliDecoder());
         }
 
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
                     channel.config(), new SnappyFrameDecoder());
         }
 
         if (Zstd.isAvailable() && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
                     channel.config(), new ZstdDecoder());
         }
 
