@@ -18,10 +18,14 @@ package io.netty.util;
 
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import jdk.jfr.Enabled;
+import jdk.jfr.Event;
 
+import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
@@ -29,6 +33,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -161,7 +166,7 @@ public class ResourceLeakDetector<T> {
     }
 
     /** the collection of active resources */
-    private final Set<DefaultResourceLeak<?>> allLeaks = ConcurrentHashMap.newKeySet();
+    private final Set<AbstractResourceLeak<?>> allLeaks = ConcurrentHashMap.newKeySet();
 
     private final ReferenceQueue<Object> refQueue = new ReferenceQueue<>();
     private final Set<String> reportedLeaks = ConcurrentHashMap.newKeySet();
@@ -263,8 +268,17 @@ public class ResourceLeakDetector<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private DefaultResourceLeak track0(T obj, boolean force) {
+    private AbstractResourceLeak track0(T obj, boolean force) {
         Level level = ResourceLeakDetector.level;
+        if (PlatformDependent.isJfrEnabled()) {
+            JfrResourceLeak.CreateResourceEvent event = new JfrResourceLeak.CreateResourceEvent();
+            if (event.isEnabled() && event.shouldCommit()) {
+                JfrResourceLeak<Object> leak = new JfrResourceLeak<>(obj, refQueue, allLeaks);
+                event.id = leak.id;
+                event.commit();
+                return leak;
+            }
+        }
         if (force ||
                 level == Level.PARANOID ||
                 (level != Level.DISABLED && ThreadLocalRandom.current().nextInt(samplingInterval) == 0)) {
@@ -276,7 +290,7 @@ public class ResourceLeakDetector<T> {
 
     private void clearRefQueue() {
         for (;;) {
-            DefaultResourceLeak ref = (DefaultResourceLeak) refQueue.poll();
+            AbstractResourceLeak ref = (AbstractResourceLeak) refQueue.poll();
             if (ref == null) {
                 break;
             }
@@ -302,7 +316,7 @@ public class ResourceLeakDetector<T> {
 
         // Detect and report previous leaks.
         for (;;) {
-            DefaultResourceLeak ref = (DefaultResourceLeak) refQueue.poll();
+            AbstractResourceLeak ref = (AbstractResourceLeak) refQueue.poll();
             if (ref == null) {
                 break;
             }
@@ -311,7 +325,11 @@ public class ResourceLeakDetector<T> {
                 continue;
             }
 
-            String records = ref.getReportAndClearRecords();
+            if (!(ref instanceof DefaultResourceLeak)) {
+                continue;
+            }
+
+            String records = ((DefaultResourceLeak<?>) ref).getReportAndClearRecords();
             if (reportedLeaks.add(records)) {
                 if (records.isEmpty()) {
                     reportUntracedLeak(resourceType);
@@ -383,8 +401,100 @@ public class ResourceLeakDetector<T> {
     }
 
     @SuppressWarnings("deprecation")
-    private static final class DefaultResourceLeak<T>
+    private static abstract class AbstractResourceLeak<T>
             extends WeakReference<Object> implements ResourceLeakTracker<T>, ResourceLeak {
+        private final Set<AbstractResourceLeak<?>> allLeaks;
+        private final int trackedHash;
+
+        AbstractResourceLeak(
+                Object referent,
+                ReferenceQueue<Object> refQueue,
+                Set<AbstractResourceLeak<?>> allLeaks) {
+            super(referent, refQueue);
+
+            assert referent != null;
+
+            this.allLeaks = allLeaks;
+
+            // Store the hash of the tracked object to later assert it in the close(...) method.
+            // It's important that we not store a reference to the referent as this would disallow it from
+            // be collected via the WeakReference.
+            trackedHash = System.identityHashCode(referent);
+            allLeaks.add(this);
+        }
+
+        @Override
+        public void record() {
+            record0(null);
+        }
+
+        @Override
+        public void record(Object hint) {
+            record0(hint);
+        }
+
+        abstract void record0(Object hint);
+
+        boolean dispose() {
+            clear();
+            return allLeaks.remove(this);
+        }
+
+        @Override
+        public boolean close() {
+            if (allLeaks.remove(this)) {
+                // Call clear so the reference is not even enqueued.
+                clear();
+                return true;
+            }
+            return false;
+        }
+
+        @Override
+        public boolean close(T trackedObject) {
+            // Ensure that the object that was tracked is the same as the one that was passed to close(...).
+            assert trackedHash == System.identityHashCode(trackedObject);
+
+            try {
+                return close();
+            } finally {
+                // This method will do `synchronized(trackedObject)` and we should be sure this will not cause deadlock.
+                // It should not, because somewhere up the callstack should be a (successful) `trackedObject.release`,
+                // therefore it is unreasonable that anyone else, anywhere, is holding a lock on the trackedObject.
+                // (Unreasonable but possible, unfortunately.)
+                reachabilityFence0(trackedObject);
+            }
+        }
+
+        /**
+         * Ensures that the object referenced by the given reference remains
+         * <a href="package-summary.html#reachability"><em>strongly reachable</em></a>,
+         * regardless of any prior actions of the program that might otherwise cause
+         * the object to become unreachable; thus, the referenced object is not
+         * reclaimable by garbage collection at least until after the invocation of
+         * this method.
+         *
+         * <p> Recent versions of the JDK have a nasty habit of prematurely deciding objects are unreachable.
+         * see: https://stackoverflow.com/questions/26642153/finalize-called-on-strongly-reachable-object-in-java-8
+         * The Java 9 method Reference.reachabilityFence offers a solution to this problem.
+         *
+         * <p> This method is always implemented as a synchronization on {@code ref}, not as
+         * {@code Reference.reachabilityFence} for consistency across platforms and to allow building on JDK 6-8.
+         * <b>It is the caller's responsibility to ensure that this synchronization will not cause deadlock.</b>
+         *
+         * @param ref the reference. If {@code null}, this method has no effect.
+         * @see Reference#reachabilityFence
+         */
+        private static void reachabilityFence0(Object ref) {
+            if (ref != null) {
+                synchronized (ref) {
+                    // Empty synchronized is ok: https://stackoverflow.com/a/31933260/1151521
+                }
+            }
+        }
+    }
+
+    private static final class DefaultResourceLeak<T> extends AbstractResourceLeak<T> {
 
         @SuppressWarnings("unchecked") // generics and updaters do not mix.
         private static final AtomicReferenceFieldUpdater<DefaultResourceLeak<?>, TraceRecord> headUpdater =
@@ -401,38 +511,16 @@ public class ResourceLeakDetector<T> {
         @SuppressWarnings("unused")
         private volatile int droppedRecords;
 
-        private final Set<DefaultResourceLeak<?>> allLeaks;
-        private final int trackedHash;
-
         DefaultResourceLeak(
                 Object referent,
                 ReferenceQueue<Object> refQueue,
-                Set<DefaultResourceLeak<?>> allLeaks,
+                Set<AbstractResourceLeak<?>> allLeaks,
                 Object initialHint) {
-            super(referent, refQueue);
+            super(referent, refQueue, allLeaks);
 
-            assert referent != null;
-
-            this.allLeaks = allLeaks;
-
-            // Store the hash of the tracked object to later assert it in the close(...) method.
-            // It's important that we not store a reference to the referent as this would disallow it from
-            // be collected via the WeakReference.
-            trackedHash = System.identityHashCode(referent);
-            allLeaks.add(this);
             // Create a new Record so we always have the creation stacktrace included.
             headUpdater.set(this, initialHint == null ?
                     new TraceRecord(TraceRecord.BOTTOM) : new TraceRecord(TraceRecord.BOTTOM, initialHint));
-        }
-
-        @Override
-        public void record() {
-            record0(null);
-        }
-
-        @Override
-        public void record(Object hint) {
-            record0(hint);
         }
 
         /**
@@ -461,7 +549,8 @@ public class ResourceLeakDetector<T> {
          * object isn't shared! If this is a problem, the loop can be aborted and the record dropped, because another
          * thread won the race.
          */
-        private void record0(Object hint) {
+        @Override
+        void record0(Object hint) {
             // Check TARGET_RECORDS > 0 here to avoid similar check before remove from and add to lastRecords
             if (TARGET_RECORDS > 0) {
                 TraceRecord oldHead;
@@ -491,63 +580,13 @@ public class ResourceLeakDetector<T> {
             }
         }
 
-        boolean dispose() {
-            clear();
-            return allLeaks.remove(this);
-        }
-
         @Override
         public boolean close() {
-            if (allLeaks.remove(this)) {
-                // Call clear so the reference is not even enqueued.
-                clear();
+            boolean close = super.close();
+            if (close) {
                 headUpdater.set(this, null);
-                return true;
             }
-            return false;
-        }
-
-        @Override
-        public boolean close(T trackedObject) {
-            // Ensure that the object that was tracked is the same as the one that was passed to close(...).
-            assert trackedHash == System.identityHashCode(trackedObject);
-
-            try {
-                return close();
-            } finally {
-                // This method will do `synchronized(trackedObject)` and we should be sure this will not cause deadlock.
-                // It should not, because somewhere up the callstack should be a (successful) `trackedObject.release`,
-                // therefore it is unreasonable that anyone else, anywhere, is holding a lock on the trackedObject.
-                // (Unreasonable but possible, unfortunately.)
-                reachabilityFence0(trackedObject);
-            }
-        }
-
-         /**
-         * Ensures that the object referenced by the given reference remains
-         * <a href="package-summary.html#reachability"><em>strongly reachable</em></a>,
-         * regardless of any prior actions of the program that might otherwise cause
-         * the object to become unreachable; thus, the referenced object is not
-         * reclaimable by garbage collection at least until after the invocation of
-         * this method.
-         *
-         * <p> Recent versions of the JDK have a nasty habit of prematurely deciding objects are unreachable.
-         * see: https://stackoverflow.com/questions/26642153/finalize-called-on-strongly-reachable-object-in-java-8
-         * The Java 9 method Reference.reachabilityFence offers a solution to this problem.
-         *
-         * <p> This method is always implemented as a synchronization on {@code ref}, not as
-         * {@code Reference.reachabilityFence} for consistency across platforms and to allow building on JDK 6-8.
-         * <b>It is the caller's responsibility to ensure that this synchronization will not cause deadlock.</b>
-         *
-         * @param ref the reference. If {@code null}, this method has no effect.
-         * @see java.lang.ref.Reference#reachabilityFence
-         */
-        private static void reachabilityFence0(Object ref) {
-            if (ref != null) {
-                synchronized (ref) {
-                    // Empty synchronized is ok: https://stackoverflow.com/a/31933260/1151521
-                }
-            }
+            return close;
         }
 
         @Override
@@ -610,6 +649,50 @@ public class ResourceLeakDetector<T> {
 
             buf.setLength(buf.length() - NEWLINE.length());
             return buf.toString();
+        }
+    }
+
+    @SuppressWarnings("Since15")
+    private static final class JfrResourceLeak<T> extends AbstractResourceLeak<T> {
+        private final long id = ThreadLocalRandom.current().nextLong();
+
+        JfrResourceLeak(Object referent, ReferenceQueue<Object> refQueue, Set<AbstractResourceLeak<?>> allLeaks) {
+            super(referent, refQueue, allLeaks);
+        }
+
+        @Override
+        void record0(Object hint) {
+            TouchResourceEvent event = new TouchResourceEvent();
+            event.id = id;
+            event.hint = hint.toString();
+            event.commit();
+        }
+
+        @Override
+        public boolean close() {
+            boolean closed = super.close();
+            if (closed) {
+                CloseResourceEvent event = new CloseResourceEvent();
+                event.id = id;
+                event.commit();
+            }
+            return closed;
+        }
+
+        @Enabled(false)
+        private static final class CreateResourceEvent extends Event {
+            long id;
+        }
+
+        @Enabled(false)
+        private static final class TouchResourceEvent extends Event {
+            long id;
+            String hint;
+        }
+
+        @Enabled(false)
+        private static final class CloseResourceEvent extends Event {
+            long id;
         }
     }
 
