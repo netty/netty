@@ -21,9 +21,7 @@ import jdk.jfr.Enabled;
 import jdk.jfr.Label;
 import jdk.jfr.Name;
 
-@Enabled(false)
 @SuppressWarnings("Since15")
-@Category("Netty")
 @Label("Chunk Return")
 @Name("ReturnChunkEvent")
 @Description("Triggered when a memory chunk is freed from an allocator")

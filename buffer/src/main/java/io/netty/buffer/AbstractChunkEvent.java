@@ -21,8 +21,6 @@ import jdk.jfr.MemoryAddress;
 
 @SuppressWarnings("Since15")
 abstract class AbstractChunkEvent extends AbstractAllocatorEvent {
-    @Description("The type of allocator this event is for")
-    public AllocatorType allocatorType;
     @DataAmount
     @Description("Size of the chunk")
     public int capacity;
