@@ -24,6 +24,7 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import jdk.jfr.Enabled;
 import jdk.jfr.Event;
+import jdk.jfr.StackTrace;
 
 import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
@@ -325,22 +326,24 @@ public class ResourceLeakDetector<T> {
                 continue;
             }
 
-            if (!(ref instanceof DefaultResourceLeak)) {
-                continue;
-            }
+            if (ref instanceof DefaultResourceLeak) {
+                String records = ((DefaultResourceLeak<?>) ref).getReportAndClearRecords();
+                if (reportedLeaks.add(records)) {
+                    if (records.isEmpty()) {
+                        reportUntracedLeak(resourceType);
+                    } else {
+                        reportTracedLeak(resourceType, records);
+                    }
 
-            String records = ((DefaultResourceLeak<?>) ref).getReportAndClearRecords();
-            if (reportedLeaks.add(records)) {
-                if (records.isEmpty()) {
-                    reportUntracedLeak(resourceType);
-                } else {
-                    reportTracedLeak(resourceType, records);
+                    LeakListener listener = leakListener;
+                    if (listener != null) {
+                        listener.onLeak(resourceType, records);
+                    }
                 }
-
-                LeakListener listener = leakListener;
-                if (listener != null) {
-                    listener.onLeak(resourceType, records);
-                }
+            } else if (ref instanceof JfrResourceLeak) {
+                JfrResourceLeak.LeakResourceEvent event = new JfrResourceLeak.LeakResourceEvent();
+                event.id = ((JfrResourceLeak<?>) ref).id;
+                event.commit();
             }
         }
     }
@@ -663,9 +666,11 @@ public class ResourceLeakDetector<T> {
         @Override
         void record0(Object hint) {
             TouchResourceEvent event = new TouchResourceEvent();
-            event.id = id;
-            event.hint = hint.toString();
-            event.commit();
+            if (event.isEnabled() && event.shouldCommit()) {
+                event.id = id;
+                event.hint = hint.toString();
+                event.commit();
+            }
         }
 
         @Override
@@ -692,6 +697,12 @@ public class ResourceLeakDetector<T> {
 
         @Enabled(false)
         private static final class CloseResourceEvent extends Event {
+            long id;
+        }
+
+        @Enabled
+        @StackTrace(false) // no point
+        private static final class LeakResourceEvent extends Event {
             long id;
         }
     }
