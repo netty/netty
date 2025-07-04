@@ -109,6 +109,15 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Create a new instance with the pipeline initialized with the specified handlers.
      *
+     * @param handler the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
+     */
+    public EmbeddedChannel(ChannelHandler handler) {
+        this(builder().handlers(handler));
+    }
+
+    /**
+     * Create a new instance with the pipeline initialized with the specified handlers.
+     *
      * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()}
      *                      to {@link #close()}, {@code true} otherwise.
      * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
