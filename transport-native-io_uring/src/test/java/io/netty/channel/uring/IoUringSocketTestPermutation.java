@@ -43,8 +43,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
     static final IoUringSocketTestPermutation INSTANCE = new IoUringSocketTestPermutation();
     static final short BGID = 0;
-    static final EventLoopGroup IO_URING_GROUP = new MultiThreadIoEventLoopGroup(
-            NUM_THREADS, new DefaultThreadFactory("testsuite-io_uring-boss", true), IoUringIoHandler.newFactory());
+    static final EventLoopGroup IO_URING_GROUP = newGroup(false);
     static final EventLoopGroup IO_URING_INCREMENTAL_GROUP = newGroup(true);
 
     static IoUringIoHandlerConfig buildConfig(boolean incremental) {

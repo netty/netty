@@ -1470,4 +1470,11 @@ public abstract class AbstractByteBuf extends ByteBuf {
     final void discardMarks() {
         markedReaderIndex = markedWriterIndex = 0;
     }
+
+    /**
+     * Obtain the memory address without checking {@link #ensureAccessible()} first, if possible.
+     */
+    long _memoryAddress() {
+        return isAccessible() && hasMemoryAddress() ? memoryAddress() : 0L;
+    }
 }
