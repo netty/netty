@@ -258,6 +258,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         if (config instanceof EpollDomainSocketChannelConfig) {
             return ((EpollDomainSocketChannelConfig) config).isAllowHalfClosure();
         }
+        if (config instanceof EpollVSockChannelConfig) {
+            return ((EpollVSockChannelConfig) config).isAllowHalfClosure();
+        }
         return config instanceof SocketChannelConfig &&
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
@@ -281,7 +284,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                     }
                 });
             }
-        } else  {
+        } else {
             // The EventLoop is not registered atm so just update the flags so the correct value
             // will be used once the channel is registered
             ops = ops.without(EpollIoOps.EPOLLIN);
@@ -583,6 +586,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
         /**
          * Create a new {@link EpollRecvByteAllocatorHandle} instance.
+         *
          * @param handle The handle to wrap with EPOLL specific logic.
          */
         EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.ExtendedHandle handle) {
@@ -660,8 +664,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                                 ChannelPromise connectPromise = AbstractEpollChannel.this.connectPromise;
                                 if (connectPromise != null && !connectPromise.isDone()
                                         && connectPromise.tryFailure(new ConnectTimeoutException(
-                                                "connection timed out after " + connectTimeoutMillis + " ms: " +
-                                                        remoteAddress))) {
+                                        "connection timed out after " + connectTimeoutMillis + " ms: " +
+                                                remoteAddress))) {
                                     close(voidPromise());
                                 }
                             }
