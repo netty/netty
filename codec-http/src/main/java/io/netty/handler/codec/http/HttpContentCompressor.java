@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -281,9 +282,10 @@ public class HttpContentCompressor extends HttpContentEncoder {
             throw new IllegalStateException("Couldn't find CompressionEncoderFactory: " + targetContentEncoding);
         }
 
+        Channel channel = ctx.channel();
         return new Result(targetContentEncoding,
-                new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                        ctx.channel().config(), encoderFactory.createEncoder()));
+                new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+                        channel.config(), encoderFactory.createEncoder()));
     }
 
     @SuppressWarnings("FloatingPointEquality")

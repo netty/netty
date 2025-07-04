@@ -16,6 +16,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -286,18 +287,19 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) || X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             return newCompressionChannel(ctx, ZlibWrapper.ZLIB);
         }
+        Channel channel = ctx.channel();
         if (Brotli.isAvailable() && brotliOptions != null && BR.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new BrotliEncoder(brotliOptions.parameters()));
+            return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+                    channel.config(), new BrotliEncoder(brotliOptions.parameters()));
         }
         if (zstdOptions != null && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new ZstdEncoder(zstdOptions.compressionLevel(),
+            return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+                    channel.config(), new ZstdEncoder(zstdOptions.compressionLevel(),
                     zstdOptions.blockSize(), zstdOptions.maxEncodeSize()));
         }
         if (snappyOptions != null && SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new SnappyFrameEncoder());
+            return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+                    channel.config(), new SnappyFrameEncoder());
         }
         // 'identity' or unsupported
         return null;
@@ -321,23 +323,24 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
      * @param wrapper Defines what type of encoder should be used
      */
     private EmbeddedChannel newCompressionChannel(final ChannelHandlerContext ctx, ZlibWrapper wrapper) {
+        Channel channel = ctx.channel();
         if (supportsCompressionOptions) {
             if (wrapper == ZlibWrapper.GZIP && gzipCompressionOptions != null) {
-                return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                        ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(wrapper,
+                return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+                        channel.config(), ZlibCodecFactory.newZlibEncoder(wrapper,
                         gzipCompressionOptions.compressionLevel(), gzipCompressionOptions.windowBits(),
                         gzipCompressionOptions.memLevel()));
             } else if (wrapper == ZlibWrapper.ZLIB && deflateOptions != null) {
-                return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                        ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(wrapper,
+                return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+                        channel.config(), ZlibCodecFactory.newZlibEncoder(wrapper,
                         deflateOptions.compressionLevel(), deflateOptions.windowBits(),
                         deflateOptions.memLevel()));
             } else {
                 throw new IllegalArgumentException("Unsupported ZlibWrapper: " + wrapper);
             }
         } else {
-            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), ZlibCodecFactory.newZlibEncoder(wrapper, compressionLevel, windowBits,
+            return new EmbeddedChannel(channel.id(), channel.metadata().hasDisconnect(),
+                    channel.config(), ZlibCodecFactory.newZlibEncoder(wrapper, compressionLevel, windowBits,
                     memLevel));
         }
     }
