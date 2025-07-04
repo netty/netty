@@ -464,7 +464,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             // In either case epollOutReady() will do the correct thing (finish connecting, or fail
             // the connection).
             // See https://github.com/netty/netty/issues/3848
-            if (epollOps.contains(EpollIoOps.EPOLLERR) || epollOps.contains(EpollIoOps.EPOLLOUT)) {
+            if (epollOps.contains(EpollIoOps.EPOLL_ERR_OUT_MASK)) {
                 // Force flush of data as the epoll is writable again
                 epollOutReady();
             }
@@ -474,7 +474,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             //
             // If EPOLLIN or EPOLLERR was received and the channel is still open call epollInReady(). This will
             // try to read from the underlying file descriptor and so notify the user about the error.
-            if (epollOps.contains(EpollIoOps.EPOLLERR) || epollOps.contains(EpollIoOps.EPOLLIN)) {
+            if (epollOps.contains(EpollIoOps.EPOLL_ERR_IN_MASK)) {
                 // The Channel is still open and there is something to read. Do it now.
                 epollInReady();
             }

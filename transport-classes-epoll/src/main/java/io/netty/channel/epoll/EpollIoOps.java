@@ -51,6 +51,9 @@ public final class EpollIoOps implements IoOps {
 
     public static final EpollIoOps EPOLLET = new EpollIoOps(Native.EPOLLET);
 
+    static final int EPOLL_ERR_OUT_MASK = EpollIoOps.EPOLLERR.value | EpollIoOps.EPOLLOUT.value;
+    static final int EPOLL_ERR_IN_MASK = EpollIoOps.EPOLLERR.value | EpollIoOps.EPOLLIN.value;
+
     // Just use an array to store often used values.
     private static final EpollIoEvent[] EVENTS;
 
