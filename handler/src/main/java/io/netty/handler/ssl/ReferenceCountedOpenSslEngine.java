@@ -1434,17 +1434,15 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     }
 
     private void rejectRemoteInitiatedRenegotiation() throws SSLHandshakeException {
-        // As rejectRemoteInitiatedRenegotiation() is called in a finally block we also need to check if we shutdown
-        // the engine before as otherwise SSL.getHandshakeCount(ssl) will throw an NPE if the passed in ssl is 0.
-        // See https://github.com/netty/netty/issues/7353
-        if (!destroyed && (!clientMode && SSL.getHandshakeCount(ssl) > 1 ||
-                // Let's allow to renegotiate once for client auth.
-                clientMode && SSL.getHandshakeCount(ssl) > 2) &&
-            // As we may count multiple handshakes when TLSv1.3 is used we should just ignore this here as
-            // renegotiation is not supported in TLSv1.3 as per spec.
-            !SslProtocols.TLS_v1_3.equals(session.getProtocol()) && handshakeState == HandshakeState.FINISHED) {
-            // TODO: In future versions me may also want to send a fatal_alert to the client and so notify it
-            // that the renegotiation failed.
+        // Avoid NPE: SSL.getHandshakeCount(ssl) must not be called if destroyed.
+        // TLS 1.3 forbids renegotiation by spec.
+        if (destroyed || SslProtocols.TLS_v1_3.equals(session.getProtocol()) || handshakeState != HandshakeState.FINISHED) {
+            return;
+        }
+
+        int count = SSL.getHandshakeCount(ssl);
+        boolean renegotiationAttempted = (!clientMode && count > 1) || (clientMode && count > 2);
+        if (renegotiationAttempted) {
             shutdown();
             throw new SSLHandshakeException("remote-initiated renegotiation not allowed");
         }
