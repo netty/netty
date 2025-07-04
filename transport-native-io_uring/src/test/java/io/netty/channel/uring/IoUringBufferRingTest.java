@@ -21,6 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.buffer.WrappedByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -73,6 +74,14 @@ public class IoUringBufferRingTest {
         } finally {
             ringBuffer.close();
         }
+    }
+
+    private static ByteBuf unwrapLeakAware(ByteBuf buf) {
+        // If its a sub-type of WrappedByteBuf we know its because it was wrapped for leak-detection.
+        if (buf instanceof WrappedByteBuf) {
+            return buf.unwrap();
+        }
+        return buf;
     }
 
     @ParameterizedTest
@@ -134,16 +143,16 @@ public class IoUringBufferRingTest {
         ByteBuf userspaceIoUringBufferElement1 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         if (incremental) {
             // Need to unwrap as its a slice.
-            assertNotNull(userspaceIoUringBufferElement1.unwrap());
+            assertNotNull(unwrapLeakAware(userspaceIoUringBufferElement1).unwrap());
         } else {
-            assertNull(userspaceIoUringBufferElement1.unwrap());
+            assertNull(unwrapLeakAware(userspaceIoUringBufferElement1).unwrap());
         }
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         if (incremental) {
             // Need to unwrap as its a slice.
-            assertNotNull(userspaceIoUringBufferElement2.unwrap());
+            assertNotNull(unwrapLeakAware(userspaceIoUringBufferElement2).unwrap());
         } else {
-            assertNull(userspaceIoUringBufferElement2.unwrap());
+            assertNull(unwrapLeakAware(userspaceIoUringBufferElement2).unwrap());
         }
         ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         readBuffer.release();
