@@ -392,6 +392,12 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     }
 
     @Override
+    public ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId, short flags,
+                                    ByteBuf payload, ChannelPromise promise) {
+        return frameWriter.writeFrame(ctx, frameType, streamId, flags, payload, promise);
+    }
+
+    @Override
     public void close() {
         frameWriter.close();
     }
