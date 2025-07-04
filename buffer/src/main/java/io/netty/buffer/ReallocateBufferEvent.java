@@ -17,11 +17,9 @@ package io.netty.buffer;
 
 import jdk.jfr.DataAmount;
 import jdk.jfr.Description;
-import jdk.jfr.Enabled;
 import jdk.jfr.Label;
 import jdk.jfr.Name;
 
-@Enabled(false)
 @SuppressWarnings("Since15")
 @Label("Buffer Reallocation")
 @Name("ReallocateBufferEvent")

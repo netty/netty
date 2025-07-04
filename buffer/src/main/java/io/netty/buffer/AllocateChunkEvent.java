@@ -15,15 +15,11 @@
  */
 package io.netty.buffer;
 
-import jdk.jfr.Category;
 import jdk.jfr.Description;
-import jdk.jfr.Enabled;
 import jdk.jfr.Label;
 import jdk.jfr.Name;
 
-@Enabled(false)
 @SuppressWarnings("Since15")
-@Category("Netty")
 @Name("AllocateChunkEvent")
 @Label("Chunk Allocation")
 @Description("Triggered when a new memory chunk is allocated for an allocator")

@@ -15,19 +15,18 @@
  */
 package io.netty.buffer;
 
+import jdk.jfr.Category;
+import jdk.jfr.Description;
+import jdk.jfr.Enabled;
 import jdk.jfr.Event;
 
 /**
  * An abstract memory allocator event.
  */
+@Enabled(false)
+@Category("Netty")
 @SuppressWarnings("Since15")
 abstract class AbstractAllocatorEvent extends Event {
-    /**
-     * Obtain the memory address of the given buffer, if it has any.
-     * This method is safe to call even on buffers that has a zero reference count,
-     * but the returned address must not be used to access memory.
-     */
-    protected long getMemoryAddressOf(AbstractByteBuf buf) {
-        return buf._memoryAddress();
-    }
+    @Description("The type of allocator this event is for")
+    public AllocatorType allocatorType;
 }
