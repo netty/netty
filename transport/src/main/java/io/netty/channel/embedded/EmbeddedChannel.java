@@ -1098,6 +1098,7 @@ public class EmbeddedChannel extends AbstractChannel {
         ChannelId channelId = EmbeddedChannelId.INSTANCE;
         boolean register = true;
         boolean hasDisconnect;
+        //you should use either handlers or handler variable, but not both.
         ChannelHandler[] handlers = EMPTY_HANDLERS;
         ChannelHandler handler;
         ChannelConfig config;
