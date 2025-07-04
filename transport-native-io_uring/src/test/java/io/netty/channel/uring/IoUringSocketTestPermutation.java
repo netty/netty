@@ -50,7 +50,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
         IoUringIoHandlerConfig config = new IoUringIoHandlerConfig();
         if (IoUring.isRegisterBufferRingSupported()) {
             config.setBufferRingConfig(
-                    new IoUringBufferRingConfig(BGID, (short) 16, 8, 16 * 16,
+                    new IoUringBufferRingConfig(BGID, (short) 16, 8,
                             incremental, new IoUringFixedBufferRingAllocator(1024)));
         }
         return config;

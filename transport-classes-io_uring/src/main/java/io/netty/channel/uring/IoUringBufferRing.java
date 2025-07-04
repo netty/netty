@@ -16,11 +16,6 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.DuplicatedByteBuf;
-import io.netty.buffer.SlicedByteBuf;
-import io.netty.buffer.SwappedByteBuf;
-import io.netty.buffer.Unpooled;
-import io.netty.buffer.WrappedByteBuf;
 import io.netty.channel.unix.Buffer;
 
 import java.lang.invoke.MethodHandles;
@@ -28,7 +23,6 @@ import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
 
 final class IoUringBufferRing {
     private static final VarHandle SHORT_HANDLE =
@@ -37,16 +31,13 @@ final class IoUringBufferRing {
     private final int tailFieldPosition;
     private final short entries;
     private final int batchSize;
-    private final int maxUnreleasedBuffers;
     private final short mask;
     private final short bufferGroupId;
     private final int ringFd;
-    private final IoUringBufferRingByteBuf[] buffers;
+    private final ByteBuf[] buffers;
     private final IoUringBufferRingAllocator allocator;
     private final IoUringBufferRingExhaustedEvent exhaustedEvent;
     private final boolean incremental;
-    private final AtomicInteger unreleasedBuffers = new AtomicInteger();
-    private volatile boolean usable;
     private boolean corrupted;
     private boolean closed;
     private int numBuffers;
@@ -56,7 +47,7 @@ final class IoUringBufferRing {
     private short lastAddedBid;
 
     IoUringBufferRing(int ringFd, ByteBuffer ioUringBufRing,
-                      short entries, int batchSize, int maxUnreleasedBuffers, short bufferGroupId, boolean incremental,
+                      short entries, int batchSize, short bufferGroupId, boolean incremental,
                       IoUringBufferRingAllocator allocator) {
         assert entries % 2 == 0;
         assert batchSize % 2 == 0;
@@ -64,18 +55,17 @@ final class IoUringBufferRing {
         this.tailFieldPosition = Native.IO_URING_BUFFER_RING_TAIL;
         this.entries = entries;
         this.batchSize = batchSize;
-        this.maxUnreleasedBuffers = maxUnreleasedBuffers;
         this.mask = (short) (entries - 1);
         this.bufferGroupId = bufferGroupId;
         this.ringFd = ringFd;
-        this.buffers = new IoUringBufferRingByteBuf[entries];
+        this.buffers = new ByteBuf[entries];
         this.incremental = incremental;
         this.allocator = allocator;
         this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
     }
 
     boolean isUsable() {
-        return !corrupted && usable;
+        return !closed && !corrupted;
     }
 
     void initialize() {
@@ -85,7 +75,6 @@ final class IoUringBufferRing {
             lastGeneratedBid = i;
         }
         assert numBuffers % 2 == 0;
-        usable = true;
     }
 
     /**
@@ -144,18 +133,18 @@ final class IoUringBufferRing {
             throw e;
         }
 
-        IoUringBufferRingByteBuf ioUringBuf = new IoUringBufferRingByteBuf(byteBuf.writerIndex(byteBuf.capacity()));
+        byteBuf.writerIndex(byteBuf.capacity());
 
         //  see:
         //  https://github.com/axboe/liburing/
         //      blob/19134a8fffd406b22595a5813a3e319c19630ac9/src/include/liburing.h#L1561
         int position = Native.SIZEOF_IOURING_BUF * ringIndex;
         ioUringBufRing.putLong(position + Native.IOURING_BUFFER_OFFSETOF_ADDR,
-                IoUring.memoryAddress(ioUringBuf) + ioUringBuf.readerIndex());
-        ioUringBufRing.putInt(position + Native.IOURING_BUFFER_OFFSETOF_LEN, ioUringBuf.readableBytes());
+                IoUring.memoryAddress(byteBuf) + byteBuf.readerIndex());
+        ioUringBufRing.putInt(position + Native.IOURING_BUFFER_OFFSETOF_LEN, byteBuf.readableBytes());
         ioUringBufRing.putShort(position + Native.IOURING_BUFFER_OFFSETOF_BID, bid);
 
-        buffers[bid] = ioUringBuf;
+        buffers[bid] = byteBuf;
         lastAddedBid = bid;
         // Now advanced the tail by the number of buffers that we just added.
         SHORT_HANDLE.setRelease(ioUringBufRing, tailFieldPosition, (short) (oldTail + 1));
@@ -190,7 +179,7 @@ final class IoUringBufferRing {
      */
     ByteBuf useBuffer(short bid, int readableBytes, boolean more) {
         assert readableBytes > 0;
-        IoUringBufferRingByteBuf byteBuf = buffers[bid];
+        ByteBuf byteBuf = buffers[bid];
 
         allocator.lastBytesRead(byteBuf.readableBytes(), readableBytes);
         if (incremental && more && byteBuf.readableBytes() > readableBytes) {
@@ -201,7 +190,6 @@ final class IoUringBufferRing {
         // The buffer is considered to be used, null out the slot.
         buffers[bid] = null;
         addBuffer(bid);
-        byteBuf.markUsed();
         return byteBuf.writerIndex(byteBuf.readerIndex() +
                 Math.min(readableBytes, byteBuf.readableBytes()));
     }
@@ -234,111 +222,5 @@ final class IoUringBufferRing {
             }
         }
         Arrays.fill(buffers, null);
-    }
-
-    // Package-private for testing
-    final class IoUringBufferRingByteBuf extends WrappedByteBuf {
-        IoUringBufferRingByteBuf(ByteBuf buf) {
-            super(buf);
-        }
-
-        void markUsed() {
-            if (unreleasedBuffers.incrementAndGet() == maxUnreleasedBuffers) {
-                usable = false;
-            }
-        }
-
-        @SuppressWarnings("deprecation")
-        @Override
-        public ByteBuf order(ByteOrder endianness) {
-            if (endianness == order()) {
-                return this;
-            }
-            return new SwappedByteBuf(this);
-        }
-
-        @Override
-        public ByteBuf slice() {
-            return slice(readerIndex(), readableBytes());
-        }
-
-        @Override
-        public ByteBuf retainedSlice() {
-            return slice().retain();
-        }
-
-        @SuppressWarnings("deprecation")
-        @Override
-        public ByteBuf slice(int index, int length) {
-            return new SlicedByteBuf(this, index, length);
-        }
-
-        @Override
-        public ByteBuf retainedSlice(int index, int length) {
-            return slice(index, length).retain();
-        }
-
-        @Override
-        public ByteBuf readSlice(int length) {
-            ByteBuf slice = slice(readerIndex(), length);
-            skipBytes(length);
-            return slice;
-        }
-
-        @Override
-        public ByteBuf readRetainedSlice(int length) {
-            ByteBuf slice = retainedSlice(readerIndex(), length);
-            try {
-                skipBytes(length);
-            } catch (Throwable cause) {
-                slice.release();
-                throw cause;
-            }
-            return slice;
-        }
-
-        @SuppressWarnings("deprecation")
-        @Override
-        public ByteBuf asReadOnly() {
-            if (isReadOnly()) {
-                return this;
-            }
-            return Unpooled.unmodifiableBuffer(this);
-        }
-
-        @SuppressWarnings("deprecation")
-        @Override
-        public ByteBuf duplicate() {
-            return new DuplicatedByteBuf(this);
-        }
-
-        @Override
-        public ByteBuf retainedDuplicate() {
-            return duplicate().retain();
-        }
-
-        @Override
-        public boolean release() {
-            if (super.release()) {
-                released();
-                return true;
-            }
-            return false;
-        }
-
-        @Override
-        public boolean release(int decrement) {
-            if (super.release(decrement)) {
-                released();
-                return true;
-            }
-            return false;
-        }
-
-        private void released() {
-            if (unreleasedBuffers.decrementAndGet() == maxUnreleasedBuffers / 2) {
-                usable = true;
-            }
-        }
     }
 }

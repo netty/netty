@@ -120,7 +120,7 @@ public final class HttpNativeServer {
             IoUringIoHandlerConfig config = new IoUringIoHandlerConfig();
             if (IoUring.isRegisterBufferRingSupported()) {
                 config.setBufferRingConfig(new IoUringBufferRingConfig(
-                        (short) 0, (short) 16, 16 * 16,
+                        (short) 0, (short) 16,
                         new IoUringFixedBufferRingAllocator(1024)
                 ));
             }
