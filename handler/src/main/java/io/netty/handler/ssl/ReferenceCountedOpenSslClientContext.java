@@ -243,7 +243,8 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
         private final Map<Long, ReferenceCountedOpenSslEngine> engines;
         private final OpenSslKeyMaterialManager keyManagerHolder;
 
-        OpenSslClientCertificateCallback(Map<Long, ReferenceCountedOpenSslEngine> engines, OpenSslKeyMaterialManager keyManagerHolder) {
+        OpenSslClientCertificateCallback(Map<Long, ReferenceCountedOpenSslEngine> engines,
+                                         OpenSslKeyMaterialManager keyManagerHolder) {
             this.engines = engines;
             this.keyManagerHolder = keyManagerHolder;
         }
