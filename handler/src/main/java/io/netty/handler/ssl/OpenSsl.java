@@ -84,7 +84,7 @@ public final class OpenSsl {
     private static final int TLS_V1_1      = 1 << 4;
     private static final int TLS_V1_2      = 1 << 5;
     private static final int TLS_V1_3      = 1 << 6;
-    private static int supportedProtocolsPacked = 0;
+    private static final int supportedProtocolsPacked;
 
     static final String[] EXTRA_SUPPORTED_TLS_1_3_CIPHERS;
     static final String EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING;
@@ -413,31 +413,33 @@ public final class OpenSsl {
             USE_KEYMANAGER_FACTORY = useKeyManagerFactory;
 
             // Seems like there is no way to explicitly disable SSLv2Hello in openssl so it is always enabled
-            supportedProtocolsPacked |= SSL_V2_HELLO;
+            int supportedProtocolsPackedTemp = 0;
+            supportedProtocolsPackedTemp |= SSL_V2_HELLO;
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_SSLV2, SSL.SSL_OP_NO_SSLv2)) {
-                supportedProtocolsPacked |= SSL_V2;
+                supportedProtocolsPackedTemp |= SSL_V2;
             }
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_SSLV3, SSL.SSL_OP_NO_SSLv3)) {
-                supportedProtocolsPacked |= SSL_V3;
+                supportedProtocolsPackedTemp |= SSL_V3;
             }
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1, SSL.SSL_OP_NO_TLSv1)) {
-                supportedProtocolsPacked |= TLS_V1;
+                supportedProtocolsPackedTemp |= TLS_V1;
             }
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_1, SSL.SSL_OP_NO_TLSv1_1)) {
-                supportedProtocolsPacked |= TLS_V1_1;
+                supportedProtocolsPackedTemp |= TLS_V1_1;
             }
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_2, SSL.SSL_OP_NO_TLSv1_2)) {
-                supportedProtocolsPacked |= TLS_V1_2;
+                supportedProtocolsPackedTemp |= TLS_V1_2;
             }
 
             // This is only supported by java8u272 and later.
             if (tlsv13Supported && doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_3, SSL.SSL_OP_NO_TLSv1_3)) {
-                supportedProtocolsPacked |= TLS_V1_3;
+                supportedProtocolsPackedTemp |= TLS_V1_3;
                 TLSV13_SUPPORTED = true;
             } else {
                 TLSV13_SUPPORTED = false;
             }
 
+            supportedProtocolsPacked = supportedProtocolsPackedTemp;
             SUPPORTS_OCSP = doesSupportOcsp();
 
             if (logger.isDebugEnabled()) {
@@ -465,6 +467,7 @@ public final class OpenSsl {
             USE_KEYMANAGER_FACTORY = false;
             SUPPORTS_OCSP = false;
             TLSV13_SUPPORTED = false;
+            supportedProtocolsPacked = 0;
             IS_BORINGSSL = false;
             EXTRA_SUPPORTED_TLS_1_3_CIPHERS = EmptyArrays.EMPTY_STRINGS;
             EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING = StringUtil.EMPTY_STRING;
