@@ -129,7 +129,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     public void testSslRenegotiationRejected(SslContext serverCtx, SslContext clientCtx, boolean delegate,
                                              TestInfo testInfo) throws Throwable {
         // BoringSSL does not support renegotiation intentionally.
-        assumeFalse("BoringSSL".equals(OpenSsl.versionString()));
+        assumeFalse("BoringSSL".equals(OpenSsl.versionString()) || OpenSsl.versionString().startsWith("AWS-LC"));
         run(testInfo, (sb, cb) -> testSslRenegotiationRejected(sb, cb, serverCtx, clientCtx, delegate));
     }
 
