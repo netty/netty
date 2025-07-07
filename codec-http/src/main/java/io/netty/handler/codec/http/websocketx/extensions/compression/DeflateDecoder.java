@@ -18,6 +18,7 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
@@ -112,7 +113,9 @@ abstract class DeflateDecoder extends WebSocketExtensionDecoder {
             if (!(msg instanceof TextWebSocketFrame) && !(msg instanceof BinaryWebSocketFrame)) {
                 throw new CodecException("unexpected initial frame type: " + msg.getClass().getName());
             }
-            decoder = EmbeddedChannel.Builder.of(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE, maxAllocation));
+            decoder = EmbeddedChannel.builder()
+                    .handlers(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.NONE, maxAllocation))
+                    .build();
         }
 
         boolean readable = msg.content().isReadable();

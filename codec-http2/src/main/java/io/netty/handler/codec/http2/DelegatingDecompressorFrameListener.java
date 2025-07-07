@@ -17,7 +17,10 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.Brotli;
@@ -226,26 +229,46 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             throws Http2Exception {
         Channel channel = ctx.channel();
         if (GZIP.contentEqualsIgnoreCase(contentEncoding) || X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
-            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
-                    channel.config(), ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP, maxAllocation));
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP, maxAllocation))
+                    .build();
         }
         if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) || X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
-            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
-                    channel.config(), ZlibCodecFactory.newZlibDecoder(wrapper, maxAllocation));
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(ZlibCodecFactory.newZlibDecoder(wrapper, maxAllocation))
+                    .build();
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
-            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
-              channel.config(), new BrotliDecoder());
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(new BrotliDecoder())
+                    .build();
         }
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
-            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
-                    channel.config(), new SnappyFrameDecoder());
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(new SnappyFrameDecoder())
+                    .build();
         }
         if (Zstd.isAvailable() && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
-            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
-                    channel.config(), new ZstdDecoder());
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(new ZstdDecoder())
+                    .build();
         }
         // 'identity' or unsupported
         return null;

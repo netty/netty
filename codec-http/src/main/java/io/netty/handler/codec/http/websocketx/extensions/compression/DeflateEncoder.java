@@ -17,6 +17,7 @@ package io.netty.handler.codec.http.websocketx.extensions.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.CodecException;
@@ -116,8 +117,10 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
 
     private ByteBuf compressContent(ChannelHandlerContext ctx, WebSocketFrame msg) {
         if (encoder == null) {
-            encoder = EmbeddedChannel.Builder.of(ZlibCodecFactory.newZlibEncoder(
-                    ZlibWrapper.NONE, compressionLevel, windowSize, 8));
+            encoder = EmbeddedChannel.builder()
+                    .handlers(ZlibCodecFactory.newZlibEncoder(
+                            ZlibWrapper.NONE, compressionLevel, windowSize, 8))
+                    .build();
         }
 
         encoder.writeOutbound(msg.content().retain());

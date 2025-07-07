@@ -17,8 +17,11 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -289,17 +292,29 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         }
         Channel channel = ctx.channel();
         if (Brotli.isAvailable() && brotliOptions != null && BR.contentEqualsIgnoreCase(contentEncoding)) {
-            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
-                    channel.config(), new BrotliEncoder(brotliOptions.parameters()));
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(new BrotliEncoder(brotliOptions.parameters()))
+                    .build();
         }
         if (zstdOptions != null && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
-            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
-                    channel.config(), new ZstdEncoder(zstdOptions.compressionLevel(),
-                    zstdOptions.blockSize(), zstdOptions.maxEncodeSize()));
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(new ZstdEncoder(zstdOptions.compressionLevel(),
+                            zstdOptions.blockSize(), zstdOptions.maxEncodeSize()))
+                    .build();
         }
         if (snappyOptions != null && SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
-            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
-                    channel.config(), new SnappyFrameEncoder());
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(new SnappyFrameEncoder())
+                    .build();
         }
         // 'identity' or unsupported
         return null;
@@ -326,22 +341,37 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         Channel channel = ctx.channel();
         if (supportsCompressionOptions) {
             if (wrapper == ZlibWrapper.GZIP && gzipCompressionOptions != null) {
-                return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
-                        channel.config(), ZlibCodecFactory.newZlibEncoder(wrapper,
-                        gzipCompressionOptions.compressionLevel(), gzipCompressionOptions.windowBits(),
-                        gzipCompressionOptions.memLevel()));
+                return EmbeddedChannel.builder()
+                        .channelId(channel.id())
+                        .hasDisconnect(channel.metadata().hasDisconnect())
+                        .config(channel.config())
+                        .handlers(ZlibCodecFactory.newZlibEncoder(wrapper,
+                                gzipCompressionOptions.compressionLevel(),
+                                gzipCompressionOptions.windowBits(),
+                                gzipCompressionOptions.memLevel())
+                        )
+                        .build();
             } else if (wrapper == ZlibWrapper.ZLIB && deflateOptions != null) {
-                return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
-                        channel.config(), ZlibCodecFactory.newZlibEncoder(wrapper,
-                        deflateOptions.compressionLevel(), deflateOptions.windowBits(),
-                        deflateOptions.memLevel()));
+                return EmbeddedChannel.builder()
+                        .channelId(channel.id())
+                        .hasDisconnect(channel.metadata().hasDisconnect())
+                        .config(channel.config())
+                        .handlers(ZlibCodecFactory.newZlibEncoder(wrapper,
+                                deflateOptions.compressionLevel(),
+                                deflateOptions.windowBits(),
+                                deflateOptions.memLevel())
+                        )
+                        .build();
             } else {
                 throw new IllegalArgumentException("Unsupported ZlibWrapper: " + wrapper);
             }
         } else {
-            return EmbeddedChannel.Builder.of(channel.id(), channel.metadata().hasDisconnect(),
-                    channel.config(), ZlibCodecFactory.newZlibEncoder(wrapper, compressionLevel, windowBits,
-                    memLevel));
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(ZlibCodecFactory.newZlibEncoder(wrapper, compressionLevel, windowBits, memLevel))
+                    .build();
         }
     }
 

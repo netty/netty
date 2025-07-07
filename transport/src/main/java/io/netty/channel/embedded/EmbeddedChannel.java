@@ -34,7 +34,6 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Ticker;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -1194,16 +1193,6 @@ public class EmbeddedChannel extends AbstractChannel {
             return new EmbeddedChannel(this);
         }
 
-        public static EmbeddedChannel of(ChannelId channelId, boolean hasDisconnect, ChannelConfig config,
-                                  ChannelHandler handler) {
-            return new EmbeddedChannel(
-                    builder().channelId(channelId).hasDisconnect(hasDisconnect).config(config).handlers(handler)
-            );
-        }
-
-        public static EmbeddedChannel of(ChannelHandler handler) {
-            return new EmbeddedChannel(builder().handlers(handler));
-        }
     }
 
     private final class EmbeddedUnsafe extends AbstractUnsafe {
