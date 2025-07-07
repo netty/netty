@@ -1753,7 +1753,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final String[] getSupportedProtocols() {
-        return OpenSsl.SUPPORTED_PROTOCOLS_SET.toArray(EMPTY_STRINGS);
+        return OpenSsl.unpackSupportedProtocols().toArray(EMPTY_STRINGS);
     }
 
     @Override
@@ -1764,7 +1764,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private static boolean isProtocolEnabled(int opts, int disableMask, String protocolString) {
         // We also need to check if the actual protocolString is supported as depending on the openssl API
         // implementations it may use a disableMask of 0 (BoringSSL is doing this for example).
-        return (opts & disableMask) == 0 && OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(protocolString);
+        return (opts & disableMask) == 0 && OpenSsl.isProtocolSupported(protocolString);
     }
 
     /**
@@ -1796,7 +1796,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         int minProtocolIndex = OPENSSL_OP_NO_PROTOCOLS.length;
         int maxProtocolIndex = 0;
         for (String protocol : protocols) {
-            if (!OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(protocol)) {
+            if (!OpenSsl.isProtocolSupported(protocol)) {
                 throw new IllegalArgumentException("Protocol " + protocol + " is not supported.");
             }
 
