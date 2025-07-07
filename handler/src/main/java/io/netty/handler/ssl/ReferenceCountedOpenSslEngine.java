@@ -1795,73 +1795,60 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         // This is correct from the API docs
         int minProtocolIndex = OPENSSL_OP_NO_PROTOCOLS.length;
         int maxProtocolIndex = 0;
-        for (String p: protocols) {
-            if (!OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(p)) {
-                throw new IllegalArgumentException("Protocol " + p + " is not supported.");
+        for (String protocol : protocols) {
+            if (!OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(protocol)) {
+                throw new IllegalArgumentException("Protocol " + protocol + " is not supported.");
             }
-            if (p.equals(SslProtocols.SSL_v2)) {
-                if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2) {
-                    minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2;
-                }
-                if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2) {
-                    maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2;
-                }
-            } else if (p.equals(SslProtocols.SSL_v3)) {
-                if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3) {
-                    minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3;
-                }
-                if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3) {
-                    maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3;
-                }
-            } else if (p.equals(SslProtocols.TLS_v1)) {
-                if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1) {
-                    minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1;
-                }
-                if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1) {
-                    maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1;
-                }
-            } else if (p.equals(SslProtocols.TLS_v1_1)) {
-                if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1) {
-                    minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1;
-                }
-                if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1) {
-                    maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1;
-                }
-            } else if (p.equals(SslProtocols.TLS_v1_2)) {
-                if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2) {
-                    minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2;
-                }
-                if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2) {
-                    maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2;
-                }
-            } else if (!explicitDisableTLSv13 && p.equals(SslProtocols.TLS_v1_3)) {
-                if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_3) {
-                    minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_3;
-                }
-                if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_3) {
-                    maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_3;
-                }
+
+            int index;
+            switch (protocol) {
+                case SslProtocols.SSL_v2:
+                    index = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2;
+                    break;
+                case SslProtocols.SSL_v3:
+                    index = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3;
+                    break;
+                case SslProtocols.TLS_v1:
+                    index = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1;
+                    break;
+                case SslProtocols.TLS_v1_1:
+                    index = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1;
+                    break;
+                case SslProtocols.TLS_v1_2:
+                    index = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2;
+                    break;
+                case SslProtocols.TLS_v1_3:
+                    if (explicitDisableTLSv13) {
+                        continue;
+                    }
+                    index = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_3;
+                    break;
+                default:
+                    continue; // Should not happen due to SUPPORTED_PROTOCOLS_SET check
             }
+
+            minProtocolIndex = Math.min(minProtocolIndex, index);
+            maxProtocolIndex = Math.max(maxProtocolIndex, index);
         }
-        if (!destroyed) {
-            // Clear out options which disable protocols
-            SSL.clearOptions(ssl, SSL.SSL_OP_NO_SSLv2 | SSL.SSL_OP_NO_SSLv3 | SSL.SSL_OP_NO_TLSv1 |
-                    SSL.SSL_OP_NO_TLSv1_1 | SSL.SSL_OP_NO_TLSv1_2 | SSL.SSL_OP_NO_TLSv1_3);
 
-            int opts = 0;
-            for (int i = 0; i < minProtocolIndex; ++i) {
-                opts |= OPENSSL_OP_NO_PROTOCOLS[i];
-            }
-            assert maxProtocolIndex != MAX_VALUE;
-            for (int i = maxProtocolIndex + 1; i < OPENSSL_OP_NO_PROTOCOLS.length; ++i) {
-                opts |= OPENSSL_OP_NO_PROTOCOLS[i];
-            }
-
-            // Disable protocols we do not want
-            SSL.setOptions(ssl, opts);
-        } else {
+        if (destroyed) {
             throw new IllegalStateException("failed to enable protocols: " + Arrays.asList(protocols));
         }
+
+        SSL.clearOptions(ssl, SSL.SSL_OP_NO_SSLv2 | SSL.SSL_OP_NO_SSLv3 |
+                SSL.SSL_OP_NO_TLSv1 | SSL.SSL_OP_NO_TLSv1_1 |
+                SSL.SSL_OP_NO_TLSv1_2 | SSL.SSL_OP_NO_TLSv1_3);
+
+        int opts = 0;
+        for (int i = 0; i < minProtocolIndex; ++i) {
+            opts |= OPENSSL_OP_NO_PROTOCOLS[i];
+        }
+        assert maxProtocolIndex != MAX_VALUE;
+        for (int i = maxProtocolIndex + 1; i < OPENSSL_OP_NO_PROTOCOLS.length; ++i) {
+            opts |= OPENSSL_OP_NO_PROTOCOLS[i];
+        }
+
+        SSL.setOptions(ssl, opts);
     }
 
     @Override
