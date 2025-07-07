@@ -29,37 +29,62 @@
 #ifndef NETTY_IO_URING
 #define NETTY_IO_URING
 
+// See https://github.com/axboe/liburing/blob/liburing-2.11/src/include/liburing.h#L78
 struct io_uring_sq {
-    unsigned *khead;
-    unsigned *ktail;
-    unsigned *kring_mask;
-    unsigned *kring_entries;
-    unsigned *kflags;
-    unsigned *kdropped;
-    unsigned *array;
-    struct io_uring_sqe *sqes;
+	unsigned *khead;
+	unsigned *ktail;
+	// Deprecated: use `ring_mask` instead of `*kring_mask`
+	unsigned *kring_mask;
+	// Deprecated: use `ring_entries` instead of `*kring_entries`
+	unsigned *kring_entries;
+	unsigned *kflags;
+	unsigned *kdropped;
+	unsigned *array;
+	struct io_uring_sqe *sqes;
 
-    size_t ring_sz;
-    void *ring_ptr;
+	unsigned sqe_head;
+	unsigned sqe_tail;
+
+	size_t ring_sz;
+	void *ring_ptr;
+
+	unsigned ring_mask;
+	unsigned ring_entries;
+
+	unsigned pad[2];
 };
 
 struct io_uring_cq {
-    unsigned *khead;
-    unsigned *ktail;
-    unsigned *kring_mask;
-    unsigned *kring_entries;
-    unsigned *koverflow;
-    struct io_uring_cqe *cqes;
+	unsigned *khead;
+	unsigned *ktail;
+	// Deprecated: use `ring_mask` instead of `*kring_mask`
+	unsigned *kring_mask;
+	// Deprecated: use `ring_entries` instead of `*kring_entries`
+	unsigned *kring_entries;
+	unsigned *kflags;
+	unsigned *koverflow;
+	struct io_uring_cqe *cqes;
 
-    size_t ring_sz;
-    void *ring_ptr;
+	size_t ring_sz;
+	void *ring_ptr;
+
+	unsigned ring_mask;
+	unsigned ring_entries;
+
+	unsigned pad[2];
 };
 
 struct io_uring {
-    struct io_uring_sq sq;
-    struct io_uring_cq cq;
-    unsigned flags;
-    int ring_fd;
+	struct io_uring_sq sq;
+	struct io_uring_cq cq;
+	unsigned flags;
+	int ring_fd;
+
+	unsigned features;
+	int enter_ring_fd;
+	__u8 int_flags;
+	__u8 pad[3];
+	unsigned pad2;
 };
 
 struct io_uring_buf {
