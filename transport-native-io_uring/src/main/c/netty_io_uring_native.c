@@ -62,6 +62,14 @@
 #define MSG_FASTOPEN 0x20000000
 #endif
 
+#ifndef MAP_HUGE_SHIFT
+#define MAP_HUGE_SHIFT  26
+#endif
+
+#ifndef MAP_HUGE_2MB
+#define MAP_HUGE_2MB    (21 << MAP_HUGE_SHIFT)
+#endif
+
 #define NATIVE_CLASSNAME "io/netty/channel/uring/Native"
 #define STATICALLY_CLASSNAME "io/netty/channel/uring/NativeStaticallyReferencedJniMethods"
 #define LIBRARYNAME "netty_transport_native_io_uring42"
@@ -410,14 +418,18 @@ static jint netty_io_uring_register_ring_fds(JNIEnv *env, jclass clazz, jint rin
 
 static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
                                            jint ringFd, jint nentries,
-                                           jshort bgid, jint flags) {
+                                           jshort bgid, jint flags, jboolean hugePages) {
     struct io_uring_buf_ring *br;
     struct io_uring_buf_reg reg;
     size_t ring_size;
 
     memset(&reg, 0, sizeof(reg));
     ring_size = nentries * sizeof(struct io_uring_buf);
-    br = mmap(NULL, ring_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    if (hugePages == JNI_TRUE) {
+        br = mmap(NULL, ring_size, PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_HUGETLB|MAP_HUGE_2MB|MAP_ANONYMOUS, -1, 0);
+    } else {
+        br = mmap(NULL, ring_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    }
     if (br == MAP_FAILED) {
         return -errno;
     }
@@ -842,7 +854,7 @@ static const JNINativeMethod method_table[] = {
     {"cmsghdrData", "(J)J", (void *) netty_io_uring_cmsghdrData},
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
     {"getFd0", "(Ljava/lang/Object;)I", (void *) netty_io_uring_getFd0 },
-    {"ioUringRegisterBufRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring },
+    {"ioUringRegisterBufRing", "(IISIZ)J", (void *) netty_io_uring_register_buf_ring },
     {"ioUringUnRegisterBufRing", "(IJIS)I", (void *) netty_io_uring_unregister_buf_ring },
     {"ioUringBufRingSize", "(I)I", (void *) netty_io_uring_buf_ring_size }
 };

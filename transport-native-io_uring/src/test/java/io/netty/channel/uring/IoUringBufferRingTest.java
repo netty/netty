@@ -59,7 +59,7 @@ public class IoUringBufferRingTest {
         RingBuffer ringBuffer = Native.createRingBuffer(8, 15, 0);
         try {
             int ringFd = ringBuffer.fd();
-            long ioUringBufRingAddr = Native.ioUringRegisterBufRing(ringFd, 4, (short) 1, 0);
+            long ioUringBufRingAddr = Native.ioUringRegisterBufRing(ringFd, 4, (short) 1, 0, false);
             assumeTrue(
                     ioUringBufRingAddr > 0,
                     "ioUringSetupBufRing result must great than 0, but now result is " + ioUringBufRingAddr);

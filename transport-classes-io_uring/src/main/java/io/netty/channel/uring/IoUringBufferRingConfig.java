@@ -30,6 +30,7 @@ public final class IoUringBufferRingConfig {
     private final int batchSize;
     private final int maxUnreleasedBuffers;
     private final boolean incremental;
+    private final boolean hugePages;
     private final IoUringBufferRingAllocator allocator;
 
     /**
@@ -42,7 +43,7 @@ public final class IoUringBufferRingConfig {
      */
     public IoUringBufferRingConfig(short bgId, short bufferRingSize,
                                    IoUringBufferRingAllocator allocator) {
-        this(bgId, bufferRingSize, Integer.MAX_VALUE, allocator);
+        this(bgId, bufferRingSize, bufferRingSize, allocator);
     }
 
     /**
@@ -84,6 +85,35 @@ public final class IoUringBufferRingConfig {
      * @param bufferRingSize        the size of the ring
      * @param batchSize             the size of the batch on how many buffers are added everytime we need to expand the
      *                              buffer ring.
+     * @param incremental           {@code true} if the buffer ring is using incremental buffer consumption.
+     * @param hugePages             {@code true} if the memory for the buffer ring should be allocated using huge pages.
+     *                              Be aware that the system needs to have huge-pages support setup for this to work.
+     *                              See <a href=https://man7.org/linux/man-pages/man2/mmap.2.html>man mmap</a>.
+     * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
+     *                              {@link io.netty.buffer.ByteBuf}s.
+     */
+    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int batchSize,
+                                   boolean incremental, boolean hugePages, IoUringBufferRingAllocator allocator) {
+        this.bgId = (short) ObjectUtil.checkPositiveOrZero(bgId, "bgId");
+        this.bufferRingSize = checkBufferRingSize(bufferRingSize);
+        this.batchSize = MathUtil.findNextPositivePowerOfTwo(
+                ObjectUtil.checkInRange(batchSize, 1, bufferRingSize, "batchSize"));
+        this.maxUnreleasedBuffers = Integer.MAX_VALUE;
+        if (incremental && !IoUring.isRegisterBufferRingIncSupported()) {
+            throw new IllegalArgumentException("Incremental buffer ring is not supported");
+        }
+        this.incremental = incremental;
+        this.hugePages = hugePages;
+        this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
+    }
+
+    /**
+     * Create a new configuration.
+     *
+     * @param bgId                  the buffer group id to use (must be non-negative).
+     * @param bufferRingSize        the size of the ring
+     * @param batchSize             the size of the batch on how many buffers are added everytime we need to expand the
+     *                              buffer ring.
      * @param maxUnreleasedBuffers  this parameter is ignored by the buffer ring.
      * @param incremental           {@code true} if the buffer ring is using incremental buffer consumption.
      * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
@@ -92,17 +122,9 @@ public final class IoUringBufferRingConfig {
     @Deprecated
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, int batchSize, int maxUnreleasedBuffers,
                                    boolean incremental, IoUringBufferRingAllocator allocator) {
-        this.bgId = (short) ObjectUtil.checkPositiveOrZero(bgId, "bgId");
-        this.bufferRingSize = checkBufferRingSize(bufferRingSize);
-        this.batchSize = MathUtil.findNextPositivePowerOfTwo(
-                ObjectUtil.checkInRange(batchSize, 1, bufferRingSize, "batchSize"));
-        this.maxUnreleasedBuffers = ObjectUtil.checkInRange(
+        this(bgId, bufferRingSize, batchSize, incremental, false, allocator);
+        ObjectUtil.checkInRange(
                 maxUnreleasedBuffers, bufferRingSize, Integer.MAX_VALUE, "maxUnreleasedBuffers");
-        if (incremental && !IoUring.isRegisterBufferRingIncSupported()) {
-            throw new IllegalArgumentException("Incremental buffer ring is not supported");
-        }
-        this.incremental = incremental;
-        this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
     }
 
     /**
@@ -162,6 +184,16 @@ public final class IoUringBufferRingConfig {
      */
     public boolean isIncremental() {
         return incremental;
+    }
+
+    /**
+     * Return {@code} true if huge-pages will be used, {@code false} otherwise.
+     * See <a href=https://man7.org/linux/man-pages/man2/mmap.2.html>man mmap</a>.
+     *
+     * @return  {@code true} if huge-pages will be used.
+     */
+    public boolean isUsingHugePages() {
+        return hugePages;
     }
 
     private static short checkBufferRingSize(short bufferRingSize) {
