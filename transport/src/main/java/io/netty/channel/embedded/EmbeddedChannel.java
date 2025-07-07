@@ -1192,7 +1192,6 @@ public class EmbeddedChannel extends AbstractChannel {
         public EmbeddedChannel build() {
             return new EmbeddedChannel(this);
         }
-
     }
 
     private final class EmbeddedUnsafe extends AbstractUnsafe {
