@@ -71,7 +71,7 @@ public class OpenSslCertificateCompressionTest {
 
     @Test
     public void testSimple() throws Throwable {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         final SslContext clientSslContext = buildClientContext(
                 OpenSslCertificateCompressionConfig.newBuilder()
                         .addAlgorithm(testBrotliAlgoClient,
@@ -92,7 +92,7 @@ public class OpenSslCertificateCompressionTest {
 
     @Test
     public void testServerPriority() throws Throwable {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         final SslContext clientSslContext = buildClientContext(
                 OpenSslCertificateCompressionConfig.newBuilder()
                         .addAlgorithm(testBrotliAlgoClient,
@@ -116,7 +116,7 @@ public class OpenSslCertificateCompressionTest {
 
     @Test
     public void testServerPriorityReverse() throws Throwable {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         final SslContext clientSslContext = buildClientContext(
                 OpenSslCertificateCompressionConfig.newBuilder()
                         .addAlgorithm(testBrotliAlgoClient,
@@ -141,7 +141,7 @@ public class OpenSslCertificateCompressionTest {
 
     @Test
     public void testFailedNegotiation() throws Throwable {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         final SslContext clientSslContext = buildClientContext(
                 OpenSslCertificateCompressionConfig.newBuilder()
                         .addAlgorithm(testBrotliAlgoClient,
@@ -162,7 +162,7 @@ public class OpenSslCertificateCompressionTest {
 
     @Test
     public void testAlgoFailure() throws Throwable {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         TestCertCompressionAlgo badZlibAlgoClient =
                 new TestCertCompressionAlgo(CertificateCompressionAlgo.TLS_EXT_CERT_COMPRESSION_ZLIB) {
             @Override
@@ -191,7 +191,7 @@ public class OpenSslCertificateCompressionTest {
 
     @Test
     public void testAlgoException() throws Throwable {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         TestCertCompressionAlgo badZlibAlgoClient =
                 new TestCertCompressionAlgo(CertificateCompressionAlgo.TLS_EXT_CERT_COMPRESSION_ZLIB) {
                     @Override
@@ -220,7 +220,7 @@ public class OpenSslCertificateCompressionTest {
 
     @Test
     public void testTlsLessThan13() throws Throwable {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         final SslContext clientSslContext = SslContextBuilder.forClient()
              .sslProvider(SslProvider.OPENSSL)
              .protocols(SslProtocols.TLS_v1_2)
@@ -251,7 +251,7 @@ public class OpenSslCertificateCompressionTest {
     @Test
     public void testDuplicateAdd() throws Throwable {
         // Fails with "Failed trying to add certificate compression algorithm"
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         Assertions.assertThrows(Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -283,7 +283,7 @@ public class OpenSslCertificateCompressionTest {
     @Test
     public void testNotBoringAdd() throws Throwable {
         // Fails with "TLS Cert Compression only supported by BoringSSL"
-        assumeTrue(!OpenSsl.isBoringSSL());
+        assumeTrue(!OpenSsl.isBoringSSL() && !OpenSsl.isAWSLC());
         Assertions.assertThrows(Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
