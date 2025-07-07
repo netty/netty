@@ -37,12 +37,24 @@ public final class IoUringBufferRingConfig {
      *
      * @param bgId                  the buffer group id to use (must be non-negative).
      * @param bufferRingSize        the size of the ring
-     * @param maxUnreleasedBuffers  the maximum buffers that were allocated out of this buffer ring and are
-     *                              unreleased yet. Once this threshold is hit the usage of the buffer ring will
-     *                              be temporary disabled.
      * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
      *                              {@link io.netty.buffer.ByteBuf}s.
      */
+    public IoUringBufferRingConfig(short bgId, short bufferRingSize,
+                                   IoUringBufferRingAllocator allocator) {
+        this(bgId, bufferRingSize, Integer.MAX_VALUE, allocator);
+    }
+
+    /**
+     * Create a new configuration.
+     *
+     * @param bgId                  the buffer group id to use (must be non-negative).
+     * @param bufferRingSize        the size of the ring
+     * @param maxUnreleasedBuffers  this parameter is ignored by the buffer ring.
+     * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
+     *                              {@link io.netty.buffer.ByteBuf}s.
+     */
+    @Deprecated
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, int maxUnreleasedBuffers,
                                    IoUringBufferRingAllocator allocator) {
         this(bgId, bufferRingSize, bufferRingSize / 2, maxUnreleasedBuffers,
@@ -56,13 +68,28 @@ public final class IoUringBufferRingConfig {
      * @param bufferRingSize        the size of the ring
      * @param batchSize             the size of the batch on how many buffers are added everytime we need to expand the
      *                              buffer ring.
-     * @param maxUnreleasedBuffers  the maximum buffers that can be allocated out of this buffer ring and are
-     *                              unreleased yet. Once this threshold is hit the usage of the buffer ring will
-     *                              be temporarily disabled.
      * @param incremental           {@code true} if the buffer ring is using incremental buffer consumption.
      * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
      *                              {@link io.netty.buffer.ByteBuf}s.
      */
+    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int batchSize,
+                                   boolean incremental, IoUringBufferRingAllocator allocator) {
+        this(bgId, bufferRingSize, batchSize, Integer.MAX_VALUE, incremental, allocator);
+    }
+
+    /**
+     * Create a new configuration.
+     *
+     * @param bgId                  the buffer group id to use (must be non-negative).
+     * @param bufferRingSize        the size of the ring
+     * @param batchSize             the size of the batch on how many buffers are added everytime we need to expand the
+     *                              buffer ring.
+     * @param maxUnreleasedBuffers  this parameter is ignored by the buffer ring.
+     * @param incremental           {@code true} if the buffer ring is using incremental buffer consumption.
+     * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
+     *                              {@link io.netty.buffer.ByteBuf}s.
+     */
+    @Deprecated
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, int batchSize, int maxUnreleasedBuffers,
                                    boolean incremental, IoUringBufferRingAllocator allocator) {
         this.bgId = (short) ObjectUtil.checkPositiveOrZero(bgId, "bgId");
@@ -110,7 +137,9 @@ public final class IoUringBufferRingConfig {
      * unreleased yet
      *
      * @return the max unreleased buffers.
+     * @deprecated will be removed as it as no effect.
      */
+    @Deprecated
     public int maxUnreleasedBuffers() {
         return maxUnreleasedBuffers;
     }
