@@ -62,6 +62,14 @@
 #define MSG_FASTOPEN 0x20000000
 #endif
 
+#ifndef MAP_HUGE_SHIFT
+#define MAP_HUGE_SHIFT  26
+#endif
+
+#ifndef MAP_HUGE_2MB
+#define MAP_HUGE_2MB    (21 << MAP_HUGE_SHIFT)
+#endif
+
 #define NATIVE_CLASSNAME "io/netty/channel/uring/Native"
 #define STATICALLY_CLASSNAME "io/netty/channel/uring/NativeStaticallyReferencedJniMethods"
 #define LIBRARYNAME "netty_transport_native_io_uring42"
@@ -84,6 +92,37 @@ static void netty_io_uring_native_JNI_OnUnLoad(JNIEnv* env, const char* packageP
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, longArrayClass);
 }
 
+void io_uring_setup_ring_pointers(struct io_uring_params *p,
+				  struct io_uring_sq *sq,
+				  struct io_uring_cq *cq)
+{
+	sq->khead = sq->ring_ptr + p->sq_off.head;
+	sq->ktail = sq->ring_ptr + p->sq_off.tail;
+	sq->kring_mask = sq->ring_ptr + p->sq_off.ring_mask;
+	sq->kring_entries = sq->ring_ptr + p->sq_off.ring_entries;
+	sq->kflags = sq->ring_ptr + p->sq_off.flags;
+	sq->kdropped = sq->ring_ptr + p->sq_off.dropped;
+
+	if (!(p->flags & IORING_SETUP_NO_SQARRAY)) {
+		sq->array = sq->ring_ptr + p->sq_off.array;
+	}
+
+	cq->khead = cq->ring_ptr + p->cq_off.head;
+	cq->ktail = cq->ring_ptr + p->cq_off.tail;
+	cq->kring_mask = cq->ring_ptr + p->cq_off.ring_mask;
+	cq->kring_entries = cq->ring_ptr + p->cq_off.ring_entries;
+	cq->koverflow = cq->ring_ptr + p->cq_off.overflow;
+	cq->cqes = cq->ring_ptr + p->cq_off.cqes;
+	if (p->cq_off.flags) {
+		cq->kflags = cq->ring_ptr + p->cq_off.flags;
+	}
+
+	sq->ring_mask = *sq->kring_mask;
+	sq->ring_entries = *sq->kring_entries;
+	cq->ring_mask = *cq->kring_mask;
+	cq->ring_entries = *cq->kring_entries;
+}
+
 static void io_uring_unmap_rings(struct io_uring_sq *sq, struct io_uring_cq *cq) {
     if (sq->ring_ptr != NULL) {
         munmap(sq->ring_ptr, sq->ring_sz);
@@ -96,7 +135,6 @@ static void io_uring_unmap_rings(struct io_uring_sq *sq, struct io_uring_cq *cq)
 static int io_uring_mmap(int fd, struct io_uring_params *p, struct io_uring_sq *sq, struct io_uring_cq *cq) {
     size_t size;
     int ret;
-    int index;
 
     sq->ring_sz = p->sq_off.array + p->sq_entries * sizeof(unsigned);
     cq->ring_sz = p->cq_off.cqes + p->cq_entries * sizeof(struct io_uring_cqe);
@@ -123,13 +161,6 @@ static int io_uring_mmap(int fd, struct io_uring_params *p, struct io_uring_sq *
         }
     }
 
-    sq->khead = sq->ring_ptr + p->sq_off.head;
-    sq->ktail = sq->ring_ptr + p->sq_off.tail;
-    sq->kring_mask = sq->ring_ptr + p->sq_off.ring_mask;
-    sq->kring_entries = sq->ring_ptr + p->sq_off.ring_entries;
-    sq->kflags = sq->ring_ptr + p->sq_off.flags;
-    sq->kdropped = sq->ring_ptr + p->sq_off.dropped;
-    sq->array = sq->ring_ptr + p->sq_off.array;
     size = p->sq_entries * sizeof(struct io_uring_sqe);
     sq->sqes = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_SQES);
     if (sq->sqes == MAP_FAILED) {
@@ -137,18 +168,7 @@ static int io_uring_mmap(int fd, struct io_uring_params *p, struct io_uring_sq *
         goto err;
     }
 
-    cq->khead = cq->ring_ptr + p->cq_off.head;
-    cq->ktail = cq->ring_ptr + p->cq_off.tail;
-    cq->kring_mask = cq->ring_ptr + p->cq_off.ring_mask;
-    cq->kring_entries = cq->ring_ptr + p->cq_off.ring_entries;
-    cq->koverflow = cq->ring_ptr + p->cq_off.overflow;
-    cq->cqes = cq->ring_ptr + p->cq_off.cqes;
-
-    if (!(p->flags & IORING_SETUP_NO_SQARRAY)) {
-        for (index = 0; index < p->sq_entries; index++) {
-            sq->array[index] = index;
-        }
-    }
+    io_uring_setup_ring_pointers(p, sq, cq);
 
     return 0;
 err:
@@ -333,6 +353,12 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
         return NULL;
     }
 
+    if (!(p.flags & IORING_SETUP_NO_SQARRAY)) {
+        for (int index = 0; index < p.sq_entries; index++) {
+            io_uring_ring.sq.array[index] = index;
+        }
+    }
+
     jlong completionArrayElements[] = {
         (jlong)io_uring_ring.cq.khead,
         (jlong)io_uring_ring.cq.ktail,
@@ -392,14 +418,18 @@ static jint netty_io_uring_register_ring_fds(JNIEnv *env, jclass clazz, jint rin
 
 static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
                                            jint ringFd, jint nentries,
-                                           jshort bgid, jint flags) {
+                                           jshort bgid, jint flags, jboolean hugePages) {
     struct io_uring_buf_ring *br;
     struct io_uring_buf_reg reg;
     size_t ring_size;
 
     memset(&reg, 0, sizeof(reg));
     ring_size = nentries * sizeof(struct io_uring_buf);
-    br = mmap(NULL, ring_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    if (hugePages == JNI_TRUE) {
+        br = mmap(NULL, ring_size, PROT_READ|PROT_WRITE,MAP_PRIVATE|MAP_HUGETLB|MAP_HUGE_2MB|MAP_ANONYMOUS, -1, 0);
+    } else {
+        br = mmap(NULL, ring_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+    }
     if (br == MAP_FAILED) {
         return -errno;
     }
@@ -824,7 +854,7 @@ static const JNINativeMethod method_table[] = {
     {"cmsghdrData", "(J)J", (void *) netty_io_uring_cmsghdrData},
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
     {"getFd0", "(Ljava/lang/Object;)I", (void *) netty_io_uring_getFd0 },
-    {"ioUringRegisterBufRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring },
+    {"ioUringRegisterBufRing", "(IISIZ)J", (void *) netty_io_uring_register_buf_ring },
     {"ioUringUnRegisterBufRing", "(IJIS)I", (void *) netty_io_uring_unregister_buf_ring },
     {"ioUringBufRingSize", "(I)I", (void *) netty_io_uring_buf_ring_size }
 };

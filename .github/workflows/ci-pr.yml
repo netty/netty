@@ -220,16 +220,35 @@ jobs:
           - setup: linux-x86_64-java11-boringssl-jdk8-tests
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-boringssl-static-jdk8-tests"
+          - setup: linux-x86_64-java11-awslc
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml build"
+            docker-compose-install-tcnative: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run install-tcnative"
+            docker-compose-update-tcnative-version: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run update-tcnative-version"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run build"
 
     name: ${{ matrix.setup }} build
     needs: verify-pr
+    defaults:
+      run:
+        working-directory: netty
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: netty
+
+      - uses: actions/checkout@v4
+        if: ${{ endsWith(matrix.setup, '-awslc') }}
+        with:
+          repository: netty/netty-tcnative
+          ref: main
+          path: netty-tcnative
+          fetch-depth: 0
 
       # Cache .m2/repository
       - name: Cache local Maven repository
         uses: actions/cache@v4
         continue-on-error: true
+        if: ${{ !endsWith(matrix.setup, '-awslc') }}
         with:
           path: ~/.m2/repository
           key: cache-maven-${{ hashFiles('**/pom.xml') }}
@@ -237,8 +256,27 @@ jobs:
             cache-maven-${{ hashFiles('**/pom.xml') }}
             cache-maven-
 
+      - name: Cache local Maven repository
+        uses: actions/cache@v4
+        continue-on-error: true
+        if: ${{ endsWith(matrix.setup, '-awslc') }}
+        with:
+          path: ~/.m2-al2023/repository
+          key: cache-maven-al2023-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            cache-maven-al2023-${{ hashFiles('**/pom.xml') }}
+            cache-maven-al2023-
+
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}
+
+      - name: Install custom netty-tcnative
+        if: ${{ endsWith(matrix.setup, '-awslc') }}
+        run: docker compose ${{ matrix.docker-compose-install-tcnative }}
+
+      - name: Update netty-tcnative version
+        if: ${{ endsWith(matrix.setup, '-awslc') }}
+        run: docker compose ${{ matrix.docker-compose-update-tcnative-version }}
 
       - name: Build project with leak detection
         run: docker compose ${{ matrix.docker-compose-run }} | tee build-leak.output
@@ -250,7 +288,7 @@ jobs:
         run: ./.github/scripts/check_leak.sh build-leak.output
 
       - name: print JVM thread dumps when cancelled
-        uses: ./.github/actions/thread-dump-jvms
+        uses: ./netty/.github/actions/thread-dump-jvms
         if: ${{ cancelled() }}
 
       - name: Upload Test Results
@@ -258,17 +296,17 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.setup }}
-          path: '**/target/surefire-reports/TEST-*.xml'
+          path: 'netty/**/target/surefire-reports/TEST-*.xml'
 
       - uses: actions/upload-artifact@v4
         if: ${{ failure() || cancelled() }}
         with:
           name: build-${{ matrix.setup }}-target
           path: |
-            **/target/surefire-reports/
-            **/target/autobahntestsuite-reports/
-            **/hs_err*.log
-            **/core.*
+            netty/**/target/surefire-reports/
+            netty/**/target/autobahntestsuite-reports/
+            netty/**/hs_err*.log
+            netty/**/core.*
 
   build-pr-macos:
     strategy:

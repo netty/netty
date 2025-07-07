@@ -74,6 +74,7 @@ public final class OpenSsl {
     private static final boolean SUPPORTS_OCSP;
     private static final boolean TLSV13_SUPPORTED;
     private static final boolean IS_BORINGSSL;
+    private static final boolean IS_AWSLC;
     private static final Set<String> CLIENT_DEFAULT_PROTOCOLS;
     private static final Set<String> SERVER_DEFAULT_PROTOCOLS;
 
@@ -177,6 +178,7 @@ public final class OpenSsl {
             }
 
             IS_BORINGSSL = "BoringSSL".equals(versionString());
+            IS_AWSLC = versionString().startsWith("AWS-LC");
             if (IS_BORINGSSL) {
                 EXTRA_SUPPORTED_TLS_1_3_CIPHERS = new String [] { "TLS_AES_128_GCM_SHA256",
                         "TLS_AES_256_GCM_SHA384" ,
@@ -284,7 +286,7 @@ public final class OpenSsl {
                             try {
                                 boolean propertySet = SystemPropertyUtil.contains(
                                         "io.netty.handler.ssl.openssl.useKeyManagerFactory");
-                                if (!IS_BORINGSSL) {
+                                if (!(IS_BORINGSSL || IS_AWSLC)) {
                                     useKeyManagerFactory = SystemPropertyUtil.getBoolean(
                                             "io.netty.handler.ssl.openssl.useKeyManagerFactory", true);
 
@@ -298,7 +300,7 @@ public final class OpenSsl {
                                     if (propertySet) {
                                         logger.info("System property " +
                                                 "'io.netty.handler.ssl.openssl.useKeyManagerFactory'" +
-                                                " is deprecated and will be ignored when using BoringSSL");
+                                                " is deprecated and will be ignored when using BoringSSL or AWS-LC");
                                     }
                                 }
                             } catch (Throwable ignore) {
@@ -469,6 +471,7 @@ public final class OpenSsl {
             TLSV13_SUPPORTED = false;
             supportedProtocolsPacked = 0;
             IS_BORINGSSL = false;
+            IS_AWSLC = false;
             EXTRA_SUPPORTED_TLS_1_3_CIPHERS = EmptyArrays.EMPTY_STRINGS;
             EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING = StringUtil.EMPTY_STRING;
             NAMED_GROUPS = DEFAULT_NAMED_GROUPS;
@@ -754,7 +757,7 @@ public final class OpenSsl {
                 return true;
             }
             // Check for options that are only supported by BoringSSL atm.
-            if (isBoringSSL()) {
+            if (isBoringSSL() || isAWSLC()) {
                 return option == OpenSslContextOption.ASYNC_PRIVATE_KEY_METHOD ||
                         option == OpenSslContextOption.PRIVATE_KEY_METHOD ||
                         option == OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS ||
@@ -850,5 +853,9 @@ public final class OpenSsl {
 
     static boolean isBoringSSL() {
         return IS_BORINGSSL;
+    }
+
+    static boolean isAWSLC() {
+        return IS_AWSLC;
     }
 }

@@ -226,6 +226,7 @@ final class Native {
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
     static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
+    static final int IORING_SETUP_NO_SQARRAY = 1 << 16;
     static final int IORING_CQE_BUFFER_SHIFT = 16;
 
     static final short IORING_POLL_ADD_MULTI = 1 << 0;
@@ -351,6 +352,11 @@ final class Native {
         if (IoUring.isSetupDeferTaskrunSupported()) {
             flags |= Native.IORING_SETUP_DEFER_TASKRUN;
         }
+        // liburing uses IORING_SETUP_NO_SQARRAY by default these days, we should do the same by default if possible.
+        // See https://github.com/axboe/liburing/releases/tag/liburing-2.6
+        if (IoUring.isIoringSetupNoSqarraySupported()) {
+            flags  |= Native.IORING_SETUP_NO_SQARRAY;
+        }
         return flags;
     }
 
@@ -453,11 +459,12 @@ final class Native {
     static boolean isRegisterBufferRingSupported(int ringFd, int flags) {
         int entries = 2;
         short bgid = 1;
-        long result = ioUringRegisterBufRing(ringFd, entries, bgid, flags);
+        long result = ioUringRegisterBufRing(ringFd, entries, bgid, flags, false);
         if (result >= 0) {
             ioUringUnRegisterBufRing(ringFd, result, entries, bgid);
             return true;
         }
+
         // This is not supported and so will return -EINVAL
         return false;
     }
@@ -515,7 +522,7 @@ final class Native {
     static native int ioUringRegisterEnableRings(int ringFd);
     static native int ioUringRegisterRingFds(int ringFds);
 
-    static native long ioUringRegisterBufRing(int ringFd, int entries, short bufferGroup, int flags);
+    static native long ioUringRegisterBufRing(int ringFd, int entries, short bufferGroup, int flags, boolean hugePages);
     static native int ioUringUnRegisterBufRing(int ringFd, long ioUringBufRingAddr, int entries, short bufferGroupId);
     static native int ioUringBufRingSize(int entries);
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
