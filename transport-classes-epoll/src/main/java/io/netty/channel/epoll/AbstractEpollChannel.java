@@ -56,6 +56,9 @@ import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
 import java.util.concurrent.TimeUnit;
 
+import static io.netty.channel.epoll.EpollIoOps.EPOLL_ERR_IN_MASK;
+import static io.netty.channel.epoll.EpollIoOps.EPOLL_ERR_OUT_MASK;
+import static io.netty.channel.epoll.EpollIoOps.EPOLL_RDHUP_MASK;
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -449,7 +452,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         @Override
         public void handle(IoRegistration registration, IoEvent event) {
             EpollIoEvent epollEvent = (EpollIoEvent) event;
-            EpollIoOps epollOps = epollEvent.ops();
+            int ops = epollEvent.ops().value;
 
             // Don't change the ordering of processing EPOLLOUT | EPOLLRDHUP / EPOLLIN if you're not 100%
             // sure about it!
@@ -464,7 +467,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             // In either case epollOutReady() will do the correct thing (finish connecting, or fail
             // the connection).
             // See https://github.com/netty/netty/issues/3848
-            if (epollOps.contains(EpollIoOps.EPOLLERR) || epollOps.contains(EpollIoOps.EPOLLOUT)) {
+            if ((ops & EPOLL_ERR_OUT_MASK) != 0) {
                 // Force flush of data as the epoll is writable again
                 epollOutReady();
             }
@@ -474,7 +477,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             //
             // If EPOLLIN or EPOLLERR was received and the channel is still open call epollInReady(). This will
             // try to read from the underlying file descriptor and so notify the user about the error.
-            if (epollOps.contains(EpollIoOps.EPOLLERR) || epollOps.contains(EpollIoOps.EPOLLIN)) {
+            if ((ops & EPOLL_ERR_IN_MASK) != 0) {
                 // The Channel is still open and there is something to read. Do it now.
                 epollInReady();
             }
@@ -482,7 +485,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             // Check if EPOLLRDHUP was set, this will notify us for connection-reset in which case
             // we may close the channel directly or try to read more data depending on the state of the
             // Channel and als depending on the AbstractEpollChannel subtype.
-            if (epollOps.contains(EpollIoOps.EPOLLRDHUP)) {
+            if ((ops & EPOLL_RDHUP_MASK) != 0) {
                 epollRdHupReady();
             }
         }

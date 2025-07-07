@@ -21,8 +21,6 @@ import jdk.jfr.MemoryAddress;
 
 @SuppressWarnings("Since15")
 abstract class AbstractBufferEvent extends AbstractAllocatorEvent {
-    @Description("The type of allocator this event is for")
-    public AllocatorType allocatorType;
     @DataAmount
     @Description("Configured buffer capacity")
     public int size;
@@ -44,6 +42,6 @@ abstract class AbstractBufferEvent extends AbstractAllocatorEvent {
         maxFastCapacity = buf.maxFastWritableBytes() + buf.writerIndex();
         maxCapacity = buf.maxCapacity();
         direct = buf.isDirect();
-        address = getMemoryAddressOf(buf);
+        address = buf._memoryAddress();
     }
 }
