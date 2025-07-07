@@ -70,10 +70,6 @@
 #define MAP_HUGE_2MB    (21 << MAP_HUGE_SHIFT)
 #endif
 
-#ifndef MAP_HUGE_1GB
-#define MAP_HUGE_1GB    (30 << MAP_HUGE_SHIFT)
-#endif
-
 #define NATIVE_CLASSNAME "io/netty/channel/uring/Native"
 #define STATICALLY_CLASSNAME "io/netty/channel/uring/NativeStaticallyReferencedJniMethods"
 #define LIBRARYNAME "netty_transport_native_io_uring42"
