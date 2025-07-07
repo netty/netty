@@ -61,6 +61,48 @@ class AdaptivePoolingAllocatorTest implements Supplier<String> {
         assertSizeBucket(15, 8 * 1024 * 1024);
     }
 
+    @Test
+    void sizeClassComputations() throws Exception {
+        final int[] sizeClasses = {
+                32,
+                64,
+                128,
+                256,
+                512,
+                640, // 512 + 128
+                1024,
+                1152, // 1024 + 128
+                2048,
+                2304, // 2048 + 256
+                4096,
+                4352, // 4096 + 256
+                8192,
+                8704, // 8192 + 512
+                16384,
+                16896, // 16384 + 512
+        };
+        for (int sizeClassIndex = 0; sizeClassIndex < sizeClasses.length; sizeClassIndex++) {
+            final int previousSizeIncluded = sizeClassIndex == 0? 0 : (sizeClasses[sizeClassIndex - 1] + 1);
+            assertSizeClassOf(sizeClassIndex, previousSizeIncluded, sizeClasses[sizeClassIndex]);
+        }
+        // beyond the last size class, we return the size class array's length
+        assertSizeClassOf(sizeClasses.length, sizeClasses[sizeClasses.length - 1] + 1,
+                          sizeClasses[sizeClasses.length - 1] + 1);
+    }
+
+    private static void assertSizeClassOf(int expectedSizeClass, int previousSizeIncluded, int maxSizeIncluded) {
+        for (int size = previousSizeIncluded; size <= maxSizeIncluded; size++) {
+            final int sizeToTest = size;
+            Supplier<String> messageSupplier = new Supplier<String>() {
+                @Override
+                public String get() {
+                    return "size = " + sizeToTest;
+                }
+            };
+            assertEquals(expectedSizeClass, AdaptivePoolingAllocator.sizeClassIndexOf(size), messageSupplier);
+        }
+    }
+
     private void assertSizeBucket(int expectedSizeBucket, int maxSizeIncluded) {
         for (; i <= maxSizeIncluded; i++) {
             assertEquals(expectedSizeBucket, AdaptivePoolingAllocator.sizeToBucket(i), this);
