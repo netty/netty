@@ -77,13 +77,13 @@ public final class OpenSsl {
     private static final Set<String> CLIENT_DEFAULT_PROTOCOLS;
     private static final Set<String> SERVER_DEFAULT_PROTOCOLS;
 
-    private static final int SSL_V2_HELLO  = 1;
-    private static final int SSL_V2        = 1 << 1;
-    private static final int SSL_V3        = 1 << 2;
-    private static final int TLS_V1        = 1 << 3;
-    private static final int TLS_V1_1      = 1 << 4;
-    private static final int TLS_V1_2      = 1 << 5;
-    private static final int TLS_V1_3      = 1 << 6;
+    private static final int SSL_V2_HELLO = 1;
+    private static final int SSL_V2 = 1 << 1;
+    private static final int SSL_V3 = 1 << 2;
+    private static final int TLS_V1 = 1 << 3;
+    private static final int TLS_V1_1 = 1 << 4;
+    private static final int TLS_V1_2 = 1 << 5;
+    private static final int TLS_V1_3 = 1 << 6;
     private static final int supportedProtocolsPacked;
 
     static final String[] EXTRA_SUPPORTED_TLS_1_3_CIPHERS;
