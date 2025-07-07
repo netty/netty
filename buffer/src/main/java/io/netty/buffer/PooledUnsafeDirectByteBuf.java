@@ -16,9 +16,8 @@
 
 package io.netty.buffer;
 
-import io.netty.util.internal.ObjectPool;
+import io.netty.util.Recycler;
 import io.netty.util.internal.ObjectPool.Handle;
-import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -27,13 +26,14 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 final class PooledUnsafeDirectByteBuf extends PooledByteBuf<ByteBuffer> {
-    private static final ObjectPool<PooledUnsafeDirectByteBuf> RECYCLER = ObjectPool.newPool(
-            new ObjectCreator<PooledUnsafeDirectByteBuf>() {
-        @Override
-        public PooledUnsafeDirectByteBuf newObject(Handle<PooledUnsafeDirectByteBuf> handle) {
-            return new PooledUnsafeDirectByteBuf(handle, 0);
-        }
-    });
+
+    private static final Recycler<PooledUnsafeDirectByteBuf> RECYCLER =
+            new Recycler<PooledUnsafeDirectByteBuf>() {
+                @Override
+                protected PooledUnsafeDirectByteBuf newObject(Handle<PooledUnsafeDirectByteBuf> handle) {
+                    return new PooledUnsafeDirectByteBuf(handle, 0);
+                }
+            };
 
     static PooledUnsafeDirectByteBuf newInstance(int maxCapacity) {
         PooledUnsafeDirectByteBuf buf = RECYCLER.get();

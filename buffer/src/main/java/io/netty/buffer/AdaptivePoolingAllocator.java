@@ -19,6 +19,7 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
+import io.netty.util.Recycler;
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocal;
@@ -762,13 +763,12 @@ final class AdaptivePoolingAllocator {
         }
         private static final Chunk MAGAZINE_FREED = new Chunk();
 
-        private static final ObjectPool<AdaptiveByteBuf> EVENT_LOOP_LOCAL_BUFFER_POOL = ObjectPool.newPool(
-                new ObjectPool.ObjectCreator<AdaptiveByteBuf>() {
-                    @Override
-                    public AdaptiveByteBuf newObject(ObjectPool.Handle<AdaptiveByteBuf> handle) {
-                        return new AdaptiveByteBuf(handle);
-                    }
-                });
+        private static final Recycler<AdaptiveByteBuf> EVENT_LOOP_LOCAL_BUFFER_POOL = new Recycler<AdaptiveByteBuf>() {
+            @Override
+            protected AdaptiveByteBuf newObject(Handle<AdaptiveByteBuf> handle) {
+                return new AdaptiveByteBuf(handle);
+            }
+        };
 
         private Chunk current;
         @SuppressWarnings("unused") // updated via NEXT_IN_LINE

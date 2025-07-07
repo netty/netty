@@ -18,14 +18,13 @@ package io.netty.channel;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
+import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.OrderedEventExecutor;
-import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectPool.Handle;
-import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PromiseNotificationUtil;
 import io.netty.util.internal.StringUtil;
@@ -1082,12 +1081,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     static final class WriteTask implements Runnable {
-        private static final ObjectPool<WriteTask> RECYCLER = ObjectPool.newPool(new ObjectCreator<WriteTask>() {
+        private static final Recycler<WriteTask> RECYCLER = new Recycler<WriteTask>() {
             @Override
-            public WriteTask newObject(Handle<WriteTask> handle) {
+            protected WriteTask newObject(Handle<WriteTask> handle) {
                 return new WriteTask(handle);
             }
-        });
+        };
 
         static WriteTask newInstance(AbstractChannelHandlerContext ctx,
                 Object msg, ChannelPromise promise, boolean flush) {

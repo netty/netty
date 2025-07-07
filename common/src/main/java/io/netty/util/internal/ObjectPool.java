@@ -50,6 +50,7 @@ public abstract class ObjectPool<T> {
      *
      * @param <T> the type of the pooled object
      */
+    @Deprecated
     public interface ObjectCreator<T> {
 
         /**
@@ -65,10 +66,12 @@ public abstract class ObjectPool<T> {
      * Creates a new {@link ObjectPool} which will use the given {@link ObjectCreator} to create the {@link Object}
      * that should be pooled.
      */
+    @Deprecated
     public static <T> ObjectPool<T> newPool(final ObjectCreator<T> creator) {
         return new RecyclerObjectPool<T>(ObjectUtil.checkNotNull(creator, "creator"));
     }
 
+    @Deprecated
     private static final class RecyclerObjectPool<T> extends ObjectPool<T> {
         private final Recycler<T> recycler;
 
