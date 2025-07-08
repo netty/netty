@@ -55,7 +55,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     private static final Logger logger = LoggerFactory.getLogger(SocketSslClientRenegotiateTest.class);
@@ -126,10 +126,10 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     @ParameterizedTest(name = "{index}: serverEngine = {0}, clientEngine = {1}, delegate = {2}")
     @MethodSource("data")
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testSslRenegotiationRejected(SslContext serverCtx, SslContext clientCtx, boolean delegate,
-                                             TestInfo testInfo) throws Throwable {
-        // BoringSSL does not support renegotiation intentionally.
-        assumeFalse("BoringSSL".equals(OpenSsl.versionString()) || OpenSsl.versionString().startsWith("AWS-LC"));
+    public void testSslRenegotiationRejected(final SslContext serverCtx, final SslContext clientCtx,
+                                             final boolean delegate, TestInfo testInfo) throws Throwable {
+        assumeTrue(OpenSsl.isRenegotiationSupported());
+        assumeTrue(OpenSsl.isAvailable());
         run(testInfo, (sb, cb) -> testSslRenegotiationRejected(sb, cb, serverCtx, clientCtx, delegate));
     }
 
