@@ -17,10 +17,13 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 
+import java.util.function.Consumer;
+
 /**
  * Allocator that is responsible to allocate buffers for a buffer ring.
  */
 public interface IoUringBufferRingAllocator {
+
     /**
      * Creates a new receive buffer to use by the buffer ring. The returned {@link ByteBuf} must be direct.
      */
@@ -33,4 +36,17 @@ public interface IoUringBufferRingAllocator {
      * @param actual     the number of bytes that could be read.
      */
     void lastBytesRead(int attempted, int actual);
+
+    /**
+     * Fill in {@code num} of {@link ByteBuf}s.
+     * <strong>Important:</strong> The {@link Consumer} MUST not escape this method.
+     *
+     * @param consumer  the {@link Consumer} that will consume the buffers.
+     * @param num       the number of buffers that are passed to {@link Consumer#accept(Object)}.
+     */
+    default void allocateBatch(Consumer<ByteBuf> consumer, int num) {
+        for (int i = 0; i < num; i++) {
+            consumer.accept(allocate());
+        }
+    }
 }
