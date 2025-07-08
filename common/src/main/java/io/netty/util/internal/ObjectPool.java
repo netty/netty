@@ -29,7 +29,10 @@ public abstract class ObjectPool<T> {
     /**
      * Get a {@link Object} from the {@link ObjectPool}. The returned {@link Object} may be created via
      * {@link ObjectCreator#newObject(Handle)} if no pooled {@link Object} is ready to be reused.
+     *
+     * @deprecated For removal. Please use {@link Recycler#get()} instead.
      */
+    @Deprecated
     public abstract T get();
 
     /**
@@ -49,6 +52,8 @@ public abstract class ObjectPool<T> {
      * it can be re-used.
      *
      * @param <T> the type of the pooled object
+     *
+     * @deprecated For removal. Please use {@link Recycler())} instead.
      */
     @Deprecated
     public interface ObjectCreator<T> {
@@ -65,6 +70,8 @@ public abstract class ObjectPool<T> {
     /**
      * Creates a new {@link ObjectPool} which will use the given {@link ObjectCreator} to create the {@link Object}
      * that should be pooled.
+     *
+     * @deprecated For removal. Please use {@link Recycler())} instead.
      */
     @Deprecated
     public static <T> ObjectPool<T> newPool(final ObjectCreator<T> creator) {
