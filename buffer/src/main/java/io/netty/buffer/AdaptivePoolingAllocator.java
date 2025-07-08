@@ -161,6 +161,7 @@ final class AdaptivePoolingAllocator {
         int lastIndex = 0;
         for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
             int sizeClass = SIZE_CLASSES[i];
+            //noinspection ConstantValue
             assert (sizeClass & 5) == 0 : "Size class must be a multiple of 32";
             int sizeIndex = sizeIndexOf(sizeClass);
             Arrays.fill(SIZE_INDEXES, lastIndex + 1, sizeIndex + 1, (byte) i);
@@ -263,7 +264,7 @@ final class AdaptivePoolingAllocator {
 
     private static int sizeIndexOf(final int size) {
         // this is aligning the size to the next multiple of 32 and dividing by 32 to get the size index.
-        return (size + 31) >> 5;
+        return size + 31 >> 5;
     }
 
     static int sizeClassIndexOf(int size) {
@@ -274,11 +275,8 @@ final class AdaptivePoolingAllocator {
         return SIZE_CLASSES_COUNT;
     }
 
-    private static int binarySearchInsertionPoint(int index) {
-        if (index < 0) {
-            index = -(index + 1);
-        }
-        return index;
+    static int[] getSizeClasses() {
+        return SIZE_CLASSES.clone();
     }
 
     private AdaptiveByteBuf allocateFallback(int size, int maxCapacity, Thread currentThread,
@@ -671,6 +669,13 @@ final class AdaptivePoolingAllocator {
         static int sizeToBucket(int size) {
             int index = binarySearchInsertionPoint(Arrays.binarySearch(HISTO_BUCKETS, size));
             return index >= HISTO_BUCKETS.length ? HISTO_BUCKETS.length - 1 : index;
+        }
+
+        private static int binarySearchInsertionPoint(int index) {
+            if (index < 0) {
+                index = -(index + 1);
+            }
+            return index;
         }
 
         static int bucketToSize(int sizeBucket) {
