@@ -92,12 +92,22 @@ public class IoUringBufferRingTest {
         }
         final BlockingQueue<ByteBuf> bufferSyncer = new LinkedBlockingQueue<>();
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
-        IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
-                (short) 1, (short) 2, 2, incremental, new IoUringFixedBufferRingAllocator(1024));
+        IoUringBufferRingConfig bufferRingConfig =
+                IoUringBufferRingConfig.builder()
+                        .bufferGroupId((short) 1)
+                        .bufferRingSize((short) 2)
+                        .batchSize(2).incremental(incremental)
+                        .allocator(new IoUringFixedBufferRingAllocator(1024))
+                        .build();
 
-        IoUringBufferRingConfig bufferRingConfig1 = new IoUringBufferRingConfig(
-                (short) 2, (short) 16, 8, incremental, new IoUringFixedBufferRingAllocator(1024)
-        );
+        IoUringBufferRingConfig bufferRingConfig1 =
+                IoUringBufferRingConfig.builder()
+                        .bufferGroupId((short) 2)
+                        .bufferRingSize((short) 16)
+                        .batchSize(8)
+                        .incremental(incremental)
+                        .allocator(new IoUringFixedBufferRingAllocator(1024))
+                        .build();
         ioUringIoHandlerConfiguration.setBufferRingConfig(bufferRingConfig, bufferRingConfig1);
 
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1,
