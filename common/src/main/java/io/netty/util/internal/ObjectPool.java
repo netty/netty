@@ -53,7 +53,7 @@ public abstract class ObjectPool<T> {
      *
      * @param <T> the type of the pooled object
      *
-     * @deprecated For removal. Please use {@link Recycler())} instead.
+     * @deprecated For removal. Please use {@link Recycler()} instead.
      */
     @Deprecated
     public interface ObjectCreator<T> {
@@ -71,7 +71,7 @@ public abstract class ObjectPool<T> {
      * Creates a new {@link ObjectPool} which will use the given {@link ObjectCreator} to create the {@link Object}
      * that should be pooled.
      *
-     * @deprecated For removal. Please use {@link Recycler())} instead.
+     * @deprecated For removal. Please use {@link Recycler()} instead.
      */
     @Deprecated
     public static <T> ObjectPool<T> newPool(final ObjectCreator<T> creator) {
