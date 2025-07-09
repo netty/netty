@@ -139,18 +139,18 @@ public class SslContextBuilderTest {
 
     @Test
     public void testUnsupportedPrivateKeyFailsFastForServer() {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         testUnsupportedPrivateKeyFailsFast(true);
     }
 
     @Test
     public void testUnsupportedPrivateKeyFailsFastForClient() {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         testUnsupportedPrivateKeyFailsFast(false);
     }
 
     private static void testUnsupportedPrivateKeyFailsFast(boolean server) {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         String cert = "-----BEGIN CERTIFICATE-----\n" +
                 "MIICODCCAY2gAwIBAgIEXKTrajAKBggqhkjOPQQDBDBUMQswCQYDVQQGEwJVUzEM\n" +
                 "MAoGA1UECAwDTi9hMQwwCgYDVQQHDANOL2ExDDAKBgNVBAoMA04vYTEMMAoGA1UE\n" +
