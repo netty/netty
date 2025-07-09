@@ -1147,6 +1147,7 @@ public class EmbeddedChannel extends AbstractChannel {
          */
         public Builder handlers(ChannelHandler... handlers) {
             this.handlers = Objects.requireNonNull(handlers, "handlers");
+            this.handler = null;
             return this;
         }
 
