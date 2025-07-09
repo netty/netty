@@ -26,7 +26,13 @@ permissions:
   contents: read
 
 env:
-  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+  MAVEN_OPTS: -Xmx6g -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
+# Cancel running jobs when a new push happens to the same branch as otherwise it will
+# tie up too many resources without providing much value.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify-pr:
@@ -58,10 +64,10 @@ jobs:
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
-        if: cancelled()
+        if: ${{ cancelled() }}
 
   build-pr-windows:
-    runs-on: windows-2019
+    runs-on: windows-2022
     name: windows-x86_64-java22
     needs: verify-pr
     steps:
@@ -89,17 +95,17 @@ jobs:
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
-        if: cancelled()
+        if: ${{ cancelled() }}
 
       - name: Upload Test Results
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: test-results-windows-x86_64-java22-boringssl
           path: '**/target/surefire-reports/TEST-*.xml'
 
       - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
+        if: ${{ failure() || cancelled() }}
         with:
           name: build-pr-windows-target
           path: |
@@ -230,17 +236,17 @@ jobs:
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms
-        if: cancelled()
+        if: ${{ cancelled() }}
 
       - name: Upload Test Results
-        if: always()
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: test-results-${{ matrix.setup }}
           path: '**/target/surefire-reports/TEST-*.xml'
 
       - uses: actions/upload-artifact@v4
-        if: ${{ failure() }}
+        if: ${{ failure() || cancelled() }}
         with:
           name: build-${{ matrix.setup }}-target
           path: |
