@@ -195,7 +195,7 @@ final class IoUringBufferRing {
         ByteBuf buffer = byteBuf.retainedSlice(byteBuf.writerIndex(), read);
         byteBuf.writerIndex(byteBuf.writerIndex() + read);
 
-        if (incremental && more && byteBuf.writableBytes() > read) {
+        if (incremental && more && byteBuf.isWritable()) {
             // The buffer will be used later again, just slice out what we did read so far.
             return buffer;
         }

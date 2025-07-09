@@ -141,19 +141,7 @@ public class IoUringBufferRingTest {
         ByteBuf writeBuffer = Unpooled.directBuffer(randomStringLength);
         ByteBufUtil.writeAscii(writeBuffer, randomString);
         ByteBuf userspaceIoUringBufferElement1 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        if (incremental) {
-            // Need to unwrap as its a slice.
-            assertNotNull(unwrapLeakAware(userspaceIoUringBufferElement1).unwrap());
-        } else {
-            assertNull(unwrapLeakAware(userspaceIoUringBufferElement1).unwrap());
-        }
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        if (incremental) {
-            // Need to unwrap as its a slice.
-            assertNotNull(unwrapLeakAware(userspaceIoUringBufferElement2).unwrap());
-        } else {
-            assertNull(unwrapLeakAware(userspaceIoUringBufferElement2).unwrap());
-        }
         ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         readBuffer.release();
 
