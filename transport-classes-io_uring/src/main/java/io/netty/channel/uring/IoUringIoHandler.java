@@ -169,7 +169,6 @@ public final class IoUringIoHandler implements IoHandler {
         if (closeCompleted) {
             return 0;
         }
-        int processedPerRun = 0;
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
         CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
         if (!completionQueue.hasCompletions() && context.canBlock()) {
@@ -182,21 +181,7 @@ public final class IoUringIoHandler implements IoHandler {
             // Even if we have some completions already pending we can still try to even fetch more.
             submitAndClearNow(submissionQueue);
         }
-        for (;;) {
-            // we might call submitAndRunNow() while processing stuff in the completionArray we need to
-            // add the processed completions to processedPerRun.
-            int processed = drainAndProcessAll(completionQueue, this::handle);
-            processedPerRun += processed;
-
-            // Let's submit again.
-            // If we were not able to submit anything and there was nothing left in the completionBuffer we will
-            // break out of the loop and return to the caller.
-            if (submitAndClearNow(submissionQueue) == 0 && processed == 0) {
-                break;
-            }
-        }
-
-        return processedPerRun;
+        return drainAndProcessAll(completionQueue, this::handle);
     }
 
     void submitAndRunNow(long udata) {
