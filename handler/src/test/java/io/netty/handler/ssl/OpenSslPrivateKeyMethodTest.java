@@ -38,7 +38,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ThreadLocalRandom;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -66,8 +65,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -372,7 +371,7 @@ public class OpenSslPrivateKeyMethodTest {
                         Throwable clientCause = clientSslHandler.handshakeFuture().await().cause();
                         Throwable serverCause = serverSslHandler.handshakeFuture().await().cause();
                         assertNotNull(clientCause);
-                        assertThat(serverCause, Matchers.instanceOf(SSLHandshakeException.class));
+                        assertInstanceOf(SSLHandshakeException.class, serverCause);
                     } finally {
                         client.close().sync();
                     }

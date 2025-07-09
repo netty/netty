@@ -19,7 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
@@ -37,6 +36,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -75,11 +75,12 @@ public class SocketReadPendingTest extends AbstractSocketTest {
             clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
 
             // 4 bytes means 2 read loops for TestNumReadsRecvByteBufAllocator
-            clientChannel.writeAndFlush(Unpooled.wrappedBuffer(new byte[4]));
+            clientChannel.writeAndFlush(randomBufferType(clientChannel.alloc(), new byte[4], 0, 4));
 
             // 4 bytes means 2 read loops for TestNumReadsRecvByteBufAllocator
             assertTrue(serverInitializer.channelInitLatch.await(5, TimeUnit.SECONDS));
-            serverInitializer.channel.writeAndFlush(Unpooled.wrappedBuffer(new byte[4]));
+            serverInitializer.channel.writeAndFlush(
+                    randomBufferType(serverInitializer.channel.alloc(), new byte[4], 0 , 4));
 
             serverInitializer.channel.read();
             serverInitializer.readPendingHandler.assertAllRead();

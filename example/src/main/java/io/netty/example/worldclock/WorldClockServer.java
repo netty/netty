@@ -33,19 +33,17 @@ public final class WorldClockServer {
 
     public static void main(String[] args) throws Exception {
 
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup();
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
+            b.group(group)
              .channel(NioServerSocketChannel.class)
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new WorldClockServerInitializer(ServerUtil.buildSslContext()));
 
             b.bind(PORT).sync().channel().closeFuture().sync();
         } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 }

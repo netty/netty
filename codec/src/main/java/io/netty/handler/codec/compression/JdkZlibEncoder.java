@@ -76,7 +76,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the default compression level ({@code 6})
+     * Creates a new zlib encoder with a compression level of ({@code 6})
      * and the default wrapper ({@link ZlibWrapper#ZLIB}).
      *
      * @throws CompressionException if failed to initialize zlib
@@ -101,7 +101,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the default compression level ({@code 6})
+     * Creates a new zlib encoder with a compression level of ({@code 6})
      * and the specified wrapper.
      *
      * @throws CompressionException if failed to initialize zlib
@@ -117,12 +117,14 @@ public class JdkZlibEncoder extends ZlibEncoder {
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
      *        best compression.  {@code 0} means no compression.  The default
-     *        compression level is {@code 6}.
+     *        compression level can be set as {@code -1} which correlates to the underlying
+     *        {@link Deflater#DEFAULT_COMPRESSION} level.
      *
      * @throws CompressionException if failed to initialize zlib
      */
     public JdkZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
-        ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
+        ObjectUtil.checkInRange(compressionLevel, Deflater.DEFAULT_COMPRESSION, Deflater.BEST_COMPRESSION,
+                "compressionLevel");
         ObjectUtil.checkNotNull(wrapper, "wrapper");
 
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
@@ -136,7 +138,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the default compression level ({@code 6})
+     * Creates a new zlib encoder with a compression level of ({@code 6})
      * and the specified preset dictionary.  The wrapper is always
      * {@link ZlibWrapper#ZLIB} because it is the only format that supports
      * the preset dictionary.
@@ -158,13 +160,15 @@ public class JdkZlibEncoder extends ZlibEncoder {
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
      *        best compression.  {@code 0} means no compression.  The default
-     *        compression level is {@code 6}.
+     *        compression level can be set as {@code -1} which correlates to the underlying
+     *        {@link Deflater#DEFAULT_COMPRESSION} level.
      * @param dictionary  the preset dictionary
      *
      * @throws CompressionException if failed to initialize zlib
      */
     public JdkZlibEncoder(int compressionLevel, byte[] dictionary) {
-        ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
+        ObjectUtil.checkInRange(compressionLevel, Deflater.DEFAULT_COMPRESSION, Deflater.BEST_COMPRESSION,
+                "compressionLevel");
         ObjectUtil.checkNotNull(dictionary, "dictionary");
 
         wrapper = ZlibWrapper.ZLIB;

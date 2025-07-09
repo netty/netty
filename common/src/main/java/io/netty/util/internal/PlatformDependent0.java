@@ -616,7 +616,6 @@ final class PlatformDependent0 {
     }
 
     private static Throwable explicitNoUnsafeCause0() {
-        boolean explicitProperty = SystemPropertyUtil.contains("io.netty.noUnsafe");
         boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
         logger.debug("-Dio.netty.noUnsafe: {}", noUnsafe);
 
@@ -625,10 +624,7 @@ final class PlatformDependent0 {
         String reason = "io.netty.noUnsafe";
         String unspecified = "<unspecified>";
         String unsafeMemoryAccess = SystemPropertyUtil.get("sun.misc.unsafe.memory.access", unspecified);
-        if (!explicitProperty && unspecified.equals(unsafeMemoryAccess) && javaVersion() >= 24) {
-            reason = "io.netty.noUnsafe=true by default on Java 24+";
-            noUnsafe = true;
-        } else if (!("allow".equals(unsafeMemoryAccess) || unspecified.equals(unsafeMemoryAccess))) {
+        if (!("allow".equals(unsafeMemoryAccess) || unspecified.equals(unsafeMemoryAccess))) {
             reason = "--sun-misc-unsafe-memory-access=" + unsafeMemoryAccess;
             noUnsafe = true;
         }

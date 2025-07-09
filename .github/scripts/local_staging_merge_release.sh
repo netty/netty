@@ -1,6 +1,6 @@
 #!/bin/bash
 # ----------------------------------------------------------------------------
-# Copyright 2021 The Netty Project
+# Copyright 2025 The Netty Project
 #
 # The Netty Project licenses this file to you under the Apache License,
 # version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,6 +14,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 # ----------------------------------------------------------------------------
+
 set -e
 if [ "$#" -lt 2 ]; then
     echo "Expected target directory and at least one local staging directory"
@@ -24,12 +25,10 @@ TARGET=$1
 for ((i=2; i<=$#; i++))
 do
   DIR="${!i}"
-  SUB_DIR=$(ls -d "${DIR}"/* | awk -F / '{print $NF}')
 
-  if [ ! -d "${TARGET}/${SUB_DIR}" ]
+  if [ ! -d "${TARGET}" ]
   then
-      mkdir -p "${TARGET}/${SUB_DIR}"
+      mkdir -p "${TARGET}"
   fi
-  cat "${DIR}"/"${SUB_DIR}"/.index >> "${TARGET}/${SUB_DIR}"/.index
   cp -r "${DIR}"/"${SUB_DIR}"/* "${TARGET}/${SUB_DIR}"/
 done

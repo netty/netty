@@ -661,7 +661,7 @@ public final class HttpUtil {
     private static int validateAsciiStringToken(AsciiString token) {
         byte[] array = token.array();
         for (int i = token.arrayOffset(), len = token.arrayOffset() + token.length(); i < len; i++) {
-            if (!BitSet128.contains(array[i], TOKEN_CHARS_HIGH, TOKEN_CHARS_LOW)) {
+            if (!isValidTokenChar(array[i])) {
                 return i - token.arrayOffset();
             }
         }
@@ -677,92 +677,102 @@ public final class HttpUtil {
     private static int validateCharSequenceToken(CharSequence token) {
         for (int i = 0, len = token.length(); i < len; i++) {
             byte value = (byte) token.charAt(i);
-            if (!BitSet128.contains(value, TOKEN_CHARS_HIGH, TOKEN_CHARS_LOW)) {
+            if (!isValidTokenChar(value)) {
                 return i;
             }
         }
         return -1;
     }
 
-    private static final long TOKEN_CHARS_HIGH;
-    private static final long TOKEN_CHARS_LOW;
-    static {
-        // HEADER
-        // header-field   = field-name ":" OWS field-value OWS
-        //
-        // field-name     = token
-        // token          = 1*tchar
-        //
-        // tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
-        //                    / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
-        //                    / DIGIT / ALPHA
-        //                    ; any VCHAR, except delimiters.
-        //  Delimiters are chosen
-        //   from the set of US-ASCII visual characters not allowed in a token
-        //   (DQUOTE and "(),/:;<=>?@[\]{}")
-        //
-        // COOKIE
-        // cookie-pair       = cookie-name "=" cookie-value
-        // cookie-name       = token
-        // token          = 1*<any CHAR except CTLs or separators>
-        // CTL = <any US-ASCII control character
-        //       (octets 0 - 31) and DEL (127)>
-        // separators     = "(" | ")" | "<" | ">" | "@"
-        //                      | "," | ";" | ":" | "\" | <">
-        //                      | "/" | "[" | "]" | "?" | "="
-        //                      | "{" | "}" | SP | HT
-        //
-        // field-name's token is equivalent to cookie-name's token, we can reuse the tchar mask for both:
-        BitSet128 tokenChars = new BitSet128()
-                .range('0', '9').range('a', 'z').range('A', 'Z') // Alphanumeric.
-                .bits('-', '.', '_', '~') // Unreserved characters.
-                .bits('!', '#', '$', '%', '&', '\'', '*', '+', '^', '`', '|'); // Token special characters.
-        TOKEN_CHARS_HIGH = tokenChars.high();
-        TOKEN_CHARS_LOW = tokenChars.low();
+    // HEADER
+    // header-field   = field-name ":" OWS field-value OWS
+    //
+    // field-name     = token
+    // token          = 1*tchar
+    //
+    // tchar          = "!" / "#" / "$" / "%" / "&" / "'" / "*"
+    //                    / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
+    //                    / DIGIT / ALPHA
+    //                    ; any VCHAR, except delimiters.
+    //  Delimiters are chosen
+    //   from the set of US-ASCII visual characters not allowed in a token
+    //   (DQUOTE and "(),/:;<=>?@[\]{}")
+    //
+    // COOKIE
+    // cookie-pair       = cookie-name "=" cookie-value
+    // cookie-name       = token
+    // token          = 1*<any CHAR except CTLs or separators>
+    // CTL = <any US-ASCII control character
+    //       (octets 0 - 31) and DEL (127)>
+    // separators     = "(" | ")" | "<" | ">" | "@"
+    //                      | "," | ";" | ":" | "\" | <">
+    //                      | "/" | "[" | "]" | "?" | "="
+    //                      | "{" | "}" | SP | HT
+    //
+    // field-name's token is equivalent to cookie-name's token, we can reuse the tchar mask for both:
+
+    //    private static final class BitSet128 {
+    //        private long high;
+    //        private long low;
+    //
+    //        BitSet128 range(char fromInc, char toInc) {
+    //            for (int bit = fromInc; bit <= toInc; bit++) {
+    //                if (bit < 64) {
+    //                    low |= 1L << bit;
+    //                } else {
+    //                    high |= 1L << bit - 64;
+    //                }
+    //            }
+    //            return this;
+    //        }
+    //
+    //        BitSet128 bits(char... bits) {
+    //            for (char bit : bits) {
+    //                if (bit < 64) {
+    //                    low |= 1L << bit;
+    //                } else {
+    //                    high |= 1L << bit - 64;
+    //                }
+    //            }
+    //            return this;
+    //        }
+    //
+    //        long high() {
+    //            return high;
+    //        }
+    //
+    //        long low() {
+    //            return low;
+    //        }
+    //
+    //        static boolean contains(byte bit, long high, long low) {
+    //            if (bit < 0) {
+    //                return false;
+    //            }
+    //            if (bit < 64) {
+    //                return 0 != (low & 1L << bit);
+    //            }
+    //            return 0 != (high & 1L << bit - 64);
+    //        }
+    //    }
+
+    // BitSet128 tokenChars = new BitSet128()
+    //        .range('0', '9').range('a', 'z').range('A', 'Z') // Alphanumeric.
+    //        .bits('-', '.', '_', '~') // Unreserved characters.
+    //        .bits('!', '#', '$', '%', '&', '\'', '*', '+', '^', '`', '|'); // Token special characters.
+
+    //this constants calculated by the above code
+    private static final long TOKEN_CHARS_HIGH = 0x57ffffffc7fffffeL;
+    private static final long TOKEN_CHARS_LOW = 0x3ff6cfa00000000L;
+
+    private static boolean isValidTokenChar(byte bit) {
+        if (bit < 0) {
+            return false;
+        }
+        if (bit < 64) {
+            return 0 != (TOKEN_CHARS_LOW & 1L << bit);
+        }
+        return 0 != (TOKEN_CHARS_HIGH & 1L << bit - 64);
     }
 
-    private static final class BitSet128 {
-        private long high;
-        private long low;
-
-        BitSet128 range(char fromInc, char toInc) {
-            for (int bit = fromInc; bit <= toInc; bit++) {
-                if (bit < 64) {
-                    low |= 1L << bit;
-                } else {
-                    high |= 1L << bit - 64;
-                }
-            }
-            return this;
-        }
-
-        BitSet128 bits(char... bits) {
-            for (char bit : bits) {
-                if (bit < 64) {
-                    low |= 1L << bit;
-                } else {
-                    high |= 1L << bit - 64;
-                }
-            }
-            return this;
-        }
-
-        long high() {
-            return high;
-        }
-
-        long low() {
-            return low;
-        }
-
-        static boolean contains(byte bit, long high, long low) {
-            if (bit < 0) {
-                return false;
-            }
-            if (bit < 64) {
-                return 0 != (low & 1L << bit);
-            }
-            return 0 != (high & 1L << bit - 64);
-        }
-    }
 }
