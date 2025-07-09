@@ -150,10 +150,22 @@ final class AdaptivePoolingAllocator {
             16896, // 16384 + 512
     };
 
+    private static final int SIZE_CLASSES_COUNT = SIZE_CLASSES.length;
+    private static final byte[] SIZE_INDEXES = new byte[(SIZE_CLASSES[SIZE_CLASSES_COUNT - 1] / 32) + 1];
+
     static {
         if (MAGAZINE_BUFFER_QUEUE_CAPACITY < 2) {
             throw new IllegalArgumentException("MAGAZINE_BUFFER_QUEUE_CAPACITY: " + MAGAZINE_BUFFER_QUEUE_CAPACITY
                     + " (expected: >= " + 2 + ')');
+        }
+        int lastIndex = 0;
+        for (int i = 0; i < SIZE_CLASSES_COUNT; i++) {
+            int sizeClass = SIZE_CLASSES[i];
+            //noinspection ConstantValue
+            assert (sizeClass & 5) == 0 : "Size class must be a multiple of 32";
+            int sizeIndex = sizeIndexOf(sizeClass);
+            Arrays.fill(SIZE_INDEXES, lastIndex + 1, sizeIndex + 1, (byte) i);
+            lastIndex = sizeIndex;
         }
     }
 
@@ -232,7 +244,7 @@ final class AdaptivePoolingAllocator {
     private AdaptiveByteBuf allocate(int size, int maxCapacity, Thread currentThread, AdaptiveByteBuf buf) {
         AdaptiveByteBuf allocated = null;
         if (size <= MAX_POOLED_BUF_SIZE) {
-            int index = binarySearchInsertionPoint(Arrays.binarySearch(SIZE_CLASSES, size));
+            final int index = sizeClassIndexOf(size);
             MagazineGroup[] magazineGroups;
             if (!FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals() ||
                     (magazineGroups = threadLocalGroup.get()) == null) {
@@ -250,11 +262,21 @@ final class AdaptivePoolingAllocator {
         return allocated;
     }
 
-    private static int binarySearchInsertionPoint(int index) {
-        if (index < 0) {
-            index = -(index + 1);
+    private static int sizeIndexOf(final int size) {
+        // this is aligning the size to the next multiple of 32 and dividing by 32 to get the size index.
+        return size + 31 >> 5;
+    }
+
+    static int sizeClassIndexOf(int size) {
+        int sizeIndex = sizeIndexOf(size);
+        if (sizeIndex < SIZE_INDEXES.length) {
+            return SIZE_INDEXES[sizeIndex];
         }
-        return index;
+        return SIZE_CLASSES_COUNT;
+    }
+
+    static int[] getSizeClasses() {
+        return SIZE_CLASSES.clone();
     }
 
     private AdaptiveByteBuf allocateFallback(int size, int maxCapacity, Thread currentThread,
@@ -647,6 +669,13 @@ final class AdaptivePoolingAllocator {
         static int sizeToBucket(int size) {
             int index = binarySearchInsertionPoint(Arrays.binarySearch(HISTO_BUCKETS, size));
             return index >= HISTO_BUCKETS.length ? HISTO_BUCKETS.length - 1 : index;
+        }
+
+        private static int binarySearchInsertionPoint(int index) {
+            if (index < 0) {
+                index = -(index + 1);
+            }
+            return index;
         }
 
         static int bucketToSize(int sizeBucket) {

@@ -225,9 +225,7 @@ public final class IoUringIoHandler implements IoHandler {
         short bufferRingSize = bufferRingConfig.bufferRingSize();
         short bufferGroupId = bufferRingConfig.bufferGroupId();
         int flags = bufferRingConfig.isIncremental() ? Native.IOU_PBUF_RING_INC : 0;
-        boolean hugePages = bufferRingConfig.isUsingHugePages();
-        long ioUringBufRingAddr = Native.ioUringRegisterBufRing(
-                ringFd, bufferRingSize, bufferGroupId, flags, hugePages);
+        long ioUringBufRingAddr = Native.ioUringRegisterBufRing(ringFd, bufferRingSize, bufferGroupId, flags);
         if (ioUringBufRingAddr < 0) {
             throw Errors.newIOException("ioUringRegisterBufRing", (int) ioUringBufRingAddr);
         }

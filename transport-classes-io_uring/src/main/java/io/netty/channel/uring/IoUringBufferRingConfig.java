@@ -30,21 +30,7 @@ public final class IoUringBufferRingConfig {
     private final int batchSize;
     private final int maxUnreleasedBuffers;
     private final boolean incremental;
-    private final boolean hugePages;
     private final IoUringBufferRingAllocator allocator;
-
-    /**
-     * Create a new configuration.
-     *
-     * @param bgId                  the buffer group id to use (must be non-negative).
-     * @param bufferRingSize        the size of the ring
-     * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
-     *                              {@link io.netty.buffer.ByteBuf}s.
-     */
-    public IoUringBufferRingConfig(short bgId, short bufferRingSize,
-                                   IoUringBufferRingAllocator allocator) {
-        this(bgId, bufferRingSize, bufferRingSize, allocator);
-    }
 
     /**
      * Create a new configuration.
@@ -54,6 +40,7 @@ public final class IoUringBufferRingConfig {
      * @param maxUnreleasedBuffers  this parameter is ignored by the buffer ring.
      * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
      *                              {@link io.netty.buffer.ByteBuf}s.
+     * @deprecated                  use {@link Builder}.
      */
     @Deprecated
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, int maxUnreleasedBuffers,
@@ -69,62 +56,26 @@ public final class IoUringBufferRingConfig {
      * @param bufferRingSize        the size of the ring
      * @param batchSize             the size of the batch on how many buffers are added everytime we need to expand the
      *                              buffer ring.
-     * @param incremental           {@code true} if the buffer ring is using incremental buffer consumption.
-     * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
-     *                              {@link io.netty.buffer.ByteBuf}s.
-     */
-    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int batchSize,
-                                   boolean incremental, IoUringBufferRingAllocator allocator) {
-        this(bgId, bufferRingSize, batchSize, Integer.MAX_VALUE, incremental, allocator);
-    }
-
-    /**
-     * Create a new configuration.
-     *
-     * @param bgId                  the buffer group id to use (must be non-negative).
-     * @param bufferRingSize        the size of the ring
-     * @param batchSize             the size of the batch on how many buffers are added everytime we need to expand the
-     *                              buffer ring.
-     * @param incremental           {@code true} if the buffer ring is using incremental buffer consumption.
-     * @param hugePages             {@code true} if the memory for the buffer ring should be allocated using huge pages.
-     *                              Be aware that the system needs to have huge-pages support setup for this to work.
-     *                              See <a href=https://man7.org/linux/man-pages/man2/mmap.2.html>man mmap</a>.
-     * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
-     *                              {@link io.netty.buffer.ByteBuf}s.
-     */
-    public IoUringBufferRingConfig(short bgId, short bufferRingSize, int batchSize,
-                                   boolean incremental, boolean hugePages, IoUringBufferRingAllocator allocator) {
-        this.bgId = (short) ObjectUtil.checkPositiveOrZero(bgId, "bgId");
-        this.bufferRingSize = checkBufferRingSize(bufferRingSize);
-        this.batchSize = MathUtil.findNextPositivePowerOfTwo(
-                ObjectUtil.checkInRange(batchSize, 1, bufferRingSize, "batchSize"));
-        this.maxUnreleasedBuffers = Integer.MAX_VALUE;
-        if (incremental && !IoUring.isRegisterBufferRingIncSupported()) {
-            throw new IllegalArgumentException("Incremental buffer ring is not supported");
-        }
-        this.incremental = incremental;
-        this.hugePages = hugePages;
-        this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
-    }
-
-    /**
-     * Create a new configuration.
-     *
-     * @param bgId                  the buffer group id to use (must be non-negative).
-     * @param bufferRingSize        the size of the ring
-     * @param batchSize             the size of the batch on how many buffers are added everytime we need to expand the
-     *                              buffer ring.
      * @param maxUnreleasedBuffers  this parameter is ignored by the buffer ring.
      * @param incremental           {@code true} if the buffer ring is using incremental buffer consumption.
      * @param allocator             the {@link IoUringBufferRingAllocator} to use to allocate
      *                              {@link io.netty.buffer.ByteBuf}s.
+     * @deprecated                  use {@link Builder}.
      */
     @Deprecated
     public IoUringBufferRingConfig(short bgId, short bufferRingSize, int batchSize, int maxUnreleasedBuffers,
                                    boolean incremental, IoUringBufferRingAllocator allocator) {
-        this(bgId, bufferRingSize, batchSize, incremental, false, allocator);
-        ObjectUtil.checkInRange(
+        this.bgId = (short) ObjectUtil.checkPositiveOrZero(bgId, "bgId");
+        this.bufferRingSize = checkBufferRingSize(bufferRingSize);
+        this.batchSize = MathUtil.findNextPositivePowerOfTwo(
+                ObjectUtil.checkInRange(batchSize, 1, bufferRingSize, "batchSize"));
+        this.maxUnreleasedBuffers = ObjectUtil.checkInRange(
                 maxUnreleasedBuffers, bufferRingSize, Integer.MAX_VALUE, "maxUnreleasedBuffers");
+        if (incremental && !IoUring.isRegisterBufferRingIncSupported()) {
+            throw new IllegalArgumentException("Incremental buffer ring is not supported");
+        }
+        this.incremental = incremental;
+        this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
     }
 
     /**
@@ -186,16 +137,6 @@ public final class IoUringBufferRingConfig {
         return incremental;
     }
 
-    /**
-     * Return {@code} true if huge-pages will be used, {@code false} otherwise.
-     * See <a href=https://man7.org/linux/man-pages/man2/mmap.2.html>man mmap</a>.
-     *
-     * @return  {@code true} if huge-pages will be used.
-     */
-    public boolean isUsingHugePages() {
-        return hugePages;
-    }
-
     private static short checkBufferRingSize(short bufferRingSize) {
         if (bufferRingSize < 1) {
             throw new IllegalArgumentException("bufferRingSize: " + bufferRingSize + " (expected: > 0)");
@@ -220,5 +161,84 @@ public final class IoUringBufferRingConfig {
     @Override
     public int hashCode() {
         return Objects.hashCode(bgId);
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        private short bgId = -1;
+        private short bufferRingSize = -1;
+        private int batchSize = -1;
+        private boolean incremental = IoUring.isRegisterBufferRingIncSupported();
+        private IoUringBufferRingAllocator allocator;
+
+        /**
+         * Set the buffer group id to use.
+         *
+         * @param bgId  The buffer group id to use.
+         * @return      This builder.
+         */
+        public Builder bufferGroupId(short bgId) {
+            this.bgId = bgId;
+            return this;
+        }
+
+        /**
+         * Set the size of the ring.
+         *
+         * @param bufferRingSize    The size of the ring.
+         * @return                  This builder.
+         */
+        public Builder bufferRingSize(short bufferRingSize) {
+            this.bufferRingSize = bufferRingSize;
+            return this;
+        }
+
+        /**
+         * Set the size of the batch on how many buffers are added everytime we need to expand the buffer ring.
+         *
+         * @param batchSize The batch size.
+         * @return          This builder.
+         */
+        public Builder batchSize(int batchSize) {
+            this.batchSize = batchSize;
+            return this;
+        }
+
+        /**
+         * Set the {@link IoUringBufferRingAllocator} to use to allocate {@link io.netty.buffer.ByteBuf}s.
+         *
+         * @param allocator The allocator.
+         * @return          This builder.
+         */
+        public Builder allocator(IoUringBufferRingAllocator allocator) {
+            this.allocator = allocator;
+            return this;
+        }
+
+        /**
+         * Set if <a href="https://github.com/axboe/liburing/wiki/
+         * What's-new-with-io_uring-in-6.11-and-6.12#incremental-provided-buffer-consumption">incremental mode</a>
+         * should be used for the buffer ring.
+         *
+         * @param incremental  {@code true} if incremental mode is used, {@code false} otherwise.
+         * @return          This builder.
+         */
+        public Builder incremental(boolean incremental) {
+            this.incremental = incremental;
+            return this;
+        }
+
+        /**
+         * Create a new {@link IoUringBufferRingConfig}.
+         *
+         * @return a new config.
+         */
+        public IoUringBufferRingConfig build() {
+            return new IoUringBufferRingConfig(
+                    bgId, bufferRingSize, batchSize, Integer.MAX_VALUE, incremental, allocator);
+        }
     }
 }

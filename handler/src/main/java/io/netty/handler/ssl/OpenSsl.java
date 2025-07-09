@@ -595,6 +595,17 @@ public final class OpenSsl {
     }
 
     /**
+     * Returns {@code true} if the used version of OpenSSL supports renegotiation.
+     * <p>
+     * Some implementations, such as BoringSSL and AWS-LC, intentionally do not support renegotiation.
+     *
+     * @return {@code true} if renegotiation is supported, otherwise {@code false}.
+     */
+    public static boolean isRenegotiationSupported() {
+        return !IS_BORINGSSL && !IS_AWSLC;
+    }
+
+    /**
      * Returns the version of the used available OpenSSL library or {@code -1} if {@link #isAvailable()}
      * returns {@code false}.
      */
