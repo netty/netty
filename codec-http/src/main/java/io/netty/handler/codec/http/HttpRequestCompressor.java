@@ -34,6 +34,8 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.compression.ZstdEncoder;
 import io.netty.handler.codec.compression.ZstdOptions;
+import io.netty.util.AttributeKey;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -108,6 +110,17 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
     private final int contentSizeThreshold;
     private final String encoding;
     private final Supplier<MessageToByteEncoder<ByteBuf>> encoderFactory;
+
+    /**
+     * Key of the attribute that will hold the original request that is needed later
+     * in order to create a {@link FullHttpRequest}
+     */
+    private final AttributeKey<HttpRequest> reqAttrKey = AttributeKey.valueOf(HttpRequestCompressor.class, "req");
+
+    /**
+     * Key of the buffer that will hold all the payload chunks that we have to compress later
+     */
+    private final AttributeKey<ByteBuf> bufAttrKey = AttributeKey.valueOf(HttpRequestCompressor.class, "buf");
 
     /**
      * new instance using the defaults.
@@ -221,13 +234,26 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
         if (msg instanceof FullHttpRequest) {
             final FullHttpRequest req = (FullHttpRequest) msg;
-            if (!req.headers().contains(HttpHeaderNames.CONTENT_ENCODING)
+            if (!isContentEncodingSet(req)
                     && req.content().isReadable()
                     && req.content().readableBytes() >= contentSizeThreshold) {
                 handleFullHttpRequest(ctx, promise, req);
             } else {
                 super.write(ctx, msg, promise);
             }
+        } else if (msg instanceof HttpRequest) {
+            final HttpRequest req = (HttpRequest) msg;
+            if (!isContentEncodingSet(req)) {
+                handleChunkedHttpRequest(ctx, promise, req);
+            } else {
+                super.write(ctx, msg, promise);
+            }
+        } else if (msg instanceof HttpContent && !(msg instanceof LastHttpContent)) {
+            handleHttpContent(ctx, promise, (HttpContent) msg);
+        } else if (msg instanceof ByteBuf) {
+            handleHttpContent(ctx, promise, (ByteBuf) msg);
+        } else if (msg instanceof LastHttpContent) {
+            handleLastHttpContent(ctx, promise, (LastHttpContent) msg);
         } else {
             super.write(ctx, msg, promise);
         }
@@ -249,11 +275,87 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
                 req.method(),
                 req.uri(),
                 compressedContent,
-                req.headers(),
+                req.headers().copy(),
                 req.trailingHeaders()
         );
-        compressedRequest.headers().set(HttpHeaderNames.CONTENT_ENCODING, encoding);
+        setContentEncoding(compressedRequest, encoding);
         HttpUtil.setContentLength(compressedRequest, compressedContent.readableBytes());
+        HttpUtil.setTransferEncodingChunked(compressedRequest, false);
         ctx.write(compressedRequest, promise);
+    }
+
+    private void handleChunkedHttpRequest(ChannelHandlerContext ctx, ChannelPromise promise, HttpRequest req) {
+        // only process requests that are allowed to have content
+        if (req.method().equals(HttpMethod.POST)
+                || req.method().equals(HttpMethod.PUT)
+                || req.method().equals(HttpMethod.PATCH)) {
+            if (!ctx.channel().attr(reqAttrKey).compareAndSet(null, ReferenceCountUtil.retain(req))) {
+                ReferenceCountUtil.release(req);
+                throw new IllegalStateException(
+                        "new HttpRequest received while waiting for LastHttpContent of the previous request");
+            }
+
+            final ByteBuf buf = allocateBuffer(ctx, req);
+            ctx.channel().attr(bufAttrKey).set(buf);
+        } else {
+            ctx.write(req, promise);
+        }
+    }
+
+    private void handleHttpContent(ChannelHandlerContext ctx, ChannelPromise promise,
+            HttpContent content) throws Exception {
+        handleHttpContent(ctx, promise, content.content());
+    }
+
+    private void handleHttpContent(ChannelHandlerContext ctx, ChannelPromise promise, ByteBuf content) {
+        final ByteBuf buf = ctx.channel().attr(bufAttrKey).get();
+        if (buf == null) {
+            // received HttpContent without previous HttpRequest ... likely because we skipped it
+            ctx.write(content, promise);
+        } else {
+            buf.writeBytes(content);
+        }
+    }
+
+    private void handleLastHttpContent(ChannelHandlerContext ctx, ChannelPromise promise, LastHttpContent last) {
+        final HttpRequest req = ctx.channel().attr(reqAttrKey).getAndSet(null);
+        if (req == null) {
+            // received LastHttpContent without previous HttpRequest ... likely because we skipped it
+            ctx.write(last, promise);
+            return;
+        }
+        final ByteBuf uncompressedContent = ctx.channel().attr(bufAttrKey).getAndSet(null);
+        final DefaultFullHttpRequest uncompressedRequest = new DefaultFullHttpRequest(
+                req.protocolVersion(),
+                req.method(),
+                req.uri(),
+                uncompressedContent,
+                req.headers(),
+                last.trailingHeaders()
+        );
+        // cleanup
+        ReferenceCountUtil.release(req);
+        if (uncompressedContent.isReadable()
+                && uncompressedContent.readableBytes() >= contentSizeThreshold) {
+            // convert uncompressed chunked request to full compressed request
+            handleFullHttpRequest(ctx, promise, uncompressedRequest);
+        } else {
+            // body is empty or size below threshold, just write empty full request
+            ctx.write(uncompressedRequest, promise);
+        }
+    }
+
+    private ByteBuf allocateBuffer(ChannelHandlerContext ctx, HttpRequest req) {
+        return HttpUtil.isContentLengthSet(req)
+                ? ctx.alloc().directBuffer(HttpUtil.getContentLength(req, 256))
+                : ctx.alloc().directBuffer();
+    }
+
+    private static boolean isContentEncodingSet(HttpMessage msg) {
+        return msg.headers().contains(HttpHeaderNames.CONTENT_ENCODING);
+    }
+
+    private static void setContentEncoding(HttpMessage msg, String value) {
+        msg.headers().set(HttpHeaderNames.CONTENT_ENCODING, value);
     }
 }
