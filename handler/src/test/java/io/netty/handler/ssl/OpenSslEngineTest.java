@@ -1031,7 +1031,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
     }
 
     private void testWrapWithDifferentSizes(SSLEngineTestParam param, String protocol, String cipher) throws Exception {
-        assumeTrue(OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(protocol));
+        assumeTrue(OpenSsl.isProtocolSupported(protocol));
         if (!OpenSsl.isCipherSuiteAvailable(cipher)) {
             return;
         }
