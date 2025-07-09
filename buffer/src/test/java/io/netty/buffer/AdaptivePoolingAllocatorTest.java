@@ -63,26 +63,9 @@ class AdaptivePoolingAllocatorTest implements Supplier<String> {
 
     @Test
     void sizeClassComputations() throws Exception {
-        final int[] sizeClasses = {
-                32,
-                64,
-                128,
-                256,
-                512,
-                640, // 512 + 128
-                1024,
-                1152, // 1024 + 128
-                2048,
-                2304, // 2048 + 256
-                4096,
-                4352, // 4096 + 256
-                8192,
-                8704, // 8192 + 512
-                16384,
-                16896, // 16384 + 512
-        };
+        final int[] sizeClasses = AdaptivePoolingAllocator.getSizeClasses();
         for (int sizeClassIndex = 0; sizeClassIndex < sizeClasses.length; sizeClassIndex++) {
-            final int previousSizeIncluded = sizeClassIndex == 0? 0 : (sizeClasses[sizeClassIndex - 1] + 1);
+            final int previousSizeIncluded = sizeClassIndex == 0? 0 : sizeClasses[sizeClassIndex - 1] + 1;
             assertSizeClassOf(sizeClassIndex, previousSizeIncluded, sizeClasses[sizeClassIndex]);
         }
         // beyond the last size class, we return the size class array's length
