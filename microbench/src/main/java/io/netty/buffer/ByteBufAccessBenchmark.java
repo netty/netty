@@ -31,10 +31,11 @@ import org.openjdk.jmh.annotations.Warmup;
 
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.internal.PlatformDependent;
+import org.openjdk.jmh.infra.Blackhole;
 
-@Warmup(iterations = 5, time = 1500, timeUnit = TimeUnit.MILLISECONDS)
-@Measurement(iterations = 10, time = 1500, timeUnit = TimeUnit.MILLISECONDS)
-@Fork(3)
+@Warmup(iterations = 10, time = 1)
+@Measurement(iterations = 10, time = 1)
+@Fork(2)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
@@ -155,7 +156,7 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public int readBatch() {
-        buffer.readerIndex(0).touch();
+        buffer.readerIndex(0);
         int result = 0;
         // WARNING!
         // Please do not replace this sum loop with a BlackHole::consume loop:
@@ -169,5 +170,54 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
             result += buffer.readByte();
         }
         return result;
+    }
+
+    @Benchmark
+    public void getByteBatch(Blackhole bh) {
+        ByteBuf buffer = this.buffer;
+        for (int i = 0, size = batchSize; i < size; i++) {
+            bh.consume(buffer.getByte(i));
+        }
+    }
+
+    @Benchmark
+    public void readByteBatch(Blackhole bh) {
+        ByteBuf buffer = this.buffer;
+        buffer.readerIndex(0);
+        for (int i = 0, size = batchSize; i < size; i++) {
+            bh.consume(buffer.readByte());
+        }
+    }
+
+    @Benchmark
+    public void getBytes(Blackhole bh) {
+        ByteBuf buffer = this.buffer;
+        int readerIndex = buffer.readerIndex();
+        bh.consume(buffer.getByte(readerIndex));
+        readerIndex += 1;
+        bh.consume(buffer.getShortLE(readerIndex));
+        readerIndex += 2;
+        bh.consume(buffer.getIntLE(readerIndex));
+        readerIndex += 4;
+        bh.consume(buffer.getLongLE(readerIndex));
+    }
+
+    @Benchmark
+    public void getBytesConstantOffset(Blackhole bh) {
+        ByteBuf buffer = this.buffer;
+        bh.consume(buffer.getByte(0));
+        bh.consume(buffer.getShortLE(1));
+        bh.consume(buffer.getIntLE(3));
+        bh.consume(buffer.getLongLE(7));
+    }
+
+    @Benchmark
+    public void readBytes(Blackhole bh) {
+        buffer.readerIndex(0);
+        ByteBuf buffer = this.buffer;
+        bh.consume(buffer.readByte());
+        bh.consume(buffer.readShortLE());
+        bh.consume(buffer.readIntLE());
+        bh.consume(buffer.readLongLE());
     }
 }
