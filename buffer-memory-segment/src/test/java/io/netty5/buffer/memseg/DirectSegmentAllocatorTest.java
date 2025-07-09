@@ -18,7 +18,6 @@
 package io.netty5.buffer.memseg;
 
 import io.netty5.buffer.memseg.DirectSegmentAllocator.SegmentHolder;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -26,6 +25,12 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.lang.foreign.MemorySegment;
 import java.lang.foreign.ValueLayout;
 import java.util.stream.Stream;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @EnabledIf("isSupported")
 public class DirectSegmentAllocatorTest {
@@ -41,23 +46,23 @@ public class DirectSegmentAllocatorTest {
     @ParameterizedTest
     @MethodSource("allocators")
     void testDirectSegmentAllocator(DirectSegmentAllocator allocator) {
-        final SegmentHolder holder = Assertions.assertDoesNotThrow(() -> allocator.allocate(10));
+        final SegmentHolder holder = assertDoesNotThrow(() -> allocator.allocate(10));
         final MemorySegment segment = holder.segment();
 
-        Assertions.assertNotNull(segment);
-        Assertions.assertEquals(10, segment.byteSize());
-        Assertions.assertTrue(segment.isNative());
-        Assertions.assertTrue(segment.isAccessibleBy(new Thread()));
+        assertNotNull(segment);
+        assertEquals(10, segment.byteSize());
+        assertTrue(segment.isNative());
+        assertTrue(segment.isAccessibleBy(new Thread()));
 
         segment.set(ValueLayout.JAVA_LONG_UNALIGNED, 2, 0x123456789ABCDEF0L);
-        Assertions.assertEquals(0x123456789ABCDEF0L, segment.get(ValueLayout.JAVA_LONG_UNALIGNED, 2));
+        assertEquals(0x123456789ABCDEF0L, segment.get(ValueLayout.JAVA_LONG_UNALIGNED, 2));
 
-        Assertions.assertDoesNotThrow(() -> holder.free());
+        assertDoesNotThrow(() -> holder.free());
     }
 
     @ParameterizedTest
     @MethodSource("allocators")
     void testThrowsOutOfMemoryErrorIfRequestedByteCountCannotBeAllocated(DirectSegmentAllocator allocator) {
-        Assertions.assertThrows(OutOfMemoryError.class, () -> allocator.allocate(Long.MAX_VALUE));
+        assertThrows(OutOfMemoryError.class, () -> allocator.allocate(Long.MAX_VALUE));
     }
 }
