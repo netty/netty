@@ -17,6 +17,7 @@ package io.netty5.buffer;
 
 import io.netty5.buffer.internal.ArcDrop;
 import io.netty5.buffer.internal.CleanerDrop;
+import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.buffer.internal.MemoryManagerOverride;
 
 import java.nio.ByteBuffer;
@@ -75,6 +76,7 @@ public final class SensitiveBufferAllocator implements BufferAllocator {
 
     @Override
     public Buffer allocate(int size) {
+        InternalBufferUtils.assertValidBufferSize(size);
         MemoryManager manager = getManager();
         return manager.allocateShared(control, size, decorator, getAllocationType());
     }
