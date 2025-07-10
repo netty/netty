@@ -97,7 +97,7 @@ public class IoUringBufferRingTest {
                         .bufferGroupId((short) 1)
                         .bufferRingSize((short) 2)
                         .batchSize(2).incremental(incremental)
-                        .allocator(new IoUringFixedBufferRingAllocator(1024))
+                        .allocator(new IoUringFixedBufferRingAllocator(1024), false)
                         .build();
 
         IoUringBufferRingConfig bufferRingConfig1 =
@@ -106,7 +106,7 @@ public class IoUringBufferRingTest {
                         .bufferRingSize((short) 16)
                         .batchSize(8)
                         .incremental(incremental)
-                        .allocator(new IoUringFixedBufferRingAllocator(1024))
+                        .allocator(new IoUringFixedBufferRingAllocator(1024), true)
                         .build();
         ioUringIoHandlerConfiguration.setBufferRingConfig(bufferRingConfig, bufferRingConfig1);
 

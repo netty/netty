@@ -38,6 +38,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class IoUringSocketTestPermutation extends SocketTestPermutation {
 
@@ -55,7 +56,9 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                             .bufferRingSize((short) 16)
                             .batchSize(8)
                             .incremental(incremental)
-                            .allocator(new IoUringFixedBufferRingAllocator(1024))
+                            .allocator(new IoUringFixedBufferRingAllocator(1024),
+                                    // Ensure we test both variants
+                                    ThreadLocalRandom.current().nextBoolean())
                             .build()
             );
         }
