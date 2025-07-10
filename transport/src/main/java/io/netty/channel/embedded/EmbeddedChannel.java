@@ -250,12 +250,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private void setup(boolean register, final ChannelHandler handler) {
         ChannelPipeline p = pipeline();
-        p.addLast(new ChannelInitializer<Channel>() {
-            @Override
-            protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(handler);
-            }
-        });
+        p.addLast(handler);
         if (register) {
             ChannelFuture future = loop.register(this);
             assert future.isDone();
