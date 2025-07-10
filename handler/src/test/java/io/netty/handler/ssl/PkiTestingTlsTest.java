@@ -55,12 +55,12 @@ public class PkiTestingTlsTest {
             List<CertificateBuilder.Algorithm> algs =  new ArrayList<>();
             algs.add(CertificateBuilder.Algorithm.rsa2048);
             algs.add(CertificateBuilder.Algorithm.ecp256);
-            if (PlatformDependent.javaVersion() >= 24) {
+            if (PlatformDependent.javaVersion() >= 15) {
                 algs.add(CertificateBuilder.Algorithm.ed25519);
             }
-            if (openssl && OpenSsl.versionString().startsWith("BoringSSL")) {
+            if (PlatformDependent.javaVersion() >= 24 && openssl && OpenSsl.versionString().startsWith("BoringSSL")) {
                 algs.add(CertificateBuilder.Algorithm.mlDsa44);
-                algs.add(CertificateBuilder.Algorithm.mlKem512);
+                //algs.add(CertificateBuilder.Algorithm.mlKem512); needs a cert chain
             }
 
             for (CertificateBuilder.Algorithm alg : algs) {
