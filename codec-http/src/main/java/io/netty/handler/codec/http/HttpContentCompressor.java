@@ -16,6 +16,7 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -281,11 +282,12 @@ public class HttpContentCompressor extends HttpContentEncoder {
             throw new IllegalStateException("Couldn't find CompressionEncoderFactory: " + targetContentEncoding);
         }
 
+        Channel channel = ctx.channel();
         return new Result(targetContentEncoding,
                 EmbeddedChannel.builder()
-                        .channelId(ctx.channel().id())
-                        .hasDisconnect(ctx.channel().metadata().hasDisconnect())
-                        .config(ctx.channel().config())
+                        .channelId(channel.id())
+                        .hasDisconnect(channel.metadata().hasDisconnect())
+                        .config(channel.config())
                         .handlers(encoderFactory.createEncoder())
                         .build());
     }
