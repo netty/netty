@@ -119,10 +119,14 @@ public final class HttpNativeServer {
         if (ioType == TransportType.IO_URING) {
             IoUringIoHandlerConfig config = new IoUringIoHandlerConfig();
             if (IoUring.isRegisterBufferRingSupported()) {
-                config.setBufferRingConfig(new IoUringBufferRingConfig(
-                        (short) 0, (short) 16,
-                        new IoUringFixedBufferRingAllocator(1024)
-                ));
+                config.setBufferRingConfig(
+                        IoUringBufferRingConfig.builder()
+                                .bufferGroupId((short) 0)
+                                .bufferRingSize((short) 16)
+                                .batchSize(16)
+                                .allocator(new IoUringFixedBufferRingAllocator(1024))
+                                .build()
+                );
             }
 
            return IoUringIoHandler.newFactory(config);

@@ -385,9 +385,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                 }
 
-                if (OpenSsl.isBoringSSL() && clientMode) {
-                    // If in client-mode and BoringSSL let's allow to renegotiate once as the server may use this
-                    // for client auth.
+                if ((OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) && clientMode) {
+                    // If in client-mode and provider is BoringSSL or AWS-LC let's allow to renegotiate once as the
+                    // server may use this for client auth.
                     //
                     // See https://github.com/netty/netty/issues/11529
                     SSL.setRenegotiateMode(ssl, SSL.SSL_RENEGOTIATE_ONCE);
@@ -1703,7 +1703,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         final StringBuilder buf = new StringBuilder();
         final StringBuilder bufTLSv13 = new StringBuilder();
 
-        CipherSuiteConverter.convertToCipherStrings(Arrays.asList(cipherSuites), buf, bufTLSv13, OpenSsl.isBoringSSL());
+        CipherSuiteConverter.convertToCipherStrings(Arrays.asList(cipherSuites), buf, bufTLSv13,
+                OpenSsl.isBoringSSL());
         final String cipherSuiteSpec = buf.toString();
         final String cipherSuiteSpecTLSv13 = bufTLSv13.toString();
 
@@ -1753,7 +1754,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     @Override
     public final String[] getSupportedProtocols() {
-        return OpenSsl.SUPPORTED_PROTOCOLS_SET.toArray(EMPTY_STRINGS);
+        return OpenSsl.unpackSupportedProtocols().toArray(EMPTY_STRINGS);
     }
 
     @Override
@@ -1764,7 +1765,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     private static boolean isProtocolEnabled(int opts, int disableMask, String protocolString) {
         // We also need to check if the actual protocolString is supported as depending on the openssl API
         // implementations it may use a disableMask of 0 (BoringSSL is doing this for example).
-        return (opts & disableMask) == 0 && OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(protocolString);
+        return (opts & disableMask) == 0 && OpenSsl.isProtocolSupported(protocolString);
     }
 
     /**
@@ -1796,7 +1797,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         int minProtocolIndex = OPENSSL_OP_NO_PROTOCOLS.length;
         int maxProtocolIndex = 0;
         for (String protocol : protocols) {
-            if (!OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(protocol)) {
+            if (!OpenSsl.isProtocolSupported(protocol)) {
                 throw new IllegalArgumentException("Protocol " + protocol + " is not supported.");
             }
 

@@ -41,6 +41,7 @@ public final class IoUring {
     private static final boolean IORING_SETUP_CQ_SIZE_SUPPORTED;
     private static final boolean IORING_SETUP_SINGLE_ISSUER_SUPPORTED;
     private static final boolean IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
+    private static final boolean IORING_SETUP_NO_SQARRAY_SUPPORTED;
     private static final boolean IORING_REGISTER_BUFFER_RING_SUPPORTED;
     private static final boolean IORING_REGISTER_BUFFER_RING_INC_SUPPORTED;
     private static final boolean IORING_ACCEPT_MULTISHOT_ENABLED;
@@ -66,6 +67,7 @@ public final class IoUring {
         boolean setUpCqSizeSupported = false;
         boolean singleIssuerSupported = false;
         boolean deferTaskrunSupported = false;
+        boolean noSqarraySupported = false;
         boolean registerBufferRingSupported = false;
         boolean registerBufferRingIncSupported = false;
         int numElementsIoVec = 10;
@@ -108,6 +110,7 @@ public final class IoUring {
                         // See https://manpages.debian.org/unstable/liburing-dev/io_uring_setup.2.en.html
                         deferTaskrunSupported = Native.ioUringSetupSupportsFlags(
                                 Native.IORING_SETUP_SINGLE_ISSUER | Native.IORING_SETUP_DEFER_TASKRUN);
+                        noSqarraySupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_NO_SQARRAY);
                         registerBufferRingSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(), 0);
                         registerBufferRingIncSupported = Native.isRegisterBufferRingSupported(ringBuffer.fd(),
                                 Native.IOU_PBUF_RING_INC);
@@ -169,6 +172,7 @@ public final class IoUring {
         IORING_SETUP_CQ_SIZE_SUPPORTED = setUpCqSizeSupported;
         IORING_SETUP_SINGLE_ISSUER_SUPPORTED = singleIssuerSupported;
         IORING_SETUP_DEFER_TASKRUN_SUPPORTED = deferTaskrunSupported;
+        IORING_SETUP_NO_SQARRAY_SUPPORTED = noSqarraySupported;
         IORING_REGISTER_BUFFER_RING_SUPPORTED = registerBufferRingSupported;
         IORING_REGISTER_BUFFER_RING_INC_SUPPORTED = registerBufferRingIncSupported;
 
@@ -263,6 +267,9 @@ public final class IoUring {
         return IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
     }
 
+    static boolean isIoringSetupNoSqarraySupported() {
+        return IORING_SETUP_NO_SQARRAY_SUPPORTED;
+    }
     /**
      * Returns if it is supported to use a buffer ring.
      *

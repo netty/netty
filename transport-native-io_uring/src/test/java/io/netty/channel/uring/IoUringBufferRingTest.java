@@ -92,12 +92,22 @@ public class IoUringBufferRingTest {
         }
         final BlockingQueue<ByteBuf> bufferSyncer = new LinkedBlockingQueue<>();
         IoUringIoHandlerConfig ioUringIoHandlerConfiguration = new IoUringIoHandlerConfig();
-        IoUringBufferRingConfig bufferRingConfig = new IoUringBufferRingConfig(
-                (short) 1, (short) 2, 2, incremental, new IoUringFixedBufferRingAllocator(1024));
+        IoUringBufferRingConfig bufferRingConfig =
+                IoUringBufferRingConfig.builder()
+                        .bufferGroupId((short) 1)
+                        .bufferRingSize((short) 2)
+                        .batchSize(2).incremental(incremental)
+                        .allocator(new IoUringFixedBufferRingAllocator(1024))
+                        .build();
 
-        IoUringBufferRingConfig bufferRingConfig1 = new IoUringBufferRingConfig(
-                (short) 2, (short) 16, 8, incremental, new IoUringFixedBufferRingAllocator(1024)
-        );
+        IoUringBufferRingConfig bufferRingConfig1 =
+                IoUringBufferRingConfig.builder()
+                        .bufferGroupId((short) 2)
+                        .bufferRingSize((short) 16)
+                        .batchSize(8)
+                        .incremental(incremental)
+                        .allocator(new IoUringFixedBufferRingAllocator(1024))
+                        .build();
         ioUringIoHandlerConfiguration.setBufferRingConfig(bufferRingConfig, bufferRingConfig1);
 
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1,
@@ -141,19 +151,7 @@ public class IoUringBufferRingTest {
         ByteBuf writeBuffer = Unpooled.directBuffer(randomStringLength);
         ByteBufUtil.writeAscii(writeBuffer, randomString);
         ByteBuf userspaceIoUringBufferElement1 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        if (incremental) {
-            // Need to unwrap as its a slice.
-            assertNotNull(unwrapLeakAware(userspaceIoUringBufferElement1).unwrap());
-        } else {
-            assertNull(unwrapLeakAware(userspaceIoUringBufferElement1).unwrap());
-        }
         ByteBuf userspaceIoUringBufferElement2 = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
-        if (incremental) {
-            // Need to unwrap as its a slice.
-            assertNotNull(unwrapLeakAware(userspaceIoUringBufferElement2).unwrap());
-        } else {
-            assertNull(unwrapLeakAware(userspaceIoUringBufferElement2).unwrap());
-        }
         ByteBuf readBuffer = sendAndRecvMessage(clientChannel, writeBuffer, bufferSyncer);
         readBuffer.release();
 

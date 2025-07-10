@@ -1391,17 +1391,36 @@ public abstract class AbstractByteBuf extends ByteBuf {
         checkIndex0(index, fieldLength);
     }
 
+    private static void checkRangeBoundsTrustedCapacity(final String indexName, final int index,
+                                                 final int fieldLength, final int capacity) {
+        if (isOutOfBoundsTrustedCapacity(index, fieldLength, capacity)) {
+            rangeBoundsCheckFailed(indexName, index, fieldLength, capacity);
+        }
+    }
+
+    /**
+     * This is a simplified version of MathUtil.isOutOfBounds that does not check for capacity negative values.
+     */
+    private static boolean isOutOfBoundsTrustedCapacity(int index, int fieldLength, int capacity) {
+        // keep these as branches since would make it easier to be constant-folded
+        return index < 0 || fieldLength < 0 || index + fieldLength < 0 || index + fieldLength > capacity;
+    }
+
     private static void checkRangeBounds(final String indexName, final int index,
             final int fieldLength, final int capacity) {
         if (isOutOfBounds(index, fieldLength, capacity)) {
-            throw new IndexOutOfBoundsException(String.format(
-                    "%s: %d, length: %d (expected: range(0, %d))", indexName, index, fieldLength, capacity));
+            rangeBoundsCheckFailed(indexName, index, fieldLength, capacity);
         }
+    }
+
+    private static void rangeBoundsCheckFailed(String indexName, int index, int fieldLength, int capacity) {
+        throw new IndexOutOfBoundsException(String.format(
+                "%s: %d, length: %d (expected: range(0, %d))", indexName, index, fieldLength, capacity));
     }
 
     final void checkIndex0(int index, int fieldLength) {
         if (checkBounds) {
-            checkRangeBounds("index", index, fieldLength, capacity());
+            checkRangeBoundsTrustedCapacity("index", index, fieldLength, capacity());
         }
     }
 

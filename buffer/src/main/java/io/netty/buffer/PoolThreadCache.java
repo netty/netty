@@ -17,14 +17,11 @@
 package io.netty.buffer;
 
 
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
-
 import io.netty.buffer.PoolArena.SizeClass;
+import io.netty.util.Recycler;
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.internal.MathUtil;
-import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectPool.Handle;
-import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -34,6 +31,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * Acts a Thread cache for allocations. This implementation is moduled after
@@ -463,13 +462,13 @@ final class PoolThreadCache {
         }
 
         @SuppressWarnings("rawtypes")
-        private static final ObjectPool<Entry> RECYCLER = ObjectPool.newPool(new ObjectCreator<Entry>() {
-            @SuppressWarnings("unchecked")
+        private static final Recycler<Entry> RECYCLER = new Recycler<Entry>() {
             @Override
-            public Entry newObject(Handle<Entry> handle) {
+            @SuppressWarnings("unchecked")
+            protected Entry newObject(Handle<Entry> handle) {
                 return new Entry(handle);
             }
-        });
+        };
     }
 
     private static final class FreeOnFinalize {
