@@ -21,6 +21,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.socksx.v5.DefaultSocks5InitialRequest;
 import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandRequest;
 import io.netty.handler.codec.socksx.v5.DefaultSocks5PasswordAuthRequest;
+import io.netty.handler.codec.socksx.v5.DefaultSocks5PrivateAuthRequest;
 import io.netty.handler.codec.socksx.v5.Socks5AddressType;
 import io.netty.handler.codec.socksx.v5.Socks5AuthMethod;
 import io.netty.handler.codec.socksx.v5.Socks5InitialRequest;
@@ -34,6 +35,9 @@ import io.netty.handler.codec.socksx.v5.Socks5CommandType;
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthResponse;
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthResponseDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthStatus;
+import io.netty.handler.codec.socksx.v5.Socks5PrivateAuthResponse;
+import io.netty.handler.codec.socksx.v5.Socks5PrivateAuthResponseDecoder;
+import io.netty.handler.codec.socksx.v5.Socks5PrivateAuthStatus;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.StringUtil;
 
@@ -50,6 +54,9 @@ public final class Socks5ProxyHandler extends ProxyHandler {
 
     private static final String PROTOCOL = "socks5";
     private static final String AUTH_PASSWORD = "password";
+    private static final String AUTH_PRIVATE = "private";
+
+    private static final byte NO_PRIVATE_AUTH_METHOD = Socks5AuthMethod.NO_AUTH.byteValue();
 
     private static final Socks5InitialRequest INIT_REQUEST_NO_AUTH =
             new DefaultSocks5InitialRequest(Collections.singletonList(Socks5AuthMethod.NO_AUTH));
@@ -59,9 +66,12 @@ public final class Socks5ProxyHandler extends ProxyHandler {
 
     private final String username;
     private final String password;
+    private final byte privateAuthMethod;
 
     private String decoderName;
     private String encoderName;
+
+    private final byte[] privateToken;
 
     public Socks5ProxyHandler(SocketAddress proxyAddress) {
         this(proxyAddress, null, null);
@@ -77,6 +87,27 @@ public final class Socks5ProxyHandler extends ProxyHandler {
         }
         this.username = username;
         this.password = password;
+        this.privateToken = null;
+        this.privateAuthMethod = NO_PRIVATE_AUTH_METHOD; // No private authentication method specified
+    }
+
+    /**
+     * Creates a new SOCKS5 proxy handler with a custom private authentication method.
+     *
+     * @param proxyAddress     The address of the SOCKS5 proxy server
+     * @param privateAuthMethod The private authentication method code (must be in range 0x80-0xFE)
+     * @param privateToken     The token to use for private authentication
+     * @throws IllegalArgumentException If privateAuthMethod is not in the valid range
+     */
+    public Socks5ProxyHandler(SocketAddress proxyAddress, byte privateAuthMethod, byte[] privateToken) {
+        super(proxyAddress);
+        if (!Socks5AuthMethod.isPrivateMethod(privateAuthMethod)) {
+            throw new IllegalArgumentException(
+                    "privateAuthMethod: " + (privateAuthMethod & 0xFF) + " (expected: 0x80-0xFE)");
+        }
+        this.username = this.password = null;
+        this.privateToken = privateToken;
+        this.privateAuthMethod = privateAuthMethod;
     }
 
     @Override
@@ -86,7 +117,14 @@ public final class Socks5ProxyHandler extends ProxyHandler {
 
     @Override
     public String authScheme() {
-        return socksAuthMethod() == Socks5AuthMethod.PASSWORD? AUTH_PASSWORD : AUTH_NONE;
+        Socks5AuthMethod authMethod = socksAuthMethod();
+        if (Socks5AuthMethod.isPrivateMethod(authMethod.byteValue())) {
+            return AUTH_PRIVATE;
+        } else if (authMethod == Socks5AuthMethod.PASSWORD) {
+            return AUTH_PASSWORD;
+        } else {
+            return AUTH_NONE;
+        }
     }
 
     public String username() {
@@ -126,7 +164,15 @@ public final class Socks5ProxyHandler extends ProxyHandler {
 
     @Override
     protected Object newInitialMessage(ChannelHandlerContext ctx) throws Exception {
-        return socksAuthMethod() == Socks5AuthMethod.PASSWORD? INIT_REQUEST_PASSWORD : INIT_REQUEST_NO_AUTH;
+        Socks5AuthMethod authMethod = socksAuthMethod();
+        if (authMethod == Socks5AuthMethod.PASSWORD) {
+            return INIT_REQUEST_PASSWORD;
+        }
+        if (Socks5AuthMethod.isPrivateMethod(authMethod.byteValue())) {
+            return new DefaultSocks5InitialRequest(Arrays.asList(Socks5AuthMethod.NO_AUTH,
+                authMethod));
+        }
+        return INIT_REQUEST_NO_AUTH;
     }
 
     @Override
@@ -135,7 +181,8 @@ public final class Socks5ProxyHandler extends ProxyHandler {
             Socks5InitialResponse res = (Socks5InitialResponse) response;
             Socks5AuthMethod authMethod = socksAuthMethod();
             Socks5AuthMethod resAuthMethod = res.authMethod();
-            if (resAuthMethod != Socks5AuthMethod.NO_AUTH && resAuthMethod != authMethod) {
+            if (resAuthMethod != Socks5AuthMethod.NO_AUTH && resAuthMethod != authMethod
+                && !Socks5AuthMethod.isPrivateMethod(resAuthMethod.byteValue())) {
                 // Server did not allow unauthenticated access nor accept the requested authentication scheme.
                 throw new ProxyConnectException(exceptionMessage("unexpected authMethod: " + res.authMethod()));
             }
@@ -147,6 +194,9 @@ public final class Socks5ProxyHandler extends ProxyHandler {
                 ctx.pipeline().replace(decoderName, decoderName, new Socks5PasswordAuthResponseDecoder());
                 sendToProxyServer(new DefaultSocks5PasswordAuthRequest(
                         username != null? username : "", password != null? password : ""));
+            } else if (Socks5AuthMethod.isPrivateMethod(resAuthMethod.byteValue())) {
+                ctx.pipeline().replace(decoderName, decoderName, new Socks5PrivateAuthResponseDecoder());
+                sendToProxyServer(new DefaultSocks5PrivateAuthRequest(privateToken));
             } else {
                 // Should never reach here.
                 throw new Error();
@@ -166,6 +216,16 @@ public final class Socks5ProxyHandler extends ProxyHandler {
             return false;
         }
 
+        if (response instanceof Socks5PrivateAuthResponse) {
+            Socks5PrivateAuthResponse res = (Socks5PrivateAuthResponse) response;
+            if (res.status() != Socks5PrivateAuthStatus.SUCCESS) {
+                throw new ProxyConnectException(exceptionMessage("privateAuthStatus: " + res.status()));
+            }
+
+            sendConnectCommand(ctx);
+            return false;
+        }
+
         // This should be the last message from the server.
         Socks5CommandResponse res = (Socks5CommandResponse) response;
         if (res.status() != Socks5CommandStatus.SUCCESS) {
@@ -177,7 +237,9 @@ public final class Socks5ProxyHandler extends ProxyHandler {
 
     private Socks5AuthMethod socksAuthMethod() {
         Socks5AuthMethod authMethod;
-        if (username == null && password == null) {
+        if (privateToken != null && privateToken.length > 0) {
+            authMethod = new Socks5AuthMethod(privateAuthMethod & 0xFF, "PRIVATE_" + (privateAuthMethod & 0xFF));
+        } else if (username == null && password == null) {
             authMethod = Socks5AuthMethod.NO_AUTH;
         } else {
             authMethod = Socks5AuthMethod.PASSWORD;

@@ -131,11 +131,20 @@ public class ProxyHandlerTest {
     static final ProxyServer socks5Proxy =
             new Socks5ProxyServer(false, TestMode.TERMINAL, DESTINATION, USERNAME, PASSWORD);
 
+    // Define private auth method and token for SOCKS5 private authentication
+    static final byte PRIVATE_AUTH_METHOD = (byte) 0x80; // Custom authentication method (range 0x80-0xFE)
+    static final byte[] PRIVATE_AUTH_TOKEN = "privateAuthToken123".getBytes(CharsetUtil.US_ASCII);
+    static final byte[] BAD_PRIVATE_AUTH_TOKEN = "wrongAuthToken".getBytes(CharsetUtil.US_ASCII);
+
+    // SOCKS5 proxy with private authentication
+    static final ProxyServer socks5PrivateProxy =
+            new Socks5ProxyServer(false, TestMode.TERMINAL, DESTINATION, PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN);
+
     private static final Collection<ProxyServer> allProxies = Arrays.asList(
             deadHttpProxy, interHttpProxy, anonHttpProxy, httpProxy,
             deadHttpsProxy, interHttpsProxy, anonHttpsProxy, httpsProxy,
             deadSocks4Proxy, interSocks4Proxy, anonSocks4Proxy, socks4Proxy,
-            deadSocks5Proxy, interSocks5Proxy, anonSocks5Proxy, socks5Proxy
+            deadSocks5Proxy, interSocks5Proxy, anonSocks5Proxy, socks5Proxy, socks5PrivateProxy
     );
 
     // set to non-zero value in case you need predictable shuffling of test cases
@@ -360,6 +369,40 @@ public class ProxyHandlerTest {
                 new TimeoutTestItem(
                         "SOCKS5: timeout",
                         new Socks5ProxyHandler(deadSocks5Proxy.address())),
+
+                // SOCKS5 Private Authentication ---------------------------
+                new SuccessTestItem(
+                    "SOCKS5 Private Auth: successful connection, AUTO_READ on",
+                    DESTINATION,
+                    true,
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN)) ,
+
+                new SuccessTestItem(
+                    "SOCKS5: successful connection to anonymous server, AUTO_READ on",
+                    DESTINATION,
+                    true,
+                    new Socks5ProxyHandler(anonSocks5Proxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
+                    "SOCKS5 Private Auth: successful connection, AUTO_READ off",
+                    DESTINATION,
+                    false,
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN)),
+
+                new FailureTestItem(
+                    "SOCKS5 Private Auth: rejected connection",
+                    BAD_DESTINATION, "status: FORBIDDEN",
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN)),
+
+                new FailureTestItem(
+                    "SOCKS5 Private Auth: authentication failure",
+                    DESTINATION, "privateAuthStatus: FAILURE",
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, BAD_PRIVATE_AUTH_TOKEN)),
+
+                new FailureTestItem(
+                    "SOCKS5 Private Auth: rejected anonymous connection",
+                    DESTINATION, "unexpected authMethod",
+                    new Socks5ProxyHandler(socks5PrivateProxy.address())),
 
                 // HTTP + HTTPS + SOCKS4 + SOCKS5
 

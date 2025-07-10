@@ -32,6 +32,18 @@ public class Socks5AuthMethod implements Comparable<Socks5AuthMethod> {
      */
     public static final Socks5AuthMethod UNACCEPTED = new Socks5AuthMethod(0xff, "UNACCEPTED");
 
+    /**
+     * Returns whether the authentication method code is in the private methods range (0x80-0xFE)
+     * as defined by RFC 1928 section 3.
+     *
+     * @param b The authentication method code
+     * @return true if the code is in the private methods range
+     */
+    public static boolean isPrivateMethod(byte b) {
+        int ubyte = b & 0xFF;
+        return ubyte >= 0x80 && ubyte <= 0xFE;
+    }
+
     public static Socks5AuthMethod valueOf(byte b) {
         switch (b) {
         case 0x00:
@@ -42,6 +54,11 @@ public class Socks5AuthMethod implements Comparable<Socks5AuthMethod> {
             return PASSWORD;
         case (byte) 0xFF:
             return UNACCEPTED;
+        }
+
+        // Handle all private methods (0x80-0xFE)
+        if (isPrivateMethod(b)) {
+            return new Socks5AuthMethod(b, "PRIVATE_" + (b & 0xFF));
         }
 
         return new Socks5AuthMethod(b);
