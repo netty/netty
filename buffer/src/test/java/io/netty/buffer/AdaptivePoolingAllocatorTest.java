@@ -61,6 +61,31 @@ class AdaptivePoolingAllocatorTest implements Supplier<String> {
         assertSizeBucket(15, 8 * 1024 * 1024);
     }
 
+    @Test
+    void sizeClassComputations() throws Exception {
+        final int[] sizeClasses = AdaptivePoolingAllocator.getSizeClasses();
+        for (int sizeClassIndex = 0; sizeClassIndex < sizeClasses.length; sizeClassIndex++) {
+            final int previousSizeIncluded = sizeClassIndex == 0? 0 : sizeClasses[sizeClassIndex - 1] + 1;
+            assertSizeClassOf(sizeClassIndex, previousSizeIncluded, sizeClasses[sizeClassIndex]);
+        }
+        // beyond the last size class, we return the size class array's length
+        assertSizeClassOf(sizeClasses.length, sizeClasses[sizeClasses.length - 1] + 1,
+                          sizeClasses[sizeClasses.length - 1] + 1);
+    }
+
+    private static void assertSizeClassOf(int expectedSizeClass, int previousSizeIncluded, int maxSizeIncluded) {
+        for (int size = previousSizeIncluded; size <= maxSizeIncluded; size++) {
+            final int sizeToTest = size;
+            Supplier<String> messageSupplier = new Supplier<String>() {
+                @Override
+                public String get() {
+                    return "size = " + sizeToTest;
+                }
+            };
+            assertEquals(expectedSizeClass, AdaptivePoolingAllocator.sizeClassIndexOf(size), messageSupplier);
+        }
+    }
+
     private void assertSizeBucket(int expectedSizeBucket, int maxSizeIncluded) {
         for (; i <= maxSizeIncluded; i++) {
             assertEquals(expectedSizeBucket, AdaptivePoolingAllocator.sizeToBucket(i), this);
