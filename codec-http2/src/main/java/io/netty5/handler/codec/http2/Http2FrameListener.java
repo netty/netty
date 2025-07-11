@@ -217,6 +217,6 @@ public interface Http2FrameListener {
      * @param payload the payload of the frame. This buffer will be closed by the codec when the method returns
      *                (the buffer will be inaccessible after the method call).
      */
-    void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, Buffer payload)
+    void onUnknownFrame(ChannelHandlerContext ctx, short frameType, int streamId, Http2Flags flags, Buffer payload)
             throws Http2Exception;
 }
