@@ -38,7 +38,6 @@ import java.util.Locale;
 
 final class Native {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
-    static final int DEFAULT_RING_SIZE = Math.max(64, SystemPropertyUtil.getInt("io.netty.iouring.ringSize", 4096));
 
     static {
         Selector selector = null;
