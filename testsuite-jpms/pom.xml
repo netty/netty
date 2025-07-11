@@ -345,42 +345,6 @@
       </dependencies>
     </profile>
     <profile>
-      <id>testsuite-jpms-java-11-to-21</id>
-      <activation>
-        <jdk>[11,21)</jdk>
-      </activation>
-      <build>
-        <pluginManagement>
-          <plugins>
-            <plugin>
-              <artifactId>maven-compiler-plugin</artifactId>
-              <executions>
-                <execution>
-                  <id>default-testCompile</id>
-                  <configuration>
-                    <testExcludes>
-                      <testExclude>**/jfr/FlightRecorderTest.java</testExclude>
-                    </testExcludes>
-                  </configuration>
-                </execution>
-              </executions>
-            </plugin>
-          </plugins>
-        </pluginManagement>
-      </build>
-    </profile>
-    <profile>
-      <id>testsuite-jpms-java-21</id>
-      <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <maven.compiler.release>21</maven.compiler.release>
-      </properties>
-      <activation>
-        <jdk>[21,)</jdk>
-      </activation>
-    </profile>
-    <profile>
       <id>testsuite-jpms</id>
       <activation>
         <jdk>[11,)</jdk>

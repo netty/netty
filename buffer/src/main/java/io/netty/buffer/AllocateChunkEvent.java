@@ -23,7 +23,7 @@ import jdk.jfr.Name;
 @Name("AllocateChunkEvent")
 @Label("Chunk Allocation")
 @Description("Triggered when a new memory chunk is allocated for an allocator")
-public final class AllocateChunkEvent extends AbstractChunkEvent {
+final class AllocateChunkEvent extends AbstractChunkEvent {
     private static final AllocateChunkEvent INSTANCE = new AllocateChunkEvent();
 
     /**
