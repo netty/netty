@@ -391,7 +391,7 @@
                   <id>default-test</id>
                   <configuration>
                     <includes>
-                      <include>io/netty/testsuite_jpms/test/**.java</include>
+                      <include>io/netty/testsuite_jpms/test/**/*.java</include>
                     </includes>
                   </configuration>
                 </execution>
