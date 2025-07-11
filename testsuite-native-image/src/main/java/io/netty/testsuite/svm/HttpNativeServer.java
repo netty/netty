@@ -124,7 +124,7 @@ public final class HttpNativeServer {
                                 .bufferGroupId((short) 0)
                                 .bufferRingSize((short) 16)
                                 .batchSize(16)
-                                .allocator(new IoUringFixedBufferRingAllocator(1024))
+                                .allocator(new IoUringFixedBufferRingAllocator(1024), false)
                                 .build()
                 );
             }

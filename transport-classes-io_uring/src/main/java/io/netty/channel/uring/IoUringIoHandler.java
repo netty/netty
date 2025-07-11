@@ -217,7 +217,8 @@ public final class IoUringIoHandler implements IoHandler {
         return new IoUringBufferRing(ringFd,
                 Buffer.wrapMemoryAddressWithNativeOrder(ioUringBufRingAddr, Native.ioUringBufRingSize(bufferRingSize)),
                 bufferRingSize, bufferRingConfig.batchSize(),
-                bufferGroupId, bufferRingConfig.isIncremental(), bufferRingConfig.allocator()
+                bufferGroupId, bufferRingConfig.isIncremental(), bufferRingConfig.allocator(),
+                bufferRingConfig.isBatchAllocation()
         );
     }
 
