@@ -635,16 +635,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     }
 
     @Override
-    protected void submitAndRunNow() {
-        if (writeId != 0) {
-            // Force a submit and processing of the completions to ensure we drain the outbound buffer and
-            // send the data to the remote peer.
-            ((IoUringIoHandler) registration().attachment()).submitAndRunNow(writeId);
-        }
-        super.submitAndRunNow();
-    }
-
-    @Override
     boolean isPollInFirst() {
         return bufferRing == null || !bufferRing.isUsable();
     }
