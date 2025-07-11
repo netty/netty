@@ -16,6 +16,7 @@
 requires:
   - module: jdk.unsupported
   - module: jdk.jfr
+    static: true
   - module: java.logging
   - module: org.apache.commons.logging
     static: true
