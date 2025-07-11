@@ -159,9 +159,12 @@ final class IoUringBufferRing {
 
     /**
      * Try to expand by adding more buffers to the ring if there is any space left, this will be done lazy.
+     *
+     * @return {@code true} if we can expand the number of buffers in the ring, {@code false} otherwise.
      */
-    void expand() {
+    boolean expand() {
         needExpand = true;
+        return allocatedBuffers < buffers.length;
     }
 
     private void fill(short startBid, int buffers) {
