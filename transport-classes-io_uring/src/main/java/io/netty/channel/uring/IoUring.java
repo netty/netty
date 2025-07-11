@@ -192,7 +192,7 @@ public final class IoUring {
                "io.netty.iouring.pollAddMultishotEnabled", true);
         NUM_ELEMENTS_IOVEC = numElementsIoVec;
 
-        DEFAULT_RING_SIZE =  Math.max(64, SystemPropertyUtil.getInt("io.netty.iouring.ringSize", 128));
+        DEFAULT_RING_SIZE =  Math.max(16, SystemPropertyUtil.getInt("io.netty.iouring.ringSize", 128));
 
         if (IORING_SETUP_CQ_SIZE_SUPPORTED) {
             DEFAULT_CQ_SIZE = Math.max(DEFAULT_RING_SIZE,
