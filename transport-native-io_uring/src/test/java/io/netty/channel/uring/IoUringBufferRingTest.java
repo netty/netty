@@ -41,8 +41,6 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -97,7 +95,8 @@ public class IoUringBufferRingTest {
                         .bufferGroupId((short) 1)
                         .bufferRingSize((short) 2)
                         .batchSize(2).incremental(incremental)
-                        .allocator(new IoUringFixedBufferRingAllocator(1024), false)
+                        .allocator(new IoUringFixedBufferRingAllocator(1024))
+                        .batchAllocation(false)
                         .build();
 
         IoUringBufferRingConfig bufferRingConfig1 =
@@ -106,7 +105,8 @@ public class IoUringBufferRingTest {
                         .bufferRingSize((short) 16)
                         .batchSize(8)
                         .incremental(incremental)
-                        .allocator(new IoUringFixedBufferRingAllocator(1024), true)
+                        .allocator(new IoUringFixedBufferRingAllocator(1024))
+                        .batchAllocation(true)
                         .build();
         ioUringIoHandlerConfiguration.setBufferRingConfig(bufferRingConfig, bufferRingConfig1);
 
