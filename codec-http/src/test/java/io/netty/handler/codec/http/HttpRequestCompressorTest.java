@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.handler.codec.compression.CompressionOptions;
+import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.handler.codec.compression.ZstdOptions;
 import java.nio.charset.StandardCharsets;
@@ -96,6 +96,12 @@ class HttpRequestCompressorTest {
         assertThatCode(() -> new HttpRequestCompressor(HttpRequestCompressor.DEFAULT_ENCODING, -1))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("contentSizeThreshold");
+        assertThatCode(() -> new HttpRequestCompressor("snappy",
+                HttpRequestCompressor.DEFAULT_THRESHOLD, StandardCompressionOptions.zstd()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("compressionOptions")
+                .hasMessageContaining("must be of type %s", SnappyOptions.class.getName())
+                .hasMessageContaining("got %s", ZstdOptions.class.getName());
     }
 
     @ParameterizedTest(name = "test preferred encoding {0} / actual {1}")
@@ -117,7 +123,7 @@ class HttpRequestCompressorTest {
                     uncompressedContent.getBytes(StandardCharsets.UTF_8).length,
                     defaultOpts.maxEncodeSize()
             );
-            uut = new HttpRequestCompressor(preferredEncoding, 0, new CompressionOptions[]{testingOpts});
+            uut = new HttpRequestCompressor(preferredEncoding, HttpRequestCompressor.DEFAULT_THRESHOLD, testingOpts);
         } else {
             uut = new HttpRequestCompressor(preferredEncoding);
         }
@@ -164,7 +170,7 @@ class HttpRequestCompressorTest {
                     uncompressedContent.getBytes(StandardCharsets.UTF_8).length,
                     defaultOpts.maxEncodeSize()
             );
-            uut = new HttpRequestCompressor(preferredEncoding, 0, new CompressionOptions[]{testingOpts});
+            uut = new HttpRequestCompressor(preferredEncoding, HttpRequestCompressor.DEFAULT_THRESHOLD, testingOpts);
         } else {
             uut = new HttpRequestCompressor(preferredEncoding);
         }

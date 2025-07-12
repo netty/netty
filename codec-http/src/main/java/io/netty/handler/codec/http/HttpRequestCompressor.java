@@ -28,6 +28,7 @@ import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.DeflateOptions;
 import io.netty.handler.codec.compression.GzipOptions;
 import io.netty.handler.codec.compression.SnappyFrameEncoder;
+import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
@@ -38,8 +39,6 @@ import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -80,19 +79,27 @@ import java.util.function.Supplier;
 public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
 
     /**
-     * default encoding. used if no preferred encoding is set or it is not available.
+     * default encoding. used if no preferred encoding is set.
      */
     public static final String DEFAULT_ENCODING = "gzip";
+
+    /**
+     * default threshold. used if no custom threshold is set.
+     */
+    public static final int DEFAULT_THRESHOLD = 0;
+
     private static final List<String> SUPPORTED_ENCODINGS = Arrays.asList(new String[] {
         "br",
         "zstd",
         "snappy",
         "deflate",
-        "gzip"
+        "gzip",
     });
-    private static final InternalLogger log = InternalLoggerFactory.getInstance(HttpRequestCompressor.class);
+
     private final int contentSizeThreshold;
+
     private final String encoding;
+
     private final Supplier<MessageToByteEncoder<ByteBuf>> encoderFactory;
 
     /**
@@ -118,13 +125,13 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
 
     /**
      * Create a new instance using the preferred encoding.
-     * shortcut for {@code new HttpRequestCompressor(preferredEncoding, 0)}
+     * shortcut for {@code new HttpRequestCompressor(preferredEncoding, DEFAULT_THRESHOLD)}
      * @param preferredEncoding the preferred encoding.
      * if unavailable, the default encoding {@link #DEFAULT_ENCODING} will be used.
      * @see #HttpRequestCompressor(java.lang.String, int)
      */
     public HttpRequestCompressor(String preferredEncoding) {
-        this(preferredEncoding, 0);
+        this(preferredEncoding, DEFAULT_THRESHOLD);
     }
 
     /**
@@ -133,10 +140,10 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
      * @param preferredEncoding the preferred encoding.
      * if unavailable, the default encoding {@link #DEFAULT_ENCODING} will be used.
      * @param contentSizeThreshold the size in byte the http body must have before compressing the request
-     * @see #HttpRequestCompressor(java.lang.String, int, io.netty.handler.codec.compression.CompressionOptions...)
+     * @see #HttpRequestCompressor(java.lang.String, int, CompressionOptions)
      */
     public HttpRequestCompressor(String preferredEncoding, int contentSizeThreshold) {
-        this(preferredEncoding, contentSizeThreshold, (CompressionOptions[]) null);
+        this(preferredEncoding, contentSizeThreshold, null);
     }
 
     /**
@@ -145,14 +152,14 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
      * if unavailable, the default encoding {@link #DEFAULT_ENCODING} will be used.
      * @param contentSizeThreshold the size in byte the http body must have before compressing the request
      * @param compressionOptions the desired compression options to use.
-     * if {@code null} or empty, the defaults will be used.
+     * if {@code null}, the defaults for the given encoding will be used.
      * @see StandardCompressionOptions#brotli() default brotli options
      * @see StandardCompressionOptions#gzip() default gzip options
      * @see StandardCompressionOptions#zstd() default zstd options
      * @see StandardCompressionOptions#deflate() default deflate options
      */
     public HttpRequestCompressor(String preferredEncoding, int contentSizeThreshold,
-            CompressionOptions... compressionOptions) {
+            CompressionOptions compressionOptions) {
         ObjectUtil.checkNonEmpty(preferredEncoding, "preferredEncoding");
         this.contentSizeThreshold = ObjectUtil.
                 checkPositiveOrZero(contentSizeThreshold, "contentSizeThreshold");
@@ -163,54 +170,40 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
                             preferredEncoding, StringUtil.join(",", SUPPORTED_ENCODINGS)));
         }
 
-        GzipOptions gzipOptions = null;
-        DeflateOptions deflateOptions = null;
-        BrotliOptions brotliOptions = null;
-        ZstdOptions zstdOptions = null;
-        for (CompressionOptions compressionOption : Optional.ofNullable(compressionOptions)
-                .orElseGet(() -> new CompressionOptions[0])) {
-            if (compressionOption instanceof BrotliOptions) {
-                brotliOptions = (BrotliOptions) compressionOption;
-            } else if (compressionOption instanceof GzipOptions) {
-                gzipOptions = (GzipOptions) compressionOption;
-            } else if (compressionOption instanceof DeflateOptions) {
-                deflateOptions = (DeflateOptions) compressionOption;
-            } else if (compressionOption instanceof ZstdOptions) {
-                zstdOptions = (ZstdOptions) compressionOption;
-            } else {
-                log.info("ignoring unsupported compression option {}",
-                        compressionOption != null ? compressionOption.getClass() : "null");
-            }
-        }
-
+        final String optsName = "compressionOptions";
         if ("br".equals(preferredEncoding) && Brotli.isAvailable()) {
-            encoding = preferredEncoding;
-            final BrotliOptions opts = Optional.ofNullable(brotliOptions)
+            final BrotliOptions opts = Optional.ofNullable(
+                    requireType(BrotliOptions.class, compressionOptions, optsName))
                     .orElseGet(StandardCompressionOptions::brotli);
+            encoding = preferredEncoding;
             encoderFactory = () -> new BrotliEncoder(opts.parameters(), false);
         } else if ("zstd".equals(preferredEncoding) && Zstd.isAvailable()) {
-            encoding = preferredEncoding;
-            final ZstdOptions opts = Optional.ofNullable(zstdOptions)
+            final ZstdOptions opts = Optional.ofNullable(
+                    requireType(ZstdOptions.class, compressionOptions, optsName))
                     .orElseGet(StandardCompressionOptions::zstd);
+            encoding = preferredEncoding;
             encoderFactory = () -> new ZstdEncoder(opts.compressionLevel(), opts.blockSize(), opts.maxEncodeSize());
         } else if ("snappy".equals(preferredEncoding)) {
+            requireType(SnappyOptions.class, compressionOptions, optsName);
             encoding = preferredEncoding;
             encoderFactory = SnappyFrameEncoder::new;
         } else if ("deflate".equals(preferredEncoding)) {
-            encoding = preferredEncoding;
-            final DeflateOptions opts = Optional.ofNullable(deflateOptions)
+            final DeflateOptions opts = Optional.ofNullable(
+                    requireType(DeflateOptions.class, compressionOptions, optsName))
                     .orElseGet(StandardCompressionOptions::deflate);
+            encoding = preferredEncoding;
             encoderFactory = () -> ZlibCodecFactory.newZlibEncoder(
                     ZlibWrapper.ZLIB, opts.compressionLevel(), opts.windowBits(), opts.memLevel());
         } else {
-            encoding = DEFAULT_ENCODING;
-            final GzipOptions opts = Optional.ofNullable(gzipOptions)
+            final GzipOptions opts = Optional.ofNullable(
+                    requireType(GzipOptions.class, compressionOptions, optsName))
                     .orElseGet(StandardCompressionOptions::gzip);
+            encoding = DEFAULT_ENCODING;
             encoderFactory = () -> ZlibCodecFactory.newZlibEncoder(
                     ZlibWrapper.GZIP, opts.compressionLevel(), opts.windowBits(), opts.memLevel());
         }
         if (!preferredEncoding.equals(encoding)) {
-            log.info("preferred encoding {} not available, using {} as default", preferredEncoding, encoding);
+            throw new IllegalArgumentException(String.format("preferred encoding %s not available", preferredEncoding));
         }
     }
 
@@ -341,5 +334,26 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
 
     private static void setContentEncoding(HttpMessage msg, String value) {
         msg.headers().set(HttpHeaderNames.CONTENT_ENCODING, value);
+    }
+
+    /**
+     * checks if {@code value} is an instance of {@code T}.
+     *
+     * @param <T> the resulting type
+     * @param requiredType class of the required type
+     * @param value the value to check
+     * @param name the name of the parameter
+     * @return {@code value} casted as type {@code T}, or {@code null}
+     * @throws IllegalArgumentException if {@code value != null} and not an
+     * instance of {@code T}
+     */
+    private static <T> T requireType(Class<T> requiredType, Object value, String name) throws IllegalArgumentException {
+        if (value == null || requiredType.isInstance(value)) {
+            return requiredType.cast(value);
+        } else {
+            throw new IllegalArgumentException(
+                    String.format("Param %s must be of type %s but got %s",
+                            name, requiredType.getName(), value.getClass().getName()));
+        }
     }
 }
