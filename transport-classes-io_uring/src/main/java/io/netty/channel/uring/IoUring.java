@@ -49,6 +49,9 @@ public final class IoUring {
     private static final boolean IORING_RECVSEND_BUNDLE_ENABLED;
     private static final boolean IORING_POLL_ADD_MULTISHOT_ENABLED;
     static final int NUM_ELEMENTS_IOVEC;
+    static final int DEFAULT_RING_SIZE;
+    static final int DEFAULT_CQ_SIZE;
+    static final int DISABLE_SETUP_CQ_SIZE = -1;
 
     private static final InternalLogger logger;
 
@@ -188,6 +191,15 @@ public final class IoUring {
         IORING_POLL_ADD_MULTISHOT_ENABLED = IORING_POLL_ADD_MULTISHOT_SUPPORTED && SystemPropertyUtil.getBoolean(
                "io.netty.iouring.pollAddMultishotEnabled", true);
         NUM_ELEMENTS_IOVEC = numElementsIoVec;
+
+        DEFAULT_RING_SIZE =  Math.max(16, SystemPropertyUtil.getInt("io.netty.iouring.ringSize", 128));
+
+        if (IORING_SETUP_CQ_SIZE_SUPPORTED) {
+            DEFAULT_CQ_SIZE = Math.max(DEFAULT_RING_SIZE,
+                    SystemPropertyUtil.getInt("io.netty.iouring.cqSize", 4096));
+        } else {
+            DEFAULT_CQ_SIZE = DISABLE_SETUP_CQ_SIZE;
+        }
     }
 
     public static boolean isAvailable() {
