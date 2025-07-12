@@ -131,7 +131,6 @@
       <version>${project.version}</version>
       <classifier>${netty.quic.classifier}</classifier>
       <scope>runtime</scope>
-      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
