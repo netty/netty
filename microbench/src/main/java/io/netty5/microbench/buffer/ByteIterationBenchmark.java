@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.buffer.tests.benchmarks;
+package io.netty5.microbench.buffer;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;

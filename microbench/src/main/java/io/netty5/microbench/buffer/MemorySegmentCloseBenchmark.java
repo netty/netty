@@ -13,56 +13,69 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.buffer.tests.benchmarks;
+package io.netty5.microbench.buffer;
 
-import io.netty5.buffer.Buffer;
-import io.netty5.buffer.BufferAllocator;
-import io.netty5.util.Send;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
+import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
 
+import java.lang.foreign.Arena;
+import java.lang.foreign.MemorySegment;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
-
-import static java.util.concurrent.CompletableFuture.completedFuture;
 
 @Warmup(iterations = 10, time = 1)
 @Measurement(iterations = 10, time = 1)
 @Fork(value = 5, jvmArgsAppend = { "-XX:+UnlockDiagnosticVMOptions", "-XX:+DebugNonSafepoints" })
 @BenchmarkMode(Mode.AverageTime)
-@OutputTimeUnit(TimeUnit.MICROSECONDS)
+@OutputTimeUnit(TimeUnit.NANOSECONDS)
 @State(Scope.Benchmark)
-public class SendBenchmark {
-    private static final BufferAllocator NON_POOLED = BufferAllocator.onHeapUnpooled();
-    private static final BufferAllocator POOLED = BufferAllocator.onHeapPooled();
-    private static final Function<Send<Buffer>, Send<Buffer>> BUFFER_BOUNCE = send -> {
-        try (Buffer buf = send.receive()) {
-            return buf.send();
-        }
-    };
+public class MemorySegmentCloseBenchmark {
+    @Param({"0", "10", "100"})
+    public int unrelatedThreads;
 
-    @Benchmark
-    public Buffer sendNonPooled() throws Exception {
-        try (Buffer buf = NON_POOLED.allocate(8)) {
-            try (Buffer receive = completedFuture(buf.send()).thenApplyAsync(BUFFER_BOUNCE).get().receive()) {
-                return receive;
-            }
+    @Param({"16"/*, "124", "1024"*/})
+    public int size;
+
+    public ExecutorService unrelatedThreadPool;
+    public byte[] array;
+
+    @Setup
+    public void setUp() {
+        unrelatedThreadPool = unrelatedThreads > 0? Executors.newFixedThreadPool(unrelatedThreads) : null;
+        array = new byte[size];
+    }
+
+    @TearDown
+    public void tearDown() throws InterruptedException {
+        if (unrelatedThreadPool != null) {
+            unrelatedThreadPool.shutdown();
+            unrelatedThreadPool.awaitTermination(1, TimeUnit.MINUTES);
+            unrelatedThreadPool = null;
         }
     }
 
     @Benchmark
-    public Buffer sendPooled() throws Exception {
-        try (Buffer buf = POOLED.allocate(8)) {
-            try (Buffer receive = completedFuture(buf.send()).thenApplyAsync(BUFFER_BOUNCE).get().receive()) {
-                return receive;
-            }
+    public MemorySegment nativeConfined() {
+        try (Arena arena = Arena.ofConfined()) {
+            return arena.allocate(size);
+        }
+    }
+
+    @Benchmark
+    public MemorySegment nativeShared() {
+        try (Arena arena = Arena.ofShared()) {
+            return arena.allocate(size);
         }
     }
 }
