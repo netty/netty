@@ -107,7 +107,7 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
     private final AttributeKey<ByteBuf> bufAttrKey = AttributeKey.valueOf(HttpRequestCompressor.class, "buf");
 
     /**
-     * new instance using the defaults.
+     * Create a new instance using the defaults.
      * shortcut for {@code new HttpRequestCompressor(DEFAULT_ENCODING)}
      * @see #DEFAULT_ENCODING
      * @see #HttpRequestCompressor(java.lang.String)
@@ -117,7 +117,7 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
     }
 
     /**
-     * new instance using the preferred encoding.
+     * Create a new instance using the preferred encoding.
      * shortcut for {@code new HttpRequestCompressor(preferredEncoding, 0)}
      * @param preferredEncoding the preferred encoding.
      * if unavailable, the default encoding {@link #DEFAULT_ENCODING} will be used.
@@ -128,7 +128,7 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
     }
 
     /**
-     * new instance using the preferred encoding and the given threshold.
+     * Create a new instance using the preferred encoding and the given threshold.
      * shortcut for {@code new HttpRequestCompressor(preferredEncoding, contentSizeThreshold, null)}
      * @param preferredEncoding the preferred encoding.
      * if unavailable, the default encoding {@link #DEFAULT_ENCODING} will be used.
@@ -140,7 +140,7 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
     }
 
     /**
-     * new instance using the preferred encoding, threshold and compression options.
+     * Create a new instance using the preferred encoding, threshold and compression options.
      * @param preferredEncoding the preferred encoding.
      * if unavailable, the default encoding {@link #DEFAULT_ENCODING} will be used.
      * @param contentSizeThreshold the size in byte the http body must have before compressing the request
