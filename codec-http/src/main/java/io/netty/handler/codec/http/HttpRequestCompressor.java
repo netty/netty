@@ -76,22 +76,6 @@ import java.util.function.Supplier;
  *   }
  * });
  * </pre>
- * <p>
- * <b>Example for Reactor Netty</b>
- * <p>
- * For each new connection, add the handler to the end of the user pipeline.
- * <pre>
- * HttpClient
- *   .create()
- *   // add the handler
- *   .observe((con, newState) -> {
- *     // use CONFIGURED for HTTP/1.1 connections
- *     // use STREAM_CONFIGURED for HTTP/2 connections
- *     if (newState == HttpClientState.CONFIGURED || newState == HttpClientState.STREAM_CONFIGURED) {
- *       con.addHandlerLast(new HttpRequestCompressor("gzip"));
- *     }
- *   });
- * </pre>
  */
 public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
 
