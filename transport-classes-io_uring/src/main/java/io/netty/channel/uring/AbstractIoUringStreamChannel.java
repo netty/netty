@@ -433,7 +433,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     if (res == Native.ERRNO_NOBUFS_NEGATIVE) {
                         // try to expand the buffer ring by adding more buffers to it if there is any space left.
                         if (!bufferRing.expand()) {
-                            // Why couldn't expand the ring anymore so notify the user that we did run out of buffers
+                            // We couldn't expand the ring anymore so notify the user that we did run out of buffers
                             // without the ability to expand it.
                             // If this happens to often the user should most likely increase the buffer ring size.
                             pipeline.fireUserEventTriggered(bufferRing.getExhaustedEvent());
