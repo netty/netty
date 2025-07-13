@@ -118,4 +118,14 @@ public class SubmissionQueueTest {
     private static boolean setUpCQSizeUnavailable() {
         return !IoUring.isSetupCqeSizeSupported();
     }
+
+    @Test
+    public void testIoUringProbe() {
+        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
+        Native.IoUringProbe ioUringProbe = Native.ioUringProbe(ringBuffer.fd());
+        assertNotNull(ioUringProbe);
+        assertTrue(ioUringProbe.lastOp != 0);
+        assertTrue(ioUringProbe.opsLen != 0);
+        assertNotNull(ioUringProbe.ops);
+    }
 }

@@ -244,6 +244,8 @@ final class Native {
     static final int SPLICE_F_MOVE = 1;
 
     static final int IOU_PBUF_RING_INC = 2;
+
+    static final int IO_URING_OP_SUPPORTED = 1;
     static String opToStr(byte op) {
         switch (op) {
             case IORING_OP_NOP: return "NOP";
@@ -408,8 +410,8 @@ final class Native {
         return new RingBuffer(submissionQueue, completionQueue, (int) values[17]);
     }
 
-    static void checkAllIOSupported(int ringFd) {
-        if (!ioUringProbe(ringFd, REQUIRED_IORING_OPS)) {
+    static void checkAllIOSupported(IoUringProbe probe) {
+        if (!ioUringProbe(probe, REQUIRED_IORING_OPS)) {
             throw new UnsupportedOperationException("Not all operations are supported: "
                     + Arrays.toString(REQUIRED_IORING_OPS));
         }
@@ -420,24 +422,24 @@ final class Native {
         return Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
     }
 
-    static boolean isAcceptMultishotSupported(int ringFd) {
+    static boolean isAcceptMultishotSupported(IoUringProbe probe) {
         // IORING_OP_SOCKET was added in the same release (5.19);
-        return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SOCKET });
+        return ioUringProbe(probe, new int[] { Native.IORING_OP_SOCKET });
     }
 
-    static boolean isCqeFSockNonEmptySupported(int ringFd) {
+    static boolean isCqeFSockNonEmptySupported(IoUringProbe probe) {
         // IORING_OP_SOCKET was added in the same release (5.19);
-        return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SOCKET });
+        return ioUringProbe(probe, new int[] { Native.IORING_OP_SOCKET });
     }
 
-    static boolean isSpliceSupported(int ringFd) {
+    static boolean isSpliceSupported(IoUringProbe probe) {
         // IORING_OP_SPLICE Available since 5.7
-        return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SPLICE });
+        return ioUringProbe(probe, new int[] { Native.IORING_OP_SPLICE });
     }
 
-    static boolean isPollAddMultiShotSupported(int ringfd) {
+    static boolean isPollAddMultiShotSupported(IoUringProbe probe) {
         // Was added in the same release and we also need this feature to correctly handle edge-triggered mode.
-        return isCqeFSockNonEmptySupported(ringfd);
+        return isCqeFSockNonEmptySupported(probe);
     }
 
     /**
@@ -512,8 +514,32 @@ final class Native {
         return nativeMinor >= minor;
     }
 
-    static native boolean ioUringSetupSupportsFlags(int setupFlags);
-    private static native boolean ioUringProbe(int ringFd, int[] ios);
+    static class IoUringProbe {
+        byte lastOp;
+        byte opsLen;
+        IoUringProbeOp[] ops;
+    }
+
+    static class IoUringProbeOp {
+        byte op;
+        int flags;
+    }
+
+    static boolean ioUringProbe(IoUringProbe probe, int[] ops) {
+        IoUringProbeOp[] ioUringProbeOps = probe.ops;
+        if (ioUringProbeOps == null) {
+            return false;
+        }
+        for (int op : ops) {
+            if (op > probe.lastOp || (ioUringProbeOps[op].flags & IO_URING_OP_SUPPORTED) == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    static native boolean ioUringSetupSupportsFlags(int setupFlags);;
+    static native IoUringProbe ioUringProbe(int ringFd);
     private static native long[] ioUringSetup(int entries, int cqeSize, int setupFlags);
 
     static native int ioUringRegisterIoWqMaxWorkers(int ringFd, int maxBoundedValue, int maxUnboundedValue);

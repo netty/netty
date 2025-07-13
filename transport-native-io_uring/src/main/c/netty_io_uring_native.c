@@ -273,6 +273,43 @@ static jboolean netty_io_uring_setup_supports_flags(JNIEnv *env, jclass clazz, j
     return JNI_TRUE;
 }
 
+static jobject netty_io_uring_probe1(JNIEnv *env, jclass clazz, jint ring_fd) {
+    struct io_uring_probe *probe;
+    size_t mallocLen = sizeof(*probe) + 256 * sizeof(struct io_uring_probe_op);
+    probe = malloc(mallocLen);
+    memset(probe, 0, mallocLen);
+
+    if (sys_io_uring_register(ring_fd, IORING_REGISTER_PROBE, probe, 256) < 0) {
+        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "failed to probe via sys_io_uring_register(....) ", errno);
+        free(probe);
+        return NULL;
+    }
+
+    jclass probeClazz = (*env)->FindClass(env, "io/netty/channel/uring/Native$IoUringProbe");
+    jmethodID constructor = (*env)->GetMethodID(env, probeClazz, "<init>", "()V");
+
+    jobject javaProbe = (*env)->NewObject(env, probeClazz, constructor);
+
+    (*env)->SetByteField(env, javaProbe, (*env)->GetFieldID(env, probeClazz, "lastOp", "B"), probe->last_op);
+    (*env)->SetByteField(env, javaProbe, (*env)->GetFieldID(env, probeClazz, "opsLen", "B"), probe->ops_len);
+
+    jclass opClazz = (*env)->FindClass(env, "io/netty/channel/uring/Native$IoUringProbeOp");
+    jmethodID opConstructor = (*env)->GetMethodID(env, opClazz, "<init>", "()V");
+
+    jobjectArray opsArray = (*env)->NewObjectArray(env, probe->ops_len, opClazz, NULL);
+
+    for (int i = 0; i < probe->ops_len; ++i) {
+        jobject opObj = (*env)->NewObject(env, opClazz, opConstructor);
+        (*env)->SetByteField(env, opObj, (*env)->GetFieldID(env, opClazz, "op", "B"), probe->ops[i].op);
+        (*env)->SetIntField(env, opObj, (*env)->GetFieldID(env, opClazz, "flags", "I"), probe->ops[i].flags);
+        (*env)->SetObjectArrayElement(env, opsArray, i, opObj);
+    }
+
+    (*env)->SetObjectField(env, javaProbe, (*env)->GetFieldID(env, probeClazz, "ops", "[Lio/netty/channel/uring/Native$IoUringProbeOp;"), opsArray);
+    free(probe);
+    return javaProbe;
+}
+
 static jboolean netty_io_uring_probe(JNIEnv *env, jclass clazz, jint ring_fd, jintArray ops) {
     jboolean supported = JNI_FALSE;
     struct io_uring_probe *probe;
@@ -832,7 +869,7 @@ static const JNINativeMethod method_table[] = {
     {"ioUringRegisterIoWqMaxWorkers","(III)I", (void*) netty_io_uring_register_iowq_max_workers },
     {"ioUringRegisterEnableRings","(I)I", (void*) netty_io_uring_register_enable_rings },
     {"ioUringRegisterRingFds","(I)I", (void*) netty_io_uring_register_ring_fds },
-    {"ioUringProbe", "(I[I)Z", (void *) netty_io_uring_probe},
+    {"ioUringProbe", "(I)Lio/netty/channel/uring/Native$IoUringProbe;", (void *) netty_io_uring_probe1},
     {"ioUringExit", "(JIJIJIII)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "(Ljava/lang/String;)I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *) netty_io_uring_enter},
