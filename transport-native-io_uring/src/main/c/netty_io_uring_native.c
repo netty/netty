@@ -273,7 +273,7 @@ static jboolean netty_io_uring_setup_supports_flags(JNIEnv *env, jclass clazz, j
     return JNI_TRUE;
 }
 
-static jobject netty_io_uring_probe1(JNIEnv *env, jclass clazz, jint ring_fd) {
+static jobject netty_io_uring_probe(JNIEnv *env, jclass clazz, jint ring_fd) {
     struct io_uring_probe *probe;
     size_t mallocLen = sizeof(*probe) + 256 * sizeof(struct io_uring_probe_op);
     probe = malloc(mallocLen);
@@ -309,38 +309,6 @@ static jobject netty_io_uring_probe1(JNIEnv *env, jclass clazz, jint ring_fd) {
     free(probe);
     return javaProbe;
 }
-
-static jboolean netty_io_uring_probe(JNIEnv *env, jclass clazz, jint ring_fd, jintArray ops) {
-    jboolean supported = JNI_FALSE;
-    struct io_uring_probe *probe;
-    size_t mallocLen = sizeof(*probe) + 256 * sizeof(struct io_uring_probe_op);
-    probe = malloc(mallocLen);
-    memset(probe, 0, mallocLen);
-
-    if (sys_io_uring_register(ring_fd, IORING_REGISTER_PROBE, probe, 256) < 0) {
-        netty_unix_errors_throwRuntimeExceptionErrorNo(env, "failed to probe via sys_io_uring_register(....) ", errno);
-        goto done;
-    }
-
-    jsize opsLen = (*env)->GetArrayLength(env, ops);
-    jint *opsElements = (*env)->GetIntArrayElements(env, ops, 0);
-    if (opsElements == NULL) {
-        goto done;
-    }
-    int i;
-    for (i = 0; i < opsLen; i++) {
-        int op = opsElements[i];
-        if (op > probe->last_op || (probe->ops[op].flags & IO_URING_OP_SUPPORTED) == 0) {
-            goto done;
-        }
-    }
-    // all supported
-    supported = JNI_TRUE;
-done:
-    free(probe);
-    return supported;
-}
-
 
 static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, jint cqSize, jint setupFlags) {
     struct io_uring_params p;
@@ -869,7 +837,7 @@ static const JNINativeMethod method_table[] = {
     {"ioUringRegisterIoWqMaxWorkers","(III)I", (void*) netty_io_uring_register_iowq_max_workers },
     {"ioUringRegisterEnableRings","(I)I", (void*) netty_io_uring_register_enable_rings },
     {"ioUringRegisterRingFds","(I)I", (void*) netty_io_uring_register_ring_fds },
-    {"ioUringProbe", "(I)Lio/netty/channel/uring/Native$IoUringProbe;", (void *) netty_io_uring_probe1},
+    {"ioUringProbe", "(I)Lio/netty/channel/uring/Native$IoUringProbe;", (void *) netty_io_uring_probe},
     {"ioUringExit", "(JIJIJIII)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "(Ljava/lang/String;)I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *) netty_io_uring_enter},

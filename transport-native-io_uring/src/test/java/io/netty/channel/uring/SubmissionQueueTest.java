@@ -127,5 +127,10 @@ public class SubmissionQueueTest {
         assertTrue(ioUringProbe.lastOp != 0);
         assertTrue(ioUringProbe.opsLen != 0);
         assertNotNull(ioUringProbe.ops);
+        assertFalse(Native.ioUringProbe(ioUringProbe, new int[] {Integer.MAX_VALUE}));
+        assertDoesNotThrow(() -> Native.checkAllIOSupported(ioUringProbe));
+        ioUringProbe.ops[Native.IORING_OP_READ].flags = 0;
+        assertFalse(Native.ioUringProbe(ioUringProbe, new int[] {Native.IORING_OP_READ}));
+        assertThrows(UnsupportedOperationException.class, () -> Native.checkAllIOSupported(ioUringProbe));
     }
 }
