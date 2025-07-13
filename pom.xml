@@ -93,7 +93,7 @@
                 netty5-testsuite-native,netty5-testsuite-native-image,netty5-testsuite-native-image-client,
                 netty5-testsuite-native-image-client-runtime-init,netty5-testsuite-osgi,netty5-testsuite-shading,
                 netty5-transport-blockhound-tests,netty5-transport-native-unix-common-tests,netty5-microbench,
-                netty5-example,netty5-memory-segment
+                netty5-example
               </skippedModules>
               <additionalOptions>
                 <!--
@@ -477,7 +477,6 @@
     <module>all</module>
     <module>common</module>
     <module>buffer</module>
-    <module>buffer-memory-segment</module>
     <module>codec</module>
     <module>codec-dns</module>
     <module>codec-http</module>
