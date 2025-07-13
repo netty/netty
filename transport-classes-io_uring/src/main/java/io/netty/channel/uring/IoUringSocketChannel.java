@@ -47,10 +47,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
         Object outboundMessage = super.filterOutboundMessage(msg);
         if (IoUring.isIOUringSendZCSupported() && msg instanceof ByteBuf) {
             ByteBuf sendBuffer = (ByteBuf) outboundMessage;
-            // UnpooledDirectByteBuf and some of its subclasses return false when hasMemoryAddress() is called,
-            // but IoUring.memoryAddress() can still return the correct memory address.
-            // Therefore, we use nioBufferCount here to determine whether the address can be retrieved.
-            if (sendBuffer.nioBufferCount() == 1 && config.shouldSendZC(sendBuffer.readableBytes())) {
+            if (sendBuffer.hasMemoryAddress() && config.shouldSendZC(sendBuffer.readableBytes())) {
                 return new IoUringSendZCMessage(sendBuffer);
             }
         }

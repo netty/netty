@@ -629,7 +629,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         private boolean canCloseNow() {
             // Currently there are is no WRITE and READ scheduled, we can close the channel now without
             // problems related to re-ordering of completions.
-            return (ioState & (WRITE_SCHEDULED | READ_SCHEDULED)) == 0;
+            return canCloseNow0() && (ioState & (WRITE_SCHEDULED | READ_SCHEDULED)) == 0;
+        }
+
+        protected boolean canCloseNow0() {
+            return true;
         }
 
         private void closeNow() {
