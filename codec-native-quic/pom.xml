@@ -1151,7 +1151,6 @@
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
@@ -1170,6 +1169,18 @@
                 <index>true</index>
                 <manifestFile>${project.build.directory}/manifests/MANIFEST.MF</manifestFile>
               </archive>
+            </configuration>
+          </execution>
+          <!-- We must generate a -javadoc JAR file to publish on Maven Central -->
+          <execution>
+            <id>empty-javadoc-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>javadoc</classifier>
+              <classesDirectory>${basedir}/javadoc</classesDirectory>
             </configuration>
           </execution>
           <!-- Generate the JAR that contains the native library in it. -->
