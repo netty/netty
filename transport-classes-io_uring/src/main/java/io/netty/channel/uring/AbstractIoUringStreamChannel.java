@@ -431,13 +431,13 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             try {
                 if (res < 0) {
                     if (res == Native.ERRNO_NOBUFS_NEGATIVE) {
-                        // recv with provider buffer failed, Fire the BufferRingExhaustedEvent to notify users.
-                        // About the failure. If this happens to often the user should most likely increase the
-                        // buffer ring size.
-                        pipeline.fireUserEventTriggered(bufferRing.getExhaustedEvent());
-
                         // try to expand the buffer ring by adding more buffers to it if there is any space left.
-                        bufferRing.expand();
+                        if (!bufferRing.expand()) {
+                            // We couldn't expand the ring anymore so notify the user that we did run out of buffers
+                            // without the ability to expand it.
+                            // If this happens to often the user should most likely increase the buffer ring size.
+                            pipeline.fireUserEventTriggered(bufferRing.getExhaustedEvent());
+                        }
 
                         // Let's trigger a read again without consulting the RecvByteBufAllocator.Handle as
                         // we can't count this as a "real" read operation.
@@ -632,16 +632,6 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     @Override
     protected boolean socketIsEmpty(int flags) {
         return IoUring.isCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
-    }
-
-    @Override
-    protected void submitAndRunNow() {
-        if (writeId != 0) {
-            // Force a submit and processing of the completions to ensure we drain the outbound buffer and
-            // send the data to the remote peer.
-            ((IoUringIoHandler) registration().attachment()).submitAndRunNow(writeId);
-        }
-        super.submitAndRunNow();
     }
 
     @Override

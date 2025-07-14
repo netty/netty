@@ -273,8 +273,8 @@ static jboolean netty_io_uring_setup_supports_flags(JNIEnv *env, jclass clazz, j
     return JNI_TRUE;
 }
 
-static jboolean netty_io_uring_probe(JNIEnv *env, jclass clazz, jint ring_fd, jintArray ops) {
-    jboolean supported = JNI_FALSE;
+static jintArray netty_io_uring_probe0(JNIEnv *env, jclass clazz, jint ring_fd) {
+    jintArray array = NULL;
     struct io_uring_probe *probe;
     size_t mallocLen = sizeof(*probe) + 256 * sizeof(struct io_uring_probe_op);
     probe = malloc(mallocLen);
@@ -282,28 +282,31 @@ static jboolean netty_io_uring_probe(JNIEnv *env, jclass clazz, jint ring_fd, ji
 
     if (sys_io_uring_register(ring_fd, IORING_REGISTER_PROBE, probe, 256) < 0) {
         netty_unix_errors_throwRuntimeExceptionErrorNo(env, "failed to probe via sys_io_uring_register(....) ", errno);
-        goto done;
+        goto cleanup;
     }
 
-    jsize opsLen = (*env)->GetArrayLength(env, ops);
-    jint *opsElements = (*env)->GetIntArrayElements(env, ops, 0);
-    if (opsElements == NULL) {
-        goto done;
+    array = (*env)->NewIntArray(env, 2 + probe->ops_len * 2);
+    if (array == NULL) {
+        goto cleanup;
     }
-    int i;
-    for (i = 0; i < opsLen; i++) {
-        int op = opsElements[i];
-        if (op > probe->last_op || (probe->ops[op].flags & IO_URING_OP_SUPPORTED) == 0) {
-            goto done;
-        }
+    int idx = 0;
+    jint lastOp = (jint) probe->last_op;
+    (*env)->SetIntArrayRegion(env, array, idx++, 1, &lastOp);
+
+    jint opsLen = (jint) probe->ops_len;
+    (*env)->SetIntArrayRegion(env, array, idx++, 1, &opsLen);
+
+    for (int i = 0; i < probe->ops_len; ++i) {
+        jint op = (jint) probe->ops[i].op;
+        (*env)->SetIntArrayRegion(env, array, idx++, 1, &op);
+
+        jint flags = (jint) probe->ops[i].flags;
+        (*env)->SetIntArrayRegion(env, array, idx++, 1, &flags);
     }
-    // all supported
-    supported = JNI_TRUE;
-done:
+cleanup:
     free(probe);
-    return supported;
+    return array;
 }
-
 
 static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, jint cqSize, jint setupFlags) {
     struct io_uring_params p;
@@ -832,7 +835,7 @@ static const JNINativeMethod method_table[] = {
     {"ioUringRegisterIoWqMaxWorkers","(III)I", (void*) netty_io_uring_register_iowq_max_workers },
     {"ioUringRegisterEnableRings","(I)I", (void*) netty_io_uring_register_enable_rings },
     {"ioUringRegisterRingFds","(I)I", (void*) netty_io_uring_register_ring_fds },
-    {"ioUringProbe", "(I[I)Z", (void *) netty_io_uring_probe},
+    {"ioUringProbe0", "(I)[I", (void *) netty_io_uring_probe0},
     {"ioUringExit", "(JIJIJIII)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "(Ljava/lang/String;)I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *) netty_io_uring_enter},

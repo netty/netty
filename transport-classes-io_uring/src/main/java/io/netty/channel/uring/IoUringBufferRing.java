@@ -36,6 +36,7 @@ final class IoUringBufferRing {
     private final int ringFd;
     private final ByteBuf[] buffers;
     private final IoUringBufferRingAllocator allocator;
+    private final boolean batchAllocation;
     private final IoUringBufferRingExhaustedEvent exhaustedEvent;
     private final RingConsumer ringConsumer;
     private final boolean incremental;
@@ -45,10 +46,11 @@ final class IoUringBufferRing {
     private int usableBuffers;
     private int allocatedBuffers;
     private boolean needExpand;
+    private short lastGeneratedBid;
 
     IoUringBufferRing(int ringFd, ByteBuffer ioUringBufRing,
                       short entries, int batchSize, short bufferGroupId, boolean incremental,
-                      IoUringBufferRingAllocator allocator) {
+                      IoUringBufferRingAllocator allocator, boolean batchAllocation) {
         assert entries % 2 == 0;
         assert batchSize % 2 == 0;
         this.batchSize = batchSize;
@@ -61,6 +63,7 @@ final class IoUringBufferRing {
         this.buffers = new ByteBuf[entries];
         this.incremental = incremental;
         this.allocator = allocator;
+        this.batchAllocation = batchAllocation;
         this.ringConsumer  = new RingConsumer();
         this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
     }
@@ -71,7 +74,8 @@ final class IoUringBufferRing {
 
     void initialize() {
         // We already validated that batchSize is <= ring length.
-        refill(batchSize);
+        fill((short) 0, batchSize);
+        allocatedBuffers = batchSize;
     }
 
     private final class RingConsumer implements Consumer<ByteBuf> {
@@ -80,17 +84,23 @@ final class IoUringBufferRing {
         private short bid;
         private short oldTail;
 
-        void fill(int numBuffers) {
+        short fill(short startBid, int numBuffers) {
             // Fetch the tail once before allocate the batch.
             oldTail = (short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition);
 
             // At the moment we always start with bid 0 and so num and bid is the same. As this is more of an
             // implementation detail it is better to still keep both separated.
             this.num = 0;
-            this.bid = 0;
+            this.bid = startBid;
             this.expectedBuffers = numBuffers;
             try {
-                allocator.allocateBatch(this, numBuffers);
+                if (batchAllocation) {
+                    allocator.allocateBatch(this, numBuffers);
+                } else {
+                    for (int i = 0; i < numBuffers; i++) {
+                        add(oldTail, bid++, num++, allocator.allocate());
+                    }
+                }
             } catch (Throwable t) {
                 corrupted = true;
                 for (int i = 0; i < buffers.length; i++) {
@@ -105,8 +115,14 @@ final class IoUringBufferRing {
             // Now advanced the tail by the number of buffers that we just added.
             SHORT_HANDLE.setRelease(ioUringBufRing, tailFieldPosition, (short) (oldTail + num));
 
-            this.num = 0;
-            this.bid = 0;
+            return (short) (bid - 1);
+        }
+
+        void fill(short bid) {
+            short tail = (short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition);
+            add(tail, bid, 0, allocator.allocate());
+            // Now advanced the tail by one
+            SHORT_HANDLE.setRelease(ioUringBufRing, tailFieldPosition, (short) (tail + 1));
         }
 
         @Override
@@ -119,7 +135,11 @@ final class IoUringBufferRing {
                 byteBuf.release();
                 throw new IllegalStateException("Produced too many buffers");
             }
-            short ringIndex = (short) ((oldTail + num) & mask);
+            add(oldTail, bid++, num++, byteBuf);
+        }
+
+        private void add(int tail, short bid, int offset, ByteBuf byteBuf) {
+            short ringIndex = (short) ((tail + offset) & mask);
             assert buffers[bid] == null;
 
             long memoryAddress = IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex();
@@ -134,27 +154,34 @@ final class IoUringBufferRing {
             ioUringBufRing.putShort(position + Native.IOURING_BUFFER_OFFSETOF_BID, bid);
 
             buffers[bid] = byteBuf;
-
-            bid++;
-            num++;
         }
     }
 
     /**
      * Try to expand by adding more buffers to the ring if there is any space left, this will be done lazy.
+     *
+     * @return {@code true} if we can expand the number of buffers in the ring, {@code false} otherwise.
      */
-    void expand() {
+    boolean expand() {
         needExpand = true;
+        return allocatedBuffers < buffers.length;
     }
 
-    private void refill(int buffers) {
+    private void fill(short startBid, int buffers) {
         if (corrupted || closed) {
             return;
         }
         assert buffers % 2 == 0;
-        assert usableBuffers == 0;
-        ringConsumer.fill(buffers);
-        allocatedBuffers = usableBuffers = buffers;
+        lastGeneratedBid = ringConsumer.fill(startBid, buffers);
+        usableBuffers += buffers;
+    }
+
+    private void fill(short bid) {
+        if (corrupted || closed) {
+            return;
+        }
+        ringConsumer.fill(bid);
+        usableBuffers++;
     }
 
     /**
@@ -174,6 +201,10 @@ final class IoUringBufferRing {
      */
     int attemptedBytesRead(short bid) {
         return buffers[bid].writableBytes();
+    }
+
+    private int calculateNextBufferBatch() {
+        return Math.min(batchSize, entries - allocatedBuffers);
     }
 
     /**
@@ -209,9 +240,26 @@ final class IoUringBufferRing {
                 // We did get a signal that our buffer ring did not have enough buffers, let's see if we
                 // can grow it.
                 needExpand = false;
-                numBuffers += Math.min(batchSize, entries - allocatedBuffers);
+                numBuffers += calculateNextBufferBatch();
             }
-            refill(numBuffers);
+            fill((short) 0, numBuffers);
+            allocatedBuffers = numBuffers;
+            assert allocatedBuffers % 2 == 0;
+        } else if (!batchAllocation) {
+            // If we don'T do bulk allocations to refill the buffer ring we need to fill in the just used bid again
+            // if we didn't get a signal that we need expansion.
+            fill(bid);
+
+            if (needExpand && lastGeneratedBid == bid) {
+                // We did get a signal that our buffer ring did not have enough buffers and we just did add the last
+                // generated bid at the tail of the ring. Now its safe to grow the buffer ring and still guarantee
+                // sequential ordering which is needed for our RECVSEND_BUNDLE implementation.
+                needExpand = false;
+                int numBuffers = calculateNextBufferBatch();
+                fill((short) (bid + 1), numBuffers);
+                allocatedBuffers += numBuffers;
+                assert allocatedBuffers % 2 == 0;
+            }
         }
         return buffer;
     }

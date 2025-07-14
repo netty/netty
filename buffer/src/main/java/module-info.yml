@@ -16,3 +16,4 @@
 requires:
   - module: io.netty.common
   - module: jdk.jfr
+    static: true

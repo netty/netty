@@ -85,7 +85,6 @@ public final class IoUringIoHandler implements IoHandler {
     private static final int KERNEL_TIMESPEC_TV_SEC_FIELD = 0;
     private static final int KERNEL_TIMESPEC_TV_NSEC_FIELD = 8;
 
-    private final CompletionBuffer completionBuffer;
     private final ThreadAwareExecutor executor;
 
     IoUringIoHandler(ThreadAwareExecutor executor, IoUringIoHandlerConfig config) {
@@ -148,10 +147,6 @@ public final class IoUringIoHandler implements IoHandler {
         timeoutMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(KERNEL_TIMESPEC_SIZE);
         timeoutMemory = timeoutMemoryCleanable.buffer();
         timeoutMemoryAddress = Buffer.memoryAddress(timeoutMemory);
-        // We buffer a maximum of 2 * CompletionQueue.ringCapacity completions before we drain them in batches.
-        // Also as we never submit an udata which is 0L we use this as the tombstone marker.
-        completionBuffer = new CompletionBuffer(ringBuffer.ioUringCompletionQueue().ringCapacity * 2, 0);
-
         iovArray = new IovArray(IoUring.NUM_ELEMENTS_IOVEC);
     }
 
@@ -181,19 +176,7 @@ public final class IoUringIoHandler implements IoHandler {
             // Even if we have some completions already pending we can still try to even fetch more.
             submitAndClearNow(submissionQueue);
         }
-        return drainAndProcessAll(completionQueue, this::handle);
-    }
-
-    void submitAndRunNow(long udata) {
-        if (closeCompleted) {
-            return;
-        }
-        SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
-        CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
-        if (submitAndClearNow(submissionQueue) > 0) {
-            completionBuffer.drain(completionQueue);
-            completionBuffer.processOneNow(this::handle, udata);
-        }
+        return completionQueue.process(this::handle);
     }
 
     private int submitAndClearNow(SubmissionQueue submissionQueue) {
@@ -217,7 +200,8 @@ public final class IoUringIoHandler implements IoHandler {
         return new IoUringBufferRing(ringFd,
                 Buffer.wrapMemoryAddressWithNativeOrder(ioUringBufRingAddr, Native.ioUringBufRingSize(bufferRingSize)),
                 bufferRingSize, bufferRingConfig.batchSize(),
-                bufferGroupId, bufferRingConfig.isIncremental(), bufferRingConfig.allocator()
+                bufferGroupId, bufferRingConfig.isIncremental(), bufferRingConfig.allocator(),
+                bufferRingConfig.isBatchAllocation()
         );
     }
 
@@ -229,18 +213,6 @@ public final class IoUringIoHandler implements IoHandler {
         throw new IllegalArgumentException(
                 String.format("Cant find bgId:%d, please register it in ioUringIoHandler", bgId)
         );
-    }
-
-    private int drainAndProcessAll(CompletionQueue completionQueue, CompletionCallback callback) {
-        int processed = 0;
-        for (;;) {
-            boolean drainedAll = completionBuffer.drain(completionQueue);
-            processed += completionBuffer.processNow(callback);
-            if (drainedAll) {
-                break;
-            }
-        }
-        return processed;
     }
 
     private static void handleLoopException(Throwable throwable) {
@@ -423,11 +395,10 @@ public final class IoUringIoHandler implements IoHandler {
                 }
             }
             final DrainFdEventCallback handler = new DrainFdEventCallback();
-            drainAndProcessAll(completionQueue, handler);
             completionQueue.process(handler);
             while (!handler.eventFdDrained) {
                 submissionQueue.submitAndGet();
-                drainAndProcessAll(completionQueue, handler);
+                completionQueue.process(handler);
             }
         }
         // We've consumed any pending eventfd read and `eventfdAsyncNotify` should never
