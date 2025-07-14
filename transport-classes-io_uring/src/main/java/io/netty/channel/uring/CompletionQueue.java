@@ -148,7 +148,7 @@ final class CompletionQueue {
             return null;
         }
         ByteBuffer buffer = extraCqeData[cqeIdx];
-        buffer.position(0).limit(buffer.capacity());
+        buffer.clear();
         return buffer;
     }
 
