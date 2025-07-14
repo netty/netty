@@ -21,6 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -35,15 +36,16 @@ public class CompletionBufferTest {
         assertProcessOneNow(buffer, 8, 5, 1);
         assertProcessOneNow(buffer, 10, 0, 2);
 
-        assertFalse(buffer.processOneNow((res, flags, udata) -> {
+        assertFalse(buffer.processOneNow((res, flags, udata, cqeExtraData) -> {
             fail();
             return true;
         }, 4));
 
         AtomicInteger called = new AtomicInteger();
-        buffer.processNow((res, flags, udata) -> {
+        buffer.processNow((res, flags, udata, cqeExtraData) -> {
             called.incrementAndGet();
             assertEquals(3, udata);
+            assertNull(cqeExtraData);
             return true;
         });
         assertEquals(1, called.get());
@@ -57,8 +59,9 @@ public class CompletionBufferTest {
         buffer.add(10, 0, 3);
 
         AtomicInteger called = new AtomicInteger();
-        buffer.processNow((res, flags, udata) -> {
+        buffer.processNow((res, flags, udata, cqeExtraData) -> {
             called.incrementAndGet();
+            assertNull(cqeExtraData);
             return false;
         });
         assertEquals(1, called.get());
@@ -66,10 +69,11 @@ public class CompletionBufferTest {
 
     private static void assertProcessOneNow(
             CompletionBuffer buffer, int expectedRes, int expectedFlags, long expectedUdata) {
-        assertTrue(buffer.processOneNow((res, flags, udata) -> {
+        assertTrue(buffer.processOneNow((res, flags, udata, cqeExtraData) -> {
             assertEquals(expectedRes, res);
             assertEquals(expectedFlags, flags);
             assertEquals(expectedUdata, udata);
+            assertNull(cqeExtraData);
             return true;
         }, expectedUdata));
     }

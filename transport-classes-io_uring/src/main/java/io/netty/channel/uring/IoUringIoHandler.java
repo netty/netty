@@ -227,7 +227,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    private boolean handle(int res, int flags, long udata) {
+    private boolean handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
         try {
             int id = UserData.decodeId(udata);
             byte op = UserData.decodeOp(udata);
@@ -251,7 +251,7 @@ public final class IoUringIoHandler implements IoHandler {
                         Native.opToStr(op), id, res);
                 return true;
             }
-            registration.handle(res, flags, op, data);
+            registration.handle(res, flags, op, data, extraCqeData);
             return true;
         } catch (Error e) {
             throw e;
@@ -387,11 +387,11 @@ public final class IoUringIoHandler implements IoHandler {
                 boolean eventFdDrained;
 
                 @Override
-                public boolean handle(int res, int flags, long udata) {
+                public boolean handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
                     if (UserData.decodeId(udata) == EVENTFD_ID) {
                         eventFdDrained = true;
                     }
-                    return IoUringIoHandler.this.handle(res, flags, udata);
+                    return IoUringIoHandler.this.handle(res, flags, udata, extraCqeData);
                 }
             }
             final DrainFdEventCallback handler = new DrainFdEventCallback();
@@ -557,8 +557,8 @@ public final class IoUringIoHandler implements IoHandler {
             }
         }
 
-        void handle(int res, int flags, byte op, short data) {
-            event.update(res, flags, op, data);
+        void handle(int res, int flags, byte op, short data, ByteBuffer extraCqeData) {
+            event.update(res, flags, op, data, extraCqeData);
             handle.handle(this, event);
             // Only decrement outstandingCompletions if IORING_CQE_F_MORE is not set as otherwise we know that we will
             // receive more completions for the intial request.
