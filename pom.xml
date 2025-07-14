@@ -809,6 +809,7 @@
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
     <module>jfr-stub</module>
+    <module>varhandle-stub</module>
     <module>bom</module>
   </modules>
 

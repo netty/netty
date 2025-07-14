@@ -15,30 +15,68 @@
  */
 package io.netty.util;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import io.netty.util.internal.AtomicReferenceCountUpdater;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReferenceCountUpdater;
+import io.netty.util.internal.UnsafeReferenceCountUpdater;
+import io.netty.util.internal.VarHandleReferenceCountUpdater;
+
+import static io.netty.util.internal.ReferenceCountUpdater.getUnsafeOffset;
+import static java.util.concurrent.atomic.AtomicIntegerFieldUpdater.newUpdater;
 
 /**
  * Abstract base class for classes wants to implement {@link ReferenceCounted}.
  */
 public abstract class AbstractReferenceCounted implements ReferenceCounted {
-    private static final long REFCNT_FIELD_OFFSET =
-            ReferenceCountUpdater.getUnsafeOffset(AbstractReferenceCounted.class, "refCnt");
-    private static final AtomicIntegerFieldUpdater<AbstractReferenceCounted> AIF_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(AbstractReferenceCounted.class, "refCnt");
+    private static final long REFCNT_FIELD_OFFSET;
+    private static final AtomicIntegerFieldUpdater<AbstractReferenceCounted> AIF_UPDATER;
+    private static final Object REFCNT_FIELD_VH;
+    private static final ReferenceCountUpdater<AbstractReferenceCounted> updater;
 
-    private static final ReferenceCountUpdater<AbstractReferenceCounted> updater =
-            new ReferenceCountUpdater<AbstractReferenceCounted>() {
-        @Override
-        protected AtomicIntegerFieldUpdater<AbstractReferenceCounted> updater() {
-            return AIF_UPDATER;
+    static {
+        switch (ReferenceCountUpdater.updaterTypeOf(AbstractReferenceCounted.class, "refCnt")) {
+            case Atomic:
+                AIF_UPDATER = newUpdater(AbstractReferenceCounted.class, "refCnt");
+                REFCNT_FIELD_OFFSET = -1;
+                REFCNT_FIELD_VH = null;
+                updater = new AtomicReferenceCountUpdater<AbstractReferenceCounted>() {
+                    @Override
+                    protected AtomicIntegerFieldUpdater<AbstractReferenceCounted> updater() {
+                        return AIF_UPDATER;
+                    }
+                };
+                break;
+            case Unsafe:
+                AIF_UPDATER = null;
+                REFCNT_FIELD_OFFSET = getUnsafeOffset(AbstractReferenceCounted.class, "refCnt");
+                REFCNT_FIELD_VH = null;
+                updater = new UnsafeReferenceCountUpdater<AbstractReferenceCounted>() {
+                    @Override
+                    protected long refCntFieldOffset() {
+                        return REFCNT_FIELD_OFFSET;
+                    }
+                };
+                break;
+            case VarHandle:
+                AIF_UPDATER = null;
+                REFCNT_FIELD_OFFSET = -1;
+                REFCNT_FIELD_VH = PlatformDependent.findVarHandleOfIntField(MethodHandles.lookup(),
+                        AbstractReferenceCounted.class, "refCnt");
+                updater = new VarHandleReferenceCountUpdater<AbstractReferenceCounted>() {
+                    @Override
+                    protected VarHandle varHandle() {
+                        return (VarHandle) REFCNT_FIELD_VH;
+                    }
+                };
+                break;
+            default:
+                throw new Error("Unknown updater type for AbstractReferenceCounted");
         }
-        @Override
-        protected long unsafeOffset() {
-            return REFCNT_FIELD_OFFSET;
-        }
-    };
+    }
 
     // Value might not equal "real" reference count, all access should be via the updater
     @SuppressWarnings({"unused", "FieldMayBeFinal"})

@@ -25,17 +25,22 @@ import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.MpscIntQueue;
+import io.netty.util.internal.AtomicReferenceCountUpdater;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReferenceCountUpdater;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
+import io.netty.util.internal.UnsafeReferenceCountUpdater;
 import io.netty.util.internal.UnstableApi;
+import io.netty.util.internal.VarHandleReferenceCountUpdater;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
@@ -54,6 +59,9 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.IntSupplier;
+
+import static io.netty.util.internal.ReferenceCountUpdater.getUnsafeOffset;
+import static java.util.concurrent.atomic.AtomicIntegerFieldUpdater.newUpdater;
 
 /**
  * An auto-tuning pooling allocator, that follows an anti-generational hypothesis.
@@ -1078,10 +1086,51 @@ final class AdaptivePoolingAllocator {
     }
 
     private static class Chunk implements ReferenceCounted, ChunkInfo {
-        private static final long REFCNT_FIELD_OFFSET =
-                ReferenceCountUpdater.getUnsafeOffset(Chunk.class, "refCnt");
-        private static final AtomicIntegerFieldUpdater<Chunk> AIF_UPDATER =
-                AtomicIntegerFieldUpdater.newUpdater(Chunk.class, "refCnt");
+        private static final long REFCNT_FIELD_OFFSET;
+        private static final AtomicIntegerFieldUpdater<Chunk> AIF_UPDATER;
+        private static final Object REFCNT_FIELD_VH;
+        private static final ReferenceCountUpdater<Chunk> updater;
+
+        static {
+            switch (ReferenceCountUpdater.updaterTypeOf(Chunk.class, "refCnt")) {
+                case Atomic:
+                    AIF_UPDATER = newUpdater(Chunk.class, "refCnt");
+                    REFCNT_FIELD_OFFSET = -1;
+                    REFCNT_FIELD_VH = null;
+                    updater = new AtomicReferenceCountUpdater<Chunk>() {
+                        @Override
+                        protected AtomicIntegerFieldUpdater<Chunk> updater() {
+                            return AIF_UPDATER;
+                        }
+                    };
+                    break;
+                case Unsafe:
+                    AIF_UPDATER = null;
+                    REFCNT_FIELD_OFFSET = getUnsafeOffset(Chunk.class, "refCnt");
+                    REFCNT_FIELD_VH = null;
+                    updater = new UnsafeReferenceCountUpdater<Chunk>() {
+                        @Override
+                        protected long refCntFieldOffset() {
+                            return REFCNT_FIELD_OFFSET;
+                        }
+                    };
+                    break;
+                case VarHandle:
+                    AIF_UPDATER = null;
+                    REFCNT_FIELD_OFFSET = -1;
+                    REFCNT_FIELD_VH = PlatformDependent.findVarHandleOfIntField(MethodHandles.lookup(),
+                            Chunk.class, "refCnt");
+                    updater = new VarHandleReferenceCountUpdater<Chunk>() {
+                        @Override
+                        protected VarHandle varHandle() {
+                            return (VarHandle) REFCNT_FIELD_VH;
+                        }
+                    };
+                    break;
+                default:
+                    throw new Error("Unknown updater type for Chunk");
+            }
+        }
 
         protected final AbstractByteBuf delegate;
         protected Magazine magazine;
@@ -1090,20 +1139,6 @@ final class AdaptivePoolingAllocator {
         private final int capacity;
         private final boolean pooled;
         protected int allocatedBytes;
-
-        private static final ReferenceCountUpdater<Chunk> updater =
-                new ReferenceCountUpdater<Chunk>() {
-                    @Override
-                    protected AtomicIntegerFieldUpdater<Chunk> updater() {
-                        return AIF_UPDATER;
-                    }
-                    @Override
-                    protected long unsafeOffset() {
-                        // on native image, REFCNT_FIELD_OFFSET can be recomputed even with Unsafe unavailable, so we
-                        // need to guard here
-                        return PlatformDependent.hasUnsafe() ? REFCNT_FIELD_OFFSET : -1;
-                    }
-                };
 
         // Value might not equal "real" reference count, all access should be via the updater
         @SuppressWarnings({"unused", "FieldMayBeFinal"})
