@@ -95,16 +95,17 @@ public final class IoUring {
                         // 160kb.
                         numElementsIoVec = SystemPropertyUtil.getInt(
                                 "io.netty.iouring.numElementsIoVec", 10 * Limits.IOV_MAX);
-                        Native.checkAllIOSupported(ringBuffer.fd());
-                        socketNonEmptySupported = Native.isCqeFSockNonEmptySupported(ringBuffer.fd());
-                        spliceSupported = Native.isSpliceSupported(ringBuffer.fd());
+                        Native.IoUringProbe ioUringProbe = Native.ioUringProbe(ringBuffer.fd());
+                        Native.checkAllIOSupported(ioUringProbe);
+                        socketNonEmptySupported = Native.isCqeFSockNonEmptySupported(ioUringProbe);
+                        spliceSupported = Native.isSpliceSupported(ioUringProbe);
                         recvsendBundleSupported = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
                         // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
                         acceptSupportNoWait = recvsendBundleSupported;
 
-                        acceptMultishotSupported = Native.isAcceptMultishotSupported(ringBuffer.fd());
+                        acceptMultishotSupported = Native.isAcceptMultishotSupported(ioUringProbe);
                         recvMultishotSupported = Native.isRecvMultishotSupported();
-                        pollAddMultishotSupported = Native.isPollAddMultiShotSupported(ringBuffer.fd());
+                        pollAddMultishotSupported = Native.isPollAddMultiShotSupported(ioUringProbe);
                         registerIowqWorkersSupported = Native.isRegisterIoWqWorkerSupported(ringBuffer.fd());
                         submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
                         setUpCqSizeSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_CQSIZE);

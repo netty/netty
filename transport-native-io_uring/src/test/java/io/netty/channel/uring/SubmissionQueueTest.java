@@ -118,4 +118,21 @@ public class SubmissionQueueTest {
     private static boolean setUpCQSizeUnavailable() {
         return !IoUring.isSetupCqeSizeSupported();
     }
+
+    @Test
+    public void testIoUringProbeSupported() {
+        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
+        Native.IoUringProbe ioUringProbe = Native.ioUringProbe(ringBuffer.fd());
+        assertNotNull(ioUringProbe);
+        assertNotEquals(0, ioUringProbe.lastOp);
+        assertNotEquals(0, ioUringProbe.opsLen);
+        assertNotNull(ioUringProbe.ops);
+        assertFalse(Native.ioUringProbe(ioUringProbe, new int[] {Integer.MAX_VALUE}));
+        assertDoesNotThrow(() -> Native.checkAllIOSupported(ioUringProbe));
+
+        // Let's mark it as not supported.
+        ioUringProbe.ops[Native.IORING_OP_READ] = new Native.IoUringProbeOp(Native.IORING_OP_READ, 0);
+        assertFalse(Native.ioUringProbe(ioUringProbe, new int[] {Native.IORING_OP_READ}));
+        assertThrows(UnsupportedOperationException.class, () -> Native.checkAllIOSupported(ioUringProbe));
+    }
 }
