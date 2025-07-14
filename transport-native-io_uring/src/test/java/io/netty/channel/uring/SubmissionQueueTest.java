@@ -120,16 +120,18 @@ public class SubmissionQueueTest {
     }
 
     @Test
-    public void testIoUringProbe() {
+    public void testIoUringProbeSupported() {
         RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
         Native.IoUringProbe ioUringProbe = Native.ioUringProbe(ringBuffer.fd());
         assertNotNull(ioUringProbe);
-        assertTrue(ioUringProbe.lastOp != 0);
-        assertTrue(ioUringProbe.opsLen != 0);
+        assertNotEquals(0, ioUringProbe.lastOp);
+        assertNotEquals(0, ioUringProbe.opsLen);
         assertNotNull(ioUringProbe.ops);
         assertFalse(Native.ioUringProbe(ioUringProbe, new int[] {Integer.MAX_VALUE}));
         assertDoesNotThrow(() -> Native.checkAllIOSupported(ioUringProbe));
-        ioUringProbe.ops[Native.IORING_OP_READ].flags = 0;
+
+        // Let's mark it as not supported.
+        ioUringProbe.ops[Native.IORING_OP_READ] = new Native.IoUringProbeOp(Native.IORING_OP_READ, 0);
         assertFalse(Native.ioUringProbe(ioUringProbe, new int[] {Native.IORING_OP_READ}));
         assertThrows(UnsupportedOperationException.class, () -> Native.checkAllIOSupported(ioUringProbe));
     }

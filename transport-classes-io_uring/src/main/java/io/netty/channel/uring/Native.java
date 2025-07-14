@@ -514,15 +514,30 @@ final class Native {
         return nativeMinor >= minor;
     }
 
-    static class IoUringProbe {
-        byte lastOp;
-        byte opsLen;
-        IoUringProbeOp[] ops;
+    static final class IoUringProbe {
+        final byte lastOp;
+        final byte opsLen;
+        final IoUringProbeOp[] ops;
+
+        IoUringProbe(int[] values) {
+            int idx = 0;
+            lastOp = (byte) values[idx++];
+            opsLen = (byte) values[idx++];
+            ops  = new IoUringProbeOp[opsLen];
+            for (int i = 0; i < opsLen; i++) {
+                ops[i] = new IoUringProbeOp((byte) values[idx++], values[idx++]);
+            }
+        }
     }
 
     static class IoUringProbeOp {
-        byte op;
-        int flags;
+        final byte op;
+        final int flags;
+
+        IoUringProbeOp(byte op, int flags) {
+            this.op = op;
+            this.flags = flags;
+        }
     }
 
     static boolean ioUringProbe(IoUringProbe probe, int[] ops) {
@@ -539,8 +554,16 @@ final class Native {
     }
 
     static native boolean ioUringSetupSupportsFlags(int setupFlags);;
-    static native IoUringProbe ioUringProbe(int ringFd);
     private static native long[] ioUringSetup(int entries, int cqeSize, int setupFlags);
+
+    static IoUringProbe ioUringProbe(int ringfd) {
+        int[] values = ioUringProbe0(ringfd);
+        if (values == null) {
+            return null;
+        }
+        return new IoUringProbe(values);
+    }
+    private static native int[] ioUringProbe0(int ringFd);
 
     static native int ioUringRegisterIoWqMaxWorkers(int ringFd, int maxBoundedValue, int maxUnboundedValue);
     static native int ioUringRegisterEnableRings(int ringFd);
