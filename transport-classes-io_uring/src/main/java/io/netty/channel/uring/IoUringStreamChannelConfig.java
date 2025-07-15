@@ -23,7 +23,7 @@ import java.util.Map;
 
 abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
-    static final int DISABLE_SEND_ZC = -1;
+    public static final int DISABLE_SEND_ZC = -1;
 
     private volatile short bufferGroupId = -1;
 

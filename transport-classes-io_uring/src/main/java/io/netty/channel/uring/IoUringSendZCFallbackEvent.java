@@ -17,6 +17,22 @@ package io.netty.channel.uring;
 
 /**
  * Event that is fired when cqe.res & IORING_NOTIF_USAGE_ZC_COPIED != 0
+ * If then kernel does not support sendzc and fallbacks to zgcopy mode,
+ * we will fire an {@link IoUringSendZCFallbackEvent} in the pipeline.
+ * At that point, you can choose to disable this feature
+ * <pre>
+ * public class MyHandle extends ChannelDuplexHandler {
+ *     {@code @Override}
+ *     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+ *         if (evt instanceof {@link IoUringSendZCFallbackEvent}) {
+ *             ctx.channel().setOption(
+ *              IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD,
+ *              IoUringSocketChannelConfig.DISABLE_SEND_ZC
+ *             );
+ *         }
+ *     }
+ * }
+ * </pre>
  */
 public final class IoUringSendZCFallbackEvent {
 
