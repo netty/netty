@@ -20,12 +20,18 @@ import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.MessageToMessageDecoder;
 import io.netty.util.internal.ObjectUtil;
 
+import java.nio.ByteBuffer;
+import java.nio.CharBuffer;
+import java.nio.charset.CharacterCodingException;
 import java.nio.charset.Charset;
+import java.nio.charset.CharsetDecoder;
+import java.nio.charset.CodingErrorAction;
 import java.util.List;
 
 /**
@@ -75,6 +81,19 @@ public class StringDecoder extends MessageToMessageDecoder<ByteBuf> {
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf msg, List<Object> out) throws Exception {
-        out.add(msg.toString(charset));
+        CharsetDecoder decoder = charset.newDecoder()
+                                        .onMalformedInput(CodingErrorAction.REPLACE)
+                                        .onUnmappableCharacter(CodingErrorAction.REPLACE);
+
+        ByteBuffer byteBuffer = msg.nioBuffer();
+
+        CharBuffer charBuffer;
+        try {
+            charBuffer = decoder.decode(byteBuffer);
+        } catch (CharacterCodingException e) {
+            throw new DecoderException("Failed to decode ByteBuf to String", e);
+        }
+
+        out.add(charBuffer.toString());
     }
 }
