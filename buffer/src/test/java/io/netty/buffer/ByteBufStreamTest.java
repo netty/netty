@@ -50,8 +50,7 @@ public class ByteBufStreamTest {
             // Expected
         }
 
-        ByteBufOutputStream out = new ByteBufOutputStream(buf);
-        try {
+        try (ByteBufOutputStream out = new ByteBufOutputStream(buf)) {
             assertSame(buf, out.buffer());
             out.writeBoolean(true);
             out.writeBoolean(false);
@@ -71,8 +70,6 @@ public class ByteBufStreamTest {
             out.write(EMPTY_BYTES);
             out.write(new byte[]{1, 2, 3, 4});
             out.write(new byte[]{1, 3, 3, 4}, 0, 0);
-        } finally {
-            out.close();
         }
 
         try {
@@ -234,33 +231,29 @@ public class ByteBufStreamTest {
         ByteBuf buf = Unpooled.buffer(16);
         buf.writeBytes(new byte[]{1, 2, 3, 4, 5, 6});
 
-        ByteBufInputStream in = new ByteBufInputStream(buf, 3);
-
-        assertEquals(1, in.read());
-        assertEquals(2, in.read());
-        assertEquals(3, in.read());
-        assertEquals(-1, in.read());
-        assertEquals(-1, in.read());
-        assertEquals(-1, in.read());
-
-        buf.release();
-        in.close();
+        try (ByteBufInputStream in = new ByteBufInputStream(buf, 3)) {
+            assertEquals(1, in.read());
+            assertEquals(2, in.read());
+            assertEquals(3, in.read());
+            assertEquals(-1, in.read());
+            assertEquals(-1, in.read());
+            assertEquals(-1, in.read());
+            buf.release();
+        }
 
         // case2
         ByteBuf buf2 = Unpooled.buffer(16);
         buf2.writeBytes(new byte[]{1, 2, 3, 4, 5, 6});
 
-        ByteBufInputStream in2 = new ByteBufInputStream(buf2, 4);
-
-        assertEquals(1, in2.read());
-        assertEquals(2, in2.read());
-        assertEquals(3, in2.read());
-        assertEquals(4, in2.read());
-        assertNotEquals(5, in2.read());
-        assertEquals(-1, in2.read());
-
-        buf2.release();
-        in2.close();
+        try (ByteBufInputStream in2 = new ByteBufInputStream(buf2, 4)) {
+            assertEquals(1, in2.read());
+            assertEquals(2, in2.read());
+            assertEquals(3, in2.read());
+            assertEquals(4, in2.read());
+            assertNotEquals(5, in2.read());
+            assertEquals(-1, in2.read());
+            buf2.release();
+        }
     }
 
     @Test
@@ -269,11 +262,10 @@ public class ByteBufStreamTest {
         ByteBuf buf = Unpooled.buffer(16);
         buf.writeBytes(new byte[] { 1, 2, 3, 4, 5, 6 });
 
-        ByteBufInputStream in = new ByteBufInputStream(buf, 0);
-
-        assertNull(in.readLine());
-        buf.release();
-        in.close();
+        try (ByteBufInputStream in = new ByteBufInputStream(buf, 0)) {
+            assertNull(in.readLine());
+            buf.release();
+        }
     }
 
     @Test
@@ -281,13 +273,12 @@ public class ByteBufStreamTest {
         ByteBuf buf2 = Unpooled.buffer(16);
         buf2.writeBytes(new byte[] { 'A', 'B', '\n', 'C', 'E', 'F'});
 
-        ByteBufInputStream in2 = new ByteBufInputStream(buf2, 4);
-
-        assertEquals("AB", in2.readLine());
-        assertEquals("C", in2.readLine());
-        assertNull(in2.readLine());
-        buf2.release();
-        in2.close();
+        try (ByteBufInputStream in2 = new ByteBufInputStream(buf2, 4)) {
+            assertEquals("AB", in2.readLine());
+            assertEquals("C", in2.readLine());
+            assertNull(in2.readLine());
+            buf2.release();
+        }
     }
 
     @Test
@@ -296,8 +287,7 @@ public class ByteBufStreamTest {
         ByteBuf buf = Unpooled.buffer(16);
         buf.writeBytes(new byte[] { 1, 2, 3, 4, 5, 6 });
 
-        final ByteBufInputStream in = new ByteBufInputStream(buf, 0);
-        try {
+        try (ByteBufInputStream in = new ByteBufInputStream(buf, 0)) {
             assertThrows(EOFException.class, new Executable() {
                 @Override
                 public void execute() throws IOException {
@@ -306,7 +296,6 @@ public class ByteBufStreamTest {
             });
         } finally {
             buf.release();
-            in.close();
         }
     }
 
@@ -314,7 +303,7 @@ public class ByteBufStreamTest {
     public void testReleaseOnCloseInByteBufOutputStream() throws Exception {
         ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer(16);
         buf.writeBytes(new byte[] { 1, 2, 3, 4, 5, 6 });
-        final ByteBufOutputStream out = new ByteBufOutputStream(buf, true);
+        ByteBufOutputStream out = new ByteBufOutputStream(buf, true);
         try {
             out.writeBoolean(true);
             out.writeBoolean(false);

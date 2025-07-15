@@ -26,6 +26,9 @@ services:
   build-boringssl-snapshot:
     image: netty:centos-7-1.8
 
+  build-boringssl-static-jdk8-tests:
+    image: netty:centos-7-1.8
+
   stage-snapshot:
     image: netty:centos-7-1.8
 

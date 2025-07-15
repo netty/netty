@@ -28,15 +28,35 @@ import static java.lang.invoke.MethodType.methodType;
  * Provide a way to clean direct {@link ByteBuffer} instances on Java 24+,
  * where we don't have {@code Unsafe} available, but we have memory segments.
  */
-final class CleanerJava24 implements Cleaner {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CleanerJava24.class);
+final class CleanerJava25 implements Cleaner {
+    private static final InternalLogger logger;
 
     private static final MethodHandle INVOKE_ALLOCATOR;
 
     static {
+        boolean suitableJavaVersion;
+        if (System.getProperty("org.graalvm.nativeimage.imagecode") != null) {
+            // native image supports this since 25, but we don't use PlatformDependent0 here, since
+            // we need to initialize CleanerJava25 at build time.
+            String v = System.getProperty("java.specification.version");
+            try {
+                suitableJavaVersion = Integer.parseInt(v) >= 25;
+            } catch (NumberFormatException e) {
+                suitableJavaVersion = false;
+            }
+            // also need to prevent initializing the logger at build time
+            logger = null;
+        } else {
+            // Only attempt to use MemorySegments on Java 25 or greater, because of the following JDK bugs:
+            // - https://bugs.openjdk.org/browse/JDK-8357145
+            // - https://bugs.openjdk.org/browse/JDK-8357268
+            suitableJavaVersion = PlatformDependent0.javaVersion() >= 25;
+            logger = InternalLoggerFactory.getInstance(CleanerJava25.class);
+        }
+
         MethodHandle method;
         Throwable error;
-        if (PlatformDependent0.javaVersion() >= 24) {
+        if (suitableJavaVersion) {
             try {
                 // Here we compose and construct a MethodHandle that takes an 'int' capacity argument,
                 // and produces a 'CleanableDirectBufferImpl' instance.
@@ -126,10 +146,12 @@ final class CleanerJava24 implements Cleaner {
             method = null;
             error = new UnsupportedOperationException("java.lang.foreign.MemorySegment unavailable");
         }
-        if (error == null) {
-            logger.debug("java.nio.ByteBuffer.cleaner(): available");
-        } else {
-            logger.debug("java.nio.ByteBuffer.cleaner(): unavailable", error);
+        if (logger != null) {
+            if (error == null) {
+                logger.debug("java.nio.ByteBuffer.cleaner(): available");
+            } else {
+                logger.debug("java.nio.ByteBuffer.cleaner(): unavailable", error);
+            }
         }
         INVOKE_ALLOCATOR = method;
     }

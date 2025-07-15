@@ -17,3 +17,4 @@ requires:
   - module: io.netty.common
   - module: io.netty.buffer
   - module: org.bouncycastle.provider
+  - module: jdk.crypto.ec

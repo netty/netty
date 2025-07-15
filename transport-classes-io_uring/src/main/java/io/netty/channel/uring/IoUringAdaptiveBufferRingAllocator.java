@@ -15,23 +15,19 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.internal.AdaptiveCalculator;
-
-import java.util.Objects;
 
 /**
  * {@link IoUringBufferRingAllocator} implementation which uses an adaptive strategy to allocate buffers, which
  * will decrease / increase the buffer size depending on if the allocated buffers were completely used or not before.
  */
-public final class IoUringAdaptiveBufferRingAllocator implements IoUringBufferRingAllocator {
+public final class IoUringAdaptiveBufferRingAllocator extends AbstractIoUringBufferRingAllocator {
 
     public static final int DEFAULT_MINIMUM = 1024;
     public static final int DEFAULT_INITIAL = 4096;
     public static final int DEFAULT_MAXIMUM = 65536;
 
-    private final ByteBufAllocator allocator;
     private final AdaptiveCalculator calculator;
 
     public IoUringAdaptiveBufferRingAllocator() {
@@ -56,13 +52,29 @@ public final class IoUringAdaptiveBufferRingAllocator implements IoUringBufferRi
      * @param maximum   the inclusive upper bound of the expected buffer size
      */
     public IoUringAdaptiveBufferRingAllocator(ByteBufAllocator allocator, int minimum, int initial, int maximum) {
-        this.allocator = Objects.requireNonNull(allocator, "allocator");
+        this(allocator, minimum, initial, maximum, false);
+    }
+
+    /**
+     * Creates new instance.
+     *
+     * @param allocator         the {@link ByteBufAllocator} to use for the allocations
+     * @param minimum           the inclusive lower bound of the expected buffer size
+     * @param initial           the initial buffer size when no feed back was received
+     * @param maximum           the inclusive upper bound of the expected buffer size
+     * @param largeAllocation   {@code true} if we should do a large allocation for the whole buffer ring
+     *                          and then slice out the buffers or {@code false} if we should do one allocation
+     *                          per buffer.
+     */
+    public IoUringAdaptiveBufferRingAllocator(
+            ByteBufAllocator allocator, int minimum, int initial, int maximum, boolean largeAllocation) {
+        super(allocator, largeAllocation);
         this.calculator = new AdaptiveCalculator(minimum, initial, maximum);
     }
 
     @Override
-    public ByteBuf allocate() {
-        return allocator.directBuffer(calculator.nextSize());
+    protected int nextBufferSize() {
+        return calculator.nextSize();
     }
 
     @Override

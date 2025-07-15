@@ -75,7 +75,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     private volatile boolean inputShutdown;
     private volatile boolean outputShutdown;
     private volatile QuicStreamPriority priority;
-    private volatile int capacity;
+    private volatile long capacity;
 
     QuicheQuicStreamChannel(QuicheQuicChannel parent, long streamId) {
         this.parent = parent;
@@ -412,7 +412,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     /**
      * Stream writability changed.
      */
-    boolean writable(int capacity) {
+    boolean writable(long capacity) {
         assert eventLoop().inEventLoop();
         if (capacity < 0) {
             // If the value is negative its a quiche error.
@@ -423,7 +423,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                         // If STOP_SENDING is received we should not close the channel but just fail all queued writes.
                         return false;
                     } else {
-                        queue.removeAndFailAll(Quiche.convertToException(capacity));
+                        queue.removeAndFailAll(Quiche.convertToException((int) capacity));
                     }
                 } else if (capacity == Quiche.QUICHE_ERR_STREAM_STOPPED) {
                     // If STOP_SENDING is received we should not close the channel
@@ -858,7 +858,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     int res = parent().streamSend(streamId(), buffer, fin);
 
                     // Update the capacity as well.
-                    int cap = parent.streamCapacity(streamId());
+                    long cap = parent.streamCapacity(streamId());
                     if (cap >= 0) {
                         capacity = cap;
                     }

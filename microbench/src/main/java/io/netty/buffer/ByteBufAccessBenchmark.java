@@ -32,10 +32,11 @@ import org.openjdk.jmh.annotations.Warmup;
 
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.internal.PlatformDependent;
+import org.openjdk.jmh.infra.Blackhole;
 
-@Warmup(iterations = 5, time = 1500, timeUnit = TimeUnit.MILLISECONDS)
-@Measurement(iterations = 10, time = 1500, timeUnit = TimeUnit.MILLISECONDS)
-@Fork(3)
+@Warmup(iterations = 10, time = 1)
+@Measurement(iterations = 10, time = 1)
+@Fork(2)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
@@ -89,6 +90,21 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
                 return UNSAFE.newBuffer().slice(16, 48);
             }
         },
+        UNSAFE_RETAINED_SLICE {
+            @Override
+            ByteBuf newBuffer() {
+                ByteBuf pooledBuffer = PooledByteBufAllocator.DEFAULT.directBuffer(64, 64)
+                        .setIndex(0, 64);
+                if (!(pooledBuffer instanceof PooledUnsafeDirectByteBuf)) {
+                    throw new IllegalStateException("Expected PooledUnsafeDirectByteBuf");
+                }
+                try {
+                    return pooledBuffer.retainedSlice(16, 48);
+                } finally {
+                    pooledBuffer.release();
+                }
+            }
+        },
         HEAP {
             @Override
             ByteBuf newBuffer() {
@@ -139,6 +155,10 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
     }
 
     private ByteBuf buffer;
+    private byte byteToWrite;
+    private int intToWrite;
+    private long longToWrite;
+    private short shortToWrite;
 
     @TearDown
     public void tearDown() {
@@ -159,7 +179,7 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public int readBatch() {
-        buffer.readerIndex(0).touch();
+        buffer.readerIndex(0);
         int result = 0;
         // WARNING!
         // Please do not replace this sum loop with a BlackHole::consume loop:
@@ -173,5 +193,95 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
             result += buffer.readByte();
         }
         return result;
+    }
+
+    @Benchmark
+    public void getByteBatch(Blackhole bh) {
+        ByteBuf buffer = this.buffer;
+        for (int i = 0, size = batchSize; i < size; i++) {
+            bh.consume(buffer.getByte(i));
+        }
+    }
+    @Benchmark
+    public void setByteBatch(Blackhole bh) {
+        ByteBuf buffer = this.buffer;
+        byte byteToWrite = this.byteToWrite;
+        buffer.resetWriterIndex();
+        for (int i = 0, size = batchSize; i < size; i++) {
+            bh.consume(buffer.setByte(i, byteToWrite));
+        }
+    }
+
+    @Benchmark
+    public void readByteBatch(Blackhole bh) {
+        ByteBuf buffer = this.buffer;
+        buffer.readerIndex(0);
+        for (int i = 0, size = batchSize; i < size; i++) {
+            bh.consume(buffer.readByte());
+        }
+    }
+
+    @Benchmark
+    public void setBytes(Blackhole bh) {
+        ByteBuf buffer = this.buffer;
+        byte byteToWrite = this.byteToWrite;
+        int intToWrite = this.intToWrite;
+        long longToWrite = this.longToWrite;
+        short shortToWrite = this.shortToWrite;
+        buffer.resetWriterIndex();
+        int index = buffer.writerIndex();
+        bh.consume(buffer.setByte(index, byteToWrite));
+        index += 1;
+        bh.consume(buffer.setShortLE(index, shortToWrite));
+        index += 2;
+        bh.consume(buffer.setIntLE(index, intToWrite));
+        index += 4;
+        bh.consume(buffer.setLongLE(index, longToWrite));
+    }
+
+    @Benchmark
+    public void getBytes(Blackhole bh) {
+        ByteBuf buffer = this.buffer;
+        int readerIndex = buffer.readerIndex();
+        bh.consume(buffer.getByte(readerIndex));
+        readerIndex += 1;
+        bh.consume(buffer.getShortLE(readerIndex));
+        readerIndex += 2;
+        bh.consume(buffer.getIntLE(readerIndex));
+        readerIndex += 4;
+        bh.consume(buffer.getLongLE(readerIndex));
+    }
+
+    @Benchmark
+    public void setBytesConstantOffset(Blackhole bh) {
+        ByteBuf buffer = this.buffer;
+        buffer.resetWriterIndex();
+        byte byteToWrite = this.byteToWrite;
+        int intToWrite = this.intToWrite;
+        long longToWrite = this.longToWrite;
+        short shortToWrite = this.shortToWrite;
+        bh.consume(buffer.setByte(0, byteToWrite));
+        bh.consume(buffer.setShortLE(1, shortToWrite));
+        bh.consume(buffer.setIntLE(3, intToWrite));
+        bh.consume(buffer.setLongLE(7, longToWrite));
+    }
+
+    @Benchmark
+    public void getBytesConstantOffset(Blackhole bh) {
+        ByteBuf buffer = this.buffer;
+        bh.consume(buffer.getByte(0));
+        bh.consume(buffer.getShortLE(1));
+        bh.consume(buffer.getIntLE(3));
+        bh.consume(buffer.getLongLE(7));
+    }
+
+    @Benchmark
+    public void readBytes(Blackhole bh) {
+        buffer.readerIndex(0);
+        ByteBuf buffer = this.buffer;
+        bh.consume(buffer.readByte());
+        bh.consume(buffer.readShortLE());
+        bh.consume(buffer.readIntLE());
+        bh.consume(buffer.readLongLE());
     }
 }

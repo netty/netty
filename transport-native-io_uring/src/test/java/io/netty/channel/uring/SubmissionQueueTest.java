@@ -51,7 +51,7 @@ public class SubmissionQueueTest {
             assertEquals(8, submissionQueue.count());
             assertThat(submissionQueue.addNop((byte) 0, 1)).isNotZero();
             assertEquals(1, submissionQueue.count());
-            submissionQueue.submitAndWait();
+            submissionQueue.submitAndGet();
             assertEquals(9, completionQueue.count());
         } finally {
             ringBuffer.close();
@@ -74,7 +74,7 @@ public class SubmissionQueueTest {
         assertThrows(IllegalStateException.class, () -> submissionQueue.addNop((byte) 0, 1));
         assertThrows(IllegalStateException.class, submissionQueue::tryRegisterRingFd);
         assertThrows(IllegalStateException.class, submissionQueue::submit);
-        assertThrows(IllegalStateException.class, submissionQueue::submitAndWait);
+        assertThrows(IllegalStateException.class, submissionQueue::submitAndGet);
 
         assertEquals(0, completionQueue.count());
         assertFalse(completionQueue.hasCompletions());
@@ -104,7 +104,7 @@ public class SubmissionQueueTest {
                 assertThat(ringBuffer.ioUringSubmissionQueue().addNop((byte) 0, 1)).isNotZero();
                 count--;
                 if (ringBuffer.ioUringSubmissionQueue().remaining() == 0) {
-                    ringBuffer.ioUringSubmissionQueue().submitAndWait();
+                    ringBuffer.ioUringSubmissionQueue().submitAndGet();
                 }
             }
 
@@ -117,5 +117,22 @@ public class SubmissionQueueTest {
 
     private static boolean setUpCQSizeUnavailable() {
         return !IoUring.isSetupCqeSizeSupported();
+    }
+
+    @Test
+    public void testIoUringProbeSupported() {
+        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
+        Native.IoUringProbe ioUringProbe = Native.ioUringProbe(ringBuffer.fd());
+        assertNotNull(ioUringProbe);
+        assertNotEquals(0, ioUringProbe.lastOp);
+        assertNotEquals(0, ioUringProbe.opsLen);
+        assertNotNull(ioUringProbe.ops);
+        assertFalse(Native.ioUringProbe(ioUringProbe, new int[] {Integer.MAX_VALUE}));
+        assertDoesNotThrow(() -> Native.checkAllIOSupported(ioUringProbe));
+
+        // Let's mark it as not supported.
+        ioUringProbe.ops[Native.IORING_OP_READ] = new Native.IoUringProbeOp(Native.IORING_OP_READ, 0);
+        assertFalse(Native.ioUringProbe(ioUringProbe, new int[] {Native.IORING_OP_READ}));
+        assertThrows(UnsupportedOperationException.class, () -> Native.checkAllIOSupported(ioUringProbe));
     }
 }

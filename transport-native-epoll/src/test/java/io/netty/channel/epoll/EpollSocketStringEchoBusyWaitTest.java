@@ -84,7 +84,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
         return new BootstrapFactory<ServerBootstrap>() {
             @Override
             public ServerBootstrap newInstance() {
-                return new ServerBootstrap().group(EPOLL_LOOP, EPOLL_LOOP).channel(EpollServerSocketChannel.class);
+                return new ServerBootstrap().group(EPOLL_LOOP).channel(EpollServerSocketChannel.class);
             }
         };
     }

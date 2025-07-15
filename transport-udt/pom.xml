@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.3.Final-SNAPSHOT</version>
+    <version>4.2.4.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-transport-udt</artifactId>
@@ -59,14 +59,6 @@
     </dependency>
 
     <!-- TEST -->
-
-    <!-- see https://github.com/netty/netty/issues/874 -->
-    <dependency>
-      <groupId>com.yammer.metrics</groupId>
-      <artifactId>metrics-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-
     <dependency>
       <groupId>com.google.caliper</groupId>
       <artifactId>caliper</artifactId>

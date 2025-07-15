@@ -55,7 +55,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     /*
      * GZIP support
      */
-    private final CRC32 crc = new CRC32();
+    private final CRC32 crc;
     private static final byte[] gzipHeader = {0x1f, (byte) 0x8b, Deflater.DEFLATED, 0, 0, 0, 0, 0, 0, 0};
     private boolean writeHeader = true;
 
@@ -133,6 +133,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
 
         this.wrapper = wrapper;
         deflater = new Deflater(compressionLevel, wrapper != ZlibWrapper.ZLIB);
+        this.crc = wrapper == ZlibWrapper.GZIP ? new CRC32() : null;
     }
 
     /**
@@ -172,6 +173,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
         wrapper = ZlibWrapper.ZLIB;
         deflater = new Deflater(compressionLevel);
         deflater.setDictionary(dictionary);
+        crc = null;
     }
 
     @Override
@@ -187,12 +189,9 @@ public class JdkZlibEncoder extends ZlibEncoder {
             return finishEncode(ctx, promise);
         } else {
             final ChannelPromise p = ctx.newPromise();
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelFuture f = finishEncode(ctx(), p);
-                    PromiseNotifier.cascade(f, promise);
-                }
+            executor.execute(() -> {
+                ChannelFuture f = finishEncode(ctx(), p);
+                PromiseNotifier.cascade(f, promise);
             });
             return p;
         }
@@ -333,14 +332,8 @@ public class JdkZlibEncoder extends ZlibEncoder {
         if (wrapper == ZlibWrapper.GZIP) {
             int crcValue = (int) crc.getValue();
             int uncBytes = deflater.getTotalIn();
-            footer.writeByte(crcValue);
-            footer.writeByte(crcValue >>> 8);
-            footer.writeByte(crcValue >>> 16);
-            footer.writeByte(crcValue >>> 24);
-            footer.writeByte(uncBytes);
-            footer.writeByte(uncBytes >>> 8);
-            footer.writeByte(uncBytes >>> 16);
-            footer.writeByte(uncBytes >>> 24);
+            footer.writeIntLE(crcValue);
+            footer.writeIntLE(uncBytes);
         }
         deflater.end();
         return ctx.writeAndFlush(footer, promise);

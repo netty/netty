@@ -17,6 +17,7 @@ package io.netty.util.internal;
 
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import jdk.jfr.FlightRecorder;
 import org.jctools.queues.MpmcArrayQueue;
 import org.jctools.queues.MpscArrayQueue;
 import org.jctools.queues.MpscChunkedArrayQueue;
@@ -127,6 +128,8 @@ public final class PlatformDependent {
     private static final String LINUX_ID_LIKE_PREFIX = "ID_LIKE=";
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
+    private static final boolean JFR;
+
     private static final Cleaner NOOP = new Cleaner() {
         @Override
         public CleanableDirectBuffer allocate(int capacity) {
@@ -192,9 +195,17 @@ public final class PlatformDependent {
                 // Try Java 9 cleaner first, because it's based on Unsafe and can skip a few steps.
                 if (CleanerJava9.isSupported()) {
                     LEGACY_CLEANER = new CleanerJava9();
-                } else if (CleanerJava24.isSupported()) {
-                    // On Java 24+ we can't use Unsafe, but we have MemorySegment.
-                    LEGACY_CLEANER = new CleanerJava24();
+                } else if (CleanerJava24Linker.isSupported()) {
+                    // On Java 24+ we'd like to not use Unsafe because it produces warnings. We have MemorySegment,
+                    // but we cannot use "shared" arenas due to JDK bugs.
+                    // If the "linker" implementation is supported, then we have native access permissions
+                    // in the "io.netty.common" module, and we can link directly to malloc() and free() from libc.
+                    LEGACY_CLEANER = new CleanerJava24Linker();
+                } else if (CleanerJava25.isSupported()) {
+                    // On Java 25+ we can't use Unsafe, but we have functioning MemorySegment support.
+                    // We don't have native access permissions to link malloc() and free() directly, but we can
+                    // use shared memory segment instances.
+                    LEGACY_CLEANER = new CleanerJava25();
                 } else {
                     LEGACY_CLEANER = NOOP;
                 }
@@ -231,6 +242,22 @@ public final class PlatformDependent {
             addFilesystemOsClassifiers(availableClassifiers);
         }
         LINUX_OS_CLASSIFIERS = Collections.unmodifiableSet(availableClassifiers);
+
+        boolean jfrAvailable;
+        Throwable jfrFailure = null;
+        try {
+            //noinspection Since15
+            jfrAvailable = FlightRecorder.isAvailable();
+        } catch (Throwable t) {
+            jfrFailure = t;
+            jfrAvailable = false;
+        }
+        JFR = SystemPropertyUtil.getBoolean("io.netty.jfr.enabled", jfrAvailable);
+        if (logger.isTraceEnabled() && jfrFailure != null) {
+            logger.debug("-Dio.netty.jfr.enabled: {}", JFR, jfrFailure);
+        } else if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.jfr.enabled: {}", JFR);
+        }
     }
 
     // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
@@ -244,7 +271,6 @@ public final class PlatformDependent {
     private static boolean processOsReleaseFile(String osReleaseFileName, Set<String> availableClassifiers) {
         Path file = Paths.get(osReleaseFileName);
         return AccessController.doPrivileged((PrivilegedAction<Boolean>) () -> {
-            Pattern lineSplitPattern = Pattern.compile("[ ]+");
             try {
                 if (Files.exists(file)) {
                     try (BufferedReader reader = new BufferedReader(new InputStreamReader(
@@ -258,7 +284,7 @@ public final class PlatformDependent {
                             } else if (line.startsWith(LINUX_ID_LIKE_PREFIX)) {
                                 line = normalizeOsReleaseVariableValue(
                                         line.substring(LINUX_ID_LIKE_PREFIX.length()));
-                                addClassifier(availableClassifiers, lineSplitPattern.split(line));
+                                addClassifier(availableClassifiers, line.split(" "));
                             }
                         }
                     } catch (SecurityException e) {
@@ -408,6 +434,15 @@ public final class PlatformDependent {
      */
     public static boolean isExplicitNoPreferDirect() {
         return EXPLICIT_NO_PREFER_DIRECT;
+    }
+
+    /**
+     * Return {@code true} if the selected cleaner can free direct buffers in a controlled way. This guarantee only
+     * applies for buffers allocated via {@link #allocateDirect(int)} and when using the {@code clean} method of the
+     * returned {@link CleanableDirectBuffer}.
+     */
+    public static boolean canReliabilyFreeDirectBuffers() {
+        return CLEANER != NOOP;
     }
 
     /**
@@ -1699,6 +1734,13 @@ public final class PlatformDependent {
         }
 
         return "unknown";
+    }
+
+    /**
+     * Check if JFR events are supported on this platform.
+     */
+    public static boolean isJfrEnabled() {
+        return JFR;
     }
 
     private PlatformDependent() {

@@ -48,7 +48,14 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import static io.netty.handler.ssl.SslUtils.*;
+import static io.netty.handler.ssl.SslUtils.DEFAULT_CIPHER_SUITES;
+import static io.netty.handler.ssl.SslUtils.PROBING_CERT;
+import static io.netty.handler.ssl.SslUtils.PROBING_KEY;
+import static io.netty.handler.ssl.SslUtils.TLSV13_CIPHERS;
+import static io.netty.handler.ssl.SslUtils.TLSV13_CIPHER_SUITES;
+import static io.netty.handler.ssl.SslUtils.addIfSupported;
+import static io.netty.handler.ssl.SslUtils.isTLSv13Cipher;
+import static io.netty.handler.ssl.SslUtils.useFallbackCiphersIfDefaultIsEmpty;
 
 /**
  * Tells if <a href="https://netty.io/wiki/forked-tomcat-native.html">{@code netty-tcnative}</a> and its OpenSSL support
@@ -67,9 +74,19 @@ public final class OpenSsl {
     private static final boolean SUPPORTS_OCSP;
     private static final boolean TLSV13_SUPPORTED;
     private static final boolean IS_BORINGSSL;
+    private static final boolean IS_AWSLC;
     private static final Set<String> CLIENT_DEFAULT_PROTOCOLS;
     private static final Set<String> SERVER_DEFAULT_PROTOCOLS;
-    static final Set<String> SUPPORTED_PROTOCOLS_SET;
+
+    private static final int SSL_V2_HELLO = 1;
+    private static final int SSL_V2 = 1 << 1;
+    private static final int SSL_V3 = 1 << 2;
+    private static final int TLS_V1 = 1 << 3;
+    private static final int TLS_V1_1 = 1 << 4;
+    private static final int TLS_V1_2 = 1 << 5;
+    private static final int TLS_V1_3 = 1 << 6;
+    private static final int supportedProtocolsPacked;
+
     static final String[] EXTRA_SUPPORTED_TLS_1_3_CIPHERS;
     static final String EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING;
     static final String[] NAMED_GROUPS;
@@ -149,18 +166,19 @@ public final class OpenSsl {
         if (cause == null) {
             logger.debug("netty-tcnative using native library: {}", SSL.versionString());
 
-            final List<String> defaultCiphers = new ArrayList<String>();
-            final Set<String> availableOpenSslCipherSuites = new LinkedHashSet<String>(128);
+            final List<String> defaultCiphers = new ArrayList<>();
+            final Set<String> availableOpenSslCipherSuites = new LinkedHashSet<>(128);
             boolean supportsKeyManagerFactory = false;
             boolean useKeyManagerFactory = false;
             boolean tlsv13Supported = false;
             String[] namedGroups = DEFAULT_NAMED_GROUPS;
-            Set<String> defaultConvertedNamedGroups = new LinkedHashSet<String>(namedGroups.length);
-            for (int i = 0; i < namedGroups.length; i++) {
-                defaultConvertedNamedGroups.add(GroupsConverter.toOpenSsl(namedGroups[i]));
+            Set<String> defaultConvertedNamedGroups = new LinkedHashSet<>(namedGroups.length);
+            for (String group : namedGroups) {
+                defaultConvertedNamedGroups.add(GroupsConverter.toOpenSsl(group));
             }
 
             IS_BORINGSSL = "BoringSSL".equals(versionString());
+            IS_AWSLC = versionString().startsWith("AWS-LC");
             if (IS_BORINGSSL) {
                 EXTRA_SUPPORTED_TLS_1_3_CIPHERS = new String [] { "TLS_AES_128_GCM_SHA256",
                         "TLS_AES_256_GCM_SHA384" ,
@@ -268,7 +286,7 @@ public final class OpenSsl {
                             try {
                                 boolean propertySet = SystemPropertyUtil.contains(
                                         "io.netty.handler.ssl.openssl.useKeyManagerFactory");
-                                if (!IS_BORINGSSL) {
+                                if (!(IS_BORINGSSL || IS_AWSLC)) {
                                     useKeyManagerFactory = SystemPropertyUtil.getBoolean(
                                             "io.netty.handler.ssl.openssl.useKeyManagerFactory", true);
 
@@ -282,7 +300,7 @@ public final class OpenSsl {
                                     if (propertySet) {
                                         logger.info("System property " +
                                                 "'io.netty.handler.ssl.openssl.useKeyManagerFactory'" +
-                                                " is deprecated and will be ignored when using BoringSSL");
+                                                " is deprecated and will be ignored when using BoringSSL or AWS-LC");
                                     }
                                 }
                             } catch (Throwable ignore) {
@@ -313,10 +331,10 @@ public final class OpenSsl {
                     String groups = SystemPropertyUtil.get("jdk.tls.namedGroups", null);
                     if (groups != null) {
                         String[] nGroups = groups.split(",");
-                        Set<String> supportedNamedGroups = new LinkedHashSet<String>(nGroups.length);
-                        Set<String> supportedConvertedNamedGroups = new LinkedHashSet<String>(nGroups.length);
+                        Set<String> supportedNamedGroups = new LinkedHashSet<>(nGroups.length);
+                        Set<String> supportedConvertedNamedGroups = new LinkedHashSet<>(nGroups.length);
 
-                        Set<String> unsupportedNamedGroups = new LinkedHashSet<String>();
+                        Set<String> unsupportedNamedGroups = new LinkedHashSet<>();
                         for (String namedGroup : nGroups) {
                             String converted = GroupsConverter.toOpenSsl(namedGroup);
                             if (SSLContext.setCurvesList(sslCtx, converted)) {
@@ -358,7 +376,7 @@ public final class OpenSsl {
             }
             NAMED_GROUPS = namedGroups;
             AVAILABLE_OPENSSL_CIPHER_SUITES = Collections.unmodifiableSet(availableOpenSslCipherSuites);
-            final Set<String> availableJavaCipherSuites = new LinkedHashSet<String>(
+            final Set<String> availableJavaCipherSuites = new LinkedHashSet<>(
                     AVAILABLE_OPENSSL_CIPHER_SUITES.size() * 2);
             for (String cipher: AVAILABLE_OPENSSL_CIPHER_SUITES) {
                 // Included converted but also openssl cipher name
@@ -387,7 +405,7 @@ public final class OpenSsl {
 
             AVAILABLE_JAVA_CIPHER_SUITES = Collections.unmodifiableSet(availableJavaCipherSuites);
 
-            final Set<String> availableCipherSuites = new LinkedHashSet<String>(
+            final Set<String> availableCipherSuites = new LinkedHashSet<>(
                     AVAILABLE_OPENSSL_CIPHER_SUITES.size() + AVAILABLE_JAVA_CIPHER_SUITES.size());
             availableCipherSuites.addAll(AVAILABLE_OPENSSL_CIPHER_SUITES);
             availableCipherSuites.addAll(AVAILABLE_JAVA_CIPHER_SUITES);
@@ -396,38 +414,38 @@ public final class OpenSsl {
             SUPPORTS_KEYMANAGER_FACTORY = supportsKeyManagerFactory;
             USE_KEYMANAGER_FACTORY = useKeyManagerFactory;
 
-            Set<String> protocols = new LinkedHashSet<String>(6);
             // Seems like there is no way to explicitly disable SSLv2Hello in openssl so it is always enabled
-            protocols.add(SslProtocols.SSL_v2_HELLO);
+            int supportedProtocolsPackedTemp = 0;
+            supportedProtocolsPackedTemp |= SSL_V2_HELLO;
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_SSLV2, SSL.SSL_OP_NO_SSLv2)) {
-                protocols.add(SslProtocols.SSL_v2);
+                supportedProtocolsPackedTemp |= SSL_V2;
             }
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_SSLV3, SSL.SSL_OP_NO_SSLv3)) {
-                protocols.add(SslProtocols.SSL_v3);
+                supportedProtocolsPackedTemp |= SSL_V3;
             }
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1, SSL.SSL_OP_NO_TLSv1)) {
-                protocols.add(SslProtocols.TLS_v1);
+                supportedProtocolsPackedTemp |= TLS_V1;
             }
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_1, SSL.SSL_OP_NO_TLSv1_1)) {
-                protocols.add(SslProtocols.TLS_v1_1);
+                supportedProtocolsPackedTemp |= TLS_V1_1;
             }
             if (doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_2, SSL.SSL_OP_NO_TLSv1_2)) {
-                protocols.add(SslProtocols.TLS_v1_2);
+                supportedProtocolsPackedTemp |= TLS_V1_2;
             }
 
             // This is only supported by java8u272 and later.
             if (tlsv13Supported && doesSupportProtocol(SSL.SSL_PROTOCOL_TLSV1_3, SSL.SSL_OP_NO_TLSv1_3)) {
-                protocols.add(SslProtocols.TLS_v1_3);
+                supportedProtocolsPackedTemp |= TLS_V1_3;
                 TLSV13_SUPPORTED = true;
             } else {
                 TLSV13_SUPPORTED = false;
             }
 
-            SUPPORTED_PROTOCOLS_SET = Collections.unmodifiableSet(protocols);
+            supportedProtocolsPacked = supportedProtocolsPackedTemp;
             SUPPORTS_OCSP = doesSupportOcsp();
 
             if (logger.isDebugEnabled()) {
-                logger.debug("Supported protocols (OpenSSL): {} ", SUPPORTED_PROTOCOLS_SET);
+                logger.debug("Supported protocols (OpenSSL): {} ", unpackSupportedProtocols());
                 logger.debug("Default cipher suites (OpenSSL): {}", DEFAULT_CIPHERS);
             }
 
@@ -449,10 +467,11 @@ public final class OpenSsl {
             AVAILABLE_CIPHER_SUITES = Collections.emptySet();
             SUPPORTS_KEYMANAGER_FACTORY = false;
             USE_KEYMANAGER_FACTORY = false;
-            SUPPORTED_PROTOCOLS_SET = Collections.emptySet();
             SUPPORTS_OCSP = false;
             TLSV13_SUPPORTED = false;
+            supportedProtocolsPacked = 0;
             IS_BORINGSSL = false;
+            IS_AWSLC = false;
             EXTRA_SUPPORTED_TLS_1_3_CIPHERS = EmptyArrays.EMPTY_STRINGS;
             EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING = StringUtil.EMPTY_STRING;
             NAMED_GROUPS = DEFAULT_NAMED_GROUPS;
@@ -463,7 +482,7 @@ public final class OpenSsl {
     static String checkTls13Ciphers(InternalLogger logger, String ciphers) {
         if (IS_BORINGSSL && !ciphers.isEmpty()) {
             assert EXTRA_SUPPORTED_TLS_1_3_CIPHERS.length > 0;
-            Set<String> boringsslTlsv13Ciphers = new HashSet<String>(EXTRA_SUPPORTED_TLS_1_3_CIPHERS.length);
+            Set<String> boringsslTlsv13Ciphers = new HashSet<>(EXTRA_SUPPORTED_TLS_1_3_CIPHERS.length);
             Collections.addAll(boringsslTlsv13Ciphers, EXTRA_SUPPORTED_TLS_1_3_CIPHERS);
             boolean ciphersNotMatch = false;
             for (String cipher: ciphers.split(":")) {
@@ -573,6 +592,17 @@ public final class OpenSsl {
      */
     public static boolean isOcspSupported() {
       return SUPPORTS_OCSP;
+    }
+
+    /**
+     * Returns {@code true} if the used version of OpenSSL supports renegotiation.
+     * <p>
+     * Some implementations, such as BoringSSL and AWS-LC, intentionally do not support renegotiation.
+     *
+     * @return {@code true} if renegotiation is supported, otherwise {@code false}.
+     */
+    public static boolean isRenegotiationSupported() {
+        return !IS_BORINGSSL && !IS_AWSLC;
     }
 
     /**
@@ -738,7 +768,7 @@ public final class OpenSsl {
                 return true;
             }
             // Check for options that are only supported by BoringSSL atm.
-            if (isBoringSSL()) {
+            if (isBoringSSL() || isAWSLC()) {
                 return option == OpenSslContextOption.ASYNC_PRIVATE_KEY_METHOD ||
                         option == OpenSslContextOption.PRIVATE_KEY_METHOD ||
                         option == OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS ||
@@ -751,7 +781,7 @@ public final class OpenSsl {
 
     private static Set<String> defaultProtocols(String property) {
         String protocolsString = SystemPropertyUtil.get(property, null);
-        Set<String> protocols = new HashSet<String>();
+        Set<String> protocols = new HashSet<>();
         if (protocolsString != null) {
             for (String proto : protocolsString.split(",")) {
                 String p = proto.trim();
@@ -767,16 +797,76 @@ public final class OpenSsl {
     static String[] defaultProtocols(boolean isClient) {
         final Collection<String> defaultProtocols = isClient ? CLIENT_DEFAULT_PROTOCOLS : SERVER_DEFAULT_PROTOCOLS;
         assert defaultProtocols != null;
-        List<String> protocols = new ArrayList<String>(defaultProtocols.size());
+        List<String> protocols = new ArrayList<>(defaultProtocols.size());
         for (String proto : defaultProtocols) {
-            if (SUPPORTED_PROTOCOLS_SET.contains(proto)) {
+            if (isProtocolSupported(proto)) {
                 protocols.add(proto);
             }
         }
         return protocols.toArray(EmptyArrays.EMPTY_STRINGS);
     }
 
+    static boolean isProtocolSupported(String protocol) {
+        int bit = getProtocolBit(protocol);
+        return bit != -1 && (supportedProtocolsPacked & bit) != 0;
+    }
+
+    private static int getProtocolBit(String protocol) {
+        if (protocol == null) {
+            return -1;
+        }
+
+        switch (protocol) {
+            case SslProtocols.SSL_v2_HELLO:
+                return SSL_V2_HELLO;
+            case SslProtocols.SSL_v2:
+                return SSL_V2;
+            case SslProtocols.SSL_v3:
+                return SSL_V3;
+            case SslProtocols.TLS_v1:
+                return TLS_V1;
+            case SslProtocols.TLS_v1_1:
+                return TLS_V1_1;
+            case SslProtocols.TLS_v1_2:
+                return TLS_V1_2;
+            case SslProtocols.TLS_v1_3:
+                return TLS_V1_3;
+            default:
+                return -1;
+        }
+    }
+
+    static List<String> unpackSupportedProtocols() {
+        List<String> protocols = new ArrayList<>(7);
+        if ((supportedProtocolsPacked & SSL_V2_HELLO) != 0) {
+            protocols.add(SslProtocols.SSL_v2_HELLO);
+        }
+        if ((supportedProtocolsPacked & SSL_V2) != 0) {
+            protocols.add(SslProtocols.SSL_v2);
+        }
+        if ((supportedProtocolsPacked & SSL_V3) != 0) {
+            protocols.add(SslProtocols.SSL_v3);
+        }
+        if ((supportedProtocolsPacked & TLS_V1) != 0) {
+            protocols.add(SslProtocols.TLS_v1);
+        }
+        if ((supportedProtocolsPacked & TLS_V1_1) != 0) {
+            protocols.add(SslProtocols.TLS_v1_1);
+        }
+        if ((supportedProtocolsPacked & TLS_V1_2) != 0) {
+            protocols.add(SslProtocols.TLS_v1_2);
+        }
+        if ((supportedProtocolsPacked & TLS_V1_3) != 0) {
+            protocols.add(SslProtocols.TLS_v1_3);
+        }
+        return protocols;
+    }
+
     static boolean isBoringSSL() {
         return IS_BORINGSSL;
+    }
+
+    static boolean isAWSLC() {
+        return IS_AWSLC;
     }
 }

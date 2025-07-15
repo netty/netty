@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.3.Final-SNAPSHOT</version>
+    <version>4.2.4.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec-native-quic</artifactId>
@@ -30,10 +30,12 @@
   <properties>
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
     <javaModuleNameWithClassifier>${javaModuleName}.${javaModuleNameClassifier}</javaModuleNameWithClassifier>
-    <javaModuleName>io.netty.handler.codec.quic</javaModuleName>
+    <fallbackModuleName>io.netty.codec.quic</fallbackModuleName>
+    <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
     <fragmentHost>io.netty.netty-codec-classes-quic</fragmentHost>
     <logging.config>${project.basedir}/../codec-native-quic/src/test/resources/logback-test.xml</logging.config>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
+    <fallbackOutputDirectory>${project.build.directory}/fallback-classes</fallbackOutputDirectory>
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <skipTests>false</skipTests>
     <packaging.type>jar</packaging.type>
@@ -58,7 +60,7 @@
     <quicheHomeIncludeDir>${quicheHomeDir}/quiche/include</quicheHomeIncludeDir>
     <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>68c296009f87a10e1cb935c5879e53bcc412d00c</quicheCommitSha>
+    <quicheCommitSha>70d6d3e233568e906e66179a56c93cf9b0616899</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
@@ -317,10 +319,6 @@
           <plugin>
             <groupId>com.soebes.maven.plugins</groupId>
             <artifactId>iterator-maven-plugin</artifactId>
-            <!-- Don't use 0.5.1, it contains a change that merges all properties, 
-              and therefore doesn't re-evaluates "nested" properties (e.g. cargoTarget, which uses ${quicheTarget}).
-              Keep this version or provide a fix to disable merging of properties in iterator-maven-plugin -->
-            <version>0.5.0</version>
             <executions>
               <execution>
                 <phase>package</phase>
@@ -388,6 +386,26 @@
                 <goals>
                   <goal>generate</goal>
                   <goal>build</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>io.github.dmlloyd.module-info</groupId>
+            <artifactId>module-info</artifactId>
+            <executions>
+              <execution>
+                <id>module-info</id>
+              </execution>
+              <execution>
+                <id>fallback-module-info</id>
+                <phase>process-classes</phase>
+                <configuration>
+                  <moduleName>${fallbackModuleName}</moduleName>
+                  <outputDirectory>${fallbackOutputDirectory}/META-INF/versions/11/</outputDirectory>
+                </configuration>
+                <goals>
+                  <goal>generate</goal>
                 </goals>
               </execution>
             </executions>
@@ -594,13 +612,6 @@
   </profiles>
 
   <build>
-    <extensions>
-      <extension>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
-        <version>1.7.0</version>
-      </extension>
-    </extensions>
     <plugins>
       <!-- Also include c files in source jar -->
       <plugin>
@@ -992,6 +1003,25 @@
               </target>
             </configuration>
           </execution>
+          <!-- Copy files for the fallback JAR that does not contain the native library
+               and a different module declaration -->
+          <execution>
+            <id>copy-to-native-output</id>
+            <phase>process-test-resources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <taskdef resource="net/sf/antcontrib/antcontrib.properties" />
+
+                <copy todir="${fallbackOutputDirectory}" includeEmptyDirs="false">
+                  <!-- Exclude native lib and attribution for the jar without classifier-->
+                  <zipfileset dir="${project.build.outputDirectory}" excludes="META-INF/versions/**,META-INF/native/**,META-INF/license/**,META-INF/NOTICE.txt,META-INF/LICENSE.txt" />
+                </copy>
+              </target>
+            </configuration>
+          </execution>
           <!-- Copy the manifest file that we populated so far so we can use it as a starting point when generating the jars and adding more things to it. -->
           <execution>
             <id>copy-manifest</id>
@@ -1102,29 +1132,55 @@
       </plugin>
 
       <plugin>
+        <groupId>io.github.dmlloyd.module-info</groupId>
+        <artifactId>module-info</artifactId>
+        <executions>
+          <execution>
+            <id>module-info</id>
+          </execution>
+          <execution>
+            <id>fallback-module-info</id>
+            <phase>process-classes</phase>
+            <configuration>
+              <moduleName>${fallbackModuleName}</moduleName>
+              <outputDirectory>${fallbackOutputDirectory}/META-INF/versions/11/</outputDirectory>
+            </configuration>
+            <goals>
+              <goal>generate</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
           <execution>
             <id>default-jar</id>
             <configuration>
-              <!-- Exclude native lib and attribution for the jar without classifier-->
-              <excludes>
-                <exclude>META-INF/native/**</exclude>
-                <exclude>META-INF/license/**</exclude>
-                <exclude>META-INF/NOTICE.txt</exclude>
-                <exclude>META-INF/LICENSE.txt</exclude>
-              </excludes>
+              <classesDirectory>${fallbackOutputDirectory}</classesDirectory>
               <archive>
                 <manifest>
                   <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                   <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                 </manifest>
                 <manifestEntries>
-                  <Automatic-Module-Name>${javaModuleName}</Automatic-Module-Name>
+                  <Multi-Release>true</Multi-Release>
                 </manifestEntries>
                 <index>true</index>
                 <manifestFile>${project.build.directory}/manifests/MANIFEST.MF</manifestFile>
               </archive>
+            </configuration>
+          </execution>
+          <!-- We must generate a -javadoc JAR file to publish on Maven Central -->
+          <execution>
+            <id>empty-javadoc-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>javadoc</classifier>
+              <classesDirectory>${basedir}/javadoc</classesDirectory>
             </configuration>
           </execution>
           <!-- Generate the JAR that contains the native library in it. -->
@@ -1140,7 +1196,7 @@
                   <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                 </manifest>
                 <manifestEntries>
-                  <Automatic-Module-Name>${javaModuleNameWithClassifier}</Automatic-Module-Name>
+                  <Multi-Release>true</Multi-Release>
                   <Fragment-Host>${fragmentHost}</Fragment-Host>
                   <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
                 </manifestEntries>

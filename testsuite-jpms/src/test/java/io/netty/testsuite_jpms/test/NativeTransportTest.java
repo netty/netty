@@ -89,8 +89,7 @@ public class NativeTransportTest {
         ServerBootstrap sb = new ServerBootstrap();
         Bootstrap cb = new Bootstrap();
 
-        sb.group(new MultiThreadIoEventLoopGroup(ioHandlerFactory),
-                new MultiThreadIoEventLoopGroup(ioHandlerFactory));
+        sb.group(new MultiThreadIoEventLoopGroup(ioHandlerFactory));
         sb.channel(serverSocketChannelFactory);
         sb.childHandler(new ChannelInitializer() {
             @Override
