@@ -102,7 +102,7 @@ public final class IoUring {
                         socketNonEmptySupported = Native.isCqeFSockNonEmptySupported(ioUringProbe);
                         spliceSupported = Native.isSpliceSupported(ioUringProbe);
                         recvsendBundleSupported = (ringBuffer.features() & Native.IORING_FEAT_RECVSEND_BUNDLE) != 0;
-                        sendZCSupported = Native.isIOUringSupportSendZC(ringBuffer.fd());
+                        sendZCSupported = Native.isIOUringSupportSendZC(ioUringProbe);
                         // IORING_FEAT_RECVSEND_BUNDLE was added in the same release.
                         acceptSupportNoWait = recvsendBundleSupported;
 
