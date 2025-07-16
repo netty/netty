@@ -30,5 +30,5 @@ import jdk.jfr.Label;
 abstract class AbstractAllocatorEvent extends Event {
     @Label("Allocator type")
     @Description("The type of allocator this event is for")
-    public String allocatorType;
+    public Class<? extends AbstractByteBufAllocator> allocatorType;
 }

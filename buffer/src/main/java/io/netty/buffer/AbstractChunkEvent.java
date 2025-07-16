@@ -30,8 +30,8 @@ abstract class AbstractChunkEvent extends AbstractAllocatorEvent {
     @MemoryAddress
     public long address;
 
-    public void fill(ChunkInfo chunk, AllocatorType allocatorType) {
-        this.allocatorType = allocatorType.name();
+    public void fill(ChunkInfo chunk, Class<? extends AbstractByteBufAllocator> allocatorType) {
+        this.allocatorType = allocatorType;
         capacity = chunk.capacity();
         direct = chunk.isDirect();
         address = chunk.memoryAddress();

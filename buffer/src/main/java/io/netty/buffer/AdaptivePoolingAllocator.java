@@ -1135,7 +1135,7 @@ final class AdaptivePoolingAllocator {
             if (PlatformDependent.isJfrEnabled() && AllocateChunkEvent.isEventEnabled()) {
                 AllocateChunkEvent event = new AllocateChunkEvent();
                 if (event.shouldCommit()) {
-                    event.fill(this, AllocatorType.adaptive);
+                    event.fill(this, AdaptiveByteBufAllocator.class);
                     event.pooled = pooled;
                     event.threadLocal = magazine.allocationLock == null;
                     event.commit();
@@ -1255,7 +1255,7 @@ final class AdaptivePoolingAllocator {
             if (PlatformDependent.isJfrEnabled() && ReturnChunkEvent.isEventEnabled()) {
                 ReturnChunkEvent event = new ReturnChunkEvent();
                 if (event.shouldCommit()) {
-                    event.fill(this, AllocatorType.adaptive);
+                    event.fill(this, AdaptiveByteBufAllocator.class);
                     event.returnedToMagazine = returnedToMagazine;
                     event.commit();
                 }
@@ -1266,7 +1266,7 @@ final class AdaptivePoolingAllocator {
             if (PlatformDependent.isJfrEnabled() && FreeChunkEvent.isEventEnabled()) {
                 FreeChunkEvent event = new FreeChunkEvent();
                 if (event.shouldCommit()) {
-                    event.fill(this, AllocatorType.adaptive);
+                    event.fill(this, AdaptiveByteBufAllocator.class);
                     event.pooled = pooled;
                     event.commit();
                 }
@@ -1431,7 +1431,7 @@ final class AdaptivePoolingAllocator {
             if (PlatformDependent.isJfrEnabled() && AllocateBufferEvent.isEventEnabled()) {
                 AllocateBufferEvent event = new AllocateBufferEvent();
                 if (event.shouldCommit()) {
-                    event.fill(this, AllocatorType.adaptive);
+                    event.fill(this, AdaptiveByteBufAllocator.class);
                     event.chunkPooled = wrapped.pooled;
                     Magazine m = wrapped.magazine;
                     event.chunkThreadLocal = m != null && m.allocationLock == null;
@@ -1475,7 +1475,7 @@ final class AdaptivePoolingAllocator {
             if (PlatformDependent.isJfrEnabled() && ReallocateBufferEvent.isEventEnabled()) {
                 ReallocateBufferEvent event = new ReallocateBufferEvent();
                 if (event.shouldCommit()) {
-                    event.fill(this, AllocatorType.adaptive);
+                    event.fill(this, AdaptiveByteBufAllocator.class);
                     event.newCapacity = newCapacity;
                     event.commit();
                 }
@@ -1879,7 +1879,7 @@ final class AdaptivePoolingAllocator {
             if (PlatformDependent.isJfrEnabled() && FreeBufferEvent.isEventEnabled()) {
                 FreeBufferEvent event = new FreeBufferEvent();
                 if (event.shouldCommit()) {
-                    event.fill(this, AllocatorType.adaptive);
+                    event.fill(this, AdaptiveByteBufAllocator.class);
                     event.commit();
                 }
             }
