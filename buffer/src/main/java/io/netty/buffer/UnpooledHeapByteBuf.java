@@ -323,6 +323,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public byte readByte() {
+        ensureAccessible();
+        int i = readerIndex;
+        byte b = _getByte(i);
+        readerIndex = i + 1;
+        return b;
+    }
+
+    @Override
     public byte getByte(int index) {
         ensureAccessible();
         return _getByte(index);
@@ -331,6 +340,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected byte _getByte(int index) {
         return HeapByteBufUtil.getByte(array, index);
+    }
+
+    @Override
+    public short readShort() {
+        ensureAccessible();
+        int i = readerIndex;
+        short s = _getShort(i);
+        readerIndex = i + 2;
+        return s;
     }
 
     @Override
@@ -345,6 +363,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public short readShortLE() {
+        ensureAccessible();
+        int i = readerIndex;
+        short s = _getShortLE(i);
+        readerIndex = i + 2;
+        return s;
+    }
+
+    @Override
     public short getShortLE(int index) {
         ensureAccessible();
         return _getShortLE(index);
@@ -353,6 +380,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected short _getShortLE(int index) {
         return HeapByteBufUtil.getShortLE(array, index);
+    }
+
+    @Override
+    public int readUnsignedMedium() {
+        ensureAccessible();
+        int i = readerIndex;
+        int m = _getUnsignedMedium(i);
+        readerIndex = i + 3;
+        return m;
     }
 
     @Override
@@ -367,6 +403,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public int readUnsignedMediumLE() {
+        ensureAccessible();
+        int i = readerIndex;
+        int m = _getUnsignedMediumLE(i);
+        readerIndex = i + 3;
+        return m;
+    }
+
+    @Override
     public int getUnsignedMediumLE(int index) {
         ensureAccessible();
         return _getUnsignedMediumLE(index);
@@ -375,6 +420,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected int _getUnsignedMediumLE(int index) {
         return HeapByteBufUtil.getUnsignedMediumLE(array, index);
+    }
+
+    @Override
+    public int readInt() {
+        ensureAccessible();
+        int i = readerIndex;
+        int value = _getInt(i);
+        readerIndex = i + 4;
+        return value;
     }
 
     @Override
@@ -389,6 +443,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public int readIntLE() {
+        ensureAccessible();
+        int i = readerIndex;
+        int value = _getIntLE(i);
+        readerIndex = i + 4;
+        return value;
+    }
+
+    @Override
     public int getIntLE(int index) {
         ensureAccessible();
         return _getIntLE(index);
@@ -397,6 +460,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected int _getIntLE(int index) {
         return HeapByteBufUtil.getIntLE(array, index);
+    }
+
+    @Override
+    public long readLong() {
+        ensureAccessible();
+        int i = readerIndex;
+        long value = _getLong(i);
+        readerIndex = i + 8;
+        return value;
     }
 
     @Override
@@ -411,6 +483,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public long readLongLE() {
+        ensureAccessible();
+        int i = readerIndex;
+        long value = _getLongLE(i);
+        readerIndex = i + 8;
+        return value;
+    }
+
+    @Override
     public long getLongLE(int index) {
         ensureAccessible();
         return _getLongLE(index);
@@ -419,6 +500,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected long _getLongLE(int index) {
         return HeapByteBufUtil.getLongLE(array, index);
+    }
+
+    @Override
+    public ByteBuf writeByte(int value) {
+        ensureAccessible();
+        int wIndex = writerIndex;
+        _setByte(wIndex, value);
+        writerIndex = wIndex + 1;
+        return this;
     }
 
     @Override
@@ -434,6 +524,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf writeShort(int value) {
+        ensureAccessible();
+        int wIndex = writerIndex;
+        _setShort(wIndex, value);
+        writerIndex = wIndex + 2;
+        return this;
+    }
+
+    @Override
     public ByteBuf setShort(int index, int value) {
         ensureAccessible();
         _setShort(index, value);
@@ -443,6 +542,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected void _setShort(int index, int value) {
         HeapByteBufUtil.setShort(array, index, value);
+    }
+
+    @Override
+    public ByteBuf writeShortLE(int value) {
+        ensureAccessible();
+        int wIndex = writerIndex;
+        _setShortLE(wIndex, value);
+        writerIndex = wIndex + 2;
+        return this;
     }
 
     @Override
@@ -458,6 +566,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf writeMedium(int value) {
+        ensureAccessible();
+        int wIndex = writerIndex;
+        _setMedium(wIndex, value);
+        writerIndex = wIndex + 3;
+        return this;
+    }
+
+    @Override
     public ByteBuf setMedium(int index, int   value) {
         ensureAccessible();
         _setMedium(index, value);
@@ -467,6 +584,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected void _setMedium(int index, int value) {
         HeapByteBufUtil.setMedium(array, index, value);
+    }
+
+    @Override
+    public ByteBuf writeMediumLE(int value) {
+        ensureAccessible();
+        int wIndex = writerIndex;
+        _setMediumLE(wIndex, value);
+        writerIndex = wIndex + 3;
+        return this;
     }
 
     @Override
@@ -482,6 +608,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf writeInt(int value) {
+        ensureAccessible();
+        int wIndex = writerIndex;
+        _setInt(wIndex, value);
+        writerIndex = wIndex + 4;
+        return this;
+    }
+
+    @Override
     public ByteBuf setInt(int index, int   value) {
         ensureAccessible();
         _setInt(index, value);
@@ -491,6 +626,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected void _setInt(int index, int value) {
         HeapByteBufUtil.setInt(array, index, value);
+    }
+
+    @Override
+    public ByteBuf writeIntLE(int value) {
+        ensureAccessible();
+        int wIndex = writerIndex;
+        _setIntLE(wIndex, value);
+        writerIndex = wIndex + 4;
+        return this;
     }
 
     @Override
@@ -506,6 +650,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf writeLong(long value) {
+        ensureAccessible();
+        int wIndex = writerIndex;
+        _setLong(wIndex, value);
+        writerIndex = wIndex + 8;
+        return this;
+    }
+
+    @Override
     public ByteBuf setLong(int index, long  value) {
         ensureAccessible();
         _setLong(index, value);
@@ -515,6 +668,15 @@ public class UnpooledHeapByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     protected void _setLong(int index, long value) {
         HeapByteBufUtil.setLong(array, index, value);
+    }
+
+    @Override
+    public ByteBuf writeLongLE(long value) {
+        ensureAccessible();
+        int wIndex = writerIndex;
+        _setLongLE(wIndex, value);
+        writerIndex = wIndex + 8;
+        return this;
     }
 
     @Override
