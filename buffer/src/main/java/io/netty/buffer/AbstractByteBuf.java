@@ -50,7 +50,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
     private static final String PROP_CHECK_ACCESSIBLE = "io.netty.buffer.checkAccessible";
     static final boolean checkAccessible; // accessed from CompositeByteBuf
     private static final String PROP_CHECK_BOUNDS = "io.netty.buffer.checkBounds";
-    private static final boolean checkBounds;
+    static final boolean checkBounds;
 
     static {
         if (SystemPropertyUtil.contains(PROP_CHECK_ACCESSIBLE)) {
@@ -1462,7 +1462,7 @@ public abstract class AbstractByteBuf extends ByteBuf {
         }
     }
 
-    private void checkReadableBytes0(int minimumReadableBytes) {
+    protected void checkReadableBytes0(int minimumReadableBytes) {
         ensureAccessible();
         if (checkBounds && readerIndex > writerIndex - minimumReadableBytes) {
             throw new IndexOutOfBoundsException(String.format(
