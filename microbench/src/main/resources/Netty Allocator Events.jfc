@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration version="2.0" label="Netty Allocator Events" description="A JFR recording profile that only include Netty allocator events.">
+  <category label="Netty">
+    <event name="AllocateBufferEvent" label="Buffer Allocation" description="Triggered when a buffer is allocated (or reallocated) from an allocator">
+      <setting name="enabled" label="Enabled" description="Record event" contentType="jdk.jfr.Flag">true</setting>
+      <setting name="stackTrace" label="Stack Trace" description="Record stack traces" contentType="jdk.jfr.Flag">false</setting>
+      <setting name="threshold" label="Threshold" description="Record event with duration above or equal to threshold" contentType="jdk.jfr.Timespan">0 ns</setting>
+    </event>
+
+    <event name="ReallocateBufferEvent" label="Buffer Reallocation" description="Triggered when a buffer is reallocated for resizing in an allocator. Will be followed by an AllocateBufferEvent">
+      <setting name="enabled" label="Enabled" description="Record event" contentType="jdk.jfr.Flag">true</setting>
+      <setting name="stackTrace" label="Stack Trace" description="Record stack traces" contentType="jdk.jfr.Flag">false</setting>
+      <setting name="threshold" label="Threshold" description="Record event with duration above or equal to threshold" contentType="jdk.jfr.Timespan">0 ns</setting>
+    </event>
+
+    <event name="FreeBufferEvent" label="Buffer Deallocation" description="Triggered when a buffer is freed from an allocator">
+      <setting name="enabled" label="Enabled" description="Record event" contentType="jdk.jfr.Flag">true</setting>
+      <setting name="stackTrace" label="Stack Trace" description="Record stack traces" contentType="jdk.jfr.Flag">false</setting>
+      <setting name="threshold" label="Threshold" description="Record event with duration above or equal to threshold" contentType="jdk.jfr.Timespan">0 ns</setting>
+    </event>
+
+    <event name="AllocateChunkEvent" label="Chunk Allocation" description="Triggered when a new memory chunk is allocated for an allocator">
+      <setting name="threshold" label="Threshold" description="Record event with duration above or equal to threshold" contentType="jdk.jfr.Timespan">0 ns</setting>
+      <setting name="stackTrace" label="Stack Trace" description="Record stack traces" contentType="jdk.jfr.Flag">false</setting>
+      <setting name="enabled" label="Enabled" description="Record event" contentType="jdk.jfr.Flag">true</setting>
+    </event>
+
+    <event name="FreeChunkEvent" label="Chunk Free" description="Triggered when a memory chunk is freed from an allocator">
+      <setting name="threshold" label="Threshold" description="Record event with duration above or equal to threshold" contentType="jdk.jfr.Timespan">0 ns</setting>
+      <setting name="stackTrace" label="Stack Trace" description="Record stack traces" contentType="jdk.jfr.Flag">false</setting>
+      <setting name="enabled" label="Enabled" description="Record event" contentType="jdk.jfr.Flag">true</setting>
+    </event>
+
+    <event name="ReturnChunkEvent" label="Chunk Return" description="Triggered when a memory chunk is prepared for re-use by an allocator">
+      <setting name="threshold" label="Threshold" description="Record event with duration above or equal to threshold" contentType="jdk.jfr.Timespan">0 ns</setting>
+      <setting name="stackTrace" label="Stack Trace" description="Record stack traces" contentType="jdk.jfr.Flag">false</setting>
+      <setting name="enabled" label="Enabled" description="Record event" contentType="jdk.jfr.Flag">true</setting>
+    </event>
+  </category>
+</configuration>

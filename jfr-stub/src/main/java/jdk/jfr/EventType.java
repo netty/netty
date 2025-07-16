@@ -13,22 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer;
+package jdk.jfr;
 
-import jdk.jfr.Category;
-import jdk.jfr.Description;
-import jdk.jfr.Enabled;
-import jdk.jfr.Event;
-import jdk.jfr.Label;
-
-/**
- * An abstract memory allocator event.
- */
-@Enabled(false)
-@Category("Netty")
-@SuppressWarnings("Since15")
-abstract class AbstractAllocatorEvent extends Event {
-    @Label("Allocator type")
-    @Description("The type of allocator this event is for")
-    public String allocatorType;
+public final class EventType {
+    public String getName() {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
 }

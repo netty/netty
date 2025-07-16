@@ -37,7 +37,7 @@ abstract class AbstractBufferEvent extends AbstractAllocatorEvent {
     public long address;
 
     public void fill(AbstractByteBuf buf, AllocatorType allocatorType) {
-        this.allocatorType = allocatorType;
+        this.allocatorType = allocatorType.name();
         size = buf.capacity();
         maxFastCapacity = buf.maxFastWritableBytes() + buf.writerIndex();
         maxCapacity = buf.maxCapacity();
