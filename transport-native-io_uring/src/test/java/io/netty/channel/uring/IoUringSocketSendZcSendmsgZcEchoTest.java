@@ -26,11 +26,11 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-public class IoUringSocketSendZCEchoTest extends SocketEchoTest {
+public class IoUringSocketSendZcSendmsgZcEchoTest extends SocketEchoTest {
     @BeforeAll
     public static void loadJNI() {
         assumeTrue(IoUring.isAvailable());
-        assumeTrue(IoUring.isIOUringSendZCSupported());
+        assumeTrue(IoUring.isSendZcSupported());
     }
 
     @Override
@@ -41,7 +41,7 @@ public class IoUringSocketSendZCEchoTest extends SocketEchoTest {
     @Override
     protected void configure(ServerBootstrap sb, Bootstrap cb, ByteBufAllocator allocator) {
         super.configure(sb, cb, allocator);
-        sb.childOption(IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD, 0);
-        cb.option(IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD, 0);
+        sb.childOption(IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD, 0);
+        cb.option(IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD, 0);
     }
 }

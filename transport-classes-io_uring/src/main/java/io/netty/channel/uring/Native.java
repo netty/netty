@@ -250,6 +250,9 @@ final class Native {
     static final int IOU_PBUF_RING_INC = 2;
 
     static final int IO_URING_OP_SUPPORTED = 1;
+
+    static final int MAX_SKB_FRAGS = NativeStaticallyReferencedJniMethods.maxSkbFrags();
+
     static String opToStr(byte op) {
         switch (op) {
             case IORING_OP_NOP: return "NOP";
@@ -446,11 +449,15 @@ final class Native {
         return isCqeFSockNonEmptySupported(probe);
     }
 
-    static boolean isIOUringSupportSendZC(IoUringProbe probe) {
+    static boolean isSendZcSupported(IoUringProbe probe) {
         // IORING_OP_SEND_ZC Available since 6.0
         return ioUringProbe(probe, new int[] { Native.IORING_OP_SEND_ZC });
     }
 
+    static boolean isSendmsgZcSupported(IoUringProbe probe) {
+        // IORING_OP_SENDMSG_ZC Available since 6.0
+        return ioUringProbe(probe, new int[] { Native.IORING_OP_SENDMSG_ZC });
+    }
     /**
      * check current kernel version whether support io_uring_register_io_wq_worker
      * Available since 5.15.

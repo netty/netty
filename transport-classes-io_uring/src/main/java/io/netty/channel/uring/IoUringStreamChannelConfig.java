@@ -23,11 +23,11 @@ import java.util.Map;
 
 abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
-    public static final int DISABLE_SEND_ZC = -1;
+    static final int DISABLE_WRITE_ZERO_COPY = -1;
 
     private volatile short bufferGroupId = -1;
 
-    private volatile int sendZcThreshold = DISABLE_SEND_ZC;
+    private volatile int writeZeroCopyThreshold = DISABLE_WRITE_ZERO_COPY;
 
     IoUringStreamChannelConfig(AbstractIoUringChannel channel) {
         super(channel);
@@ -44,8 +44,8 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
             return (T) Short.valueOf(getBufferGroupId());
         }
 
-        if (option == IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD) {
-            return (T) Integer.valueOf(getSendZcThreshold());
+        if (option == IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD) {
+            return (T) Integer.valueOf(getWriteZeroCopyThreshold());
         }
 
         return super.getOption(option);
@@ -58,8 +58,8 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
             return true;
         }
 
-        if (option == IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD) {
-            setSendZcThreshold((Integer) value);
+        if (option == IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD) {
+            setWriteZeroCopyThreshold((Integer) value);
             return true;
         }
 
@@ -70,7 +70,7 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(super.getOptions(),
                 IoUringChannelOption.IO_URING_BUFFER_GROUP_ID,
-                IoUringChannelOption.IO_URING_SEND_ZC_THRESHOLD
+                IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD
         );
     }
 
@@ -78,8 +78,8 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
         return bufferGroupId;
     }
 
-    int getSendZcThreshold() {
-        return sendZcThreshold;
+    private int getWriteZeroCopyThreshold() {
+        return writeZeroCopyThreshold;
     }
 
     IoUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
@@ -87,18 +87,19 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
         return this;
     }
 
-    IoUringStreamChannelConfig setSendZcThreshold(int sendZcThreshold) {
-        if (sendZcThreshold == DISABLE_SEND_ZC) {
-            this.sendZcThreshold = DISABLE_SEND_ZC;
+    IoUringStreamChannelConfig setWriteZeroCopyThreshold(int setWriteZeroCopyThreshold) {
+        if (setWriteZeroCopyThreshold == DISABLE_WRITE_ZERO_COPY) {
+            this.writeZeroCopyThreshold = DISABLE_WRITE_ZERO_COPY;
         } else {
-            this.sendZcThreshold = ObjectUtil.checkPositiveOrZero(sendZcThreshold, "sendZcThreshold");
+            this.writeZeroCopyThreshold =
+                    ObjectUtil.checkPositiveOrZero(setWriteZeroCopyThreshold, "setWriteZeroCopyThreshold");
         }
         return this;
     }
 
-    boolean shouldSendZC(int waitSend) {
+    boolean shouldWriteZeroCopy(int amount) {
         // This can reduce one read operation on a volatile field.
-        int threshold = this.getSendZcThreshold();
-        return threshold != DISABLE_SEND_ZC && waitSend >= threshold;
+        int threshold = this.getWriteZeroCopyThreshold();
+        return threshold != DISABLE_WRITE_ZERO_COPY && amount >= threshold;
     }
 }

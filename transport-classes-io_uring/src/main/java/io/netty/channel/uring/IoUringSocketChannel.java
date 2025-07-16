@@ -43,18 +43,6 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
     }
 
     @Override
-    protected Object filterOutboundMessage(Object msg) {
-        Object outboundMessage = super.filterOutboundMessage(msg);
-        if (IoUring.isIOUringSendZCSupported() && msg instanceof ByteBuf) {
-            ByteBuf sendBuffer = (ByteBuf) outboundMessage;
-            if (sendBuffer.hasMemoryAddress() && config.shouldSendZC(sendBuffer.readableBytes())) {
-                return new IoUringSendZCMessage(sendBuffer);
-            }
-        }
-        return outboundMessage;
-    }
-
-    @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
     }

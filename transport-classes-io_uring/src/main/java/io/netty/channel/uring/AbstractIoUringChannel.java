@@ -474,6 +474,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 case Native.IORING_OP_WRITE:
                 case Native.IORING_OP_SPLICE:
                 case Native.IORING_OP_SEND_ZC:
+                case Native.IORING_OP_SENDMSG_ZC:
                     writeComplete(op, res, flags, data);
                     break;
                 case Native.IORING_OP_POLL_ADD:
