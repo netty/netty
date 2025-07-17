@@ -638,7 +638,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         return writeZeroCopyThreshold;
     }
 
-    IoUringStreamChannelConfig setWriteZeroCopyThreshold(int setWriteZeroCopyThreshold) {
+    IoUringSocketChannelConfig setWriteZeroCopyThreshold(int setWriteZeroCopyThreshold) {
         if (setWriteZeroCopyThreshold == DISABLE_WRITE_ZERO_COPY) {
             this.writeZeroCopyThreshold = DISABLE_WRITE_ZERO_COPY;
         } else {
