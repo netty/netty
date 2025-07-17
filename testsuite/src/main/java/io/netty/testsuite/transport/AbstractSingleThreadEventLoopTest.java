@@ -28,12 +28,16 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.ScheduledFuture;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -41,6 +45,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -261,6 +266,39 @@ public abstract class AbstractSingleThreadEventLoopTest {
                     });
                 }
             });
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
+
+    @Test
+    void schedulingAndCancellingTasks() throws Exception {
+        Runnable runnable = new Runnable() {
+            @Override
+            public void run() {
+            }
+        };
+        List<ScheduledFuture<?>> tasks = new ArrayList<ScheduledFuture<?>>();
+        EventLoopGroup group = newEventLoopGroup();
+        try {
+            EventLoop eventLoop = group.next();
+            for (int i = 0; i < 5000; i++) {
+                tasks.add(eventLoop.scheduleAtFixedRate(runnable, 1, 1, MILLISECONDS));
+                if (tasks.size() > 500) {
+                    tasks.get(PlatformDependent.threadLocalRandom().nextInt(tasks.size())).cancel(false);
+                }
+            }
+            for (ScheduledFuture<?> task : tasks) {
+                task.cancel(false);
+            }
+            for (ScheduledFuture<?> task : tasks) {
+                task.await();
+            }
+            for (ScheduledFuture<?> task : tasks) {
+                if (!task.isCancelled()) {
+                    task.sync();
+                }
+            }
         } finally {
             group.shutdownGracefully();
         }
