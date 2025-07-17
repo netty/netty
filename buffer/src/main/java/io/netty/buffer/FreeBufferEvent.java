@@ -21,7 +21,7 @@ import jdk.jfr.Name;
 
 @SuppressWarnings("Since15")
 @Label("Buffer Deallocation")
-@Name("io.netty.FreeBufferEvent")
+@Name("io.netty.FreeBuffer")
 @Description("Triggered when a buffer is freed from an allocator")
 final class FreeBufferEvent extends AbstractBufferEvent {
     private static final FreeBufferEvent INSTANCE = new FreeBufferEvent();

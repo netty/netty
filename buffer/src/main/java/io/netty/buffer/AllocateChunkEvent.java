@@ -20,7 +20,7 @@ import jdk.jfr.Label;
 import jdk.jfr.Name;
 
 @SuppressWarnings("Since15")
-@Name("io.netty.AllocateChunkEvent")
+@Name("io.netty.AllocateChunk")
 @Label("Chunk Allocation")
 @Description("Triggered when a new memory chunk is allocated for an allocator")
 final class AllocateChunkEvent extends AbstractChunkEvent {
