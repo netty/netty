@@ -147,6 +147,7 @@ final class Native {
     static final int ERRNO_NOBUFS_NEGATIVE = -NativeStaticallyReferencedJniMethods.enobufs();
 
     static final int PAGE_SIZE = NativeStaticallyReferencedJniMethods.pageSize();
+    static final int MAX_SKB_FRAGS = NativeStaticallyReferencedJniMethods.maxSkbFrags();
 
     static final int SIZEOF_IOURING_BUF = NativeStaticallyReferencedJniMethods.sizeofIoUringBuf();
     static final int IOURING_BUFFER_OFFSETOF_ADDR = NativeStaticallyReferencedJniMethods.ioUringBufferOffsetAddr();
@@ -224,6 +225,8 @@ final class Native {
 
     static final int IORING_SETUP_R_DISABLED = 1 << 6;
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
+    static final int IORING_SETUP_CQE32 = 1 << 11;
+
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
     static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
     static final int IORING_SETUP_NO_SQARRAY = 1 << 16;
@@ -248,10 +251,11 @@ final class Native {
     static final int SPLICE_F_MOVE = 1;
 
     static final int IOU_PBUF_RING_INC = 2;
-
     static final int IO_URING_OP_SUPPORTED = 1;
 
-    static final int MAX_SKB_FRAGS = NativeStaticallyReferencedJniMethods.maxSkbFrags();
+    static final int CQE_SIZE = 16;
+    static final int CQE32_SIZE = 32;
+
 
     static String opToStr(byte op) {
         switch (op) {
@@ -386,16 +390,17 @@ final class Native {
         long cqringAddress = values[6];
         int cqringFd = (int) values[7];
         int cqringCapacity = (int) values[8];
+        int cqeLength = (setupFlags & IORING_SETUP_CQE32) == 0 ? CQE_SIZE : CQE32_SIZE;
         CompletionQueue completionQueue = new CompletionQueue(
                 Buffer.wrapMemoryAddressWithNativeOrder(cqkhead, Integer.BYTES),
                 Buffer.wrapMemoryAddressWithNativeOrder(cqktail, Integer.BYTES),
                 cqringMask,
                 cqringEntries,
-                Buffer.wrapMemoryAddressWithNativeOrder(cqArrayAddress, cqringEntries * CompletionQueue.CQE_SIZE),
+                Buffer.wrapMemoryAddressWithNativeOrder(cqArrayAddress, cqringEntries * cqeLength),
                 cqringSize,
                 cqringAddress,
                 cqringFd,
-                cqringCapacity);
+                cqringCapacity, cqeLength);
 
         long sqkhead = values[9];
         long sqktail = values[10];

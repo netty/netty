@@ -18,6 +18,8 @@ package io.netty.channel.uring;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.*;
@@ -78,7 +80,7 @@ public class SubmissionQueueTest {
 
         assertEquals(0, completionQueue.count());
         assertFalse(completionQueue.hasCompletions());
-        assertEquals(0, completionQueue.process((res, flags, data) -> {
+        assertEquals(0, completionQueue.process((res, flags, data, cqeExtraData) -> {
             fail("Should not be called");
             return false;
         }));
@@ -134,5 +136,41 @@ public class SubmissionQueueTest {
         ioUringProbe.ops[Native.IORING_OP_READ] = new Native.IoUringProbeOp(Native.IORING_OP_READ, 0);
         assertFalse(Native.ioUringProbe(ioUringProbe, new int[] {Native.IORING_OP_READ}));
         assertThrows(UnsupportedOperationException.class, () -> Native.checkAllIOSupported(ioUringProbe));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = { false, true })
+    public void testCqe(boolean useCqe32) {
+        RingBuffer ringBuffer = Native.createRingBuffer(8, useCqe32 ? Native.IORING_SETUP_CQE32 : 0);
+        ringBuffer.enable();
+        try {
+            SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+            final CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
+
+            assertNotNull(ringBuffer);
+            assertNotNull(submissionQueue);
+            assertNotNull(completionQueue);
+
+            assertThat(submissionQueue.addNop((byte) 0, 1)).isNotZero();
+            assertEquals(1, submissionQueue.submitAndGet());
+            assertEquals(1, completionQueue.count());
+            int processed = completionQueue.process((res, flags, udata, extraCqeData) -> {
+                assertEquals(0, res);
+                assertEquals(0, flags);
+                assertEquals(1, udata);
+                if (useCqe32) {
+                    assertNotNull(extraCqeData);
+                    assertEquals(0, extraCqeData.position());
+                    assertEquals(16, extraCqeData.limit());
+                } else {
+                    assertNull(extraCqeData);
+                }
+                return true;
+            });
+            assertEquals(1, processed);
+            assertFalse(completionQueue.hasCompletions());
+        } finally {
+            ringBuffer.close();
+        }
     }
 }
