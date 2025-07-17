@@ -22,7 +22,7 @@ import jdk.jfr.Name;
 @SuppressWarnings("Since15")
 @Label("Chunk Return")
 @Name("ReturnChunkEvent")
-@Description("Triggered when a memory chunk is freed from an allocator")
+@Description("Triggered when a memory chunk is prepared for re-use by an allocator")
 final class ReturnChunkEvent extends AbstractChunkEvent {
     private static final FreeChunkEvent INSTANCE = new FreeChunkEvent();
 

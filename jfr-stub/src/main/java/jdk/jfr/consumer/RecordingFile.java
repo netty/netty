@@ -15,26 +15,24 @@
  */
 package jdk.jfr.consumer;
 
-import jdk.jfr.EventType;
+import java.io.IOException;
+import java.nio.file.Path;
 
-public final class RecordedEvent {
-    public RecordedEvent() {
+public final class RecordingFile implements AutoCloseable {
+    public RecordingFile(Path ignore) throws IOException {
         throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 
-    public String getString(String fieldName) {
+    public boolean hasMoreEvents() {
         throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 
-    public boolean getBoolean(String fieldName) {
+    public RecordedEvent readEvent() throws IOException {
         throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 
-    public int getInt(String fieldName) {
-        throw new UnsupportedOperationException("Stub should only be used at compile time");
-    }
-
-    public EventType getEventType() {
+    @Override
+    public void close() throws IOException {
         throw new UnsupportedOperationException("Stub should only be used at compile time");
     }
 }
