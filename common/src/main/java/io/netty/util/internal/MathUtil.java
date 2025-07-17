@@ -61,7 +61,7 @@ public final class MathUtil {
      * {@code true} if this would result in an index out of bounds exception.
      */
     public static boolean isOutOfBounds(int index, int length, int capacity) {
-        return (index | length | capacity | (index + length) | (capacity - (index + length))) < 0;
+        return (index | length | capacity | index + length) < 0 || index + length > capacity;
     }
 
     /**
