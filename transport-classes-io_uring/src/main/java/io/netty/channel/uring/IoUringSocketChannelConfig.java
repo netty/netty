@@ -16,13 +16,13 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -34,6 +34,9 @@ import static io.netty.channel.ChannelOption.*;
 final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implements SocketChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
+
+    static final int DISABLE_WRITE_ZERO_COPY = -1;
+    private volatile int writeZeroCopyThreshold = DISABLE_WRITE_ZERO_COPY;
 
     IoUringSocketChannelConfig(AbstractIoUringChannel channel) {
         super(channel);
@@ -50,7 +53,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
                 ALLOW_HALF_CLOSURE, IoUringChannelOption.TCP_CORK, IoUringChannelOption.TCP_NOTSENT_LOWAT,
                 IoUringChannelOption.TCP_KEEPCNT, IoUringChannelOption.TCP_KEEPIDLE, IoUringChannelOption.TCP_KEEPINTVL,
                 IoUringChannelOption.TCP_QUICKACK, IoUringChannelOption.IP_TRANSPARENT,
-                ChannelOption.TCP_FASTOPEN_CONNECT);
+                ChannelOption.TCP_FASTOPEN_CONNECT, IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD);
     }
 
     @SuppressWarnings("unchecked")
@@ -107,6 +110,9 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
             return (T) Boolean.valueOf(isTcpFastOpenConnect());
         }
+        if (option == IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD) {
+            return (T) Integer.valueOf(getWriteZeroCopyThreshold());
+        }
         return super.getOption(option);
     }
 
@@ -148,6 +154,8 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
             setTcpQuickAck((Boolean) value);
         } else if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
             setTcpFastOpenConnect((Boolean) value);
+        } else if (option == IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD) {
+            setWriteZeroCopyThreshold((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -626,4 +634,23 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         return this;
     }
 
+    private int getWriteZeroCopyThreshold() {
+        return writeZeroCopyThreshold;
+    }
+
+    IoUringStreamChannelConfig setWriteZeroCopyThreshold(int setWriteZeroCopyThreshold) {
+        if (setWriteZeroCopyThreshold == DISABLE_WRITE_ZERO_COPY) {
+            this.writeZeroCopyThreshold = DISABLE_WRITE_ZERO_COPY;
+        } else {
+            this.writeZeroCopyThreshold =
+                    ObjectUtil.checkPositiveOrZero(setWriteZeroCopyThreshold, "setWriteZeroCopyThreshold");
+        }
+        return this;
+    }
+
+    boolean shouldWriteZeroCopy(int amount) {
+        // This can reduce one read operation on a volatile field.
+        int threshold = this.getWriteZeroCopyThreshold();
+        return threshold != DISABLE_WRITE_ZERO_COPY && amount >= threshold;
+    }
 }

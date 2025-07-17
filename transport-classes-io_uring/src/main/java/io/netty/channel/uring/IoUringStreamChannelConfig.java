@@ -23,11 +23,7 @@ import java.util.Map;
 
 abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
 
-    static final int DISABLE_WRITE_ZERO_COPY = -1;
-
     private volatile short bufferGroupId = -1;
-
-    private volatile int writeZeroCopyThreshold = DISABLE_WRITE_ZERO_COPY;
 
     IoUringStreamChannelConfig(AbstractIoUringChannel channel) {
         super(channel);
@@ -43,11 +39,6 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
         if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
             return (T) Short.valueOf(getBufferGroupId());
         }
-
-        if (option == IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD) {
-            return (T) Integer.valueOf(getWriteZeroCopyThreshold());
-        }
-
         return super.getOption(option);
     }
 
@@ -57,20 +48,13 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
             setBufferGroupId((Short) value);
             return true;
         }
-
-        if (option == IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD) {
-            setWriteZeroCopyThreshold((Integer) value);
-            return true;
-        }
-
         return super.setOption(option, value);
     }
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
         return getOptions(super.getOptions(),
-                IoUringChannelOption.IO_URING_BUFFER_GROUP_ID,
-                IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD
+                IoUringChannelOption.IO_URING_BUFFER_GROUP_ID
         );
     }
 
@@ -78,28 +62,8 @@ abstract class IoUringStreamChannelConfig extends IoUringChannelConfig {
         return bufferGroupId;
     }
 
-    private int getWriteZeroCopyThreshold() {
-        return writeZeroCopyThreshold;
-    }
-
     IoUringStreamChannelConfig setBufferGroupId(short bufferGroupId) {
         this.bufferGroupId = (short) ObjectUtil.checkPositiveOrZero(bufferGroupId, "bufferGroupId");
         return this;
-    }
-
-    IoUringStreamChannelConfig setWriteZeroCopyThreshold(int setWriteZeroCopyThreshold) {
-        if (setWriteZeroCopyThreshold == DISABLE_WRITE_ZERO_COPY) {
-            this.writeZeroCopyThreshold = DISABLE_WRITE_ZERO_COPY;
-        } else {
-            this.writeZeroCopyThreshold =
-                    ObjectUtil.checkPositiveOrZero(setWriteZeroCopyThreshold, "setWriteZeroCopyThreshold");
-        }
-        return this;
-    }
-
-    boolean shouldWriteZeroCopy(int amount) {
-        // This can reduce one read operation on a volatile field.
-        int threshold = this.getWriteZeroCopyThreshold();
-        return threshold != DISABLE_WRITE_ZERO_COPY && amount >= threshold;
     }
 }
