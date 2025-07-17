@@ -56,10 +56,6 @@ import java.util.function.Supplier;
  * <li>zstd (depends on "com.github.luben:zstd-jni")r</li>
  * </ul>
  * <p>
- * <b>Note for zstd:</b>
- * <a href="https://github.com/netty/netty/issues/15340">
- * you should define a threshold that is greater or equal to the configured block size</a>.
- * <p>
  * <b>How-To Use</b>
  * <p>
  * Add the handler after {@code HttpClientCodec} to the pipeline.
@@ -104,7 +100,6 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
 
     /**
      * Key of the attribute that will hold the original request that is needed later
-     * in order to create a {@link FullHttpRequest}
      */
     private final AttributeKey<HttpRequest> reqAttrKey = AttributeKey.valueOf(HttpRequestCompressor.class, "req");
 
@@ -112,6 +107,12 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
      * Key of the buffer that will hold all the payload chunks that we have to compress later
      */
     private final AttributeKey<ByteBuf> bufAttrKey = AttributeKey.valueOf(HttpRequestCompressor.class, "buf");
+
+    /**
+     * Key of the encoder-channel that is used to compress the chunks
+     */
+    private final AttributeKey<EmbeddedChannel> encoderChannelAttrKey =
+            AttributeKey.valueOf(HttpRequestCompressor.class, "encoderChannel");
 
     /**
      * Create a new instance using the defaults.
@@ -236,25 +237,17 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
         }
     }
 
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        cleanup(ctx);
+        super.handlerRemoved(ctx);
+    }
+
     private void handleFullHttpRequest(ChannelHandlerContext ctx, ChannelPromise promise, FullHttpRequest req) {
-        EmbeddedChannel encoderChannel = new EmbeddedChannel(
-                ctx.channel().id(),
-                ctx.channel().metadata().hasDisconnect(),
-                ctx.channel().config(),
-                encoderFactory.get()
-        );
-        encoderChannel.writeOutbound(req.content().retain());
-        encoderChannel.flushOutbound();
-        ByteBuf compressedContent = encoderChannel.readOutbound();
-        encoderChannel.finishAndReleaseAll();
-        DefaultFullHttpRequest compressedRequest = new DefaultFullHttpRequest(
-                req.protocolVersion(),
-                req.method(),
-                req.uri(),
-                compressedContent,
-                req.headers().copy(),
-                req.trailingHeaders()
-        );
+        ByteBuf compressedContent = allocateBuffer(ctx, req);
+        EmbeddedChannel encoderChannel = createEncoderChannel(ctx);
+        finishCompress(encoderChannel, req.content().retain(), compressedContent);
+        FullHttpRequest compressedRequest = req.replace(compressedContent);
         setContentEncoding(compressedRequest, encoding);
         HttpUtil.setContentLength(compressedRequest, compressedContent.readableBytes());
         HttpUtil.setTransferEncodingChunked(compressedRequest, false);
@@ -290,42 +283,183 @@ public class HttpRequestCompressor extends ChannelOutboundHandlerAdapter {
             // received HttpContent without previous HttpRequest ... likely because we skipped it
             ctx.write(content, promise);
         } else {
-            buf.writeBytes(content);
+            EmbeddedChannel encoderChannel = ctx.channel().attr(encoderChannelAttrKey).get();
+            if (encoderChannel == null) {
+                buf.writeBytes(content);
+                // buffered content exceeds threshold, start streaming and send stored HttpRequest
+                if (buf.isReadable() && buf.readableBytes() >= contentSizeThreshold) {
+                    encoderChannel = createEncoderChannel(ctx);
+                    ctx.channel().attr(encoderChannelAttrKey).set(encoderChannel);
+
+                    final HttpRequest req = ctx.channel().attr(reqAttrKey).getAndSet(null);
+                    setContentEncoding(req, encoding);
+                    HttpUtil.setTransferEncodingChunked(req, true);
+                    ctx.write(req, ctx.voidPromise());
+
+                    // call retain here as it will call release after its written to the channel
+                    encoderChannel.writeOutbound(buf.retain());
+                    buf.clear();
+                    writeAllOutput(encoderChannel, ctx, promise);
+                }
+            } else {
+                // encoderChannel is present, this means we can now directly stream new content
+                encoderChannel.writeOutbound(content);
+                writeAllOutput(encoderChannel, ctx, promise);
+            }
         }
     }
 
     private void handleLastHttpContent(ChannelHandlerContext ctx, ChannelPromise promise, LastHttpContent last) {
         final HttpRequest req = ctx.channel().attr(reqAttrKey).getAndSet(null);
-        if (req == null) {
+        final EmbeddedChannel encoderChannel = ctx.channel().attr(encoderChannelAttrKey).getAndSet(null);
+        if (req == null && encoderChannel == null) {
             // received LastHttpContent without previous HttpRequest ... likely because we skipped it
             ctx.write(last, promise);
-            return;
-        }
-        final ByteBuf uncompressedContent = ctx.channel().attr(bufAttrKey).getAndSet(null);
-        final DefaultFullHttpRequest uncompressedRequest = new DefaultFullHttpRequest(
-                req.protocolVersion(),
-                req.method(),
-                req.uri(),
-                uncompressedContent,
-                req.headers(),
-                last.trailingHeaders()
-        );
-        // cleanup
-        ReferenceCountUtil.release(req);
-        if (uncompressedContent.isReadable()
-                && uncompressedContent.readableBytes() >= contentSizeThreshold) {
-            // convert uncompressed chunked request to full compressed request
-            handleFullHttpRequest(ctx, promise, uncompressedRequest);
-        } else {
-            // body is empty or size below threshold, just write empty full request
-            ctx.write(uncompressedRequest, promise);
+        } else if (req != null && encoderChannel == null) {
+            // never received content or content size is below threshold, send everything at once
+            final ByteBuf uncompressedContent = ctx.channel().attr(bufAttrKey).getAndSet(null);
+            uncompressedContent.writeBytes(last.content());
+            final DefaultFullHttpRequest uncompressedRequest = new DefaultFullHttpRequest(
+                    req.protocolVersion(),
+                    req.method(),
+                    req.uri(),
+                    uncompressedContent,
+                    req.headers().copy(),
+                    last.trailingHeaders()
+            );
+            // cleanup
+            ReferenceCountUtil.release(req);
+            if (uncompressedContent.isReadable()
+                    && uncompressedContent.readableBytes() >= contentSizeThreshold) {
+                // convert uncompressed request to compressed request
+                handleFullHttpRequest(ctx, promise, uncompressedRequest);
+            } else {
+                // body is empty or size still below threshold, just write it as uncompressed full request
+                HttpUtil.setContentLength(uncompressedRequest, uncompressedContent.readableBytes());
+                HttpUtil.setTransferEncodingChunked(uncompressedRequest, false);
+                ctx.write(uncompressedRequest, promise);
+            }
+        } else if (req == null && encoderChannel != null) {
+            // some content was already sent, send the last
+            final ByteBuf compressedContent = ctx.channel().attr(bufAttrKey).getAndSet(null);
+            finishCompress(encoderChannel, last.content(), compressedContent);
+            LastHttpContent compressedRequest = last.replace(compressedContent);
+            ctx.write(compressedRequest, promise);
         }
     }
 
     private ByteBuf allocateBuffer(ChannelHandlerContext ctx, HttpRequest req) {
-        return HttpUtil.isContentLengthSet(req)
+        return req != null && HttpUtil.isContentLengthSet(req)
                 ? ctx.alloc().directBuffer(HttpUtil.getContentLength(req, 256))
                 : ctx.alloc().directBuffer();
+    }
+
+    private EmbeddedChannel createEncoderChannel(ChannelHandlerContext ctx) {
+        return new EmbeddedChannel(
+                ctx.channel().id(),
+                ctx.channel().metadata().hasDisconnect(),
+                ctx.channel().config(),
+                encoderFactory.get()
+        );
+    }
+
+    /**
+     * finishes the compression of the remaining content and closes the channel
+     * afterwards.
+     *
+     * @param encoderChannel the encoder channel to use
+     * @param in the remaining content to compress
+     * @param out the destination of the compressed content
+     */
+    private void finishCompress(EmbeddedChannel encoderChannel, ByteBuf in, ByteBuf out) {
+        encoderChannel.writeOutbound(in);
+        encoderChannel.flushOutbound();
+        readAllOutput(encoderChannel, out);
+        if (encoderChannel.finish()) {
+            readAllOutput(encoderChannel, out);
+        }
+        encoderChannel.releaseOutbound();
+        encoderChannel.close();
+    }
+
+    /**
+     * reads all output of the given channel into the given buffer {@code dst}
+     *
+     * @param channel the channel to use
+     * @param dst the destination of the output
+     */
+    private void readAllOutput(EmbeddedChannel channel, ByteBuf dst) {
+        ByteBuf out;
+        while ((out = channel.readOutbound()) != null) {
+            if (out.isReadable()) {
+                dst.writeBytes(out);
+            } else {
+                out.release();
+            }
+        }
+    }
+
+    /**
+     * writes all output of the given channel to the given context {@code ctx}
+     *
+     * @param channel the channel to use
+     * @param ctx the context to write to
+     * @param promise the promise for the write operation
+     */
+    private void writeAllOutput(EmbeddedChannel channel, ChannelHandlerContext ctx, ChannelPromise promise) {
+        ByteBuf out;
+        while ((out = channel.readOutbound()) != null) {
+            if (out.isReadable()) {
+                ctx.write(out, promise);
+            } else {
+                out.release();
+            }
+        }
+    }
+
+    private void cleanup(ChannelHandlerContext ctx) throws Exception {
+        Exception err1 = withExceptionCaught(() -> {
+            ByteBuf buf = ctx.channel().attr(bufAttrKey).getAndSet(null);
+            if (buf != null) {
+                buf.release();
+            }
+        });
+        Exception err2 = withExceptionCaught(() -> {
+            HttpRequest req = ctx.channel().attr(reqAttrKey).getAndSet(null);
+            if (req != null) {
+                ReferenceCountUtil.release(req);
+            }
+        });
+        Exception err3 = withExceptionCaught(() -> {
+            EmbeddedChannel encoderChannel = ctx.channel().attr(encoderChannelAttrKey).getAndSet(null);
+            if (encoderChannel != null) {
+                encoderChannel.finishAndReleaseAll();
+            }
+        });
+        if (err1 != null) {
+            throw err1;
+        } else if (err2 != null) {
+            throw err2;
+        } else if (err3 != null) {
+            throw err3;
+        }
+    }
+
+    /**
+     * runs the given action and returns any caught exception
+     *
+     * @param action the action to execute
+     * @return the exception caught or {@code null} if none occured
+     */
+    private static Exception withExceptionCaught(Runnable action) {
+        try {
+            action.run();
+            return null;
+        } catch (Exception cause) {
+            return cause;
+        } catch (Throwable cause) {
+            return new Exception(cause);
+        }
     }
 
     private static boolean isContentEncodingSet(HttpMessage msg) {
