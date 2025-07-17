@@ -21,9 +21,10 @@ import jdk.jfr.Name;
 
 @SuppressWarnings("Since15")
 @Label("Buffer Allocation")
-@Name("io.netty.AllocateBuffer")
+@Name(AllocateBufferEvent.NAME)
 @Description("Triggered when a buffer is allocated (or reallocated) from an allocator")
 final class AllocateBufferEvent extends AbstractBufferEvent {
+    static final String NAME = "io.netty.AllocateBuffer";
     private static final AllocateBufferEvent INSTANCE = new AllocateBufferEvent();
 
     /**
