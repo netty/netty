@@ -256,7 +256,6 @@ final class Native {
     static final int CQE_SIZE = 16;
     static final int CQE32_SIZE = 32;
 
-
     static String opToStr(byte op) {
         switch (op) {
             case IORING_OP_NOP: return "NOP";
