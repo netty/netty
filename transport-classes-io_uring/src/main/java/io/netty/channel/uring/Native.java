@@ -462,6 +462,7 @@ final class Native {
         // IORING_OP_SENDMSG_ZC Available since 6.0
         return ioUringProbe(probe, new int[] { Native.IORING_OP_SENDMSG_ZC });
     }
+
     /**
      * check current kernel version whether support io_uring_register_io_wq_worker
      * Available since 5.15.

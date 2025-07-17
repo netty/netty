@@ -241,7 +241,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
             int fd = fd().intValue();
             IoRegistration registration = registration();
-            IoUringIoHandler handler = registration().attachment();
+            IoUringIoHandler handler = registration.attachment();
             IovArray iovArray = handler.iovArray();
             int offset = iovArray.count();
 
