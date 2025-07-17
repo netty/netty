@@ -455,7 +455,8 @@ public class AllocationPatternSimulator {
             while (eventReader.hasMoreEvents()) {
                 RecordedEvent event = eventReader.readEvent();
                 String name = event.getEventType().getName();
-                if ("AllocateBufferEvent".equals(name)) {
+                if (("AllocateBufferEvent".equals(name) || "io.netty.AllocateBufferEvent".equals(name)) &&
+                        event.hasField("size")) {
                     int size = event.getInt("size");
                     summation.compute(size, (k, v) -> v == null ? 1 : v + 1);
                 }
