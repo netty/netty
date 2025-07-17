@@ -289,17 +289,6 @@ public final class IovArray implements MessageProcessor {
     }
 
     /**
-     * Returns the {@link ByteBuffer} for the given {@code offset}-
-     */
-    public ByteBuffer buffer(int offset) {
-        ByteBuffer buffer = memory.internalNioBuffer(0, memory.capacity());
-        int position = idx(offset);
-        int limit = idx(count());
-        buffer.clear().position(position).limit(limit);
-        return buffer;
-    }
-
-    /**
      * Release the {@link IovArray}. Once release further using of it may crash the JVM!
      */
     public void release() {

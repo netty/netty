@@ -659,7 +659,6 @@ static jint netty_io_uring_maxSkbFrags(JNIEnv* env, jclass clazz) {
     return MAX_SKB_FRAGS;
 }
 
-
 static int getSysctlValue(const char * property, int* returnValue) {
     int rc = -1;
     FILE *fd=fopen(property, "r");
