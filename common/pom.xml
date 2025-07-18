@@ -101,6 +101,12 @@
       <version>${project.version}</version>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-varhandle-stub</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
     <!-- Add dependency on dev-tools as otherwise the build will fail if not installed first manually -->
     <!-- See https://github.com/netty/netty/issues/7842 -->
     <dependency>

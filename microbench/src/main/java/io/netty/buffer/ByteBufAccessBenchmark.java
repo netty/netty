@@ -84,6 +84,13 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
                         UnpooledByteBufAllocator.DEFAULT, 64, 64).setIndex(0, 64);
             }
         },
+        DIRECT {
+            @Override
+            ByteBuf newBuffer() {
+                return new UnpooledDirectByteBuf(
+                        UnpooledByteBufAllocator.DEFAULT, 64, 64).setIndex(0, 64);
+            }
+        },
         UNSAFE_SLICE {
             @Override
             ByteBuf newBuffer() {
@@ -108,8 +115,13 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
         HEAP {
             @Override
             ByteBuf newBuffer() {
-                return new UnpooledUnsafeHeapByteBuf(
-                        UnpooledByteBufAllocator.DEFAULT, 64, 64).setIndex(0,  64);
+                if (PlatformDependent.hasUnsafe()) {
+                    return new UnpooledUnsafeHeapByteBuf(
+                            UnpooledByteBufAllocator.DEFAULT, 64, 64).setIndex(0, 64);
+                } else {
+                    return new UnpooledHeapByteBuf(
+                            UnpooledByteBufAllocator.DEFAULT, 64, 64).setIndex(0, 64);
+                }
             }
         },
         COMPOSITE {
