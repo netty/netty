@@ -87,6 +87,12 @@ public class VarHandle {
     public native Object getAcquire(Object... args);
 
     @MethodHandle.PolymorphicSignature
+    public native Object getVolatile(Object... args);
+
+    @MethodHandle.PolymorphicSignature
+    public native Object getOpaque(Object... args);
+
+    @MethodHandle.PolymorphicSignature
     public native void set(Object... args);
 
     @MethodHandle.PolymorphicSignature

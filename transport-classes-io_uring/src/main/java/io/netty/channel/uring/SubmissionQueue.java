@@ -16,13 +16,12 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.unix.Buffer;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.StringJoiner;
 
 final class SubmissionQueue {
@@ -48,8 +47,7 @@ final class SubmissionQueue {
 
     // These unsigned integer pointers(shared with the kernel) will be changed by the kernel and us
     // using a VarHandle.
-    private static final VarHandle INT_HANDLE =
-            MethodHandles.byteBufferViewVarHandle(int[].class, ByteOrder.nativeOrder());
+    private static final VarHandle INT_HANDLE = PlatformDependent.intNeBufferView();
     private final ByteBuffer kHead;
     private final ByteBuffer kTail;
     private final ByteBuffer kflags;

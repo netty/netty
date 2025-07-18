@@ -35,6 +35,9 @@ final class VarHandleFactory {
     private static final VarHandle INT_BE_ARRAY_VIEW;
     private static final VarHandle SHORT_LE_ARRAY_VIEW;
     private static final VarHandle SHORT_BE_ARRAY_VIEW;
+    private static final VarHandle INT_NE_BUFFER_VIEW;
+    private static final VarHandle SHORT_NE_BUFFER_VIEW;
+
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     static {
@@ -46,6 +49,9 @@ final class VarHandleFactory {
         VarHandle intBeArrayViewHandle = null;
         VarHandle shortLeArrayViewHandle = null;
         VarHandle shortBeArrayViewHandle = null;
+        VarHandle intNeBufferViewHandle = null;
+        VarHandle shortNeBufferViewHandle = null;
+
         Throwable error = null;
         try {
             MethodHandles.Lookup lookup = MethodHandles.lookup();
@@ -62,6 +68,15 @@ final class VarHandleFactory {
             shortLeArrayViewHandle = (VarHandle) byteArrayViewHandle.invokeExact(
                     short[].class, ByteOrder.LITTLE_ENDIAN);
             shortBeArrayViewHandle = (VarHandle) byteArrayViewHandle.invokeExact(short[].class, ByteOrder.BIG_ENDIAN);
+
+            MethodHandle byteBufferViewHandle = lookup.findStatic(MethodHandles.class, "byteBufferViewVarHandle",
+                    MethodType.methodType(VarHandle.class, Class.class, ByteOrder.class));
+
+            intNeBufferViewHandle = (VarHandle)
+                    byteBufferViewHandle.invokeExact(int[].class, ByteOrder.nativeOrder());
+
+            shortNeBufferViewHandle = (VarHandle)
+                    byteBufferViewHandle.invokeExact(short[].class, ByteOrder.nativeOrder());
             error = null;
         } catch (Throwable e) {
             error = e;
@@ -81,6 +96,8 @@ final class VarHandleFactory {
             INT_BE_ARRAY_VIEW = intBeArrayViewHandle;
             SHORT_LE_ARRAY_VIEW = shortLeArrayViewHandle;
             SHORT_BE_ARRAY_VIEW = shortBeArrayViewHandle;
+            INT_NE_BUFFER_VIEW = intNeBufferViewHandle;
+            SHORT_NE_BUFFER_VIEW = shortNeBufferViewHandle;
             UNAVAILABILITY_CAUSE = error;
         }
     }
@@ -133,5 +150,13 @@ final class VarHandleFactory {
 
     public static VarHandle shortBeArrayView() {
         return SHORT_BE_ARRAY_VIEW;
+    }
+
+    public static VarHandle intNeBufferView() {
+        return INT_NE_BUFFER_VIEW;
+    }
+
+    public static VarHandle shortNeBufferView() {
+        return SHORT_NE_BUFFER_VIEW;
     }
 }

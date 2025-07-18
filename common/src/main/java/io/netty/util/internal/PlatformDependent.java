@@ -678,6 +678,20 @@ public final class PlatformDependent {
         return null;
     }
 
+    public static VarHandle intNeBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.intNeBufferView();
+        }
+        return null;
+    }
+
+    public static VarHandle shortNeBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.shortNeBufferView();
+        }
+        return null;
+    }
+
     public static Object getObject(Object object, long fieldOffset) {
         return PlatformDependent0.getObject(object, fieldOffset);
     }

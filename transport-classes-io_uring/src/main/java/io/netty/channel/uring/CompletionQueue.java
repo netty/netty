@@ -15,18 +15,17 @@
  */
 package io.netty.channel.uring;
 
-import java.lang.invoke.MethodHandles;
+import io.netty.util.internal.PlatformDependent;
+
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.StringJoiner;
 
 /**
  * Completion queue implementation for io_uring.
  */
 final class CompletionQueue {
-    private static final VarHandle INT_HANDLE =
-            MethodHandles.byteBufferViewVarHandle(int[].class, ByteOrder.nativeOrder());
+    private static final VarHandle INT_HANDLE = PlatformDependent.intNeBufferView();
 
     //these offsets are used to access specific properties
     //CQE (https://github.com/axboe/liburing/blob/master/src/include/liburing/io_uring.h#L162)

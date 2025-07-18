@@ -17,17 +17,15 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.unix.Buffer;
+import io.netty.util.internal.PlatformDependent;
 
-import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
 import java.util.Arrays;
 import java.util.function.Consumer;
 
 final class IoUringBufferRing {
-    private static final VarHandle SHORT_HANDLE =
-            MethodHandles.byteBufferViewVarHandle(short[].class, ByteOrder.nativeOrder());
+    private static final VarHandle SHORT_HANDLE = PlatformDependent.shortNeBufferView();
     private final ByteBuffer ioUringBufRing;
     private final int tailFieldPosition;
     private final short entries;
