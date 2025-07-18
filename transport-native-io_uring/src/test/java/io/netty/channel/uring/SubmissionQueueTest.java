@@ -126,17 +126,31 @@ public class SubmissionQueueTest {
             assertNotNull(ringBuffer);
             ringBuffer.enable();
             assertNotEquals(0, ringBuffer.features() & Native.IORING_FEAT_NODROP);
-            assertEquals(cqSize, ringBuffer.ioUringCompletionQueue().ringEntries);
 
-            assertThat(ringBuffer.ioUringSubmissionQueue().addNop((byte) 0, 1)).isNotZero();
-            assertThat(ringBuffer.ioUringSubmissionQueue().addNop((byte) 0, 1)).isNotZero();
-            ringBuffer.ioUringSubmissionQueue().submitAndGet();
-            assertEquals(0, ringBuffer.ioUringSubmissionQueue().flags() & Native.IORING_SQ_CQ_OVERFLOW);
+            CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
+            assertEquals(cqSize, completionQueue.ringEntries);
 
-            assertThat(ringBuffer.ioUringSubmissionQueue().addNop((byte) 0, 1)).isNotZero();
-            assertThat(ringBuffer.ioUringSubmissionQueue().addNop((byte) 0, 1)).isNotZero();
-            ringBuffer.ioUringSubmissionQueue().submitAndGet();
+            SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+            assertThat(submissionQueue.addNop((byte) 0, 1)).isNotZero();
+            assertThat(submissionQueue.addNop((byte) 0, 1)).isNotZero();
+            submissionQueue.submitAndGet();
+            assertEquals(0, submissionQueue.flags() & Native.IORING_SQ_CQ_OVERFLOW);
+
+            assertThat(submissionQueue.addNop((byte) 0, 1)).isNotZero();
+            submissionQueue.submitAndGet();
             assertNotEquals(0, ringBuffer.ioUringSubmissionQueue().flags() & Native.IORING_SQ_CQ_OVERFLOW);
+
+            // The completion queue should have only had space for 2 events
+            int processed = completionQueue.process((res, flags, udata, extraCqeData) -> true);
+            assertEquals(2, processed);
+
+            // submit again to ensure we flush the event that did overflow
+            submissionQueue.submitAndGetNow();
+            processed = completionQueue.process((res, flags, udata, extraCqeData) -> true);
+            assertEquals(1, processed);
+
+            // Everything was processed and so the overflow flag should have been cleared
+            assertEquals(0, submissionQueue.flags() & Native.IORING_SQ_CQ_OVERFLOW);
         } finally {
             ringBuffer.close();
         }
