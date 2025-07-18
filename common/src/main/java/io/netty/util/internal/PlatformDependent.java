@@ -39,6 +39,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -129,6 +130,7 @@ public final class PlatformDependent {
     public static final boolean BIG_ENDIAN_NATIVE_ORDER = ByteOrder.nativeOrder() == ByteOrder.BIG_ENDIAN;
 
     private static final boolean JFR;
+    private static final boolean VAR_HANDLE;
 
     private static final Cleaner NOOP = new Cleaner() {
         @Override
@@ -258,6 +260,37 @@ public final class PlatformDependent {
         } else if (logger.isDebugEnabled()) {
             logger.debug("-Dio.netty.jfr.enabled: {}", JFR);
         }
+        VAR_HANDLE = initializeVarHandle();
+    }
+
+    private static boolean initializeVarHandle() {
+        if (UNSAFE_UNAVAILABILITY_CAUSE == null || javaVersion() < 9 ||
+                PlatformDependent0.isNativeImage()) {
+            return false;
+        }
+        boolean varHandleAvailable = false;
+        Throwable varHandleFailure;
+        try {
+            VarHandle.storeStoreFence();
+            varHandleAvailable = VarHandleFactory.isSupported();
+            varHandleFailure = VarHandleFactory.unavailableCause();
+        } catch (Throwable t) {
+            // no-op
+            varHandleFailure = t;
+        }
+        if (varHandleFailure != null) {
+            logger.debug("java.lang.invoke.VarHandle: unavailable, reason: {}", varHandleFailure.toString());
+        } else {
+            logger.debug("java.lang.invoke.VarHandle: available");
+        }
+        boolean varHandleEnabled = varHandleAvailable &&
+                SystemPropertyUtil.getBoolean("io.netty.varHandle.enabled", varHandleAvailable);
+        if (logger.isTraceEnabled() && varHandleFailure != null) {
+            logger.debug("-Dio.netty.varHandle.enabled: {}", varHandleEnabled, varHandleFailure);
+        } else if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.varHandle.enabled: {}", varHandleEnabled);
+        }
+        return varHandleEnabled;
     }
 
     // For specifications, see https://www.freedesktop.org/software/systemd/man/os-release.html
@@ -592,28 +625,127 @@ public final class PlatformDependent {
                 "sun.misc.Unsafe or java.nio.DirectByteBuffer.<init>(long, int) not available");
     }
 
+    public static boolean hasVarHandle() {
+        return VAR_HANDLE;
+    }
+
+    public static VarHandle findVarHandleOfIntField(MethodHandles.Lookup lookup, Class<?> type, String fieldName) {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.privateFindVarHandle(lookup, type, fieldName, int.class);
+        }
+        return null;
+    }
+
+    public static VarHandle intBeArrayView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.intBeArrayView();
+        }
+        return null;
+    }
+
+    public static VarHandle intLeArrayView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.intLeArrayView();
+        }
+        return null;
+    }
+
+    public static VarHandle longBeArrayView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.longBeArrayView();
+        }
+        return null;
+    }
+
+    public static VarHandle longLeArrayView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.longLeArrayView();
+        }
+        return null;
+    }
+
+    public static VarHandle shortBeArrayView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.shortBeArrayView();
+        }
+        return null;
+    }
+
+    public static VarHandle shortLeArrayView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.shortLeArrayView();
+        }
+        return null;
+    }
+
+    public static VarHandle longBeByteBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.longBeByteBufferView();
+        }
+        return null;
+    }
+
+    public static VarHandle longLeByteBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.longLeByteBufferView();
+        }
+        return null;
+    }
+
+    public static VarHandle intBeByteBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.intBeByteBufferView();
+        }
+        return null;
+    }
+
+    public static VarHandle intLeByteBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.intLeByteBufferView();
+        }
+        return null;
+    }
+
+    public static VarHandle shortBeByteBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.shortBeByteBufferView();
+        }
+        return null;
+    }
+
+    public static VarHandle shortLeByteBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.shortLeByteBufferView();
+        }
+        return null;
+    }
+
     public static Object getObject(Object object, long fieldOffset) {
         return PlatformDependent0.getObject(object, fieldOffset);
+    }
+
+    public static int getVolatileInt(Object object, long fieldOffset) {
+        return PlatformDependent0.getIntVolatile(object, fieldOffset);
     }
 
     public static int getInt(Object object, long fieldOffset) {
         return PlatformDependent0.getInt(object, fieldOffset);
     }
 
+    public static void putOrderedInt(Object object, long fieldOffset, int value) {
+        PlatformDependent0.putOrderedInt(object, fieldOffset, value);
+    }
+
+    public static int getAndAddInt(Object object, long fieldOffset, int delta) {
+        return PlatformDependent0.getAndAddInt(object, fieldOffset, delta);
+    }
+
+    public static boolean compareAndSwapInt(Object object, long fieldOffset, int expected, int value) {
+        return PlatformDependent0.compareAndSwapInt(object, fieldOffset, expected, value);
+    }
+
     static void safeConstructPutInt(Object object, long fieldOffset, int value) {
         PlatformDependent0.safeConstructPutInt(object, fieldOffset, value);
-    }
-
-    public static void putShortOrdered(long adddress, short newValue) {
-        PlatformDependent0.putShortOrdered(adddress, newValue);
-    }
-
-    public static int getIntVolatile(long address) {
-        return PlatformDependent0.getIntVolatile(address);
-    }
-
-    public static void putIntOrdered(long adddress, int newValue) {
-        PlatformDependent0.putIntOrdered(adddress, newValue);
     }
 
     public static byte getByte(long address) {

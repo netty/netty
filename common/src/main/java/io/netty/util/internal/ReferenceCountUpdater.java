@@ -17,8 +17,6 @@ package io.netty.util.internal;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCounted;
 
@@ -38,34 +36,27 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
      * for example: if (rawCnt == 2 || rawCnt == 4 || (rawCnt & 1) == 0) { ...
      */
 
-    protected ReferenceCountUpdater() { }
-
-    public static long getUnsafeOffset(Class<? extends ReferenceCounted> clz, String fieldName) {
-        try {
-            if (PlatformDependent.hasUnsafe()) {
-                return PlatformDependent.objectFieldOffset(clz.getDeclaredField(fieldName));
-            }
-        } catch (Throwable ignore) {
-            // fall-back
-        }
-        return -1;
+    protected ReferenceCountUpdater() {
     }
 
-    protected abstract AtomicIntegerFieldUpdater<T> updater();
+    protected abstract void safeInitializeRawRefCnt(T refCntObj, int value);
 
-    protected abstract long unsafeOffset();
+    protected abstract int getAndAddRawRefCnt(T refCntObj, int increment);
+
+    protected abstract int getRawRefCnt(T refCnt);
+
+    protected abstract int getAcquireRawRefCnt(T refCnt);
+
+    protected abstract void setReleaseRawRefCnt(T refCnt, int value);
+
+    protected abstract boolean casRawRefCnt(T refCnt, int expected, int value);
 
     public final int initialValue() {
         return 2;
     }
 
-    public void setInitialValue(T instance) {
-        final long offset = unsafeOffset();
-        if (offset == -1) {
-            updater().set(instance, initialValue());
-        } else {
-            PlatformDependent.safeConstructPutInt(instance, offset, initialValue());
-        }
+    public final void setInitialValue(T instance) {
+        safeInitializeRawRefCnt(instance, initialValue());
     }
 
     private static int realRefCnt(int rawCnt) {
@@ -83,20 +74,12 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
         throw new IllegalReferenceCountException(0, -decrement);
     }
 
-    private int nonVolatileRawCnt(T instance) {
-        // TODO: Once we compile against later versions of Java we can replace the Unsafe usage here by varhandles.
-        final long offset = unsafeOffset();
-        return offset != -1 ? PlatformDependent.getInt(instance, offset) : updater().get(instance);
-    }
-
     public final int refCnt(T instance) {
-        return realRefCnt(updater().get(instance));
+        return realRefCnt(getAcquireRawRefCnt(instance));
     }
 
     public final boolean isLiveNonVolatile(T instance) {
-        final long offset = unsafeOffset();
-        final int rawCnt = offset != -1 ? PlatformDependent.getInt(instance, offset) : updater().get(instance);
-
+        final int rawCnt = getRawRefCnt(instance);
         // The "real" ref count is > 0 if the rawCnt is even.
         return rawCnt == 2 || rawCnt == 4 || rawCnt == 6 || rawCnt == 8 || (rawCnt & 1) == 0;
     }
@@ -105,7 +88,8 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
      * An unsafe operation that sets the reference count directly
      */
     public final void setRefCnt(T instance, int refCnt) {
-        updater().set(instance, refCnt > 0 ? refCnt << 1 : 1); // overflow OK here
+        int rawRefCnt = refCnt > 0 ? refCnt << 1 : 1; // overflow OK here
+        setReleaseRawRefCnt(instance, rawRefCnt);
     }
 
     /**
@@ -113,7 +97,7 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
      */
     public final void resetRefCnt(T instance) {
         // no need of a volatile set, it should happen in a quiescent state
-        updater().lazySet(instance, initialValue());
+        setReleaseRawRefCnt(instance, initialValue());
     }
 
     public final T retain(T instance) {
@@ -128,7 +112,7 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
 
     // rawIncrement == increment << 1
     private T retain0(T instance, final int increment, final int rawIncrement) {
-        int oldRef = updater().getAndAdd(instance, rawIncrement);
+        int oldRef = getAndAddRawRefCnt(instance, rawIncrement);
         if (oldRef != 2 && oldRef != 4 && (oldRef & 1) != 0) {
             throw new IllegalReferenceCountException(0, increment);
         }
@@ -136,33 +120,33 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
         if ((oldRef <= 0 && oldRef + rawIncrement >= 0)
                 || (oldRef >= 0 && oldRef + rawIncrement < oldRef)) {
             // overflow case
-            updater().getAndAdd(instance, -rawIncrement);
+            getAndAddRawRefCnt(instance, -rawIncrement);
             throw new IllegalReferenceCountException(realRefCnt(oldRef), increment);
         }
         return instance;
     }
 
     public final boolean release(T instance) {
-        int rawCnt = nonVolatileRawCnt(instance);
+        int rawCnt = getRawRefCnt(instance);
         return rawCnt == 2 ? tryFinalRelease0(instance, 2) || retryRelease0(instance, 1)
                 : nonFinalRelease0(instance, 1, rawCnt, toLiveRealRefCnt(rawCnt, 1));
     }
 
     public final boolean release(T instance, int decrement) {
-        int rawCnt = nonVolatileRawCnt(instance);
+        int rawCnt = getRawRefCnt(instance);
         int realCnt = toLiveRealRefCnt(rawCnt, checkPositive(decrement, "decrement"));
         return decrement == realCnt ? tryFinalRelease0(instance, rawCnt) || retryRelease0(instance, decrement)
                 : nonFinalRelease0(instance, decrement, rawCnt, realCnt);
     }
 
     private boolean tryFinalRelease0(T instance, int expectRawCnt) {
-        return updater().compareAndSet(instance, expectRawCnt, 1); // any odd number will work
+        return casRawRefCnt(instance, expectRawCnt, 1); // any odd number will work
     }
 
     private boolean nonFinalRelease0(T instance, int decrement, int rawCnt, int realCnt) {
         if (decrement < realCnt
                 // all changes to the raw count are 2x the "real" change - overflow is OK
-                && updater().compareAndSet(instance, rawCnt, rawCnt - (decrement << 1))) {
+                && casRawRefCnt(instance, rawCnt, rawCnt - (decrement << 1))) {
             return false;
         }
         return retryRelease0(instance, decrement);
@@ -170,14 +154,14 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
 
     private boolean retryRelease0(T instance, int decrement) {
         for (;;) {
-            int rawCnt = updater().get(instance), realCnt = toLiveRealRefCnt(rawCnt, decrement);
+            int rawCnt = getRawRefCnt(instance), realCnt = toLiveRealRefCnt(rawCnt, decrement);
             if (decrement == realCnt) {
                 if (tryFinalRelease0(instance, rawCnt)) {
                     return true;
                 }
             } else if (decrement < realCnt) {
                 // all changes to the raw count are 2x the "real" change
-                if (updater().compareAndSet(instance, rawCnt, rawCnt - (decrement << 1))) {
+                if (casRawRefCnt(instance, rawCnt, rawCnt - (decrement << 1))) {
                     return false;
                 }
             } else {
@@ -185,5 +169,33 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
             }
             Thread.yield(); // this benefits throughput under high contention
         }
+    }
+
+    public enum UpdaterType {
+        Unsafe,
+        VarHandle,
+        Atomic
+    }
+
+    public static <T extends ReferenceCounted> UpdaterType updaterTypeOf(Class<T> clz, String fieldName) {
+        long fieldOffset = getUnsafeOffset(clz, fieldName);
+        if (fieldOffset >= 0) {
+            return UpdaterType.Unsafe;
+        }
+        if (PlatformDependent.hasVarHandle()) {
+            return UpdaterType.VarHandle;
+        }
+        return UpdaterType.Atomic;
+    }
+
+    public static long getUnsafeOffset(Class<? extends ReferenceCounted> clz, String fieldName) {
+        try {
+            if (PlatformDependent.hasUnsafe()) {
+                return PlatformDependent.objectFieldOffset(clz.getDeclaredField(fieldName));
+            }
+        } catch (Throwable ignore) {
+            // fall-back
+        }
+        return -1;
     }
 }
