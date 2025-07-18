@@ -117,6 +117,31 @@ public class SubmissionQueueTest {
         }
     }
 
+    @Test
+    @DisabledIf("setUpCQSizeUnavailable")
+    public void testCqOverflow() {
+        int cqSize = 2;
+        RingBuffer ringBuffer = Native.createRingBuffer(2, cqSize, Native.IORING_SETUP_CQSIZE);
+        try {
+            assertNotNull(ringBuffer);
+            ringBuffer.enable();
+            assertNotEquals(0, ringBuffer.features() & Native.IORING_FEAT_NODROP);
+            assertEquals(cqSize, ringBuffer.ioUringCompletionQueue().ringEntries);
+
+            assertThat(ringBuffer.ioUringSubmissionQueue().addNop((byte) 0, 1)).isNotZero();
+            assertThat(ringBuffer.ioUringSubmissionQueue().addNop((byte) 0, 1)).isNotZero();
+            ringBuffer.ioUringSubmissionQueue().submitAndGet();
+            assertEquals(0, ringBuffer.ioUringSubmissionQueue().flags() & Native.IORING_SQ_CQ_OVERFLOW);
+
+            assertThat(ringBuffer.ioUringSubmissionQueue().addNop((byte) 0, 1)).isNotZero();
+            assertThat(ringBuffer.ioUringSubmissionQueue().addNop((byte) 0, 1)).isNotZero();
+            ringBuffer.ioUringSubmissionQueue().submitAndGet();
+            assertNotEquals(0, ringBuffer.ioUringSubmissionQueue().flags() & Native.IORING_SQ_CQ_OVERFLOW);
+        } finally {
+            ringBuffer.close();
+        }
+    }
+
     private static boolean setUpCQSizeUnavailable() {
         return !IoUring.isSetupCqeSizeSupported();
     }

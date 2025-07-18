@@ -178,7 +178,26 @@ public final class IoUringIoHandler implements IoHandler {
             // Even if we have some completions already pending we can still try to even fetch more.
             submitAndClearNow(submissionQueue);
         }
-        return completionQueue.process(this::handle);
+        return processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+    }
+
+    private int processCompletionsAndHandleOverflow(SubmissionQueue submissionQueue, CompletionQueue completionQueue,
+                                         CompletionCallback callback) {
+        int processed = 0;
+        for (;;) {
+            int p = completionQueue.process(callback);
+            if ((submissionQueue.flags() & Native.IORING_SQ_CQ_OVERFLOW) != 0) {
+                logger.warn("CompletionQueue overflow detected, consider increasing size: {} ",
+                        completionQueue.ringEntries);
+                submitAndClearNow(submissionQueue);
+            } else {
+                if (p == 0) {
+                    break;
+                }
+            }
+            processed += p;
+        }
+        return processed;
     }
 
     private int submitAndClearNow(SubmissionQueue submissionQueue) {
@@ -333,9 +352,9 @@ public final class IoUringIoHandler implements IoHandler {
 
         // Submit everything and wait until we could drain i.
         submissionQueue.submitAndGet();
-        while (completionQueue.hasCompletions()) {
-            completionQueue.process(this::handle);
 
+        while (completionQueue.hasCompletions()) {
+            processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
             if (submissionQueue.count() > 0) {
                 submissionQueue.submitAndGetNow();
             }
@@ -402,7 +421,7 @@ public final class IoUringIoHandler implements IoHandler {
             completionQueue.process(handler);
             while (!handler.eventFdDrained) {
                 submissionQueue.submitAndGet();
-                completionQueue.process(handler);
+                processCompletionsAndHandleOverflow(submissionQueue, completionQueue, handler);
             }
         }
         // We've consumed any pending eventfd read and `eventfdAsyncNotify` should never
