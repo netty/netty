@@ -473,6 +473,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 case Native.IORING_OP_SENDMSG:
                 case Native.IORING_OP_WRITE:
                 case Native.IORING_OP_SPLICE:
+                case Native.IORING_OP_SEND_ZC:
+                case Native.IORING_OP_SENDMSG_ZC:
                     writeComplete(op, res, flags, data);
                     break;
                 case Native.IORING_OP_POLL_ADD:
@@ -628,7 +630,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         private boolean canCloseNow() {
             // Currently there are is no WRITE and READ scheduled, we can close the channel now without
             // problems related to re-ordering of completions.
-            return (ioState & (WRITE_SCHEDULED | READ_SCHEDULED)) == 0;
+            return canCloseNow0() && (ioState & (WRITE_SCHEDULED | READ_SCHEDULED)) == 0;
+        }
+
+        protected boolean canCloseNow0() {
+            return true;
         }
 
         private void closeNow() {
@@ -982,8 +988,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 }
                 return;
             }
-            assert numOutstandingWrites > 0;
-            --numOutstandingWrites;
+
+            if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
+                assert numOutstandingWrites > 0;
+                --numOutstandingWrites;
+            }
 
             boolean writtenAll = writeComplete0(op, res, flags, data, numOutstandingWrites);
             if (!writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {

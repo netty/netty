@@ -43,6 +43,7 @@
 
 #include <sys/eventfd.h>
 #include <poll.h>
+
 // Needed for UDP_SEGMENT
 #include <netinet/udp.h>
 #include <sys/utsname.h>
@@ -60,6 +61,11 @@
 // Allow to compile on systems with older kernels
 #ifndef MSG_FASTOPEN
 #define MSG_FASTOPEN 0x20000000
+#endif
+
+// This should be CONFIG_MAX_SKB_FRAGS these days.
+#ifndef MAX_SKB_FRAGS
+#define MAX_SKB_FRAGS 17
 #endif
 
 #define NATIVE_CLASSNAME "io/netty/channel/uring/Native"
@@ -649,6 +655,10 @@ static jint netty_io_uring_sizeofIoUringBuf(JNIEnv* env, jclass clazz) {
     return sizeof(struct io_uring_buf);
 }
 
+static jint netty_io_uring_maxSkbFrags(JNIEnv* env, jclass clazz) {
+    return MAX_SKB_FRAGS;
+}
+
 static int getSysctlValue(const char * property, int* returnValue) {
     int rc = -1;
     FILE *fd=fopen(property, "r");
@@ -826,6 +836,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "ioUringBufferOffsetLen", "()I", (void *) netty_io_uring_ioUringBufOffsetoflen },
   { "ioUringBufferOffsetBid", "()I", (void *) netty_io_uring_ioUringBufOffsetofbid },
   { "tcpFastopenMode", "()I", (void *) netty_io_uring_tcpFastopenMode },
+  { "maxSkbFrags", "()I", (void *) netty_io_uring_maxSkbFrags }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 

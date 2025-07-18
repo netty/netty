@@ -28,7 +28,6 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
-import io.netty.channel.unix.Limits;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -239,26 +238,29 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
             assert writeId == 0;
-            int numElements = Math.min(in.size(), Limits.IOV_MAX);
-            IoUringIoHandler handler = registration().attachment();
-            IovArray iovArray = handler.iovArray();
-            try {
-                int offset = iovArray.count();
-                in.forEachFlushedMessage(iovArray);
 
-                int fd = fd().intValue();
-                IoRegistration registration = registration();
-                IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArray.memoryAddress(offset),
-                        iovArray.count() - offset, nextOpsId());
-                byte opCode = ops.opcode();
-                writeId = registration.submit(ops);
-                writeOpCode = opCode;
-                if (writeId == 0) {
-                    return 0;
-                }
+            int fd = fd().intValue();
+            IoRegistration registration = registration();
+            IoUringIoHandler handler = registration.attachment();
+            IovArray iovArray = handler.iovArray();
+            int offset = iovArray.count();
+
+            try {
+                in.forEachFlushedMessage(iovArray);
             } catch (Exception e) {
                 // This should never happen, anyway fallback to single write.
-                scheduleWriteSingle(in.current());
+                return scheduleWriteSingle(in.current());
+            }
+            long iovArrayAddress = iovArray.memoryAddress(offset);
+            int iovArrayLength = iovArray.count() - offset;
+            // Should not use sendmsg_zc, just use normal writev.
+            IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, nextOpsId());
+
+            byte opCode = ops.opcode();
+            writeId = registration.submit(ops);
+            writeOpCode = opCode;
+            if (writeId == 0) {
+                return 0;
             }
             return 1;
         }
@@ -281,10 +283,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 ops = fileRegion.splice(fd);
             } else {
                 ByteBuf buf = (ByteBuf) msg;
-                ops = IoUringIoOps.newWrite(fd, (byte) 0, 0,
-                        IoUring.memoryAddress(buf) + buf.readerIndex(), buf.readableBytes(), nextOpsId());
-            }
+                long address = IoUring.memoryAddress(buf) + buf.readerIndex();
+                int length = buf.readableBytes();
+                short opsid = nextOpsId();
 
+                ops = IoUringIoOps.newWrite(fd, (byte) 0, 0, address, length, opsid);
+            }
             byte opCode = ops.opcode();
             writeId = registration.submit(ops);
             writeOpCode = opCode;
@@ -550,35 +554,45 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
         }
 
+        private boolean handleWriteCompleteFileRegion(ChannelOutboundBuffer channelOutboundBuffer,
+                                                      IoUringFileRegion fileRegion, int res, short data) {
+            try {
+                if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                    return true;
+                }
+                int result = res >= 0 ? res : ioResult("io_uring splice", res);
+                if (result == 0 && fileRegion.count() > 0) {
+                    validateFileRegion(fileRegion.fileRegion, fileRegion.transfered());
+                    return false;
+                }
+                int progress = fileRegion.handleResult(result, data);
+                if (progress == -1) {
+                    // Done with writing
+                    channelOutboundBuffer.remove();
+                } else if (progress > 0) {
+                    channelOutboundBuffer.progress(progress);
+                }
+            } catch (Throwable cause) {
+                handleWriteError(cause);
+            }
+            return true;
+        }
+
         @Override
         boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
-            writeId = 0;
-            writeOpCode = 0;
-
+            if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
+                // We only want to reset these if IORING_CQE_F_NOTIF is not set.
+                // If it's set we know this is only an extra notification for a write but we already handled
+                // the write completions before.
+                // See https://man7.org/linux/man-pages/man2/io_uring_enter.2.html section: IORING_OP_SEND_ZC
+                writeId = 0;
+                writeOpCode = 0;
+            }
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
             Object current = channelOutboundBuffer.current();
             if (current instanceof IoUringFileRegion) {
                 IoUringFileRegion fileRegion = (IoUringFileRegion) current;
-                try {
-                    if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                        return true;
-                    }
-                    int result = res >= 0 ? res : ioResult("io_uring splice", res);
-                    if (result == 0 && fileRegion.count() > 0) {
-                        validateFileRegion(fileRegion.fileRegion, fileRegion.transfered());
-                        return false;
-                    }
-                    int progress = fileRegion.handleResult(result, data);
-                    if (progress == -1) {
-                        // Done with writing
-                        channelOutboundBuffer.remove();
-                    } else if (progress > 0) {
-                        channelOutboundBuffer.progress(progress);
-                    }
-                } catch (Throwable cause) {
-                    handleWriteError(cause);
-                }
-                return true;
+                return handleWriteCompleteFileRegion(channelOutboundBuffer, fileRegion, res, data);
             }
 
             if (res >= 0) {
