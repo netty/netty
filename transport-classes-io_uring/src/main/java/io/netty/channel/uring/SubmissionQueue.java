@@ -52,6 +52,7 @@ final class SubmissionQueue {
             MethodHandles.byteBufferViewVarHandle(int[].class, ByteOrder.nativeOrder());
     private final ByteBuffer kHead;
     private final ByteBuffer kTail;
+    private final ByteBuffer kflags;
     private final ByteBuffer submissionQueueArray;
 
     final int ringEntries;
@@ -67,7 +68,8 @@ final class SubmissionQueue {
 
     private boolean closed;
 
-    SubmissionQueue(ByteBuffer khead, ByteBuffer ktail, int ringMask, int ringEntries, ByteBuffer submissionQueueArray,
+    SubmissionQueue(ByteBuffer khead, ByteBuffer ktail, int ringMask, int ringEntries, ByteBuffer kflags,
+                    ByteBuffer submissionQueueArray,
                     int ringSize, long ringAddress,
                     int ringFd) {
         this.kHead = khead;
@@ -78,9 +80,18 @@ final class SubmissionQueue {
         this.ringFd = ringFd;
         this.enterRingFd = ringFd;
         this.ringEntries = ringEntries;
+        this.kflags = kflags;
         this.ringMask = ringMask;
         this.head = (int) INT_HANDLE.getVolatile(khead, 0);
         this.tail = (int) INT_HANDLE.getVolatile(ktail, 0);
+    }
+
+    int flags() {
+        if (closed) {
+            return 0;
+        }
+        // we only need memory_order_relaxed
+        return (int) INT_HANDLE.getOpaque(kflags, 0);
     }
 
     long submissionQueueArrayAddress() {

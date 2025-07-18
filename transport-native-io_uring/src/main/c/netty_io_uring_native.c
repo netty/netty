@@ -324,7 +324,7 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
         p.cq_entries = (__u32) cqSize;
     }
 
-    jlongArray array = (*env)->NewLongArray(env, 18);
+    jlongArray array = (*env)->NewLongArray(env, 20);
     if (array == NULL) {
         // This will put an OOME on the stack
         return NULL;
@@ -367,13 +367,14 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
         (jlong)*io_uring_ring.cq.kring_mask,
         // Should be replaced by ring_entries when we depend on later kernel versions
         (jlong)*io_uring_ring.cq.kring_entries,
+        (jlong)io_uring_ring.cq.kflags,
         (jlong)io_uring_ring.cq.cqes,
         (jlong)io_uring_ring.cq.ring_sz,
         (jlong)io_uring_ring.cq.ring_ptr,
         (jlong)ring_fd,
         (jlong)p.cq_entries
     };
-    (*env)->SetLongArrayRegion(env, array, 0, 9, completionArrayElements);
+    (*env)->SetLongArrayRegion(env, array, 0, 10, completionArrayElements);
 
     jlong submissionArrayElements[] = {
         (jlong)io_uring_ring.sq.khead,
@@ -382,15 +383,16 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
         (jlong)*io_uring_ring.sq.kring_mask,
         // Should be replaced by ring_entries when we depend on later kernel versions
         (jlong)*io_uring_ring.sq.kring_entries,
+        (jlong)io_uring_ring.sq.kflags,
         (jlong)io_uring_ring.sq.sqes,
         (jlong)io_uring_ring.sq.ring_sz,
         (jlong)io_uring_ring.sq.ring_ptr,
         (jlong)ring_fd
     };
-    (*env)->SetLongArrayRegion(env, array, 9, 8, submissionArrayElements);
+    (*env)->SetLongArrayRegion(env, array, 10, 9, submissionArrayElements);
 
     jlong features = (jlong) p.features;
-    (*env)->SetLongArrayRegion(env, array, 17, 1, &features);
+    (*env)->SetLongArrayRegion(env, array, 19, 1, &features);
     return array;
 }
 

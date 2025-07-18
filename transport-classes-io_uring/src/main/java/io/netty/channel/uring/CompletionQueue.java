@@ -38,6 +38,7 @@ final class CompletionQueue {
     // using a VarHandle.
     private final ByteBuffer khead;
     private final ByteBuffer ktail;
+    private final ByteBuffer kflags;
     private final ByteBuffer completionQueueArray;
     private final ByteBuffer[] extraCqeData;
 
@@ -52,7 +53,7 @@ final class CompletionQueue {
     private int ringHead;
     private boolean closed;
 
-    CompletionQueue(ByteBuffer kHead, ByteBuffer kTail, int ringMask, int ringEntries,
+    CompletionQueue(ByteBuffer kHead, ByteBuffer kTail, int ringMask, int ringEntries, ByteBuffer kflags,
                     ByteBuffer completionQueueArray, int ringSize, long ringAddress,
                     int ringFd, int ringCapacity, int cqeLength) {
         this.khead = kHead;
@@ -64,6 +65,7 @@ final class CompletionQueue {
         this.ringCapacity = ringCapacity;
         this.cqeLength = cqeLength;
         this.ringEntries = ringEntries;
+        this.kflags = kflags;
         this.ringMask = ringMask;
         ringHead = (int) INT_HANDLE.getVolatile(kHead, 0);
 
@@ -86,6 +88,14 @@ final class CompletionQueue {
 
     void close() {
         closed = true;
+    }
+
+    int flags() {
+        if (closed) {
+            return 0;
+        }
+        // we only need memory_order_relaxed
+        return (int) INT_HANDLE.getOpaque(kflags, 0);
     }
 
     /**

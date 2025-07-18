@@ -117,6 +117,45 @@ public class SubmissionQueueTest {
         }
     }
 
+    @Test
+    @DisabledIf("setUpCQSizeUnavailable")
+    public void testCqOverflow() {
+        int cqSize = 2;
+        RingBuffer ringBuffer = Native.createRingBuffer(2, cqSize, Native.IORING_SETUP_CQSIZE);
+        try {
+            assertNotNull(ringBuffer);
+            ringBuffer.enable();
+            assertNotEquals(0, ringBuffer.features() & Native.IORING_FEAT_NODROP);
+
+            CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
+            assertEquals(cqSize, completionQueue.ringEntries);
+
+            SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+            assertThat(submissionQueue.addNop((byte) 0, 1)).isNotZero();
+            assertThat(submissionQueue.addNop((byte) 0, 1)).isNotZero();
+            submissionQueue.submitAndGet();
+            assertEquals(0, submissionQueue.flags() & Native.IORING_SQ_CQ_OVERFLOW);
+
+            assertThat(submissionQueue.addNop((byte) 0, 1)).isNotZero();
+            submissionQueue.submitAndGet();
+            assertNotEquals(0, ringBuffer.ioUringSubmissionQueue().flags() & Native.IORING_SQ_CQ_OVERFLOW);
+
+            // The completion queue should have only had space for 2 events
+            int processed = completionQueue.process((res, flags, udata, extraCqeData) -> true);
+            assertEquals(2, processed);
+
+            // submit again to ensure we flush the event that did overflow
+            submissionQueue.submitAndGetNow();
+            processed = completionQueue.process((res, flags, udata, extraCqeData) -> true);
+            assertEquals(1, processed);
+
+            // Everything was processed and so the overflow flag should have been cleared
+            assertEquals(0, submissionQueue.flags() & Native.IORING_SQ_CQ_OVERFLOW);
+        } finally {
+            ringBuffer.close();
+        }
+    }
+
     private static boolean setUpCQSizeUnavailable() {
         return !IoUring.isSetupCqeSizeSupported();
     }
