@@ -16,6 +16,43 @@
   -->
 <configuration version="2.0" label="Netty Allocator Events" description="A JFR recording profile that only include Netty allocator events.">
   <category label="Netty">
+    <event name="io.netty.AllocateBuffer" label="Buffer Allocation" description="Triggered when a buffer is allocated (or reallocated) from an allocator">
+      <setting name="enabled" label="Enabled" description="Record event" contentType="jdk.jfr.Flag">true</setting>
+      <setting name="stackTrace" label="Stack Trace" description="Record stack traces" contentType="jdk.jfr.Flag">false</setting>
+      <setting name="threshold" label="Threshold" description="Record event with duration above or equal to threshold" contentType="jdk.jfr.Timespan">0 ns</setting>
+    </event>
+
+    <event name="io.netty.ReallocateBuffer" label="Buffer Reallocation" description="Triggered when a buffer is reallocated for resizing in an allocator. Will be followed by an AllocateBufferEvent">
+      <setting name="enabled" label="Enabled" description="Record event" contentType="jdk.jfr.Flag">true</setting>
+      <setting name="stackTrace" label="Stack Trace" description="Record stack traces" contentType="jdk.jfr.Flag">false</setting>
+      <setting name="threshold" label="Threshold" description="Record event with duration above or equal to threshold" contentType="jdk.jfr.Timespan">0 ns</setting>
+    </event>
+
+    <event name="io.netty.FreeBuffer" label="Buffer Deallocation" description="Triggered when a buffer is freed from an allocator">
+      <setting name="enabled" label="Enabled" description="Record event" contentType="jdk.jfr.Flag">true</setting>
+      <setting name="stackTrace" label="Stack Trace" description="Record stack traces" contentType="jdk.jfr.Flag">false</setting>
+      <setting name="threshold" label="Threshold" description="Record event with duration above or equal to threshold" contentType="jdk.jfr.Timespan">0 ns</setting>
+    </event>
+
+    <event name="io.netty.AllocateChunk" label="Chunk Allocation" description="Triggered when a new memory chunk is allocated for an allocator">
+      <setting name="threshold" label="Threshold" description="Record event with duration above or equal to threshold" contentType="jdk.jfr.Timespan">0 ns</setting>
+      <setting name="stackTrace" label="Stack Trace" description="Record stack traces" contentType="jdk.jfr.Flag">false</setting>
+      <setting name="enabled" label="Enabled" description="Record event" contentType="jdk.jfr.Flag">true</setting>
+    </event>
+
+    <event name="io.netty.FreeChunk" label="Chunk Free" description="Triggered when a memory chunk is freed from an allocator">
+      <setting name="threshold" label="Threshold" description="Record event with duration above or equal to threshold" contentType="jdk.jfr.Timespan">0 ns</setting>
+      <setting name="stackTrace" label="Stack Trace" description="Record stack traces" contentType="jdk.jfr.Flag">false</setting>
+      <setting name="enabled" label="Enabled" description="Record event" contentType="jdk.jfr.Flag">true</setting>
+    </event>
+
+    <event name="io.netty.ReturnChunk" label="Chunk Return" description="Triggered when a memory chunk is prepared for re-use by an allocator">
+      <setting name="threshold" label="Threshold" description="Record event with duration above or equal to threshold" contentType="jdk.jfr.Timespan">0 ns</setting>
+      <setting name="stackTrace" label="Stack Trace" description="Record stack traces" contentType="jdk.jfr.Flag">false</setting>
+      <setting name="enabled" label="Enabled" description="Record event" contentType="jdk.jfr.Flag">true</setting>
+    </event>
+
+    <!-- Historic event names -->
     <event name="AllocateBufferEvent" label="Buffer Allocation" description="Triggered when a buffer is allocated (or reallocated) from an allocator">
       <setting name="enabled" label="Enabled" description="Record event" contentType="jdk.jfr.Flag">true</setting>
       <setting name="stackTrace" label="Stack Trace" description="Record stack traces" contentType="jdk.jfr.Flag">false</setting>
