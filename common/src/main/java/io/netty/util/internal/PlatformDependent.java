@@ -678,6 +678,48 @@ public final class PlatformDependent {
         return null;
     }
 
+    public static VarHandle longBeByteBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.longBeByteBufferView();
+        }
+        return null;
+    }
+
+    public static VarHandle longLeByteBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.longLeByteBufferView();
+        }
+        return null;
+    }
+
+    public static VarHandle intBeByteBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.intBeByteBufferView();
+        }
+        return null;
+    }
+
+    public static VarHandle intLeByteBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.intLeByteBufferView();
+        }
+        return null;
+    }
+
+    public static VarHandle shortBeByteBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.shortBeByteBufferView();
+        }
+        return null;
+    }
+
+    public static VarHandle shortLeByteBufferView() {
+        if (VAR_HANDLE) {
+            return VarHandleFactory.shortLeByteBufferView();
+        }
+        return null;
+    }
+
     public static Object getObject(Object object, long fieldOffset) {
         return PlatformDependent0.getObject(object, fieldOffset);
     }
