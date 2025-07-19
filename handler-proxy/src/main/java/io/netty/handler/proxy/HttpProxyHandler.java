@@ -23,6 +23,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.CombinedChannelDuplexHandler;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -53,7 +54,7 @@ import java.net.SocketAddress;
  * <a href="https://datatracker.ietf.org/doc/html/rfc7230#page-10">message-forwarding HTTP proxy agent</a> instead of a
  * tunneling proxy should not use this handler.
  */
-public final class HttpProxyHandler extends ProxyHandler {
+public class HttpProxyHandler extends ProxyHandler {
 
     private static final String PROTOCOL = "http";
     private static final String AUTH_BASIC = "basic";
@@ -64,7 +65,7 @@ public final class HttpProxyHandler extends ProxyHandler {
     // See:
     // - https://github.com/netty/netty/issues/5201
     // - https://github.com/netty/netty/issues/5070
-    private final HttpClientCodecWrapper codecWrapper = new HttpClientCodecWrapper();
+    private HttpClientCodecWrapper codecWrapper = new HttpClientCodecWrapper<>(new HttpClientCodec());
     private final String username;
     private final String password;
     private final CharSequence authorization;
@@ -154,12 +155,16 @@ public final class HttpProxyHandler extends ProxyHandler {
 
     @Override
     protected void removeEncoder(ChannelHandlerContext ctx) throws Exception {
-        codecWrapper.codec.removeOutboundHandler();
+        if (codecWrapper.codec instanceof CombinedChannelDuplexHandler) {
+            ((CombinedChannelDuplexHandler) codecWrapper.codec).removeOutboundHandler();
+        }
     }
 
     @Override
     protected void removeDecoder(ChannelHandlerContext ctx) throws Exception {
-        codecWrapper.codec.removeInboundHandler();
+        if (codecWrapper.codec instanceof CombinedChannelDuplexHandler) {
+            ((CombinedChannelDuplexHandler) codecWrapper.codec).removeInboundHandler();
+        }
     }
 
     @Override
@@ -241,8 +246,17 @@ public final class HttpProxyHandler extends ProxyHandler {
         }
     }
 
-    private static final class HttpClientCodecWrapper implements ChannelInboundHandler, ChannelOutboundHandler {
-        final HttpClientCodec codec = new HttpClientCodec();
+    protected <T extends ChannelInboundHandler & ChannelOutboundHandler> void setCodec(T codec) {
+        this.codecWrapper = new HttpClientCodecWrapper(codec);
+    }
+
+    private static final class HttpClientCodecWrapper<T extends ChannelInboundHandler & ChannelOutboundHandler>
+        implements ChannelInboundHandler, ChannelOutboundHandler {
+        private final T codec;
+
+        HttpClientCodecWrapper(T codec) {
+            this.codec = codec;
+        }
 
         @Override
         public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
