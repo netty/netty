@@ -529,33 +529,44 @@ final class AdaptivePoolingAllocator {
     }
 
     private static final class SizeClassChunkControllerFactory implements ChunkControllerFactory {
-        private final int segmentSize;
-
-        private SizeClassChunkControllerFactory(int segmentSize) {
-            this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
-        }
-
-        @Override
-        public ChunkController create(MagazineGroup group) {
-            return new SizeClassChunkController(group, segmentSize);
-        }
-    }
-
-    private static final class SizeClassChunkController implements ChunkController {
         // To amortize activation/deactivation of chunks, we should have a minimum number of segments per chunk.
         // We choose 32 because it seems neither too small nor too big.
         // For segments of 16 KiB, the chunks will be half a megabyte.
         private static final int MIN_SEGMENTS_PER_CHUNK = 32;
+        private final int segmentSize;
+        private final int chunkSize;
+        private final int[] segmentOffsets;
+
+        private SizeClassChunkControllerFactory(int segmentSize) {
+            this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
+            this.chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
+            int segmentsCount = chunkSize / segmentSize;
+            this.segmentOffsets = new int[segmentsCount];
+            for (int i = 0; i < segmentsCount; i++) {
+                segmentOffsets[i] = i * segmentSize;
+            }
+        }
+
+        @Override
+        public ChunkController create(MagazineGroup group) {
+            return new SizeClassChunkController(group, segmentSize, chunkSize, segmentOffsets);
+        }
+    }
+
+    private static final class SizeClassChunkController implements ChunkController {
+
         private final ChunkAllocator chunkAllocator;
         private final int segmentSize;
         private final int chunkSize;
         private final Set<Chunk> chunkRegistry;
+        private final int[] segmentOffsets;
 
-        private SizeClassChunkController(MagazineGroup group, int segmentSize) {
+        private SizeClassChunkController(MagazineGroup group, int segmentSize, int chunkSize, int[] segmentOffsets) {
             chunkAllocator = group.chunkAllocator;
             this.segmentSize = segmentSize;
-            chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
+            this.chunkSize = chunkSize;
             chunkRegistry = group.allocator.chunkRegistry;
+            this.segmentOffsets = segmentOffsets;
         }
 
         @Override
@@ -571,8 +582,10 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public Chunk newChunkAllocation(int promptingSize, Magazine magazine) {
-            SizeClassedChunk chunk = new SizeClassedChunk(chunkAllocator.allocate(chunkSize, chunkSize),
-                    magazine, true, segmentSize, size -> false);
+            AbstractByteBuf chunkBuffer = chunkAllocator.allocate(chunkSize, chunkSize);
+            assert chunkBuffer.capacity() == chunkSize;
+            SizeClassedChunk chunk = new SizeClassedChunk(chunkBuffer, magazine, true,
+                    segmentSize, segmentOffsets, size -> false);
             chunkRegistry.add(chunk);
             return chunk;
         }
@@ -1314,7 +1327,7 @@ final class AdaptivePoolingAllocator {
             Chunk chunk = this;
             chunk.retain();
             try {
-                buf.init(delegate, chunk, 0, 0, startIndex, size, startingCapacity, maxCapacity, 0);
+                buf.init(delegate, chunk, 0, 0, startIndex, size, startingCapacity, maxCapacity);
                 chunk = null;
             } finally {
                 if (chunk != null) {
@@ -1353,35 +1366,33 @@ final class AdaptivePoolingAllocator {
         private final MpscIntQueue freeList;
 
         SizeClassedChunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled, int segmentSize,
-                         ChunkReleasePredicate shouldReleaseChunk) {
+                         int[] segmentOffsets, ChunkReleasePredicate shouldReleaseChunk) {
             super(delegate, magazine, pooled, shouldReleaseChunk);
-            int capacity = delegate.capacity();
             this.segmentSize = segmentSize;
-            int segmentCount = capacity / segmentSize;
+            int segmentCount = segmentOffsets.length;
+            assert delegate.capacity() / segmentSize == segmentCount;
             assert segmentCount > 0: "Chunk must have a positive number of segments";
             freeList = MpscIntQueue.create(segmentCount, FREE_LIST_EMPTY);
             freeList.fill(segmentCount, new IntSupplier() {
                 int counter;
                 @Override
                 public int getAsInt() {
-                    return counter++;
+                    return segmentOffsets[counter++];
                 }
             });
         }
 
         @Override
         public void readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
-            int segmentId = freeList.poll();
-            if (segmentId == FREE_LIST_EMPTY) {
+            int startIndex = freeList.poll();
+            if (startIndex == FREE_LIST_EMPTY) {
                 throw new IllegalStateException("Free list is empty");
             }
-
-            int startIndex = segmentId * segmentSize;
             allocatedBytes += segmentSize;
             Chunk chunk = this;
             chunk.retain();
             try {
-                buf.init(delegate, chunk, 0, 0, startIndex, size, startingCapacity, maxCapacity, segmentId);
+                buf.init(delegate, chunk, 0, 0, startIndex, size, startingCapacity, maxCapacity);
                 chunk = null;
             } finally {
                 if (chunk != null) {
@@ -1389,7 +1400,7 @@ final class AdaptivePoolingAllocator {
                     // the chunk again as we retained it before calling buf.init(...). Beside this we also need to
                     // restore the old allocatedBytes value.
                     allocatedBytes -= segmentSize;
-                    chunk.releaseSegment(segmentId);
+                    chunk.releaseSegment(startIndex);
                 }
             }
         }
@@ -1422,10 +1433,10 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        boolean releaseSegment(int segmentId) {
+        boolean releaseSegment(int startIndex) {
             boolean released = release();
-            boolean segmentReturned = freeList.offer(segmentId);
-            assert segmentReturned: "Unable to return segment " + segmentId + " to free list";
+            boolean segmentReturned = freeList.offer(startIndex);
+            assert segmentReturned: "Unable to return segment " + startIndex + " to free list";
             return released;
         }
     }
@@ -1434,12 +1445,12 @@ final class AdaptivePoolingAllocator {
 
         private final ObjectPool.Handle<AdaptiveByteBuf> handle;
 
-        private int adjustment;
+        // this both act as adjustment and the start index for a free list segment allocation
+        private int startIndex;
         private AbstractByteBuf rootParent;
         Chunk chunk;
         private int length;
         private int maxFastCapacity;
-        private int segmentId;
         private ByteBuffer tmpNioBuf;
         private boolean hasArray;
         private boolean hasMemoryAddress;
@@ -1450,14 +1461,13 @@ final class AdaptivePoolingAllocator {
         }
 
         void init(AbstractByteBuf unwrapped, Chunk wrapped, int readerIndex, int writerIndex,
-                  int adjustment, int size, int capacity, int maxCapacity, int segmentId) {
-            this.adjustment = adjustment;
+                  int startIndex, int size, int capacity, int maxCapacity) {
+            this.startIndex = startIndex;
             chunk = wrapped;
             length = size;
             maxFastCapacity = capacity;
             maxCapacity(maxCapacity);
             setIndex0(readerIndex, writerIndex);
-            this.segmentId = segmentId;
             hasArray = unwrapped.hasArray();
             hasMemoryAddress = unwrapped.hasMemoryAddress();
             rootParent = unwrapped;
@@ -1521,13 +1531,12 @@ final class AdaptivePoolingAllocator {
             AdaptivePoolingAllocator allocator = chunk.allocator;
             int readerIndex = this.readerIndex;
             int writerIndex = this.writerIndex;
-            int baseOldRootIndex = adjustment;
+            int baseOldRootIndex = startIndex;
             int oldCapacity = length;
-            int oldSegmentId = segmentId;
             AbstractByteBuf oldRoot = rootParent();
             allocator.reallocate(newCapacity, maxCapacity(), this);
             oldRoot.getBytes(baseOldRootIndex, this, 0, oldCapacity);
-            chunk.releaseSegment(oldSegmentId);
+            chunk.releaseSegment(baseOldRootIndex);
             this.readerIndex = readerIndex;
             this.writerIndex = writerIndex;
             return this;
@@ -1572,7 +1581,7 @@ final class AdaptivePoolingAllocator {
         @Override
         long _memoryAddress() {
             AbstractByteBuf root = rootParent;
-            return root != null ? root._memoryAddress() + adjustment : 0L;
+            return root != null ? root._memoryAddress() + startIndex : 0L;
         }
 
         @Override
@@ -1589,7 +1598,7 @@ final class AdaptivePoolingAllocator {
 
         private ByteBuffer internalNioBuffer() {
             if (tmpNioBuf == null) {
-                tmpNioBuf = rootParent().nioBuffer(adjustment, maxFastCapacity);
+                tmpNioBuf = rootParent().nioBuffer(startIndex, maxFastCapacity);
             }
             return (ByteBuffer) tmpNioBuf.clear();
         }
@@ -1894,10 +1903,10 @@ final class AdaptivePoolingAllocator {
         }
 
         private int forEachResult(int ret) {
-            if (ret < adjustment) {
+            if (ret < startIndex) {
                 return -1;
             }
-            return ret - adjustment;
+            return ret - startIndex;
         }
 
         @Override
@@ -1906,7 +1915,7 @@ final class AdaptivePoolingAllocator {
         }
 
         private int idx(int index) {
-            return index + adjustment;
+            return index + startIndex;
         }
 
         @Override
@@ -1920,7 +1929,7 @@ final class AdaptivePoolingAllocator {
             }
 
             if (chunk != null) {
-                chunk.releaseSegment(segmentId);
+                chunk.releaseSegment(startIndex);
             }
             tmpNioBuf = null;
             chunk = null;
