@@ -318,22 +318,6 @@ public final class LinuxSocket extends Socket {
     }
 
     /**
-     * @deprecated Use {@link Socket#newVSockStream()}.
-     */
-    @Deprecated
-    public static LinuxSocket newVSockStream() {
-        return new LinuxSocket(newVSockStream0());
-    }
-
-    /**
-     * @deprecated Use {@link Socket#newVSockStream1()}.
-     */
-    @Deprecated
-    static int newVSockStream0() {
-        return newVSockStream1();
-    }
-
-    /**
      * @deprecated Use {@link Socket#bind(SocketAddress)}.
      */
     @Deprecated

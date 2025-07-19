@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
@@ -31,7 +32,11 @@ import static io.netty.channel.ChannelOption.ALLOW_HALF_CLOSURE;
 import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 
-public class EpollVSockChannelConfig extends EpollChannelConfig implements VSockChannelConfig, DuplexChannelConfig {
+/**
+ * {@link ChannelConfig} implementation for Linux Virtual Sockets that uses Linux EPOLL.
+ */
+public final class EpollVSockChannelConfig extends EpollChannelConfig
+        implements VSockChannelConfig, DuplexChannelConfig {
     private volatile boolean allowHalfClosure;
 
     EpollVSockChannelConfig(Channel channel) {

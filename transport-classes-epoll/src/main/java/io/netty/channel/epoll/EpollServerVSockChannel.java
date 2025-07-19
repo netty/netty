@@ -16,12 +16,16 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
+import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.ServerVSockChannel;
 import io.netty.channel.unix.VSockAddress;
 
 import java.net.SocketAddress;
 
-public class EpollServerVSockChannel extends AbstractEpollServerChannel implements ServerVSockChannel {
+/**
+ * {@link ServerSocketChannel} implementation for Linux Virtual Sockets that uses Linux EPOLL.
+ */
+public final class EpollServerVSockChannel extends AbstractEpollServerChannel implements ServerVSockChannel {
     private final EpollServerChannelConfig config = new EpollServerChannelConfig(this);
     private volatile VSockAddress local;
 
@@ -45,10 +49,12 @@ public class EpollServerVSockChannel extends AbstractEpollServerChannel implemen
         return new EpollVSockChannel(this, new LinuxSocket(fd));
     }
 
+    @Override
     protected VSockAddress localAddress0() {
         return this.local;
     }
 
+    @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         if (!(localAddress instanceof VSockAddress)) {
             throw new RuntimeException("Please bind `ServerVSockChannel` through bind(new VSockAddress(CID, PORT))");
@@ -60,6 +66,7 @@ public class EpollServerVSockChannel extends AbstractEpollServerChannel implemen
         this.active = true;
     }
 
+    @Override
     protected void doClose() throws Exception {
         super.doClose();
     }
@@ -68,10 +75,12 @@ public class EpollServerVSockChannel extends AbstractEpollServerChannel implemen
         return this.config;
     }
 
+    @Override
     public VSockAddress remoteAddress() {
         return (VSockAddress) super.remoteAddress();
     }
 
+    @Override
     public VSockAddress localAddress() {
         return (VSockAddress) super.localAddress();
     }

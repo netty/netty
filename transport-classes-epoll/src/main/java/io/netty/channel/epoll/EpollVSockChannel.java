@@ -17,12 +17,16 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.VSockAddress;
 import io.netty.channel.unix.VSockChannel;
 
 import java.net.SocketAddress;
 
+/**
+ * {@link SocketChannel} implementation for Linux Virtual Sockets that uses Linux EPOLL.
+ */
 public class EpollVSockChannel extends AbstractEpollStreamChannel implements VSockChannel {
     private final EpollVSockChannelConfig config;
     private volatile VSockAddress local;
@@ -44,14 +48,17 @@ public class EpollVSockChannel extends AbstractEpollStreamChannel implements VSo
         config = new EpollVSockChannelConfig(this);
     }
 
+    @Override
     protected VSockAddress localAddress0() {
         return this.local;
     }
 
+    @Override
     protected VSockAddress remoteAddress0() {
         return this.remote;
     }
 
+    @Override
     protected void doBind(SocketAddress localAddress) throws Exception {
         if (!(localAddress instanceof VSockAddress)) {
             throw new RuntimeException("Please bind `VSockChannel` through bind(new VSockAddress(CID, PORT))");
@@ -65,6 +72,7 @@ public class EpollVSockChannel extends AbstractEpollStreamChannel implements VSo
         return this.config;
     }
 
+    @Override
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         this.remote = (VSockAddress) remoteAddress;
         final boolean vsConnected = socket.connect(remoteAddress);
@@ -75,14 +83,17 @@ public class EpollVSockChannel extends AbstractEpollStreamChannel implements VSo
         return vsConnected;
     }
 
+    @Override
     public VSockAddress remoteAddress() {
         return (VSockAddress) super.remoteAddress();
     }
 
+    @Override
     public VSockAddress localAddress() {
         return (VSockAddress) super.localAddress();
     }
 
+    @Override
     protected int doWriteSingle(ChannelOutboundBuffer in) throws Exception {
         Object msg = in.current();
         if (msg instanceof FileDescriptor && this.socket.sendFd(((FileDescriptor) msg).intValue()) > 0) {
@@ -93,6 +104,7 @@ public class EpollVSockChannel extends AbstractEpollStreamChannel implements VSo
         }
     }
 
+    @Override
     protected Object filterOutboundMessage(Object msg) {
         return msg instanceof FileDescriptor ? msg : super.filterOutboundMessage(msg);
     }

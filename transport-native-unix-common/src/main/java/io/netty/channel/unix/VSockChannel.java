@@ -15,12 +15,19 @@
  */
 package io.netty.channel.unix;
 
+import io.netty.channel.Channel;
 import io.netty.channel.socket.DuplexChannel;
 
+/**
+ * {@link Channel} that expose operations that are only present on {@code UNIX} like systems.
+ */
 public interface VSockChannel extends DuplexChannel {
+    @Override
     VSockAddress remoteAddress();
 
+    @Override
     VSockAddress localAddress();
 
+    @Override
     VSockChannelConfig config();
 }

@@ -29,7 +29,8 @@ import java.util.List;
 public class EpollDeprecatedVSockAddressTest extends EpollSocketEchoTest {
     @Override
     protected SocketAddress newSocketAddress() {
-        return new io.netty.channel.epoll.VSockAddress(io.netty.channel.unix.VSockAddress.VMADDR_CID_LOCAL, 8080);
+        // io.netty.channel.epoll is the deprecated package.
+        return new io.netty.channel.epoll.VSockAddress(io.netty.channel.epoll.VSockAddress.VMADDR_CID_LOCAL, 8080);
     }
 
     @Override

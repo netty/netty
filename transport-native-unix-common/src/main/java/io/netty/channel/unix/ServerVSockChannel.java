@@ -18,5 +18,14 @@ package io.netty.channel.unix;
 
 import io.netty.channel.ServerChannel;
 
+/**
+ * {@link ServerChannel} that accepts {@link VSockChannel}'s via
+ * <a href="https://wiki.qemu.org/Features/VirtioVsock">VSock</a>.
+ */
 public interface ServerVSockChannel extends ServerChannel {
+    @Override
+    VSockAddress remoteAddress();
+
+    @Override
+    VSockAddress localAddress();
 }
