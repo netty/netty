@@ -53,9 +53,14 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             new FastThreadLocal<Map<Class<?>, String>>() {
         @Override
         protected Map<Class<?>, String> initialValue() {
-            return new WeakHashMap<Class<?>, String>();
+            return new WeakHashMap<>();
         }
     };
+
+    private static final int ADD_FIRST = 0;
+    private static final int ADD_LAST = 1;
+    private static final int ADD_BEFORE = 2;
+    private static final int ADD_AFTER = 3;
 
     private static final AtomicReferenceFieldUpdater<DefaultChannelPipeline, MessageSizeEstimator.Handle> ESTIMATOR =
             AtomicReferenceFieldUpdater.newUpdater(
@@ -151,16 +156,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return addFirst(null, name, handler);
     }
 
-    private enum AddStrategy {
-        ADD_FIRST,
-        ADD_LAST,
-        ADD_BEFORE,
-        ADD_AFTER;
-    }
-
     private ChannelPipeline internalAdd(EventExecutorGroup group, String name,
                                         ChannelHandler handler, String baseName,
-                                        AddStrategy addStrategy) {
+                                        int addStrategy) {
         final AbstractChannelHandlerContext newCtx;
         synchronized (this) {
             checkMultiplicity(handler);
@@ -206,7 +204,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler) {
-        return internalAdd(group, name, handler, null, AddStrategy.ADD_FIRST);
+        return internalAdd(group, name, handler, null, ADD_FIRST);
     }
 
     private void addFirst0(AbstractChannelHandlerContext newCtx) {
@@ -224,7 +222,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
-        return internalAdd(group, name, handler, null, AddStrategy.ADD_LAST);
+        return internalAdd(group, name, handler, null, ADD_LAST);
     }
 
     private void addLast0(AbstractChannelHandlerContext newCtx) {
@@ -243,7 +241,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public final ChannelPipeline addBefore(
             EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
-        return internalAdd(group, name, handler, baseName, AddStrategy.ADD_BEFORE);
+        return internalAdd(group, name, handler, baseName, ADD_BEFORE);
     }
 
     private static void addBefore0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
@@ -269,7 +267,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public final ChannelPipeline addAfter(
             EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
-        return internalAdd(group, name, handler, baseName, AddStrategy.ADD_AFTER);
+        return internalAdd(group, name, handler, baseName, ADD_AFTER);
     }
 
     private static void addAfter0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
@@ -414,12 +412,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             EventExecutor executor = ctx.executor();
             if (!executor.inEventLoop()) {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        callHandlerRemoved0(ctx);
-                    }
-                });
+                executor.execute(() -> callHandlerRemoved0(ctx));
                 return ctx;
             }
         }
@@ -502,15 +495,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             }
             EventExecutor executor = ctx.executor();
             if (!executor.inEventLoop()) {
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Invoke newHandler.handlerAdded() first (i.e. before oldHandler.handlerRemoved() is invoked)
-                        // because callHandlerRemoved() will trigger channelRead() or flush() on newHandler and
-                        // those event handlers must be called after handlerAdded().
-                        callHandlerAdded0(newCtx);
-                        callHandlerRemoved0(ctx);
-                    }
+                executor.execute(() -> {
+                    // Invoke newHandler.handlerAdded() first (i.e. before oldHandler.handlerRemoved() is invoked)
+                    // because callHandlerRemoved() will trigger channelRead() or flush() on newHandler and
+                    // those event handlers must be called after handlerAdded().
+                    callHandlerAdded0(newCtx);
+                    callHandlerRemoved0(ctx);
                 });
                 return ctx.handler();
             }
@@ -699,7 +689,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final List<String> names() {
-        List<String> list = new ArrayList<String>();
+        List<String> list = new ArrayList<>();
         AbstractChannelHandlerContext ctx = head.next;
         for (;;) {
             if (ctx == null) {
@@ -712,7 +702,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final Map<String, ChannelHandler> toMap() {
-        Map<String, ChannelHandler> map = new LinkedHashMap<String, ChannelHandler>();
+        Map<String, ChannelHandler> map = new LinkedHashMap<>();
         AbstractChannelHandlerContext ctx = head.next;
         for (;;) {
             if (ctx == tail) {
@@ -761,28 +751,30 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelRegistered() {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelRegistered(head);
             } else {
                 head.fireChannelRegistered();
             }
         } else {
-            head.executor().execute(this::fireChannelRegistered);
+            executor.execute(this::fireChannelRegistered);
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelUnregistered() {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelUnregistered(head);
             } else {
                 head.fireChannelUnregistered();
             }
         } else {
-            head.executor().execute(this::fireChannelUnregistered);
+            executor.execute(this::fireChannelUnregistered);
         }
         return this;
     }
@@ -813,12 +805,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             final EventExecutor executor = ctx.executor();
             if (!inEventLoop && !executor.inEventLoop(currentThread)) {
                 final AbstractChannelHandlerContext finalCtx = ctx;
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        destroyUp(finalCtx, true);
-                    }
-                });
+                executor.execute(() -> destroyUp(finalCtx, true));
                 break;
             }
 
@@ -841,12 +828,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 callHandlerRemoved0(ctx);
             } else {
                 final AbstractChannelHandlerContext finalCtx = ctx;
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        destroyDown(Thread.currentThread(), finalCtx, true);
-                    }
-                });
+                executor.execute(() -> destroyDown(Thread.currentThread(), finalCtx, true));
                 break;
             }
 
@@ -857,98 +839,105 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline fireChannelActive() {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelActive(head);
             } else {
                 head.fireChannelActive();
             }
         } else {
-            head.executor().execute(this::fireChannelActive);
+            executor.execute(this::fireChannelActive);
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelInactive() {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelInactive(head);
             } else {
                 head.fireChannelInactive();
             }
         } else {
-            head.executor().execute(this::fireChannelInactive);
+            executor.execute(this::fireChannelInactive);
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireExceptionCaught(Throwable cause) {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.exceptionCaught(head, cause);
             } else {
                 head.fireExceptionCaught(cause);
             }
         } else {
-            head.executor().execute(() -> fireExceptionCaught(cause));
+            executor.execute(() -> fireExceptionCaught(cause));
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireUserEventTriggered(Object event) {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.userEventTriggered(head, event);
             } else {
                 head.fireUserEventTriggered(event);
             }
         } else {
-            head.executor().execute(() -> fireUserEventTriggered(event));
+            executor.execute(() -> fireUserEventTriggered(event));
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelRead(Object msg) {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelRead(head, msg);
             } else {
                 head.fireChannelRead(msg);
             }
         } else {
-            head.executor().execute(() -> fireChannelRead(msg));
+            executor.execute(() -> fireChannelRead(msg));
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelReadComplete() {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelReadComplete(head);
             } else {
                 head.fireChannelReadComplete();
             }
         } else {
-            head.executor().execute(this::fireChannelReadComplete);
+            executor.execute(this::fireChannelReadComplete);
         }
         return this;
     }
 
     @Override
     public final ChannelPipeline fireChannelWritabilityChanged() {
-        if (head.executor().inEventLoop()) {
+        EventExecutor executor = head.executor();
+        if (executor.inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelWritabilityChanged(head);
             } else {
                 head.fireChannelWritabilityChanged();
             }
         } else {
-            head.executor().execute(this::fireChannelWritabilityChanged);
+            executor.execute(this::fireChannelWritabilityChanged);
         }
         return this;
     }
@@ -1156,12 +1145,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private void callHandlerAddedInEventLoop(final AbstractChannelHandlerContext newCtx, EventExecutor executor) {
         newCtx.setAddPending();
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                callHandlerAdded0(newCtx);
-            }
-        });
+        executor.execute(() -> callHandlerAdded0(newCtx));
     }
 
     /**
