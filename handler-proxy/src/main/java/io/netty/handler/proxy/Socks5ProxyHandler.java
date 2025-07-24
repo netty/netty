@@ -72,6 +72,7 @@ public final class Socks5ProxyHandler extends ProxyHandler {
     private String encoderName;
 
     private final byte[] privateToken;
+    private final Socks5ClientEncoder clientEncoder;
 
     public Socks5ProxyHandler(SocketAddress proxyAddress) {
         this(proxyAddress, null, null);
@@ -89,6 +90,7 @@ public final class Socks5ProxyHandler extends ProxyHandler {
         this.password = password;
         this.privateToken = null;
         this.privateAuthMethod = NO_PRIVATE_AUTH_METHOD; // No private authentication method specified
+        this.clientEncoder = Socks5ClientEncoder.DEFAULT;
     }
 
     /**
@@ -97,9 +99,12 @@ public final class Socks5ProxyHandler extends ProxyHandler {
      * @param proxyAddress     The address of the SOCKS5 proxy server
      * @param privateAuthMethod The private authentication method code (must be in range 0x80-0xFE)
      * @param privateToken     The token to use for private authentication
+     * @param customEncoder    The custom encoder to use for encoding SOCKS5 messages, if {@code null} the
+     *                         {@link Socks5ClientEncoder#DEFAULT} will be used
      * @throws IllegalArgumentException If privateAuthMethod is not in the valid range
      */
-    public Socks5ProxyHandler(SocketAddress proxyAddress, byte privateAuthMethod, byte[] privateToken) {
+    public Socks5ProxyHandler(SocketAddress proxyAddress, byte privateAuthMethod, byte[] privateToken,
+                              Socks5ClientEncoder customEncoder) {
         super(proxyAddress);
         if (!Socks5AuthMethod.isPrivateMethod(privateAuthMethod)) {
             throw new IllegalArgumentException(
@@ -108,6 +113,7 @@ public final class Socks5ProxyHandler extends ProxyHandler {
         this.username = this.password = null;
         this.privateToken = privateToken;
         this.privateAuthMethod = privateAuthMethod;
+        this.clientEncoder = customEncoder != null ? customEncoder : Socks5ClientEncoder.DEFAULT;
     }
 
     @Override
@@ -120,11 +126,11 @@ public final class Socks5ProxyHandler extends ProxyHandler {
         Socks5AuthMethod authMethod = socksAuthMethod();
         if (Socks5AuthMethod.isPrivateMethod(authMethod.byteValue())) {
             return AUTH_PRIVATE;
-        } else if (authMethod == Socks5AuthMethod.PASSWORD) {
-            return AUTH_PASSWORD;
-        } else {
-            return AUTH_NONE;
         }
+        if (authMethod == Socks5AuthMethod.PASSWORD) {
+            return AUTH_PASSWORD;
+        }
+        return AUTH_NONE;
     }
 
     public String username() {
@@ -146,7 +152,7 @@ public final class Socks5ProxyHandler extends ProxyHandler {
         decoderName = p.context(decoder).name();
         encoderName = decoderName + ".encoder";
 
-        p.addBefore(name, encoderName, Socks5ClientEncoder.DEFAULT);
+        p.addBefore(name, encoderName, clientEncoder);
     }
 
     @Override

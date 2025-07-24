@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,9 +17,9 @@ package io.netty.handler.codec.socksx.v5;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
@@ -37,84 +37,89 @@ import java.util.List;
  * </ul>
  * </p>
  * <p>
- * For custom private authentication protocols, this decoder can be extended by:
+ * For custom private authentication protocols, you can:
  * <ul>
- *   <li>Subclassing this decoder</li>
- *   <li>Overriding the decode method to handle additional fields</li>
- *   <li>Creating a custom response class that extends {@link DefaultSocks5PrivateAuthResponse}</li>
+ *   <li>Create a new decoder implementing {@link ByteToMessageDecoder} or similar</li>
+ *   <li>Implement the {@link Socks5PrivateAuthResponse} interface or extend {@link DefaultSocks5PrivateAuthResponse}</li>
+ *   <li>Create a custom handler chain to process the authentication responses</li>
  * </ul>
  * </p>
  */
-public final class Socks5PrivateAuthResponseDecoder extends ReplayingDecoder<Socks5PrivateAuthResponseDecoder.State> {
+public final class Socks5PrivateAuthResponseDecoder extends ByteToMessageDecoder {
 
-  /**
-   * Decoder states for SOCKS5 private authentication responses.
-   */
-  @UnstableApi
-  public enum State {
-    /** Initial state. */
-    INIT,
-    /** Authentication successful. */
-    SUCCESS,
-    /** Authentication failed. */
-    FAILURE
-  }
-
-  /**
-   * Creates a new SOCKS5 private authentication response decoder.
-   */
-  public Socks5PrivateAuthResponseDecoder() {
-    super(State.INIT);
-  }
-
-  @Override
-  protected void decode(ChannelHandlerContext ctx, ByteBuf in,
-                        List<Object> out) throws Exception {
-    try {
-      switch (state()) {
-        case INIT:
-          final byte version = in.readByte();
-          if (version != 1) {
-            throw new DecoderException(
-                "unsupported subnegotiation version: " + version + " (expected: 1)");
-          }
-
-          out.add(new DefaultSocks5PrivateAuthResponse(
-              Socks5PrivateAuthStatus.valueOf(in.readByte())));
-          checkpoint(State.SUCCESS);
-          break;
-        case SUCCESS:
-          int readableBytes = actualReadableBytes();
-          if (readableBytes > 0) {
-            out.add(in.readRetainedSlice(readableBytes));
-          }
-          break;
-        case FAILURE:
-          in.skipBytes(actualReadableBytes());
-          break;
-        default:
-          throw new Error();
-      }
-    } catch (Exception e) {
-      fail(out, e);
-    }
-  }
-
-  /**
-   * Handles decoder failures by setting the appropriate error state.
-   *
-   * @param out the output list to add the failure message to
-   * @param cause the exception that caused the failure
-   */
-  private void fail(List<Object> out, Exception cause) {
-    if (!(cause instanceof DecoderException)) {
-      cause = new DecoderException(cause);
+    /**
+     * Decoder states for SOCKS5 private authentication responses.
+     */
+    @UnstableApi
+    private enum State {
+        /**
+         * Initial state.
+         */
+        INIT,
+        /**
+         * Authentication successful.
+         */
+        SUCCESS,
+        /**
+         * Authentication failed.
+         */
+        FAILURE
     }
 
-    checkpoint(State.FAILURE);
+    private State state = State.INIT;
 
-    Socks5Message m = new DefaultSocks5PrivateAuthResponse(Socks5PrivateAuthStatus.FAILURE);
-    m.setDecoderResult(DecoderResult.failure(cause));
-    out.add(m);
-  }
+    @Override
+    protected void decode(ChannelHandlerContext ctx, ByteBuf in,
+                          List<Object> out) throws Exception {
+        try {
+            switch (state) {
+                case INIT:
+                    if (in.readableBytes() < 2) {
+                        return;
+                    }
+
+                    final byte version = in.readByte();
+                    if (version != 1) {
+                        throw new DecoderException(
+                            "unsupported subnegotiation version: " + version + " (expected: 1)");
+                    }
+
+                    out.add(new DefaultSocks5PrivateAuthResponse(
+                        Socks5PrivateAuthStatus.valueOf(in.readByte())));
+                    state = State.SUCCESS;
+                    break;
+                case SUCCESS:
+                    int readableBytes = in.readableBytes();
+                    if (readableBytes > 0) {
+                        out.add(in.readRetainedSlice(readableBytes));
+                    }
+                    break;
+                case FAILURE:
+                    in.skipBytes(in.readableBytes());
+                    break;
+                default:
+                    throw new Error();
+            }
+        } catch (Exception e) {
+            fail(out, e);
+        }
+    }
+
+    /**
+     * Handles decoder failures by setting the appropriate error state.
+     *
+     * @param out   the output list to add the failure message to
+     * @param cause the exception that caused the failure
+     */
+    private void fail(List<Object> out, Exception cause) {
+        if (!(cause instanceof DecoderException)) {
+            cause = new DecoderException(cause);
+        }
+
+        state = State.FAILURE;
+
+        Socks5Message m = new DefaultSocks5PrivateAuthResponse(Socks5PrivateAuthStatus.FAILURE);
+        m.setDecoderResult(DecoderResult.failure(cause));
+        out.add(m);
+    }
 }

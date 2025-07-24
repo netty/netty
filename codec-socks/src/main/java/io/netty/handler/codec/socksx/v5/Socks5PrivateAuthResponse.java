@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,14 +22,15 @@ package io.netty.handler.codec.socksx.v5;
  * in the range 0x80-0xFE as defined in RFC 1928. For custom private authentication
  * protocols, this interface can be extended with additional methods.
  * </p>
+ *
  * @see <a href="https://www.ietf.org/rfc/rfc1928.txt">RFC 1928 Section 3</a>
  */
 public interface Socks5PrivateAuthResponse extends Socks5Message {
 
-  /**
-   * Returns the status of this response.
-   *
-   * @return the authentication status
-   */
-  Socks5PrivateAuthStatus status();
+    /**
+     * Returns the status of this response.
+     *
+     * @return the authentication status
+     */
+    Socks5PrivateAuthStatus status();
 }

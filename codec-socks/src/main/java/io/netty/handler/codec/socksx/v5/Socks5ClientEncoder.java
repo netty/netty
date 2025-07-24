@@ -107,6 +107,7 @@ public class Socks5ClientEncoder extends MessageToByteEncoder<Socks5Message> {
 
     private static void encodePrivateAuthRequest(Socks5PrivateAuthRequest msg, ByteBuf out) {
         out.writeByte(0x01);
+        out.writeByte(msg.privateToken().length);
         out.writeBytes(msg.privateToken());
     }
 

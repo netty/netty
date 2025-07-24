@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -36,10 +36,10 @@ public class Socks5PrivateAuthStatus implements Comparable<Socks5PrivateAuthStat
 
     public static Socks5PrivateAuthStatus valueOf(byte b) {
         switch (b) {
-        case 0x00:
-            return SUCCESS;
-        case (byte) 0xFF:
-            return FAILURE;
+            case 0x00:
+                return SUCCESS;
+            case (byte) 0xFF:
+                return FAILURE;
         }
 
         return new Socks5PrivateAuthStatus(b);

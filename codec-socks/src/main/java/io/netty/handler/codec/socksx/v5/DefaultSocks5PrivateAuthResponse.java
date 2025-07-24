@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,42 +22,44 @@ import io.netty.util.internal.StringUtil;
  * The default {@link Socks5PrivateAuthResponse} implementation.
  */
 public final class DefaultSocks5PrivateAuthResponse extends AbstractSocks5Message
-        implements Socks5PrivateAuthResponse {
+    implements Socks5PrivateAuthResponse {
 
-  /** The authentication status. */
-  private final Socks5PrivateAuthStatus status;
+    /**
+     * The authentication status.
+     */
+    private final Socks5PrivateAuthStatus status;
 
-  /**
-   * Creates a new instance with the specified status.
-   *
-   * @param authStatus the authentication status
-   */
-  public DefaultSocks5PrivateAuthResponse(final Socks5PrivateAuthStatus authStatus) {
-    this.status = authStatus;
-  }
-
-  @Override
-  public Socks5PrivateAuthStatus status() {
-    return status;
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder buf = new StringBuilder(StringUtil.simpleClassName(this));
-
-    DecoderResult decoderResult = decoderResult();
-    if (!decoderResult.isSuccess()) {
-      buf.append("(decoderResult: ");
-      buf.append(decoderResult);
-      buf.append(", status: ");
-      buf.append(status);
-      buf.append(')');
-    } else {
-      buf.append("(status: ");
-      buf.append(status);
-      buf.append(')');
+    /**
+     * Creates a new instance with the specified status.
+     *
+     * @param authStatus the authentication status
+     */
+    public DefaultSocks5PrivateAuthResponse(final Socks5PrivateAuthStatus authStatus) {
+        this.status = authStatus;
     }
 
-    return buf.toString();
-  }
+    @Override
+    public Socks5PrivateAuthStatus status() {
+        return status;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder(StringUtil.simpleClassName(this));
+
+        DecoderResult decoderResult = decoderResult();
+        if (!decoderResult.isSuccess()) {
+            buf.append("(decoderResult: ");
+            buf.append(decoderResult);
+            buf.append(", status: ");
+            buf.append(status);
+            buf.append(')');
+        } else {
+            buf.append("(status: ");
+            buf.append(status);
+            buf.append(')');
+        }
+
+        return buf.toString();
+    }
 }

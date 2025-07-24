@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,46 +22,47 @@ import io.netty.util.internal.StringUtil;
 /**
  * The default {@link Socks5PrivateAuthRequest} implementation.
  * <p>
- * For custom private authentication protocols, this class can be extended to include
- * additional fields and behaviors. Custom protocols should also implement their own
- * encoder/decoder to handle the wire format.
+ * For custom private authentication protocols, you should implement the {@link Socks5PrivateAuthRequest}
+ * interface directly. Custom protocols should also implement their own encoder/decoder to handle the wire format.
  * </p>
  */
 public final class DefaultSocks5PrivateAuthRequest extends AbstractSocks5Message
-        implements Socks5PrivateAuthRequest {
+    implements Socks5PrivateAuthRequest {
 
-  /** The private authentication token. */
-  private final byte[] privateToken;
+    /**
+     * The private authentication token.
+     */
+    private final byte[] privateToken;
 
-  /**
-   * Creates a new instance with the specified token.
-   *
-   * @param privateAuthToken the private authentication token
-   */
-  public DefaultSocks5PrivateAuthRequest(final byte[] privateAuthToken) {
-    ObjectUtil.checkNotNull(privateAuthToken, "privateToken");
+    /**
+     * Creates a new instance with the specified token.
+     *
+     * @param privateAuthToken the private authentication token
+     */
+    public DefaultSocks5PrivateAuthRequest(final byte[] privateAuthToken) {
+        ObjectUtil.checkNotNull(privateAuthToken, "privateToken");
 
-    this.privateToken = privateAuthToken;
-  }
-
-  @Override
-  public byte[] privateToken() {
-    return privateToken;
-  }
-
-  @Override
-  public String toString() {
-    StringBuilder buf = new StringBuilder(StringUtil.simpleClassName(this));
-
-    DecoderResult decoderResult = decoderResult();
-    if (!decoderResult.isSuccess()) {
-      buf.append("(decoderResult: ");
-      buf.append(decoderResult);
-      buf.append(", privateToken: ****)");
-    } else {
-      buf.append("(privateToken: ****)");
+        this.privateToken = privateAuthToken.clone();
     }
 
-    return buf.toString();
-  }
+    @Override
+    public byte[] privateToken() {
+        return privateToken.clone();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder buf = new StringBuilder(StringUtil.simpleClassName(this));
+
+        DecoderResult decoderResult = decoderResult();
+        if (!decoderResult.isSuccess()) {
+            buf.append("(decoderResult: ");
+            buf.append(decoderResult);
+            buf.append(", privateToken: ****)");
+        } else {
+            buf.append("(privateToken: ****)");
+        }
+
+        return buf.toString();
+    }
 }

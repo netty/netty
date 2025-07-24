@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -22,18 +22,19 @@ package io.netty.handler.codec.socksx.v5;
  * This interface provides a base implementation for method 0x80, but can be extended
  * for other private authentication methods by implementing custom encoders/decoders.
  * </p>
+ *
  * @see <a href="https://www.ietf.org/rfc/rfc1928.txt">RFC 1928 Section 3</a>
  */
 public interface Socks5PrivateAuthRequest extends Socks5Message {
 
-  /**
-   * Returns the private token of this request.
-   * <p>
-   * For custom subnegotiation protocols, this could be extended by adding
-   * additional methods in a subinterface.
-   * </p>
-   *
-   * @return the private authentication token
-   */
-  byte[] privateToken();
+    /**
+     * Returns the private token of this request.
+     * <p>
+     * For custom subnegotiation protocols, this could be extended by adding
+     * additional methods in a subinterface.
+     * </p>
+     *
+     * @return the private authentication token
+     */
+    byte[] privateToken();
 }

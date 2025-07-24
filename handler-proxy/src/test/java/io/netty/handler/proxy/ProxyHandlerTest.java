@@ -375,7 +375,7 @@ public class ProxyHandlerTest {
                     "SOCKS5 Private Auth: successful connection, AUTO_READ on",
                     DESTINATION,
                     true,
-                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN)) ,
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN, null)) ,
 
                 new SuccessTestItem(
                     "SOCKS5: successful connection to anonymous server, AUTO_READ on",
@@ -387,17 +387,17 @@ public class ProxyHandlerTest {
                     "SOCKS5 Private Auth: successful connection, AUTO_READ off",
                     DESTINATION,
                     false,
-                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN)),
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN, null)),
 
                 new FailureTestItem(
                     "SOCKS5 Private Auth: rejected connection",
                     BAD_DESTINATION, "status: FORBIDDEN",
-                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN)),
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN, null)),
 
                 new FailureTestItem(
                     "SOCKS5 Private Auth: authentication failure",
                     DESTINATION, "privateAuthStatus: FAILURE",
-                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, BAD_PRIVATE_AUTH_TOKEN)),
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, BAD_PRIVATE_AUTH_TOKEN, null)),
 
                 new FailureTestItem(
                     "SOCKS5 Private Auth: rejected anonymous connection",

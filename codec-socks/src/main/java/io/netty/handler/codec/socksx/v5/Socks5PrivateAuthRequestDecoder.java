@@ -20,8 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.ReplayingDecoder;
-import io.netty.util.internal.UnstableApi;
+import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.List;
 
@@ -30,50 +29,51 @@ import java.util.List;
  * On successful decode, this decoder will forward the received data to the next handler, so that
  * other handler can remove or replace this decoder later.
  */
-public class Socks5PrivateAuthRequestDecoder extends ReplayingDecoder<Socks5PrivateAuthRequestDecoder.State> {
+public class Socks5PrivateAuthRequestDecoder extends ByteToMessageDecoder {
 
-    @UnstableApi
-    public enum State {
-        INIT,
-        SUCCESS,
-        FAILURE
-    }
-
-    public Socks5PrivateAuthRequestDecoder() {
-        super(State.INIT);
-    }
+    private boolean decoded;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         try {
-            switch (state()) {
-            case INIT: {
-                final byte version = in.readByte();
-                if (version != 1) {
-                    throw new DecoderException("unsupported subnegotiation version: " + version + " (expected: 1)");
-                }
-
-                int readableBytes = actualReadableBytes();
-                byte[] token = new byte[readableBytes];
-                in.readBytes(token);
-
-                out.add(new DefaultSocks5PrivateAuthRequest(token));
-
-                checkpoint(State.SUCCESS);
-                break;
-            }
-            case SUCCESS: {
-                int readableBytes = actualReadableBytes();
+            if (decoded) {
+                int readableBytes = in.readableBytes();
                 if (readableBytes > 0) {
                     out.add(in.readRetainedSlice(readableBytes));
                 }
-                break;
+                return;
             }
-            case FAILURE: {
-                in.skipBytes(actualReadableBytes());
-                break;
+
+            // Check if we have enough data to decode the message
+            if (in.readableBytes() < 2) {
+                return;
             }
+
+            final int startOffset = in.readerIndex();
+            final byte version = in.getByte(startOffset);
+            if (version != 1) {
+                throw new DecoderException("unsupported subnegotiation version: " + version + " (expected: 1)");
             }
+
+            final int tokenLength = in.getUnsignedByte(startOffset + 1);
+
+            // Check if the full message is available
+            if (in.readableBytes() < 2 + tokenLength) {
+                return;
+            }
+
+            // Read the version and token length
+            in.skipBytes(2);
+
+            // Read the token
+            byte[] token = new byte[tokenLength];
+            in.readBytes(token);
+
+            // Add the decoded token to the output list
+            out.add(new DefaultSocks5PrivateAuthRequest(token));
+
+            // Mark as decoded to handle remaining bytes in future calls
+            decoded = true;
         } catch (Exception e) {
             fail(out, e);
         }
@@ -84,7 +84,7 @@ public class Socks5PrivateAuthRequestDecoder extends ReplayingDecoder<Socks5Priv
             cause = new DecoderException(cause);
         }
 
-        checkpoint(State.FAILURE);
+        decoded = true;
 
         Socks5Message m = new DefaultSocks5PrivateAuthRequest(Unpooled.EMPTY_BUFFER.array());
         m.setDecoderResult(DecoderResult.failure(cause));

@@ -34,7 +34,7 @@ public class Socks5AuthMethod implements Comparable<Socks5AuthMethod> {
 
     /**
      * Returns whether the authentication method code is in the private methods range (0x80-0xFE)
-     * as defined by RFC 1928 section 3.
+     * as defined by <a href="https://www.ietf.org/rfc/rfc1928.txt">RFC 1928 section 3</a>.
      *
      * @param b The authentication method code
      * @return true if the code is in the private methods range
