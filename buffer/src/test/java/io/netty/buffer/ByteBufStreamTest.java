@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -340,5 +339,16 @@ public class ByteBufStreamTest {
         // When releaseOnClose is not set or releaseOnClose is false, ByteBuf must be released manually.
         out.buffer().release();
         assertEquals(0, out.buffer().refCnt());
+    }
+
+    @Test
+    void writeStringMustIgnoreHigherOrderByte() throws Exception {
+        ByteBuf buf = Unpooled.buffer();
+        try (ByteBufOutputStream out = new ByteBufOutputStream(buf, false)) {
+            out.writeBytes("√");
+        }
+        assertEquals(0x221A, '√'); // This is a multibyte character
+        assertEquals(0x1A, buf.readByte()); // Only the lower-order byte is written
+        assertEquals(0, buf.readableBytes());
     }
 }
