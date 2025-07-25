@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.CharsetUtil;
 import io.netty.util.internal.ObjectUtil;
 
 import java.io.DataOutput;
@@ -102,7 +101,13 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
 
     @Override
     public void writeBytes(String s) throws IOException {
-        buffer.writeCharSequence(s, CharsetUtil.US_ASCII);
+        int length = s.length();
+        buffer.ensureWritable(length);
+        int offset = buffer.writerIndex();
+        for (int i = 0; i < length; i++) {
+            buffer.setByte(offset + i, (byte) s.charAt(i));
+        }
+        buffer.writerIndex(offset + length);
     }
 
     @Override
