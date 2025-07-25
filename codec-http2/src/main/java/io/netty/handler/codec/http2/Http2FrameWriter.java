@@ -215,6 +215,22 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
             Http2Flags flags, ByteBuf payload, ChannelPromise promise);
 
     /**
+     * Generic write method for any HTTP/2 frame. This allows writing of non-standard frames.
+     *
+     * @param ctx the context to use for writing.
+     * @param frameType the frame type identifier.
+     * @param streamId the stream for which to send the frame.
+     * @param flags the flags to write for this frame.
+     * @param payload the payload to write for this frame. This will be released by this method.
+     * @param promise the promise for the write.
+     * @return the future for the write.
+     */
+    default ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+                             short flags, ByteBuf payload, ChannelPromise promise) {
+        return writeFrame(ctx, frameType, streamId, new Http2Flags(flags), payload, promise);
+    }
+
+    /**
      * Get the configuration related elements for this {@link Http2FrameWriter}
      */
     Configuration configuration();
