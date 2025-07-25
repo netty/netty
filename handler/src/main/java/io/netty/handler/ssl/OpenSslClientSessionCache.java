@@ -29,10 +29,10 @@ import java.util.Set;
  * {@link OpenSslSessionCache} that is used by the client-side.
  */
 final class OpenSslClientSessionCache extends OpenSslSessionCache {
-    private final Map<HostPort, Set<NativeSslSession>> sessions = new HashMap<HostPort, Set<NativeSslSession>>();
+    private final Map<HostPort, Set<NativeSslSession>> sessions = new HashMap<>();
 
-    OpenSslClientSessionCache(OpenSslEngineMap engineMap) {
-        super(engineMap);
+    OpenSslClientSessionCache(Map<Long, ReferenceCountedOpenSslEngine> engines) {
+        super(engines);
     }
 
     @Override
@@ -46,7 +46,7 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
         if (sessionsForHost == null) {
             // Let's start with something small as usually the server does not provide too many of these per hostPort
             // mapping.
-            sessionsForHost = new HashSet<NativeSslSession>(4);
+            sessionsForHost = new HashSet<>(4);
             sessions.put(hostPort, sessionsForHost);
         }
         sessionsForHost.add(session);
@@ -97,7 +97,7 @@ final class OpenSslClientSessionCache extends OpenSslSessionCache {
                     break;
                 } else {
                     if (toBeRemoved == null) {
-                        toBeRemoved = new ArrayList<NativeSslSession>(2);
+                        toBeRemoved = new ArrayList<>(2);
                     }
                     toBeRemoved.add(sslSession);
                 }
