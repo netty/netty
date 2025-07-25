@@ -101,6 +101,9 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
 
     @Override
     public void writeBytes(String s) throws IOException {
+        // We don't use `ByteBuf.writeCharSequence` here, because `writeBytes` is specified to only write the
+        // lower-order by of multibyte characters (exactly one byte per character in the string), while
+        // `writeCharSequence` will instead write a '?' replacement character.
         int length = s.length();
         buffer.ensureWritable(length);
         int offset = buffer.writerIndex();
