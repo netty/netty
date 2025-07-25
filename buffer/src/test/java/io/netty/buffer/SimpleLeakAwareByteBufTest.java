@@ -15,16 +15,25 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.ResourceLeakDetector;
+import io.netty.util.ResourceLeakDetectorFactory;
 import io.netty.util.ResourceLeakTracker;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class SimpleLeakAwareByteBufTest extends BigEndianHeapByteBufTest {
     private final Class<? extends ByteBuf> clazz = leakClass();
@@ -139,6 +148,37 @@ public class SimpleLeakAwareByteBufTest extends BigEndianHeapByteBufTest {
             assertSame(clazz, buf.getClass());
         } finally {
             buf.release();
+        }
+    }
+
+    enum ReleaseMechanism {
+        RELEASE, RELEASE_COUNTED
+    }
+
+    @ParameterizedTest
+    @EnumSource(ReleaseMechanism.class)
+    void mustAddStackTraceForOriginalCloseMethodOnDoubleFree(ReleaseMechanism mechanism) throws Exception {
+        int trackEveryBuffer = 1;
+        ResourceLeakDetector<ByteBuf> detector = ResourceLeakDetectorFactory.instance()
+                .newResourceLeakDetector(ByteBuf.class, trackEveryBuffer);
+        ByteBuf origin = Unpooled.buffer();
+        ByteBuf buf = wrap(origin, detector.track(origin));
+        originalCloseCall(buf, mechanism);
+        assertFalse(buf.isAccessible());
+        IllegalReferenceCountException irce = assertThrows(IllegalReferenceCountException.class, buf::release);
+        assertThat(irce).hasStackTraceContaining("originalCloseCall");
+    }
+
+    private static void originalCloseCall(ByteBuf buf, ReleaseMechanism mechanism) {
+        switch (mechanism) {
+            case RELEASE:
+                buf.release();
+                break;
+            case RELEASE_COUNTED:
+                buf.release(1);
+                break;
+            default:
+                fail("Unknown release mechanism: " + mechanism);
         }
     }
 }

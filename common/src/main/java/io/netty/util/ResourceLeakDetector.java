@@ -21,12 +21,12 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
+import org.jetbrains.annotations.Nullable;
 
 import java.lang.ref.ReferenceQueue;
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -52,8 +52,12 @@ public class ResourceLeakDetector<T> {
     // There is a minor performance benefit in TLR if this is a power of 2.
     private static final int DEFAULT_SAMPLING_INTERVAL = 128;
 
+    private static final String PROP_TRACK_CLOSE = "io.netty.leakDetection.trackClose";
+    private static final boolean DEFAULT_TRACK_CLOSE = true;
+
     private static final int TARGET_RECORDS;
     static final int SAMPLING_INTERVAL;
+    private static final boolean TRACK_CLOSE;
 
     /**
      * Represents the level of resource leak detection.
@@ -123,6 +127,7 @@ public class ResourceLeakDetector<T> {
 
         TARGET_RECORDS = SystemPropertyUtil.getInt(PROP_TARGET_RECORDS, DEFAULT_TARGET_RECORDS);
         SAMPLING_INTERVAL = SystemPropertyUtil.getInt(PROP_SAMPLING_INTERVAL, DEFAULT_SAMPLING_INTERVAL);
+        TRACK_CLOSE = SystemPropertyUtil.getBoolean(PROP_TRACK_CLOSE, DEFAULT_TRACK_CLOSE);
 
         ResourceLeakDetector.level = level;
         if (logger.isDebugEnabled()) {
@@ -469,7 +474,8 @@ public class ResourceLeakDetector<T> {
                 TraceRecord newHead;
                 boolean dropped;
                 do {
-                    if ((prevHead = oldHead = headUpdater.get(this)) == null) {
+                    if ((prevHead = oldHead = headUpdater.get(this)) == null ||
+                            oldHead.pos == TraceRecord.CLOSE_MARK_POS) {
                         // already closed.
                         return;
                     }
@@ -501,7 +507,7 @@ public class ResourceLeakDetector<T> {
             if (allLeaks.remove(this)) {
                 // Call clear so the reference is not even enqueued.
                 clear();
-                headUpdater.set(this, null);
+                headUpdater.set(this, TRACK_CLOSE ? new TraceRecord(true) : null);
                 return true;
             }
             return false;
@@ -548,6 +554,15 @@ public class ResourceLeakDetector<T> {
                     // Empty synchronized is ok: https://stackoverflow.com/a/31933260/1151521
                 }
             }
+        }
+
+        @Override
+        public @Nullable Throwable getCloseStackTraceIfAny() {
+            TraceRecord head = headUpdater.get(this);
+            if (head != null && head.pos == TraceRecord.CLOSE_MARK_POS) {
+                return head;
+            }
+            return null;
         }
 
         @Override
@@ -642,8 +657,10 @@ public class ResourceLeakDetector<T> {
 
     private static class TraceRecord extends Throwable {
         private static final long serialVersionUID = 6065153674892850720L;
+        public static final int BOTTOM_POS = -1;
+        public static final int CLOSE_MARK_POS = -2;
 
-        private static final TraceRecord BOTTOM = new TraceRecord() {
+        private static final TraceRecord BOTTOM = new TraceRecord(false) {
             private static final long serialVersionUID = 7396077602074694571L;
 
             // Override fillInStackTrace() so we not populate the backtrace via a native call and so leak the
@@ -673,10 +690,10 @@ public class ResourceLeakDetector<T> {
         }
 
         // Used to terminate the stack
-        private TraceRecord() {
+        private TraceRecord(boolean closeMarker) {
             hintString = null;
             next = null;
-            pos = -1;
+            pos = closeMarker ? CLOSE_MARK_POS : BOTTOM_POS;
         }
 
         @Override
