@@ -22,6 +22,7 @@ import io.netty.util.internal.PlatformDependent;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
@@ -246,6 +247,12 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public short getShortLE(int index) {
+        ensureAccessible();
+        return _getShortLE(index);
+    }
+
+    @Override
     public short getShort(int index) {
         ensureAccessible();
         return _getShort(index);
@@ -253,11 +260,19 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected short _getShort(int index) {
+        VarHandle varHandle = PlatformDependent.shortBeByteBufferView();
+        if (varHandle != null) {
+            return (short) varHandle.get(buffer, index);
+        }
         return buffer.getShort(index);
     }
 
     @Override
     protected short _getShortLE(int index) {
+        VarHandle varHandle = PlatformDependent.shortLeByteBufferView();
+        if (varHandle != null) {
+            return (short) varHandle.get(buffer, index);
+        }
         return ByteBufUtil.swapShort(buffer.getShort(index));
     }
 
@@ -282,6 +297,12 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public int getIntLE(int index) {
+        ensureAccessible();
+        return _getIntLE(index);
+    }
+
+    @Override
     public int getInt(int index) {
         ensureAccessible();
         return _getInt(index);
@@ -289,12 +310,26 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected int _getInt(int index) {
+        VarHandle varHandle = PlatformDependent.intBeByteBufferView();
+        if (varHandle != null) {
+            return (int) varHandle.get(buffer, index);
+        }
         return buffer.getInt(index);
     }
 
     @Override
     protected int _getIntLE(int index) {
+        VarHandle varHandle = PlatformDependent.intLeByteBufferView();
+        if (varHandle != null) {
+            return (int) varHandle.get(buffer, index);
+        }
         return ByteBufUtil.swapInt(buffer.getInt(index));
+    }
+
+    @Override
+    public long getLongLE(int index) {
+        ensureAccessible();
+        return _getLongLE(index);
     }
 
     @Override
@@ -305,11 +340,19 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected long _getLong(int index) {
+        VarHandle varHandle = PlatformDependent.longBeByteBufferView();
+        if (varHandle != null) {
+            return (long) varHandle.get(buffer, index);
+        }
         return buffer.getLong(index);
     }
 
     @Override
     protected long _getLongLE(int index) {
+        VarHandle varHandle = PlatformDependent.longLeByteBufferView();
+        if (varHandle != null) {
+            return (long) varHandle.get(buffer, index);
+        }
         return ByteBufUtil.swapLong(buffer.getLong(index));
     }
 
@@ -398,6 +441,13 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf setShortLE(int index, int value) {
+        ensureAccessible();
+        _setShortLE(index, value);
+        return this;
+    }
+
+    @Override
     public ByteBuf setShort(int index, int value) {
         ensureAccessible();
         _setShort(index, value);
@@ -406,12 +456,29 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setShort(int index, int value) {
+        VarHandle varHandle = PlatformDependent.shortBeByteBufferView();
+        if (varHandle != null) {
+            varHandle.set(buffer, index, (short) value);
+            return;
+        }
         buffer.putShort(index, (short) value);
     }
 
     @Override
     protected void _setShortLE(int index, int value) {
+        VarHandle varHandle = PlatformDependent.shortLeByteBufferView();
+        if (varHandle != null) {
+            varHandle.set(buffer, index, (short) value);
+            return;
+        }
         buffer.putShort(index, ByteBufUtil.swapShort((short) value));
+    }
+
+    @Override
+    public ByteBuf setMediumLE(int index, int value) {
+        ensureAccessible();
+        _setMediumLE(index, value);
+        return this;
     }
 
     @Override
@@ -436,6 +503,13 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf setIntLE(int index, int value) {
+        ensureAccessible();
+        _setIntLE(index, value);
+        return this;
+    }
+
+    @Override
     public ByteBuf setInt(int index, int value) {
         ensureAccessible();
         _setInt(index, value);
@@ -444,11 +518,21 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setInt(int index, int value) {
+        VarHandle varHandle = PlatformDependent.intBeByteBufferView();
+        if (varHandle != null) {
+            varHandle.set(buffer, index, value);
+            return;
+        }
         buffer.putInt(index, value);
     }
 
     @Override
     protected void _setIntLE(int index, int value) {
+        VarHandle varHandle = PlatformDependent.intLeByteBufferView();
+        if (varHandle != null) {
+            varHandle.set(buffer, index, value);
+            return;
+        }
         buffer.putInt(index, ByteBufUtil.swapInt(value));
     }
 
@@ -460,12 +544,29 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     }
 
     @Override
+    public ByteBuf setLongLE(int index, long value) {
+        ensureAccessible();
+        _setLongLE(index, value);
+        return this;
+    }
+
+    @Override
     protected void _setLong(int index, long value) {
+        VarHandle varHandle = PlatformDependent.longBeByteBufferView();
+        if (varHandle != null) {
+            varHandle.set(buffer, index, value);
+            return;
+        }
         buffer.putLong(index, value);
     }
 
     @Override
     protected void _setLongLE(int index, long value) {
+        VarHandle varHandle = PlatformDependent.longLeByteBufferView();
+        if (varHandle != null) {
+            varHandle.set(buffer, index, value);
+            return;
+        }
         buffer.putLong(index, ByteBufUtil.swapLong(value));
     }
 
