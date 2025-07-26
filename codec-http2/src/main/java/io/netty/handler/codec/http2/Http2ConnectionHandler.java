@@ -717,7 +717,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 try {
                     stream = encoder.connection().remote().createStream(streamId, true);
                 } catch (Http2Exception e) {
-                    resetUnknownStream(ctx, streamId, http2Ex.error().code(), ctx.newPromise());
+                    encoder().writeRstStream(ctx, streamId, http2Ex.error().code(), ctx.newPromise());
                     return;
                 }
             }
@@ -734,10 +734,10 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
 
         if (stream == null) {
             if (!outbound || connection().local().mayHaveCreatedStream(streamId)) {
-                resetUnknownStream(ctx, streamId, http2Ex.error().code(), ctx.newPromise());
+                encoder().writeRstStream(ctx, streamId, http2Ex.error().code(), ctx.newPromise());
             }
         } else {
-            resetStream(ctx, stream, http2Ex.error().code(), ctx.newPromise());
+            encoder().writeRstStream(ctx, streamId, http2Ex.error().code(), ctx.newPromise());
         }
     }
 

@@ -421,7 +421,7 @@ public class Http2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(true);
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
-        when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
+        when(encoder.writeRstStream(eq(ctx), eq(STREAM_ID),
                 eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
 
         handler.exceptionCaught(ctx, e);
@@ -431,7 +431,7 @@ public class Http2ConnectionHandlerTest {
                 captor.capture(), eq(padding), eq(true), eq(promise));
         Http2Headers headers = captor.getValue();
         assertEquals(HttpResponseStatus.REQUEST_HEADER_FIELDS_TOO_LARGE.codeAsText(), headers.status());
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+        verify(encoder).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
     }
 
     @Test
@@ -445,14 +445,14 @@ public class Http2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(true);
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
-        when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
+        when(encoder.writeRstStream(eq(ctx), eq(STREAM_ID),
             eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
 
         handler.exceptionCaught(ctx, e);
 
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
             any(Http2Headers.class), eq(padding), eq(true), eq(promise));
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+        verify(encoder).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
     }
 
     @Test
@@ -466,14 +466,14 @@ public class Http2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(false);
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
-        when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
+        when(encoder.writeRstStream(eq(ctx), eq(STREAM_ID),
                 eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
 
         handler.exceptionCaught(ctx, e);
 
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
                 any(Http2Headers.class), eq(padding), eq(true), eq(promise));
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+        verify(encoder).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
     }
 
     @Test
@@ -502,14 +502,14 @@ public class Http2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(true);
         when(stream.isHeadersSent()).thenReturn(true);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
-        when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
+        when(encoder.writeRstStream(eq(ctx), eq(STREAM_ID),
             eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
         handler.exceptionCaught(ctx, e);
 
         verify(encoder, never()).writeHeaders(eq(ctx), eq(STREAM_ID),
             any(Http2Headers.class), eq(padding), eq(true), eq(promise));
 
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+        verify(encoder).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
     }
 
     @Test
@@ -526,7 +526,7 @@ public class Http2ConnectionHandlerTest {
         when(connection.isServer()).thenReturn(true);
         when(stream.isHeadersSent()).thenReturn(false);
         when(remote.lastStreamCreated()).thenReturn(STREAM_ID);
-        when(frameWriter.writeRstStream(eq(ctx), eq(STREAM_ID),
+        when(encoder.writeRstStream(eq(ctx), eq(STREAM_ID),
             eq(PROTOCOL_ERROR.code()), eq(promise))).thenReturn(future);
         handler.exceptionCaught(ctx, e);
 
@@ -534,7 +534,7 @@ public class Http2ConnectionHandlerTest {
         verify(encoder).writeHeaders(eq(ctx), eq(STREAM_ID),
             any(Http2Headers.class), eq(padding), eq(true), eq(promise));
 
-        verify(frameWriter).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
+        verify(encoder).writeRstStream(ctx, STREAM_ID, PROTOCOL_ERROR.code(), promise);
     }
 
     @Test
