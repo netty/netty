@@ -1546,14 +1546,38 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
     }
 
     /**
-     * Return the {@link ByteBuf} on the specified index
+     * Return a duplicate of the {@link ByteBuf} on the specified component index.
+     * <p>
+     * Note that this method returns a shallow duplicate of the underlying component buffer.
+     * The returned buffer's {@code readerIndex} and {@code writerIndex} will be independent of the
+     * composite buffer's indices and will not be adjusted to reflect the component's view within
+     * the composite buffer.
+     * <p>
+     * If you need a buffer that represents the component's readable view as seen from the composite
+     * buffer, use {@link #componentSlice(int cIndex)} instead.
      *
      * @param cIndex the index for which the {@link ByteBuf} should be returned
-     * @return buf the {@link ByteBuf} on the specified index
+     * @return a duplicate of the underlying {@link ByteBuf} on the specified index
      */
     public ByteBuf component(int cIndex) {
         checkComponentIndex(cIndex);
         return components[cIndex].duplicate();
+    }
+
+    /**
+     * Return a slice of the {@link ByteBuf} on the specified component index.
+     * <p>
+     * This method provides a view of the component that reflects its state within the composite buffer.
+     * The returned buffer's readable bytes will correspond to the bytes that this component
+     * contributes to the composite buffer's capacity. The slice will have its own independent
+     * {@code readerIndex} and {@code writerIndex}, starting at {@code 0}.
+     *
+     * @param cIndex the index for which the sliced {@link ByteBuf} should be returned
+     * @return a sliced {@link ByteBuf} representing the component's view
+     */
+    public ByteBuf componentSlice(int cIndex) {
+        checkComponentIndex(cIndex);
+        return components[cIndex].slice();
     }
 
     /**
