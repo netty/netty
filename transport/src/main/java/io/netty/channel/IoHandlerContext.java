@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.util.concurrent.ThreadAwareExecutor;
+import io.netty.util.concurrent.Ticker;
 
 /**
  * The context for an {@link IoHandler} that is run by an {@link ThreadAwareExecutor}.
@@ -46,4 +47,17 @@ public interface IoHandlerContext {
      * @return deadline.
      */
     long deadlineNanos();
+
+    /**
+     * Reports the amount of time in nanoseconds that was spent actively processing I/O events.
+     * This does not include time spent blocking/waiting for I/O.
+     *
+     * @param activeNanos The duration in nanoseconds of active I/O work.
+     */
+    void reportActiveIoTime(long activeNanos);
+
+    /**
+     * Returns the {@link Ticker} that provides the time source for the event loop.
+     */
+    Ticker ticker();
 }

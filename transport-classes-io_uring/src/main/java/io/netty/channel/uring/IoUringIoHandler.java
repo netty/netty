@@ -164,6 +164,7 @@ public final class IoUringIoHandler implements IoHandler {
     @Override
     public int run(IoHandlerContext context) {
         if (closeCompleted) {
+            context.reportActiveIoTime(0);
             return 0;
         }
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
@@ -178,7 +179,13 @@ public final class IoUringIoHandler implements IoHandler {
             // Even if we have some completions already pending we can still try to even fetch more.
             submitAndClearNow(submissionQueue);
         }
-        return processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+
+        // Timer starts after the blocking wait, around the processing of completions.
+        long activeIoStartTimeNanos = context.ticker().nanoTime();
+        int processed = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+        long activeIoEndTimeNanos = context.ticker().nanoTime();
+        context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
+        return processed;
     }
 
     private int processCompletionsAndHandleOverflow(SubmissionQueue submissionQueue, CompletionQueue completionQueue,

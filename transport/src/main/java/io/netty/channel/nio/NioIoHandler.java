@@ -413,6 +413,7 @@ public final class NioIoHandler implements IoHandler {
             try {
                 switch (selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock())) {
                     case SelectStrategy.CONTINUE:
+                        context.reportActiveIoTime(0); // Report zero as we did no I/O.
                         return 0;
 
                     case SelectStrategy.BUSY_WAIT:
@@ -465,7 +466,12 @@ public final class NioIoHandler implements IoHandler {
 
             cancelledKeys = 0;
             needsToSelectAgain = false;
+
+            // We start the timer after the blocking select() call has returned.
+            long activeIoStartTimeNanos = context.ticker().nanoTime();
             handled = processSelectedKeys();
+            long activeIoEndTimeNanos = context.ticker().nanoTime();
+            context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
         } catch (Error e) {
             throw e;
         } catch (Throwable t) {

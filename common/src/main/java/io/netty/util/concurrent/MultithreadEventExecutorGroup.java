@@ -15,11 +15,11 @@
  */
 package io.netty.util.concurrent;
 
-import static io.netty.util.internal.ObjectUtil.checkPositive;
-
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
@@ -32,11 +32,25 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public abstract class MultithreadEventExecutorGroup extends AbstractEventExecutorGroup {
 
+    private static final Runnable NOOP_TASK = () -> { /* NOOP */ };
     private final EventExecutor[] children;
+    private final AtomicInteger nextWakeUpIndex = new AtomicInteger();
     private final Set<EventExecutor> readonlyChildren;
     private final AtomicInteger terminatedChildren = new AtomicInteger();
     private final Promise<?> terminationFuture = new DefaultPromise(GlobalEventExecutor.INSTANCE);
     private final EventExecutorChooserFactory.EventExecutorChooser chooser;
+
+    // Fields for dynamic utilization-based auto-scaling
+    private final int minChildren;
+    private final int maxChildren;
+    private final long utilizationCheckPeriodNanos;
+    private final double scaleDownThreshold;
+    private final double scaleUpThreshold;
+    private final int maxRampUpStep;
+    private final int maxRampDownStep;
+    private final int scalingPatienceCycles;
+    private final AtomicInteger activeChildrenCount;
+    private final ScheduledFuture<?> utilizationMonitoringTask;
 
     /**
      * Create a new instance.
@@ -70,15 +84,83 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
      */
     protected MultithreadEventExecutorGroup(int nThreads, Executor executor,
                                             EventExecutorChooserFactory chooserFactory, Object... args) {
-        checkPositive(nThreads, "nThreads");
+        this(nThreads, nThreads, 0, TimeUnit.SECONDS, 0, 0, 0, 0, 0, executor, chooserFactory, args);
+    }
+
+    /**
+     * Create a new instance with optional dynamic utilization-based scaling capabilities.
+     *
+     * @param minThreads                  the minimum number of threads to keep active.
+     * @param maxThreads                  the maximum number of threads to scale up to.
+     * @param utilizationWindow           the period at which to check group utilization. A value of 0 disables scaling.
+     * @param windowUnit                  the unit for {@code utilizationWindow}.
+     * @param scaleDownThreshold          the average utilization below which a thread may be suspended (0.0 to 1.0).
+     * @param scaleUpThreshold            the average utilization above which a thread may be resumed (0.0 to 1.0).
+     * @param maxRampUpStep               the maximum number of threads to add in one cycle.
+     * @param maxRampDownStep             the maximum number of threads to remove in one cycle.
+     * @param scalingPatienceCycles       the number of consecutive cycles a condition must be met before scaling.
+     * @param executor                    the Executor to use, or {@code null} if the default should be used.
+     * @param chooserFactory              the {@link EventExecutorChooserFactory} to use.
+     * @param args                        arguments which will be passed to each {@link #newChild(Executor, Object...)}
+     *                                    call
+     */
+    protected MultithreadEventExecutorGroup(int minThreads, int maxThreads, long utilizationWindow, TimeUnit windowUnit,
+                                            double scaleDownThreshold, double scaleUpThreshold, int maxRampUpStep,
+                                            int maxRampDownStep, int scalingPatienceCycles, Executor executor,
+                                            EventExecutorChooserFactory chooserFactory, Object... args) {
+        if (minThreads < 0 || minThreads > maxThreads || maxThreads == 0) {
+            throw new IllegalArgumentException(String.format(
+                    "minThreads: %d, maxThreads: %d (expected: 0 <= minThreads <= maxThreads, maxThreads > 0)",
+                    minThreads, maxThreads));
+        }
+        if (utilizationWindow < 0) {
+            throw new IllegalArgumentException("utilizationWindow must be >= 0: " + utilizationWindow);
+        }
+        if (windowUnit == null && utilizationWindow > 0) {
+            throw new NullPointerException("windowUnit");
+        }
+        boolean scalingEnabled = utilizationWindow > 0 && minThreads < maxThreads;
+        if (scalingEnabled) {
+            if (scaleDownThreshold < 0.0 || scaleDownThreshold > 1.0) {
+                throw new IllegalArgumentException(
+                        "scaleDownThreshold must be between 0.0 and 1.0: " + scaleDownThreshold);
+            }
+            if (scaleUpThreshold < 0.0 || scaleUpThreshold > 1.0) {
+                throw new IllegalArgumentException(
+                        "scaleUpThreshold must be between 0.0 and 1.0: " + scaleUpThreshold);
+            }
+            if (scaleDownThreshold >= scaleUpThreshold) {
+                throw new IllegalArgumentException(
+                        "scaleDownThreshold must be less than scaleUpThreshold when scaling is enabled: " +
+                        scaleDownThreshold + " >= " + scaleUpThreshold);
+            }
+            if (maxRampUpStep <= 0) {
+                throw new IllegalArgumentException("maxRampUpStep must be > 0: " + maxRampUpStep);
+            }
+            if (maxRampDownStep <= 0) {
+                throw new IllegalArgumentException("maxRampDownStep must be > 0: " + maxRampDownStep);
+            }
+            if (scalingPatienceCycles < 0) {
+                throw new IllegalArgumentException("scalingPatienceCycles must be >= 0: " + scalingPatienceCycles);
+            }
+        }
 
         if (executor == null) {
             executor = new ThreadPerTaskExecutor(newDefaultThreadFactory());
         }
 
-        children = new EventExecutor[nThreads];
+        this.minChildren = minThreads;
+        this.maxChildren = maxThreads;
+        this.utilizationCheckPeriodNanos = windowUnit == null ? 0 : windowUnit.toNanos(utilizationWindow);
+        this.scaleDownThreshold = scaleDownThreshold;
+        this.scaleUpThreshold = scaleUpThreshold;
+        this.maxRampUpStep = maxRampUpStep;
+        this.maxRampDownStep = maxRampDownStep;
+        this.scalingPatienceCycles = scalingPatienceCycles;
 
-        for (int i = 0; i < nThreads; i ++) {
+        children = new EventExecutor[maxThreads];
+
+        for (int i = 0; i < maxThreads; i ++) {
             boolean success = false;
             try {
                 children[i] = newChild(executor, args);
@@ -108,6 +190,19 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
         }
 
+        if (utilizationCheckPeriodNanos > 0 && minChildren < maxChildren) {
+            // Autoscaling is enabled, schedule the monitor.
+            this.activeChildrenCount = new AtomicInteger(maxThreads);
+            utilizationMonitoringTask = GlobalEventExecutor.INSTANCE.scheduleAtFixedRate(
+                    new UtilizationMonitor(), this.utilizationCheckPeriodNanos, this.utilizationCheckPeriodNanos,
+                    TimeUnit.NANOSECONDS);
+            // The monitor will handle the initial suspension
+        } else {
+            // Scaling is disabled.
+            this.activeChildrenCount = null;
+            this.utilizationMonitoringTask = null;
+        }
+
         chooser = chooserFactory.newChooser(children);
 
         final FutureListener<Object> terminationListener = new FutureListener<Object>() {
@@ -134,6 +229,13 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
     @Override
     public EventExecutor next() {
+        if (activeChildrenCount != null) {
+            // If we are operating below maximum capacity, try to scale up by one.
+            // This handles on-demand scaling.
+            if (activeChildrenCount.get() < maxChildren) {
+                tryScaleUpBy(1);
+            }
+        }
         return chooser.next();
     }
 
@@ -159,6 +261,9 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
     @Override
     public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+        if (utilizationMonitoringTask != null) {
+            utilizationMonitoringTask.cancel(false);
+        }
         for (EventExecutor l: children) {
             l.shutdownGracefully(quietPeriod, timeout, unit);
         }
@@ -225,4 +330,136 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
         }
         return isTerminated();
     }
+
+    /**
+     * Tries to scale up by a given amount, respecting the maxChildren limit.
+     * This method is thread-safe and reliably wakes up suspended threads.
+     *
+     * @param amount The desired number of threads to add.
+     * @return The number of threads that were actually activated.
+     */
+    private int tryScaleUpBy(int amount) {
+        if (amount <= 0 || activeChildrenCount == null) {
+            return 0;
+        }
+
+        int wokenUp = 0;
+        for (;;) {
+            int currentActive = activeChildrenCount.get();
+            if (currentActive >= maxChildren) {
+                return 0;
+            }
+
+            int canAdd = Math.min(amount, maxChildren - currentActive);
+            int newActive = currentActive + canAdd;
+
+            if (activeChildrenCount.compareAndSet(currentActive, newActive)) {
+                final int startIndex = nextWakeUpIndex.getAndIncrement();
+
+                for (int i = 0; i < children.length; i++) {
+                    EventExecutor child = children[(startIndex + i) % children.length];
+
+                    if (wokenUp >= canAdd) {
+                        break; // We have woken up all the threads we reserved.
+                    }
+                    if (child instanceof SingleThreadEventExecutor) {
+                        SingleThreadEventExecutor stee = (SingleThreadEventExecutor) child;
+                        if (stee.isSuspended()) {
+                            stee.execute(NOOP_TASK);
+                            wokenUp++;
+                        }
+                    }
+                }
+
+                // We reserved 'canAdd' slots but found fewer suspended threads to wake up (in a lost race condition).
+                // Release the unused slots.
+                if (wokenUp < canAdd) {
+                    activeChildrenCount.addAndGet(-(canAdd - wokenUp));
+                }
+                return wokenUp;
+            }
+        }
+    }
+
+    private final class UtilizationMonitor implements Runnable {
+        @Override
+        public void run() {
+            if (isShuttingDown() || isShutdown() || isTerminated()) {
+                if (utilizationMonitoringTask != null) {
+                    utilizationMonitoringTask.cancel(false);
+                }
+                return;
+            }
+
+            int consistentlyBusyChildren = 0;
+            final List<SingleThreadEventExecutor> consistentlyIdleChildren = new ArrayList<>(maxChildren);
+
+            // Gather utilization data from all active children.
+            for (EventExecutor child : children) {
+                if (child.isSuspended() || !(child instanceof SingleThreadEventExecutor)) {
+                    continue;
+                }
+
+                SingleThreadEventExecutor stee = (SingleThreadEventExecutor) child;
+                double utilization = stee.getAndResetUtilization();
+
+                if (utilization < scaleDownThreshold) {
+                    // Utilization is low, increment idle counter and reset busy counter.
+                    int idleCycles = stee.getAndIncrementIdleCycles();
+                    stee.resetBusyCycles();
+                    if (idleCycles >= scalingPatienceCycles) {
+                        consistentlyIdleChildren.add(stee);
+                    }
+                } else if (utilization > scaleUpThreshold) {
+                    // Utilization is high, increment busy counter and reset idle counter.
+                    int busyCycles = stee.getAndIncrementBusyCycles();
+                    stee.resetIdleCycles();
+                    if (busyCycles >= scalingPatienceCycles) {
+                        consistentlyBusyChildren++;
+                    }
+                } else {
+                    // Utilization is in the normal range, reset counters.
+                    stee.resetIdleCycles();
+                    stee.resetBusyCycles();
+                }
+            }
+
+            // Make scaling decisions based on stable states.
+            int currentActive = activeChildrenCount.get();
+
+            if (!consistentlyIdleChildren.isEmpty() && currentActive > minChildren) {
+                // Scale down, we have children that have been idle for multiple cycles.
+                // Sort candidates to prioritize suspending the most idle ones first.
+                consistentlyIdleChildren.sort((e1, e2) -> Integer.compare(e2.getIdleCycles(), e1.getIdleCycles()));
+                int threadsToRemove = Math.min(consistentlyIdleChildren.size(), maxRampDownStep);
+                threadsToRemove = Math.min(threadsToRemove, currentActive - minChildren);
+
+                int actuallyRemoved = 0;
+                for (int i = 0; i < threadsToRemove; i++) {
+                    SingleThreadEventExecutor childToSuspend = consistentlyIdleChildren.get(i);
+                    if (childToSuspend.trySuspend()) {
+                        // Reset cycles upon suspension so it doesn't get immediately re-suspended on wake-up.
+                        childToSuspend.resetBusyCycles();
+                        childToSuspend.resetIdleCycles();
+                        actuallyRemoved++;
+                    }
+                }
+                if (actuallyRemoved > 0) {
+                    //TODO: log # of suspended and current active threads?
+                    activeChildrenCount.addAndGet(-actuallyRemoved);
+                }
+            }
+
+            if (consistentlyBusyChildren > 0 && currentActive < maxChildren) {
+                // Scale Up, we have children that have been busy for multiple cycles.
+                int threadsToAdd = Math.min(consistentlyBusyChildren, maxRampUpStep);
+                threadsToAdd = Math.min(threadsToAdd, maxChildren - currentActive);
+                if (threadsToAdd > 0) {
+                    // tryScaleUpBy handles the atomic increment and wake-up.
+                    tryScaleUpBy(threadsToAdd);
+                }
+            }
+        }
+    }
 }
+

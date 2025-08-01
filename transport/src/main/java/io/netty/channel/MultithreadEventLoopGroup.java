@@ -25,6 +25,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Abstract base class for {@link EventLoopGroup} implementations that handles their tasks with multiple threads at
@@ -66,6 +67,18 @@ public abstract class MultithreadEventLoopGroup extends MultithreadEventExecutor
     protected MultithreadEventLoopGroup(int nThreads, Executor executor, EventExecutorChooserFactory chooserFactory,
                                      Object... args) {
         super(nThreads == 0 ? DEFAULT_EVENT_LOOP_THREADS : nThreads, executor, chooserFactory, args);
+    }
+
+    /**
+     * @see MultithreadEventExecutorGroup#MultithreadEventExecutorGroup(int, int, long, TimeUnit, double, double, int,
+     * int, int, Executor, EventExecutorChooserFactory, Object...)
+     */
+    protected MultithreadEventLoopGroup(int minThreads, int maxThreads, long utilizationWindow, TimeUnit windowUnit,
+                                        double scaleDownThreshold, double scaleUpThreshold, int maxRampUpStep,
+                                        int maxRampDownStep, int scalingPatienceCycles, Executor executor,
+                                        EventExecutorChooserFactory chooserFactory, Object... args) {
+        super(minThreads, maxThreads, utilizationWindow, windowUnit, scaleDownThreshold, scaleUpThreshold,
+              maxRampUpStep, maxRampDownStep, scalingPatienceCycles, executor, chooserFactory, args);
     }
 
     @Override

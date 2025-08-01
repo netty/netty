@@ -40,7 +40,9 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -93,6 +95,21 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final RejectedExecutionHandler rejectedExecutionHandler;
     private final boolean supportSuspension;
 
+    // A running total of nanoseconds this executor has spent in an "active" state during the current
+    // measurement window.
+    private final AtomicLong activeTimeInWindowNanos = new AtomicLong(0);
+    private final AtomicLong windowStartTimeNanos = new AtomicLong(ticker().nanoTime());
+    /**
+     * Tracks the number of consecutive monitor cycles this executor's
+     * utilization has been below the scale-down threshold.
+     */
+    private final AtomicInteger consecutiveIdleCycles = new AtomicInteger();
+
+    /**
+     * Tracks the number of consecutive monitor cycles this executor's
+     * utilization has been above the scale-up threshold.
+     */
+    private final AtomicInteger consecutiveBusyCycles = new AtomicInteger();
     private long lastExecutionTime;
 
     @SuppressWarnings({ "FieldMayBeFinal", "unused" })
@@ -503,6 +520,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         final long deadline = timeoutNanos > 0 ? getCurrentTimeNanos() + timeoutNanos : 0;
         long runTasks = 0;
         long lastExecutionTime;
+
+        long workStartTime = ticker().nanoTime();
         for (;;) {
             safeExecute(task);
 
@@ -523,6 +542,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 break;
             }
         }
+
+        long workEndTime = ticker().nanoTime();
+        activeTimeInWindowNanos.addAndGet(workEndTime - workStartTime);
 
         afterRunningAllTasks();
         this.lastExecutionTime = lastExecutionTime;
@@ -569,6 +591,58 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     protected void updateLastExecutionTime() {
         lastExecutionTime = getCurrentTimeNanos();
+    }
+
+    /**
+     * Adds the given duration to the total active time for the current measurement window.
+     * This method is thread-safe.
+     * @param nanos The active time in nanoseconds to add.
+     */
+    public void reportActiveIoTime(long nanos) {
+        if (nanos > 0) {
+            activeTimeInWindowNanos.addAndGet(nanos);
+        }
+    }
+
+    /**
+     * Calculates the utilization ratio since the last reset and resets the window.
+     * @return A value between 0.0 and 1.0 representing the utilization percentage.
+     */
+    public double getAndResetUtilization() {
+        long now = ticker().nanoTime();
+        long startTime = windowStartTimeNanos.getAndSet(now);
+        long activeTime = activeTimeInWindowNanos.getAndSet(0);
+
+        long totalTimeInWindow = now - startTime;
+        if (totalTimeInWindow <= 0) {
+            return 0.0;
+        }
+        // Return the ratio of active time to total time. Clamp between 0 and 1.
+        return Math.max(0.0, Math.min(1.0, (double) activeTime / totalTimeInWindow));
+    }
+
+    public int getAndIncrementIdleCycles() {
+        return consecutiveIdleCycles.getAndIncrement();
+    }
+
+    public void resetIdleCycles() {
+        consecutiveIdleCycles.set(0);
+    }
+
+    public int getAndIncrementBusyCycles() {
+        return consecutiveBusyCycles.getAndIncrement();
+    }
+
+    public void resetBusyCycles() {
+        consecutiveBusyCycles.set(0);
+    }
+
+    /**
+     * Returns the current number of consecutive idle cycles without modifying it.
+     * @return The current number of idle cycles.
+     */
+    public int getIdleCycles() {
+        return consecutiveIdleCycles.get();
     }
 
     /**
@@ -1022,6 +1096,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         int currentState = state;
         if (currentState == ST_NOT_STARTED || currentState == ST_SUSPENDED) {
             if (STATE_UPDATER.compareAndSet(this, currentState, ST_STARTED)) {
+                resetIdleCycles();
+                resetBusyCycles();
                 boolean success = false;
                 try {
                     doStartThread();

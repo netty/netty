@@ -386,6 +386,7 @@ public class EpollIoHandler implements IoHandler {
             int strategy = selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock());
             switch (strategy) {
                 case SelectStrategy.CONTINUE:
+                    context.reportActiveIoTime(0); // Report zero as we did no I/O.
                     return 0;
 
                 case SelectStrategy.BUSY_WAIT:
@@ -441,9 +442,12 @@ public class EpollIoHandler implements IoHandler {
             }
             if (strategy > 0) {
                 handled = strategy;
+                long activeIoStartTimeNanos = context.ticker().nanoTime();
                 if (processReady(events, strategy)) {
                     prevDeadlineNanos = NONE;
                 }
+                long activeIoEndTimeNanos = context.ticker().nanoTime();
+                context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
             }
             if (allowGrowing && strategy == events.length()) {
                 //increase the size of the array as we needed the whole space for the events

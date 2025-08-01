@@ -20,6 +20,7 @@ import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoRegistration;
 import io.netty.util.concurrent.ThreadAwareExecutor;
+import io.netty.util.concurrent.Ticker;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -68,6 +69,16 @@ public class NioIoHandlerTest {
             @Override
             public long deadlineNanos() {
                 return -1;
+            }
+
+            @Override
+            public void reportActiveIoTime(long activeNanos) {
+                // No-op for this test as we are not testing auto-scaling.
+            }
+
+            @Override
+            public Ticker ticker() {
+                return Ticker.systemTicker();
             }
         };
         IoHandler handler = factory.newHandler(executor);

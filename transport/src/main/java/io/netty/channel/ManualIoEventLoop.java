@@ -74,6 +74,17 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
             assert inEventLoop();
             return -1;
         }
+
+        @Override
+        public void reportActiveIoTime(long activeNanos) {
+            // This event loop does not participate in auto-scaling,
+            // so this is a no-op.
+        }
+
+        @Override
+        public Ticker ticker() {
+            return ManualIoEventLoop.this.ticker();
+        }
     };
     private final BlockingIoHandlerContext blockingContext = new BlockingIoHandlerContext();
     private final IoEventLoopGroup parent;
@@ -656,6 +667,17 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
                 return maxDeadlineNanos;
             }
             return Math.min(next, maxDeadlineNanos);
+        }
+
+        @Override
+        public void reportActiveIoTime(long activeNanos) {
+            // This event loop does not participate in auto-scaling,
+            // so this is a no-op.
+        }
+
+        @Override
+        public Ticker ticker() {
+            return ManualIoEventLoop.this.ticker();
         }
     };
 }
