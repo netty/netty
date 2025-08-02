@@ -57,7 +57,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     public static class ProducerConsumerState {
         private Queue<ByteBuf> queue;
         private Integer[] sizeIndexes;
-        private int nextSizeIndex = 0;
+        private int nextSizeIndex;
 
         @Setup
         public void init() {
@@ -79,7 +79,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
 
     @Benchmark
     @Group("pooled_direct")
-    public void consumerPooledDirect(ProducerConsumerState state, Control control, Blackhole blackhole) throws Exception {
+    public void consumerPooledDirect(ProducerConsumerState state, Control control, Blackhole blackhole) {
         Queue<ByteBuf> queue = state.queue;
         do {
             ByteBuf buf = queue.poll();
@@ -92,7 +92,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
 
     @Benchmark
     @Group("pooled_direct")
-    public void producerPooledDirect(ProducerConsumerState state, Control control) throws Exception {
+    public void producerPooledDirect(ProducerConsumerState state, Control control) {
         Queue<ByteBuf> queue = state.queue;
         while (!control.stopMeasurement) {
             int sizeIndex = state.sizeIndexes[state.getNextSizeIndex()];
@@ -105,7 +105,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
 
     @Benchmark
     @Group("adaptive_direct")
-    public void consumerAdaptiveDirect(ProducerConsumerState state, Control control, Blackhole blackhole) throws Exception {
+    public void consumerAdaptiveDirect(ProducerConsumerState state, Control control, Blackhole blackhole) {
         Queue<ByteBuf> queue = state.queue;
         do {
             ByteBuf buf = queue.poll();
@@ -118,7 +118,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
 
     @Benchmark
     @Group("adaptive_direct")
-    public void producerAdaptiveDirect(ProducerConsumerState state, Control control) throws Exception {
+    public void producerAdaptiveDirect(ProducerConsumerState state, Control control) {
         Queue<ByteBuf> queue = state.queue;
         while (!control.stopMeasurement) {
             int sizeIndex = state.sizeIndexes[state.getNextSizeIndex()];
@@ -131,7 +131,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
 
     @Benchmark
     @Group("mimalloc_direct")
-    public void consumerMimallocDirect(ProducerConsumerState state, Control control, Blackhole blackhole) throws Exception {
+    public void consumerMimallocDirect(ProducerConsumerState state, Control control, Blackhole blackhole) {
         Queue<ByteBuf> queue = state.queue;
         do {
             ByteBuf buf = queue.poll();
@@ -144,7 +144,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
 
     @Benchmark
     @Group("mimalloc_direct")
-    public void producerMimallocDirect(ProducerConsumerState state, Control control) throws Exception {
+    public void producerMimallocDirect(ProducerConsumerState state, Control control) {
         Queue<ByteBuf> queue = state.queue;
         while (!control.stopMeasurement) {
             int sizeIndex = state.sizeIndexes[state.getNextSizeIndex()];
@@ -157,7 +157,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
 
     @Benchmark
     @Group("pooled_heap")
-    public void consumerPooledHeap(ProducerConsumerState state, Control control, Blackhole blackhole) throws Exception {
+    public void consumerPooledHeap(ProducerConsumerState state, Control control, Blackhole blackhole) {
         Queue<ByteBuf> queue = state.queue;
         do {
             ByteBuf buf = queue.poll();
@@ -170,7 +170,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
 
     @Benchmark
     @Group("pooled_heap")
-    public void producerPooledHeap(ProducerConsumerState state, Control control) throws Exception {
+    public void producerPooledHeap(ProducerConsumerState state, Control control) {
         Queue<ByteBuf> queue = state.queue;
         while (!control.stopMeasurement) {
             int sizeIndex = state.sizeIndexes[state.getNextSizeIndex()];
@@ -183,7 +183,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
 
     @Benchmark
     @Group("adaptive_heap")
-    public void consumerAdaptiveHeap(ProducerConsumerState state, Control control, Blackhole blackhole) throws Exception {
+    public void consumerAdaptiveHeap(ProducerConsumerState state, Control control, Blackhole blackhole) {
         Queue<ByteBuf> queue = state.queue;
         do {
             ByteBuf buf = queue.poll();
@@ -209,7 +209,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
 
     @Benchmark
     @Group("mimalloc_heap")
-    public void consumerMimallocHeap(ProducerConsumerState state, Control control, Blackhole blackhole) throws Exception {
+    public void consumerMimallocHeap(ProducerConsumerState state, Control control, Blackhole blackhole) {
         Queue<ByteBuf> queue = state.queue;
         do {
             ByteBuf buf = queue.poll();
@@ -222,7 +222,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
 
     @Benchmark
     @Group("mimalloc_heap")
-    public void producerMimallocHeap(ProducerConsumerState state, Control control) throws Exception {
+    public void producerMimallocHeap(ProducerConsumerState state, Control control) {
         Queue<ByteBuf> queue = state.queue;
         while (!control.stopMeasurement) {
             int sizeIndex = state.sizeIndexes[state.getNextSizeIndex()];

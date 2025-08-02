@@ -62,8 +62,8 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
     private Integer[] releaseIndexes;
     private Integer[] sizeIndexes;
 
-    private int nextReleaseIndex = 0;
-    private int nextSizeIndex = 0;
+    private int nextReleaseIndex;
+    private int nextSizeIndex;
 
     // Use event-loop threads.
     public ByteBufAllocatorAllocPatternBenchmark() {
