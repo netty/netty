@@ -1436,9 +1436,7 @@ final class MiMallocByteBufAllocator {
         final AtomicReference<LocalHeap> heapx = new AtomicReference<LocalHeap>();
 
         // Empty Page Constructor
-        Page() {
-
-        }
+        Page() { }
 
         // Abandon a page with used blocks at the end of a thread.
         // Note: only call if it is ensured that no references exist from
@@ -1584,9 +1582,7 @@ final class MiMallocByteBufAllocator {
         private int blockAdjustment;
         private Block nextBlock;
 
-        Block() {
-
-        }
+        Block() { }
 
         static Block copyBlock(Block block) {
             Block copy = new Block();
@@ -1872,9 +1868,9 @@ final class MiMallocByteBufAllocator {
     private static int alignUp(int sz, int alignment) {
         int mask = alignment - 1;
         if ((alignment & mask) == 0) {  // If alignment is power of two.
-            return ((sz + mask) & ~mask);
+            return (sz + mask) & ~mask;
         } else {
-            return (((sz + mask) / alignment) * alignment);
+            return ((sz + mask) / alignment) * alignment;
         }
     }
 
