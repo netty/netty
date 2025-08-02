@@ -63,8 +63,8 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         public void init() {
             queue = PlatformDependent.newFixedMpmcQueue(1024);
             sizeIndexes = new Integer[MathUtil.findNextPositivePowerOfTwo(sizeList.size())];
-            // Pre-generate the to be released index.
             SplittableRandom rand = new SplittableRandom(42);
+            // Pre-generate the to be released index.
             for (int i = 0; i < sizeIndexes.length; i++) {
                 sizeIndexes[i] = rand.nextInt(sizeList.size());
             }

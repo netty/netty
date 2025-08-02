@@ -761,7 +761,7 @@ final class MiMallocByteBufAllocator {
                 }
                 slice = segment.slices[slice.sliceIndex + slice.sliceCount];
             }
-            if (segment.usedPages == 0) {  // due to page_clear
+            if (segment.usedPages == 0) {  // due to `segmentPageClear()`
                 segmentFree(segment, true);
                 return null;
             } else if (reclaimed) {

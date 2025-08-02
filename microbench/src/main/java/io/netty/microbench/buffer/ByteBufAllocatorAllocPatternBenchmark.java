@@ -93,8 +93,8 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
     public void setup() {
         releaseIndexes = new Integer[MAX_LIVE_BUFFERS];
         sizeIndexes = new Integer[MathUtil.findNextPositivePowerOfTwo(sizeList.size())];
-        // Pre-generate the to be released index.
         SplittableRandom rand = new SplittableRandom(SEED);
+        // Pre-generate the to be released index.
         for (int i = 0; i < releaseIndexes.length; i++) {
             releaseIndexes[i] = rand.nextInt(releaseIndexes.length);
         }
