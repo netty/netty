@@ -164,7 +164,7 @@ final class MiMallocByteBufAllocator {
         int reclaimCount; // number of reclaimed (abandoned) segments
         private final SpanQueue[] spanQueues = new SpanQueue[] {
             new SpanQueue(1, 0),
-            new SpanQueue(1, 1), new SpanQueue( 2, 2),
+            new SpanQueue(1, 1), new SpanQueue(2, 2),
             new SpanQueue(3, 3), new SpanQueue(4, 4),
             new SpanQueue(5, 5), new SpanQueue(6, 6),
             new SpanQueue(7, 7), new SpanQueue(10, 8),
@@ -305,7 +305,7 @@ final class MiMallocByteBufAllocator {
             Segment segment;
             long max_tries = force ? this.allocator.abandonedSegmentCount.get() : 1024;  // Limit latency
             while (max_tries-- > 0 && (segment = this.allocator.abandonedSegmentQueue.poll()) != null) {
-                segmentCheckFree(segment,0,0); // try to free up pages (due to concurrent frees)
+                segmentCheckFree(segment, 0, 0); // try to free up pages (due to concurrent frees)
                 if (segment.usedPages == 0) {
                     // Free the segment (by forced reclaim) to make it available to other threads.
                     segmentReclaim(segment, 0, false);
@@ -321,7 +321,7 @@ final class MiMallocByteBufAllocator {
         private void heapCollectRetired(boolean force) {
             int min = PAGE_QUEUE_BIN_FULL_INDEX;
             int max = 0;
-            for(int bin = this.pageRetiredMin; bin <= this.pageRetiredMax; bin++) {
+            for (int bin = this.pageRetiredMin; bin <= this.pageRetiredMax; bin++) {
                 PageQueue pq = this.pageQueues[bin];
                 Page page = pq.firstPage;
                 if (page != null && page.retireExpire != 0) {
@@ -331,8 +331,12 @@ final class MiMallocByteBufAllocator {
                             pageFree(pq.firstPage, pq, force);
                         } else {
                             // keep retired, update min/max
-                            if (bin < min) min = bin;
-                            if (bin > max) max = bin;
+                            if (bin < min) {
+                                min = bin;
+                            }
+                            if (bin > max) {
+                                max = bin;
+                            }
                         }
                     } else {
                         page.retireExpire = 0;
@@ -358,7 +362,7 @@ final class MiMallocByteBufAllocator {
             }
             boolean all_freed = true;
             // And free them all.
-            while(block != null) {
+            while (block != null) {
                 Block next = block.nextBlock;
                 // Use internal free instead of regular one to keep stats correct.
                 if (!freeDelayedBlock(block)) {
@@ -440,9 +444,9 @@ final class MiMallocByteBufAllocator {
             int block_size = getGoodOsAllocSize(size);
             boolean is_huge = block_size > LARGE_BLOCK_SIZE_MAX;
             //TODO: handle huge page stats?`
-            PageQueue pq = (is_huge ? null : pageQueue(block_size));
+            PageQueue pq = is_huge ? null : pageQueue(block_size);
             Page page = pageFreshAlloc(pq, block_size);
-            if (page!= null && is_huge) {
+            if (page != null && is_huge) {
                 page.heapx.set(null);
             }
             return page;
@@ -536,7 +540,7 @@ final class MiMallocByteBufAllocator {
             // Calculate the extend count.
             int bSize = page.blockSize;
             int extend = page.reservedBlocks - page.capacityBlocks;
-            int max_extend = (bSize >= PAGE_MAX_EXTEND_SIZE ? PAGE_MIN_EXTEND_BLOCKS : PAGE_MAX_EXTEND_SIZE / bSize);
+            int max_extend = bSize >= PAGE_MAX_EXTEND_SIZE ? PAGE_MIN_EXTEND_BLOCKS : PAGE_MAX_EXTEND_SIZE / bSize;
             if (max_extend < PAGE_MIN_EXTEND_BLOCKS) {
                 max_extend = PAGE_MIN_EXTEND_BLOCKS;
             }
@@ -589,7 +593,6 @@ final class MiMallocByteBufAllocator {
             last.nextBlock = page.freeList;
             page.freeList = start;
         }
-
 
         // Get a fresh page to use.
         private Page pageFresh(PageQueue pq) {
@@ -645,7 +648,8 @@ final class MiMallocByteBufAllocator {
         }
 
         private Page segmentsPageAlloc(int requiredSize, int blockSize) {
-            int pageSize = alignUp(requiredSize, (requiredSize > MEDIUM_PAGE_SIZE ? MEDIUM_PAGE_SIZE : SEGMENT_SLICE_SIZE));
+            int pageSize = alignUp(requiredSize,
+                    requiredSize > MEDIUM_PAGE_SIZE ? MEDIUM_PAGE_SIZE : SEGMENT_SLICE_SIZE);
             int slicesNeeded = pageSize >> SEGMENT_SLICE_SHIFT;
             Page page = segmentsPageFindAndAllocate(slicesNeeded);
             if (page == null) {
@@ -868,7 +872,6 @@ final class MiMallocByteBufAllocator {
             return page.usedBlocks < page.reservedBlocks || page.threadFreeList.get() != null;
         }
 
-
         // Note: can be called on abandoned pages
         private Span segmentPageClear(Page page) {
             Segment segment = page.segment;
@@ -945,7 +948,7 @@ final class MiMallocByteBufAllocator {
                 return 0;
             }
             // Avoid overflow.
-            long relative_count = (total_count > 10000 ? (total_count / 100) * perc : (total_count * perc) / 100);
+            long relative_count = total_count > 10000 ? (total_count / 100) * perc : (total_count * perc) / 100;
             long max_tries = relative_count <= 1 ? 1 : (relative_count > 1024 ? 1024 : relative_count);
             if (max_tries < 8 && total_count > 8) {
                 max_tries = 8;
@@ -981,7 +984,7 @@ final class MiMallocByteBufAllocator {
         }
 
         private void segmentsTrackSize(long segment_size) {
-            segmentTld.segmentsCount += (segment_size >= 0 ? 1 : -1);
+            segmentTld.segmentsCount += segment_size >= 0 ? 1 : -1;
             if (segmentTld.segmentsCount > segmentTld.segmentsPeakCount) {
                 segmentTld.segmentsPeakCount = segmentTld.segmentsCount;
             }
@@ -1051,7 +1054,7 @@ final class MiMallocByteBufAllocator {
             segment.usedPages++;
             // Convert to Page.
             Page page = slice;
-            page.isHuge = (segment.kind == SEGMENT_HUGE);
+            page.isHuge = segment.kind == SEGMENT_HUGE;
             return page;
         }
 
@@ -1106,7 +1109,6 @@ final class MiMallocByteBufAllocator {
             }
             slice.blockSize = 0; // free.
         }
-
 
         private boolean isSegmentAbandoned(Segment segment) {
             return segment.ownerThread.get() == null;
@@ -1299,8 +1301,7 @@ final class MiMallocByteBufAllocator {
                 if (to.lastPage != null) {
                     to.lastPage.nextPage = page;
                     to.lastPage = page;
-                }
-                else {
+                } else {
                     to.firstPage = page;
                     to.lastPage = page;
                     heapQueueFirstUpdate(to);
@@ -1435,7 +1436,9 @@ final class MiMallocByteBufAllocator {
         final AtomicReference<LocalHeap> heapx = new AtomicReference<LocalHeap>();
 
         // Empty Page Constructor
-        Page() {}
+        Page() {
+
+        }
 
         // Abandon a page with used blocks at the end of a thread.
         // Note: only call if it is ensured that no references exist from
@@ -1516,7 +1519,7 @@ final class MiMallocByteBufAllocator {
                     // Append -- only on shutdown (force) as this is a linear operation.
                     Block tail = this.localFreeList;
                     Block next;
-                    while((next = tail.nextBlock) != null) {
+                    while ((next = tail.nextBlock) != null) {
                         tail = next;
                     }
                     tail.nextBlock = this.freeList;
@@ -1571,7 +1574,7 @@ final class MiMallocByteBufAllocator {
 
         private boolean isMostlyUsed() {
             int frac = this.reservedBlocks >> 3;
-            return (this.reservedBlocks - this.usedBlocks <= frac);
+            return this.reservedBlocks - this.usedBlocks <= frac;
         }
     }
 
@@ -1581,7 +1584,9 @@ final class MiMallocByteBufAllocator {
         private int blockAdjustment;
         private Block nextBlock;
 
-        Block() {}
+        Block() {
+
+        }
 
         static Block copyBlock(Block block) {
             Block copy = new Block();
@@ -1612,7 +1617,7 @@ final class MiMallocByteBufAllocator {
         Span prevSpan;
         Span nextSpan;
         final int sliceIndex;
-        int sliceOffset;// Distance from the actual page data slice (0 if a page).
+        int sliceOffset; // Distance from the actual page data slice (0 if a page).
 
         Span(Segment segment, int adjustment, int sliceCount, Span nextSpan, Span prevSpan, int sliceIndex) {
             this.segment = segment;
