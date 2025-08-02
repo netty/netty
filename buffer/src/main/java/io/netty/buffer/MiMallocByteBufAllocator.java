@@ -1778,8 +1778,8 @@ final class MiMallocByteBufAllocator {
 
     private MiByteBuf allocate(int size, int maxCapacity, MiByteBuf byteBuf) {
         LocalHeap localHeap = THREAD_LOCAL_HEAP.get();
-        int wSize = toWordSize(size);
         if (size <= PAGES_FREE_DIRECT_SIZE_MAX) {
+            int wSize = toWordSize(size);
             Page page = localHeap.pagesFreeDirect[wSize];
             // Fast path
             Block block = page.freeList;
