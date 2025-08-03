@@ -371,8 +371,9 @@ final class MiMallocByteBufAllocator {
                     // reset the delayed_freeing flag, in that case,
                     // delay it further by reinserting the current block into the delayed free list.
                     all_freed = false;
-                    Block current = this.threadDelayedFreeList.get();
+                    Block current;
                     do {
+                        current = this.threadDelayedFreeList.get();
                         block.nextBlock = current;
                     } while (!this.threadDelayedFreeList.compareAndSet(current, block));
                 }
