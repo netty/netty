@@ -51,28 +51,29 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     }
 
     // Allocation size list.
-    private static final ArrayList<Integer> sizeList = new ArrayList<>();
+    private static final int[] flattendSizeArray;
 
     @State(Scope.Group)
     public static class ProducerConsumerState {
         private Queue<ByteBuf> queue;
-        private int[] sizeIndexes;
+        private int[] sizes;
         private int nextSizeIndex;
 
         @Setup
         public void init() {
             queue = PlatformDependent.newFixedMpmcQueue(1024);
-            sizeIndexes = new int[MathUtil.findNextPositivePowerOfTwo(sizeList.size())];
+            sizes = new int[MathUtil.findNextPositivePowerOfTwo(flattendSizeArray.length)];
             SplittableRandom rand = new SplittableRandom(42);
-            // Pre-generate the to be released index.
-            for (int i = 0; i < sizeIndexes.length; i++) {
-                sizeIndexes[i] = rand.nextInt(sizeList.size());
+            // Shuffle the `flattendSizeArray` to `sizes`.
+            for (int i = 0; i < sizes.length; i++) {
+                int sizeIndex = rand.nextInt(flattendSizeArray.length);
+                sizes[i] = flattendSizeArray[sizeIndex];
             }
         }
 
         private int getNextSizeIndex() {
             int index = nextSizeIndex;
-            nextSizeIndex = (nextSizeIndex + 1) & (sizeIndexes.length - 1);
+            nextSizeIndex = (nextSizeIndex + 1) & (sizes.length - 1);
             return index;
         }
     }
@@ -95,9 +96,9 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     public void producerPooledDirect(ProducerConsumerState state, Control control) {
         Queue<ByteBuf> queue = state.queue;
         while (!control.stopMeasurement) {
-            int sizeIndex = state.sizeIndexes[state.getNextSizeIndex()];
-            int size = sizeList.get(sizeIndex);
-            if (queue.offer(pooledAlloc.directBuffer(size))) {
+            int size = state.sizes[state.getNextSizeIndex()];
+            ByteBuf buf = pooledAlloc.directBuffer(size);
+            if (queue.offer(buf)) {
                 break;
             }
         }
@@ -118,12 +119,12 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
 
     @Benchmark
     @Group("adaptive_direct")
-    public void producerAdaptiveDirect(ProducerConsumerState state, Control control) {
+    public void producerAdaptiveDirect(ProducerConsumerState state, Control control) throws Exception {
         Queue<ByteBuf> queue = state.queue;
         while (!control.stopMeasurement) {
-            int sizeIndex = state.sizeIndexes[state.getNextSizeIndex()];
-            int size = sizeList.get(sizeIndex);
-            if (queue.offer(adaptiveAllocator.directBuffer(size))) {
+            int size = state.sizes[state.getNextSizeIndex()];
+            ByteBuf buf = adaptiveAllocator.directBuffer(size);
+            if (queue.offer(buf)) {
                 break;
             }
         }
@@ -147,13 +148,14 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     public void producerMimallocDirect(ProducerConsumerState state, Control control) {
         Queue<ByteBuf> queue = state.queue;
         while (!control.stopMeasurement) {
-            int sizeIndex = state.sizeIndexes[state.getNextSizeIndex()];
-            int size = sizeList.get(sizeIndex);
-            if (queue.offer(miMallocAllocator.directBuffer(size))) {
+            int size = state.sizes[state.getNextSizeIndex()];
+            ByteBuf buf = miMallocAllocator.directBuffer(size);
+            if (queue.offer(buf)) {
                 break;
             }
         }
     }
+
 
     @Benchmark
     @Group("pooled_heap")
@@ -173,9 +175,9 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     public void producerPooledHeap(ProducerConsumerState state, Control control) {
         Queue<ByteBuf> queue = state.queue;
         while (!control.stopMeasurement) {
-            int sizeIndex = state.sizeIndexes[state.getNextSizeIndex()];
-            int size = sizeList.get(sizeIndex);
-            if (queue.offer(pooledAlloc.heapBuffer(size))) {
+            int size = state.sizes[state.getNextSizeIndex()];
+            ByteBuf buf = pooledAlloc.heapBuffer(size);
+            if (queue.offer(buf)) {
                 break;
             }
         }
@@ -199,9 +201,9 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     public void producerAdaptiveHeap(ProducerConsumerState state, Control control) throws Exception {
         Queue<ByteBuf> queue = state.queue;
         while (!control.stopMeasurement) {
-            int sizeIndex = state.sizeIndexes[state.getNextSizeIndex()];
-            int size = sizeList.get(sizeIndex);
-            if (queue.offer(adaptiveAllocator.heapBuffer(size))) {
+            int size = state.sizes[state.getNextSizeIndex()];
+            ByteBuf buf = adaptiveAllocator.heapBuffer(size);
+            if (queue.offer(buf)) {
                 break;
             }
         }
@@ -225,9 +227,9 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     public void producerMimallocHeap(ProducerConsumerState state, Control control) {
         Queue<ByteBuf> queue = state.queue;
         while (!control.stopMeasurement) {
-            int sizeIndex = state.sizeIndexes[state.getNextSizeIndex()];
-            int size = sizeList.get(sizeIndex);
-            if (queue.offer(miMallocAllocator.heapBuffer(size))) {
+            int size = state.sizes[state.getNextSizeIndex()];
+            ByteBuf buf = miMallocAllocator.heapBuffer(size);
+            if (queue.offer(buf)) {
                 break;
             }
         }
@@ -617,7 +619,8 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     };
 
     static {
-        // Flat the array to list.
+        // Flat the WEB_SOCKET_PROXY_PATTERN.
+        ArrayList<Integer> sizeList = new ArrayList<>();
         for (int i = 0; i < WEB_SOCKET_PROXY_PATTERN.length; i += 2) {
             int size = WEB_SOCKET_PROXY_PATTERN[i];
             int frequency = WEB_SOCKET_PROXY_PATTERN[i + 1];
@@ -625,5 +628,6 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
                 sizeList.add(size);
             }
         }
+        flattendSizeArray = sizeList.stream().mapToInt(Integer::intValue).toArray();
     }
 }

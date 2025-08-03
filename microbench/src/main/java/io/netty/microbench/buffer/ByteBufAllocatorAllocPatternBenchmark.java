@@ -48,8 +48,8 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
     private static final MiByteBufAllocator miMallocAllocator = new MiByteBufAllocator();
 
     private static final int SEED = 42;
-    // Allocation size list.
-    private static final ArrayList<Integer> sizeList = new ArrayList<>();
+    // Allocation size array.
+    private static final int[] flattendSizeArray;
 
     private static final int MAX_LIVE_BUFFERS = 8192;
     private final ByteBuf[] pooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
@@ -60,7 +60,7 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
     private final ByteBuf[] mimallocHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
 
     private int[] releaseIndexes;
-    private int[] sizeIndexes;
+    private int[] sizes;
 
     private int nextReleaseIndex;
     private int nextSizeIndex;
@@ -92,15 +92,16 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
     @Setup
     public void setup() {
         releaseIndexes = new int[MAX_LIVE_BUFFERS];
-        sizeIndexes = new int[MathUtil.findNextPositivePowerOfTwo(sizeList.size())];
+        sizes = new int[MathUtil.findNextPositivePowerOfTwo(flattendSizeArray.length)];
         SplittableRandom rand = new SplittableRandom(SEED);
         // Pre-generate the to be released index.
         for (int i = 0; i < releaseIndexes.length; i++) {
             releaseIndexes[i] = rand.nextInt(releaseIndexes.length);
         }
-        // Shuffle the sizeList index.
-        for (int i = 0; i < sizeIndexes.length; i++) {
-            sizeIndexes[i] = rand.nextInt(sizeList.size());
+        // Shuffle the `flattendSizeArray` to `sizes`.
+        for (int i = 0; i < sizes.length; i++) {
+            int sizeIndex = rand.nextInt(flattendSizeArray.length);
+            sizes[i] = flattendSizeArray[sizeIndex];
         }
     }
 
@@ -112,13 +113,12 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
 
     private int getNextSizeIndex() {
         int index = nextSizeIndex;
-        nextSizeIndex = (nextSizeIndex + 1) & (sizeIndexes.length - 1);
+        nextSizeIndex = (nextSizeIndex + 1) & (sizes.length - 1);
         return index;
     }
 
     private void directAlloc(Blackhole blackhole, ByteBufAllocator alloc, ByteBuf[] buffers) {
-        int sizeIndex = sizeIndexes[getNextSizeIndex()];
-        int size = sizeList.get(sizeIndex);
+        int size = sizes[getNextSizeIndex()];
         int releaseIndex = getNextReleaseIndex();
         ByteBuf oldBuf = buffers[releaseIndex];
         if (oldBuf != null) {
@@ -130,8 +130,7 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
     }
 
     private void heapAlloc(Blackhole blackhole, ByteBufAllocator alloc, ByteBuf[] buffers) {
-        int sizeIndex = sizeIndexes[getNextSizeIndex()];
-        int size = sizeList.get(sizeIndex);
+        int size = sizes[getNextSizeIndex()];
         int releaseIndex = getNextReleaseIndex();
         ByteBuf oldBuf = buffers[releaseIndex];
         if (oldBuf != null) {
@@ -556,7 +555,8 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
     };
 
     static {
-        // Flat the array to list.
+        // Flat the WEB_SOCKET_PROXY_PATTERN.
+        ArrayList<Integer> sizeList = new ArrayList<>();
         for (int i = 0; i < WEB_SOCKET_PROXY_PATTERN.length; i += 2) {
             int size = WEB_SOCKET_PROXY_PATTERN[i];
             int frequency = WEB_SOCKET_PROXY_PATTERN[i + 1];
@@ -564,5 +564,6 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
                 sizeList.add(size);
             }
         }
+        flattendSizeArray = sizeList.stream().mapToInt(Integer::intValue).toArray();
     }
 }
