@@ -156,7 +156,6 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         }
     }
 
-
     @Benchmark
     @Group("pooled_heap")
     public void consumerPooledHeap(ProducerConsumerState state, Control control, Blackhole blackhole) {
