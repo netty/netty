@@ -200,7 +200,7 @@ final class MiMallocByteBufAllocator {
         private static final byte VISIT_WORK_TYPE_PAGE_COLLECT = 1;
 
         private static final int BLOCK_QUEUE_SIZE = PAGE_MAX_EXTEND_SIZE;
-        private final ArrayDeque<Block> blockQueue = new ArrayDeque<Block>(BLOCK_QUEUE_SIZE);
+        private final ArrayDeque<Block> blockDeque = new ArrayDeque<Block>(BLOCK_QUEUE_SIZE);
 
         LocalHeap(MiMallocByteBufAllocator allocator) {
             this.ownerThread = Thread.currentThread();
@@ -553,7 +553,7 @@ final class MiMallocByteBufAllocator {
         }
 
         private Block getBlock(Page page, int blockBytes, int adjustment) {
-            Block block = blockQueue.poll();
+            Block block = blockDeque.poll();
             if (block == null) {
                 block = new Block();
             }
@@ -1151,7 +1151,7 @@ final class MiMallocByteBufAllocator {
             Block block = currentBlock;
             while (block != null) {
                 currentBlock = block;
-                blockQueue.offer(block);
+                blockDeque.offer(block);
                 block = block.nextBlock;
                 currentBlock.nextBlock = null;
             }
@@ -1160,7 +1160,7 @@ final class MiMallocByteBufAllocator {
             block = currentBlock;
             while (block != null) {
                 currentBlock = block;
-                blockQueue.offer(block);
+                blockDeque.offer(block);
                 block = block.nextBlock;
                 currentBlock.nextBlock = null;
             }
