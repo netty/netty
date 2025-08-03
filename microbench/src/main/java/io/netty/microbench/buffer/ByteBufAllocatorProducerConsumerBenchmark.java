@@ -95,9 +95,9 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     @Group("pooled_direct")
     public void producerPooledDirect(ProducerConsumerState state, Control control) {
         Queue<ByteBuf> queue = state.queue;
+        int size = state.sizes[state.getNextSizeIndex()];
+        ByteBuf buf = pooledAlloc.directBuffer(size);
         while (!control.stopMeasurement) {
-            int size = state.sizes[state.getNextSizeIndex()];
-            ByteBuf buf = pooledAlloc.directBuffer(size);
             if (queue.offer(buf)) {
                 break;
             }
@@ -121,9 +121,9 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     @Group("adaptive_direct")
     public void producerAdaptiveDirect(ProducerConsumerState state, Control control) throws Exception {
         Queue<ByteBuf> queue = state.queue;
+        int size = state.sizes[state.getNextSizeIndex()];
+        ByteBuf buf = adaptiveAllocator.directBuffer(size);
         while (!control.stopMeasurement) {
-            int size = state.sizes[state.getNextSizeIndex()];
-            ByteBuf buf = adaptiveAllocator.directBuffer(size);
             if (queue.offer(buf)) {
                 break;
             }
@@ -147,9 +147,9 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     @Group("mimalloc_direct")
     public void producerMimallocDirect(ProducerConsumerState state, Control control) {
         Queue<ByteBuf> queue = state.queue;
+        int size = state.sizes[state.getNextSizeIndex()];
+        ByteBuf buf = miMallocAllocator.directBuffer(size);
         while (!control.stopMeasurement) {
-            int size = state.sizes[state.getNextSizeIndex()];
-            ByteBuf buf = miMallocAllocator.directBuffer(size);
             if (queue.offer(buf)) {
                 break;
             }
@@ -174,9 +174,9 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     @Group("pooled_heap")
     public void producerPooledHeap(ProducerConsumerState state, Control control) {
         Queue<ByteBuf> queue = state.queue;
+        int size = state.sizes[state.getNextSizeIndex()];
+        ByteBuf buf = pooledAlloc.heapBuffer(size);
         while (!control.stopMeasurement) {
-            int size = state.sizes[state.getNextSizeIndex()];
-            ByteBuf buf = pooledAlloc.heapBuffer(size);
             if (queue.offer(buf)) {
                 break;
             }
@@ -200,9 +200,9 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     @Group("adaptive_heap")
     public void producerAdaptiveHeap(ProducerConsumerState state, Control control) throws Exception {
         Queue<ByteBuf> queue = state.queue;
+        int size = state.sizes[state.getNextSizeIndex()];
+        ByteBuf buf = adaptiveAllocator.heapBuffer(size);
         while (!control.stopMeasurement) {
-            int size = state.sizes[state.getNextSizeIndex()];
-            ByteBuf buf = adaptiveAllocator.heapBuffer(size);
             if (queue.offer(buf)) {
                 break;
             }
@@ -226,9 +226,9 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     @Group("mimalloc_heap")
     public void producerMimallocHeap(ProducerConsumerState state, Control control) {
         Queue<ByteBuf> queue = state.queue;
+        int size = state.sizes[state.getNextSizeIndex()];
+        ByteBuf buf = miMallocAllocator.heapBuffer(size);
         while (!control.stopMeasurement) {
-            int size = state.sizes[state.getNextSizeIndex()];
-            ByteBuf buf = miMallocAllocator.heapBuffer(size);
             if (queue.offer(buf)) {
                 break;
             }
