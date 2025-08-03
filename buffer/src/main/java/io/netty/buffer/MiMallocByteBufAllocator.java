@@ -443,7 +443,7 @@ final class MiMallocByteBufAllocator {
         private Page largeOrHugePageAlloc(int size) {
             int block_size = getGoodOsAllocSize(size);
             boolean is_huge = block_size > LARGE_BLOCK_SIZE_MAX;
-            //TODO: handle huge page stats?`
+            //TODO: handle huge page stats?
             PageQueue pq = is_huge ? null : pageQueue(block_size);
             Page page = pageFreshAlloc(pq, block_size);
             if (page != null && is_huge) {

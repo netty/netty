@@ -56,13 +56,13 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
     @State(Scope.Group)
     public static class ProducerConsumerState {
         private Queue<ByteBuf> queue;
-        private Integer[] sizeIndexes;
+        private int[] sizeIndexes;
         private int nextSizeIndex;
 
         @Setup
         public void init() {
             queue = PlatformDependent.newFixedMpmcQueue(1024);
-            sizeIndexes = new Integer[MathUtil.findNextPositivePowerOfTwo(sizeList.size())];
+            sizeIndexes = new int[MathUtil.findNextPositivePowerOfTwo(sizeList.size())];
             SplittableRandom rand = new SplittableRandom(42);
             // Pre-generate the to be released index.
             for (int i = 0; i < sizeIndexes.length; i++) {

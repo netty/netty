@@ -59,8 +59,8 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
     private final ByteBuf[] adaptiveHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
     private final ByteBuf[] mimallocHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
 
-    private Integer[] releaseIndexes;
-    private Integer[] sizeIndexes;
+    private int[] releaseIndexes;
+    private int[] sizeIndexes;
 
     private int nextReleaseIndex;
     private int nextSizeIndex;
@@ -91,8 +91,8 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
 
     @Setup
     public void setup() {
-        releaseIndexes = new Integer[MAX_LIVE_BUFFERS];
-        sizeIndexes = new Integer[MathUtil.findNextPositivePowerOfTwo(sizeList.size())];
+        releaseIndexes = new int[MAX_LIVE_BUFFERS];
+        sizeIndexes = new int[MathUtil.findNextPositivePowerOfTwo(sizeList.size())];
         SplittableRandom rand = new SplittableRandom(SEED);
         // Pre-generate the to be released index.
         for (int i = 0; i < releaseIndexes.length; i++) {
