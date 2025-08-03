@@ -70,6 +70,14 @@ public final class MiByteBufAllocator extends AbstractByteBufAllocator
         return direct.usedMemory();
     }
 
+    long abandonedHeapSegmentCount() {
+        return heap.abandonedSegmentCount();
+    }
+
+    long abandonedDirectSegmentCount() {
+        return direct.abandonedSegmentCount();
+    }
+
     @Override
     public ByteBufAllocatorMetric metric() {
         return this;

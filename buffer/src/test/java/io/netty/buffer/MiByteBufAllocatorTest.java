@@ -98,4 +98,31 @@ public class MiByteBufAllocatorTest extends AbstractByteBufAllocatorTest<MiByteB
         return 1 << 22; // Default segment size: 4MiB
     }
 
+    @Test
+    public void testAbandonAndReclaim() throws InterruptedException {
+        MiByteBufAllocator allocator = newAllocator(true);
+        AtomicReference<ByteBuf> buf1 = new AtomicReference<>();
+        AtomicReference<ByteBuf> buf2 = new AtomicReference<>();
+        FastThreadLocalThread t1 = new FastThreadLocalThread(new Runnable() {
+            @Override
+            public void run() {
+                buf1.set(allocator.directBuffer());
+            }
+        });
+        t1.start();
+        t1.join();
+        assertEquals(1, allocator.abandonedDirectSegmentCount());
+        FastThreadLocalThread t2 = new FastThreadLocalThread(new Runnable() {
+            @Override
+            public void run() {
+                buf2.set(allocator.directBuffer());
+                assertEquals(0, allocator.abandonedDirectSegmentCount());
+            }
+        });
+        t2.start();
+        t2.join();
+        assertEquals(1, allocator.abandonedDirectSegmentCount());
+        buf1.get().release();
+        buf2.get().release();
+    }
 }

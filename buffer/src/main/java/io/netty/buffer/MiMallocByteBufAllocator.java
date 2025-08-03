@@ -115,11 +115,10 @@ final class MiMallocByteBufAllocator {
     private final FastThreadLocal<LocalHeap> THREAD_LOCAL_HEAP;
 
     private final Deque<Segment> abandonedSegmentQueue;
-
-    private final ChunkAllocator chunkAllocator;
-
     // Count of abandoned segments for this allocator.
     private final AtomicLong abandonedSegmentCount = new AtomicLong();
+
+    private final ChunkAllocator chunkAllocator;
 
     private static final Object RECLAIMED_SEGMENT_FLAG = new Object();
 
@@ -303,8 +302,10 @@ final class MiMallocByteBufAllocator {
         // Collect abandoned segments
         private void abandonedCollect(boolean force) {
             Segment segment;
-            long max_tries = force ? this.allocator.abandonedSegmentCount.get() : 1024;  // Limit latency
+            long abandonedSegmentCount = this.allocator.abandonedSegmentCount.get();
+            long max_tries = force ? abandonedSegmentCount : Math.min(1024, abandonedSegmentCount);  // Limit latency
             while (max_tries-- > 0 && (segment = this.allocator.abandonedSegmentQueue.poll()) != null) {
+                this.allocator.abandonedSegmentCount.decrementAndGet();
                 segmentCheckFree(segment, 0, 0); // try to free up pages (due to concurrent frees)
                 if (segment.usedPages == 0) {
                     // Free the segment (by forced reclaim) to make it available to other threads.
@@ -423,6 +424,7 @@ final class MiMallocByteBufAllocator {
         private void abandonedReclaimAll() {
             Segment segment;
             while ((segment = this.allocator.abandonedSegmentQueue.poll()) != null) {
+                this.allocator.abandonedSegmentCount.decrementAndGet();
                 segmentReclaim(segment, 0, false);
             }
         }
@@ -688,6 +690,7 @@ final class MiMallocByteBufAllocator {
             Object result = null;
             for (Segment segment = this.allocator.abandonedSegmentQueue.poll();
                 segment != null && max_tries > 0; max_tries--) {
+                this.allocator.abandonedSegmentCount.decrementAndGet();
                 segment.abandonedVisits++;
                 // Try to free up pages (due to concurrent frees).
                 boolean has_page = segmentCheckFree(segment, needed_slices, block_size);
@@ -1669,6 +1672,10 @@ final class MiMallocByteBufAllocator {
 
     long usedMemory() {
         return usedMemory.get();
+    }
+
+    long abandonedSegmentCount() {
+        return abandonedSegmentCount.get();
     }
 
     // Free a block.
