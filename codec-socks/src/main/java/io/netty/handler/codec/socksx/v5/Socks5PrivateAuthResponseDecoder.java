@@ -40,7 +40,8 @@ import java.util.List;
  * For custom private authentication protocols, you can:
  * <ul>
  *   <li>Create a new decoder implementing {@link ByteToMessageDecoder} or similar</li>
- *   <li>Implement the {@link Socks5PrivateAuthResponse} interface or extend {@link DefaultSocks5PrivateAuthResponse}</li>
+ *   <li>Implement the {@link Socks5PrivateAuthResponse} interface
+ *   or extend {@link DefaultSocks5PrivateAuthResponse}</li>
  *   <li>Create a custom handler chain to process the authentication responses</li>
  * </ul>
  * </p>
