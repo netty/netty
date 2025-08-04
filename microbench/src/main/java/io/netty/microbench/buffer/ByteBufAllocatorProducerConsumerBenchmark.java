@@ -23,6 +23,7 @@ import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.CompilerControl;
 import org.openjdk.jmh.annotations.Group;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Scope;
@@ -39,6 +40,7 @@ import java.util.SplittableRandom;
 @State(Scope.Benchmark)
 @Warmup(iterations = 10, time = 1)
 @Measurement(iterations = 10, time = 1)
+@CompilerControl(CompilerControl.Mode.DONT_INLINE)
 public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenchmark {
 
     private static final AdaptiveByteBufAllocator adaptiveAllocator = new AdaptiveByteBufAllocator();
