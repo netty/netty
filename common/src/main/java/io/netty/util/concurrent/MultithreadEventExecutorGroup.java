@@ -382,6 +382,8 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     }
 
     private final class UtilizationMonitor implements Runnable {
+        private final List<SingleThreadEventExecutor> consistentlyIdleChildren = new ArrayList<>(maxChildren);
+
         @Override
         public void run() {
             if (isShuttingDown() || isShutdown() || isTerminated()) {
@@ -392,16 +394,31 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             }
 
             int consistentlyBusyChildren = 0;
-            final List<SingleThreadEventExecutor> consistentlyIdleChildren = new ArrayList<>(maxChildren);
+            consistentlyIdleChildren.clear();
 
-            // Gather utilization data from all active children.
             for (EventExecutor child : children) {
                 if (child.isSuspended() || !(child instanceof SingleThreadEventExecutor)) {
                     continue;
                 }
 
                 SingleThreadEventExecutor stee = (SingleThreadEventExecutor) child;
-                double utilization = stee.getAndResetUtilization();
+
+                long activeTime = stee.getAndResetAccumulatedActiveTimeNanos();
+                final long totalTime = utilizationCheckPeriodNanos;
+
+                if (activeTime == 0) {
+                    long lastActivity = stee.getLastActivityTimeNanos();
+                    long idleTime = ticker().nanoTime() - lastActivity;
+
+                    // If the event loop has been idle for less time than our utilization window,
+                    // it means it was active for the remainder of that window.
+                    if (idleTime < totalTime) {
+                        activeTime = totalTime - idleTime;
+                    }
+                    // If idleTime >= totalTime, it was idle for the whole window, so activeTime remains 0.
+                }
+
+                double utilization = Math.min(1.0, (double) activeTime / totalTime);
 
                 if (utilization < scaleDownThreshold) {
                     // Utilization is low, increment idle counter and reset busy counter.
@@ -429,8 +446,9 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
 
             if (!consistentlyIdleChildren.isEmpty() && currentActive > minChildren) {
                 // Scale down, we have children that have been idle for multiple cycles.
-                // Sort candidates to prioritize suspending the most idle ones first.
-                consistentlyIdleChildren.sort((e1, e2) -> Integer.compare(e2.getIdleCycles(), e1.getIdleCycles()));
+
+                consistentlyIdleChildren.removeIf(stee -> stee.registeredChannels() > 0);
+
                 int threadsToRemove = Math.min(consistentlyIdleChildren.size(), maxRampDownStep);
                 threadsToRemove = Math.min(threadsToRemove, currentActive - minChildren);
 

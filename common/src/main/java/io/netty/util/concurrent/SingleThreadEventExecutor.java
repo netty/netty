@@ -95,10 +95,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final RejectedExecutionHandler rejectedExecutionHandler;
     private final boolean supportSuspension;
 
-    // A running total of nanoseconds this executor has spent in an "active" state during the current
-    // measurement window.
-    private final AtomicLong activeTimeInWindowNanos = new AtomicLong(0);
-    private final AtomicLong windowStartTimeNanos = new AtomicLong(ticker().nanoTime());
+    // A running total of nanoseconds this executor has spent in an "active" state.
+    private final AtomicLong accumulatedActiveTimeNanos = new AtomicLong(0);
+    // Timestamp of the last recorded activity (tasks + IO).
+    private final AtomicLong lastActivityTimeNanos = new AtomicLong(ticker().nanoTime());
     /**
      * Tracks the number of consecutive monitor cycles this executor's
      * utilization has been below the scale-down threshold.
@@ -544,7 +544,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         }
 
         long workEndTime = ticker().nanoTime();
-        activeTimeInWindowNanos.addAndGet(workEndTime - workStartTime);
+        accumulatedActiveTimeNanos.addAndGet(workEndTime - workStartTime);
+        lastActivityTimeNanos.set(workEndTime);
 
         afterRunningAllTasks();
         this.lastExecutionTime = lastExecutionTime;
@@ -590,7 +591,20 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * checks.
      */
     protected void updateLastExecutionTime() {
-        lastExecutionTime = getCurrentTimeNanos();
+        long now = getCurrentTimeNanos();
+        lastExecutionTime = now;
+        lastActivityTimeNanos.set(now);
+    }
+
+    /**
+     * Returns the number of channels registered with this executor. A value of 0 is returned
+     * for executors that do not handle channels. Implementations that do handle channels
+     * should override this method.
+     *
+     * @return The number of registered channels, or 0 by default.
+     */
+    public int registeredChannels() {
+        return 0;
     }
 
     /**
@@ -600,25 +614,23 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      */
     public void reportActiveIoTime(long nanos) {
         if (nanos > 0) {
-            activeTimeInWindowNanos.addAndGet(nanos);
+            accumulatedActiveTimeNanos.addAndGet(nanos);
+            lastActivityTimeNanos.set(ticker().nanoTime());
         }
     }
 
     /**
-     * Calculates the utilization ratio since the last reset and resets the window.
-     * @return A value between 0.0 and 1.0 representing the utilization percentage.
+     * Returns the accumulated active time since the last call and resets the counter.
      */
-    public double getAndResetUtilization() {
-        long now = ticker().nanoTime();
-        long startTime = windowStartTimeNanos.getAndSet(now);
-        long activeTime = activeTimeInWindowNanos.getAndSet(0);
+    public long getAndResetAccumulatedActiveTimeNanos() {
+        return accumulatedActiveTimeNanos.getAndSet(0);
+    }
 
-        long totalTimeInWindow = now - startTime;
-        if (totalTimeInWindow <= 0) {
-            return 0.0;
-        }
-        // Return the ratio of active time to total time. Clamp between 0 and 1.
-        return Math.max(0.0, Math.min(1.0, (double) activeTime / totalTimeInWindow));
+    /**
+     * Returns the timestamp of the last known activity (tasks + I/O).
+     */
+    public long getLastActivityTimeNanos() {
+        return lastActivityTimeNanos.get();
     }
 
     public int getAndIncrementIdleCycles() {
@@ -635,14 +647,6 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
 
     public void resetBusyCycles() {
         consecutiveBusyCycles.set(0);
-    }
-
-    /**
-     * Returns the current number of consecutive idle cycles without modifying it.
-     * @return The current number of idle cycles.
-     */
-    public int getIdleCycles() {
-        return consecutiveIdleCycles.get();
     }
 
     /**

@@ -69,6 +69,7 @@ public class MultithreadEventExecutorGroupTest {
                 } else {
                     boolean ranTask = runAllTasks();
                     if (ranTask) {
+                        updateLastExecutionTime();
                         // If we ran tasks, immediately loop back to check highLoad state
                         continue;
                     }

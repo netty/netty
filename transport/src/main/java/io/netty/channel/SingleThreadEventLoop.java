@@ -180,6 +180,7 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
      * if operation is not supported. The returned value is not guaranteed to be exact accurate and
      * should be viewed as a best effort.
      */
+    @Override
     @UnstableApi
     public int registeredChannels() {
         return -1;

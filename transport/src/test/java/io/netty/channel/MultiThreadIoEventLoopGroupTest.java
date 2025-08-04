@@ -136,7 +136,7 @@ public class MultiThreadIoEventLoopGroupTest {
     }
 
     @Test
-    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    @Timeout(value = 5, unit = TimeUnit.SECONDS)
     public void testScalingWithIoRegistrationLifecycle() throws InterruptedException {
         TestMultiThreadIoEventLoopGroup group = new TestMultiThreadIoEventLoopGroup(0, 2, 200, TimeUnit.MILLISECONDS);
         try {
@@ -163,6 +163,41 @@ public class MultiThreadIoEventLoopGroupTest {
             waitForSuspension(group, 2, 2000);
             assertTrue(activeExecutor.isSuspended(),
                        "Executor should suspend after handle is cancelled and idle");
+        } finally {
+            group.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    public void testShouldNotSuspendExecutorWithActiveRegistration() throws InterruptedException {
+        TestMultiThreadIoEventLoopGroup group = new TestMultiThreadIoEventLoopGroup(0, 2, 200, TimeUnit.MILLISECONDS);
+        try {
+            startAllExecutors(group);
+            waitForSuspension(group, 1, 2000);
+            assertEquals(1, countActiveExecutors(group), "One executor should have been suspended");
+
+            TestableIoEventLoop activeExecutor = (TestableIoEventLoop) findActiveExecutor(group);
+            assertNotNull(activeExecutor, "One executor should remain active");
+
+            // Register a handle with the active executor. This makes registeredChannels() return 1.
+            IoRegistration registration = activeExecutor.register(new TestIoHandle()).syncUninterruptibly().getNow();
+
+            // The executor is now a candidate for suspension based on utilization,
+            // but not based on registered channels.
+            activeExecutor.setSimulateWorkload(false);
+
+            // Wait for a few monitor cycles. The monitor will run and see the executor is idle.
+            Thread.sleep(600);
+
+            assertFalse(activeExecutor.isSuspended(),
+                        "Executor with an active registration should not be suspended, even if idle");
+            assertEquals(1, countActiveExecutors(group), "Only one executor should still be active");
+
+            assertTrue(registration.cancel());
+            waitForSuspension(group, 2, 2000);
+            assertTrue(activeExecutor.isSuspended(),
+                       "Executor should suspend after registration is cancelled and it remains idle");
         } finally {
             group.shutdownGracefully().syncUninterruptibly();
         }

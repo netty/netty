@@ -235,6 +235,11 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         return promise;
     }
 
+    @Override
+    public int registeredChannels() {
+        return numRegistrations.get();
+    }
+
     private void registerForIo0(final IoHandle handle, Promise<IoRegistration> promise) {
         assert inEventLoop();
         final IoRegistration registration;
