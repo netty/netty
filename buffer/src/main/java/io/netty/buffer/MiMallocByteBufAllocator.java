@@ -965,7 +965,11 @@ final class MiMallocByteBufAllocator {
             int segment_slices = segmentCalculateSlices(0);
             int segment_size = segment_slices * SEGMENT_SLICE_SIZE;
             // Allocate the segment.
-            Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_NORMAL);
+            AbstractByteBuf buf = this.allocator.newChunk(segment_size);
+            if (buf == null) {
+                return null; // Signal OOM
+            }
+            Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_NORMAL, buf);
             segmentsTrackSize(segment.segmentSize);
             // Initialize the initial free pages.
             segmentSpanFree(segment, 0, segment.sliceEntries);
@@ -976,7 +980,11 @@ final class MiMallocByteBufAllocator {
             int segment_slices = segmentCalculateSlices(required);
             int segment_size = segment_slices * SEGMENT_SLICE_SIZE;
             // Allocate the segment.
-            Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_HUGE);
+            AbstractByteBuf buf = this.allocator.newChunk(segment_size);
+            if (buf == null) {
+                return null; // Signal OOM
+            }
+            Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_HUGE, buf);
             segmentsTrackSize(segment.segmentSize);
             // Initialize the initial free pages.
             return segmentSpanAllocate(segment, 0, segment_slices);
@@ -1599,7 +1607,11 @@ final class MiMallocByteBufAllocator {
     }
 
     private AbstractByteBuf newChunk(int size) {
-        return chunkAllocator.allocate(size, size);
+        try {
+            return chunkAllocator.allocate(size, size);
+        } catch (OutOfMemoryError e) {
+            return null; // OOM
+        }
     }
 
     static final class SpanQueue {
@@ -1646,9 +1658,10 @@ final class MiMallocByteBufAllocator {
         boolean wasReclaimed; // True if it was reclaimed (used to limit on-free reclamation).
         final SEGMENT_KIND kind;
 
-        Segment(MiMallocByteBufAllocator parent, int segmentSize, int segmentSlices, SEGMENT_KIND kind) {
+        Segment(MiMallocByteBufAllocator parent, int segmentSize, int segmentSlices, SEGMENT_KIND kind,
+                AbstractByteBuf delegate) {
             this.parent = parent;
-            this.delegate = parent.newChunk(segmentSize);
+            this.delegate = delegate;
             ownerThread.set(kind == SEGMENT_HUGE ? null : Thread.currentThread());
             this.segmentSize = segmentSize;
             this.parent.usedMemory.addAndGet(segmentSize);
