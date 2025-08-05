@@ -37,7 +37,9 @@ import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.buffer.Unpooled.compositeBuffer;
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.util.CharsetUtil.US_ASCII;
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -1805,4 +1807,52 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertArrayEquals(new byte[] {6, 5, 4, 3, 2, 1}, arrayDesc);
         buf.release();
     }
+
+    @Test
+    public void componentSliceFromFlattenedCompositeShouldHaveCorrectView() {
+        ByteBufAllocator alloc = new PooledByteBufAllocator();
+        ByteBuf buf = null;
+        CompositeByteBuf composite1 = null;
+        CompositeByteBuf composite2 = null;
+        ByteBuf component = null;
+
+        try {
+            buf = alloc.buffer(32).writeBytes("---01234".getBytes(US_ASCII));
+
+            composite1 = alloc.compositeBuffer(8).addFlattenedComponents(true, buf);
+            buf = null;
+
+            assertThat(composite1.readCharSequence(3, US_ASCII).toString()).isEqualTo("---");
+
+            composite2 = alloc.compositeBuffer(8).addFlattenedComponents(true, composite1);
+            composite1 = null;
+
+            assertThat(composite2.toString(US_ASCII)).isEqualTo("01234");
+
+            // Remove the last component from the cumulation, then add it back.
+            int tailComponentIndex = composite2.numComponents() - 1;
+            int tailStart = composite2.toByteIndex(tailComponentIndex);
+            component = composite2.componentSlice(tailComponentIndex);
+            assertThat(component.readableBytes()).isEqualTo(5);
+            assertThat(component.toString(US_ASCII)).isEqualTo("01234");
+
+            // Take temporary ownership of the component.
+            component.retain();
+
+            // Remove the component from the composite buf.
+            composite2.removeComponent(tailComponentIndex).setIndex(0, tailStart);
+
+            composite2.addFlattenedComponents(true, component);
+            component = null;
+
+            assertThat(composite2.toString(US_ASCII)).isEqualTo("01234");
+        } finally {
+            // On a success path, only composite2 will be non-null here.
+            ReferenceCountUtil.release(buf);
+            ReferenceCountUtil.release(composite1);
+            ReferenceCountUtil.release(composite2);
+            ReferenceCountUtil.release(component);
+        }
+    }
+
 }
