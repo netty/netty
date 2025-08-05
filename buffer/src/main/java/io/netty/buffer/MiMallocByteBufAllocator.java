@@ -198,8 +198,7 @@ final class MiMallocByteBufAllocator {
         private static final byte VISIT_WORK_TYPE_MARK_PAGE_NEVER_DELAYED_FREE = 0;
         private static final byte VISIT_WORK_TYPE_PAGE_COLLECT = 1;
 
-        private static final int BLOCK_QUEUE_SIZE = PAGE_MAX_EXTEND_SIZE;
-        private final ArrayDeque<Block> blockDeque = new ArrayDeque<Block>(BLOCK_QUEUE_SIZE);
+        private final ArrayDeque<Block> blockDeque = new ArrayDeque<Block>(1024);
 
         LocalHeap(MiMallocByteBufAllocator allocator) {
             this.ownerThread = Thread.currentThread();
