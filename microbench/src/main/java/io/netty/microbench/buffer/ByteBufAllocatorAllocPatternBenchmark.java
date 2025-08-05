@@ -42,7 +42,6 @@ import java.util.SplittableRandom;
 @Warmup(iterations = 10, time = 1)
 @Measurement(iterations = 10, time = 1)
 @Threads(8)
-@CompilerControl(CompilerControl.Mode.DONT_INLINE)
 public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmark {
 
     private static final PooledByteBufAllocator pooledAlloc = PooledByteBufAllocator.DEFAULT;
@@ -143,31 +142,37 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
         blackhole.consume(buffers);
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     public void pooledDirect(Blackhole blackhole) {
         directAlloc(blackhole, pooledAlloc, pooledDirectBuffers);
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     public void adaptiveDirect(Blackhole blackhole) {
         directAlloc(blackhole, adaptiveAllocator, adaptiveDirectBuffers);
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     public void mimallocDirect(Blackhole blackhole) {
         directAlloc(blackhole, miMallocAllocator, mimallocDirectBuffers);
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     public void pooledHeap(Blackhole blackhole) {
         heapAlloc(blackhole, pooledAlloc, pooledHeapBuffers);
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     public void adaptiveHeap(Blackhole blackhole) {
         heapAlloc(blackhole, adaptiveAllocator, adaptiveHeapBuffers);
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     public void mimallocHeap(Blackhole blackhole) {
         heapAlloc(blackhole, miMallocAllocator, mimallocHeapBuffers);

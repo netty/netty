@@ -40,7 +40,6 @@ import java.util.SplittableRandom;
 @State(Scope.Benchmark)
 @Warmup(iterations = 10, time = 1)
 @Measurement(iterations = 10, time = 1)
-@CompilerControl(CompilerControl.Mode.DONT_INLINE)
 public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenchmark {
 
     private static final AdaptiveByteBufAllocator adaptiveAllocator = new AdaptiveByteBufAllocator();
@@ -80,6 +79,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         }
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("pooled_direct")
     public void consumerPooledDirect(ProducerConsumerState state, Control control, Blackhole blackhole) {
@@ -93,6 +93,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         } while (!control.stopMeasurement);
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("pooled_direct")
     public void producerPooledDirect(ProducerConsumerState state, Control control) {
@@ -106,6 +107,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         }
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("adaptive_direct")
     public void consumerAdaptiveDirect(ProducerConsumerState state, Control control, Blackhole blackhole) {
@@ -119,6 +121,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         } while (!control.stopMeasurement);
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("adaptive_direct")
     public void producerAdaptiveDirect(ProducerConsumerState state, Control control) throws Exception {
@@ -132,6 +135,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         }
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("mimalloc_direct")
     public void consumerMimallocDirect(ProducerConsumerState state, Control control, Blackhole blackhole) {
@@ -145,6 +149,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         } while (!control.stopMeasurement);
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("mimalloc_direct")
     public void producerMimallocDirect(ProducerConsumerState state, Control control) {
@@ -158,6 +163,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         }
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("pooled_heap")
     public void consumerPooledHeap(ProducerConsumerState state, Control control, Blackhole blackhole) {
@@ -171,6 +177,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         } while (!control.stopMeasurement);
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("pooled_heap")
     public void producerPooledHeap(ProducerConsumerState state, Control control) {
@@ -184,6 +191,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         }
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("adaptive_heap")
     public void consumerAdaptiveHeap(ProducerConsumerState state, Control control, Blackhole blackhole) {
@@ -197,6 +205,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         } while (!control.stopMeasurement);
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("adaptive_heap")
     public void producerAdaptiveHeap(ProducerConsumerState state, Control control) throws Exception {
@@ -210,6 +219,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         }
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("mimalloc_heap")
     public void consumerMimallocHeap(ProducerConsumerState state, Control control, Blackhole blackhole) {
@@ -223,6 +233,7 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         } while (!control.stopMeasurement);
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("mimalloc_heap")
     public void producerMimallocHeap(ProducerConsumerState state, Control control) {
