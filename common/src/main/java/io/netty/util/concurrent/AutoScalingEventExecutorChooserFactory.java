@@ -44,7 +44,6 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
     private final int minChildren;
     private final int maxChildren;
     private final long utilizationCheckPeriodNanos;
-    private final TimeUnit windowUnit;
     private final double scaleDownThreshold;
     private final double scaleUpThreshold;
     private final int maxRampUpStep;
@@ -105,7 +104,6 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
         this.minChildren = minThreads;
         this.maxChildren = maxThreads;
         this.utilizationCheckPeriodNanos = windowUnit.toNanos(utilizationWindow);
-        this.windowUnit = windowUnit;
         this.scaleDownThreshold = scaleDownThreshold;
         this.scaleUpThreshold = scaleUpThreshold;
         this.maxRampUpStep = maxRampUpStep;
