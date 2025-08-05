@@ -442,11 +442,11 @@ public class EpollIoHandler implements IoHandler {
             }
             if (strategy > 0) {
                 handled = strategy;
-                long activeIoStartTimeNanos = context.ticker().nanoTime();
+                long activeIoStartTimeNanos = System.nanoTime();
                 if (processReady(events, strategy)) {
                     prevDeadlineNanos = NONE;
                 }
-                long activeIoEndTimeNanos = context.ticker().nanoTime();
+                long activeIoEndTimeNanos = System.nanoTime();
                 context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
             }
             if (allowGrowing && strategy == events.length()) {

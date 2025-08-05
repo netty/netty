@@ -15,8 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.MultithreadEventExecutorGroup;
 import io.netty.util.concurrent.ThreadAwareExecutor;
-import io.netty.util.concurrent.Ticker;
 
 /**
  * The context for an {@link IoHandler} that is run by an {@link ThreadAwareExecutor}.
@@ -50,14 +50,23 @@ public interface IoHandlerContext {
 
     /**
      * Reports the amount of time in nanoseconds that was spent actively processing I/O events.
-     * This does not include time spent blocking/waiting for I/O.
+     * <p>
+     * This metric is needed for the dynamic, utilization-based auto-scaling feature
+     * in {@link MultithreadEventExecutorGroup}. The reported time
+     * allows the auto-scaler to accurately measure the I/O workload of an event loop.
+     * <p>
+     * {@code IoHandler} implementations should measure the time spent in their event processing
+     * logic and report the duration via this method. This should only include time spent
+     * actively handling ready I/O events and should <strong>not</strong> include time spent blocking or
+     * waiting for I/O (e.g., in an {@code epoll_wait}) call.
+     * <p>
+     * The default implementation of this method is a no-op. Failing to override it in an
+     * {@link IoHandlerContext} that supports auto-scaling will result in the I/O utilization
+     * being perceived as zero.
      *
-     * @param activeNanos The duration in nanoseconds of active I/O work.
+     * @param activeNanos The duration in nanoseconds of active, non-blocking I/O work.
      */
-    void reportActiveIoTime(long activeNanos);
-
-    /**
-     * Returns the {@link Ticker} that provides the time source for the event loop.
-     */
-    Ticker ticker();
+    default void reportActiveIoTime(long activeNanos) {
+        // no-op
+    }
 }

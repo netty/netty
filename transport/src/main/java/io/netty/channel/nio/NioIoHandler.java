@@ -468,9 +468,9 @@ public final class NioIoHandler implements IoHandler {
             needsToSelectAgain = false;
 
             // We start the timer after the blocking select() call has returned.
-            long activeIoStartTimeNanos = context.ticker().nanoTime();
+            long activeIoStartTimeNanos = System.nanoTime();
             handled = processSelectedKeys();
-            long activeIoEndTimeNanos = context.ticker().nanoTime();
+            long activeIoEndTimeNanos = System.nanoTime();
             context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
         } catch (Error e) {
             throw e;

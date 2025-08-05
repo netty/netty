@@ -597,14 +597,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     }
 
     /**
-     * Returns the number of channels registered with this executor. A value of 0 is returned
-     * for executors that do not handle channels. Implementations that do handle channels
-     * should override this method.
+     * Returns the number of registered channels for auto-scaling related decisions.
+     * This is intended to be used by {@link MultithreadEventExecutorGroup} for dynamic scaling.
      *
-     * @return The number of registered channels, or 0 by default.
+     * @return The number of registered channels, or {@code -1} if not applicable.
      */
-    public int registeredChannels() {
-        return 0;
+    protected int getNumOfRegisteredChannels() {
+        return -1;
     }
 
     /**
@@ -612,7 +611,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * This method is thread-safe.
      * @param nanos The active time in nanoseconds to add.
      */
-    public void reportActiveIoTime(long nanos) {
+    protected void reportActiveIoTime(long nanos) {
         if (nanos > 0) {
             accumulatedActiveTimeNanos.addAndGet(nanos);
             lastActivityTimeNanos.set(ticker().nanoTime());
@@ -622,30 +621,30 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     /**
      * Returns the accumulated active time since the last call and resets the counter.
      */
-    public long getAndResetAccumulatedActiveTimeNanos() {
+    protected long getAndResetAccumulatedActiveTimeNanos() {
         return accumulatedActiveTimeNanos.getAndSet(0);
     }
 
     /**
      * Returns the timestamp of the last known activity (tasks + I/O).
      */
-    public long getLastActivityTimeNanos() {
+    protected long getLastActivityTimeNanos() {
         return lastActivityTimeNanos.get();
     }
 
-    public int getAndIncrementIdleCycles() {
+    protected int getAndIncrementIdleCycles() {
         return consecutiveIdleCycles.getAndIncrement();
     }
 
-    public void resetIdleCycles() {
+    protected void resetIdleCycles() {
         consecutiveIdleCycles.set(0);
     }
 
-    public int getAndIncrementBusyCycles() {
+    protected int getAndIncrementBusyCycles() {
         return consecutiveBusyCycles.getAndIncrement();
     }
 
-    public void resetBusyCycles() {
+    protected void resetBusyCycles() {
         consecutiveBusyCycles.set(0);
     }
 

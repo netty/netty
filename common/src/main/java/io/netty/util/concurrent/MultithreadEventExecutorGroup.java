@@ -425,7 +425,9 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
                     int idleCycles = stee.getAndIncrementIdleCycles();
                     stee.resetBusyCycles();
                     if (idleCycles >= scalingPatienceCycles) {
-                        consistentlyIdleChildren.add(stee);
+                        if (stee.getNumOfRegisteredChannels() <= 0) {
+                            consistentlyIdleChildren.add(stee);
+                        }
                     }
                 } else if (utilization > scaleUpThreshold) {
                     // Utilization is high, increment busy counter and reset idle counter.
@@ -444,10 +446,16 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
             // Make scaling decisions based on stable states.
             int currentActive = activeChildrenCount.get();
 
-            if (!consistentlyIdleChildren.isEmpty() && currentActive > minChildren) {
+            if (consistentlyBusyChildren > 0 && currentActive < maxChildren) {
+                // Scale Up, we have children that have been busy for multiple cycles.
+                int threadsToAdd = Math.min(consistentlyBusyChildren, maxRampUpStep);
+                threadsToAdd = Math.min(threadsToAdd, maxChildren - currentActive);
+                if (threadsToAdd > 0) {
+                    // tryScaleUpBy handles the atomic increment and wake-up.
+                    tryScaleUpBy(threadsToAdd);
+                }
+            } else if (!consistentlyIdleChildren.isEmpty() && currentActive > minChildren) {
                 // Scale down, we have children that have been idle for multiple cycles.
-
-                consistentlyIdleChildren.removeIf(stee -> stee.registeredChannels() > 0);
 
                 int threadsToRemove = Math.min(consistentlyIdleChildren.size(), maxRampDownStep);
                 threadsToRemove = Math.min(threadsToRemove, currentActive - minChildren);
@@ -465,16 +473,6 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
                 if (actuallyRemoved > 0) {
                     //TODO: log # of suspended and current active threads?
                     activeChildrenCount.addAndGet(-actuallyRemoved);
-                }
-            }
-
-            if (consistentlyBusyChildren > 0 && currentActive < maxChildren) {
-                // Scale Up, we have children that have been busy for multiple cycles.
-                int threadsToAdd = Math.min(consistentlyBusyChildren, maxRampUpStep);
-                threadsToAdd = Math.min(threadsToAdd, maxChildren - currentActive);
-                if (threadsToAdd > 0) {
-                    // tryScaleUpBy handles the atomic increment and wake-up.
-                    tryScaleUpBy(threadsToAdd);
                 }
             }
         }

@@ -19,7 +19,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
-import io.netty.util.concurrent.Ticker;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -63,11 +62,6 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         @Override
         public void reportActiveIoTime(long activeNanos) {
             SingleThreadIoEventLoop.this.reportActiveIoTime(activeNanos);
-        }
-
-        @Override
-        public Ticker ticker() {
-            return SingleThreadIoEventLoop.this.ticker();
         }
     };
 
@@ -236,7 +230,7 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     }
 
     @Override
-    public int registeredChannels() {
+    protected int getNumOfRegisteredChannels() {
         return numRegistrations.get();
     }
 

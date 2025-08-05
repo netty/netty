@@ -17,9 +17,9 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
+import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
@@ -260,9 +260,9 @@ public final class KQueueIoHandler implements IoHandler {
             if (strategy > 0) {
                 handled = strategy;
                 // The Timer starts after the blocking kqueueWait() call returns with events.
-                long activeIoStartTimeNanos = context.ticker().nanoTime();
+                long activeIoStartTimeNanos = System.nanoTime();
                 processReady(strategy);
-                long activeIoEndTimeNanos = context.ticker().nanoTime();
+                long activeIoEndTimeNanos = System.nanoTime();
                 context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
             } else {
                 context.reportActiveIoTime(0);

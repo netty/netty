@@ -1377,18 +1377,6 @@
                   <new>interface org.jboss.marshalling.UnmarshallingObjectInputFilter</new>
                   <justification>We need to build with upgraded JBoss Marshalling version. Otherwise, testsuite-jpms won't compile.</justification>
                 </item>
-                <item>
-                  <ignore>true</ignore>
-                  <code>java.method.addedToInterface</code>
-                  <new>method void io.netty.channel.IoHandlerContext::reportActiveIoTime(long)</new>
-                  <justification>Added to support I/O time reporting functionality for event loop auto-scaling</justification>
-                </item>
-                <item>
-                  <ignore>true</ignore>
-                  <code>java.method.addedToInterface</code>
-                  <new>method io.netty.util.concurrent.Ticker io.netty.channel.IoHandlerContext::ticker()</new>
-                  <justification>Added to provide access to the event loop's time source for work measuring</justification>
-                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>

@@ -15,9 +15,9 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
+import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
@@ -181,9 +181,9 @@ public final class IoUringIoHandler implements IoHandler {
         }
 
         // Timer starts after the blocking wait, around the processing of completions.
-        long activeIoStartTimeNanos = context.ticker().nanoTime();
+        long activeIoStartTimeNanos = System.nanoTime();
         int processed = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
-        long activeIoEndTimeNanos = context.ticker().nanoTime();
+        long activeIoEndTimeNanos = System.nanoTime();
         context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
         return processed;
     }
