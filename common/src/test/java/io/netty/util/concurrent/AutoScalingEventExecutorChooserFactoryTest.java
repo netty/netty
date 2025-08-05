@@ -18,7 +18,6 @@ package io.netty.util.concurrent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
-import java.lang.reflect.Field;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -26,11 +25,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-public class MultithreadEventExecutorGroupTest {
+public class AutoScalingEventExecutorChooserFactoryTest {
 
     private static void busyTask(long duration, TimeUnit unit) {
         long endTime = System.nanoTime() + unit.toNanos(duration);
@@ -91,10 +88,12 @@ public class MultithreadEventExecutorGroupTest {
         private static final Object[] ARGS = new Object[0];
 
         TestEventExecutorGroup(int minThreads, int maxThreads, long checkPeriod, TimeUnit unit) {
-            super(minThreads, maxThreads, checkPeriod, unit, 0.4, 0.6,
-                  maxThreads, maxThreads, 2,
+            super(maxThreads,
                   new ThreadPerTaskExecutor(Executors.defaultThreadFactory()),
-                  DefaultEventExecutorChooserFactory.INSTANCE, ARGS);
+                  new AutoScalingEventExecutorChooserFactory(
+                          minThreads, maxThreads, checkPeriod, unit, 0.4, 0.6,
+                          maxThreads, maxThreads, 2),
+                  ARGS);
         }
 
         @Override
@@ -224,23 +223,6 @@ public class MultithreadEventExecutorGroupTest {
                          "Should not scale back down while load is high");
         } finally {
             group.shutdownGracefully().syncUninterruptibly();
-        }
-    }
-
-    @Test
-    @Timeout(value = 5, unit = TimeUnit.SECONDS)
-    public void testShutdownCancelsMonitor() throws Exception {
-        TestEventExecutorGroup group = new TestEventExecutorGroup(1, 2, 50, TimeUnit.MILLISECONDS);
-        try {
-            Field field = MultithreadEventExecutorGroup.class.getDeclaredField("utilizationMonitoringTask");
-            field.setAccessible(true);
-            Future<?> monitorTask = (Future<?>) field.get(group);
-
-            assertFalse(monitorTask.isCancelled());
-            group.shutdownGracefully().syncUninterruptibly();
-            assertTrue(monitorTask.isCancelled(), "Shutdown should cancel the monitoring task");
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            fail("Failed to access internal field for testing", e);
         }
     }
 

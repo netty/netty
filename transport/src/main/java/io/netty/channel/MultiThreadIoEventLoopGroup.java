@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.util.concurrent.DefaultEventExecutorChooserFactory;
 import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.internal.EmptyArrays;
 
@@ -24,10 +23,14 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.TimeUnit;
 
 /**
  * {@link IoEventLoopGroup} implementation that will handle its tasks with multiple threads.
+ * <p>
+ * This group supports advanced thread management strategies, such as dynamic auto-scaling,
+ * by providing a custom {@link EventExecutorChooserFactory}. To enable utilization-based
+ * auto-scaling, pass an instance of
+ * {@code io.netty.util.concurrent.AutoScalingEventExecutorChooserFactory}.
  */
 public class MultiThreadIoEventLoopGroup extends MultithreadEventLoopGroup implements IoEventLoopGroup {
 
@@ -178,95 +181,6 @@ public class MultiThreadIoEventLoopGroup extends MultithreadEventLoopGroup imple
                                           EventExecutorChooserFactory chooserFactory,
                                           Object... args) {
         super(nThreads, executor, chooserFactory, combine(ioHandlerFactory, args));
-    }
-
-    /**
-     * Creates a new instance of the {@link MultiThreadIoEventLoopGroup} with dynamic,
-     * utilization-based auto-scaling capabilities.
-     * <p>
-     * This constructor enables the Event loop group to automatically scale the number of active {@link EventLoop}
-     * threads between a minimum and maximum threshold. The scaling decision is based on the average
-     * utilization of the active threads, measured over a configurable time window.
-     * <p>
-     * An {@link EventLoop} can be suspended if its utilization is consistently below the
-     * {@code scaleDownThreshold}. Conversely, if the group's average utilization is consistently
-     * above the {@code scaleUpThreshold}, a suspended thread will be automatically resumed to handle
-     * the increased load.
-     *
-     * @param minThreads               the minimum number of threads to keep active at all times. This value must be
-     *                                 non-negative and less than or equal to {@code maxThreads}.
-     * @param maxThreads               the maximum number of threads the group can scale up to. This value must be
-     *                                 positive.
-     * @param utilizationWindow        the duration of the time window over which to measure thread utilization.
-     *                                 A value of 0 disables the dynamic auto-scaling of the
-     *                                 {@link EventLoopGroup} threads.
-     * @param windowUnit               the {@link TimeUnit} for the {@code utilizationWindow}.
-     * @param scaleDownThreshold       the average utilization below which a thread is considered a candidate for
-     *                                 suspension (e.g., 0.20 for 20%). Must be less than {@code scaleUpThreshold}.
-     * @param scaleUpThreshold         the average utilization above which the group is considered under-provisioned,
-     *                                 triggering a scale-up (e.g., 0.80 for 80%).
-     * @param maxRampUpStep            the maximum number of threads to activate in a single scaling cycle when
-     *                                 scaling up.
-     * @param maxRampDownStep          the maximum number of threads to suspend in a single scaling cycle when
-     *                                 scaling down.
-     * @param scalingPatienceCycles    the number of consecutive time windows a scaling condition must be met before
-     *                                 an action is taken. This prevents the system from overreacting to short-lived
-     *                                 spikes. A value of 0 means the system will react instantly.
-     * @param ioHandlerFactory         the {@link IoHandlerFactory} that will be used to create an {@link IoHandler} for
-     *                                 each {@link EventLoop} to handle I/O operations.
-     */
-    public MultiThreadIoEventLoopGroup(int minThreads, int maxThreads, long utilizationWindow, TimeUnit windowUnit,
-                                       double scaleDownThreshold, double scaleUpThreshold, int maxRampUpStep,
-                                       int maxRampDownStep, int scalingPatienceCycles,
-                                       IoHandlerFactory ioHandlerFactory) {
-        this(minThreads, maxThreads, utilizationWindow, windowUnit, scaleDownThreshold, scaleUpThreshold,
-             maxRampUpStep, maxRampDownStep, scalingPatienceCycles, (Executor) null, ioHandlerFactory);
-    }
-
-    /**
-     * Creates a new instance of the {@link MultiThreadIoEventLoopGroup} with dynamic,
-     * utilization-based auto-scaling capabilities.
-     * <p>
-     * This constructor enables the Event loop group to automatically scale the number of active {@link EventLoop}
-     * threads between a minimum and maximum threshold. The scaling decision is based on the average
-     * utilization of the active threads, measured over a configurable time window.
-     * <p>
-     * An {@link EventLoop} can be suspended if its utilization is consistently below the
-     * {@code scaleDownThreshold}. Conversely, if the group's average utilization is consistently
-     * above the {@code scaleUpThreshold}, a suspended thread will be automatically resumed to handle
-     * the increased load.
-     *
-     * @param minThreads               the minimum number of threads to keep active at all times. This value must be
-     *                                 non-negative and less than or equal to {@code maxThreads}.
-     * @param maxThreads               the maximum number of threads the group can scale up to. This value must be
-     *                                 positive.
-     * @param utilizationWindow        the duration of the time window over which to measure thread utilization.
-     *                                 A value of 0 disables the dynamic auto-scaling of the
-     *                                 {@link EventLoopGroup} threads.
-     * @param windowUnit               the {@link TimeUnit} for the {@code utilizationWindow}.
-     * @param scaleDownThreshold       the average utilization below which a thread is considered a candidate for
-     *                                 suspension (e.g., 0.20 for 20%). Must be less than {@code scaleUpThreshold}.
-     * @param scaleUpThreshold         the average utilization above which the group is considered under-provisioned,
-     *                                 triggering a scale-up (e.g., 0.80 for 80%).
-     * @param maxRampUpStep            the maximum number of threads to activate in a single scaling cycle when
-     *                                 scaling up.
-     * @param maxRampDownStep          the maximum number of threads to suspend in a single scaling cycle when
-     *                                 scaling down.
-     * @param scalingPatienceCycles    the number of consecutive time windows a scaling condition must be met before
-     *                                 an action is taken. This prevents the system from overreacting to short-lived
-     *                                 spikes. A value of 0 means the system will react instantly.
-     * @param executor                 the {@link Executor} to use for creating threads. If {@code null}, a default
-     *                                 {@link ThreadFactory} will be used.
-     * @param ioHandlerFactory         the {@link IoHandlerFactory} that will be used to create an {@link IoHandler} for
-     *                                 each {@link EventLoop} to handle I/O operations.
-     */
-    public MultiThreadIoEventLoopGroup(int minThreads, int maxThreads, long utilizationWindow, TimeUnit windowUnit,
-                                       double scaleDownThreshold, double scaleUpThreshold, int maxRampUpStep,
-                                       int maxRampDownStep, int scalingPatienceCycles, Executor executor,
-                                       IoHandlerFactory ioHandlerFactory) {
-        super(minThreads, maxThreads, utilizationWindow, windowUnit, scaleDownThreshold, scaleUpThreshold,
-              maxRampUpStep, maxRampDownStep, scalingPatienceCycles, executor,
-              DefaultEventExecutorChooserFactory.INSTANCE, combine(ioHandlerFactory));
     }
 
     // The return type should be IoHandleEventLoop but we choose EventLoop to allow us to introduce the IoHandle

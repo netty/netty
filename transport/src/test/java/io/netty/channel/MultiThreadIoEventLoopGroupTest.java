@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.AutoScalingEventExecutorChooserFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ThreadAwareExecutor;
 import org.junit.jupiter.api.Test;
@@ -122,10 +123,10 @@ public class MultiThreadIoEventLoopGroupTest {
 
     private static class TestMultiThreadIoEventLoopGroup extends MultiThreadIoEventLoopGroup {
         TestMultiThreadIoEventLoopGroup(int minThreads, int maxThreads, long checkPeriod, TimeUnit unit) {
-            super(minThreads, maxThreads, checkPeriod, unit,
-                  0.4, 0.8,
-                  maxThreads, 1,
-                  1,
+            super(maxThreads, (Executor) null,
+                  new AutoScalingEventExecutorChooserFactory(
+                          minThreads, maxThreads, checkPeriod, unit, 0.4, 0.8,
+                          maxThreads, 1, 1),
                   new TestIoHandlerFactory());
         }
 
