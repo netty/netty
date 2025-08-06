@@ -18,11 +18,18 @@ package io.netty.buffer;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import org.junit.jupiter.api.Test;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
+import java.lang.reflect.Method;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.abort;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class MiByteBufAllocatorTest extends AbstractByteBufAllocatorTest<MiByteBufAllocator> {
 
@@ -124,5 +131,31 @@ public class MiByteBufAllocatorTest extends AbstractByteBufAllocatorTest<MiByteB
         assertEquals(1, allocator.abandonedDirectSegmentCount());
         buf1.get().release();
         buf2.get().release();
+    }
+
+    @Test
+    public void shouldReuseChunks() throws Exception {
+        int bufSize = 128 * 1024; // MEDIUM_BLOCK_SIZE_MAX
+        ByteBufAllocator allocator = newAllocator(false);
+        allocator.heapBuffer(bufSize, bufSize).release();
+        ThreadMXBean threadMXBean = ManagementFactory.getThreadMXBean();
+        Class<?> cls = null;
+        try {
+            cls = Class.forName("com.sun.management.ThreadMXBean");
+        } catch (ClassNotFoundException e) {
+            abort("Internal ThreadMXBean not available");
+        }
+        assumeThat(threadMXBean).isInstanceOf(cls);
+        Method getThreadAllocatedBytes = cls.getDeclaredMethod("getThreadAllocatedBytes", long.class);
+        long allocBefore = (long) getThreadAllocatedBytes.invoke(threadMXBean, Thread.currentThread().getId());
+        assumeTrue(allocBefore != -1);
+        for (int i = 0; i < 100; ++i) {
+            allocator.heapBuffer(bufSize, bufSize).release();
+        }
+        long allocAfter = (long) getThreadAllocatedBytes.invoke(threadMXBean, Thread.currentThread().getId());
+        assumeTrue(allocAfter != -1);
+        assertThat(allocAfter - allocBefore)
+                .as("allocated MB: %.3f", (allocAfter - allocBefore) / 1024.0 / 1024.0)
+                .isLessThan(4 * 1024 * 1024);
     }
 }

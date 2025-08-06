@@ -431,7 +431,7 @@ final class MiMallocByteBufAllocator {
 
         // Allocate a page.
         private Page findPage(int size) {
-            // Huge allocation.
+            // Large or Huge allocation.
             if (size > MEDIUM_BLOCK_SIZE_MAX) {
                 return largeOrHugePageAlloc(size);
             } else {
@@ -801,12 +801,6 @@ final class MiMallocByteBufAllocator {
         }
 
         private void segmentFree(Segment segment, boolean force) {
-            // If it's a huge segment, then `force` must be true.
-            assert segment.kind != SEGMENT_HUGE || force;
-            // Don't free the segment if: `isForce` == false && `segmentsCount` < 2.
-            if (!force && this.segmentTld.segmentsCount < 2) {
-                return;
-            }
             if (segment.kind != SEGMENT_HUGE) {
                 // Remove the free pages
                 Span slice = segment.slices[0];
@@ -1607,7 +1601,9 @@ final class MiMallocByteBufAllocator {
 
     private AbstractByteBuf newChunk(int size) {
         try {
-            return chunkAllocator.allocate(size, size);
+            AbstractByteBuf buf = chunkAllocator.allocate(size, size);
+            this.usedMemory.addAndGet(size);
+            return buf;
         } catch (OutOfMemoryError e) {
             return null; // OOM
         }
@@ -1663,7 +1659,6 @@ final class MiMallocByteBufAllocator {
             this.delegate = delegate;
             ownerThread.set(kind == SEGMENT_HUGE ? null : Thread.currentThread());
             this.segmentSize = segmentSize;
-            this.parent.usedMemory.addAndGet(segmentSize);
             this.segmentSlices = segmentSlices;
             this.sliceEntries = Math.min(segmentSlices, DEFAULT_SLICE_COUNT);
             this.usedPages = 0;
