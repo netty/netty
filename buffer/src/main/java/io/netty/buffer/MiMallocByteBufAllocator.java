@@ -802,7 +802,7 @@ final class MiMallocByteBufAllocator {
 
         private void segmentFree(Segment segment, boolean force) {
             if (segment.kind != SEGMENT_HUGE) {
-                // Remove the free pages
+                // Remove the free spans.
                 Span slice = segment.slices[0];
                 Span end = segment.slices[segment.sliceEntries];
                 while (slice.sliceIndex < end.sliceIndex) {
@@ -812,8 +812,25 @@ final class MiMallocByteBufAllocator {
                     slice = segment.slices[slice.sliceIndex + slice.sliceCount];
                 }
             }
+            // Expensive assertion: the spanQueues should not contain this segment anymore.
+            assert assertSegmentNotExistInSpanQueue(segment);
             // Free it.
             segmentOsFree(segment);
+        }
+
+        // Only used for assertion.
+        private boolean assertSegmentNotExistInSpanQueue(Segment segment) {
+            SpanQueue[] spanQueues = this.segmentTld.spanQueues;
+            for (SpanQueue sq : spanQueues) {
+                Span span = sq.firstSpan;
+                while (span != null) {
+                    if (span.segment == segment) {
+                        return false;
+                    }
+                    span = span.nextSpan;
+                }
+            }
+            return true;
         }
 
         private void segmentOsFree(Segment segment) {
