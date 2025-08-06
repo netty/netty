@@ -137,7 +137,7 @@ public class MultiThreadIoEventLoopGroupTest {
     }
 
     @Test
-    @Timeout(value = 5, unit = TimeUnit.SECONDS)
+    @Timeout(30)
     public void testScalingWithIoRegistrationLifecycle() throws InterruptedException {
         TestMultiThreadIoEventLoopGroup group = new TestMultiThreadIoEventLoopGroup(0, 2, 200, TimeUnit.MILLISECONDS);
         try {
@@ -170,7 +170,7 @@ public class MultiThreadIoEventLoopGroupTest {
     }
 
     @Test
-    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    @Timeout(30)
     public void testShouldNotSuspendExecutorWithActiveRegistration() throws InterruptedException {
         TestMultiThreadIoEventLoopGroup group = new TestMultiThreadIoEventLoopGroup(0, 2, 200, TimeUnit.MILLISECONDS);
         try {

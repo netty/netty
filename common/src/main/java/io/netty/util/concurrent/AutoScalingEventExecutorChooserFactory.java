@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * A factory that creates {@link AutoScalingEventExecutorChooser} instances.
+ * A factory that creates auto-scaling {@link EventExecutorChooser} instances.
  * This chooser implements a dynamic, utilization-based auto-scaling strategy.
  * <p>
  * It enables the Event loop group to automatically scale the number of active {@code EventLoop}
@@ -223,7 +223,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
 
                     if (activeTime == 0) {
                         long lastActivity = stee.getLastActivityTimeNanos();
-                        long idleTime = System.nanoTime() - lastActivity;
+                        long idleTime = stee.ticker().nanoTime() - lastActivity;
 
                         // If the event loop has been idle for less time than our utilization window,
                         // it means it was active for the remainder of that window.

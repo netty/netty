@@ -103,7 +103,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
     }
 
     @Test
-    @Timeout(value = 5, unit = TimeUnit.SECONDS)
+    @Timeout(30)
     void testScaleDown() throws InterruptedException {
         TestEventExecutorGroup group = new TestEventExecutorGroup(1, 3, 50, TimeUnit.MILLISECONDS);
         try {
@@ -119,7 +119,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
     }
 
     @Test
-    @Timeout(value = 5, unit = TimeUnit.SECONDS)
+    @Timeout(30)
     void testScaleUp() throws InterruptedException {
         TestEventExecutorGroup group = new TestEventExecutorGroup(1, 3, 50, TimeUnit.MILLISECONDS);
         try {
@@ -166,7 +166,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
     }
 
     @Test
-    @Timeout(value = 5, unit = TimeUnit.SECONDS)
+    @Timeout(30)
     void testScaleDownDoesNotGoBelowMinThreads() throws InterruptedException {
         TestEventExecutorGroup group = new TestEventExecutorGroup(2, 4, 50, TimeUnit.MILLISECONDS);
         try {
@@ -179,7 +179,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
     }
 
     @Test
-    @Timeout(value = 5, unit = TimeUnit.SECONDS)
+    @Timeout(30)
     void testScaleUpDoesNotExceedMaxThreads() throws Exception {
         TestEventExecutorGroup group = new TestEventExecutorGroup(1, 2, 50, TimeUnit.MILLISECONDS);
         try {

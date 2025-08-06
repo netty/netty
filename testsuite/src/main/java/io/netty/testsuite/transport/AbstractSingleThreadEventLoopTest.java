@@ -25,7 +25,9 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.concurrent.AutoScalingEventExecutorChooserFactory;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.EventExecutorChooserFactory;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -55,6 +57,20 @@ import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public abstract class AbstractSingleThreadEventLoopTest {
+    protected static final int SCALING_MIN_THREADS = 1;
+    protected static final int SCALING_MAX_THREADS = 2;
+    protected static final long SCALING_WINDOW_SECONDS = 100;
+    protected static final TimeUnit SCALING_WINDOW_UNIT = MILLISECONDS;
+    protected static final double SCALEDOWN_THRESHOLD = 0.2;
+    protected static final double SCALEUP_THRESHOLD = 0.9;
+    protected static final int SCALING_PATIENCE_CYCLES = 1;
+
+    protected static final EventExecutorChooserFactory AUTO_SCALING_CHOOSER_FACTORY =
+            new AutoScalingEventExecutorChooserFactory(SCALING_MIN_THREADS, SCALING_MAX_THREADS, SCALING_WINDOW_SECONDS,
+                                                       SCALING_WINDOW_UNIT, SCALEDOWN_THRESHOLD, SCALEUP_THRESHOLD,
+                                                       SCALING_MAX_THREADS, SCALING_MAX_THREADS, SCALING_PATIENCE_CYCLES
+    );
+
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
     public void testChannelsRegistered() throws Exception {
@@ -304,6 +320,75 @@ public abstract class AbstractSingleThreadEventLoopTest {
         }
     }
 
+    @Test
+    @Timeout(30)
+    public void testAutoScalingEventLoopGroupCanScaleDownAndBeUsed() throws Exception {
+        EventLoopGroup group = newAutoScalingEventLoopGroup();
+        try {
+            startAllExecutors(group);
+            assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
+                         "Group should start with max threads active.");
+
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (countActiveExecutors(group) > SCALING_MIN_THREADS && System.nanoTime() < deadline) {
+                Thread.sleep(100);
+            }
+
+            assertEquals(SCALING_MIN_THREADS, countActiveExecutors(group),
+                         "Group did not scale down to min threads in time.");
+        } finally {
+            group.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    @Test
+    @Timeout(30)
+    public void testAutoScalingEventLoopGroupCanScaleUpOnDemand() throws Exception {
+        EventLoopGroup group = newAutoScalingEventLoopGroup();
+        try {
+            startAllExecutors(group);
+            assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
+                         "Group should start with max threads.");
+
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (countActiveExecutors(group) > SCALING_MIN_THREADS && System.nanoTime() < deadline) {
+                Thread.sleep(100);
+            }
+            assertEquals(SCALING_MIN_THREADS, countActiveExecutors(group),
+                         "Group did not scale down to min threads in time.");
+
+            // Trigger the on-demand scale-up.
+            group.next();
+
+            deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (countActiveExecutors(group) < SCALING_MAX_THREADS && System.nanoTime() < deadline) {
+                Thread.sleep(100);
+            }
+            assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
+                         "Group did not scale up to max threads on demand.");
+        } finally {
+            group.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    private static int countActiveExecutors(EventLoopGroup group) {
+        int activeCount = 0;
+        for (EventExecutor executor : group) {
+            if (!executor.isSuspended()) {
+                activeCount++;
+            }
+        }
+        return activeCount;
+    }
+
+    private static void startAllExecutors(EventLoopGroup group) throws InterruptedException {
+        CountDownLatch startLatch = new CountDownLatch(SCALING_MAX_THREADS);
+        for (EventExecutor executor : group) {
+            executor.execute(startLatch::countDown);
+        }
+        startLatch.await();
+    }
+
     private static void runBlockingOn(EventLoop eventLoop, final Runnable action) {
         final Promise<Void> promise = eventLoop.newPromise();
             eventLoop.execute(new Runnable() {
@@ -349,6 +434,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
         return false;
     }
     protected abstract EventLoopGroup newEventLoopGroup();
+    protected abstract EventLoopGroup newAutoScalingEventLoopGroup();
     protected abstract Channel newChannel();
     protected abstract Class<? extends ServerChannel> serverChannelClass();
 }
