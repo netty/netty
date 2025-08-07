@@ -25,6 +25,7 @@ import io.netty.util.internal.MathUtil;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.CompilerControl;
 import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -65,6 +66,12 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
 
     private int nextReleaseIndex;
     private int nextSizeIndex;
+
+    @Param({
+            "false",
+            "true"
+    })
+    private boolean writeThenReadLong;
 
     // Use event-loop threads.
     public ByteBufAllocatorAllocPatternBenchmark() {
@@ -123,9 +130,15 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
         int releaseIndex = getNextReleaseIndex();
         ByteBuf oldBuf = buffers[releaseIndex];
         if (oldBuf != null) {
+            if (writeThenReadLong) {
+                blackhole.consume(oldBuf.readLong());
+            }
             oldBuf.release();
         }
         ByteBuf newBuf = alloc.directBuffer(size);
+        if (writeThenReadLong) {
+            newBuf.writeLong(size);
+        }
         buffers[releaseIndex] = newBuf;
         blackhole.consume(buffers);
     }
@@ -135,9 +148,15 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
         int releaseIndex = getNextReleaseIndex();
         ByteBuf oldBuf = buffers[releaseIndex];
         if (oldBuf != null) {
+            if (writeThenReadLong) {
+                blackhole.consume(oldBuf.readLong());
+            }
             oldBuf.release();
         }
         ByteBuf newBuf = alloc.heapBuffer(size);
+        if (writeThenReadLong) {
+            newBuf.writeLong(size);
+        }
         buffers[releaseIndex] = newBuf;
         blackhole.consume(buffers);
     }
