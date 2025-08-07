@@ -35,6 +35,12 @@ final class VarHandleFactory {
     private static final VarHandle INT_BE_ARRAY_VIEW;
     private static final VarHandle SHORT_LE_ARRAY_VIEW;
     private static final VarHandle SHORT_BE_ARRAY_VIEW;
+    private static final VarHandle LONG_LE_BYTE_BUFFER_VIEW;
+    private static final VarHandle LONG_BE_BYTE_BUFFER_VIEW;
+    private static final VarHandle INT_LE_BYTE_BUFFER_VIEW;
+    private static final VarHandle INT_BE_BYTE_BUFFER_VIEW;
+    private static final VarHandle SHORT_LE_BYTE_BUFFER_VIEW;
+    private static final VarHandle SHORT_BE_BYTE_BUFFER_VIEW;
     private static final Throwable UNAVAILABILITY_CAUSE;
 
     static {
@@ -46,6 +52,12 @@ final class VarHandleFactory {
         VarHandle intBeArrayViewHandle = null;
         VarHandle shortLeArrayViewHandle = null;
         VarHandle shortBeArrayViewHandle = null;
+        VarHandle longLeByteBufferViewHandle = null;
+        VarHandle longBeByteBufferViewHandle = null;
+        VarHandle intLeByteBufferViewHandle = null;
+        VarHandle intBeByteBufferViewHandle = null;
+        VarHandle shortLeByteBufferViewHandle = null;
+        VarHandle shortBeByteBufferViewHandle = null;
         Throwable error = null;
         try {
             MethodHandles.Lookup lookup = MethodHandles.lookup();
@@ -62,6 +74,20 @@ final class VarHandleFactory {
             shortLeArrayViewHandle = (VarHandle) byteArrayViewHandle.invokeExact(
                     short[].class, ByteOrder.LITTLE_ENDIAN);
             shortBeArrayViewHandle = (VarHandle) byteArrayViewHandle.invokeExact(short[].class, ByteOrder.BIG_ENDIAN);
+            MethodHandle byteBufferViewHandle = lookup.findStatic(MethodHandles.class, "byteBufferViewVarHandle",
+                    MethodType.methodType(VarHandle.class, Class.class, ByteOrder.class));
+            longLeByteBufferViewHandle = (VarHandle) byteBufferViewHandle.invokeExact(
+                    long[].class, ByteOrder.LITTLE_ENDIAN);
+            longBeByteBufferViewHandle = (VarHandle) byteBufferViewHandle.invokeExact(
+                    long[].class, ByteOrder.BIG_ENDIAN);
+            intLeByteBufferViewHandle = (VarHandle) byteBufferViewHandle.invokeExact(
+                    int[].class, ByteOrder.LITTLE_ENDIAN);
+            intBeByteBufferViewHandle = (VarHandle) byteBufferViewHandle.invokeExact(
+                    int[].class, ByteOrder.BIG_ENDIAN);
+            shortLeByteBufferViewHandle = (VarHandle) byteBufferViewHandle.invokeExact(
+                    short[].class, ByteOrder.LITTLE_ENDIAN);
+            shortBeByteBufferViewHandle = (VarHandle) byteBufferViewHandle.invokeExact(
+                    short[].class, ByteOrder.BIG_ENDIAN);
             error = null;
         } catch (Throwable e) {
             error = e;
@@ -72,6 +98,12 @@ final class VarHandleFactory {
             intLeArrayViewHandle = null;
             intBeArrayViewHandle = null;
             shortLeArrayViewHandle = null;
+            longLeByteBufferViewHandle = null;
+            longBeByteBufferViewHandle = null;
+            intLeByteBufferViewHandle = null;
+            intBeByteBufferViewHandle = null;
+            shortLeByteBufferViewHandle = null;
+            shortBeByteBufferViewHandle = null;
         } finally {
             FIND_VAR_HANDLE = findVarHandle;
             PRIVATE_LOOKUP_IN = privateLookupIn;
@@ -81,6 +113,12 @@ final class VarHandleFactory {
             INT_BE_ARRAY_VIEW = intBeArrayViewHandle;
             SHORT_LE_ARRAY_VIEW = shortLeArrayViewHandle;
             SHORT_BE_ARRAY_VIEW = shortBeArrayViewHandle;
+            LONG_LE_BYTE_BUFFER_VIEW = longLeByteBufferViewHandle;
+            LONG_BE_BYTE_BUFFER_VIEW = longBeByteBufferViewHandle;
+            INT_LE_BYTE_BUFFER_VIEW = intLeByteBufferViewHandle;
+            INT_BE_BYTE_BUFFER_VIEW = intBeByteBufferViewHandle;
+            SHORT_LE_BYTE_BUFFER_VIEW = shortLeByteBufferViewHandle;
+            SHORT_BE_BYTE_BUFFER_VIEW = shortBeByteBufferViewHandle;
             UNAVAILABILITY_CAUSE = error;
         }
     }
@@ -133,5 +171,29 @@ final class VarHandleFactory {
 
     public static VarHandle shortBeArrayView() {
         return SHORT_BE_ARRAY_VIEW;
+    }
+
+    public static VarHandle longLeByteBufferView() {
+        return LONG_LE_BYTE_BUFFER_VIEW;
+    }
+
+    public static VarHandle longBeByteBufferView() {
+        return LONG_BE_BYTE_BUFFER_VIEW;
+    }
+
+    public static VarHandle intLeByteBufferView() {
+        return INT_LE_BYTE_BUFFER_VIEW;
+    }
+
+    public static VarHandle intBeByteBufferView() {
+        return INT_BE_BYTE_BUFFER_VIEW;
+    }
+
+    public static VarHandle shortLeByteBufferView() {
+        return SHORT_LE_BYTE_BUFFER_VIEW;
+    }
+
+    public static VarHandle shortBeByteBufferView() {
+        return SHORT_BE_BYTE_BUFFER_VIEW;
     }
 }
