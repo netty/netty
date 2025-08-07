@@ -194,11 +194,12 @@ final class MiMallocByteBufAllocator {
         // 8 bytes to 2 MiB.
         final PageQueue[] pageQueues;
         final MiMallocByteBufAllocator allocator;
-        final AtomicReference<Block> threadDelayedFreeList = new AtomicReference<>();
+        final AtomicReference<Block> threadDelayedFreeList;
         private static final byte VISIT_WORK_TYPE_MARK_PAGE_NEVER_DELAYED_FREE = 0;
         private static final byte VISIT_WORK_TYPE_PAGE_COLLECT = 1;
 
-        private final ArrayDeque<Block> blockDeque = new ArrayDeque<Block>(1024);
+        private static final int MAX_BLOCK_QUEUE_SIZE = 1024;
+        private final ArrayDeque<Block> blockDeque;
 
         LocalHeap(MiMallocByteBufAllocator allocator) {
             this.ownerThread = Thread.currentThread();
@@ -206,6 +207,8 @@ final class MiMallocByteBufAllocator {
             pagesFreeDirect = new Page[PAGES_FREE_DIRECT_ARRAY_SIZE + 1];
             Arrays.fill(pagesFreeDirect, EMPTY_PAGE);
             this.allocator = allocator;
+            this.threadDelayedFreeList = new AtomicReference<>();
+            this.blockDeque = new ArrayDeque<Block>(32);
             pageQueues = new PageQueue[] {
                     new PageQueue(1, 0),
                     new PageQueue(1, 1), new PageQueue(2, 2),
@@ -555,7 +558,7 @@ final class MiMallocByteBufAllocator {
         }
 
         private Block getBlock(Page page, int blockBytes, int adjustment) {
-            Block block = blockDeque.poll();
+            Block block = blockDeque.pollLast();
             if (block == null) {
                 block = new Block();
             }
@@ -1169,25 +1172,26 @@ final class MiMallocByteBufAllocator {
             // And free it.
             page.heapx.set(null);
             page.capacityBlocks = 0;
-            Block currentBlock = page.freeList;
-            Block block = currentBlock;
-            while (block != null) {
-                currentBlock = block;
-                blockDeque.offer(block);
-                block = block.nextBlock;
-                currentBlock.nextBlock = null;
-            }
+            recycleBlocks(page.freeList);
             page.freeList = null;
-            currentBlock = page.localFreeList;
-            block = currentBlock;
-            while (block != null) {
-                currentBlock = block;
-                blockDeque.offer(block);
-                block = block.nextBlock;
-                currentBlock.nextBlock = null;
-            }
+            recycleBlocks(page.localFreeList);
             page.localFreeList = null;
             segmentPageFree(page, force);
+        }
+
+        private void recycleBlocks(Block firstBlock) {
+            if (firstBlock == null) {
+                return;
+            }
+            Block currentBlock = firstBlock;
+            Block recycledBlock;
+            int blockQueueAvailableCapacity = MAX_BLOCK_QUEUE_SIZE - blockDeque.size();
+            while (blockQueueAvailableCapacity-- > 0 && currentBlock != null) {
+                recycledBlock = currentBlock;
+                currentBlock = currentBlock.nextBlock;
+                recycledBlock.nextBlock = null;
+                blockDeque.addLast(recycledBlock);
+            }
         }
 
         private void segmentPageFree(Page page, boolean force) {
