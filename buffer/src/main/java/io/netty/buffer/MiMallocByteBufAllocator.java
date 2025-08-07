@@ -1963,8 +1963,8 @@ final class MiMallocByteBufAllocator {
             setIndex0(0, 0);
             this.rootParent = block.page.segment.delegate;
             this.tmpNioBuf = null;
-            this.hasArray = block.page.segment.delegate.hasArray();
-            this.hasMemoryAddress = block.page.segment.delegate.hasMemoryAddress();
+            this.hasArray = rootParent.hasArray();
+            this.hasMemoryAddress = rootParent.hasMemoryAddress();
         }
 
         @Override
