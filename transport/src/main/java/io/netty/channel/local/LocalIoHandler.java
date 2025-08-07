@@ -63,7 +63,9 @@ public final class LocalIoHandler implements IoHandler {
             LockSupport.parkNanos(this, context.delayNanos(System.nanoTime()));
         }
 
-        context.reportActiveIoTime(0);
+        if (context.shouldReportActiveIoTime()) {
+            context.reportActiveIoTime(0);
+        }
         return 0;
     }
 

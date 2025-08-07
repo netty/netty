@@ -63,6 +63,11 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         public void reportActiveIoTime(long activeNanos) {
             SingleThreadIoEventLoop.this.reportActiveIoTime(activeNanos);
         }
+
+        @Override
+        public boolean shouldReportActiveIoTime() {
+            return isSuspensionSupported();
+        }
     };
 
     private final IoHandler ioHandler;

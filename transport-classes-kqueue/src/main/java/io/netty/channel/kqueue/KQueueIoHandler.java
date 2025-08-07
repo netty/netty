@@ -213,7 +213,9 @@ public final class KQueueIoHandler implements IoHandler {
             int strategy = selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock());
             switch (strategy) {
                 case SelectStrategy.CONTINUE:
-                    context.reportActiveIoTime(0); // Report zero as we did no I/O.
+                    if (context.shouldReportActiveIoTime()) {
+                        context.reportActiveIoTime(0); // Report zero as we did no I/O.
+                    }
                     return 0;
 
                 case SelectStrategy.BUSY_WAIT:
@@ -259,12 +261,16 @@ public final class KQueueIoHandler implements IoHandler {
 
             if (strategy > 0) {
                 handled = strategy;
-                // The Timer starts after the blocking kqueueWait() call returns with events.
-                long activeIoStartTimeNanos = System.nanoTime();
-                processReady(strategy);
-                long activeIoEndTimeNanos = System.nanoTime();
-                context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
-            } else {
+                if (context.shouldReportActiveIoTime()) {
+                    // The Timer starts after the blocking kqueueWait() call returns with events.
+                    long activeIoStartTimeNanos = System.nanoTime();
+                    processReady(strategy);
+                    long activeIoEndTimeNanos = System.nanoTime();
+                    context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
+                } else {
+                    processReady(strategy);
+                }
+            } else if (context.shouldReportActiveIoTime()) {
                 context.reportActiveIoTime(0);
             }
 

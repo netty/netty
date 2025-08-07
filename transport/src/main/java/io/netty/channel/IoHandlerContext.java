@@ -69,4 +69,15 @@ public interface IoHandlerContext {
     default void reportActiveIoTime(long activeNanos) {
         // no-op
     }
+
+    /**
+     * Returns {@code true} if the I/O handler should measure and report its active I/O time.
+     * This is used as a guard to avoid the overhead of calling {@link System#nanoTime()}
+     * when the feature is not in use.
+     *
+     * @return {@code true} if active I/O time should be reported, {@code false} otherwise.
+     */
+    default boolean shouldReportActiveIoTime() {
+        return false;
+    }
 }
