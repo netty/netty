@@ -226,6 +226,34 @@ public class AutoScalingEventExecutorChooserFactoryTest {
         }
     }
 
+    @Test
+    @Timeout(30)
+    void testSmarterPickingConsolidatesWorkOnActiveExecutor() throws InterruptedException {
+        TestEventExecutorGroup group = new TestEventExecutorGroup(1, 3, 50, TimeUnit.MILLISECONDS);
+        try {
+            startAllExecutors(group);
+
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (countActiveExecutors(group) > 1 && System.nanoTime() < deadline) {
+                Thread.sleep(50);
+            }
+            assertEquals(1, countActiveExecutors(group),
+                         "Group should scale down to 1 active executor");
+
+            // Simulate a slow trickle of new work (e.g., new connections) by calling next() a few times.
+            for (int i = 0; i < 5; i++) {
+                group.next().execute(() -> { });
+                Thread.sleep(20);
+            }
+
+            assertEquals(1, countActiveExecutors(group),
+                         "Should consolidate the trickle of work onto the single active executor, without" +
+                         " waking up the suspended ones");
+        } finally {
+            group.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
     private static void startAllExecutors(MultithreadEventExecutorGroup group) throws InterruptedException {
         CountDownLatch startLatch = new CountDownLatch(group.executorCount());
         for (EventExecutor executor : group) {

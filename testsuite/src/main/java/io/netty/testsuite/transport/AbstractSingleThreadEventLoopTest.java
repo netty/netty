@@ -343,7 +343,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
 
     @Test
     @Timeout(30)
-    public void testAutoScalingEventLoopGroupCanScaleUpOnDemand() throws Exception {
+    public void testSubmittingTaskWakesUpSuspendedExecutor() throws Exception {
         EventLoopGroup group = newAutoScalingEventLoopGroup();
         try {
             startAllExecutors(group);
@@ -357,15 +357,22 @@ public abstract class AbstractSingleThreadEventLoopTest {
             assertEquals(SCALING_MIN_THREADS, countActiveExecutors(group),
                          "Group did not scale down to min threads in time.");
 
-            // Trigger the on-demand scale-up.
-            group.next();
-
-            deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
-            while (countActiveExecutors(group) < SCALING_MAX_THREADS && System.nanoTime() < deadline) {
-                Thread.sleep(100);
+            EventLoop suspendedLoop = null;
+            for (EventExecutor exec : group) {
+                if (exec.isSuspended()) {
+                    suspendedLoop = (EventLoop) exec;
+                    break;
+                }
             }
+            assertNotNull(suspendedLoop, "Could not find a suspended executor to test.");
+
+            // Submit a task directly to the suspended loop, this should trigger the wake-up mechanism.
+            Future<?> future = suspendedLoop.submit(() -> { });
+            future.syncUninterruptibly();
+
+            assertFalse(suspendedLoop.isSuspended(), "Executor should wake up after task submission.");
             assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
-                         "Group did not scale up to max threads on demand.");
+                         "Active executor count should increase after wake-up.");
         } finally {
             group.shutdownGracefully().syncUninterruptibly();
         }
