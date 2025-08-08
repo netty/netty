@@ -916,7 +916,7 @@ final class MiMallocByteBufAllocator {
             int slice_count = slice.sliceCount;
             Span next = segment.slices[slice.sliceIndex + slice.sliceCount];
             if (next.sliceIndex < segment.sliceEntries && next.blockSize == 0) {
-                // Free the next block -- remove it from free and merge.
+                // Free the next slice -- remove it from free and merge.
                 assert next.sliceCount > 0 && next.sliceOffset == 0;
                 slice_count += next.sliceCount; // extend
                 if (!is_abandoned) {
