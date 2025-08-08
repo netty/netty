@@ -104,10 +104,6 @@ public final class LongLongHashMap {
         return emptyVal;
     }
 
-    public long emptyValue() {
-        return this.emptyVal;
-    }
-
     private int index(long key) {
         // Hash with murmur64, and mask.
         key ^= key >>> 33;
