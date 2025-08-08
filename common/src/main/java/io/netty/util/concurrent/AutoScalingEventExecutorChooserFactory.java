@@ -16,10 +16,10 @@
 package io.netty.util.concurrent;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A factory that creates auto-scaling {@link EventExecutorChooser} instances.
@@ -117,23 +117,36 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
         return new AutoScalingEventExecutorChooser(executors);
     }
 
+    /**
+     * An immutable snapshot of the chooser's state. All state transitions
+     * are managed by atomically swapping this object.
+     */
+    private static final class AutoScalingState {
+        final int activeChildrenCount;
+        final long nextWakeUpIndex;
+        final EventExecutor[] activeExecutors;
+        final EventExecutorChooser activeExecutorsChooser;
+
+        AutoScalingState(int activeChildrenCount, long nextWakeUpIndex, EventExecutor[] activeExecutors) {
+            this.activeChildrenCount = activeChildrenCount;
+            this.nextWakeUpIndex = nextWakeUpIndex;
+            this.activeExecutors = activeExecutors;
+            this.activeExecutorsChooser = DefaultEventExecutorChooserFactory.INSTANCE.newChooser(activeExecutors);
+        }
+    }
+
     private final class AutoScalingEventExecutorChooser implements EventExecutorChooser {
         private final Runnable noOpTask = () -> { };
         private final EventExecutor[] executors;
-        private final AtomicInteger activeChildrenCount;
-        private final AtomicLong nextWakeUpIndex = new AtomicLong();
         private final EventExecutorChooser allExecutorsChooser;
-
-        private volatile EventExecutor[] activeExecutors;
-        private volatile EventExecutorChooser activeExecutorsChooser;
+        private final AtomicReference<AutoScalingState> state;
 
         AutoScalingEventExecutorChooser(EventExecutor[] executors) {
             this.executors = executors;
             this.allExecutorsChooser = DefaultEventExecutorChooserFactory.INSTANCE.newChooser(executors);
-            this.activeChildrenCount = new AtomicInteger(maxChildren);
 
-            this.activeExecutors = executors;
-            this.activeExecutorsChooser = DefaultEventExecutorChooserFactory.INSTANCE.newChooser(executors);
+            AutoScalingState initialState = new AutoScalingState(maxChildren, 0L, executors);
+            this.state = new AtomicReference<>(initialState);
 
             ScheduledFuture<?> utilizationMonitoringTask = GlobalEventExecutor.INSTANCE.scheduleAtFixedRate(
                     new UtilizationMonitor(), utilizationCheckPeriodNanos, utilizationCheckPeriodNanos,
@@ -150,87 +163,74 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
          */
         @Override
         public EventExecutor next() {
-            // Read the volatile fields once to get a consistent snapshot.
-            EventExecutor[] active = this.activeExecutors;
-            EventExecutorChooser chooser = this.activeExecutorsChooser;
+            // Get a snapshot of the current state.
+            AutoScalingState currentState = this.state.get();
 
-            if (active.length == 0) {
+            if (currentState.activeExecutors.length == 0) {
                 // This is only reachable if minChildren is 0 and the monitor has just suspended the last active thread.
                 // To prevent an error and ensure the group can recover, we wake one up and use the
                 // chooser that contains all executors as a safe temporary choice.
-                tryScaleUpBy(1, true);
+                tryScaleUpBy(1);
                 return allExecutorsChooser.next();
             }
-            return chooser.next();
+            return currentState.activeExecutorsChooser.next();
         }
 
         /**
-         * Helper method to rebuild the active executors list and chooser.
-         */
-        private void updateActiveExecutors() {
-            List<EventExecutor> active = new ArrayList<>(activeChildrenCount.get());
-            for (EventExecutor executor : executors) {
-                if (!executor.isSuspended()) {
-                    active.add(executor);
-                }
-            }
-            EventExecutor[] newActiveExecutors = active.toArray(new EventExecutor[0]);
-            this.activeExecutors = newActiveExecutors;
-            this.activeExecutorsChooser = DefaultEventExecutorChooserFactory.INSTANCE.newChooser(newActiveExecutors);
-        }
-
-        /**
-         * Tries to increase the active thread count by a given amount, respecting the maxChildren limit.
-         * This method is thread-safe.
+         * Tries to increase the active thread count by waking up suspended executors.
+         * This method is thread-safe and updates the state atomically.
          *
          * @param amount    The desired number of threads to add to the active count.
-         * @param tryWakeUp If true, this method will also attempt to wake up a suspended thread.
-         * @return The number of threads that were actually woken up (will be 0 if tryWakeUp is false).
          */
-        private int tryScaleUpBy(int amount, boolean tryWakeUp) {
+        private void tryScaleUpBy(int amount) {
             if (amount <= 0) {
-                return 0;
+                return;
             }
 
-            int wokenUp = 0;
-            if (tryWakeUp) {
-                for (;;) {
-                    int currentActive = activeChildrenCount.get();
-                    if (currentActive >= maxChildren) {
-                        return 0;
+            for (;;) {
+                AutoScalingState oldState = state.get();
+                if (oldState.activeChildrenCount >= maxChildren) {
+                    return;
+                }
+
+                int canAdd = Math.min(amount, maxChildren - oldState.activeChildrenCount);
+                List<EventExecutor> wokenUp = new ArrayList<>(canAdd);
+                final long startIndex = oldState.nextWakeUpIndex;
+
+                for (int i = 0; i < executors.length; i++) {
+                    EventExecutor child = executors[(int) Math.abs((startIndex + i) % executors.length)];
+
+                    if (wokenUp.size() >= canAdd) {
+                        break; // We have woken up all the threads we reserved.
                     }
-
-                    int canAdd = Math.min(amount, maxChildren - currentActive);
-                    int newActive = currentActive + canAdd;
-
-                    if (activeChildrenCount.compareAndSet(currentActive, newActive)) {
-                        final long startIndex = nextWakeUpIndex.getAndIncrement();
-
-                        for (int i = 0; i < executors.length; i++) {
-                            EventExecutor child = executors[(int) Math.abs((startIndex + i) % executors.length)];
-
-                            if (wokenUp >= canAdd) {
-                                break; // We have woken up all the threads we reserved.
-                            }
-                            if (child instanceof SingleThreadEventExecutor) {
-                                SingleThreadEventExecutor stee = (SingleThreadEventExecutor) child;
-                                if (stee.isSuspended()) {
-                                    stee.execute(noOpTask);
-                                    wokenUp++;
-                                }
-                            }
+                    if (child instanceof SingleThreadEventExecutor) {
+                        SingleThreadEventExecutor stee = (SingleThreadEventExecutor) child;
+                        if (stee.isSuspended()) {
+                            stee.execute(noOpTask);
+                            wokenUp.add(stee);
                         }
-
-                        // We reserved 'canAdd' slots but found fewer suspended threads
-                        // to wake up (in a lost race condition). Release the unused slots.
-                        if (wokenUp < canAdd) {
-                            activeChildrenCount.addAndGet(-(canAdd - wokenUp));
-                        }
-                        return wokenUp;
                     }
                 }
+
+                if (wokenUp.isEmpty()) {
+                    return;
+                }
+
+                // Create the new state.
+                List<EventExecutor> newActiveList = new ArrayList<>(oldState.activeExecutors.length + wokenUp.size());
+                newActiveList.addAll(Arrays.asList(oldState.activeExecutors));
+                newActiveList.addAll(wokenUp);
+
+                AutoScalingState newState = new AutoScalingState(
+                        oldState.activeChildrenCount + wokenUp.size(),
+                        startIndex + wokenUp.size(),
+                        newActiveList.toArray(new EventExecutor[0]));
+
+                if (state.compareAndSet(oldState, newState)) {
+                    return;
+                }
+                // CAS failed, another thread changed the state. Loop again to retry.
             }
-            return wokenUp;
         }
 
         private final class UtilizationMonitor implements Runnable {
@@ -246,6 +246,8 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
 
                 int consistentlyBusyChildren = 0;
                 consistentlyIdleChildren.clear();
+
+                final AutoScalingState currentState = state.get();
 
                 for (EventExecutor child : executors) {
                     if (child.isSuspended() || !(child instanceof SingleThreadEventExecutor)) {
@@ -275,10 +277,8 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                         // Utilization is low, increment idle counter and reset busy counter.
                         int idleCycles = stee.getAndIncrementIdleCycles();
                         stee.resetBusyCycles();
-                        if (idleCycles >= scalingPatienceCycles) {
-                            if (stee.getNumOfRegisteredChannels() <= 0) {
-                                consistentlyIdleChildren.add(stee);
-                            }
+                        if (idleCycles >= scalingPatienceCycles && stee.getNumOfRegisteredChannels() <= 0) {
+                            consistentlyIdleChildren.add(stee);
                         }
                     } else if (utilization > scaleUpThreshold) {
                         // Utilization is high, increment busy counter and reset idle counter.
@@ -295,7 +295,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                 }
 
                 boolean changed = false; // Flag to track if we need to rebuild the active executors list.
-                int currentActive = activeChildrenCount.get();
+                int currentActive = currentState.activeChildrenCount;
 
                 // Make scaling decisions based on stable states.
                 if (consistentlyBusyChildren > 0 && currentActive < maxChildren) {
@@ -303,34 +303,58 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                     int threadsToAdd = Math.min(consistentlyBusyChildren, maxRampUpStep);
                     threadsToAdd = Math.min(threadsToAdd, maxChildren - currentActive);
                     if (threadsToAdd > 0) {
-                        // tryScaleUpBy handles the atomic increment and wake-up.
-                        tryScaleUpBy(threadsToAdd, true);
+                        tryScaleUpBy(threadsToAdd);
+                        // State change is handled by tryScaleUpBy, no need for rebuild here.
+                        return; // Exit to avoid conflicting scale down logic in the same cycle.
                     }
-                } else if (!consistentlyIdleChildren.isEmpty() && currentActive > minChildren) {
+                }
+
+                if (!consistentlyIdleChildren.isEmpty() && currentActive > minChildren) {
                     // Scale down, we have children that have been idle for multiple cycles.
 
                     int threadsToRemove = Math.min(consistentlyIdleChildren.size(), maxRampDownStep);
                     threadsToRemove = Math.min(threadsToRemove, currentActive - minChildren);
 
-                    int actuallyRemoved = 0;
                     for (int i = 0; i < threadsToRemove; i++) {
                         SingleThreadEventExecutor childToSuspend = consistentlyIdleChildren.get(i);
                         if (childToSuspend.trySuspend()) {
                             // Reset cycles upon suspension so it doesn't get immediately re-suspended on wake-up.
                             childToSuspend.resetBusyCycles();
                             childToSuspend.resetIdleCycles();
-                            actuallyRemoved++;
                             changed = true;
                         }
                     }
-                    if (actuallyRemoved > 0) {
-                        //TODO: log # of suspended and current active threads?
-                        activeChildrenCount.addAndGet(-actuallyRemoved);
-                    }
                 }
 
-                if (changed || activeChildrenCount.get() != activeExecutors.length) {
-                    updateActiveExecutors();
+                // If a scale-down occurred, or if the actual state differs from our view, rebuild.
+                if (changed || currentActive != currentState.activeExecutors.length) {
+                    rebuildActiveExecutors();
+                }
+            }
+
+            /**
+             * Atomically updates the state by creating a new snapshot with the current set of active executors.
+             */
+            private void rebuildActiveExecutors() {
+                for (;;) {
+                    AutoScalingState oldState = state.get();
+                    List<EventExecutor> active = new ArrayList<>(oldState.activeChildrenCount);
+                    for (EventExecutor executor : executors) {
+                        if (!executor.isSuspended()) {
+                            active.add(executor);
+                        }
+                    }
+                    EventExecutor[] newActiveExecutors = active.toArray(new EventExecutor[0]);
+
+                    // If the number of active executors in our scan differs from the count in the state,
+                    // another thread likely changed it. We use the count from our fresh scan.
+                    // The nextWakeUpIndex is preserved from the old state as this rebuild is not a scale-up action.
+                    AutoScalingState newState = new AutoScalingState(
+                            newActiveExecutors.length, oldState.nextWakeUpIndex, newActiveExecutors);
+
+                    if (state.compareAndSet(oldState, newState)) {
+                        break;
+                    }
                 }
             }
         }
