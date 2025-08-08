@@ -1722,11 +1722,11 @@ final class MiMallocByteBufAllocator {
                 page.freeBlockLocal(block, false, heap);
             } else {
                 // Page is full, use the generic free path.
-                freeGenericLocal(page, segment, block, heap);
+                page.freeBlockLocal(block, true, heap);
             }
         } else {
             // Not thread-local, use the generic multi-threaded-free path.
-            freeGenericMt(page, segment, block);
+            freeBlockMt(page, segment, block);
         }
     }
 
@@ -1791,14 +1791,6 @@ final class MiMallocByteBufAllocator {
             page.usedBlocks--;
             heap.segmentPageFree(page, true);
         }
-    }
-
-    private void freeGenericMt(Page page, Segment segment, Block block) {
-        freeBlockMt(page, segment, block);
-    }
-
-    private void freeGenericLocal(Page page, Segment segment, Block block, LocalHeap heap) {
-        page.freeBlockLocal(block, true, heap);
     }
 
     /**
