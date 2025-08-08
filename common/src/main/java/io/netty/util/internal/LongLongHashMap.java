@@ -17,7 +17,7 @@ package io.netty.util.internal;
 
 import java.util.Arrays;
 
-public class LongLongHashMap {
+public final class LongLongHashMap {
     private static final int MASK_TEMPLATE = ~1;
     private int mask;
     private long[] array;

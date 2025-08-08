@@ -217,7 +217,7 @@ public class FastThreadLocalThread extends Thread {
             long bit = 1L << (threadId & 63);
 
             long bitmap = map.get(key);
-            return bitmap != map.emptyValue() && (bitmap & bit) != 0;
+            return (bitmap & bit) != 0;
         }
 
         public FallbackThreadSet add(long threadId) {
@@ -236,14 +236,14 @@ public class FastThreadLocalThread extends Thread {
             long key = threadId >>> 6;
             long bit = 1L << (threadId & 63);
 
-            LongLongHashMap newMap = new LongLongHashMap(map);
-            long oldBitmap = newMap.get(key);
-
-            if (oldBitmap == newMap.emptyValue()) {
-                return this; // Should not happen
+            long oldBitmap = map.get(key);
+            if ((oldBitmap & bit) == 0) {
+                return this;
             }
 
+            LongLongHashMap newMap = new LongLongHashMap(map);
             long newBitmap = oldBitmap & ~bit;
+
             if (newBitmap != EMPTY_VALUE) {
                 newMap.put(key, newBitmap);
             } else {
