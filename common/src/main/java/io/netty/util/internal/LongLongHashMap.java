@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,13 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer;
+package io.netty.util.internal;
 
-/**
- * Internal primitive map implementation that is specifically optimised for the runs availability map use case in {@link
- * PoolChunk}.
- */
-final class LongLongHashMap {
+import java.util.Arrays;
+
+public class LongLongHashMap {
     private static final int MASK_TEMPLATE = ~1;
     private int mask;
     private long[] array;
@@ -27,13 +25,21 @@ final class LongLongHashMap {
     private long zeroVal;
     private final long emptyVal;
 
-    LongLongHashMap(long emptyVal) {
+    public LongLongHashMap(long emptyVal) {
         this.emptyVal = emptyVal;
         zeroVal = emptyVal;
         int initialSize = 32;
         array = new long[initialSize];
         mask = initialSize - 1;
         computeMaskAndProbe();
+    }
+
+    public LongLongHashMap(LongLongHashMap other) {
+        this.mask = other.mask;
+        this.array = Arrays.copyOf(other.array, other.array.length);
+        this.maxProbe = other.maxProbe;
+        this.zeroVal = other.zeroVal;
+        this.emptyVal = other.emptyVal;
     }
 
     public long put(long key, long value) {
@@ -96,6 +102,10 @@ final class LongLongHashMap {
             index = index + 2 & mask;
         }
         return emptyVal;
+    }
+
+    public long emptyValue() {
+        return this.emptyVal;
     }
 
     private int index(long key) {
