@@ -1189,6 +1189,7 @@ final class MiMallocByteBufAllocator {
             while (blockQueueAvailableCapacity-- > 0 && currentBlock != null) {
                 recycledBlock = currentBlock;
                 currentBlock = currentBlock.nextBlock;
+                recycledBlock.page = null;
                 recycledBlock.nextBlock = null;
                 blockDeque.addLast(recycledBlock);
             }
