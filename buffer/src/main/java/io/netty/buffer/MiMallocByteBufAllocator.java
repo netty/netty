@@ -1226,11 +1226,11 @@ final class MiMallocByteBufAllocator {
                Abandon segment/page
             ----------------------------------------------------------- */
         private void segmentAbandon(Segment segment) {
-            // Remove the free pages from the free page queues.
+            // Remove the free spans from the free span queues.
             Span slice = segment.slices[0];
             Span end = segment.slices[segment.sliceEntries];
             while (slice.sliceIndex < end.sliceIndex) {
-                if (slice.blockSize == 0) { // a free page
+                if (slice.blockSize == 0) { // a free span
                     segmentSpanRemoveFromQueue(slice);
                     slice.blockSize = 0; // but keep it free
                 }
@@ -1758,6 +1758,7 @@ final class MiMallocByteBufAllocator {
             // Racy read on `heap`, but ok because `DELAYED_FREEING` is set.
             // (see `heapCollectAbandon`)
             LocalHeap heap = page.ownerHeap.get();
+            assert heap != null;
             if (heap != null) {
                 // Add to the delayed free list of this heap.
                 Block dfree;
