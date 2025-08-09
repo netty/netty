@@ -453,7 +453,7 @@ final class MiMallocByteBufAllocator {
             PageQueue pq = is_huge ? null : pageQueue(block_size);
             Page page = pageFreshAlloc(pq, block_size);
             if (page != null && is_huge) {
-                page.heapx.set(null);
+                page.ownerHeap.set(null);
             }
             return page;
         }
@@ -625,7 +625,7 @@ final class MiMallocByteBufAllocator {
         // Initialize a fresh page.
         private void pageInit(Page page, int block_size) {
             // Set fields.
-            page.heapx.set(this);
+            page.ownerHeap.set(this);
             page.blockSize = block_size;
             int page_size = page.sliceCount * SEGMENT_SLICE_SIZE;
             page.reservedBlocks = page_size / block_size;
@@ -746,7 +746,7 @@ final class MiMallocByteBufAllocator {
                     Page page = (Page) slice;
                     segment.abandonedPages--;
                     // Associate the heap with this page, and allow heap thread delayed free again.
-                    page.heapx.set(this);
+                    page.ownerHeap.set(this);
                     pageUseDelayedFree(page, USE_DELAYED_FREE, true); // override never (after heap is set)
                     page.pageFreeCollect(false); // Ensure `usedBlocks` count is up to date.
                     if (page.usedBlocks == 0) {
@@ -1164,13 +1164,13 @@ final class MiMallocByteBufAllocator {
             return this.segmentTld.spanQueues[bin];
         }
 
-        // Free a page with no more free blocks.
+        // Free a page with no more used blocks.
         private void pageFree(Page page, PageQueue pq, boolean force) {
             // Remove from the page list
             // (no need to do `heapDelayedFree` first as all blocks are already free).
             pageQueueRemove(pq, page);
             // And free it.
-            page.heapx.set(null);
+            page.ownerHeap.set(null);
             page.capacityBlocks = 0;
             recycleBlocks(page.freeList);
             page.freeList = null;
@@ -1460,7 +1460,7 @@ final class MiMallocByteBufAllocator {
         int blockSize;
         final AtomicReference<DELAYED_FLAG> threadDelayedFreeFlag = new AtomicReference<>(USE_DELAYED_FREE);
         boolean isHuge; // `true` if the page is in a huge segment (segment.kind == SEGMENT_HUGE)
-        final AtomicReference<LocalHeap> heapx = new AtomicReference<LocalHeap>();
+        final AtomicReference<LocalHeap> ownerHeap = new AtomicReference<LocalHeap>();
 
         // Empty Page Constructor
         Page() { }
@@ -1471,7 +1471,7 @@ final class MiMallocByteBufAllocator {
         // Currently only called through `heapCollectEx` which ensures this.
         private void pageAbandon(PageQueue pq, LocalHeap heap) {
             // page is no longer associated with heap.
-            this.heapx.set(null);
+            this.ownerHeap.set(null);
             // remove from page queues.
             heap.pageQueueRemove(pq, this);
             // abandon it.
@@ -1757,7 +1757,7 @@ final class MiMallocByteBufAllocator {
         if (use_delayed) {
             // Racy read on `heap`, but ok because `DELAYED_FREEING` is set.
             // (see `heapCollectAbandon`)
-            LocalHeap heap = page.heapx.get();
+            LocalHeap heap = page.ownerHeap.get();
             if (heap != null) {
                 // Add to the delayed free list of this heap.
                 Block dfree;
