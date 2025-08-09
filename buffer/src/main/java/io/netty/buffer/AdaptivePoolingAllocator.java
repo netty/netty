@@ -1295,7 +1295,7 @@ final class AdaptivePoolingAllocator {
         /**
          * Called when a ByteBuf is done using its allocation in this chunk.
          */
-        boolean releaseSegment(int segmentId) {
+        boolean releaseSegment(int ignoredSegmentId) {
             return release();
         }
 
