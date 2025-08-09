@@ -35,6 +35,7 @@ import java.nio.charset.Charset;
 import java.util.ArrayDeque;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import static io.netty.buffer.MiMallocByteBufAllocator.COLLECT_TYPE.ABANDON;
@@ -114,7 +115,7 @@ final class MiMallocByteBufAllocator {
 
     private final FastThreadLocal<LocalHeap> THREAD_LOCAL_HEAP;
 
-    private final Deque<Segment> abandonedSegmentQueue;
+    private final ConcurrentLinkedDeque<Segment> abandonedSegmentDeque;
     // Count of abandoned segments for this allocator.
     private final AtomicLong abandonedSegmentCount = new AtomicLong();
 
@@ -140,7 +141,7 @@ final class MiMallocByteBufAllocator {
 
     MiMallocByteBufAllocator(ChunkAllocator chunkAllocator) {
         this.chunkAllocator = chunkAllocator;
-        this.abandonedSegmentQueue = PlatformDependent.newConcurrentDeque();
+        this.abandonedSegmentDeque = new ConcurrentLinkedDeque<Segment>();
         this.THREAD_LOCAL_HEAP = new FastThreadLocal<LocalHeap>() {
             @Override
             protected LocalHeap initialValue() {
@@ -306,7 +307,7 @@ final class MiMallocByteBufAllocator {
             Segment segment;
             long abandonedSegmentCount = this.allocator.abandonedSegmentCount.get();
             long max_tries = force ? abandonedSegmentCount : Math.min(1024, abandonedSegmentCount);  // Limit latency
-            while (max_tries-- > 0 && (segment = this.allocator.abandonedSegmentQueue.poll()) != null) {
+            while (max_tries-- > 0 && (segment = this.allocator.abandonedSegmentDeque.poll()) != null) {
                 this.allocator.abandonedSegmentCount.decrementAndGet();
                 segmentCheckFree(segment, 0, 0); // try to free up pages (due to concurrent frees)
                 if (segment.usedPages == 0) {
@@ -426,7 +427,7 @@ final class MiMallocByteBufAllocator {
 
         private void abandonedReclaimAll() {
             Segment segment;
-            while ((segment = this.allocator.abandonedSegmentQueue.poll()) != null) {
+            while ((segment = this.allocator.abandonedSegmentDeque.poll()) != null) {
                 this.allocator.abandonedSegmentCount.decrementAndGet();
                 segmentReclaim(segment, 0, false);
             }
@@ -691,7 +692,7 @@ final class MiMallocByteBufAllocator {
                 return null;
             }
             Object result = null;
-            for (Segment segment = this.allocator.abandonedSegmentQueue.poll();
+            for (Segment segment = this.allocator.abandonedSegmentDeque.poll();
                 segment != null && max_tries > 0; max_tries--) {
                 this.allocator.abandonedSegmentCount.decrementAndGet();
                 segment.abandonedVisits++;
@@ -723,10 +724,9 @@ final class MiMallocByteBufAllocator {
         // Mark a specific segment as abandoned,
         // and clears the ownerThread.
         private void segmentMarkAbandoned(Segment segment) {
-            if (segment.parent.abandonedSegmentQueue.offer(segment)) {
-                segment.parent.abandonedSegmentCount.incrementAndGet();
-                segment.ownerThread.set(null);
-            }
+            segment.ownerThread.set(null);
+            segment.parent.abandonedSegmentDeque.offer(segment);
+            segment.parent.abandonedSegmentCount.incrementAndGet();
         }
 
         // Reclaim an abandoned segment; returns null if the segment was freed.
@@ -899,7 +899,7 @@ final class MiMallocByteBufAllocator {
             return slice;
         }
 
-        // Note: can be called on abandoned segments.
+        // Note: can be called on abandoned segments, through `segmentCheckFree`->segmentPageClear`.
         private Span segmentSpanFreeCoalesce(Span slice) {
             Segment segment = slice.segment;
             // For huge pages, just mark as free but don't add to the queues.
