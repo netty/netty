@@ -1845,7 +1845,7 @@ final class MiMallocByteBufAllocator {
             page = heap.findPage(size);
         }
         if (page == null) { // out of memory
-            PlatformDependent.throwException(new RuntimeException("Unable to allocate " + size + " bytes"));
+            PlatformDependent.throwException(new OutOfMemoryError("Unable to allocate " + size + " bytes"));
         }
         Block block = page.freeList;
         if (byteBuf == null) {
