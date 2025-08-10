@@ -163,7 +163,7 @@ final class MiMallocByteBufAllocator {
         long segmentsPeakSize;    // peak size of all segments
         int reclaimCount; // number of reclaimed (abandoned) segments
         private final SpanQueue[] spanQueues = new SpanQueue[] {
-            new SpanQueue(1, 0),
+            new SpanQueue(1, 0), // placeholder, not used.
             new SpanQueue(1, 1), new SpanQueue(2, 2),
             new SpanQueue(3, 3), new SpanQueue(4, 4),
             new SpanQueue(5, 5), new SpanQueue(6, 6),
@@ -211,7 +211,7 @@ final class MiMallocByteBufAllocator {
             this.threadDelayedFreeList = new AtomicReference<>();
             this.blockDeque = new ArrayDeque<Block>(32);
             pageQueues = new PageQueue[] {
-                    new PageQueue(1, 0),
+                    new PageQueue(1, 0), // placeholder, not used.
                     new PageQueue(1, 1), new PageQueue(2, 2),
                     new PageQueue(3, 3), new PageQueue(4, 4),
                     new PageQueue(5, 5), new PageQueue(6, 6),
@@ -1361,7 +1361,8 @@ final class MiMallocByteBufAllocator {
         // current free page queue is updated for a small bin, we need to update a
         // range of entries in `pagesFreeDirect`.
         private void heapQueueFirstUpdate(PageQueue pq) {
-            int size = pq.blockSize;
+            int size = pq.blockSize; // size >= 8
+            assert size >= 8;
             if (size > PAGES_FREE_DIRECT_SIZE_MAX) {
                 return;
             }
@@ -1376,15 +1377,13 @@ final class MiMallocByteBufAllocator {
                 return;  // already set
             }
             // Find start slot.
-            if (idx <= 1) {
+            if (idx <= 1) { // size == 8
+                assert size == 8;
                 start = 0;
-            } else {
-                // Find previous size; due to minimal alignment upto 3 previous bins may need to be skipped.
-                int bin = pageQueueIndex(size);
+            } else { // size > 8
+                assert size > 8;
+                assert pq.index > 1;
                 PageQueue prev = this.pageQueues[pq.index - 1];
-                while (bin == pageQueueIndex(prev.blockSize) && prev.index > 0) {
-                    prev = this.pageQueues[prev.index - 1];
-                }
                 start = 1 + toWordSize(prev.blockSize);
                 if (start > idx) {
                     start = idx;
@@ -1914,27 +1913,41 @@ final class MiMallocByteBufAllocator {
         return (size + WORD_SIZE_MASK) >> 3;
     }
 
+    /**
+     * Calculate the page queue index for a given size.
+     * As the size increases, the index growth curve flattens out.
+     */
     private static int pageQueueIndex(int size) {
         assert size >= 0;
         int wSize = toWordSize(size);
-        if (wSize <= 8) {
+        if (wSize <= 9) {
             return (wSize == 0) ? 1 : wSize;
         }
         if (wSize > MEDIUM_BLOCK_WORD_SIZE_MAX) {
             return PAGE_QUEUE_BIN_LARGE_INDEX;
         }
         wSize--;
+        // Find the highest bit position of wSize.
         int p = 31 - Integer.numberOfLeadingZeros(wSize);
+        // Use the top 3 bits to determine the index.
+        // Adjust with 3 because we do not use the first 8 sizes, which each get an exact index.
         return ((p << 2) | ((wSize >> (p - 2)) & 0x03)) - 3;
     }
 
+    /**
+     * Calculate the span queue index for a given sliceCount.
+     * As the sliceCount increases, the index growth curve flattens out.
+     */
     private static int spanQueueIndex(int sliceCount) {
         assert sliceCount > 0;
         if (sliceCount <= 8) {
             return sliceCount;
         }
         sliceCount--;
+        // Find the highest bit position of sliceCount.
         int s = 31 - Integer.numberOfLeadingZeros(sliceCount);
+        // Use the top 3 bits to determine the index.
+        // Adjust with 4 because we do not use the first 7 sliceCounts, which each get an exact index.
         return ((s << 2) | ((sliceCount >> (s - 2)) & 0x03)) - 4;
     }
 
