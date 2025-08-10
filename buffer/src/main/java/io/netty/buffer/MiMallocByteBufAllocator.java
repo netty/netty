@@ -1930,7 +1930,7 @@ final class MiMallocByteBufAllocator {
         // Find the highest bit position of wSize.
         int p = 31 - Integer.numberOfLeadingZeros(wSize);
         // Use the top 3 bits to determine the index.
-        // Adjust with 3 because we do not use the first 8 sizes, which each get an exact index.
+        // Adjust with 3 because we already handled the first 8 wSizes, which each gets an exact index.
         return ((p << 2) | ((wSize >> (p - 2)) & 0x03)) - 3;
     }
 
@@ -1947,7 +1947,7 @@ final class MiMallocByteBufAllocator {
         // Find the highest bit position of sliceCount.
         int s = 31 - Integer.numberOfLeadingZeros(sliceCount);
         // Use the top 3 bits to determine the index.
-        // Adjust with 4 because we do not use the first 7 sliceCounts, which each get an exact index.
+        // Adjust with 4 because we already handled the first 7 sliceCounts, which each gets an exact index.
         return ((s << 2) | ((sliceCount >> (s - 2)) & 0x03)) - 4;
     }
 
