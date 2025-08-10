@@ -451,11 +451,7 @@ final class MiMallocByteBufAllocator {
             boolean is_huge = block_size > LARGE_BLOCK_SIZE_MAX;
             //TODO: handle huge page stats?
             PageQueue pq = is_huge ? null : pageQueue(block_size);
-            Page page = pageFreshAlloc(pq, block_size);
-            if (page != null && is_huge) {
-                page.ownerHeap.set(null);
-            }
-            return page;
+            return pageFreshAlloc(pq, block_size);
         }
 
         private PageQueue pageQueue(int size) {
@@ -613,7 +609,8 @@ final class MiMallocByteBufAllocator {
                 return null;
             }
             // A fresh page was found, initialize it.
-            int fullBlockSize = (pq == null || page.isHuge) ? page.blockSize : blockSize;
+            assert (pq == null && page.isHuge) || (pq != null && !page.isHuge);
+            int fullBlockSize = page.isHuge ? page.blockSize : blockSize;
             assert fullBlockSize > 0;
             pageInit(page, fullBlockSize);
             if (pq != null) {
@@ -625,7 +622,7 @@ final class MiMallocByteBufAllocator {
         // Initialize a fresh page.
         private void pageInit(Page page, int block_size) {
             // Set fields.
-            page.ownerHeap.set(this);
+            page.ownerHeap.set(page.isHuge ? null : this);
             page.blockSize = block_size;
             int page_size = page.sliceCount * SEGMENT_SLICE_SIZE;
             page.reservedBlocks = page_size / block_size;
@@ -648,7 +645,7 @@ final class MiMallocByteBufAllocator {
             } else if (block_size <= LARGE_BLOCK_SIZE_MAX) { // <= 2 MiB
                 page = segmentsPageAlloc(block_size, block_size);
             } else {
-                page = segmentAllocHuge(block_size);
+                page = segmentsHugePageAlloc(block_size);
             }
             return page;
         }
@@ -989,7 +986,8 @@ final class MiMallocByteBufAllocator {
             return segment;
         }
 
-        private Page segmentAllocHuge(int required) {
+        // Allocate a huge page, which also means allocate a huge segment.
+        private Page segmentsHugePageAlloc(int required) {
             int segment_slices = segmentCalculateSlices(required);
             int segment_size = segment_slices * SEGMENT_SLICE_SIZE;
             // Allocate the segment.
@@ -1368,7 +1366,7 @@ final class MiMallocByteBufAllocator {
                 return;
             }
             Page page = pq.firstPage;
-            if (pq.firstPage == null) {
+            if (page == null) {
                 page = EMPTY_PAGE;
             }
             // Find index in the right direct page array.
