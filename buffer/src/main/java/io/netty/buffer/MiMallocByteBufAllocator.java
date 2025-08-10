@@ -1431,6 +1431,51 @@ final class MiMallocByteBufAllocator {
         }
     }
 
+    /**
+     * <pre>
+     * Used by {@link Page#threadDelayedFreeFlag}.
+     * The flag is used to control how blocks are freed in a page.
+     * The page can be in one of the following states:
+     * - {@link #USE_DELAYED_FREE} - The page is using delayed free.
+     * - {@link #DELAYED_FREEING} - The page is currently being freed in a delayed manner.
+     * - {@link #NO_DELAYED_FREE} - The page is not using delayed free.
+     * - {@link #NEVER_DELAYED_FREE} - The page is never using delayed free.
+     *
+     *
+     *                                Initializing a page
+     *                                         │
+     *                                         ▼
+     *                            ┌────────────────────────────┐
+     *       ┌───────────────────►│      USE_DELAYED_FREE      │◄─────────────────────┐
+     *       │                    │      (Delayed free)        │                      │
+     *       │                    └────────────┬───────────────┘                      │
+     *       │                                 │                                      │
+     *       │                    First cross-thread free of the page                 │
+     *       │                                 │                                      │
+     *       │                                 ▼                                      │
+     *       │                    ┌────────────────────────────┐                      │
+     *       │                    │      DELAYED_FREEING       │         Before collecting the delayed list
+     *       │                    │ (Currently processing free)│                      │
+     *       │                    └────────────┬───────────────┘                      │
+     * Before reclaim/free                     │                                      │
+     * an abandoned segment         When freeing completes                            │
+     *       │                                 │                                      │
+     *       │                                 ▼                                      │
+     *       │                    ┌────────────────────────────┐                      │
+     *       │                    │      NO_DELAYED_FREE       │──────────────────────┘
+     *       │                    │   (Delayed free disabled)  │
+     *       │                    └────────────┬───────────────┘
+     *       │                                 │
+     *       │                          On heap abandon
+     *       │                                 │
+     *       │                                 ▼
+     *       │                    ┌────────────────────────────┐
+     *       │                    │    NEVER_DELAYED_FREE      │
+     *       └────────────────────│ (Never use delayed free)   │
+     *                            └────────────────────────────┘
+     *
+     *</pre>
+     */
     enum DELAYED_FLAG {
         USE_DELAYED_FREE,
         DELAYED_FREEING,
