@@ -237,8 +237,16 @@
                 <!-- NativeLibraryLoader can be used to manually load native libraries from other bundles that this bundle does not depend on,
                 hence use DynamicImport-Package instruction to ensure the loading is successful -->
                 <DynamicImport-Package>*</DynamicImport-Package>
-                <!-- JCTools is shaded -->
-                <Import-Package>!org.jctools.*;sun.misc;resolution:=optional;*</Import-Package>
+                <Import-Package>
+                  <!-- JCTools is shaded -->
+                  !org.jctools.*,
+                  <!-- JFR is available only in JDK9+ and is optional -->
+                  jdk.jfr;resolution:=optional,
+                  <!-- JVM vendor packages are optional -->
+                  sun.misc;resolution:=optional,
+                  sun.nio.ch;resolution:=optional,
+                  *
+                </Import-Package>
               </instructions>
             </configuration>
           </execution>
