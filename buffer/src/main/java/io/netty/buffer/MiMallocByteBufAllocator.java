@@ -341,6 +341,7 @@ final class MiMallocByteBufAllocator {
                             }
                         }
                     } else {
+                        // disable retirement
                         page.retireExpire = 0;
                     }
                 }
@@ -461,6 +462,7 @@ final class MiMallocByteBufAllocator {
             if (pq.firstPage != null) {
                 pq.firstPage.pageFreeCollect(false);
                 if (pq.firstPage.immediateAvailable()) {
+                    // disable retirement
                     pq.firstPage.retireExpire = 0;
                     return pq.firstPage; // fast path
                 }
@@ -523,6 +525,7 @@ final class MiMallocByteBufAllocator {
             } else {
                 // Move the page to the front of the queue.
                 pageQueueMoveToFront(pq, page);
+                // disable retirement
                 page.retireExpire = 0;
             }
             return page;
@@ -1490,7 +1493,9 @@ final class MiMallocByteBufAllocator {
         int capacityBlocks; // number of blocks created.
         int reservedBlocks; // number of blocks reserved.
         boolean isInFull;
-        byte retireExpire = DEFAULT_PAGE_RETIRE_EXPIRE; // Expiration count for retired blocks.
+        // Expiration count for retired blocks.
+        // retireExpire = 0 means disable retirement.
+        byte retireExpire = DEFAULT_PAGE_RETIRE_EXPIRE;
         Block freeList;
         Block localFreeList;
         int usedBlocks; // number of blocks in use (including blocks in `thread-free list`)
@@ -1542,6 +1547,7 @@ final class MiMallocByteBufAllocator {
                 int bSize = page.blockSize;
                 if (pq.index < PAGE_QUEUE_BIN_LARGE_INDEX) {  // not full && not huge queue
                     if (pq.lastPage == page && pq.firstPage == page) { // the only page in the queue
+                        // Enable retirement
                         page.retireExpire =
                                 (byte) (bSize <= SMALL_BLOCK_SIZE_MAX ? PAGE_RETIRE_CYCLES : PAGE_RETIRE_CYCLES / 4);
                         int index = pq.index;
