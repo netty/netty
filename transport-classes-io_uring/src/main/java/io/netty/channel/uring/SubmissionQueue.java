@@ -16,9 +16,11 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.unix.Buffer;
+import io.netty.channel.unix.Errors;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.UncheckedIOException;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
@@ -259,7 +261,7 @@ final class SubmissionQueue {
         assert submit == 0;
         int ret = ioUringEnter(0, minComplete, Native.IORING_ENTER_GETEVENTS);
         if (ret < 0) {
-            throw new RuntimeException("ioUringEnter syscall returned " + ret);
+            throw new UncheckedIOException(Errors.newIOException("io_uring_enter", ret));
         }
         return ret; // should be 0
     }
@@ -270,7 +272,7 @@ final class SubmissionQueue {
         head = (int) INT_HANDLE.getVolatile(kHead, 0); // acquire memory barrier
         if (ret != toSubmit) {
             if (ret < 0) {
-                throw new RuntimeException("ioUringEnter syscall returned " + ret);
+                throw new UncheckedIOException(Errors.newIOException("io_uring_enter", ret));
             }
         }
         return ret;
