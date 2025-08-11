@@ -251,7 +251,7 @@ final class NativeDatagramPacketArray {
             this.segmentSize = segmentSize;
 
             senderScopeId = 0;
-            senderPort = 0;
+            senderPort = -1;
             senderAddrLen = 0;
 
             if (recipient == null) {
@@ -273,7 +273,7 @@ final class NativeDatagramPacketArray {
         }
 
         boolean hasSender() {
-            return senderPort > 0;
+            return senderPort >= 0;
         }
 
         int count() {
