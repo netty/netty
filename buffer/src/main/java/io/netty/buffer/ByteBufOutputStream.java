@@ -72,10 +72,6 @@ public class ByteBufOutputStream extends OutputStream implements DataOutput {
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
-        if (len == 0) {
-            return;
-        }
-
         buffer.writeBytes(b, off, len);
     }
 
