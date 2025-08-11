@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
@@ -185,7 +186,7 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         try {
             return ((EpollDomainSocketChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ChannelException(e);
         }
     }
 
@@ -194,7 +195,7 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
             ((EpollDomainSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
             return this;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ChannelException(e);
         }
     }
 
@@ -202,7 +203,7 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
         try {
             return ((EpollDomainSocketChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ChannelException(e);
         }
     }
 
@@ -211,7 +212,7 @@ public final class EpollDomainSocketChannelConfig extends EpollChannelConfig
             ((EpollDomainSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ChannelException(e);
         }
     }
 }

@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
@@ -92,7 +93,7 @@ final class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
         try {
             return ((IoUringDomainSocketChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ChannelException(e);
         }
     }
 
@@ -101,7 +102,7 @@ final class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
             ((IoUringDomainSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
             return this;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ChannelException(e);
         }
     }
 
@@ -109,7 +110,7 @@ final class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
         try {
             return ((IoUringDomainSocketChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ChannelException(e);
         }
     }
 
@@ -118,7 +119,7 @@ final class IoUringDomainSocketChannelConfig extends IoUringStreamChannelConfig
             ((IoUringDomainSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ChannelException(e);
         }
     }
 
