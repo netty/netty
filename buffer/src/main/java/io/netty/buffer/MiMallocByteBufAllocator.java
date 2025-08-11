@@ -1830,23 +1830,25 @@ final class MiMallocByteBufAllocator {
         // If this was the first non-local free, we need to push it on the heap delayed free list.
         // `use_delayed` will only be true if `threadDelayedFreeFlag == USE_DELAYED_FREE`.
         if (use_delayed) {
-            // Racy read on `heap`, but ok because `DELAYED_FREEING` is set.
-            // (see `heapCollectAbandon`)
-            LocalHeap heap = page.segment.ownerHeap.get();
-            assert heap != null;
-            if (heap != null) {
-                // Add to the delayed free list of this heap.
-                Block dfree;
+            try {
+                // Racy read on `heap`, but ok because `DELAYED_FREEING` is set.
+                // (see `heapCollectAbandon`)
+                LocalHeap heap = page.segment.ownerHeap.get();
+                assert heap != null;
+                if (heap != null) {
+                    // Add to the delayed free list of this heap.
+                    Block dfree;
+                    do {
+                        dfree = heap.threadDelayedFreeList.get();
+                        block.nextBlock = dfree;
+                    } while (!heap.threadDelayedFreeList.compareAndSet(dfree, block));
+                }
+            } finally { // Make sure we always reset the `DELAYED_FREEING` flag.
+                boolean isReset;
                 do {
-                    dfree = heap.threadDelayedFreeList.get();
-                    block.nextBlock = dfree;
-                } while (!heap.threadDelayedFreeList.compareAndSet(dfree, block));
+                    isReset = page.threadDelayedFreeFlag.compareAndSet(DELAYED_FREEING, NO_DELAYED_FREE);
+                } while (!isReset);
             }
-            // Reset the `DELAYED_FREEING` flag.
-            boolean isReset;
-            do {
-                isReset = page.threadDelayedFreeFlag.compareAndSet(DELAYED_FREEING, NO_DELAYED_FREE);
-            } while (!isReset);
         } else { // Common path
             Block current;
             do {
