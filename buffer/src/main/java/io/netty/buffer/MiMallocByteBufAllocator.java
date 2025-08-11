@@ -742,6 +742,8 @@ final class MiMallocByteBufAllocator {
             boolean reclaimed = false;
             while (slice.sliceIndex < segment.sliceEntries) {
                 if (slice.blockSize > 0) {
+                    assert slice.sliceOffset == 0;
+                    assert slice.sliceCount > 0;
                     // In use: reclaim the page in our heap.
                     Page page = (Page) slice;
                     segment.abandonedPages--;
@@ -764,6 +766,8 @@ final class MiMallocByteBufAllocator {
                     // The span is free, add it to our span queues.
                     slice = segmentSpanFreeCoalesce(slice); // Set slice again due to coalescing.
                 }
+                assert slice.sliceOffset == 0;
+                assert slice.sliceCount > 0;
                 slice = segment.slices[slice.sliceIndex + slice.sliceCount];
             }
             if (segment.usedPages == 0) {  // due to `segmentPageClear()`
@@ -858,6 +862,8 @@ final class MiMallocByteBufAllocator {
             Span slice = segment.slices[0];
             while (slice.sliceIndex < segment.sliceEntries) {
                 if (slice.blockSize > 0) { // Used page
+                    assert slice.sliceOffset == 0;
+                    assert slice.sliceCount > 0;
                     // Ensure used count is up to date and collect potential concurrent frees.
                     Page page = (Page) slice;
                     page.pageFreeCollect(false);
@@ -1504,6 +1510,25 @@ final class MiMallocByteBufAllocator {
         Page prevPage;
         int adjustment;
         int sliceCount;
+        /**
+         * Meaning of `blockSize`:
+         * <p>
+         * blockSize > 1: Actual block size of a page, the page may exist in page queue,
+         *                or not: page has been abandoned or is a huge page.
+         * <p>
+         * blockSize = 0:
+         *      (1).Slices of a newly created segment.
+         *      (2).An abandoned free span.
+         *      (3).A huge page which has been marked as free.
+         *      (4).The first and last slice of continuous slices which represents a free span in span queue,
+         *          the intermediate spans can be ignored, as we use `span.sliceOffset` to skip intermediate spans.
+         * <p>
+         * blockSize = 1:
+         *      (1).The non-head slices of a page.
+         *      (2).The span which has been removed from span queue.
+         *      (3).A span which is about to be pushed into span queue or not (due to spans coalescence),
+         *          or is about to be marked as free if it's a huge page.
+         */
         int blockSize;
         final AtomicReference<DELAYED_FLAG> threadDelayedFreeFlag = new AtomicReference<>(USE_DELAYED_FREE);
         boolean isHuge; // `true` if the page is in a huge segment (segment.kind == SEGMENT_HUGE)
