@@ -29,7 +29,7 @@ import java.util.List;
  * On successful decode, this decoder will forward the received data to the next handler, so that
  * other handler can remove or replace this decoder later.
  */
-public class Socks5PrivateAuthRequestDecoder extends ByteToMessageDecoder {
+public final class Socks5PrivateAuthRequestDecoder extends ByteToMessageDecoder {
 
     private boolean decoded;
 

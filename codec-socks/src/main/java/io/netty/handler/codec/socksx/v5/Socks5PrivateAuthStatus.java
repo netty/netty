@@ -29,7 +29,7 @@ import io.netty.util.internal.ObjectUtil;
  * @see <a href="https://www.ietf.org/rfc/rfc1928.txt">RFC 1928 Section 3</a>
  * @see <a href="https://www.ietf.org/rfc/rfc1929.txt">RFC 1929</a>
  */
-public class Socks5PrivateAuthStatus implements Comparable<Socks5PrivateAuthStatus> {
+public final class Socks5PrivateAuthStatus implements Comparable<Socks5PrivateAuthStatus> {
 
     public static final Socks5PrivateAuthStatus SUCCESS = new Socks5PrivateAuthStatus(0x00, "SUCCESS");
     public static final Socks5PrivateAuthStatus FAILURE = new Socks5PrivateAuthStatus(0xFF, "FAILURE");

@@ -51,7 +51,6 @@ public final class Socks5PrivateAuthResponseDecoder extends ByteToMessageDecoder
     /**
      * Decoder states for SOCKS5 private authentication responses.
      */
-    @UnstableApi
     private enum State {
         /**
          * Initial state.

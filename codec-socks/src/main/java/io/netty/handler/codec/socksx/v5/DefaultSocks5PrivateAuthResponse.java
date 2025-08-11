@@ -16,6 +16,7 @@
 package io.netty.handler.codec.socksx.v5;
 
 import io.netty.handler.codec.DecoderResult;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 /**
@@ -35,7 +36,7 @@ public final class DefaultSocks5PrivateAuthResponse extends AbstractSocks5Messag
      * @param authStatus the authentication status
      */
     public DefaultSocks5PrivateAuthResponse(final Socks5PrivateAuthStatus authStatus) {
-        this.status = authStatus;
+        this.status = ObjectUtil.checkNotNull(authStatus, "status");
     }
 
     @Override
