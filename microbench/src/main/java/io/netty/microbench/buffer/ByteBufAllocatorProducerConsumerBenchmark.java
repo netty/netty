@@ -17,6 +17,7 @@ package io.netty.microbench.buffer;
 
 import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.MiByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.microbench.util.AbstractMicrobenchmark;
@@ -26,6 +27,7 @@ import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.CompilerControl;
 import org.openjdk.jmh.annotations.Group;
 import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -59,6 +61,11 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         private Queue<ByteBuf> queue;
         private int[] sizes;
         private int nextSizeIndex;
+        @Param({
+                "false",
+                "true"
+        })
+        private boolean writeThenReadLong;
 
         @Setup
         public void init() {
@@ -79,172 +86,130 @@ public class ByteBufAllocatorProducerConsumerBenchmark extends AbstractMicrobenc
         }
     }
 
-    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
-    @Benchmark
-    @Group("pooled_direct")
-    public void consumerPooledDirect(ProducerConsumerState state, Control control, Blackhole blackhole) {
+    private void consumer(ProducerConsumerState state, Control control, Blackhole blackhole) {
         Queue<ByteBuf> queue = state.queue;
         do {
             ByteBuf buf = queue.poll();
             if (buf != null) {
+                if (state.writeThenReadLong) {
+                    blackhole.consume(buf.readLong());
+                }
                 blackhole.consume(buf.release());
                 return;
             }
         } while (!control.stopMeasurement);
+    }
+
+    private void producerDirect(ProducerConsumerState state, Control control, ByteBufAllocator alloc) {
+        Queue<ByteBuf> queue = state.queue;
+        int size = state.sizes[state.getNextSizeIndex()];
+        ByteBuf buf = alloc.directBuffer(size);
+        if (state.writeThenReadLong) {
+            buf.writeLong(size);
+        }
+        while (!control.stopMeasurement) {
+            if (queue.offer(buf)) {
+                break;
+            }
+        }
+    }
+
+    private void producerHeap(ProducerConsumerState state, Control control, ByteBufAllocator alloc) {
+        Queue<ByteBuf> queue = state.queue;
+        int size = state.sizes[state.getNextSizeIndex()];
+        ByteBuf buf = alloc.heapBuffer(size);
+        if (state.writeThenReadLong) {
+            buf.writeLong(size);
+        }
+        while (!control.stopMeasurement) {
+            if (queue.offer(buf)) {
+                break;
+            }
+        }
+    }
+
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+    @Benchmark
+    @Group("pooled_direct")
+    public void consumerPooledDirect(ProducerConsumerState state, Control control, Blackhole blackhole) {
+        consumer(state, control, blackhole);
     }
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("pooled_direct")
     public void producerPooledDirect(ProducerConsumerState state, Control control) {
-        Queue<ByteBuf> queue = state.queue;
-        int size = state.sizes[state.getNextSizeIndex()];
-        ByteBuf buf = pooledAlloc.directBuffer(size);
-        while (!control.stopMeasurement) {
-            if (queue.offer(buf)) {
-                break;
-            }
-        }
+        producerDirect(state, control, pooledAlloc);
     }
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("adaptive_direct")
     public void consumerAdaptiveDirect(ProducerConsumerState state, Control control, Blackhole blackhole) {
-        Queue<ByteBuf> queue = state.queue;
-        do {
-            ByteBuf buf = queue.poll();
-            if (buf != null) {
-                blackhole.consume(buf.release());
-                return;
-            }
-        } while (!control.stopMeasurement);
+        consumer(state, control, blackhole);
     }
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("adaptive_direct")
-    public void producerAdaptiveDirect(ProducerConsumerState state, Control control) throws Exception {
-        Queue<ByteBuf> queue = state.queue;
-        int size = state.sizes[state.getNextSizeIndex()];
-        ByteBuf buf = adaptiveAllocator.directBuffer(size);
-        while (!control.stopMeasurement) {
-            if (queue.offer(buf)) {
-                break;
-            }
-        }
+    public void producerAdaptiveDirect(ProducerConsumerState state, Control control) {
+        producerDirect(state, control, adaptiveAllocator);
     }
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("mimalloc_direct")
     public void consumerMimallocDirect(ProducerConsumerState state, Control control, Blackhole blackhole) {
-        Queue<ByteBuf> queue = state.queue;
-        do {
-            ByteBuf buf = queue.poll();
-            if (buf != null) {
-                blackhole.consume(buf.release());
-                return;
-            }
-        } while (!control.stopMeasurement);
+        consumer(state, control, blackhole);
     }
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("mimalloc_direct")
     public void producerMimallocDirect(ProducerConsumerState state, Control control) {
-        Queue<ByteBuf> queue = state.queue;
-        int size = state.sizes[state.getNextSizeIndex()];
-        ByteBuf buf = miMallocAllocator.directBuffer(size);
-        while (!control.stopMeasurement) {
-            if (queue.offer(buf)) {
-                break;
-            }
-        }
+        producerDirect(state, control, miMallocAllocator);
     }
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("pooled_heap")
     public void consumerPooledHeap(ProducerConsumerState state, Control control, Blackhole blackhole) {
-        Queue<ByteBuf> queue = state.queue;
-        do {
-            ByteBuf buf = queue.poll();
-            if (buf != null) {
-                blackhole.consume(buf.release());
-                return;
-            }
-        } while (!control.stopMeasurement);
+        consumer(state, control, blackhole);
     }
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("pooled_heap")
     public void producerPooledHeap(ProducerConsumerState state, Control control) {
-        Queue<ByteBuf> queue = state.queue;
-        int size = state.sizes[state.getNextSizeIndex()];
-        ByteBuf buf = pooledAlloc.heapBuffer(size);
-        while (!control.stopMeasurement) {
-            if (queue.offer(buf)) {
-                break;
-            }
-        }
+        producerHeap(state, control, pooledAlloc);
     }
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("adaptive_heap")
     public void consumerAdaptiveHeap(ProducerConsumerState state, Control control, Blackhole blackhole) {
-        Queue<ByteBuf> queue = state.queue;
-        do {
-            ByteBuf buf = queue.poll();
-            if (buf != null) {
-                blackhole.consume(buf.release());
-                return;
-            }
-        } while (!control.stopMeasurement);
+        consumer(state, control, blackhole);
     }
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("adaptive_heap")
-    public void producerAdaptiveHeap(ProducerConsumerState state, Control control) throws Exception {
-        Queue<ByteBuf> queue = state.queue;
-        int size = state.sizes[state.getNextSizeIndex()];
-        ByteBuf buf = adaptiveAllocator.heapBuffer(size);
-        while (!control.stopMeasurement) {
-            if (queue.offer(buf)) {
-                break;
-            }
-        }
+    public void producerAdaptiveHeap(ProducerConsumerState state, Control control) {
+        producerHeap(state, control, adaptiveAllocator);
     }
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("mimalloc_heap")
     public void consumerMimallocHeap(ProducerConsumerState state, Control control, Blackhole blackhole) {
-        Queue<ByteBuf> queue = state.queue;
-        do {
-            ByteBuf buf = queue.poll();
-            if (buf != null) {
-                blackhole.consume(buf.release());
-                return;
-            }
-        } while (!control.stopMeasurement);
+        consumer(state, control, blackhole);
     }
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     @Group("mimalloc_heap")
     public void producerMimallocHeap(ProducerConsumerState state, Control control) {
-        Queue<ByteBuf> queue = state.queue;
-        int size = state.sizes[state.getNextSizeIndex()];
-        ByteBuf buf = miMallocAllocator.heapBuffer(size);
-        while (!control.stopMeasurement) {
-            if (queue.offer(buf)) {
-                break;
-            }
-        }
+        producerHeap(state, control, miMallocAllocator);
     }
 
     /**
