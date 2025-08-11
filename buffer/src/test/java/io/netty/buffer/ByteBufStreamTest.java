@@ -49,6 +49,8 @@ public class ByteBufStreamTest {
             // Expected
         }
 
+        assertThrows(IndexOutOfBoundsException.class, () -> new ByteBufOutputStream(buf).write(EMPTY_BYTES, -1, 0));
+
         try (ByteBufOutputStream out = new ByteBufOutputStream(buf)) {
             assertSame(buf, out.buffer());
             out.writeBoolean(true);
