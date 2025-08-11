@@ -48,8 +48,14 @@ public class ByteBufStreamTest {
             // Expected
         }
 
-        ByteBufOutputStream out = new ByteBufOutputStream(buf);
+        final ByteBufOutputStream out = new ByteBufOutputStream(buf);
         try {
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    out.write(EMPTY_BYTES, -1, 0);
+                }
+            });
             assertSame(buf, out.buffer());
             out.writeBoolean(true);
             out.writeBoolean(false);
