@@ -49,6 +49,7 @@ public class BufferStreamTest {
 
         BufferOutputStream out = new BufferOutputStream(buf);
         try {
+            assertThrows(IndexOutOfBoundsException.class, () -> out.write(EMPTY_BYTES, -1, 0));
             assertSame(buf, out.buffer());
             out.writeBoolean(true);
             out.writeBoolean(false);
