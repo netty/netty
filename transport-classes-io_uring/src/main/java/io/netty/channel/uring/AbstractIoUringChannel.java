@@ -162,7 +162,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         if (!isRegistered()) {
             return;
         }
-        readPending = false;
         IoRegistration registration = this.registration;
         if (registration == null || !registration.isValid()) {
             return;
@@ -180,14 +179,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         IoRegistration registration = this.registration;
         if (registration == null || !registration.isValid()) {
             return;
-        }
-        if ((ioState & POLL_IN_SCHEDULED) != 0) {
-            // There was a POLLIN scheduled, let's cancel it so we are not notified of any more reads for now.
-            assert pollInId != 0;
-            long id = registration.submit(
-                    IoUringIoOps.newAsyncCancel((byte) 0, pollInId, Native.IORING_OP_POLL_ADD));
-            assert id != 0;
-            ioState &= ~POLL_IN_SCHEDULED;
         }
         // Also cancel all outstanding reads as the user did signal there is no more desire to read.
         cancelOutstandingReads(registration(), numOutstandingReads);
