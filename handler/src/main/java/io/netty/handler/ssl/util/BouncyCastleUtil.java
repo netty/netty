@@ -102,8 +102,8 @@ public final class BouncyCastleUtil {
      */
     public static boolean isBcJsseInUse(SSLEngine engine) {
         ensureLoaded();
-        Class<? extends SSLEngine> bcSSLEngineClass = this.bcSSLEngineClass;
-        return bcSSLEngineClass != null && bcSSLEngineClass.isInstance(engine);
+        Class<? extends SSLEngine> bcEngineClass = bcSSLEngineClass;
+        return bcEngineClass != null && bcEngineClass.isInstance(engine);
     }
 
     /**
