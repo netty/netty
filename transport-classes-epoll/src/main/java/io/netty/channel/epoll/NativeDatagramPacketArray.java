@@ -188,7 +188,7 @@ final class NativeDatagramPacketArray {
             this.segmentSize = segmentSize;
 
             this.senderScopeId = 0;
-            this.senderPort = 0;
+            this.senderPort = -1;
             this.senderAddrLen = 0;
 
             if (recipient == null) {
@@ -210,7 +210,7 @@ final class NativeDatagramPacketArray {
         }
 
         boolean hasSender() {
-            return senderPort > 0;
+            return senderPort >= 0;
         }
 
         DatagramPacket newDatagramPacket(ByteBuf buffer, InetSocketAddress recipient) throws UnknownHostException {
