@@ -185,7 +185,6 @@ final class MiMallocByteBufAllocator {
 
     static final class LocalHeap {
         final SegmentTld segmentTld;
-        final Thread ownerThread;
         int pageCount; // total number of pages in the `pages` queues.
         int pageRetiredMin; // smallest retired index (retired pages are fully free, but still in the page queues)
         int pageRetiredMax; // largest retired index into the `pages` array.
@@ -203,7 +202,6 @@ final class MiMallocByteBufAllocator {
         private final ArrayDeque<Block> blockDeque;
 
         LocalHeap(MiMallocByteBufAllocator allocator) {
-            this.ownerThread = Thread.currentThread();
             segmentTld = new SegmentTld();
             pagesFreeDirect = new Page[PAGES_FREE_DIRECT_ARRAY_SIZE + 1];
             Arrays.fill(pagesFreeDirect, EMPTY_PAGE);
@@ -622,10 +620,10 @@ final class MiMallocByteBufAllocator {
         // Initialize a fresh page.
         private void pageInit(Page page, int block_size) {
             // Set fields.
-            page.ownerHeap.set(page.isHuge ? null : this);
             page.blockSize = block_size;
             int page_size = page.sliceCount * SEGMENT_SLICE_SIZE;
             page.reservedBlocks = page_size / block_size;
+            page.retireExpire = DEFAULT_PAGE_RETIRE_EXPIRE;
             assert page.capacityBlocks == 0;
             assert page.freeList == null;
             assert page.localFreeList == null;
@@ -722,6 +720,7 @@ final class MiMallocByteBufAllocator {
         // and clears the ownerThread.
         private void segmentMarkAbandoned(Segment segment) {
             segment.ownerThread.set(null);
+            segment.ownerHeap.set(null);
             segment.parent.abandonedSegmentDeque.offer(segment);
             segment.parent.abandonedSegmentCount.incrementAndGet();
         }
@@ -730,6 +729,7 @@ final class MiMallocByteBufAllocator {
         // Return `RECLAIMED_SEGMENT_FLAG` if it reclaimed a page of the right block size that was not full.
         private Object segmentReclaim(Segment segment, int requested_block_size, boolean check_right_page_reclaimed) {
             segment.ownerThread.set(Thread.currentThread());
+            segment.ownerHeap.set(this);
             segment.abandonedVisits = 0;
             segment.wasReclaimed = true;
             this.segmentTld.reclaimCount++;
@@ -743,7 +743,6 @@ final class MiMallocByteBufAllocator {
                     Page page = (Page) slice;
                     segment.abandonedPages--;
                     // Associate the heap with this page, and allow heap thread delayed free again.
-                    page.ownerHeap.set(this);
                     pageUseDelayedFree(page, USE_DELAYED_FREE, true); // override never (after heap is set)
                     page.pageFreeCollect(false); // Ensure `usedBlocks` count is up to date.
                     if (page.usedBlocks == 0) {
@@ -759,7 +758,7 @@ final class MiMallocByteBufAllocator {
                         }
                     }
                 } else {
-                    // The span is free, add it to our page queues.
+                    // The span is free, add it to our span queues.
                     slice = segmentSpanFreeCoalesce(slice); // Set slice again due to coalescing.
                 }
                 slice = segment.slices[slice.sliceIndex + slice.sliceCount];
@@ -888,6 +887,8 @@ final class MiMallocByteBufAllocator {
 
         // Note: can be called on abandoned pages
         private Span segmentPageClear(Page page) {
+            assert page.usedBlocks == 0;
+            assert page.threadFreeList.get() == null;
             Segment segment = page.segment;
             page.blockSize = 1;
             // Free it
@@ -935,7 +936,7 @@ final class MiMallocByteBufAllocator {
                     slice = prevFirst;
                 }
             }
-            // Add the new free page.
+            // Add the new free span.
             segmentSpanFree(segment, slice.sliceIndex, slice_count);
             return slice;
         }
@@ -979,9 +980,9 @@ final class MiMallocByteBufAllocator {
             if (buf == null) {
                 return null; // Signal OOM
             }
-            Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_NORMAL, buf);
+            Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_NORMAL, buf, this);
             segmentsTrackSize(segment.segmentSize);
-            // Initialize the initial free pages.
+            // Initialize the initial free spans.
             segmentSpanFree(segment, 0, segment.sliceEntries);
             return segment;
         }
@@ -995,9 +996,9 @@ final class MiMallocByteBufAllocator {
             if (buf == null) {
                 return null; // Signal OOM
             }
-            Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_HUGE, buf);
+            Segment segment = new Segment(this.allocator, segment_size, segment_slices, SEGMENT_HUGE, buf, this);
             segmentsTrackSize(segment.segmentSize);
-            // Initialize the initial free pages.
+            // Allocate a huge page which spans the entire segment.
             return segmentSpanAllocate(segment, 0, segment_slices);
         }
 
@@ -1091,10 +1092,10 @@ final class MiMallocByteBufAllocator {
             slice.sliceCount = sliceCount;
         }
 
-        // Note: can be called on abandoned segments.
+        // Note: can be called on abandoned segments, through `segmentCheckFree`->`segmentSpanFreeCoalesce`.
         private void segmentSpanFree(Segment segment, int sliceIndex, int sliceCount) {
-            SpanQueue sq = segment.kind == SEGMENT_HUGE || isSegmentAbandoned(segment) ?
-                    null : getSpanQueue(sliceCount);
+            assert segment.kind != SEGMENT_HUGE;
+            SpanQueue sq = isSegmentAbandoned(segment) ? null : getSpanQueue(sliceCount);
             if (sliceCount == 0) {
                 sliceCount = 1;
             }
@@ -1113,11 +1114,11 @@ final class MiMallocByteBufAllocator {
                 last.sliceOffset = sliceCount - 1;
                 last.blockSize = 0;
             }
-            // And push it on the free page queue (if it was not a huge page).
+            // And push it on the free span queue.
             if (sq != null) {
                 spanQueuePush(sq, slice);
             } else {
-                slice.blockSize = 0; // Mark the huge page as free anyway.
+                slice.blockSize = 0; // Mark the abandoned span as free anyway.
             }
         }
 
@@ -1168,7 +1169,6 @@ final class MiMallocByteBufAllocator {
             // (no need to do `heapDelayedFree` first as all blocks are already free).
             pageQueueRemove(pq, page);
             // And free it.
-            page.ownerHeap.set(null);
             page.capacityBlocks = 0;
             recycleBlocks(page.freeList);
             page.freeList = null;
@@ -1415,11 +1415,11 @@ final class MiMallocByteBufAllocator {
     }
 
     static final class PageQueue {
-        Page firstPage;
-        Page lastPage;
-        final int blockWords;
-        final int blockSize;
-        final int index;
+        private Page firstPage;
+        private Page lastPage;
+        private final int blockWords;
+        private final int blockSize;
+        private final int index;
 
         PageQueue(int blockWords, int index) {
             this.blockWords = blockWords;
@@ -1502,7 +1502,6 @@ final class MiMallocByteBufAllocator {
         int blockSize;
         final AtomicReference<DELAYED_FLAG> threadDelayedFreeFlag = new AtomicReference<>(USE_DELAYED_FREE);
         boolean isHuge; // `true` if the page is in a huge segment (segment.kind == SEGMENT_HUGE)
-        final AtomicReference<LocalHeap> ownerHeap = new AtomicReference<LocalHeap>();
 
         // Empty Page Constructor
         Page() { }
@@ -1513,7 +1512,6 @@ final class MiMallocByteBufAllocator {
         // Currently only called through `heapCollectEx` which ensures this.
         private void pageAbandon(PageQueue pq, LocalHeap heap) {
             // page is no longer associated with heap.
-            this.ownerHeap.set(null);
             // remove from page queues.
             heap.pageQueueRemove(pq, this);
             // abandon it.
@@ -1533,7 +1531,7 @@ final class MiMallocByteBufAllocator {
         }
 
         // Retire a page with no more used blocks.
-        // Important to not retire too quickly though as new allocations might coming.
+        // Important to not retire too quickly though as new allocations might be coming soon.
         private void pageRetire(LocalHeap heap) {
             // Don't retire too often.
             // (or we end up retiring and re-allocating most of the time).
@@ -1674,10 +1672,10 @@ final class MiMallocByteBufAllocator {
     }
 
     static final class SpanQueue {
-        Span firstSpan;
-        Span lastSpan;
-        final int sliceCount;
-        final int index;
+        private Span firstSpan;
+        private Span lastSpan;
+        private final int sliceCount;
+        private final int index;
         SpanQueue(int sliceCount, int index) {
             this.sliceCount = sliceCount;
             this.index = index;
@@ -1705,23 +1703,27 @@ final class MiMallocByteBufAllocator {
         private final MiMallocByteBufAllocator parent;
         private final int segmentSize;
         private final AtomicReference<Thread> ownerThread = new AtomicReference<>();
+        private final AtomicReference<LocalHeap> ownerHeap = new AtomicReference<LocalHeap>();
         // One extra final entry for huge blocks.
-        final Span[] slices = new Span[DEFAULT_SLICE_COUNT + 1];
-        int sliceEntries; // Entries in the `slices` array, at most `DEFAULT_SLICE_COUNT`
-        int segmentSlices; // For huge segments, this may be different from `DEFAULT_SLICE_COUNT`
-        int usedPages; // count of pages in use
+        private final Span[] slices = new Span[DEFAULT_SLICE_COUNT + 1];
+        private int sliceEntries; // Entries in the `slices` array, at most `DEFAULT_SLICE_COUNT`
+        private int segmentSlices; // For huge segments, this may be different from `DEFAULT_SLICE_COUNT`
+        private int usedPages; // count of pages in use
         // Abandoned pages (i.e. the original owning thread stopped) (`abandoned <= used`)
-        int abandonedPages;
+        private int abandonedPages;
         // Count how often this segment is visited during abandoned reclamation (to force reclaim if it takes too long).
-        int abandonedVisits;
-        boolean wasReclaimed; // True if it was reclaimed (used to limit on-free reclamation).
-        final SEGMENT_KIND kind;
+        private int abandonedVisits;
+        private boolean wasReclaimed; // True if it was reclaimed (used to limit on-free reclamation).
+        private final SEGMENT_KIND kind;
 
         Segment(MiMallocByteBufAllocator parent, int segmentSize, int segmentSlices, SEGMENT_KIND kind,
-                AbstractByteBuf delegate) {
+                AbstractByteBuf delegate, LocalHeap heap) {
             this.parent = parent;
             this.delegate = delegate;
-            ownerThread.set(kind == SEGMENT_HUGE ? null : Thread.currentThread());
+            if (kind != SEGMENT_HUGE) {
+                this.ownerThread.set(Thread.currentThread());
+                this.ownerHeap.set(heap);
+            }
             this.segmentSize = segmentSize;
             this.segmentSlices = segmentSlices;
             this.sliceEntries = Math.min(segmentSlices, DEFAULT_SLICE_COUNT);
@@ -1799,7 +1801,7 @@ final class MiMallocByteBufAllocator {
         if (use_delayed) {
             // Racy read on `heap`, but ok because `DELAYED_FREEING` is set.
             // (see `heapCollectAbandon`)
-            LocalHeap heap = page.ownerHeap.get();
+            LocalHeap heap = page.segment.ownerHeap.get();
             assert heap != null;
             if (heap != null) {
                 // Add to the delayed free list of this heap.
@@ -1832,6 +1834,7 @@ final class MiMallocByteBufAllocator {
             block.nextBlock = page.freeList;
             page.freeList = block;
             page.usedBlocks--;
+            assert page.usedBlocks == 0;
             heap.segmentPageFree(page, true);
         }
     }
