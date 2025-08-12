@@ -19,6 +19,7 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.FastThreadLocal;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -1835,14 +1836,12 @@ final class MiMallocByteBufAllocator {
                 // (see `heapCollectAbandon`)
                 LocalHeap heap = page.segment.ownerHeap.get();
                 assert heap != null;
-                if (heap != null) {
-                    // Add to the delayed free list of this heap.
-                    Block dfree;
-                    do {
-                        dfree = heap.threadDelayedFreeList.get();
-                        block.nextBlock = dfree;
-                    } while (!heap.threadDelayedFreeList.compareAndSet(dfree, block));
-                }
+                // Add to the delayed free list of this heap.
+                Block dfree;
+                do {
+                    dfree = heap.threadDelayedFreeList.get();
+                    block.nextBlock = dfree;
+                } while (!heap.threadDelayedFreeList.compareAndSet(dfree, block));
             } finally { // Make sure we always reset the `DELAYED_FREEING` flag.
                 if (!page.threadDelayedFreeFlag.compareAndSet(DELAYED_FREEING, NO_DELAYED_FREE)) {
                     // Should not happen.
