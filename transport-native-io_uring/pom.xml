@@ -216,12 +216,6 @@
                     <logback.configurationFile>src/test/resources/logback-test.xml</logback.configurationFile>
                     <logLevel>debug</logLevel>
                   </systemPropertyVariables>
-                  <properties>
-                    <property>
-                      <name>listener</name>
-                      <value>io.netty.build.junit.TimedOutTestsListener</value>
-                    </property>
-                  </properties>
                   <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
                   <trimStackTrace>false</trimStackTrace>
                   <argLine>${test.argLine}</argLine>
@@ -249,12 +243,6 @@
                     <logback.configurationFile>src/test/resources/logback-test.xml</logback.configurationFile>
                     <logLevel>debug</logLevel>
                   </systemPropertyVariables>
-                  <properties>
-                    <property>
-                      <name>listener</name>
-                      <value>io.netty.build.junit.TimedOutTestsListener</value>
-                    </property>
-                  </properties>
                   <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
                   <trimStackTrace>false</trimStackTrace>
                   <argLine>${test.argLine}</argLine>
