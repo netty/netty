@@ -34,6 +34,19 @@ public final class Socks5PrivateAuthStatus implements Comparable<Socks5PrivateAu
     public static final Socks5PrivateAuthStatus SUCCESS = new Socks5PrivateAuthStatus(0x00, "SUCCESS");
     public static final Socks5PrivateAuthStatus FAILURE = new Socks5PrivateAuthStatus(0xFF, "FAILURE");
 
+    /**
+     * Returns the {@link Socks5PrivateAuthStatus} instance that corresponds to the specified byte value.
+     * <p>
+     * This method returns a singleton instance for standard status codes:
+     * <ul>
+     *   <li>0x00: {@link #SUCCESS}</li>
+     *   <li>0xFF: {@link #FAILURE}</li>
+     * </ul>
+     * For any other values, a new instance is created.
+     *
+     * @param b The byte value of the SOCKS5 private authentication status
+     * @return The corresponding {@link Socks5PrivateAuthStatus} instance
+     */
     public static Socks5PrivateAuthStatus valueOf(byte b) {
         switch (b) {
             case 0x00:
@@ -49,10 +62,18 @@ public final class Socks5PrivateAuthStatus implements Comparable<Socks5PrivateAu
     private final String name;
     private String text;
 
-    public Socks5PrivateAuthStatus(int byteValue) {
+    private Socks5PrivateAuthStatus(int byteValue) {
         this(byteValue, "UNKNOWN");
     }
 
+    /**
+     * Creates a new SOCKS5 private authentication status.
+     *
+     * @param byteValue The byte value representing the authentication status
+     *                  (0x00 for success, 0xFF for failure, or custom values)
+     * @param name      The descriptive name of this status, must not be null
+     * @throws NullPointerException if the name is null
+     */
     public Socks5PrivateAuthStatus(int byteValue, String name) {
         this.name = ObjectUtil.checkNotNull(name, "name");
         this.byteValue = (byte) byteValue;
