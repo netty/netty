@@ -56,8 +56,8 @@ public class FlightRecorderTest {
         try (AutoCloseable c = (AutoCloseable) recordingStream) {
             CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
             Consumer<RecordedEvent> complete = allocateFuture::complete;
-            enableMethod.invoke(recordingStream, "AllocateChunkEvent");
-            onEventMethod.invoke(recordingStream, "AllocateChunkEvent", complete);
+            enableMethod.invoke(recordingStream, "io.netty.AllocateChunk");
+            onEventMethod.invoke(recordingStream, "io.netty.AllocateChunk", complete);
             startAsyncMethod.invoke(recordingStream);
 
             AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, false);

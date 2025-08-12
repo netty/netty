@@ -19,6 +19,7 @@ import jdk.jfr.Category;
 import jdk.jfr.Description;
 import jdk.jfr.Enabled;
 import jdk.jfr.Event;
+import jdk.jfr.Label;
 
 /**
  * An abstract memory allocator event.
@@ -27,6 +28,7 @@ import jdk.jfr.Event;
 @Category("Netty")
 @SuppressWarnings("Since15")
 abstract class AbstractAllocatorEvent extends Event {
+    @Label("Allocator type")
     @Description("The type of allocator this event is for")
-    public AllocatorType allocatorType;
+    public Class<? extends AbstractByteBufAllocator> allocatorType;
 }

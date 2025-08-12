@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.3.Final-SNAPSHOT</version>
+  <version>4.2.4.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -678,8 +678,8 @@
       <properties>
         <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
-        <argLine.java9/>
-        <argLine.java9.extras/>
+        <argLine.java9 />
+        <argLine.java9.extras />
       </properties>
     </profile>
   </profiles>
@@ -809,6 +809,7 @@
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
     <module>jfr-stub</module>
+    <module>varhandle-stub</module>
     <module>bom</module>
   </modules>
 
@@ -1556,25 +1557,11 @@
             <nativeimage.handlerMetadataArtifactId>${project.artifactId}</nativeimage.handlerMetadataArtifactId>
           </systemPropertyVariables>
           <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
-          <properties>
-            <property>
-              <name>listener</name>
-              <value>io.netty.build.junit.TimedOutTestsListener</value>
-            </property>
-          </properties>
           <skipTests>${skipTests}</skipTests>
           <jvm>${testJvm}</jvm>
            <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
         </configuration>
-        <dependencies>
-          <!-- Needed for TimedOutTestsListener -->
-          <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>netty-build-common</artifactId>
-            <version>${netty.build.version}</version>
-          </dependency>
-        </dependencies>
       </plugin>
       <!-- always produce osgi bundles -->
       <plugin>

@@ -69,6 +69,7 @@ public final class IovArray implements MessageProcessor {
     private int count;
     private long size;
     private long maxBytes = SSIZE_MAX;
+    private int maxCount;
 
     /**
      * @deprecated Use {@link #IovArray(int)} instead.
@@ -100,6 +101,7 @@ public final class IovArray implements MessageProcessor {
             ByteBuffer byteBuffer = memory.internalNioBuffer(0, memory.capacity());
             memoryAddress = Buffer.memoryAddress(byteBuffer) + byteBuffer.position();
         }
+        maxCount = IOV_MAX;
     }
 
     /**
@@ -124,11 +126,13 @@ public final class IovArray implements MessageProcessor {
             memoryAddress = Buffer.memoryAddress(byteBuffer) + byteBuffer.position();
         }
         cleanable = null;
+        maxCount = IOV_MAX;
     }
 
     public void clear() {
         count = 0;
         size = 0;
+        maxCount = IOV_MAX;
     }
 
     /**
@@ -140,7 +144,7 @@ public final class IovArray implements MessageProcessor {
     }
 
     public boolean add(ByteBuf buf, int offset, int len) {
-        if (count == IOV_MAX) {
+        if (count == maxCount) {
             // No more room!
             return false;
         }
@@ -250,11 +254,31 @@ public final class IovArray implements MessageProcessor {
     }
 
     /**
+     * Set the maximum amount of buffers that can be added to this {@link IovArray} via {@link #add(ByteBuf, int, int)}
+     * <p>
+     * This will not impact the existing state of the {@link IovArray}, and only applies to subsequent calls to
+     * {@link #add(ByteBuf)}.
+     * <p>
+     * @param maxCount the maximum amount of bytes that can be added to this {@link IovArray}.
+     */
+    public void maxCount(int maxCount) {
+        this.maxCount = min(IOV_MAX, checkPositive(maxCount, "maxCount"));
+    }
+
+    /**
      * Get the maximum amount of bytes that can be added to this {@link IovArray}.
      * @return the maximum amount of bytes that can be added to this {@link IovArray}.
      */
     public long maxBytes() {
         return maxBytes;
+    }
+
+    /**
+     * Get the maximum amount of buffers that can be added to this {@link IovArray}.
+     * @return the maximum amount of buffers that can be added to this {@link IovArray}.
+     */
+    public int maxCount() {
+        return maxCount;
     }
 
     /**

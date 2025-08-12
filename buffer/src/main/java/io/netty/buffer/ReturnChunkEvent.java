@@ -21,9 +21,10 @@ import jdk.jfr.Name;
 
 @SuppressWarnings("Since15")
 @Label("Chunk Return")
-@Name("ReturnChunkEvent")
-@Description("Triggered when a memory chunk is freed from an allocator")
+@Name(ReturnChunkEvent.NAME)
+@Description("Triggered when a memory chunk is prepared for re-use by an allocator")
 final class ReturnChunkEvent extends AbstractChunkEvent {
+    static final String NAME = "io.netty.ReturnChunk";
     private static final FreeChunkEvent INSTANCE = new FreeChunkEvent();
 
     /**

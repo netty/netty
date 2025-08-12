@@ -16,9 +16,11 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.unix.Buffer;
+import io.netty.channel.unix.Errors;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.io.UncheckedIOException;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
@@ -52,6 +54,7 @@ final class SubmissionQueue {
             MethodHandles.byteBufferViewVarHandle(int[].class, ByteOrder.nativeOrder());
     private final ByteBuffer kHead;
     private final ByteBuffer kTail;
+    private final ByteBuffer kflags;
     private final ByteBuffer submissionQueueArray;
 
     final int ringEntries;
@@ -67,7 +70,8 @@ final class SubmissionQueue {
 
     private boolean closed;
 
-    SubmissionQueue(ByteBuffer khead, ByteBuffer ktail, int ringMask, int ringEntries, ByteBuffer submissionQueueArray,
+    SubmissionQueue(ByteBuffer khead, ByteBuffer ktail, int ringMask, int ringEntries, ByteBuffer kflags,
+                    ByteBuffer submissionQueueArray,
                     int ringSize, long ringAddress,
                     int ringFd) {
         this.kHead = khead;
@@ -78,9 +82,18 @@ final class SubmissionQueue {
         this.ringFd = ringFd;
         this.enterRingFd = ringFd;
         this.ringEntries = ringEntries;
+        this.kflags = kflags;
         this.ringMask = ringMask;
         this.head = (int) INT_HANDLE.getVolatile(khead, 0);
         this.tail = (int) INT_HANDLE.getVolatile(ktail, 0);
+    }
+
+    int flags() {
+        if (closed) {
+            return 0;
+        }
+        // we only need memory_order_relaxed
+        return (int) INT_HANDLE.getOpaque(kflags, 0);
     }
 
     long submissionQueueArrayAddress() {
@@ -248,7 +261,7 @@ final class SubmissionQueue {
         assert submit == 0;
         int ret = ioUringEnter(0, minComplete, Native.IORING_ENTER_GETEVENTS);
         if (ret < 0) {
-            throw new RuntimeException("ioUringEnter syscall returned " + ret);
+            throw new UncheckedIOException(Errors.newIOException("io_uring_enter", ret));
         }
         return ret; // should be 0
     }
@@ -259,7 +272,7 @@ final class SubmissionQueue {
         head = (int) INT_HANDLE.getVolatile(kHead, 0); // acquire memory barrier
         if (ret != toSubmit) {
             if (ret < 0) {
-                throw new RuntimeException("ioUringEnter syscall returned " + ret);
+                throw new UncheckedIOException(Errors.newIOException("io_uring_enter", ret));
             }
         }
         return ret;

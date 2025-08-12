@@ -17,6 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -81,25 +82,34 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         cb.option(ChannelOption.IP_MULTICAST_IF, iface);
         cb.option(ChannelOption.SO_REUSEADDR, true);
 
-        DatagramChannel sc = (DatagramChannel) sb.bind(newSocketAddress(iface)).sync().channel();
-        assertEquals(iface, sc.config().getNetworkInterface());
-        assertInterfaceAddress(iface, sc.config().getInterface());
+        DatagramChannel sc = null;
 
-        InetSocketAddress addr = sc.localAddress();
-        cb.localAddress(addr.getPort());
+        int attempts = 5;
+        ChannelFuture clientFuture;
+        do {
+            if (sc != null) {
+                sc.close().sync();
+            }
+            sc = (DatagramChannel) sb.bind(newSocketAddress(iface)).sync().channel();
+            if (sc instanceof OioDatagramChannel) {
+                // skip the test for OIO, as it fails because of
+                // No route to host which makes no sense.
+                // Maybe a JDK bug ?
+                sc.close().awaitUninterruptibly();
+                return;
+            }
+            assertEquals(iface, sc.config().getNetworkInterface());
+            assertInterfaceAddress(iface, sc.config().getInterface());
 
-        if (sc instanceof OioDatagramChannel) {
-            // skip the test for OIO, as it fails because of
-            // No route to host which makes no sense.
-            // Maybe a JDK bug ?
-            sc.close().awaitUninterruptibly();
-            return;
-        }
-        DatagramChannel cc = (DatagramChannel) cb.bind().sync().channel();
+            InetSocketAddress addr = sc.localAddress();
+            cb.localAddress(addr.getPort());
+            clientFuture = cb.bind().await();
+        } while (!clientFuture.isSuccess() && --attempts > 0);
+        DatagramChannel cc = (DatagramChannel) clientFuture.sync().channel();
         assertEquals(iface, cc.config().getNetworkInterface());
         assertInterfaceAddress(iface, cc.config().getInterface());
 
-        InetSocketAddress groupAddress = SocketUtils.socketAddress(groupAddress(), addr.getPort());
+        InetSocketAddress groupAddress = SocketUtils.socketAddress(groupAddress(), sc.localAddress().getPort());
 
         cc.joinGroup(groupAddress, iface).sync();
 

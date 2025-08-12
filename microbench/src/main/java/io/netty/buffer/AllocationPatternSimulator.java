@@ -15,6 +15,8 @@
  */
 package io.netty.buffer;
 
+import jdk.jfr.consumer.RecordedEvent;
+import jdk.jfr.consumer.RecordingFile;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.JFreeChart;
 import org.jfree.data.category.DefaultCategoryDataset;
@@ -23,10 +25,16 @@ import java.awt.BasicStroke;
 import java.awt.Rectangle;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.SplittableRandom;
+import java.util.TreeMap;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -422,6 +430,7 @@ public class AllocationPatternSimulator {
     };
     private static final int CONCURRENCY_LEVEL = 4;
     private static final int RUNNING_TIME_SECONDS = 120;
+    private static final ConcurrentHashMap<String, Integer> THREAD_NAMES = new ConcurrentHashMap<>();
 
     AdaptiveByteBufAllocator adaptive128;
     PooledByteBufAllocator pooled128;
@@ -433,9 +442,36 @@ public class AllocationPatternSimulator {
     int count;
 
     public static void main(String[] args) throws Exception {
+        int[] pattern = args.length == 0 ? WEB_SOCKET_PROXY_PATTERN : buildPattern(args[0]);
         AllocationPatternSimulator runner = new AllocationPatternSimulator();
-        runner.setUp(WEB_SOCKET_PROXY_PATTERN);
+        runner.setUp(pattern);
         runner.run(CONCURRENCY_LEVEL, RUNNING_TIME_SECONDS);
+    }
+
+    private static int[] buildPattern(String jfrFile) throws IOException {
+        Path path = Paths.get(jfrFile).toAbsolutePath();
+        TreeMap<Integer, Integer> summation = new TreeMap<>();
+        try (RecordingFile eventReader = new RecordingFile(path)) {
+            while (eventReader.hasMoreEvents()) {
+                RecordedEvent event = eventReader.readEvent();
+                String name = event.getEventType().getName();
+                if (("AllocateBufferEvent".equals(name) || "io.netty.AllocateBuffer".equals(name)) &&
+                        event.hasField("size")) {
+                    int size = event.getInt("size");
+                    summation.compute(size, (k, v) -> v == null ? 1 : v + 1);
+                }
+            }
+        }
+        if (summation.isEmpty()) {
+            throw new IllegalStateException("No 'AllocateBufferEvent' records found in JFR file: " + jfrFile);
+        }
+        int[] pattern = new int[summation.size() * 2];
+        int index = 0;
+        for (Map.Entry<Integer, Integer> entry : summation.entrySet()) {
+            pattern[index++] = entry.getKey();
+            pattern[index++] = entry.getValue();
+        }
+        return pattern;
     }
 
     void setUp(int[] pattern) {
@@ -443,7 +479,7 @@ public class AllocationPatternSimulator {
         pooled128 = new PooledByteBufAllocator();
         adaptive2048 = new AdaptiveByteBufAllocator();
         pooled2048 = new PooledByteBufAllocator();
-        PatternItr itr = new PatternItr();
+        PatternItr itr = new PatternItr(pattern);
         size = new int[pattern.length >> 1];
         cumulativeFrequency = new int[pattern.length >> 1];
         sumFrequency = 0;
@@ -547,7 +583,7 @@ public class AllocationPatternSimulator {
         }
 
         Thread start(CountDownLatch startLatch, AtomicBoolean stopCondition) {
-            return new Workload(startLatch, allocator, rng.split(), stopCondition, avgLiveBufs).start();
+            return new Workload(startLatch, allocator, rng.split(), stopCondition, avgLiveBufs).start(name);
         }
 
         long usedMemory() {
@@ -581,8 +617,8 @@ public class AllocationPatternSimulator {
             this.avgLiveBuffers = avgLiveBuffers;
         }
 
-        Thread start() {
-            Thread thread = new Thread(this);
+        Thread start(String name) {
+            Thread thread = new Thread(this, name + '-' + THREAD_NAMES.compute(name, (n, c) -> c == null ? 1 : c + 1));
             thread.start();
             return thread;
         }
@@ -621,15 +657,20 @@ public class AllocationPatternSimulator {
     }
 
     private static final class PatternItr {
+        private final int[] pattern;
         private int index;
         private boolean hasData;
         private int size;
         private int frequency;
 
+        PatternItr(int[] pattern) {
+            this.pattern = pattern;
+        }
+
         public boolean next() {
-            if (index < WEB_SOCKET_PROXY_PATTERN.length) {
-                size = WEB_SOCKET_PROXY_PATTERN[index++];
-                frequency = WEB_SOCKET_PROXY_PATTERN[index++];
+            if (index < pattern.length) {
+                size = pattern[index++];
+                frequency = pattern[index++];
                 return hasData = true;
             }
             return hasData = false;

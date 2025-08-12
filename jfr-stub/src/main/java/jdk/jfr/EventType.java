@@ -13,25 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer;
+package jdk.jfr;
 
-import io.netty.util.internal.UnstableApi;
-
-/**
- * The type of allocator that an event is related to.
- */
-@UnstableApi
-enum AllocatorType {
-    /**
-     * The event is produced by the {@link io.netty.buffer.PooledByteBufAllocator}.
-     */
-    pooled,
-    /**
-     * The event is produced by the {@link io.netty.buffer.AdaptiveByteBufAllocator}.
-     */
-    adaptive,
-    /**
-     * The event is produced by an unknown or indeterminate allocator.
-     */
-    unknown
+public final class EventType {
+    public String getName() {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
 }
