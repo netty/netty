@@ -1844,10 +1844,10 @@ final class MiMallocByteBufAllocator {
                     } while (!heap.threadDelayedFreeList.compareAndSet(dfree, block));
                 }
             } finally { // Make sure we always reset the `DELAYED_FREEING` flag.
-                boolean isReset;
-                do {
-                    isReset = page.threadDelayedFreeFlag.compareAndSet(DELAYED_FREEING, NO_DELAYED_FREE);
-                } while (!isReset);
+                if (!page.threadDelayedFreeFlag.compareAndSet(DELAYED_FREEING, NO_DELAYED_FREE)) {
+                    // Should not happen.
+                    PlatformDependent.throwException(new IllegalStateException("Failed to reset DELAYED_FREEING flag"));
+                }
             }
         } else { // Common path
             Block current;
