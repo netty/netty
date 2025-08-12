@@ -36,6 +36,8 @@
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
     <javaModuleName>io.netty.testsuite_osgi</javaModuleName>
+    <!-- Skip OSGI testsuite by default -->
+    <skipOsgiTestsuite>true</skipOsgiTestsuite>
   </properties>
 
   <profiles>
