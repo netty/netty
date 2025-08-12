@@ -34,6 +34,8 @@
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
     <maven.javadoc.skip>true</maven.javadoc.skip>
+    <!-- Skip OSGI testsuite by default -->
+    <skipOsgiTestsuite>true</skipOsgiTestsuite>
   </properties>
 
   <profiles>
