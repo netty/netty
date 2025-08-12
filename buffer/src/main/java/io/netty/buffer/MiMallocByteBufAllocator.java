@@ -19,7 +19,6 @@ import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.FastThreadLocal;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 
@@ -35,7 +34,6 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.Deque;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -1794,12 +1792,7 @@ final class MiMallocByteBufAllocator {
         Page page = block.page;
         if (is_local) { // thread-local free.
             LocalHeap heap = THREAD_LOCAL_HEAP.get();
-            if (!page.isInFull) { // It is not in a full page (full pages need to move from the full bin).
-                page.freeBlockLocal(block, false, heap);
-            } else {
-                // Page is full, use the generic free path.
-                page.freeBlockLocal(block, true, heap);
-            }
+            page.freeBlockLocal(block, page.isInFull, heap);
         } else {
             // Not thread-local, use the generic multi-threaded-free path.
             freeBlockMt(page, segment, block);
@@ -1842,7 +1835,7 @@ final class MiMallocByteBufAllocator {
                     dfree = heap.threadDelayedFreeList.get();
                     block.nextBlock = dfree;
                 } while (!heap.threadDelayedFreeList.compareAndSet(dfree, block));
-            } finally { // Make sure we always reset the `DELAYED_FREEING` flag.
+            } finally { // Make sure we always reset the `DELAYED_FREEING` to `NO_DELAYED_FREE`.
                 if (!page.threadDelayedFreeFlag.compareAndSet(DELAYED_FREEING, NO_DELAYED_FREE)) {
                     // Should not happen.
                     PlatformDependent.throwException(new IllegalStateException("Failed to reset DELAYED_FREEING flag"));
