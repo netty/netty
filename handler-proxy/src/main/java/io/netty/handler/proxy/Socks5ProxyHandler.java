@@ -56,7 +56,8 @@ public final class Socks5ProxyHandler extends ProxyHandler {
     private static final String AUTH_PASSWORD = "password";
     private static final String AUTH_PRIVATE = "private";
 
-    private static final byte NO_PRIVATE_AUTH_METHOD = Socks5AuthMethod.NO_AUTH.byteValue();
+    private static final byte NO_PRIVATE_AUTH_METHOD =
+        Socks5AuthMethod.NO_AUTH.byteValue();
 
     private static final Socks5InitialRequest INIT_REQUEST_NO_AUTH =
             new DefaultSocks5InitialRequest(Collections.singletonList(Socks5AuthMethod.NO_AUTH));
@@ -67,12 +68,11 @@ public final class Socks5ProxyHandler extends ProxyHandler {
     private final String username;
     private final String password;
     private final byte privateAuthMethod;
+    private final byte[] privateToken;
+    private final Socks5ClientEncoder clientEncoder;
 
     private String decoderName;
     private String encoderName;
-
-    private final byte[] privateToken;
-    private final Socks5ClientEncoder clientEncoder;
 
     public Socks5ProxyHandler(SocketAddress proxyAddress) {
         this(proxyAddress, null, null);

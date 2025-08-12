@@ -36,7 +36,7 @@ public final class DefaultSocks5PrivateAuthResponse extends AbstractSocks5Messag
      * @param authStatus the authentication status
      */
     public DefaultSocks5PrivateAuthResponse(final Socks5PrivateAuthStatus authStatus) {
-        this.status = ObjectUtil.checkNotNull(authStatus, "status");
+        this.status = ObjectUtil.checkNotNull(authStatus, "authStatus");
     }
 
     @Override

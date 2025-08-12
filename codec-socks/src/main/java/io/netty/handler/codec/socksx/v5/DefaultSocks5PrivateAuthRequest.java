@@ -40,9 +40,7 @@ public final class DefaultSocks5PrivateAuthRequest extends AbstractSocks5Message
      * @param privateAuthToken the private authentication token
      */
     public DefaultSocks5PrivateAuthRequest(final byte[] privateAuthToken) {
-        ObjectUtil.checkNotNull(privateAuthToken, "privateToken");
-
-        this.privateToken = privateAuthToken.clone();
+        this.privateToken = ObjectUtil.checkNotNull(privateAuthToken, "privateToken").clone();
     }
 
     @Override

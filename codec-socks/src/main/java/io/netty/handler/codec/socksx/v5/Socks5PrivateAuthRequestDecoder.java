@@ -16,11 +16,11 @@
 package io.netty.handler.codec.socksx.v5;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.internal.EmptyArrays;
 
 import java.util.List;
 
@@ -86,7 +86,8 @@ public final class Socks5PrivateAuthRequestDecoder extends ByteToMessageDecoder 
 
         decoded = true;
 
-        Socks5Message m = new DefaultSocks5PrivateAuthRequest(Unpooled.EMPTY_BUFFER.array());
+        Socks5Message m = new
+            DefaultSocks5PrivateAuthRequest(EmptyArrays.EMPTY_BYTES);
         m.setDecoderResult(DecoderResult.failure(cause));
         out.add(m);
     }
