@@ -1438,6 +1438,13 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.returnTypeErasureChanged</code>
+                  <old>method B io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T extends io.netty.handler.codec.http2.Http2ConnectionHandler, B extends io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T, B&gt;&gt;::encoderEnforceMaxRstFramesPerWindow(int, int) @ io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder</old>
+                  <new>method io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder::encoderEnforceMaxRstFramesPerWindow(int, int)</new>
+                  <justification>Acceptable incompatibility for required change, because the method was not previously exposed; protected visiblity in super-class, not made public in final sub-class until now</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.method.removed</code>
                   <old>method io.netty.channel.ChannelFactory&lt;&amp; extends io.netty.channel.socket.DatagramChannel&gt; io.netty.resolver.dns.DnsNameResolverBuilder::channelFactory()</old>
                   <justification>Protected methods of a final class.</justification>
