@@ -285,7 +285,7 @@
         <ldflags>-L${quicheHomeBuildDir} -lquiche -L${boringsslHomeBuildDir} -lssl -lcrypto</ldflags>
         <bundleNativeCode>META-INF/native/${jniLibName}.dll;osname=android;processor=${androidAbi}</bundleNativeCode>
         <ndkToolchain>${ANDROID_NDK_HOME}/toolchains/llvm/prebuilt/linux-x86_64</ndkToolchain>
-        <extraLdflags>-Wl,-soname=${jniLibName}.so -Wl,--build-id=sha1 -Wl,--strip-debug -Wl,--exclude-libs,ALL -lm</extraLdflags>
+        <extraLdflags>-Wl,-soname=${jniLibName}.so -Wl,--build-id=sha1 -Wl,--strip-debug -Wl,--exclude-libs,ALL -lm -lc++_shared</extraLdflags>
 
         <extraConfigureArg>--host=${androidTriple}</extraConfigureArg>
 
