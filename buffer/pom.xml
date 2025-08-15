@@ -125,6 +125,28 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-manifest</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+            <configuration>
+              <instructions>
+                <Import-Package>
+                  <!-- JFR is available only in JDK9+ and is optional -->
+                  jdk.jfr;resolution:=optional,
+                  *
+                </Import-Package>
+              </instructions>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
         <groupId>io.github.dmlloyd.module-info</groupId>
         <artifactId>module-info</artifactId>
         <executions>
