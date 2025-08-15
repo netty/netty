@@ -459,7 +459,7 @@ public abstract class AbstractHttp2ConnectionHandlerBuilder<T extends Http2Conne
      * {@code 0} for any of the parameters means no protection should be applied.
      */
     protected B encoderEnforceMaxRstFramesPerWindow(int maxRstFramesPerWindow, int secondsPerWindow) {
-        enforceNonCodecConstraints("decoderEnforceMaxRstFramesPerWindow");
+        enforceNonCodecConstraints("encoderEnforceMaxRstFramesPerWindow");
         this.maxEncodedRstFramesPerWindow = checkPositiveOrZero(
                 maxRstFramesPerWindow, "maxRstFramesPerWindow");
         this.maxEncodedRstFramesSecondsPerWindow = checkPositiveOrZero(secondsPerWindow, "secondsPerWindow");
