@@ -184,13 +184,18 @@ public final class IoUringIoHandler implements IoHandler {
     private int processCompletionsAndHandleOverflow(SubmissionQueue submissionQueue, CompletionQueue completionQueue,
                                          CompletionCallback callback) {
         int processed = 0;
-        for (;;) {
+        // Bound the maximum number of times this will loop before we return and so execute some non IO stuff.
+        // 128 here is just some sort of bound and another number might be ok as well.
+        for (int i = 0; i < 128; i++) {
             int p = completionQueue.process(callback);
             if ((submissionQueue.flags() & Native.IORING_SQ_CQ_OVERFLOW) != 0) {
                 logger.warn("CompletionQueue overflow detected, consider increasing size: {} ",
                         completionQueue.ringEntries);
                 submitAndClearNow(submissionQueue);
-            } else if (p == 0) {
+            } else if (p == 0 &&
+                    // Let's try to submit again and check if there are new completions to handle.
+                    // Only break the loop if there was nothing submitted and there are no new completions.
+                    submitAndClearNow(submissionQueue) == 0 && !completionQueue.hasCompletions()) {
                 break;
             }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer;
+package io.netty.util.internal;
 
 import org.junit.jupiter.api.Test;
 
@@ -26,7 +26,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class LongLongHashMapTest {
+public class LongLongHashMapTest {
     @Test
     public void zeroPutGetAndRemove() {
         LongLongHashMap map = new LongLongHashMap(-1);
@@ -60,7 +60,7 @@ class LongLongHashMapTest {
     @Test
     public void randomOperations() {
         int operations = 6000;
-        ThreadLocalRandom tlr = ThreadLocalRandom.current();
+        java.util.concurrent.ThreadLocalRandom tlr = ThreadLocalRandom.current();
         Map<Long, Long> expected = new HashMap<Long, Long>();
         LongLongHashMap actual = new LongLongHashMap(-1);
         OfLong itr = tlr.longs(0, operations).limit(operations * 50).iterator();
