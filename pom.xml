@@ -1367,6 +1367,13 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method void io.netty.handler.codec.http2.Http2ServerUpgradeCodec::<![CDATA[<init>]]>(java.lang.String, io.netty.handler.codec.http2.Http2ConnectionHandler, io.netty.channel.ChannelHandler[])</old>
+                  <new>method void io.netty.handler.codec.http2.Http2ServerUpgradeCodec::<![CDATA[<init>]]>(java.lang.String, io.netty.handler.codec.http2.Http2ConnectionHandler, io.netty.channel.ChannelHandler[])</new>
+                  <justification>Be able to directly construct class</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.class.externalClassExposedInAPI</code>
                   <new>interface org.jboss.marshalling.ClassNameTransformer</new>
                   <justification>We need to build with upgraded JBoss Marshalling version. Otherwise, testsuite-jpms won't compile.</justification>
