@@ -28,6 +28,7 @@ import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.channel.unix.VSockAddress;
 import io.netty.channel.unix.tests.UnixTestUtils;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
@@ -229,6 +230,44 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
         );
     }
 
+    public List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> vSock() {
+        return combo(serverVSocket(), clientVSocket());
+    }
+
+    public List<BootstrapFactory<ServerBootstrap>> serverVSocket() {
+        return Collections.<BootstrapFactory<ServerBootstrap>>singletonList(
+                new BootstrapFactory<ServerBootstrap>() {
+                    @Override
+                    public ServerBootstrap newInstance() {
+                        return new ServerBootstrap().group(EPOLL_GROUP)
+                                .channel(EpollServerVSockChannel.class);
+                    }
+                }
+        );
+    }
+
+    public List<BootstrapFactory<Bootstrap>> clientVSocket() {
+        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(EPOLL_GROUP).channel(EpollVSockChannel.class);
+                    }
+                }
+        );
+    }
+
+    public List<BootstrapFactory<Bootstrap>> clientVSocket(EpollVSockChannel vSockChannel) {
+        return Collections.<BootstrapFactory<Bootstrap>>singletonList(
+                new BootstrapFactory<Bootstrap>() {
+                    @Override
+                    public Bootstrap newInstance() {
+                        return new Bootstrap().group(EPOLL_GROUP).channelFactory(() -> vSockChannel);
+                    }
+                }
+        );
+    }
+
     @Override
     public List<BootstrapFactory<Bootstrap>> datagramSocket() {
         return Collections.<BootstrapFactory<Bootstrap>>singletonList(
@@ -258,5 +297,9 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
     public static DomainSocketAddress newDomainSocketAddress() {
         return UnixTestUtils.newDomainSocketAddress();
+    }
+
+    public static VSockAddress newVSockAddress() {
+        return new VSockAddress(VSockAddress.VMADDR_CID_LOCAL, 8080);
     }
 }
