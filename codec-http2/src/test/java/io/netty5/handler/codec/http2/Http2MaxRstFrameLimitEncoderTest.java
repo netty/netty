@@ -25,7 +25,9 @@ import io.netty5.util.Resource;
 import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
+import io.netty5.util.concurrent.MockTicker;
 import io.netty5.util.concurrent.Promise;
+import io.netty5.util.concurrent.Ticker;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,6 +38,7 @@ import org.mockito.stubbing.Answer;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
+import java.util.concurrent.TimeUnit;
 
 import static io.netty5.buffer.DefaultBufferAllocators.onHeapAllocator;
 import static io.netty5.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
@@ -74,6 +77,7 @@ public class Http2MaxRstFrameLimitEncoderTest {
     @Mock
     private EventExecutor executor;
 
+    private final MockTicker ticker = Ticker.newMockTicker();
     private final Queue<Promise<Void>> goAwayPromises = new ArrayDeque<>();
 
     /**
@@ -114,7 +118,7 @@ public class Http2MaxRstFrameLimitEncoderTest {
 
         DefaultHttp2ConnectionEncoder defaultEncoder =
                 new DefaultHttp2ConnectionEncoder(connection, writer);
-        encoder = new Http2MaxRstFrameLimitEncoder(defaultEncoder, 2, 1);
+        encoder = new Http2MaxRstFrameLimitEncoder(defaultEncoder, 2, 1, ticker);
         DefaultHttp2ConnectionDecoder decoder =
                 new DefaultHttp2ConnectionDecoder(connection, encoder, mock(Http2FrameReader.class));
         Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
@@ -184,7 +188,7 @@ public class Http2MaxRstFrameLimitEncoderTest {
         assertTrue(encoder.writeRstStream(ctx, 1, error.code()).isSuccess());
         assertTrue(encoder.writeRstStream(ctx, 1, error.code()).isSuccess());
         verifyFlushAndClose(0, false);
-        Thread.sleep(1000);
+        ticker.advance(1, TimeUnit.SECONDS);
         assertTrue(encoder.writeRstStream(ctx, 1, error.code()).isSuccess());
         verifyFlushAndClose(0, false);
     }

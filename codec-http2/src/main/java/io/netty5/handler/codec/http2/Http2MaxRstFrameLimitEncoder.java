@@ -16,6 +16,7 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
+import io.netty5.util.concurrent.Ticker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,14 +32,22 @@ final class Http2MaxRstFrameLimitEncoder extends DecoratingHttp2ConnectionEncode
 
     private final long nanosPerWindow;
     private final int maxRstFramesPerWindow;
-    private long lastRstFrameNano = System.nanoTime();
+    private final Ticker ticker;
+    private long lastRstFrameNano;
     private int sendRstInWindow;
     private Http2LifecycleManager lifecycleManager;
 
     Http2MaxRstFrameLimitEncoder(Http2ConnectionEncoder delegate, int maxRstFramesPerWindow, int secondsPerWindow) {
+        this(delegate, maxRstFramesPerWindow, secondsPerWindow, Ticker.systemTicker());
+    }
+
+    Http2MaxRstFrameLimitEncoder(Http2ConnectionEncoder delegate, int maxRstFramesPerWindow, int secondsPerWindow,
+                                 Ticker ticker) {
         super(delegate);
         this.maxRstFramesPerWindow = maxRstFramesPerWindow;
         this.nanosPerWindow = TimeUnit.SECONDS.toNanos(secondsPerWindow);
+        this.ticker = ticker;
+        lastRstFrameNano = ticker.nanoTime();
     }
 
     @Override
@@ -51,7 +60,7 @@ final class Http2MaxRstFrameLimitEncoder extends DecoratingHttp2ConnectionEncode
     public Future<Void> writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode) {
         Future<Void> future = super.writeRstStream(ctx, streamId, errorCode);
         if (countRstFrameErrorCode(errorCode)) {
-            long currentNano = System.nanoTime();
+            long currentNano = ticker.nanoTime();
             if (currentNano - lastRstFrameNano >= nanosPerWindow) {
                 lastRstFrameNano = currentNano;
                 sendRstInWindow = 1;
