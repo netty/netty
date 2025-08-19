@@ -481,7 +481,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return This buffer.
      */
     default Buffer writeBytes(byte[] source, int srcPos, int length) {
-        if (source.length < srcPos + length) {
+        if (source.length < srcPos + length || srcPos < 0) {
             throw new ArrayIndexOutOfBoundsException();
         }
         if (writableBytes() < length && writerOffset() + length <= implicitCapacityLimit()) {
