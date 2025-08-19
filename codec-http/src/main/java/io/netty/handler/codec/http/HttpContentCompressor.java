@@ -15,12 +15,8 @@
  */
 package io.netty.handler.codec.http;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -30,6 +26,8 @@ import io.netty.handler.codec.compression.BrotliOptions;
 import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.DeflateOptions;
 import io.netty.handler.codec.compression.GzipOptions;
+import io.netty.handler.codec.compression.SnappyFrameEncoder;
+import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.handler.codec.compression.StandardCompressionOptions;
 import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibEncoder;
@@ -37,9 +35,12 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.compression.ZstdEncoder;
 import io.netty.handler.codec.compression.ZstdOptions;
-import io.netty.handler.codec.compression.SnappyFrameEncoder;
-import io.netty.handler.codec.compression.SnappyOptions;
 import io.netty.util.internal.ObjectUtil;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import static io.netty.util.internal.ObjectUtil.checkInRange;
 
@@ -281,9 +282,14 @@ public class HttpContentCompressor extends HttpContentEncoder {
             throw new IllegalStateException("Couldn't find CompressionEncoderFactory: " + targetContentEncoding);
         }
 
+        Channel channel = ctx.channel();
         return new Result(targetContentEncoding,
-                new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                        ctx.channel().config(), encoderFactory.createEncoder()));
+                EmbeddedChannel.builder()
+                        .channelId(channel.id())
+                        .hasDisconnect(channel.metadata().hasDisconnect())
+                        .config(channel.config())
+                        .handlers(encoderFactory.createEncoder())
+                        .build());
     }
 
     @SuppressWarnings("FloatingPointEquality")
