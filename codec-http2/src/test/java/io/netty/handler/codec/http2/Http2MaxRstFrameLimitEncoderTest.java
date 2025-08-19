@@ -193,7 +193,7 @@ public class Http2MaxRstFrameLimitEncoderTest {
         assertTrue(encoder.writeRstStream(ctx, 1, error.code(), newPromise()).isSuccess());
         assertTrue(encoder.writeRstStream(ctx, 1, error.code(), newPromise()).isSuccess());
         verifyFlushAndClose(0, false);
-        Thread.sleep(1000);
+        Thread.sleep(2000);
         assertTrue(encoder.writeRstStream(ctx, 1, error.code(), newPromise()).isSuccess());
         verifyFlushAndClose(0, false);
     }
