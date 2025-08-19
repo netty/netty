@@ -22,7 +22,6 @@ import io.netty5.handler.codec.base64.Base64;
 import io.netty5.handler.codec.base64.Base64Dialect;
 import io.netty5.util.NetUtil;
 import io.netty5.util.internal.EmptyArrays;
-import io.netty5.util.internal.StringUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -239,10 +238,10 @@ final class SslUtils {
         return context;
     }
 
-    static SSLContext getSSLContext(String provider)
+    static SSLContext getSSLContext(Provider provider)
             throws NoSuchAlgorithmException, KeyManagementException, NoSuchProviderException {
         final SSLContext context;
-        if (StringUtil.isNullOrEmpty(provider)) {
+        if (provider == null) {
             context = SSLContext.getInstance(getTlsVersion());
         } else {
             context = SSLContext.getInstance(getTlsVersion(), provider);

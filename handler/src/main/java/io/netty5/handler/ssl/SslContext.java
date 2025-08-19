@@ -23,6 +23,7 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.Protocol;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBehavior;
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
+import io.netty5.handler.ssl.util.BouncyCastleUtil;
 import io.netty5.util.AttributeMap;
 import io.netty5.util.DefaultAttributeMap;
 import io.netty5.util.concurrent.ImmediateExecutor;
@@ -1188,7 +1189,7 @@ public abstract class SslContext {
         }
 
         // try BC first, if this fail fallback to original key extraction process
-        if (tryBouncyCastle && BouncyCastlePemReader.isAvailable()) {
+        if (tryBouncyCastle && BouncyCastleUtil.isBcPkixAvailable()) {
             PrivateKey pk = BouncyCastlePemReader.getPrivateKey(keyFile, keyPassword);
             if (pk != null) {
                 return pk;
@@ -1208,7 +1209,7 @@ public abstract class SslContext {
         }
 
         // try BC first, if this fail fallback to original key extraction process
-        if (BouncyCastlePemReader.isAvailable()) {
+        if (BouncyCastleUtil.isBcPkixAvailable()) {
             if (!keyInputStream.markSupported()) {
                 // We need an input stream that supports resetting, in case BouncyCastle fails to read.
                 keyInputStream = new BufferedInputStream(keyInputStream);
