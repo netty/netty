@@ -208,23 +208,19 @@ final class BouncyCastleAlpnSslUtils {
         }
     }
 
-    @SuppressWarnings("unchecked")
     static BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector(SSLEngine engine) {
         try {
             final Object selector = GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR.invoke(engine);
             return new BiFunction<SSLEngine, List<String>, String>() {
-
                 @Override
                 public String apply(SSLEngine sslEngine, List<String> strings) {
                     try {
-                        return (String) BC_APPLICATION_PROTOCOL_SELECTOR_SELECT.invoke(selector, sslEngine,
-                                strings);
+                        return (String) BC_APPLICATION_PROTOCOL_SELECTOR_SELECT.invoke(selector, sslEngine, strings);
                     } catch (Exception e) {
                         throw new RuntimeException("Could not call getHandshakeApplicationProtocolSelector", e);
                     }
                 }
             };
-
         } catch (UnsupportedOperationException ex) {
             throw ex;
         } catch (Exception ex) {
