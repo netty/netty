@@ -151,13 +151,13 @@ public final class BouncyCastleUtil {
         }
     }
 
+    @SuppressWarnings("unchecked")
     private static void tryLoading() {
-        AccessController.doPrivileged(new PrivilegedAction<Void>() {
-            @SuppressWarnings("unchecked")
+        AccessController.doPrivileged(new PrivilegedAction<Object>() {
             @Override
-            public Void run() {
+            public Object run() {
                 try {
-                    // Check for bcprov-jdk15on or bc-fips:
+                    // Check for bcprov-jdk18on or bc-fips:
                     Provider provider = Security.getProvider(BC_PROVIDER_NAME);
                     if (provider == null) {
                         provider = Security.getProvider(BC_FIPS_PROVIDER_NAME);
@@ -185,7 +185,7 @@ public final class BouncyCastleUtil {
                 }
 
                 try {
-                    // Check for bcpkix-jdk15on:
+                    // Check for bcpkix-jdk18on:
                     ClassLoader classLoader = BouncyCastleUtil.class.getClassLoader();
                     Provider provider = bcProviderJce;
                     if (provider != null) {
@@ -200,7 +200,7 @@ public final class BouncyCastleUtil {
                 }
 
                 try {
-                    // Check for bctls-jdk15on:
+                    // Check for bctls-jdk18on:
                     ClassLoader classLoader = BouncyCastleUtil.class.getClassLoader();
                     Provider provider = Security.getProvider(BC_JSSE_PROVIDER_NAME);
                     if (provider != null) {
