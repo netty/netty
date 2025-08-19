@@ -14,23 +14,9 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
-
-  <modelVersion>4.0.0</modelVersion>
-  <parent>
-    <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
-    <version>4.2.5.Final-SNAPSHOT</version>
-  </parent>
-
-  <artifactId>netty-jfr-stub</artifactId>
-  <packaging>jar</packaging>
-
-  <name>Netty/JFR Stub</name>
-
-  <properties>
-    <revapi.skip>true</revapi.skip>
-    <maven.javadoc.skip>true</maven.javadoc.skip>
-  </properties>
-</project>
-
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0" name="test">
+  <feature name="test" version="${project.version}">
+    <bundle>mvn:io.netty/netty-common/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-resolver/${project.version}</bundle>
+  </feature>
+</features>
