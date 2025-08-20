@@ -52,7 +52,7 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
@@ -889,17 +889,23 @@ final class AdaptivePoolingAllocator {
     }
 
     private abstract static class AbstractMagazine implements Recycler.Handle<AdaptiveByteBuf> {
+        private static final AtomicLongFieldUpdater<AbstractMagazine> USED_MEMORY =
+                AtomicLongFieldUpdater.newUpdater(AbstractMagazine.class, "usedMemory");
         protected Chunk current;
         protected final MagazineGroup group;
         protected final ChunkController chunkController;
-        protected final AtomicLong usedMemory;
         protected final Queue<AdaptiveByteBuf> externalBuffers;
+        protected final Thread ownerThread;
+        private volatile long usedMemory;
+        private final boolean isShared;
 
-        AbstractMagazine(MagazineGroup group, ChunkController chunkController, Queue<AdaptiveByteBuf> externalBuffers) {
+        AbstractMagazine(MagazineGroup group, ChunkController chunkController, Queue<AdaptiveByteBuf> externalBuffers,
+                         Thread ownerThread) {
             this.group = group;
             this.chunkController = chunkController;
             this.externalBuffers = externalBuffers;
-            usedMemory = new AtomicLong();
+            this.ownerThread = ownerThread;
+            this.isShared = ownerThread == null;
         }
 
         /**
@@ -917,35 +923,18 @@ final class AdaptivePoolingAllocator {
          */
         abstract void free();
 
-        abstract boolean isShared();
-
-        /**
-         * Tries to add a buffer to the fast, thread-local cache.
-         * @return {@code true} if successful, {@code false} otherwise.
-         */
-        abstract boolean offerToLocalCache(AdaptiveByteBuf buf);
-
         /**
          * Tries to get a buffer from the fast, thread-local cache.
          * @return An {@link AdaptiveByteBuf} if successful, {@code null} otherwise.
          */
         abstract AdaptiveByteBuf pollFromLocalCache();
 
-        /**
-         * The owning thread of this magazine, or {@code null} if it is shared across threads.
-         */
-        abstract Thread ownerThread();
-
         @Override
-        public void recycle(AdaptiveByteBuf self) {
-            if (Thread.currentThread() != ownerThread() || !offerToLocalCache(self)) {
-                externalBuffers.offer(self);
-            }
-        }
+        public abstract void recycle(AdaptiveByteBuf self);
 
         public AdaptiveByteBuf newBuffer() {
             AdaptiveByteBuf buf = null;
-            if (Thread.currentThread() == ownerThread()) {
+            if (isOwnerThread()) {
                 buf = pollFromLocalCache();
             }
             if (buf == null) {
@@ -965,6 +954,19 @@ final class AdaptivePoolingAllocator {
 
         public void initializeSharedStateIn(AbstractMagazine other) {
             chunkController.initializeSharedStateIn(other.chunkController);
+        }
+
+        protected boolean isOwnerThread() {
+            return ownerThread != null && Thread.currentThread() == ownerThread;
+        }
+
+        private void addUsedMemory(long value) {
+            if (isOwnerThread()) {
+                long current = usedMemory;
+                USED_MEMORY.lazySet(this, current + value);
+            } else {
+                USED_MEMORY.getAndAdd(this, value);
+            }
         }
     }
 
@@ -996,23 +998,17 @@ final class AdaptivePoolingAllocator {
         private final StampedLock allocationLock = new StampedLock();
 
         SharedMagazine(MagazineGroup group, ChunkController chunkController, Queue<AdaptiveByteBuf> externalBuffers) {
-            super(group, chunkController, externalBuffers);
-        }
-
-        @Override
-        Thread ownerThread() {
-            return null;
-        }
-
-        @Override
-        boolean offerToLocalCache(AdaptiveByteBuf buf) {
-            // No local cache, so always fail.
-            return false;
+            super(group, chunkController, externalBuffers, null);
         }
 
         @Override
         AdaptiveByteBuf pollFromLocalCache() {
             return null;
+        }
+
+        @Override
+        public void recycle(AdaptiveByteBuf self) {
+            externalBuffers.offer(self);
         }
 
         @Override
@@ -1241,39 +1237,30 @@ final class AdaptivePoolingAllocator {
                 allocationLock.unlockWrite(stamp);
             }
         }
-
-        @Override
-        boolean isShared() {
-            return true;
-        }
     }
 
     private static final class ThreadLocalMagazine extends AbstractMagazine {
         private volatile Chunk nextInLine;
-        private final Thread ownerThread;
         private final ArrayDeque<AdaptiveByteBuf> localBuffers;
 
         ThreadLocalMagazine(MagazineGroup group, ChunkController chunkController,
                             Queue<AdaptiveByteBuf> externalBuffers, ArrayDeque<AdaptiveByteBuf> localBuffers) {
-            super(group, chunkController, externalBuffers);
-            this.ownerThread = group.ownerThread;
+            super(group, chunkController, externalBuffers, group.ownerThread);
             this.localBuffers = localBuffers;
-        }
-
-        @Override
-        Thread ownerThread() {
-            return ownerThread;
-        }
-
-        @Override
-        boolean offerToLocalCache(AdaptiveByteBuf buf) {
-            localBuffers.addLast(buf);
-            return true;
         }
 
         @Override
         AdaptiveByteBuf pollFromLocalCache() {
             return localBuffers.pollLast();
+        }
+
+        @Override
+        public void recycle(AdaptiveByteBuf self) {
+            if (isOwnerThread()) {
+                localBuffers.addLast(self);
+            } else {
+                externalBuffers.offer(self);
+            }
         }
 
         @Override
@@ -1387,7 +1374,7 @@ final class AdaptivePoolingAllocator {
 
         @Override
         boolean trySetNextInLine(Chunk chunk) {
-            if (Thread.currentThread() != ownerThread) {
+            if (!isOwnerThread()) {
                 return false;
             }
             if (nextInLine == null) {
@@ -1407,11 +1394,6 @@ final class AdaptivePoolingAllocator {
                 nextInLine.releaseFromMagazine();
                 nextInLine = null;
             }
-        }
-
-        @Override
-        boolean isShared() {
-            return false;
         }
     }
 
@@ -1613,7 +1595,7 @@ final class AdaptivePoolingAllocator {
                 if (event.shouldCommit()) {
                     event.fill(this, AdaptiveByteBufAllocator.class);
                     event.pooled = pooled;
-                    event.threadLocal = !magazine.isShared();
+                    event.threadLocal = !magazine.isShared;
                     event.commit();
                 }
             }
@@ -1625,12 +1607,7 @@ final class AdaptivePoolingAllocator {
 
         void detachFromMagazine() {
             if (magazine != null) {
-                final AtomicLong usedMemory = magazine.usedMemory;
-                if (Thread.currentThread() == magazine.ownerThread()) {
-                    usedMemory.lazySet(usedMemory.get() - capacity);
-                } else {
-                    usedMemory.getAndAdd(-capacity);
-                }
+                magazine.addUsedMemory(-capacity);
                 magazine = null;
             }
         }
@@ -1638,12 +1615,7 @@ final class AdaptivePoolingAllocator {
         void attachToMagazine(AbstractMagazine magazine) {
             assert this.magazine == null;
             this.magazine = magazine;
-            final AtomicLong usedMemory = magazine.usedMemory;
-            if (Thread.currentThread() == magazine.ownerThread()) {
-                usedMemory.lazySet(usedMemory.get() + capacity);
-            } else {
-                usedMemory.getAndAdd(capacity);
-            }
+            magazine.addUsedMemory(capacity);
         }
 
         /**
@@ -1754,6 +1726,11 @@ final class AdaptivePoolingAllocator {
         private final int[] stack;
         private int top;
 
+        IntStack(int capacity) {
+            stack = new int[capacity];
+            top = -1;
+        }
+
         IntStack(int[] initialValues) {
             stack = new int[initialValues.length];
             // copy reversed
@@ -1787,7 +1764,7 @@ final class AdaptivePoolingAllocator {
         private static final int AVAILABLE = -1;
         private static final int DEALLOCATED = Integer.MIN_VALUE;
 
-        private static final AtomicIntegerFieldUpdater<SizeClassedChunk> STATE = AtomicIntegerFieldUpdater.newUpdater(
+        private static final AtomicIntegerFieldUpdater<SizeClassedChunk> STATE = newUpdater(
                 SizeClassedChunk.class, "state"
         );
 
@@ -1802,7 +1779,7 @@ final class AdaptivePoolingAllocator {
 
         SizeClassedChunk(AbstractByteBuf delegate, AbstractMagazine magazine, int segmentSize, int[] segmentOffsets) {
             super(delegate, magazine, true, chunkSize -> false);
-            ownerThread = magazine.ownerThread();
+            ownerThread = magazine.ownerThread;
             this.segmentSize = segmentSize;
             int segmentCount = segmentOffsets.length;
             assert delegate.capacity() / segmentSize == segmentCount;
@@ -1817,7 +1794,9 @@ final class AdaptivePoolingAllocator {
                         return segmentOffsets[counter++];
                     }
                 });
-                localFreeList = null;
+                // since the allocation path for shared magazines is guarded by a lock, it's safe to use the
+                // local free list for the shared path as well.
+                localFreeList = new IntStack(segmentCount);
             } else {
                 localFreeList = new IntStack(segmentOffsets);
             }
@@ -1830,18 +1809,11 @@ final class AdaptivePoolingAllocator {
             assert state == AVAILABLE;
             IntStack localFreeList = this.localFreeList;
             final int startIndex;
-            if (localFreeList != null) {
-                assert Thread.currentThread() == ownerThread;
-                if (localFreeList.isEmpty() && copyIntoLocalFreeList(localFreeList) == 0) {
-                    throw new IllegalStateException("Free list is empty");
-                }
-                startIndex = localFreeList.pop();
-            } else {
-                startIndex = externalFreeList.poll();
-                if (startIndex == FREE_LIST_EMPTY) {
-                    throw new IllegalStateException("Free list is empty");
-                }
+            if (localFreeList.isEmpty() && copyIntoLocalFreeList(localFreeList) == 0) {
+                throw new IllegalStateException("Free list is empty");
             }
+            startIndex = localFreeList.pop();
+
             allocatedBytes += segmentSize;
             SizeClassedChunk chunk = this;
             try {
@@ -1878,7 +1850,7 @@ final class AdaptivePoolingAllocator {
             // TODO we could optimize this to save reading the externalFreeList.size() if we know that
             //      localFreeList is not null and has enough capacity
             int updatedRemainingCapacity = externalFreeList.size() * segmentSize;
-            if (localFreeList != null) {
+            if (ownerThread != null) {
                 assert Thread.currentThread() == ownerThread;
                 updatedRemainingCapacity += localFreeList.size() * segmentSize;
             }
@@ -1904,7 +1876,7 @@ final class AdaptivePoolingAllocator {
         @Override
         void releaseSegment(int startIndex) {
             IntStack localFreeList = this.localFreeList;
-            if (localFreeList != null && Thread.currentThread() == ownerThread) {
+            if (ownerThread != null && Thread.currentThread() == ownerThread) {
                 localFreeList.push(startIndex);
                 // Only check the volatile state if the chunk has been marked for deallocation.
                 // This avoids a StoreLoad barrier on the hot path.
@@ -1972,7 +1944,7 @@ final class AdaptivePoolingAllocator {
                 assert Thread.currentThread() == ownerThread;
                 markedForDeallocation = true;
             }
-            int state = localFreeList != null ? localFreeList.size() : 0;
+            int state = localFreeList.size();
             STATE.set(this, state);
             // StoreLoad
             int totalSize = state + externalFreeList.size();
@@ -2020,7 +1992,7 @@ final class AdaptivePoolingAllocator {
                     event.fill(this, AdaptiveByteBufAllocator.class);
                     event.chunkPooled = wrapped.pooled;
                     AbstractMagazine m = wrapped.magazine;
-                    event.chunkThreadLocal = m != null && !m.isShared();
+                    event.chunkThreadLocal = m != null && !m.isShared;
                     event.commit();
                 }
             }
