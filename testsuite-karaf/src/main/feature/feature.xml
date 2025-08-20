@@ -16,6 +16,7 @@
   -->
 <features xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0" name="test">
   <feature name="test" version="${project.version}">
+    <bundle>mvn:io.netty/netty-buffer/${project.version}</bundle>
     <bundle>mvn:io.netty/netty-common/${project.version}</bundle>
     <bundle>mvn:io.netty/netty-resolver/${project.version}</bundle>
   </feature>
