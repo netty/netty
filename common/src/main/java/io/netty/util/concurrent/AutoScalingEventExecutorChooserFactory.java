@@ -15,8 +15,11 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.internal.ObjectUtil;
+
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -25,9 +28,10 @@ import java.util.concurrent.atomic.AtomicReference;
  * A factory that creates auto-scaling {@link EventExecutorChooser} instances.
  * This chooser implements a dynamic, utilization-based auto-scaling strategy.
  * <p>
- * It enables the Event loop group to automatically scale the number of active {@code EventLoop}
- * threads between a minimum and maximum threshold. The scaling decision is based on the average
- * utilization of the active threads, measured over a configurable time window.
+ * It enables the {@link io.netty.channel.EventLoopGroup} to automatically scale the number of active
+ * {@link io.netty.channel.EventLoop} threads between a minimum and maximum threshold.
+ * The scaling decision is based on the average utilization of the active threads, measured over a
+ * configurable time window.
  * <p>
  * An {@code EventLoop} can be suspended if its utilization is consistently below the
  * {@code scaleDownThreshold}. Conversely, if the group's average utilization is consistently
@@ -68,48 +72,25 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                                                   TimeUnit windowUnit, double scaleDownThreshold,
                                                   double scaleUpThreshold, int maxRampUpStep, int maxRampDownStep,
                                                   int scalingPatienceCycles) {
-        if (minThreads < 0 || minThreads > maxThreads || maxThreads == 0) {
+        this.minChildren = ObjectUtil.checkPositiveOrZero(minThreads, "minThreads");
+        this.maxChildren = ObjectUtil.checkPositive(maxThreads, "maxThreads");
+        if (minThreads > maxThreads) {
             throw new IllegalArgumentException(String.format(
-                    "minThreads: %d, maxThreads: %d (expected: 0 <= minThreads <= maxThreads, maxThreads > 0)",
-                    minThreads, maxThreads));
+                    "minThreads: %d must not be greater than maxThreads: %d", minThreads, maxThreads));
         }
-        if (utilizationWindow <= 0) {
-            throw new IllegalArgumentException("utilizationWindow must be > 0: " + utilizationWindow);
-        }
-        if (windowUnit == null) {
-            throw new NullPointerException("windowUnit");
-        }
-        if (scaleDownThreshold < 0.0 || scaleDownThreshold > 1.0) {
-            throw new IllegalArgumentException(
-                    "scaleDownThreshold must be between 0.0 and 1.0: " + scaleDownThreshold);
-        }
-        if (scaleUpThreshold < 0.0 || scaleUpThreshold > 1.0) {
-            throw new IllegalArgumentException(
-                    "scaleUpThreshold must be between 0.0 and 1.0: " + scaleUpThreshold);
-        }
+        this.utilizationCheckPeriodNanos = ObjectUtil.checkNotNull(windowUnit, "windowUnit")
+                                                     .toNanos(ObjectUtil.checkPositive(utilizationWindow,
+                                                                                       "utilizationWindow"));
+        this.scaleDownThreshold = ObjectUtil.checkInRange(scaleDownThreshold, 0.0, 1.0, "scaleDownThreshold");
+        this.scaleUpThreshold = ObjectUtil.checkInRange(scaleUpThreshold, 0.0, 1.0, "scaleUpThreshold");
         if (scaleDownThreshold >= scaleUpThreshold) {
             throw new IllegalArgumentException(
                     "scaleDownThreshold must be less than scaleUpThreshold: " +
                     scaleDownThreshold + " >= " + scaleUpThreshold);
         }
-        if (maxRampUpStep <= 0) {
-            throw new IllegalArgumentException("maxRampUpStep must be > 0: " + maxRampUpStep);
-        }
-        if (maxRampDownStep <= 0) {
-            throw new IllegalArgumentException("maxRampDownStep must be > 0: " + maxRampDownStep);
-        }
-        if (scalingPatienceCycles < 0) {
-            throw new IllegalArgumentException("scalingPatienceCycles must be >= 0: " + scalingPatienceCycles);
-        }
-
-        this.minChildren = minThreads;
-        this.maxChildren = maxThreads;
-        this.utilizationCheckPeriodNanos = windowUnit.toNanos(utilizationWindow);
-        this.scaleDownThreshold = scaleDownThreshold;
-        this.scaleUpThreshold = scaleUpThreshold;
-        this.maxRampUpStep = maxRampUpStep;
-        this.maxRampDownStep = maxRampDownStep;
-        this.scalingPatienceCycles = scalingPatienceCycles;
+        this.maxRampUpStep = ObjectUtil.checkPositive(maxRampUpStep, "maxRampUpStep");
+        this.maxRampDownStep = ObjectUtil.checkPositive(maxRampDownStep, "maxRampDownStep");
+        this.scalingPatienceCycles = ObjectUtil.checkPositiveOrZero(scalingPatienceCycles, "scalingPatienceCycles");
     }
 
     @Override
@@ -218,7 +199,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
 
                 // Create the new state.
                 List<EventExecutor> newActiveList = new ArrayList<>(oldState.activeExecutors.length + wokenUp.size());
-                newActiveList.addAll(Arrays.asList(oldState.activeExecutors));
+                Collections.addAll(newActiveList, oldState.activeExecutors);
                 newActiveList.addAll(wokenUp);
 
                 AutoScalingState newState = new AutoScalingState(

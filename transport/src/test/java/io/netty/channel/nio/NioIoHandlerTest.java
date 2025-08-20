@@ -15,8 +15,8 @@
  */
 package io.netty.channel.nio;
 
-import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerContext;
+import io.netty.channel.IoHandler;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoRegistration;
 import io.netty.util.concurrent.ThreadAwareExecutor;

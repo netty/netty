@@ -82,6 +82,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     SingleThreadEventExecutor.class, ThreadProperties.class, "threadProperties");
     private static final AtomicLongFieldUpdater<SingleThreadEventExecutor> ACCUMULATED_ACTIVE_TIME_NANOS_UPDATER =
             AtomicLongFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "accumulatedActiveTimeNanos");
+    private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> CONSECUTIVE_IDLE_CYCLES_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "consecutiveIdleCycles");
+    private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> CONSECUTIVE_BUSY_CYCLES_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "consecutiveBusyCycles");
     private final Queue<Runnable> taskQueue;
 
     private volatile Thread thread;
@@ -106,13 +110,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * Tracks the number of consecutive monitor cycles this executor's
      * utilization has been below the scale-down threshold.
      */
-    private final AtomicInteger consecutiveIdleCycles = new AtomicInteger();
+    private volatile int consecutiveIdleCycles;
 
     /**
      * Tracks the number of consecutive monitor cycles this executor's
      * utilization has been above the scale-up threshold.
      */
-    private final AtomicInteger consecutiveBusyCycles = new AtomicInteger();
+    private volatile int consecutiveBusyCycles;
     private long lastExecutionTime;
 
     @SuppressWarnings({ "FieldMayBeFinal", "unused" })
@@ -642,20 +646,40 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         return lastActivityTimeNanos;
     }
 
+    /**
+     * Atomically increments the counter for consecutive monitor cycles where utilization was below the
+     * scale-down threshold. This is used by the auto-scaling monitor to track sustained idleness.
+     *
+     * @return The number of consecutive idle cycles before the increment.
+     */
     protected int getAndIncrementIdleCycles() {
-        return consecutiveIdleCycles.getAndIncrement();
+        return CONSECUTIVE_IDLE_CYCLES_UPDATER.getAndIncrement(this);
     }
 
+    /**
+     * Resets the counter for consecutive idle cycles to zero. This is typically called when the
+     * executor's utilization is no longer considered idle, breaking the streak.
+     */
     protected void resetIdleCycles() {
-        consecutiveIdleCycles.set(0);
+        CONSECUTIVE_IDLE_CYCLES_UPDATER.set(this, 0);
     }
 
+    /**
+     * Atomically increments the counter for consecutive monitor cycles where utilization was above the
+     * scale-up threshold. This is used by the auto-scaling monitor to track a sustained high load.
+     *
+     * @return The number of consecutive busy cycles before the increment.
+     */
     protected int getAndIncrementBusyCycles() {
-        return consecutiveBusyCycles.getAndIncrement();
+        return CONSECUTIVE_BUSY_CYCLES_UPDATER.getAndIncrement(this);
     }
 
+    /**
+     * Resets the counter for consecutive busy cycles to zero. This is typically called when the
+     * executor's utilization is no longer considered busy, breaking the streak.
+     */
     protected void resetBusyCycles() {
-        consecutiveBusyCycles.set(0);
+        CONSECUTIVE_BUSY_CYCLES_UPDATER.set(this, 0);
     }
 
     /**
