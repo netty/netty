@@ -147,6 +147,17 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
     }
 
     @Test
+    public void testUsedDirectMemoryHuge() {
+        T allocator =  newAllocator(true);
+        ByteBufAllocatorMetric metric = ((ByteBufAllocatorMetricProvider) allocator).metric();
+        assertEquals(0, metric.usedHeapMemory());
+        int size = 32 * 1024 * 1024;
+        ByteBuf buffer = allocator.directBuffer(size, size);
+        assertEquals(size, metric.usedDirectMemory());
+        buffer.release();
+    }
+
+    @Test
     public void testUsedHeapMemory() {
         T allocator =  newAllocator(true);
         ByteBufAllocatorMetric metric = ((ByteBufAllocatorMetricProvider) allocator).metric();
@@ -163,6 +174,17 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
 
         buffer.release();
         assertEquals(expectedUsedMemoryAfterRelease(allocator, capacity), metric.usedHeapMemory());
+    }
+
+    @Test
+    public void testUsedHeapMemoryHuge() {
+        T allocator =  newAllocator(true);
+        ByteBufAllocatorMetric metric = ((ByteBufAllocatorMetricProvider) allocator).metric();
+        assertEquals(0, metric.usedHeapMemory());
+        int size = 32 * 1024 * 1024;
+        ByteBuf buffer = allocator.heapBuffer(size, size);
+        assertEquals(size, metric.usedHeapMemory());
+        buffer.release();
     }
 
     @Test
