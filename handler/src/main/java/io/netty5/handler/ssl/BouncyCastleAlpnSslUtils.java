@@ -15,12 +15,14 @@
  */
 package io.netty5.handler.ssl;
 
+import io.netty5.handler.ssl.util.BouncyCastleUtil;
 import io.netty5.util.internal.EmptyArrays;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.List;
@@ -31,8 +33,6 @@ import static io.netty5.handler.ssl.SslUtils.getSSLContext;
 final class BouncyCastleAlpnSslUtils {
     private static final Logger logger = LoggerFactory.getLogger(BouncyCastleAlpnSslUtils.class);
 
-    private static final Method SET_PARAMETERS;
-    private static final Method GET_PARAMETERS;
     private static final Method SET_APPLICATION_PROTOCOLS;
     private static final Method GET_APPLICATION_PROTOCOL;
     private static final Method GET_HANDSHAKE_APPLICATION_PROTOCOL;
@@ -42,10 +42,6 @@ final class BouncyCastleAlpnSslUtils {
     private static final Method BC_APPLICATION_PROTOCOL_SELECTOR_SELECT;
 
     static {
-        Class<?> bcSslEngine;
-        Method getParameters;
-
-        Method setParameters;
         Method setApplicationProtocols;
         Method getApplicationProtocol;
         Method getHandshakeApplicationProtocol;
@@ -55,49 +51,40 @@ final class BouncyCastleAlpnSslUtils {
         Class<?> bcApplicationProtocolSelector;
 
         try {
-            bcSslEngine = Class.forName("org.bouncycastle.jsse.BCSSLEngine");
-            final Class<?> testBCSslEngine = bcSslEngine;
-
-            bcApplicationProtocolSelector =
-                    Class.forName("org.bouncycastle.jsse.BCApplicationProtocolSelector");
-
-            final Class<?> testBCApplicationProtocolSelector = bcApplicationProtocolSelector;
-
-            bcApplicationProtocolSelectorSelect =
-                    testBCApplicationProtocolSelector.getMethod("select", Object.class, List.class);
-
-            SSLContext context = getSSLContext("BCJSSE");
+            if (!BouncyCastleUtil.isBcTlsAvailable()) {
+                throw new IllegalStateException(BouncyCastleUtil.unavailabilityCauseBcTls());
+            }
+            SSLContext context = getSSLContext(BouncyCastleUtil.getBcProviderJsse());
             SSLEngine engine = context.createSSLEngine();
+            final Class<? extends SSLEngine> engineClass = engine.getClass();
 
-            getParameters = testBCSslEngine.getMethod("getParameters");
-
-            final Object bcSslParameters = getParameters.invoke(engine);
+            final SSLParameters bcSslParameters = engine.getSSLParameters();
             final Class<?> bCSslParametersClass = bcSslParameters.getClass();
 
-            setParameters = testBCSslEngine.getMethod("setParameters", bCSslParametersClass);
-            setParameters.invoke(engine, bcSslParameters);
-
             setApplicationProtocols = bCSslParametersClass.getMethod("setApplicationProtocols", String[].class);
-            setApplicationProtocols.invoke(bcSslParameters, new Object[] { EmptyArrays.EMPTY_STRINGS });
+            setApplicationProtocols.invoke(bcSslParameters, new Object[]{EmptyArrays.EMPTY_STRINGS});
 
-            getApplicationProtocol = testBCSslEngine.getMethod("getApplicationProtocol");
+            getApplicationProtocol = engineClass.getMethod("getApplicationProtocol");
             getApplicationProtocol.invoke(engine);
 
-            getHandshakeApplicationProtocol = testBCSslEngine.getMethod("getHandshakeApplicationProtocol");
+            getHandshakeApplicationProtocol = engineClass.getMethod("getHandshakeApplicationProtocol");
             getHandshakeApplicationProtocol.invoke(engine);
 
-            setHandshakeApplicationProtocolSelector =
-                    testBCSslEngine.getMethod("setBCHandshakeApplicationProtocolSelector",
-                                              testBCApplicationProtocolSelector);
+            final Class<?> testBCApplicationProtocolSelector = Class.forName(
+                    "org.bouncycastle.jsse.BCApplicationProtocolSelector", true, engineClass.getClassLoader());
+            bcApplicationProtocolSelector = testBCApplicationProtocolSelector;
+
+            bcApplicationProtocolSelectorSelect = testBCApplicationProtocolSelector.getMethod(
+                    "select", Object.class, List.class);
+
+            setHandshakeApplicationProtocolSelector = engineClass.getMethod("setBCHandshakeApplicationProtocolSelector",
+                            testBCApplicationProtocolSelector);
 
             getHandshakeApplicationProtocolSelector =
-                    testBCSslEngine.getMethod("getBCHandshakeApplicationProtocolSelector");
+                    engineClass.getMethod("getBCHandshakeApplicationProtocolSelector");
             getHandshakeApplicationProtocolSelector.invoke(engine);
-
         } catch (Throwable t) {
             logger.error("Unable to initialize BouncyCastleAlpnSslUtils.", t);
-            setParameters = null;
-            getParameters = null;
             setApplicationProtocols = null;
             getApplicationProtocol = null;
             getHandshakeApplicationProtocol = null;
@@ -106,8 +93,6 @@ final class BouncyCastleAlpnSslUtils {
             bcApplicationProtocolSelectorSelect = null;
             bcApplicationProtocolSelector = null;
         }
-        SET_PARAMETERS = setParameters;
-        GET_PARAMETERS = getParameters;
         SET_APPLICATION_PROTOCOLS = setApplicationProtocols;
         GET_APPLICATION_PROTOCOL = getApplicationProtocol;
         GET_HANDSHAKE_APPLICATION_PROTOCOL = getHandshakeApplicationProtocol;
@@ -133,9 +118,9 @@ final class BouncyCastleAlpnSslUtils {
     static void setApplicationProtocols(SSLEngine engine, List<String> supportedProtocols) {
         String[] protocolArray = supportedProtocols.toArray(EmptyArrays.EMPTY_STRINGS);
         try {
-            Object bcSslParameters = GET_PARAMETERS.invoke(engine);
+            SSLParameters bcSslParameters = engine.getSSLParameters();
             SET_APPLICATION_PROTOCOLS.invoke(bcSslParameters, new Object[]{protocolArray});
-            SET_PARAMETERS.invoke(engine, bcSslParameters);
+            engine.setSSLParameters(bcSslParameters);
         } catch (UnsupportedOperationException ex) {
             throw ex;
         } catch (Exception ex) {
@@ -187,13 +172,11 @@ final class BouncyCastleAlpnSslUtils {
             final Object selector = GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR.invoke(engine);
             return (sslEngine, strings) -> {
                 try {
-                    return (String) BC_APPLICATION_PROTOCOL_SELECTOR_SELECT.invoke(selector, sslEngine,
-                            strings);
+                    return (String) BC_APPLICATION_PROTOCOL_SELECTOR_SELECT.invoke(selector, sslEngine, strings);
                 } catch (Exception e) {
                     throw new RuntimeException("Could not call getHandshakeApplicationProtocolSelector", e);
                 }
             };
-
         } catch (UnsupportedOperationException ex) {
             throw ex;
         } catch (Exception ex) {

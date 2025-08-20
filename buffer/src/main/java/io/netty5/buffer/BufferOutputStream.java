@@ -59,9 +59,7 @@ public final class BufferOutputStream extends OutputStream implements DataOutput
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
         prepareWrite(len);
-        if (len > 0) {
-            buffer.writeBytes(b, off, len);
-        }
+        buffer.writeBytes(b, off, len);
     }
 
     @Override

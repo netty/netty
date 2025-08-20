@@ -1,0 +1,70 @@
+FROM --platform=linux/amd64 amazonlinux:2023
+
+ARG java_version=22.0.2-amzn
+ARG aws_lc_version=v1.54.0
+ARG maven_version=3.9.10
+ENV JAVA_VERSION $java_version
+ENV AWS_LC_VERSION $aws_lc_version
+ENV MAVEN_VERSION $maven_version
+
+# install dependencies
+RUN dnf install -y \
+ apr-devel \
+ autoconf \
+ automake \
+ bzip2 \
+ cmake \
+ gcc \
+ gcc-c++ \
+ git \
+ glibc-devel \
+ golang \
+ libgcc \
+ libstdc++ \
+ libstdc++-devel \
+ libstdc++-static \
+ libtool \
+ make \
+ ninja-build \
+ patch \
+ perl \
+ perl-parent \
+ perl-devel \
+ tar \
+ unzip \
+ wget \
+ which \
+ zip
+
+# Downloading and installing SDKMAN!
+RUN curl -s "https://get.sdkman.io" | bash
+
+# Installing Java removing some unnecessary SDKMAN files
+RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
+    yes | sdk install java $JAVA_VERSION && \
+    yes | sdk install maven $MAVEN_VERSION && \
+    rm -rf $HOME/.sdkman/archives/* && \
+    rm -rf $HOME/.sdkman/tmp/*"
+
+RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
+RUN echo 'export PATH=$JAVA_HOME/bin:$PATH' >> ~/.bashrc
+
+ENV PATH /root/.sdkman/candidates/java/current/bin:/root/.sdkman/candidates/maven/current/bin:$PATH
+ENV JAVA_HOME=/root/.sdkman/candidates/java/current
+
+# install rust and setup PATH
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
+
+RUN mkdir "$HOME/sources" && \
+    git clone https://github.com/aws/aws-lc.git "$HOME/sources/aws-lc" && \
+    cd "$HOME/sources/aws-lc" && \
+    git checkout $AWS_LC_VERSION && \
+    cmake -B build -S . -DCMAKE_INSTALL_PREFIX=/opt/aws-lc -DBUILD_SHARED_LIBS=1 -DBUILD_TESTING=0 && \
+    cmake --build build -- -j && \
+    cmake --install build
+
+# Cleanup
+RUN dnf clean all && \
+    rm -rf /var/cache/dnf && \
+    rm -rf "$HOME/sources"

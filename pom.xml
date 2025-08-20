@@ -84,7 +84,7 @@
                 netty5-testsuite-native,netty5-testsuite-native-image,netty5-testsuite-native-image-client,
                 netty5-testsuite-native-image-client-runtime-init,netty5-testsuite-osgi,netty5-testsuite-shading,
                 netty5-transport-blockhound-tests,netty5-transport-native-unix-common-tests,netty5-microbench,
-                netty5-example,netty5-memory-segment
+                netty5-example
               </skippedModules>
               <additionalOptions>
                 <!--
@@ -464,7 +464,6 @@
     <module>all</module>
     <module>common</module>
     <module>buffer</module>
-    <module>buffer-memory-segment</module>
     <module>codec</module>
     <module>codec-dns</module>
     <module>codec-http</module>
@@ -996,12 +995,6 @@
             <nativeimage.handlerMetadataArtifactId>${project.artifactId}</nativeimage.handlerMetadataArtifactId>
           </systemPropertyVariables>
           <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty5.bootstrap.extensions=serviceload</argLine>
-          <properties>
-            <property>
-              <name>listener</name>
-              <value>io.netty5.build.junit.TimedOutTestsListener</value>
-            </property>
-          </properties>
           <skipTests>${skipTests}</skipTests>
           <jvm>${testJvm}</jvm>
            <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->

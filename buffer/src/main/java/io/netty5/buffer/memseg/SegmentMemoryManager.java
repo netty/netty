@@ -24,12 +24,15 @@ import io.netty5.buffer.StandardAllocationTypes;
 import io.netty5.buffer.internal.ArcDrop;
 import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.buffer.internal.WrappingAllocation;
+import io.netty5.buffer.memseg.DirectSegmentAllocator.SegmentHolder;
 
-import java.lang.foreign.Arena;
 import java.lang.foreign.MemorySegment;
 import java.util.function.Function;
 
 public class SegmentMemoryManager implements MemoryManager {
+    private static final DirectSegmentAllocator DIRECT_SEGMENT_ALLOCATOR
+            = NativeSegmentAllocator.isAvailable()? new NativeSegmentAllocator() : new JdkSegmentAllocator();
+
     private static Buffer createHeapBuffer(
             long size, Function<Drop<Buffer>, Drop<Buffer>> adaptor, AllocatorControl control) {
         var segment = MemorySegment.ofArray(new byte[Math.toIntExact(size)]);
@@ -39,11 +42,10 @@ public class SegmentMemoryManager implements MemoryManager {
 
     private static Buffer createNativeBuffer(
             long size, Function<Drop<Buffer>, Drop<Buffer>> adaptor, AllocatorControl control) {
-        Arena arena = Arena.ofShared();
         InternalBufferUtils.MEM_USAGE_NATIVE.add(size);
-        var segment = arena.allocate(size);
-        var drop = adaptor.apply(drop(arena, size));
-        return createBuffer(segment, drop, control);
+        var segmentHolder = DIRECT_SEGMENT_ALLOCATOR.allocate(size);
+        var drop = adaptor.apply(drop(segmentHolder, size));
+        return createBuffer(segmentHolder.segment(), drop, control);
     }
 
     @Override
@@ -69,8 +71,8 @@ public class SegmentMemoryManager implements MemoryManager {
         return buf.newConstChild();
     }
 
-    private static Drop<Buffer> drop(Arena arena, long nativeMemoryReserved) {
-        var drop = new MemorySessionCloseDrop(arena, nativeMemoryReserved);
+    private static Drop<Buffer> drop(SegmentHolder segmentHolder, long nativeMemoryReserved) {
+        var drop = new SegmentHolderFreeDrop(segmentHolder, nativeMemoryReserved);
         // Wrap in an ArcDrop because closing the session will close all associated memory segments.
         return ArcDrop.wrap(drop);
     }
@@ -117,10 +119,10 @@ public class SegmentMemoryManager implements MemoryManager {
         return "MemorySegment";
     }
 
-    private record MemorySessionCloseDrop(Arena arena, long nativeMemoryReserved) implements Drop<Buffer> {
+    private record SegmentHolderFreeDrop(SegmentHolder holder, long nativeMemoryReserved) implements Drop<Buffer> {
         @Override
         public void drop(Buffer obj) {
-            arena.close();
+            holder.free();
             InternalBufferUtils.MEM_USAGE_NATIVE.add(-nativeMemoryReserved);
         }
 

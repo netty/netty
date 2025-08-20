@@ -329,9 +329,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
                     }
                 }
 
-                if (OpenSsl.isBoringSSL() && clientMode) {
-                    // If in client-mode and BoringSSL let's allow to renegotiate once as the server may use this
-                    // for client auth.
+                if ((OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) && clientMode) {
+                    // If in client-mode and provider is BoringSSL or AWS-LC let's allow to renegotiate once as the
+                    // server may use this for client auth.
                     //
                     // See https://github.com/netty/netty/issues/11529
                     try {
@@ -1379,17 +1379,16 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
     }
 
     private void rejectRemoteInitiatedRenegotiation() throws SSLHandshakeException {
-        // As rejectRemoteInitiatedRenegotiation() is called in a finally block we also need to check if we shutdown
-        // the engine before as otherwise SSL.getHandshakeCount(ssl) will throw an NPE if the passed in ssl is 0.
-        // See https://github.com/netty/netty/issues/7353
-        if (!isDestroyed() && (!clientMode && SSL.getHandshakeCount(ssl) > 1 ||
-                // Let's allow to renegotiate once for client auth.
-                clientMode && SSL.getHandshakeCount(ssl) > 2) &&
-            // As we may count multiple handshakes when TLSv1.3 is used we should just ignore this here as
-            // renegotiation is not supported in TLSv1.3 as per spec.
-            !SslProtocols.TLS_v1_3.equals(session.getProtocol()) && handshakeState == HandshakeState.FINISHED) {
-            // TODO: In future versions me may also want to send a fatal_alert to the client and so notify it
-            // that the renegotiation failed.
+        // Avoid NPE: SSL.getHandshakeCount(ssl) must not be called if destroyed.
+        // TLS 1.3 forbids renegotiation by spec.
+        if (destroyed || SslProtocols.TLS_v1_3.equals(session.getProtocol())
+                || handshakeState != HandshakeState.FINISHED) {
+            return;
+        }
+
+        int count = SSL.getHandshakeCount(ssl);
+        boolean renegotiationAttempted = (!clientMode && count > 1) || (clientMode && count > 2);
+        if (renegotiationAttempted) {
             shutdown();
             throw new SSLHandshakeException("remote-initiated renegotiation not allowed");
         }
@@ -1654,7 +1653,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         final StringBuilder buf = new StringBuilder();
         final StringBuilder bufTLSv13 = new StringBuilder();
 
-        CipherSuiteConverter.convertToCipherStrings(Arrays.asList(cipherSuites), buf, bufTLSv13, OpenSsl.isBoringSSL());
+        CipherSuiteConverter.convertToCipherStrings(Arrays.asList(cipherSuites), buf, bufTLSv13,
+                OpenSsl.isBoringSSL());
         final String cipherSuiteSpec = buf.toString();
         final String cipherSuiteSpecTLSv13 = bufTLSv13.toString();
 
@@ -1753,82 +1753,60 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine
         // This is correct from the API docs
         int minProtocolIndex = OPENSSL_OP_NO_PROTOCOLS.length;
         int maxProtocolIndex = 0;
-        for (String p: protocols) {
-            if (!OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(p)) {
-                throw new IllegalArgumentException("Protocol " + p + " is not supported.");
+        for (String protocol : protocols) {
+            if (!OpenSsl.SUPPORTED_PROTOCOLS_SET.contains(protocol)) {
+                throw new IllegalArgumentException("Protocol " + protocol + " is not supported.");
             }
-            switch (p) {
+
+            int index;
+            switch (protocol) {
                 case SslProtocols.SSL_v2:
-                    if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2) {
-                        minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2;
-                    }
-                    if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2) {
-                        maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2;
-                    }
+                    index = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV2;
                     break;
                 case SslProtocols.SSL_v3:
-                    if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3) {
-                        minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3;
-                    }
-                    if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3) {
-                        maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3;
-                    }
+                    index = OPENSSL_OP_NO_PROTOCOL_INDEX_SSLV3;
                     break;
                 case SslProtocols.TLS_v1:
-                    if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1) {
-                        minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1;
-                    }
-                    if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1) {
-                        maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1;
-                    }
+                    index = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1;
                     break;
                 case SslProtocols.TLS_v1_1:
-                    if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1) {
-                        minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1;
-                    }
-                    if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1) {
-                        maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1;
-                    }
+                    index = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_1;
                     break;
                 case SslProtocols.TLS_v1_2:
-                    if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2) {
-                        minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2;
-                    }
-                    if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2) {
-                        maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2;
-                    }
+                    index = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_2;
                     break;
                 case SslProtocols.TLS_v1_3:
-                    if (!explicitDisableTLSv13) {
-                        if (minProtocolIndex > OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_3) {
-                            minProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_3;
-                        }
-                        if (maxProtocolIndex < OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_3) {
-                            maxProtocolIndex = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_3;
-                        }
+                    if (explicitDisableTLSv13) {
+                        continue;
                     }
+                    index = OPENSSL_OP_NO_PROTOCOL_INDEX_TLSv1_3;
                     break;
+                default:
+                    continue; // Should not happen due to SUPPORTED_PROTOCOLS_SET check
             }
+
+            minProtocolIndex = Math.min(minProtocolIndex, index);
+            maxProtocolIndex = Math.max(maxProtocolIndex, index);
         }
-        if (!isDestroyed()) {
-            // Clear out options which disable protocols
-            SSL.clearOptions(ssl, SSL.SSL_OP_NO_SSLv2 | SSL.SSL_OP_NO_SSLv3 | SSL.SSL_OP_NO_TLSv1 |
-                    SSL.SSL_OP_NO_TLSv1_1 | SSL.SSL_OP_NO_TLSv1_2 | SSL.SSL_OP_NO_TLSv1_3);
 
-            int opts = 0;
-            for (int i = 0; i < minProtocolIndex; ++i) {
-                opts |= OPENSSL_OP_NO_PROTOCOLS[i];
-            }
-            assert maxProtocolIndex != MAX_VALUE;
-            for (int i = maxProtocolIndex + 1; i < OPENSSL_OP_NO_PROTOCOLS.length; ++i) {
-                opts |= OPENSSL_OP_NO_PROTOCOLS[i];
-            }
-
-            // Disable protocols we do not want
-            SSL.setOptions(ssl, opts);
-        } else {
+        if (destroyed) {
             throw new IllegalStateException("failed to enable protocols: " + Arrays.asList(protocols));
         }
+
+        SSL.clearOptions(ssl, SSL.SSL_OP_NO_SSLv2 | SSL.SSL_OP_NO_SSLv3 |
+                SSL.SSL_OP_NO_TLSv1 | SSL.SSL_OP_NO_TLSv1_1 |
+                SSL.SSL_OP_NO_TLSv1_2 | SSL.SSL_OP_NO_TLSv1_3);
+
+        int opts = 0;
+        for (int i = 0; i < minProtocolIndex; ++i) {
+            opts |= OPENSSL_OP_NO_PROTOCOLS[i];
+        }
+        assert maxProtocolIndex != MAX_VALUE;
+        for (int i = maxProtocolIndex + 1; i < OPENSSL_OP_NO_PROTOCOLS.length; ++i) {
+            opts |= OPENSSL_OP_NO_PROTOCOLS[i];
+        }
+
+        SSL.setOptions(ssl, opts);
     }
 
     @Override
