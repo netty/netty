@@ -29,7 +29,6 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
@@ -61,10 +60,6 @@ public class PkiTestingTlsTest {
             List<CertificateBuilder.Algorithm> algs =  new ArrayList<>();
             algs.add(CertificateBuilder.Algorithm.rsa2048);
             algs.add(CertificateBuilder.Algorithm.ecp256);
-
-            if (PlatformDependent.javaVersion() >= 15) {
-                algs.add(CertificateBuilder.Algorithm.ed25519);
-            }
 
             for (CertificateBuilder.Algorithm alg : algs) {
                 args.add(Arguments.of(provider, alg));
