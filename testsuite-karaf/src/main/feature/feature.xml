@@ -25,6 +25,7 @@
     <bundle>mvn:io.netty/netty-codec-haproxy/${project.version}</bundle>
     <bundle>mvn:io.netty/netty-codec-http/${project.version}</bundle>
     <bundle>mvn:io.netty/netty-codec-http2/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-http3/${project.version}</bundle>
     <bundle>mvn:io.netty/netty-codec-memcache/${project.version}</bundle>
     <bundle>mvn:io.netty/netty-codec-mqtt/${project.version}</bundle>
     <bundle>mvn:io.netty/netty-codec-redis/${project.version}</bundle>
