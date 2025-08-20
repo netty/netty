@@ -51,7 +51,7 @@ public class PkiTestingTlsTest {
         if (SslProvider.isTlsv13Supported(SslProvider.JDK)) {
             providers.add(SslProvider.JDK);
         }
-        if (OpenSsl.isAvailable() && OpenSsl.supportsKeyManagerFactory()) {
+        if (OpenSsl.isAvailable() && OpenSsl.supportsKeyManagerFactory() && OpenSsl.isTlsv13Supported()) {
             providers.add(SslProvider.OPENSSL);
         }
 
@@ -95,6 +95,34 @@ public class PkiTestingTlsTest {
         testTlsConnection(serverContext, clientContext);
     }
 
+    @EnabledForJreRange(min = JRE.JAVA_15)
+    @Test
+    public void connectWithEd25519()
+            throws Exception {
+        X509Bundle cert = new CertificateBuilder()
+                .algorithm(CertificateBuilder.Algorithm.ed25519)
+                .setIsCertificateAuthority(true)
+                .subject("CN=localhost")
+                .buildSelfSigned();
+
+        // We currently don't support Ed25519 or Ed448 with the OPENSSL provider,
+        // so to use those algorithms we have to use the JDK provider.
+        SslProvider provider = SslProvider.JDK;
+
+        final SslContext serverContext = SslContextBuilder.forServer(cert.toKeyManagerFactory())
+                .sslProvider(provider)
+                .build();
+
+        final SslContext clientContext = SslContextBuilder.forClient()
+                .trustManager(cert.toTrustManagerFactory())
+                .sslProvider(provider)
+                .serverName(new SNIHostName("localhost"))
+                .protocols("TLSv1.3")
+                .build();
+
+        testTlsConnection(serverContext, clientContext);
+    }
+
     /**
      * A TLS connection using the X25519MLKEM768 hybrid classical-and-quantum-safe key exchange.
      * This protects the ephemeral TLS session key from harvest-now-decrypt-later attacks.
@@ -105,7 +133,7 @@ public class PkiTestingTlsTest {
     @EnabledForJreRange(min = JRE.JAVA_24)
     @Test
     void connectWithX25519MLKEM768() throws Exception {
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() && OpenSsl.isTlsv13Supported());
         X509Bundle cert = new CertificateBuilder()
                 .algorithm(CertificateBuilder.Algorithm.ecp256)
                 .setIsCertificateAuthority(true)
