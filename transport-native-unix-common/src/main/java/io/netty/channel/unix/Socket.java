@@ -52,10 +52,15 @@ public class Socket extends FileDescriptor {
 
     protected final boolean ipv6;
 
-    public Socket(int fd) {
+    public Socket(int fd, boolean ipv6) {
         super(fd);
-        ipv6 = isIPv6(fd);
+        this.ipv6 = ipv6;
     }
+
+    public Socket(int fd) {
+        this(fd, isIPv6(fd));
+    }
+
     /**
      * Returns {@code true} if we should use IPv6 internally, {@code false} otherwise.
      */
