@@ -14,9 +14,71 @@
   ~ License for the specific language governing permissions and limitations
   ~ under the License.
   -->
-<features xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0" name="test">
-  <feature name="test" version="${project.version}">
+<features xmlns="http://karaf.apache.org/xmlns/features/v1.6.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://karaf.apache.org/xmlns/features/v1.6.0" name="netty">
+  <!-- Artifacts requiring Java 8 and nothing else -->
+  <feature name="netty-java8" version="${project.version}">
+    <bundle>mvn:io.netty/netty-buffer/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-base/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-classes-quic/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-compression/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-dns/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-haproxy/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-http/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-http2/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-memcache/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-mqtt/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-redis/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-smtp/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-socks/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-stomp/${project.version}</bundle>
     <bundle>mvn:io.netty/netty-common/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-handler/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-handler-proxy/${project.version}</bundle>
     <bundle>mvn:io.netty/netty-resolver/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-resolver-dns/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-resolver-dns-classes-macos/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-transport/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-transport-classes-epoll/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-transport-classes-kqueue/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-transport-native-unix-common/${project.version}</bundle>
+    <bundle>mvn:io.netty/netty-transport-sctp/${project.version}</bundle>
+  </feature>
+
+  <!-- Artifacts requiring Java 9+ and nothing else -->
+  <feature name="netty-java9" version="${project.version}">
+    <feature>netty-java8</feature>
+    <bundle>mvn:io.netty/netty-transport-classes-io_uring/${project.version}</bundle>
+  </feature>
+
+  <!-- Artifacts requiring FasterXML AAlto -->
+  <feature name="netty-aalto" version="${project.version}">
+    <feature>netty-java8</feature>
+    <bundle dependency="true">mvn:org.codehaus.woodstox/stax2-api/4.2.2</bundle>
+    <bundle dependency="true">mvn:com.fasterxml/aalto-xml/${aalto.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-xml/${project.version}</bundle>
+  </feature>
+
+  <!-- Artifacts requiring Bouncy Castle -->
+  <feature name="netty-bc" version="${project.version}">
+    <feature>netty-java8</feature>
+    <bundle dependency="true">mvn:org.bouncycastle/bcpkix-jdk18on/${bouncycastle.version}</bundle>
+    <bundle dependency="true">mvn:org.bouncycastle/bcprov-jdk18on/${bouncycastle.version}</bundle>
+    <bundle dependency="true">mvn:org.bouncycastle/bcutil-jdk18on/${bouncycastle.version}</bundle>
+    <bundle>mvn:io.netty/netty-handler-ssl-ocsp/${project.version}</bundle>
+  </feature>
+
+  <!-- Artifacts requiring JBoss Marshalling -->
+  <feature name="netty-jboss" version="${project.version}">
+    <feature>netty-java8</feature>
+    <!-- Note: requires Java 11 as of https://issues.redhat.com/browse/JBMAR-253 -->
+    <bundle dependency="true">wrap:mvn:org.jboss.marshalling/jboss-marshalling/${jboss.marshalling.version}</bundle>
+    <bundle>mvn:io.netty/netty-codec-marshalling/${project.version}</bundle>
+  </feature>
+
+  <!-- Artifacts requiring RXTX -->
+  <feature name="netty-rxtx" version="${project.version}">
+    <feature>netty-java8</feature>
+    <bundle dependency="true">wrap:mvn:org.rxtx/rxtx/${rxtx.version}</bundle>
+    <bundle>mvn:io.netty/netty-transport-rxtx/${project.version}</bundle>
   </feature>
 </features>

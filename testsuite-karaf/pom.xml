@@ -25,7 +25,7 @@
   </parent>
 
   <artifactId>testsuite-karaf</artifactId>
-  <packaging>kar</packaging>
+  <packaging>feature</packaging>
   <name>Netty/Testsuite/Karaf</name>
 
   <properties>
@@ -49,7 +49,102 @@
   <dependencies>
     <dependency>
       <groupId>io.netty</groupId>
+      <artifactId>netty-buffer</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-base</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-compression</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-classes-quic</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-dns</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-haproxy</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-http</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-http2</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-marshalling</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-memcache</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-mqtt</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-redis</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-smtp</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-socks</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-stomp</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-xml</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
       <artifactId>netty-common</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-handler</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-handler-proxy</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-handler-ssl-ocsp</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -57,6 +152,63 @@
       <artifactId>netty-resolver</artifactId>
       <scope>provided</scope>
     </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-resolver-dns</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-resolver-dns-classes-macos</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-classes-epoll</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-classes-io_uring</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-classes-kqueue</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-native-unix-common</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-rxtx</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-sctp</artifactId>
+      <scope>provided</scope>
+    </dependency>
+
+    <!-- TODO: netty-codec-http3 requires a header fix -->
+    <!-- TODO: netty-codec-protobuf requires figuring out dependencies -->
+    <!-- TODO: netty-transport-udt: requires figuring out slf4j dependency -->
+    <!-- TODO: these require figuring out platform build
+        netty-codec-native-quic
+        netty-resolver-dns-native-macos
+        netty-transport-native-epoll
+        netty-transport-native-io_uring
+        netty-transport-native-kqueue
+        netty-transport-native-unix-common (with classifiers)
+    -->
 
     <!-- verify dependencies -->
     <dependency>
@@ -88,10 +240,41 @@
             <descriptor>file:${project.build.directory}/feature/feature.xml</descriptor>
           </descriptors>
           <features>
-            <feature>test</feature>
+            <feature>netty-java8</feature>
+            <feature>netty-aalto</feature>
+            <feature>netty-bc</feature>
+            <feature>netty-rxtx</feature>
           </features>
-          <javase>${maven.compiler.target}</javase>
+          <javase>1.8</javase>
         </configuration>
+        <executions>
+          <execution>
+            <id>verify-java9</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>verify</goal>
+            </goals>
+            <configuration>
+              <features>
+                <feature>netty-java9</feature>
+              </features>
+              <javase>9</javase>
+            </configuration>
+          </execution>
+          <execution>
+            <id>verify-java11</id>
+            <phase>compile</phase>
+            <goals>
+              <goal>verify</goal>
+            </goals>
+            <configuration>
+              <features>
+                <feature>netty-jboss</feature>
+              </features>
+              <javase>11</javase>
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>

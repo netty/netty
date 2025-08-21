@@ -57,6 +57,7 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.IntSupplier;
 
@@ -179,14 +180,14 @@ final class AdaptivePoolingAllocator {
     }
 
     private final ChunkAllocator chunkAllocator;
-    private final Set<Chunk> chunkRegistry;
+    private final ChunkRegistry chunkRegistry;
     private final MagazineGroup[] sizeClassedMagazineGroups;
     private final MagazineGroup largeBufferMagazineGroup;
     private final FastThreadLocal<MagazineGroup[]> threadLocalGroup;
 
     AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, boolean useCacheForNonEventLoopThreads) {
         this.chunkAllocator = ObjectUtil.checkNotNull(chunkAllocator, "chunkAllocator");
-        chunkRegistry = ConcurrentHashMap.newKeySet();
+        chunkRegistry = new ChunkRegistry();
         sizeClassedMagazineGroups = createMagazineGroupSizeClasses(this, false);
         largeBufferMagazineGroup = new MagazineGroup(
                 this, chunkAllocator, new HistogramChunkControllerFactory(true), false);
@@ -304,6 +305,7 @@ final class AdaptivePoolingAllocator {
         // Create a one-off chunk for this allocation.
         AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
         Chunk chunk = new Chunk(innerChunk, magazine, false, chunkSize -> true);
+        chunkRegistry.add(chunk);
         try {
             chunk.readInitInto(buf, size, size, maxCapacity);
         } finally {
@@ -329,11 +331,7 @@ final class AdaptivePoolingAllocator {
     }
 
     long usedMemory() {
-        long sum = 0;
-        for (Chunk chunk : chunkRegistry) {
-            sum += chunk.capacity();
-        }
-        return sum;
+        return chunkRegistry.totalCapacity();
     }
 
     // Ensure that we release all previous pooled resources when this object is finalized. This is needed as otherwise
@@ -558,7 +556,7 @@ final class AdaptivePoolingAllocator {
         private final ChunkAllocator chunkAllocator;
         private final int segmentSize;
         private final int chunkSize;
-        private final Set<Chunk> chunkRegistry;
+        private final ChunkRegistry chunkRegistry;
         private final int[] segmentOffsets;
 
         private SizeClassChunkController(MagazineGroup group, int segmentSize, int chunkSize, int[] segmentOffsets) {
@@ -634,7 +632,7 @@ final class AdaptivePoolingAllocator {
                 new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
                 new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
         };
-        private final Set<Chunk> chunkRegistry;
+        private final ChunkRegistry chunkRegistry;
         private short[] histo = histos[0];
         private final int[] sums = new int[HISTO_BUCKET_COUNT];
 
@@ -1095,6 +1093,22 @@ final class AdaptivePoolingAllocator {
 
         public void initializeSharedStateIn(Magazine other) {
             chunkController.initializeSharedStateIn(other.chunkController);
+        }
+    }
+
+    private static final class ChunkRegistry {
+        private final LongAdder totalCapacity = new LongAdder();
+
+        public long totalCapacity() {
+            return totalCapacity.sum();
+        }
+
+        public void add(Chunk chunk) {
+            totalCapacity.add(chunk.capacity());
+        }
+
+        public void remove(Chunk chunk) {
+            totalCapacity.add(-chunk.capacity());
         }
     }
 
