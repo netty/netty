@@ -84,6 +84,13 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.netty.handler.codec.http.HttpRequestCompressor",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpRequestCompressor"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.netty.handler.codec.http.HttpRequestDecoder",
     "condition": {
       "typeReachable": "io.netty.handler.codec.http.HttpRequestDecoder"
