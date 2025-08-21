@@ -214,6 +214,17 @@ public final class ObjectUtil {
     }
 
     /**
+     * Checks that the given argument is in range. If it is not, throws {@link IllegalArgumentException}.
+     * Otherwise, returns the argument.
+     */
+    public static double checkInRange(double d, double start, double end, String name) {
+        if (d < start || d > end) {
+            throw new IllegalArgumentException(name + ": " + d + " (expected: " + start + "-" + end + ")");
+        }
+        return d;
+    }
+
+    /**
      * Checks that the given argument is neither null nor empty.
      * If it is, throws {@link NullPointerException} or {@link IllegalArgumentException}.
      * Otherwise, returns the argument.
