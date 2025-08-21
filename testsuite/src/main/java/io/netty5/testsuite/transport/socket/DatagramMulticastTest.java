@@ -66,6 +66,11 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
             public void messageReceived(ChannelHandlerContext ctx, Object msg) throws Exception {
                 // Nothing will be sent.
             }
+
+            @Override
+            public boolean isSharable() {
+                return true;
+            }
         });
 
         cb.handler(mhandler);
@@ -156,6 +161,11 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
                 fail();
             }
             return success;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
     }
 
