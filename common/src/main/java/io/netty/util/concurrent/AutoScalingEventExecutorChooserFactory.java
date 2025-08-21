@@ -18,7 +18,6 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -46,6 +45,7 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class AutoScalingEventExecutorChooserFactory implements EventExecutorChooserFactory {
 
+    private static final Runnable NO_OOP_TASK = () -> { };
     private final int minChildren;
     private final int maxChildren;
     private final long utilizationCheckPeriodNanos;
@@ -117,7 +117,6 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
     }
 
     private final class AutoScalingEventExecutorChooser implements EventExecutorChooser {
-        private final Runnable noOpTask = () -> { };
         private final EventExecutor[] executors;
         private final EventExecutorChooser allExecutorsChooser;
         private final AtomicReference<AutoScalingState> state;
@@ -187,7 +186,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                     if (child instanceof SingleThreadEventExecutor) {
                         SingleThreadEventExecutor stee = (SingleThreadEventExecutor) child;
                         if (stee.isSuspended()) {
-                            stee.execute(noOpTask);
+                            stee.execute(NO_OOP_TASK);
                             wokenUp.add(stee);
                         }
                     }
