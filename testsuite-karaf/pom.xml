@@ -89,6 +89,11 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
+      <artifactId>netty-codec-http3</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
       <artifactId>netty-codec-marshalling</artifactId>
       <scope>provided</scope>
     </dependency>
@@ -198,7 +203,6 @@
       <scope>provided</scope>
     </dependency>
 
-    <!-- TODO: netty-codec-http3 requires a header fix -->
     <!-- TODO: netty-codec-protobuf requires figuring out dependencies -->
     <!-- TODO: netty-transport-udt: requires figuring out slf4j dependency -->
     <!-- TODO: these require figuring out platform build
