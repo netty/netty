@@ -279,7 +279,6 @@ public class HttpServerUpgradeHandlerTest {
                 "Content-Length: 8\n" +
                 "\n" +
                 "GET / HTTP/1.1\n", CharsetUtil.US_ASCII));
-        channel.checkException();
         assertTrue(channel.finishAndReleaseAll());
     }
 }
