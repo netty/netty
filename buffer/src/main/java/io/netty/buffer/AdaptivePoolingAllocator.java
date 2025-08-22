@@ -1734,6 +1734,11 @@ final class AdaptivePoolingAllocator {
         private final int[] stack;
         private int top;
 
+        IntStack(int capacity) {
+            stack = new int[capacity];
+            top = -1;
+        }
+
         IntStack(int[] initialValues) {
             stack = new int[initialValues.length];
             // copy reversed
@@ -1764,6 +1769,26 @@ final class AdaptivePoolingAllocator {
     }
 
     private static final class SizeClassedChunk extends Chunk {
+
+        /**
+         * The number of segments to transfer from the thread-safe externalFreeList to the
+         * non-thread-safe localFreeList when the local cache is empty.
+         * <p>
+         * This constant prevents a "thrashing" problem in shared magazines. Without batching,
+         * the allocator would perform a full drain of all available segments from the thread-safe queue just to
+         * allocate one, leading to a bottleneck. By transferring a small batch, we
+         * "amortize" the high cost of the thread-safe operation over many later, non-thread-safe stack pops.
+         * <p>
+         * This value must be smaller than the minimum number
+         * of segments in any chunk ({@code SizeClassChunkControllerFactory.MIN_SEGMENTS_PER_CHUNK},
+         * which is currently 32). If the batch size were equal to or greater than the minimum
+         * segment count, a "batch drain" on the smallest chunks would become a "full drain,"
+         * reintroducing the original problem we're solving here.
+         * <p>
+         * The number 16 is a safe and effective choice, providing good amortization without
+         * risking this edge case or hoarding too many segments in a local cache.
+         */
+        private static final int LOCAL_CACHE_BATCH_SIZE = 16;
         private static final int AVAILABLE = -1;
         private static final int DEALLOCATED = Integer.MIN_VALUE;
 
@@ -1797,7 +1822,9 @@ final class AdaptivePoolingAllocator {
                         return segmentOffsets[counter++];
                     }
                 });
-                localFreeList = null;
+                // since the allocation path for shared magazines is guarded by a lock, it's safe to use the
+                // local free list for the shared path as well.
+                localFreeList = new IntStack(segmentCount);
             } else {
                 localFreeList = new IntStack(segmentOffsets);
             }
@@ -1809,19 +1836,13 @@ final class AdaptivePoolingAllocator {
         public void readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
             assert state == AVAILABLE;
             IntStack localFreeList = this.localFreeList;
-            final int startIndex;
-            if (localFreeList != null) {
-                assert Thread.currentThread() == ownerThread;
-                if (localFreeList.isEmpty() && copyIntoLocalFreeList(localFreeList) == 0) {
-                    throw new IllegalStateException("Free list is empty");
-                }
-                startIndex = localFreeList.pop();
-            } else {
-                startIndex = externalFreeList.poll();
-                if (startIndex == FREE_LIST_EMPTY) {
+
+            if (localFreeList.isEmpty()) {
+                if (copyIntoLocalFreeList(localFreeList) == 0) {
                     throw new IllegalStateException("Free list is empty");
                 }
             }
+            final int startIndex = localFreeList.pop();
 
             allocatedBytes += segmentSize;
             SizeClassedChunk chunk = this;
@@ -1843,7 +1864,7 @@ final class AdaptivePoolingAllocator {
             final MpscIntQueue externalFreeList = this.externalFreeList;
             int index;
             int count = 0;
-            while ((index = externalFreeList.poll()) != FREE_LIST_EMPTY) {
+            while (count < LOCAL_CACHE_BATCH_SIZE && (index = externalFreeList.poll()) != FREE_LIST_EMPTY) {
                 localFreeList.push(index);
                 count++;
             }
@@ -1856,12 +1877,13 @@ final class AdaptivePoolingAllocator {
             if (remainingCapacity > segmentSize) {
                 return remainingCapacity;
             }
-            // TODO we could optimize this to save reading the externalFreeList.size() if we know that
-            //      localFreeList is not null and has enough capacity
-            int updatedRemainingCapacity = externalFreeList.size() * segmentSize;
-            if (localFreeList != null) {
+
+            final int updatedRemainingCapacity;
+            if (ownerThread != null) {
                 assert Thread.currentThread() == ownerThread;
-                updatedRemainingCapacity += localFreeList.size() * segmentSize;
+                updatedRemainingCapacity = localFreeList.size() * segmentSize;
+            } else {
+                updatedRemainingCapacity = (localFreeList.size() + externalFreeList.size()) * segmentSize;
             }
             if (updatedRemainingCapacity == remainingCapacity) {
                 return remainingCapacity;
@@ -1885,7 +1907,7 @@ final class AdaptivePoolingAllocator {
         @Override
         void releaseSegment(int startIndex) {
             IntStack localFreeList = this.localFreeList;
-            if (localFreeList != null && Thread.currentThread() == ownerThread) {
+            if (ownerThread != null && Thread.currentThread() == ownerThread) {
                 localFreeList.push(startIndex);
                 // Only check the volatile state if the chunk has been marked for deallocation.
                 // This avoids a StoreLoad barrier on the hot path.
@@ -1953,7 +1975,7 @@ final class AdaptivePoolingAllocator {
                 assert Thread.currentThread() == ownerThread;
                 markedForDeallocation = true;
             }
-            int state = localFreeList != null ? localFreeList.size() : 0;
+            int state = localFreeList.size();
             STATE.set(this, state);
             // StoreLoad
             int totalSize = state + externalFreeList.size();
