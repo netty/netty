@@ -56,7 +56,6 @@ import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
-import java.util.function.IntSupplier;
 
 import static io.netty.util.internal.ReferenceCountUpdater.getUnsafeOffset;
 import static java.util.concurrent.atomic.AtomicIntegerFieldUpdater.newUpdater;
@@ -1734,11 +1733,6 @@ final class AdaptivePoolingAllocator {
         private final int[] stack;
         private int top;
 
-        IntStack(int capacity) {
-            stack = new int[capacity];
-            top = -1;
-        }
-
         IntStack(int[] initialValues) {
             stack = new int[initialValues.length];
             // copy reversed
@@ -1812,22 +1806,11 @@ final class AdaptivePoolingAllocator {
             int segmentCount = segmentOffsets.length;
             assert delegate.capacity() / segmentSize == segmentCount;
             assert segmentCount > 0: "Chunk must have a positive number of segments";
+            // The externalFreeList is only used to receive segments freed by other threads.
             externalFreeList = MpscIntQueue.create(segmentCount, FREE_LIST_EMPTY);
-            if (ownerThread == null) {
-                externalFreeList.fill(segmentCount, new IntSupplier() {
-                    int counter;
-
-                    @Override
-                    public int getAsInt() {
-                        return segmentOffsets[counter++];
-                    }
-                });
-                // since the allocation path for shared magazines is guarded by a lock, it's safe to use the
-                // local free list for the shared path as well.
-                localFreeList = new IntStack(segmentCount);
-            } else {
-                localFreeList = new IntStack(segmentOffsets);
-            }
+            // Since the allocation path for shared magazines is guarded by a lock, it's safe to use the
+            // local free list for the shared path as well.
+            localFreeList = new IntStack(segmentOffsets);
             this.segments = segmentCount;
             STATE.lazySet(this, AVAILABLE);
         }
