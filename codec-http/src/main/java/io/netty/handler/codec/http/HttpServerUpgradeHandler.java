@@ -14,6 +14,7 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -172,6 +173,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     private final HttpHeadersFactory headersFactory;
     private final HttpHeadersFactory trailersFactory;
     private boolean handlingUpgrade;
+    private boolean failedAggregationStart;
 
     /**
      * Constructs the upgrader with the supported codecs.
@@ -256,6 +258,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
                 if (req.headers().contains(HttpHeaderNames.UPGRADE) &&
                     shouldHandleUpgradeRequest(req)) {
                     handlingUpgrade = true;
+                    failedAggregationStart = true; // reset if beginAggregation is called
                 } else {
                     ReferenceCountUtil.retain(msg);
                     ctx.fireChannelRead(msg);
@@ -277,7 +280,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
             // Call the base class to handle the aggregation of the full request.
             super.decode(ctx, msg, out);
             if (out.isEmpty()) {
-                if (msg instanceof LastHttpContent) {
+                if (msg instanceof LastHttpContent || failedAggregationStart) {
                     // request failed to aggregate, try with the next request
                     handlingUpgrade = false;
                     releaseCurrentMessage();
@@ -302,6 +305,12 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
 
         // The upgrade did not succeed, just allow the full request to propagate to the
         // next handler.
+    }
+
+    @Override
+    protected FullHttpMessage beginAggregation(HttpMessage start, ByteBuf content) throws Exception {
+        failedAggregationStart = false;
+        return super.beginAggregation(start, content);
     }
 
     /**
