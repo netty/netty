@@ -201,7 +201,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
     final boolean jdkCompatibilityMode;
     private final boolean clientMode;
     final ByteBufAllocator alloc;
-    private final OpenSslEngineMap engineMap;
+    private final Map<Long, ReferenceCountedOpenSslEngine> engines;
     private final OpenSslApplicationProtocolNegotiator apn;
     private final ReferenceCountedOpenSslContext parentContext;
     private final OpenSslInternalSession session;
@@ -229,7 +229,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                   String endpointIdentificationAlgorithm, List<SNIServerName> serverNames) {
         super(peerHost, peerPort);
         OpenSsl.ensureAvailability();
-        engineMap = context.engineMap;
+        engines = context.engines;
         enableOcsp = context.enableOcsp;
         this.jdkCompatibilityMode = jdkCompatibilityMode;
         this.alloc = checkNotNull(alloc, "alloc");
@@ -581,8 +581,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             // Let's check if engineMap is null as it could be in theory if we throw an OOME during the construction of
             // ReferenceCountedOpenSslEngine (before we assign the field). This is needed as shutdown() is called from
             // the finalizer as well.
-            if (engineMap != null) {
-                engineMap.remove(ssl);
+            if (engines != null) {
+                engines.remove(ssl);
             }
             SSL.freeSSL(ssl);
             ssl = networkBIO = 0;
@@ -1961,7 +1961,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         }
 
         // Adding the OpenSslEngine to the OpenSslEngineMap so it can be used in the AbstractCertificateVerifier.
-        engineMap.add(this);
+        engines.put(sslPointer(), this);
 
         if (!sessionSet) {
             if (!parentContext.sessionContext().setSessionFromCache(ssl, session, getPeerHost(), getPeerPort())) {
