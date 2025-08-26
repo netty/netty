@@ -20,11 +20,11 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.0.RC4-SNAPSHOT</version>
+    <version>4.2.5.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-native-image</artifactId>
-  <packaging>jar</packaging>
+  <packaging>${packaging.type}</packaging>
 
   <name>Netty/Testsuite/NativeImage</name>
 
@@ -32,6 +32,10 @@
     <revapi.skip>true</revapi.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <packaging.type>jar</packaging.type>
+    <native.maven.plugin.version>0.10.6</native.maven.plugin.version>
+    <native.classifier>${os.detected.name}-${os.detected.arch}</native.classifier>
   </properties>
 
   <dependencies>
@@ -60,8 +64,44 @@
       <artifactId>netty-codec-http</artifactId>
       <version>${project.version}</version>
     </dependency>
-
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-classes-epoll</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-transport-classes-io_uring</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-classes-quic</artifactId>
+      <version>${project.version}</version>
+    </dependency>
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>empty-javadoc-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>javadoc</classifier>
+              <classesDirectory>${basedir}/javadoc</classesDirectory>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
 
   <profiles>
     <profile>
@@ -75,49 +115,146 @@
         <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
       </properties>
     </profile>
+    <!-- Profiles related to native-image testing of QUIC -->
+    <profile>
+      <id>native-image-testsuite</id>
+      <activation>
+        <file>
+          <!-- GraalVM 'native-image' should exist when using GraalVM -->
+          <exists>${java.home}/bin/native-image</exists>
+        </file>
+      </activation>
+      <dependencies>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-epoll</artifactId>
+          <version>${project.version}</version>
+          <classifier>${native.classifier}</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>io.netty</groupId>
+          <artifactId>netty-transport-native-io_uring</artifactId>
+          <version>${project.version}</version>
+          <classifier>${native.classifier}</classifier>
+          <scope>runtime</scope>
+        </dependency>
+        <dependency>
+          <groupId>${project.groupId}</groupId>
+          <artifactId>netty-codec-native-quic</artifactId>
+          <version>${project.version}</version>
+          <classifier>${native.classifier}</classifier>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+              <source>17</source>
+              <target>17</target>
+            </configuration>
+          </plugin>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>${project.basedir}/../codec-native-quic/src/test/java/io/netty/handler/codec/quic/example/</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.graalvm.buildtools</groupId>
+            <artifactId>native-maven-plugin</artifactId>
+            <version>0.10.6</version>
+            <extensions>false</extensions>
+            <executions>
+              <execution>
+                <id>http-server</id>
+                <phase>package</phase>
+                <goals><goal>compile-no-fork</goal></goals>
+                <configuration>
+                  <metadataRepository><enabled>false</enabled></metadataRepository>
+                  <imageName>native-image-http-server</imageName>
+                  <mainClass>io.netty.testsuite.svm.HttpNativeServer</mainClass>
+                  <buildArgs>
+                    <arg>--report-unsupported-elements-at-runtime</arg>
+                    <arg>--allow-incomplete-classpath</arg>
+                    <arg>-Ob</arg>
+                  </buildArgs>
+                </configuration>
+              </execution>
+
+              <execution>
+                <id>quic-client</id>
+                <phase>package</phase>
+                <goals><goal>compile-no-fork</goal></goals>
+                <configuration>
+                  <metadataRepository><enabled>false</enabled></metadataRepository>
+                  <imageName>native-image-quic-client</imageName>
+                  <mainClass>io.netty.handler.codec.quic.example.QuicClientExample</mainClass>
+                  <buildArgs>
+                    <arg>--report-unsupported-elements-at-runtime</arg>
+                    <arg>--allow-incomplete-classpath</arg>
+                    <arg>-Ob</arg>
+                  </buildArgs>
+                </configuration>
+              </execution>
+
+              <execution>
+                <id>quic-server</id>
+                <phase>package</phase>
+                <goals><goal>compile-no-fork</goal></goals>
+                <configuration>
+                  <metadataRepository><enabled>false</enabled></metadataRepository>
+                  <imageName>native-image-quic-server</imageName>
+                  <mainClass>io.netty.handler.codec.quic.example.QuicServerExample</mainClass>
+                  <buildArgs>
+                    <arg>--report-unsupported-elements-at-runtime</arg>
+                    <arg>--allow-incomplete-classpath</arg>
+                    <arg>-Ob</arg>
+                    <arg>--trace-class-initialization=org.bouncycastle.pqc.asn1.PQCObjectIdentifiers</arg>
+                  </buildArgs>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.6.0</version>
+            <executions>
+              <!-- This will do a whitesmoke test: if the substitutions are missing the binary will fail to run -->
+              <!-- If the metadata is missing the build above will fail -->
+              <execution>
+                <id>verify-native-image</id>
+                <phase>verify</phase>
+                <goals>
+                  <goal>exec</goal>
+                </goals>
+              </execution>
+            </executions>
+            <configuration>
+              <skip>${skipNativeImageTestsuite}</skip>
+              <executable>bash</executable>
+              <arguments>
+                <argument>${project.basedir}/verify-native-image.sh</argument>
+              </arguments>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
   </profiles>
 
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.graalvm.nativeimage</groupId>
-        <artifactId>native-image-maven-plugin</artifactId>
-        <version>${graalvm.version}</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>native-image</goal>
-            </goals>
-            <phase>package</phase>
-          </execution>
-        </executions>
-        <configuration>
-          <skip>${skipNativeImageTestsuite}</skip>
-          <imageName>${project.artifactId}</imageName>
-          <mainClass>io.netty.testsuite.svm.HttpNativeServer</mainClass>
-          <buildArgs>--report-unsupported-elements-at-runtime --allow-incomplete-classpath</buildArgs>
-        </configuration>
-      </plugin>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>1.6.0</version>
-        <executions>
-          <!-- This will do a whitesmoke test: if the substitutions are missing the binary will fail to run -->
-          <!-- If the metadata is missing the build above will fail -->
-          <execution>
-            <id>verify-native-image</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <skip>${skipNativeImageTestsuite}</skip>
-          <executable>${project.build.directory}/${project.artifactId}</executable>
-        </configuration>
-      </plugin>
-    </plugins>
-  </build>
 </project>

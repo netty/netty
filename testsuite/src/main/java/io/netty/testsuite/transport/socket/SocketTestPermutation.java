@@ -40,13 +40,16 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class SocketTestPermutation {
 
     static final String BAD_HOST = SystemPropertyUtil.get("io.netty.testsuite.badHost", "198.51.100.254");
     static final int BAD_PORT = SystemPropertyUtil.getInt("io.netty.testsuite.badPort", 65535);
+    static final boolean INCLUDE_OIO = SystemPropertyUtil.getBoolean("io.netty.testsuite.includeOio", false);
+
+    // See /etc/services
+    public static final int UNASSIGNED_PORT = 4;
 
     static {
         InternalLogger logger = InternalLoggerFactory.getInstance(SocketConnectionAttemptTest.class);
@@ -56,19 +59,14 @@ public class SocketTestPermutation {
 
     static final SocketTestPermutation INSTANCE = new SocketTestPermutation();
 
-    protected static final int BOSSES = 2;
-    protected static final int WORKERS = 3;
+    protected static final int NUM_THREADS = 4;
 
     protected static final int OIO_SO_TIMEOUT = 10;  // Use short timeout for faster runs.
 
-    protected final EventLoopGroup nioBossGroup = new MultiThreadIoEventLoopGroup(
-            BOSSES, new DefaultThreadFactory("testsuite-nio-boss", true), NioIoHandler.newFactory());
-    protected final EventLoopGroup nioWorkerGroup = new MultiThreadIoEventLoopGroup(
-            WORKERS, new DefaultThreadFactory("testsuite-nio-worker", true), NioIoHandler.newFactory());
-    protected final EventLoopGroup oioBossGroup =
-            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-oio-boss", true));
-    protected final EventLoopGroup oioWorkerGroup =
-            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-oio-worker", true));
+    protected final EventLoopGroup NIO_GROUP = new MultiThreadIoEventLoopGroup(
+            NUM_THREADS, new DefaultThreadFactory("testsuite-nio", true), NioIoHandler.newFactory());
+    protected final EventLoopGroup OIO_GROUP =
+            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-oio", true));
 
     protected <A extends AbstractBootstrap<?, ?>, B extends AbstractBootstrap<?, ?>>
 
@@ -108,8 +106,10 @@ public class SocketTestPermutation {
         // Populate the combinations
         List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> list = combo(sbfs, cbfs);
 
-        // Remove the OIO-OIO case which often leads to a dead lock by its nature.
-        list.remove(list.size() - 1);
+        if (INCLUDE_OIO) {
+            // Remove the OIO-OIO case which often leads to a dead lock by its nature.
+            list.remove(list.size() - 1);
+        }
 
         return list;
     }
@@ -124,80 +124,89 @@ public class SocketTestPermutation {
         // Populate the combinations
         List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> list = combo(sbfs, cbfs);
 
-        // Remove the OIO-OIO case which often leads to a dead lock by its nature.
-        list.remove(list.size() - 1);
+        if (INCLUDE_OIO) {
+            // Remove the OIO-OIO case which often leads to a dead lock by its nature.
+            list.remove(list.size() - 1);
+        }
 
         return list;
     }
 
     public List<BootstrapComboFactory<Bootstrap, Bootstrap>> datagram(final SocketProtocolFamily family) {
         // Make the list of Bootstrap factories.
-        List<BootstrapFactory<Bootstrap>> bfs = Arrays.asList(
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channelFactory(new ChannelFactory<Channel>() {
-                            @Override
-                            public Channel newChannel() {
-                                return new NioDatagramChannel(family);
-                            }
+        List<BootstrapFactory<Bootstrap>> bfs = new ArrayList<>();
 
-                            @Override
-                            public String toString() {
-                                return NioDatagramChannel.class.getSimpleName() + ".class";
-                            }
-                        });
-                    }
-                },
-                new BootstrapFactory<Bootstrap>() {
+        bfs.add(new BootstrapFactory<Bootstrap>() {
+            @Override
+            public Bootstrap newInstance() {
+                return new Bootstrap().group(NIO_GROUP).channelFactory(new ChannelFactory<Channel>() {
                     @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(oioWorkerGroup).channel(OioDatagramChannel.class)
-                                .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
+                    public Channel newChannel() {
+                        return new NioDatagramChannel(family);
                     }
+
+                    @Override
+                    public String toString() {
+                        return NioDatagramChannel.class.getSimpleName() + ".class";
+                    }
+                });
+            }
+        });
+        if (INCLUDE_OIO) {
+            bfs.add(new BootstrapFactory<Bootstrap>() {
+                @Override
+                public Bootstrap newInstance() {
+                    return new Bootstrap().group(OIO_GROUP).channel(OioDatagramChannel.class)
+                            .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
                 }
-        );
+            });
+        }
 
         // Populare the combinations.
         return combo(bfs, bfs);
     }
 
     public List<BootstrapFactory<ServerBootstrap>> serverSocket() {
-        return Arrays.asList(
-                new BootstrapFactory<ServerBootstrap>() {
-                    @Override
-                    public ServerBootstrap newInstance() {
-                        return new ServerBootstrap().group(nioBossGroup, nioWorkerGroup)
-                                .channel(NioServerSocketChannel.class);
-                    }
-                },
-                new BootstrapFactory<ServerBootstrap>() {
-                    @Override
-                    public ServerBootstrap newInstance() {
-                        return new ServerBootstrap().group(oioBossGroup, oioWorkerGroup)
-                                .channel(OioServerSocketChannel.class)
-                                .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
-                    }
+        List<BootstrapFactory<ServerBootstrap>> factories = new ArrayList<>();
+        factories.add(new BootstrapFactory<ServerBootstrap>() {
+            @Override
+            public ServerBootstrap newInstance() {
+                return new ServerBootstrap().group(NIO_GROUP)
+                        .channel(NioServerSocketChannel.class);
+            }
+        });
+        if (INCLUDE_OIO) {
+            factories.add(new BootstrapFactory<ServerBootstrap>() {
+                @Override
+                public ServerBootstrap newInstance() {
+                    return new ServerBootstrap().group(OIO_GROUP)
+                            .channel(OioServerSocketChannel.class)
+                            .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
                 }
-        );
+            });
+        }
+
+        return factories;
     }
 
     public List<BootstrapFactory<Bootstrap>> clientSocket() {
-        return Arrays.asList(
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channel(NioSocketChannel.class);
-                    }
-                },
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(oioWorkerGroup).channel(OioSocketChannel.class)
-                                .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
-                    }
+        List<BootstrapFactory<Bootstrap>> factories = new ArrayList<>();
+        factories.add(new BootstrapFactory<Bootstrap>() {
+            @Override
+            public Bootstrap newInstance() {
+                return new Bootstrap().group(NIO_GROUP).channel(NioSocketChannel.class);
+            }
+        });
+        if (INCLUDE_OIO) {
+            factories.add(new BootstrapFactory<Bootstrap>() {
+                @Override
+                public Bootstrap newInstance() {
+                    return new Bootstrap().group(OIO_GROUP).channel(OioSocketChannel.class)
+                            .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
                 }
-        );
+            });
+        }
+        return factories;
     }
 
     public List<BootstrapFactory<Bootstrap>> clientSocketWithFastOpen() {
@@ -205,20 +214,22 @@ public class SocketTestPermutation {
     }
 
     public List<BootstrapFactory<Bootstrap>> datagramSocket() {
-        return Arrays.asList(
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(nioWorkerGroup).channel(NioDatagramChannel.class);
-                    }
-                },
-                new BootstrapFactory<Bootstrap>() {
-                    @Override
-                    public Bootstrap newInstance() {
-                        return new Bootstrap().group(oioWorkerGroup).channel(OioDatagramChannel.class)
-                                .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
-                    }
+        List<BootstrapFactory<Bootstrap>> factories = new ArrayList<>();
+        factories.add(new BootstrapFactory<Bootstrap>() {
+            @Override
+            public Bootstrap newInstance() {
+                return new Bootstrap().group(NIO_GROUP).channel(NioDatagramChannel.class);
+            }
+        });
+        if (INCLUDE_OIO) {
+            factories.add(new BootstrapFactory<Bootstrap>() {
+                @Override
+                public Bootstrap newInstance() {
+                    return new Bootstrap().group(OIO_GROUP).channel(OioDatagramChannel.class)
+                            .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
                 }
-        );
+            });
+        }
+         return factories;
     }
 }

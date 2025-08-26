@@ -1,0 +1,6 @@
+{
+    "rules": [
+        {"excludeClasses": "**"},
+        {"includeClasses": "io.netty.handler.codec.quic.**"}
+    ]
+}

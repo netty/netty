@@ -38,6 +38,7 @@ public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResp
      * Creates a new encoder with the specified {@code encoder}.
      */
     public TcpDnsResponseEncoder(DnsRecordEncoder encoder) {
+        super(DnsResponse.class);
         this.encoder = ObjectUtil.checkNotNull(encoder, "encoder");
     }
 

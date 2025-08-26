@@ -174,7 +174,9 @@ public abstract class Recycler<T> {
 
     @SuppressWarnings("unchecked")
     public final T get() {
-        if (maxCapacityPerThread == 0) {
+        if (maxCapacityPerThread == 0 ||
+                (PlatformDependent.isVirtualThread(Thread.currentThread()) &&
+                        !FastThreadLocalThread.currentThreadHasFastThreadLocal())) {
             return newObject((Handle<T>) NOOP_HANDLE);
         }
         LocalPool<T> localPool = threadLocal.get();
@@ -210,6 +212,10 @@ public abstract class Recycler<T> {
 
     @VisibleForTesting
     final int threadLocalSize() {
+        if (PlatformDependent.isVirtualThread(Thread.currentThread()) &&
+                !FastThreadLocalThread.currentThreadHasFastThreadLocal()) {
+            return 0;
+        }
         LocalPool<T> localPool = threadLocal.getIfExists();
         return localPool == null ? 0 : localPool.pooledHandles.size() + localPool.batch.size();
     }
@@ -308,7 +314,8 @@ public abstract class Recycler<T> {
             this.chunkSize = chunkSize;
             batch = new ArrayDeque<DefaultHandle<T>>(chunkSize);
             Thread currentThread = Thread.currentThread();
-            owner = !BATCH_FAST_TL_ONLY || currentThread instanceof FastThreadLocalThread ? currentThread : null;
+            owner = !BATCH_FAST_TL_ONLY || FastThreadLocalThread.currentThreadHasFastThreadLocal()
+                    ? currentThread : null;
             if (BLOCKING_POOL) {
                 pooledHandles = new BlockingMessageQueue<DefaultHandle<T>>(maxCapacity);
             } else {

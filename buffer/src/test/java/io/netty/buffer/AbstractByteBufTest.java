@@ -40,6 +40,7 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -48,6 +49,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -59,12 +61,11 @@ import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -106,8 +107,8 @@ public abstract class AbstractByteBufTest {
     @AfterEach
     public void dispose() {
         if (buffer != null) {
-            assertThat(buffer.release(), is(true));
-            assertThat(buffer.refCnt(), is(0));
+            assertTrue(buffer.release());
+            assertEquals(0, buffer.refCnt());
 
             try {
                 buffer.release();
@@ -2612,19 +2613,19 @@ public abstract class AbstractByteBufTest {
 
         final AtomicInteger lastIndex = new AtomicInteger();
         buffer.setIndex(CAPACITY / 4, CAPACITY * 3 / 4);
-        assertThat(buffer.forEachByte(new ByteProcessor() {
+        assertEquals(-1, buffer.forEachByte(new ByteProcessor() {
             int i = CAPACITY / 4;
 
             @Override
             public boolean process(byte value) throws Exception {
-                assertThat(value, is((byte) (i + 1)));
+                assertEquals((byte) (i + 1), value);
                 lastIndex.set(i);
                 i ++;
                 return true;
             }
-        }), is(-1));
+        }));
 
-        assertThat(lastIndex.get(), is(CAPACITY * 3 / 4 - 1));
+        assertEquals(CAPACITY * 3 / 4 - 1, lastIndex.get());
     }
 
     @Test
@@ -2635,12 +2636,12 @@ public abstract class AbstractByteBufTest {
         }
 
         final int stop = CAPACITY / 2;
-        assertThat(buffer.forEachByte(CAPACITY / 3, CAPACITY / 3, new ByteProcessor() {
+        assertEquals(stop, buffer.forEachByte(CAPACITY / 3, CAPACITY / 3, new ByteProcessor() {
             int i = CAPACITY / 3;
 
             @Override
             public boolean process(byte value) throws Exception {
-                assertThat(value, is((byte) (i + 1)));
+                assertEquals((byte) (i + 1), value);
                 if (i == stop) {
                     return false;
                 }
@@ -2648,7 +2649,7 @@ public abstract class AbstractByteBufTest {
                 i++;
                 return true;
             }
-        }), is(stop));
+        }));
     }
 
     @Test
@@ -2659,19 +2660,19 @@ public abstract class AbstractByteBufTest {
         }
 
         final AtomicInteger lastIndex = new AtomicInteger();
-        assertThat(buffer.forEachByteDesc(CAPACITY / 4, CAPACITY * 2 / 4, new ByteProcessor() {
+        assertEquals(-1, buffer.forEachByteDesc(CAPACITY / 4, CAPACITY * 2 / 4, new ByteProcessor() {
             int i = CAPACITY * 3 / 4 - 1;
 
             @Override
             public boolean process(byte value) throws Exception {
-                assertThat(value, is((byte) (i + 1)));
+                assertEquals((byte) (i + 1), value);
                 lastIndex.set(i);
                 i --;
                 return true;
             }
-        }), is(-1));
+        }));
 
-        assertThat(lastIndex.get(), is(CAPACITY / 4));
+        assertEquals(CAPACITY / 4, lastIndex.get());
     }
 
     @Test
@@ -2690,7 +2691,7 @@ public abstract class AbstractByteBufTest {
         assertEquals(1, buf.remaining());
 
         byte[] data = new byte[a];
-        PlatformDependent.threadLocalRandom().nextBytes(data);
+        ThreadLocalRandom.current().nextBytes(data);
         buffer.writeBytes(data);
 
         buf = buffer.internalNioBuffer(buffer.readerIndex(), a);
@@ -4835,6 +4836,37 @@ public abstract class AbstractByteBufTest {
     }
 
     @Test
+    public void testWriteReadUsAsciiString() {
+        testWriteReadString(CharsetUtil.US_ASCII);
+    }
+
+    @Test
+    public void testWriteReadUtf8String() {
+        testWriteReadString(CharsetUtil.UTF_8);
+    }
+
+    @Test
+    public void testWriteReadIso88591String() {
+        testWriteReadString(CharsetUtil.ISO_8859_1);
+    }
+
+    @Test
+    public void testWriteReadUtf16String() {
+        testWriteReadString(CharsetUtil.UTF_16);
+    }
+
+    private void testWriteReadString(Charset charset) {
+        ByteBuf buf = newBuffer(1024);
+        CharBuffer sequence = CharsetUtil.US_ASCII.equals(charset)
+                ? ASCII_CHARS : EXTENDED_ASCII_CHARS;
+        buf.writerIndex(1);
+        int bytes = buf.writeCharSequence(sequence, charset);
+        buf.readerIndex(1);
+        assertEquals(sequence, CharBuffer.wrap(buf.readString(bytes, charset)));
+        buf.release();
+    }
+
+    @Test
     public void testRetainedSliceIndexOutOfBounds() {
         assertThrows(IndexOutOfBoundsException.class, new Executable() {
             @Override
@@ -6282,5 +6314,38 @@ public abstract class AbstractByteBufTest {
         for (ByteBuffer nioBuffer: buffer.asReadOnly().nioBuffers(0, buffer.capacity())) {
             assertTrue(nioBuffer.isReadOnly());
         }
+    }
+
+    @Test
+    public void testMaxFastWritableBytesTracksWrittenBytes() {
+        final ByteBuf buf = newBuffer(4, 10);
+        int max = buf.maxFastWritableBytes();
+        buf.writeByte(1);
+        assertEquals(max - 1, buf.maxFastWritableBytes());
+        buf.release();
+    }
+
+    @Test
+    public void testSetCharSequenceWithTooLongSequence() {
+        ByteBuf buffer = buffer(4, 128);
+        CharSequence sequence = "ÖÄÜ€";
+        int maxBytes = ByteBufUtil.utf8MaxBytes(sequence);
+        assertThat(buffer.writableBytes()).isLessThan(maxBytes);
+        assertThrows(IndexOutOfBoundsException.class,
+                () -> buffer.setCharSequence(0, sequence, StandardCharsets.UTF_8));
+        buffer.release();
+    }
+
+    @Test
+    public void testWriteCharSequence() {
+        ByteBuf buffer = buffer(4, 128);
+        CharSequence sequence = "ÖÄÜ€";
+        int maxBytes = ByteBufUtil.utf8MaxBytes(sequence);
+        assertThat(buffer.writableBytes()).isLessThan(maxBytes);
+        int capacity = buffer.capacity();
+        // This should expand the buffer.
+        buffer.writeCharSequence(sequence, StandardCharsets.UTF_8);
+        assertNotSame(capacity, buffer.capacity());
+        buffer.release();
     }
 }

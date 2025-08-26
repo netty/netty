@@ -37,29 +37,53 @@ class AdaptivePoolingAllocatorTest implements Supplier<String> {
 
     @Test
     void sizeBucketComputations() throws Exception {
-        assertSizeBucket(0, 8 * 1024);
-        assertSizeBucket(1, 16 * 1024);
+        assertSizeBucket(0, 16 * 1024);
+        assertSizeBucket(1, 24 * 1024);
         assertSizeBucket(2, 32 * 1024);
-        assertSizeBucket(3, 64 * 1024);
-        assertSizeBucket(4, 128 * 1024);
-        assertSizeBucket(5, 256 * 1024);
-        assertSizeBucket(6, 512 * 1024);
-        assertSizeBucket(7, 1024 * 1024);
-        // The sizeBucket function will be used for sizes up to 10 MiB
-        assertSizeBucket(7, 2 * 1024 * 1024);
-        assertSizeBucket(7, 3 * 1024 * 1024);
-        assertSizeBucket(7, 4 * 1024 * 1024);
-        assertSizeBucket(7, 5 * 1024 * 1024);
-        assertSizeBucket(7, 6 * 1024 * 1024);
-        assertSizeBucket(7, 7 * 1024 * 1024);
-        assertSizeBucket(7, 8 * 1024 * 1024);
-        assertSizeBucket(7, 9 * 1024 * 1024);
-        assertSizeBucket(7, 10 * 1024 * 1024);
+        assertSizeBucket(3, 48 * 1024);
+        assertSizeBucket(4, 64 * 1024);
+        assertSizeBucket(5, 96 * 1024);
+        assertSizeBucket(6, 128 * 1024);
+        assertSizeBucket(7, 192 * 1024);
+        assertSizeBucket(8, 256 * 1024);
+        assertSizeBucket(9, 384 * 1024);
+        assertSizeBucket(10, 512 * 1024);
+        assertSizeBucket(11, 768 * 1024);
+        assertSizeBucket(12, 1024 * 1024);
+        assertSizeBucket(13, 1792 * 1024);
+        assertSizeBucket(14, 2048 * 1024);
+        assertSizeBucket(15, 3072 * 1024);
+        // The sizeBucket function will be used for sizes up to 8 MiB
+        assertSizeBucket(15, 4 * 1024 * 1024);
+        assertSizeBucket(15, 5 * 1024 * 1024);
+        assertSizeBucket(15, 6 * 1024 * 1024);
+        assertSizeBucket(15, 7 * 1024 * 1024);
+        assertSizeBucket(15, 8 * 1024 * 1024);
+    }
+
+    @Test
+    void sizeClassComputations() throws Exception {
+        final int[] sizeClasses = AdaptivePoolingAllocator.getSizeClasses();
+        for (int sizeClassIndex = 0; sizeClassIndex < sizeClasses.length; sizeClassIndex++) {
+            final int previousSizeIncluded = sizeClassIndex == 0? 0 : sizeClasses[sizeClassIndex - 1] + 1;
+            assertSizeClassOf(sizeClassIndex, previousSizeIncluded, sizeClasses[sizeClassIndex]);
+        }
+        // beyond the last size class, we return the size class array's length
+        assertSizeClassOf(sizeClasses.length, sizeClasses[sizeClasses.length - 1] + 1,
+                          sizeClasses[sizeClasses.length - 1] + 1);
+    }
+
+    private static void assertSizeClassOf(int expectedSizeClass, int previousSizeIncluded, int maxSizeIncluded) {
+        for (int size = previousSizeIncluded; size <= maxSizeIncluded; size++) {
+            int sizeToTest = size;
+            assertEquals(expectedSizeClass, AdaptivePoolingAllocator.sizeClassIndexOf(size),
+                         () -> "size = " + sizeToTest);
+        }
     }
 
     private void assertSizeBucket(int expectedSizeBucket, int maxSizeIncluded) {
         for (; i <= maxSizeIncluded; i++) {
-            assertEquals(expectedSizeBucket, AdaptivePoolingAllocator.sizeBucket(i), this);
+            assertEquals(expectedSizeBucket, AdaptivePoolingAllocator.sizeToBucket(i), this);
         }
     }
 }

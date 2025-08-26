@@ -15,27 +15,34 @@
  */
 package io.netty.channel;
 
+import io.netty.channel.local.LocalIoHandler;
+import io.netty.channel.nio.NioIoHandler;
+import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.MockTicker;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.SingleThreadEventExecutor;
-import org.assertj.core.api.Assertions;
+import io.netty.util.concurrent.Ticker;
+import io.netty.util.internal.ThreadExecutorMap;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 import java.util.Collections;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.*;
 
 public class ManualIoEventLoopTest {
 
@@ -93,6 +100,18 @@ public class ManualIoEventLoopTest {
     }
 
     @Test
+    public void testShutdownOutSideOfOwningThread() throws Exception {
+        Semaphore semaphore = new Semaphore(0);
+        Thread ownerThread = new Thread();
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(ownerThread, executor ->
+                new TestIoHandler(semaphore));
+        eventLoop.shutdown();
+        assertTrue(eventLoop.isShuttingDown());
+        // we expect wakeup to be called!
+        assertEquals(1, semaphore.availablePermits());
+    }
+
+    @Test
     public void testCallFromWrongThread() throws Exception {
         Thread thread = new Thread();
         Semaphore semaphore = new Semaphore(0);
@@ -101,6 +120,24 @@ public class ManualIoEventLoopTest {
 
         assertThrows(IllegalStateException.class, eventLoop::runNow);
         assertThrows(IllegalStateException.class, () -> eventLoop.run(10));
+    }
+
+    @Test
+    public void testThreadEventExecutorMap() throws Exception {
+        final BlockingQueue<EventExecutor> queue = new LinkedBlockingQueue<>();
+        Semaphore semaphore = new Semaphore(0);
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(Thread.currentThread(), executor ->
+                new TestIoHandler(semaphore));
+        assertNull(ThreadExecutorMap.currentExecutor());
+        eventLoop.execute(() -> queue.offer(ThreadExecutorMap.currentExecutor()));
+        assertEquals(1, eventLoop.runNow());
+        assertSame(eventLoop, queue.take());
+        eventLoop.shutdown();
+
+        while (!eventLoop.isTerminated()) {
+            eventLoop.runNow();
+        }
+        eventLoop.terminationFuture().sync();
     }
 
     @Test
@@ -181,6 +218,145 @@ public class ManualIoEventLoopTest {
             }
             assertTrue(eventLoop.terminationFuture().isSuccess());
         }
+    }
+
+    @Test
+    public void testDelayOwningThread() throws ExecutionException, InterruptedException {
+        Semaphore semaphore = new Semaphore(0);
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(null, executor ->
+                new TestIoHandler(semaphore));
+        Thread thread = new Thread(() -> {
+            eventLoop.setOwningThread(Thread.currentThread());
+            assertTrue(eventLoop.inEventLoop());
+            while (!eventLoop.isTerminated()) {
+                eventLoop.runNow();
+            }
+        });
+
+        assertFalse(eventLoop.inEventLoop());
+
+        CompletableFuture<Void> cf = new CompletableFuture<>();
+        eventLoop.execute(() -> {
+            assertTrue(eventLoop.inEventLoop());
+            cf.complete(null);
+        });
+
+        thread.start();
+        cf.get();
+
+        eventLoop.shutdownGracefully();
+        thread.join();
+    }
+
+    @Test
+    public void testRunWithoutOwner() throws ExecutionException, InterruptedException {
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(null, executor ->
+                new TestIoHandler(new Semaphore(0)));
+
+        // prior to setOwningThread, runNow is forbidden
+        assertThrows(IllegalStateException.class, eventLoop::runNow);
+
+        eventLoop.setOwningThread(Thread.currentThread());
+
+        eventLoop.runNow(); // runs fine
+
+        eventLoop.shutdownGracefully();
+    }
+
+    @Test
+    public void testRunNonIoTasksSetupEventExecutor() {
+        MockTicker ticker = Ticker.newMockTicker();
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(
+                null, Thread.currentThread(), LocalIoHandler.newFactory(), ticker);
+        assertNull(ThreadExecutorMap.currentExecutor());
+        AtomicBoolean executed = new AtomicBoolean(false);
+        eventLoop.execute(() -> {
+            assertTrue(executed.compareAndSet(false, true));
+            assertSame(eventLoop, ThreadExecutorMap.currentExecutor());
+        });
+        assertEquals(1, eventLoop.runNonBlockingTasks(0));
+        assertTrue(executed.get());
+        eventLoop.shutdownGracefully();
+    }
+
+    private enum RunMode {
+        Now,
+        Wait,
+        NonIoNow;
+
+        public int runWith(ManualIoEventLoop el, long timeoutNs) {
+            switch (this) {
+                case Now:
+                    return el.runNow(timeoutNs);
+                case Wait:
+                    return el.run(TimeUnit.HOURS.toNanos(1), timeoutNs);
+                case NonIoNow:
+                    return el.runNonBlockingTasks(timeoutNs);
+                default:
+                    throw new IllegalStateException("Unknown run mode: " + this);
+            }
+        }
+    }
+
+    @ParameterizedTest
+    @EnumSource(RunMode.class)
+    public void testTasksWhileExpiringTimeout(RunMode mode) {
+        MockTicker ticker = Ticker.newMockTicker();
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(
+                null, Thread.currentThread(), LocalIoHandler.newFactory(), ticker);
+        AtomicBoolean executedFirst = new AtomicBoolean(false);
+        eventLoop.execute(() -> {
+            assertTrue(executedFirst.compareAndSet(false, true));
+            ticker.advance(1, TimeUnit.NANOSECONDS);
+        });
+        AtomicBoolean canExecute = new AtomicBoolean(false);
+        AtomicBoolean executedSecond = new AtomicBoolean(false);
+        eventLoop.execute(() -> {
+            if (!canExecute.get()) {
+                fail("Should not be executed");
+            } else {
+                assertTrue(executedSecond.compareAndSet(false, true));
+            }
+        });
+        assertEquals(1, mode.runWith(eventLoop, 1));
+        assertTrue(executedFirst.get());
+        assertFalse(executedSecond.get());
+        canExecute.set(true);
+        assertEquals(1, mode.runWith(eventLoop, 1));
+        eventLoop.shutdownGracefully();
+    }
+
+    @Test
+    public void testSetOwnerMultipleTimes() {
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(null, executor ->
+                new TestIoHandler(new Semaphore(0)));
+        eventLoop.setOwningThread(Thread.currentThread());
+        assertThrows(IllegalStateException.class, () -> eventLoop.setOwningThread(Thread.currentThread()));
+
+        eventLoop.shutdownGracefully();
+    }
+
+    @Test
+    public void testTicker() {
+        MockTicker ticker = Ticker.newMockTicker();
+        ManualIoEventLoop eventLoop = new ManualIoEventLoop(
+                null, Thread.currentThread(), NioIoHandler.newFactory(), ticker);
+
+        AtomicInteger counter = new AtomicInteger();
+        eventLoop.schedule(counter::incrementAndGet, 60, TimeUnit.SECONDS);
+
+        eventLoop.runNow();
+        assertEquals(0, counter.get());
+
+        ticker.advance(50, TimeUnit.SECONDS);
+        eventLoop.runNow();
+        assertEquals(0, counter.get());
+
+        ticker.advance(20, TimeUnit.SECONDS);
+        eventLoop.runNow();
+        assertEquals(1, counter.get());
+
+        eventLoop.shutdownGracefully();
     }
 
     private static final class TestRunnable implements Runnable {

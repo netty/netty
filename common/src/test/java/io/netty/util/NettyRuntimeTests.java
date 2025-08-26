@@ -23,10 +23,8 @@ import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasToString;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -41,7 +39,7 @@ public class NettyRuntimeTests {
                 holder.setAvailableProcessors(i);
                 fail();
             } catch (final IllegalArgumentException e) {
-                assertThat(e, hasToString(containsString("(expected: > 0)")));
+                assertThat(e.getMessage()).contains("(expected: > 0)");
             }
         }
     }
@@ -54,7 +52,7 @@ public class NettyRuntimeTests {
             holder.setAvailableProcessors(2);
             fail();
         } catch (final IllegalStateException e) {
-            assertThat(e, hasToString(containsString("availableProcessors is already set to [1], rejecting [2]")));
+            assertThat(e.getMessage()).contains("availableProcessors is already set to [1], rejecting [2]");
         }
     }
 
@@ -66,7 +64,7 @@ public class NettyRuntimeTests {
             holder.setAvailableProcessors(1);
             fail();
         } catch (final IllegalStateException e) {
-            assertThat(e, hasToString(containsString("availableProcessors is already set")));
+            assertThat(e.getMessage()).contains("availableProcessors is already set");
         }
     }
 
@@ -155,7 +153,7 @@ public class NettyRuntimeTests {
         set.join();
 
         if (setException.get() == null) {
-            assertThat(holder.availableProcessors(), equalTo(2048));
+            assertEquals(2048, holder.availableProcessors());
         } else {
             assertNotNull(setException.get());
         }
@@ -167,7 +165,7 @@ public class NettyRuntimeTests {
         try {
             System.setProperty("io.netty.availableProcessors", "2048");
             final NettyRuntime.AvailableProcessorsHolder holder = new NettyRuntime.AvailableProcessorsHolder();
-            assertThat(holder.availableProcessors(), equalTo(2048));
+            assertEquals(2048, holder.availableProcessors());
         } finally {
             if (availableProcessorsSystemProperty != null) {
                 System.setProperty("io.netty.availableProcessors", availableProcessorsSystemProperty);
@@ -184,7 +182,7 @@ public class NettyRuntimeTests {
         try {
             System.clearProperty("io.netty.availableProcessors");
             final NettyRuntime.AvailableProcessorsHolder holder = new NettyRuntime.AvailableProcessorsHolder();
-            assertThat(holder.availableProcessors(), equalTo(Runtime.getRuntime().availableProcessors()));
+            assertEquals(Runtime.getRuntime().availableProcessors(), holder.availableProcessors());
         } finally {
             if (availableProcessorsSystemProperty != null) {
                 System.setProperty("io.netty.availableProcessors", availableProcessorsSystemProperty);
@@ -197,9 +195,7 @@ public class NettyRuntimeTests {
     private static void await(final CyclicBarrier barrier) {
         try {
             barrier.await();
-        } catch (final InterruptedException e) {
-            fail(e.toString());
-        } catch (final BrokenBarrierException e) {
+        } catch (InterruptedException | BrokenBarrierException e) {
             fail(e.toString());
         }
     }

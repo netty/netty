@@ -855,6 +855,11 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
+    public final ByteBuf componentSlice(int cIndex) {
+        return wrapped.componentSlice(cIndex);
+    }
+
+    @Override
     public final ByteBuf componentAtOffset(int offset) {
         return wrapped.componentAtOffset(offset);
     }
@@ -1113,6 +1118,11 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     @Override
     public CharSequence readCharSequence(int length, Charset charset) {
         return wrapped.readCharSequence(length, charset);
+    }
+
+    @Override
+    public String readString(int length, Charset charset) {
+        return wrapped.readString(length, charset);
     }
 
     @Override

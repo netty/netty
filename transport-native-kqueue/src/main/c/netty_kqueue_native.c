@@ -204,6 +204,10 @@ static jint netty_kqueue_native_offsetofKeventData(JNIEnv* env, jclass clazz) {
     return offsetof(struct kevent, data);
 }
 
+static jint netty_kqueue_native_offsetofKeventUdata(JNIEnv* env, jclass clazz) {
+    return offsetof(struct kevent, udata);
+}
+
 static jshort netty_kqueue_native_evfiltRead(JNIEnv* env, jclass clazz) {
     return EVFILT_READ;
 }
@@ -357,6 +361,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "offsetofKEventFFlags", "()I", (void *) netty_kqueue_native_offsetofKEventFFlags },
   { "offsetofKEventFilter", "()I", (void *) netty_kqueue_native_offsetofKEventFilter },
   { "offsetofKeventData", "()I", (void *) netty_kqueue_native_offsetofKeventData },
+  { "offsetofKeventUdata", "()I", (void *) netty_kqueue_native_offsetofKeventUdata },
   { "registerUnix", "()I", (void *) netty_kqueue_native_registerUnix }
 };
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);

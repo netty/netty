@@ -64,7 +64,10 @@ public class JdkZlibDecoder extends ZlibDecoder {
 
     /**
      * Creates a new instance with the default wrapper ({@link ZlibWrapper#ZLIB}).
+     *
+     * @deprecated Use {@link JdkZlibDecoder#JdkZlibDecoder(int)}.
      */
+    @Deprecated
     public JdkZlibDecoder() {
         this(ZlibWrapper.ZLIB, null, false, 0);
     }
@@ -85,7 +88,10 @@ public class JdkZlibDecoder extends ZlibDecoder {
      * Creates a new instance with the specified preset dictionary. The wrapper
      * is always {@link ZlibWrapper#ZLIB} because it is the only format that
      * supports the preset dictionary.
+     *
+     * @deprecated Use {@link JdkZlibDecoder#JdkZlibDecoder(byte[], int)}.
      */
+    @Deprecated
     public JdkZlibDecoder(byte[] dictionary) {
         this(ZlibWrapper.ZLIB, dictionary, false, 0);
     }
@@ -107,7 +113,10 @@ public class JdkZlibDecoder extends ZlibDecoder {
      * Creates a new instance with the specified wrapper.
      * Be aware that only {@link ZlibWrapper#GZIP}, {@link ZlibWrapper#ZLIB} and {@link ZlibWrapper#NONE} are
      * supported atm.
+     *
+     * @deprecated Use {@link JdkZlibDecoder#JdkZlibDecoder(ZlibWrapper, int)}.
      */
+    @Deprecated
     public JdkZlibDecoder(ZlibWrapper wrapper) {
         this(wrapper, null, false, 0);
     }
@@ -125,6 +134,10 @@ public class JdkZlibDecoder extends ZlibDecoder {
         this(wrapper, null, false, maxAllocation);
     }
 
+    /**
+     * @deprecated Use {@link JdkZlibDecoder#JdkZlibDecoder(ZlibWrapper, boolean, int)}.
+     */
+    @Deprecated
     public JdkZlibDecoder(ZlibWrapper wrapper, boolean decompressConcatenated) {
         this(wrapper, null, decompressConcatenated, 0);
     }
@@ -133,6 +146,10 @@ public class JdkZlibDecoder extends ZlibDecoder {
         this(wrapper, null, decompressConcatenated, maxAllocation);
     }
 
+    /**
+     * @deprecated Use {@link JdkZlibDecoder#JdkZlibDecoder(boolean, int)}.
+     */
+    @Deprecated
     public JdkZlibDecoder(boolean decompressConcatenated) {
         this(ZlibWrapper.GZIP, null, decompressConcatenated, 0);
     }
@@ -443,10 +460,7 @@ public class JdkZlibDecoder extends ZlibDecoder {
         assert enoughData;
 
         // read ISIZE and verify
-        int dataLength = 0;
-        for (int i = 0; i < 4; ++i) {
-            dataLength |= in.readUnsignedByte() << i * 8;
-        }
+        int dataLength = in.readIntLE();
         int readLength = inflater.getTotalOut();
         if (dataLength != readLength) {
             throw new DecompressionException(
@@ -466,10 +480,8 @@ public class JdkZlibDecoder extends ZlibDecoder {
         if (in.readableBytes() < 4) {
             return false;
         }
-        long crcValue = 0;
-        for (int i = 0; i < 4; ++i) {
-            crcValue |= (long) in.readUnsignedByte() << i * 8;
-        }
+        long crcValue = in.readUnsignedIntLE();
+
         long readCrc = crc.getValue();
         if (crcValue != readCrc) {
             throw new DecompressionException(
@@ -482,13 +494,10 @@ public class JdkZlibDecoder extends ZlibDecoder {
         if (in.readableBytes() < 2) {
             return false;
         }
-        long readCrc32 = crc.getValue();
-        long crc16Value = 0;
-        long readCrc16 = 0; // the two least significant bytes from the CRC32
-        for (int i = 0; i < 2; ++i) {
-            crc16Value |= (long) in.readUnsignedByte() << (i * 8);
-            readCrc16 |= ((readCrc32 >> (i * 8)) & 0xff) << (i * 8);
-        }
+
+        int crc16Value = in.readUnsignedShortLE();
+        // the two least significant bytes from the CRC32
+        int readCrc16 = (int) (crc.getValue() & 0xFFFF);
 
         if (crc16Value != readCrc16) {
             throw new DecompressionException(

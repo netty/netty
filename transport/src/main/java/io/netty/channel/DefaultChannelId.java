@@ -26,6 +26,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.lang.reflect.Method;
 import java.util.Arrays;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static io.netty.util.internal.MacAddressUtil.defaultMachineId;
@@ -57,7 +58,7 @@ public final class DefaultChannelId implements ChannelId {
                                     PROCESS_ID,
                                     nextSequence.getAndIncrement(),
                                     Long.reverse(System.nanoTime()) ^ System.currentTimeMillis(),
-                                    PlatformDependent.threadLocalRandom().nextInt());
+                                    ThreadLocalRandom.current().nextInt());
     }
 
     static {
@@ -171,7 +172,7 @@ public final class DefaultChannelId implements ChannelId {
         }
 
         if (pid < 0) {
-            pid = PlatformDependent.threadLocalRandom().nextInt();
+            pid = ThreadLocalRandom.current().nextInt();
             logger.warn("Failed to find the current process ID from '{}'; using a random value: {}",  value, pid);
         }
 

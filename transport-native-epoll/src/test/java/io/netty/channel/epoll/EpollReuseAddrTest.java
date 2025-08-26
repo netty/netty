@@ -195,7 +195,7 @@ public class EpollReuseAddrTest {
 
     private static ServerBootstrap createServerBootstrap() {
         ServerBootstrap bootstrap = new ServerBootstrap();
-        bootstrap.group(EpollSocketTestPermutation.EPOLL_BOSS_GROUP, EpollSocketTestPermutation.EPOLL_WORKER_GROUP);
+        bootstrap.group(EpollSocketTestPermutation.EPOLL_GROUP);
         bootstrap.channel(EpollServerSocketChannel.class);
         bootstrap.childHandler(new DummyHandler());
         InetSocketAddress address = new InetSocketAddress(NetUtil.LOCALHOST, 0);
@@ -205,7 +205,7 @@ public class EpollReuseAddrTest {
 
     private static Bootstrap createBootstrap() {
         Bootstrap bootstrap = new Bootstrap();
-        bootstrap.group(EpollSocketTestPermutation.EPOLL_WORKER_GROUP);
+        bootstrap.group(EpollSocketTestPermutation.EPOLL_GROUP);
         bootstrap.channel(EpollDatagramChannel.class);
         InetSocketAddress address = new InetSocketAddress(NetUtil.LOCALHOST, 0);
         bootstrap.localAddress(address);

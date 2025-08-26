@@ -42,7 +42,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
     @Test
     public void testNormalData() {
         PerMessageDeflateClientExtensionHandshaker handshaker =
-                new PerMessageDeflateClientExtensionHandshaker();
+                new PerMessageDeflateClientExtensionHandshaker(0);
 
         WebSocketExtensionData data = handshaker.newRequestData();
 
@@ -53,7 +53,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
     @Test
     public void testCustomData() {
         PerMessageDeflateClientExtensionHandshaker handshaker =
-                new PerMessageDeflateClientExtensionHandshaker(6, true, 10, true, true);
+                new PerMessageDeflateClientExtensionHandshaker(6, true, 10, true, true, 0);
 
         WebSocketExtensionData data = handshaker.newRequestData();
 
@@ -68,7 +68,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
     @Test
     public void testNormalHandshake() {
         PerMessageDeflateClientExtensionHandshaker handshaker =
-                new PerMessageDeflateClientExtensionHandshaker();
+                new PerMessageDeflateClientExtensionHandshaker(0);
 
         WebSocketClientExtension extension = handshaker.handshakeExtension(
                 new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, Collections.<String, String>emptyMap()));
@@ -86,7 +86,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
 
         // initialize
         PerMessageDeflateClientExtensionHandshaker handshaker =
-                new PerMessageDeflateClientExtensionHandshaker(6, true, 10, true, true);
+                new PerMessageDeflateClientExtensionHandshaker(6, true, 10, true, true, 0);
 
         parameters = new HashMap<String, String>();
         parameters.put(CLIENT_MAX_WINDOW, "12");
@@ -136,7 +136,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         Map<String, String> parameters;
 
         PerMessageDeflateClientExtensionHandshaker handshaker =
-                new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, false);
+                new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, false, 0);
 
         parameters = new HashMap<String, String>();
         parameters.put(CLIENT_MAX_WINDOW, "15");
@@ -165,7 +165,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         Map<String, String> parameters;
 
         PerMessageDeflateClientExtensionHandshaker handshaker =
-                new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, false);
+                new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, false, 0);
 
         parameters = new HashMap<String, String>();
         parameters.put(SERVER_NO_CONTEXT, null);
@@ -178,7 +178,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
         assertTrue(extension.newExtensionEncoder() instanceof PerMessageDeflateEncoder);
 
         // initialize
-        handshaker = new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, true);
+        handshaker = new PerMessageDeflateClientExtensionHandshaker(6, true, 15, true, true, 0);
 
         parameters = new HashMap<String, String>();
         extension = handshaker.handshakeExtension(new WebSocketExtensionData(PERMESSAGE_DEFLATE_EXTENSION, parameters));
@@ -190,7 +190,7 @@ public class PerMessageDeflateClientExtensionHandshakerTest {
     @Test
     public void testDecoderNoClientContext() {
         PerMessageDeflateClientExtensionHandshaker handshaker =
-                new PerMessageDeflateClientExtensionHandshaker(6, true, MAX_WINDOW_SIZE, true, false);
+                new PerMessageDeflateClientExtensionHandshaker(6, true, MAX_WINDOW_SIZE, true, false, 0);
 
         byte[] firstPayload = new byte[] {
                 76, -50, -53, 10, -62, 48, 20, 4, -48, 95, 41, 89, -37, 36, 77, 90, 31, -39, 41, -72, 112, 33, -120, 20,

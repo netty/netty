@@ -270,10 +270,10 @@ final class SslUtils {
         return context;
     }
 
-    static SSLContext getSSLContext(String provider)
+    static SSLContext getSSLContext(Provider provider)
             throws NoSuchAlgorithmException, KeyManagementException, NoSuchProviderException {
         final SSLContext context;
-        if (StringUtil.isNullOrEmpty(provider)) {
+        if (provider == null) {
             context = SSLContext.getInstance(getTlsVersion());
         } else {
             context = SSLContext.getInstance(getTlsVersion(), provider);
@@ -574,12 +574,12 @@ final class SslUtils {
     static boolean isValidHostNameForSNI(String hostname) {
         // See  https://datatracker.ietf.org/doc/html/rfc6066#section-3
         return hostname != null &&
-               // SNI HostName has to be a FQDN according to TLS SNI Extension spec (see [1]),
-               // which means that is has to have at least a host name and a domain part.
-               hostname.indexOf('.') > 0 &&
-               !hostname.endsWith(".") && !hostname.startsWith("/") &&
-               !NetUtil.isValidIpV4Address(hostname) &&
-               !NetUtil.isValidIpV6Address(hostname);
+                // SNI HostName has to be a FQDN according to TLS SNI Extension spec (see [1]),
+                // which means that is has to have at least a host name and a domain part.
+                hostname.indexOf('.') > 0 &&
+                !hostname.endsWith(".") && !hostname.startsWith("/") &&
+                !NetUtil.isValidIpV4Address(hostname) &&
+                !NetUtil.isValidIpV6Address(hostname);
     }
 
     /**

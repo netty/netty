@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.compression;
 
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -31,19 +32,34 @@ public final class ZlibCodecFactory {
     private static final boolean noJdkZlibDecoder;
     private static final boolean noJdkZlibEncoder;
 
+    private static final boolean JZLIB_AVAILABLE;
+
     static {
         noJdkZlibDecoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibDecoder", false);
         logger.debug("-Dio.netty.noJdkZlibDecoder: {}", noJdkZlibDecoder);
 
         noJdkZlibEncoder = SystemPropertyUtil.getBoolean("io.netty.noJdkZlibEncoder", false);
         logger.debug("-Dio.netty.noJdkZlibEncoder: {}", noJdkZlibEncoder);
+
+        boolean jzlibAvailable;
+        try {
+            Class.forName("com.jcraft.jzlib.JZlib", false,
+                PlatformDependent.getClassLoader(ZlibCodecFactory.class));
+            jzlibAvailable = true;
+        } catch (ClassNotFoundException t) {
+            jzlibAvailable = false;
+            logger.debug(
+                "JZlib not in the classpath; the only window bits supported value will be " +
+                    DEFAULT_JDK_WINDOW_SIZE);
+        }
+        JZLIB_AVAILABLE = jzlibAvailable;
     }
 
     /**
      * Returns {@code true} if specify a custom window size and mem level is supported.
      */
     public static boolean isSupportingWindowSizeAndMemLevel() {
-        return true;
+        return JZLIB_AVAILABLE;
     }
 
     public static ZlibEncoder newZlibEncoder(int compressionLevel) {
@@ -104,27 +120,82 @@ public final class ZlibCodecFactory {
         }
     }
 
+    /**
+     * Create a new decoder instance.
+     *
+     * @deprecated Use {@link ZlibCodecFactory#newZlibDecoder(int)}.
+     */
+    @Deprecated
     public static ZlibDecoder newZlibDecoder() {
+        return newZlibDecoder(0);
+    }
+
+    /**
+     * Create a new decoder instance with specified maximum buffer allocation.
+     *
+     * @param maxAllocation
+     *           Maximum size of the decompression buffer. Must be &gt;= 0.
+     *           If zero, maximum size is not limited by decoder.
+     */
+    public static ZlibDecoder newZlibDecoder(int maxAllocation) {
         if (noJdkZlibDecoder) {
-            return new JZlibDecoder();
+            return new JZlibDecoder(maxAllocation);
         } else {
-            return new JdkZlibDecoder(true);
+            return new JdkZlibDecoder(true, maxAllocation);
         }
     }
 
+    /**
+     * Create a new decoder instance with the specified wrapper.
+     *
+     * @deprecated Use {@link ZlibCodecFactory#newZlibDecoder(ZlibWrapper, int)}.
+     */
+    @Deprecated
     public static ZlibDecoder newZlibDecoder(ZlibWrapper wrapper) {
+        return newZlibDecoder(wrapper, 0);
+    }
+
+    /**
+     * Create a new decoder instance with the specified wrapper and maximum buffer allocation.
+     *
+     * @param maxAllocation
+     *          Maximum size of the decompression buffer. Must be &gt;= 0.
+     *          If zero, maximum size is not limited by decoder.
+     */
+    public static ZlibDecoder newZlibDecoder(ZlibWrapper wrapper, int maxAllocation) {
         if (noJdkZlibDecoder) {
-            return new JZlibDecoder(wrapper);
+            return new JZlibDecoder(wrapper, maxAllocation);
         } else {
-            return new JdkZlibDecoder(wrapper, true);
+            return new JdkZlibDecoder(wrapper, true, maxAllocation);
         }
     }
 
+    /**
+     * Create a new decoder instance with the specified preset dictionary. The wrapper
+     * is always {@link ZlibWrapper#ZLIB} because it is the only format that
+     * supports the preset dictionary.
+     *
+     * @deprecated Use {@link ZlibCodecFactory#newZlibDecoder(byte[], int)}.
+     */
+    @Deprecated
     public static ZlibDecoder newZlibDecoder(byte[] dictionary) {
+        return newZlibDecoder(dictionary, 0);
+    }
+
+    /**
+     * Create a new decoder instance with the specified preset dictionary and maximum buffer allocation.
+     * The wrapper is always {@link ZlibWrapper#ZLIB} because it is the only format that
+     * supports the preset dictionary.
+     *
+     * @param maxAllocation
+     *          Maximum size of the decompression buffer. Must be &gt;= 0.
+     *          If zero, maximum size is not limited by decoder.
+     */
+    public static ZlibDecoder newZlibDecoder(byte[] dictionary, int maxAllocation) {
         if (noJdkZlibDecoder) {
-            return new JZlibDecoder(dictionary);
+            return new JZlibDecoder(dictionary, maxAllocation);
         } else {
-            return new JdkZlibDecoder(dictionary);
+            return new JdkZlibDecoder(dictionary, maxAllocation);
         }
     }
 

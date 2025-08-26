@@ -28,7 +28,6 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
-import io.netty.channel.unix.Limits;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -42,11 +41,14 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     // Store the opCode so we know if we used WRITE or WRITEV.
-    private byte writeOpCode;
-
+    byte writeOpCode;
     // Keep track of the ids used for write and read so we can cancel these when needed.
-    private long writeId;
-    private long readId;
+    long writeId;
+    byte readOpCode;
+    long readId;
+
+    // The configured buffer ring if any
+    private IoUringBufferRing bufferRing;
 
     AbstractIoUringStreamChannel(Channel parent, LinuxSocket socket, boolean active) {
         super(parent, socket, active);
@@ -62,7 +64,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     }
 
     @Override
-    protected final AbstractUringUnsafe newUnsafe() {
+    protected AbstractUringUnsafe newUnsafe() {
         return new IoUringStreamUnsafe();
     }
 
@@ -193,70 +195,78 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
     @Override
     protected final void doRegister(ChannelPromise promise) {
-        super.doRegister(promise);
-        promise.addListener(f -> {
+        ChannelPromise registerPromise = this.newPromise();
+        // Ensure that the buffer group is properly set before channel::read
+        registerPromise.addListener(f -> {
             if (f.isSuccess()) {
-                if (active) {
-                    // Register for POLLRDHUP if this channel is already considered active.
-                    schedulePollRdHup();
-                }
+               try {
+                   short bgid = ((IoUringStreamChannelConfig) config()).getBufferGroupId();
+                   if (bgid >= 0) {
+                       final IoUringIoHandler ioUringIoHandler = registration().attachment();
+                       bufferRing = ioUringIoHandler.findBufferRing(bgid);
+                   }
+                   if (active) {
+                       // Register for POLLRDHUP if this channel is already considered active.
+                       schedulePollRdHup();
+                   }
+               } finally {
+                   promise.setSuccess();
+               }
+            } else {
+                promise.setFailure(f.cause());
             }
         });
+
+        super.doRegister(registerPromise);
     }
 
     @Override
     protected Object filterOutboundMessage(Object msg) {
         // Since we cannot use synchronous sendfile,
         // the channel can only support DefaultFileRegion instead of FileRegion.
-        if (IoUring.isIOUringSpliceSupported() && msg instanceof DefaultFileRegion) {
+        if (IoUring.isSpliceSupported() && msg instanceof DefaultFileRegion) {
             return new IoUringFileRegion((DefaultFileRegion) msg);
         }
 
         return super.filterOutboundMessage(msg);
     }
 
-    private final class IoUringStreamUnsafe extends AbstractUringUnsafe {
+    protected class IoUringStreamUnsafe extends AbstractUringUnsafe {
 
         private ByteBuf readBuffer;
-        private IovArray iovArray;
-        private IoUringBufferRing lastUsedBufferRing;
 
         @Override
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
-            assert iovArray == null;
             assert writeId == 0;
-            int numElements = Math.min(in.size(), Limits.IOV_MAX);
-            ByteBuf iovArrayBuffer = alloc().directBuffer(numElements * IovArray.IOV_SIZE);
-            iovArray = new IovArray(iovArrayBuffer);
+
+            int fd = fd().intValue();
+            IoRegistration registration = registration();
+            IoUringIoHandler handler = registration.attachment();
+            IovArray iovArray = handler.iovArray();
+            int offset = iovArray.count();
+
             try {
-                int offset = iovArray.count();
                 in.forEachFlushedMessage(iovArray);
-
-                int fd = fd().intValue();
-                IoRegistration registration = registration();
-                IoUringIoOps ops = IoUringIoOps.newWritev(fd, flags((byte) 0), 0, iovArray.memoryAddress(offset),
-                        iovArray.count() - offset, nextOpsId());
-                byte opCode = ops.opcode();
-                writeId = registration.submit(ops);
-                writeOpCode = opCode;
-                if (writeId == 0) {
-                    iovArray.release();
-                    iovArray = null;
-                    return 0;
-                }
             } catch (Exception e) {
-                iovArray.release();
-                iovArray = null;
-
                 // This should never happen, anyway fallback to single write.
-                scheduleWriteSingle(in.current());
+                return scheduleWriteSingle(in.current());
+            }
+            long iovArrayAddress = iovArray.memoryAddress(offset);
+            int iovArrayLength = iovArray.count() - offset;
+            // Should not use sendmsg_zc, just use normal writev.
+            IoUringIoOps ops = IoUringIoOps.newWritev(fd, (byte) 0, 0, iovArrayAddress, iovArrayLength, nextOpsId());
+
+            byte opCode = ops.opcode();
+            writeId = registration.submit(ops);
+            writeOpCode = opCode;
+            if (writeId == 0) {
+                return 0;
             }
             return 1;
         }
 
         @Override
         protected int scheduleWriteSingle(Object msg) {
-            assert iovArray == null;
             assert writeId == 0;
 
             int fd = fd().intValue();
@@ -273,10 +283,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 ops = fileRegion.splice(fd);
             } else {
                 ByteBuf buf = (ByteBuf) msg;
-                ops = IoUringIoOps.newWrite(fd, flags((byte) 0), 0,
-                        buf.memoryAddress() + buf.readerIndex(), buf.readableBytes(), nextOpsId());
-            }
+                long address = IoUring.memoryAddress(buf) + buf.readerIndex();
+                int length = buf.readableBytes();
+                short opsid = nextOpsId();
 
+                ops = IoUringIoOps.newWrite(fd, (byte) 0, 0, address, length, opsid);
+            }
             byte opCode = ops.opcode();
             writeId = registration.submit(ops);
             writeOpCode = opCode;
@@ -286,60 +298,54 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             return 1;
         }
 
+        private int calculateRecvFlags(boolean first) {
+            // Depending on if this is the first read or not we will use Native.MSG_DONTWAIT.
+            // The idea is that if the socket is blocking we can do the first read in a blocking fashion
+            // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
+            // be possible directly we schedule these with Native.MSG_DONTWAIT. This allows us to still be
+            // able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
+            // transports.
+            if (first) {
+                return 0;
+            }
+            return Native.MSG_DONTWAIT;
+        }
+
+        private short calculateRecvIoPrio(boolean first, boolean socketIsEmpty) {
+            // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
+            // attempt.
+            // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
+            if (first) {
+                // IORING_RECVSEND_POLL_FIRST and IORING_CQE_F_SOCK_NONEMPTY were added in the same release (5.19).
+                // We need to check if it's supported as otherwise providing these would result in an -EINVAL.
+                return socketIsEmpty && IoUring.isCqeFSockNonEmptySupported() ?
+                        Native.IORING_RECVSEND_POLL_FIRST : 0;
+            }
+            return 0;
+        }
+
         @Override
         protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
             assert readBuffer == null;
-            assert readId == 0;
+            assert readId == 0 : readId;
+            final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
 
-            final IoUringStreamChannelConfig channelConfig = (IoUringStreamChannelConfig) config();
-            final IoUringIoHandler ioUringIoHandler = registration().attachment();
-            // Although we checked whether the current kernel supports `register_buffer_ring`
-            // during the initialization of IoUringIoHandler
-            // we still check it again here.
-            // When the kernel does not support this feature, it helps the JIT to delete this branch.
-            // only `first` value is true, we will recv with the buffer ring;
-            if (channelConfig.getUseIoUringBufferGroup() && IoUring.isRegisterBufferRingSupported() && first) {
-                IoUringBufferRing ioUringBufferRing = ioUringIoHandler.findBufferRing(
-                        AbstractIoUringStreamChannel.this, recvBufAllocHandle().guess());
-                if (ioUringBufferRing != null) {
-                    ioUringBufferRing.refillIfNecessary();
-                    return scheduleReadProviderBuffer(ioUringBufferRing, socketIsEmpty);
-                }
+            if (bufferRing != null && bufferRing.isUsable()) {
+                return scheduleReadProviderBuffer(bufferRing, first, socketIsEmpty);
             }
 
-            final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+            // We either have no buffer ring configured or we force a recv without using a buffer ring.
             ByteBuf byteBuf = allocHandle.allocate(alloc());
             try {
-                allocHandle.attemptedBytesRead(byteBuf.writableBytes());
                 int fd = fd().intValue();
                 IoRegistration registration = registration();
+                short ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
+                int recvFlags = calculateRecvFlags(first);
 
-                // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
-                // attempt.
-                // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
-                final short ioPrio;
-
-                // Depending on if this is the first read or not we will use Native.MSG_DONTWAIT.
-                // The idea is that if the socket is blocking we can do the first read in a blocking fashion
-                // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
-                // be possible directly we schedule these with Native.MSG_DONTWAIT. This allows us to still be
-                // able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
-                // transports.
-                final int recvFlags;
-
-                if (first) {
-                    // IORING_RECVSEND_POLL_FIRST and IORING_CQE_F_SOCK_NONEMPTY were added in the same release (5.19).
-                    // We need to check if it's supported as otherwise providing these would result in an -EINVAL.
-                    ioPrio = socketIsEmpty && IoUring.isIOUringCqeFSockNonEmptySupported() ?
-                            Native.IORING_RECVSEND_POLL_FIRST : 0;
-                    recvFlags = 0;
-                } else {
-                    ioPrio = 0;
-                    recvFlags = Native.MSG_DONTWAIT;
-                }
-                IoUringIoOps ops = IoUringIoOps.newRecv(fd, flags((byte) 0), ioPrio, recvFlags,
-                        byteBuf.memoryAddress() + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
+                IoUringIoOps ops = IoUringIoOps.newRecv(fd, (byte) 0, ioPrio, recvFlags,
+                        IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex(), byteBuf.writableBytes(), nextOpsId());
                 readId = registration.submit(ops);
+                readOpCode = Native.IORING_OP_RECV;
                 if (readId == 0) {
                     return 0;
                 }
@@ -353,28 +359,42 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
         }
 
-        private int scheduleReadProviderBuffer(IoUringBufferRing bufferRing, boolean socketIsEmpty) {
+        private int scheduleReadProviderBuffer(IoUringBufferRing bufferRing, boolean first, boolean socketIsEmpty) {
             short bgId = bufferRing.bufferGroupId();
             try {
-                int chunkSize = bufferRing.chunkSize();
+                boolean multishot = IoUring.isRecvMultishotEnabled();
+                byte flags = (byte) Native.IOSQE_BUFFER_SELECT;
+                short ioPrio;
+                final int recvFlags;
+                if (multishot) {
+                    ioPrio = Native.IORING_RECV_MULTISHOT;
+                    recvFlags = 0;
+                } else {
+                    // We should only use the calculate*() methods if this is not a multishot recv, as otherwise
+                    // the would be applied until the multishot will be re-armed.
+                    ioPrio = calculateRecvIoPrio(first, socketIsEmpty);
+                    recvFlags = calculateRecvFlags(first);
+                }
+                if (IoUring.isRecvsendBundleEnabled()) {
+                    // See https://github.com/axboe/liburing/wiki/
+                    // What's-new-with-io_uring-in-6.10#add-support-for-sendrecv-bundles
+                    ioPrio |= Native.IORING_RECVSEND_BUNDLE;
+                }
                 IoRegistration registration = registration();
-
                 int fd = fd().intValue();
-
-                // IORING_RECVSEND_POLL_FIRST and IORING_CQE_F_SOCK_NONEMPTY were added in the same release (5.19).
-                // We need to check if it's supported as otherwise providing these would result in an -EINVAL.
-                // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
-                short ioPrio = socketIsEmpty && IoUring.isIOUringCqeFSockNonEmptySupported() ?
-                        Native.IORING_RECVSEND_POLL_FIRST : 0;
                 IoUringIoOps ops = IoUringIoOps.newRecv(
-                        fd, flags((byte) Native.IOSQE_BUFFER_SELECT), ioPrio, 0, 0,
-                        chunkSize, nextOpsId(), bgId
+                        fd, flags, ioPrio, recvFlags, 0,
+                        0, nextOpsId(), bgId
                 );
                 readId = registration.submit(ops);
+                readOpCode = Native.IORING_OP_RECV;
                 if (readId == 0) {
                     return 0;
                 }
-                lastUsedBufferRing = bufferRing;
+                if (multishot) {
+                    // Return -1 to signal we used multishot and so expect multiple recvComplete(...) calls.
+                    return -1;
+                }
                 return 1;
             } catch (IllegalArgumentException illegalArgumentException) {
                 this.handleReadException(pipeline(), null, illegalArgumentException, false, recvBufAllocHandle());
@@ -384,45 +404,49 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
         @Override
         protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
-            assert readId != 0;
-            readId = 0;
+            ByteBuf byteBuf = readBuffer;
+            readBuffer = null;
+            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                readId = 0;
+                // In case of cancellation we should reset the last used buffer ring to null as we will select a new one
+                // when calling scheduleRead(..)
+                if (byteBuf != null) {
+                    //recv without buffer ring
+                    byteBuf.release();
+                }
+                return;
+            }
+            boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
+            boolean useBufferRing = (flags & Native.IORING_CQE_F_BUFFER) != 0;
+            short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
+            boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
+
+            boolean empty = socketIsEmpty(flags);
+            if (rearm) {
+                // Only reset if we don't use multi-shot or we need to re-arm because the multi-shot was cancelled.
+                readId = 0;
+            }
+
             boolean allDataRead = false;
 
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             final ChannelPipeline pipeline = pipeline();
-            ByteBuf byteBuf = this.readBuffer;
-            IoUringBufferRing bufferRing = lastUsedBufferRing;
-            this.readBuffer = null;
-            this.lastUsedBufferRing = null;
 
             try {
                 if (res < 0) {
-                    if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                        if (byteBuf != null) {
-                            //recv without buffer ring
-                            byteBuf.release();
+                    if (res == Native.ERRNO_NOBUFS_NEGATIVE) {
+                        // try to expand the buffer ring by adding more buffers to it if there is any space left.
+                        if (!bufferRing.expand()) {
+                            // We couldn't expand the ring anymore so notify the user that we did run out of buffers
+                            // without the ability to expand it.
+                            // If this happens to often the user should most likely increase the buffer ring size.
+                            pipeline.fireUserEventTriggered(bufferRing.getExhaustedEvent());
                         }
-                        return;
-                    }
-
-                    if (res == Native.ERRNO_NO_BUFFER_NEGATIVE) {
-                        //recv with provider buffer fail!
-                        //fallback to normal recv
-                        bufferRing.markExhausted();
-
-                        // fire the BufferRingExhaustedEvent to notify users.
-                        // Users can then switch the ring buffer or do other things as they wish
-                        pipeline.fireUserEventTriggered(bufferRing.getExhaustedEvent());
 
                         // Let's trigger a read again without consulting the RecvByteBufAllocator.Handle as
                         // we can't count this as a "real" read operation.
-                        // This will do the correct thing, taking into account if
-                        // there is again room in the ring or not and so either use the buffer ring or not for the
-                        // read.
-                        //
-                        // As we only use the buffer ring for the first read we can call schedule(...) with true as
-                        // parameter.
-                        scheduleRead(true);
+                        // Because of how our BufferRing works we should have it filled again.
+                        scheduleRead(allocHandle.isFirstRead());
                         return;
                     }
 
@@ -430,14 +454,43 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                     // or convert it to 0 if we could not read because the socket was not readable.
                     allocHandle.lastBytesRead(ioResult("io_uring read", res));
                 } else if (res > 0) {
-                    if (bufferRing != null) {
-                        short bid = (short) (flags >> Native.IORING_CQE_BUFFER_SHIFT);
-                        boolean more = (flags & Native.IORING_CQE_F_BUF_MORE) != 0;
-                        byteBuf = bufferRing.useBuffer(bid, res, more);
+                    if (useBufferRing) {
+                        // If RECVSEND_BUNDLE is used we need to do a bit more work here.
+                        // In this case we might need to obtain multiple buffers out of the buffer ring as
+                        // multiple of them might have been filled for one recv operation.
+                        // See https://github.com/axboe/liburing/wiki/
+                        // What's-new-with-io_uring-in-6.10#add-support-for-sendrecv-bundles
+                        int read = res;
+                        for (;;) {
+                            int attemptedBytesRead = bufferRing.attemptedBytesRead(bid);
+                            byteBuf = bufferRing.useBuffer(bid, read, more);
+                            read -= byteBuf.readableBytes();
+                            allocHandle.attemptedBytesRead(attemptedBytesRead);
+                            allocHandle.lastBytesRead(byteBuf.readableBytes());
+
+                            assert read >= 0;
+                            if (read == 0) {
+                                // Just break here, we will handle the byteBuf below and also fill the bufferRing
+                                // if needed later.
+                                break;
+                            }
+                            allocHandle.incMessagesRead(1);
+                            pipeline.fireChannelRead(byteBuf);
+                            byteBuf = null;
+                            bid = bufferRing.nextBid(bid);
+                            if (!allocHandle.continueReading()) {
+                                // We should call fireChannelReadComplete() to mimic a normal read loop.
+                                allocHandle.readComplete();
+                                pipeline.fireChannelReadComplete();
+                                allocHandle.reset(config());
+                            }
+                        }
                     } else {
+                        int attemptedBytesRead = byteBuf.writableBytes();
                         byteBuf.writerIndex(byteBuf.writerIndex() + res);
+                        allocHandle.attemptedBytesRead(attemptedBytesRead);
+                        allocHandle.lastBytesRead(res);
                     }
-                    allocHandle.lastBytesRead(res);
                 } else {
                     // EOF which we signal with -1.
                     allocHandle.lastBytesRead(-1);
@@ -462,18 +515,20 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 allocHandle.incMessagesRead(1);
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
-                scheduleNextRead(flags);
+                scheduleNextRead(pipeline, allocHandle, rearm, empty);
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
             }
         }
 
-        private void scheduleNextRead(int cqeFlags) {
-            final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            final ChannelPipeline pipeline = pipeline();
-            if (allocHandle.continueReading() && !socketIsEmpty(cqeFlags)) {
-                // Let's schedule another read.
-                scheduleRead(false);
+        private void scheduleNextRead(ChannelPipeline pipeline, IoUringRecvByteAllocatorHandle allocHandle,
+                                      boolean rearm, boolean empty) {
+            if (allocHandle.continueReading() && !empty) {
+                if (rearm) {
+                    // We only should schedule another read if we need to rearm.
+                    // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#multi-shot
+                    scheduleRead(false);
+                }
             } else {
                 // We did not fill the whole ByteBuf so we should break the "read loop" and try again later.
                 allocHandle.readComplete();
@@ -481,7 +536,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
         }
 
-        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf,
+        protected final void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf,
                                          Throwable cause, boolean allDataRead,
                                          IoUringRecvByteAllocatorHandle allocHandle) {
             if (byteBuf != null) {
@@ -499,40 +554,47 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             }
         }
 
+        private boolean handleWriteCompleteFileRegion(ChannelOutboundBuffer channelOutboundBuffer,
+                                                      IoUringFileRegion fileRegion, int res, short data) {
+            try {
+                if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                    return true;
+                }
+                int result = res >= 0 ? res : ioResult("io_uring splice", res);
+                if (result == 0 && fileRegion.count() > 0) {
+                    validateFileRegion(fileRegion.fileRegion, fileRegion.transfered());
+                    return false;
+                }
+                int progress = fileRegion.handleResult(result, data);
+                if (progress == -1) {
+                    // Done with writing
+                    channelOutboundBuffer.remove();
+                } else if (progress > 0) {
+                    channelOutboundBuffer.progress(progress);
+                }
+            } catch (Throwable cause) {
+                handleWriteError(cause);
+            }
+            return true;
+        }
+
         @Override
         boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
-            assert writeId != 0;
-            writeId = 0;
-            writeOpCode = 0;
-
+            if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
+                // We only want to reset these if IORING_CQE_F_NOTIF is not set.
+                // If it's set we know this is only an extra notification for a write but we already handled
+                // the write completions before.
+                // See https://man7.org/linux/man-pages/man2/io_uring_enter.2.html section: IORING_OP_SEND_ZC
+                writeId = 0;
+                writeOpCode = 0;
+            }
             ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
             Object current = channelOutboundBuffer.current();
             if (current instanceof IoUringFileRegion) {
                 IoUringFileRegion fileRegion = (IoUringFileRegion) current;
-                try {
-                    int result = res >= 0 ? res : ioResult("io_uring splice", res);
-                    if (result == 0 && fileRegion.count() > 0) {
-                        validateFileRegion(fileRegion.fileRegion, fileRegion.transfered());
-                        return false;
-                    }
-                    int progress = fileRegion.handleResult(result, data);
-                    if (progress == -1) {
-                        // Done with writing
-                        channelOutboundBuffer.remove();
-                    } else if (progress > 0) {
-                        channelOutboundBuffer.progress(progress);
-                    }
-                } catch (Throwable cause) {
-                    handleWriteError(cause);
-                }
-                return true;
+                return handleWriteCompleteFileRegion(channelOutboundBuffer, fileRegion, res, data);
             }
 
-            IovArray iovArray = this.iovArray;
-            if (iovArray != null) {
-                this.iovArray = null;
-                iovArray.release();
-            }
             if (res >= 0) {
                 channelOutboundBuffer.removeBytes(res);
             } else if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
@@ -560,11 +622,11 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     protected final void cancelOutstandingReads(IoRegistration registration, int numOutstandingReads) {
         if (readId != 0) {
             // Let's try to cancel outstanding reads as these might be submitted and waiting for data (via fastpoll).
-            assert numOutstandingReads == 1;
-            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(flags((byte) 0), readId, Native.IORING_OP_RECV);
-            registration.submit(ops);
-        } else {
-            assert numOutstandingReads == 0;
+            assert numOutstandingReads == 1 || numOutstandingReads == -1;
+            IoUringIoOps ops = IoUringIoOps.newAsyncCancel((byte) 0, readId, readOpCode);
+            long id = registration.submit(ops);
+            assert id != 0;
+            readId = 0;
         }
     }
 
@@ -575,29 +637,19 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             // (via fastpoll).
             assert numOutstandingWrites == 1;
             assert writeOpCode != 0;
-            registration.submit(IoUringIoOps.newAsyncCancel(flags((byte) 0), writeId, writeOpCode));
-        } else {
-            assert numOutstandingWrites == 0;
+            long id = registration.submit(IoUringIoOps.newAsyncCancel((byte) 0, writeId, writeOpCode));
+            assert id != 0;
+            writeId = 0;
         }
     }
 
     @Override
     protected boolean socketIsEmpty(int flags) {
-        return IoUring.isIOUringCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
-    }
-
-    @Override
-    protected void submitAndRunNow() {
-        if (writeId != 0) {
-            // Force a submit and processing of the completions to ensure we drain the outbound buffer and
-            // send the data to the remote peer.
-            ((IoUringIoHandler) registration().attachment()).submitAndRunNow(writeId);
-        }
-        super.submitAndRunNow();
+        return IoUring.isCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
     }
 
     @Override
     boolean isPollInFirst() {
-        return !((IoUringStreamChannelConfig) config()).getUseIoUringBufferGroup();
+        return bufferRing == null || !bufferRing.isUsable();
     }
 }

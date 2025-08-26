@@ -63,8 +63,8 @@ public class HandlerSslTest {
     private Channel serverConnectedChannel;
     private Throwable clientException;
     private Throwable serverException;
-    private CountDownLatch serverLatch = new CountDownLatch(1);
-    private CountDownLatch clientLatch = new CountDownLatch(1);
+    private final CountDownLatch serverLatch = new CountDownLatch(1);
+    private final CountDownLatch clientLatch = new CountDownLatch(1);
 
     @BeforeAll
     public static void setup() throws Exception {
@@ -123,8 +123,7 @@ public class HandlerSslTest {
         ServerBootstrap sb = new ServerBootstrap();
         Bootstrap cb = new Bootstrap();
 
-        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()),
-                new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
+        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer() {
             @Override

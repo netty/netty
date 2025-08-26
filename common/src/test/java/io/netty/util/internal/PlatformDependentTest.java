@@ -16,6 +16,8 @@
 package io.netty.util.internal;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
@@ -157,5 +159,14 @@ public class PlatformDependentTest {
         assertNotEquals(0, PlatformDependent.directBufferAddress(buffer));
         assertEquals(0, buffer.capacity());
         PlatformDependent.freeDirectNoCleaner(buffer);
+    }
+
+    @EnabledForJreRange(min = JRE.JAVA_25)
+    @Test
+    void java25MustHaveCleanerImplAvailable() throws Exception {
+        assertTrue(CleanerJava25.isSupported(),
+                "The CleanerJava25 implementation must be supported on Java 25+");
+        // Note: we're not testing on `PlatformDependent.directBufferPreferred()` because some builds
+        // might intentionally disable it, in order to exercise those code paths.
     }
 }

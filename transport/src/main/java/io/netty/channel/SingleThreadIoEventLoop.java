@@ -20,6 +20,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 
 import java.util.Queue;
@@ -115,7 +116,8 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         super(parent, threadFactory, false, true, maxPendingTasks, rejectedExecutionHandler);
         this.maxTaskProcessingQuantumNs =
                 ObjectUtil.checkPositiveOrZero(maxTaskProcessingQuantumMs, "maxTaskProcessingQuantumMs") == 0 ?
-                        DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS : maxTaskProcessingQuantumMs;
+                        DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS :
+                        TimeUnit.MILLISECONDS.toNanos(maxTaskProcessingQuantumMs);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
     }
 
@@ -141,7 +143,8 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         super(parent, executor, false, true, maxPendingTasks, rejectedExecutionHandler);
         this.maxTaskProcessingQuantumNs =
                 ObjectUtil.checkPositiveOrZero(maxTaskProcessingQuantumMs, "maxTaskProcessingQuantumMs") == 0 ?
-                        DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS : maxTaskProcessingQuantumMs;
+                        DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS :
+                        TimeUnit.MILLISECONDS.toNanos(maxTaskProcessingQuantumMs);
         this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
     }
 
@@ -253,6 +256,17 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     @Override
     public boolean isIoType(Class<? extends IoHandler> handlerType) {
         return ioHandler.getClass().equals(handlerType);
+    }
+
+    @Override
+    protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
+        return newTaskQueue0(maxPendingTasks);
+    }
+
+    protected static Queue<Runnable> newTaskQueue0(int maxPendingTasks) {
+        // This event loop never calls takeTask()
+        return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.<Runnable>newMpscQueue()
+                : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
     }
 
     private final class IoRegistrationWrapper implements IoRegistration {

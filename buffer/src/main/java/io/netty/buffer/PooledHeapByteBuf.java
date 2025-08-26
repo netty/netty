@@ -14,9 +14,8 @@
 
 package io.netty.buffer;
 
-import io.netty.util.internal.ObjectPool;
+import io.netty.util.Recycler;
 import io.netty.util.internal.ObjectPool.Handle;
-import io.netty.util.internal.ObjectPool.ObjectCreator;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -26,13 +25,13 @@ import java.nio.ByteBuffer;
 
 class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
 
-    private static final ObjectPool<PooledHeapByteBuf> RECYCLER = ObjectPool.newPool(
-            new ObjectCreator<PooledHeapByteBuf>() {
-        @Override
-        public PooledHeapByteBuf newObject(Handle<PooledHeapByteBuf> handle) {
-            return new PooledHeapByteBuf(handle, 0);
-        }
-    });
+    private static final Recycler<PooledHeapByteBuf> RECYCLER =
+            new Recycler<PooledHeapByteBuf>() {
+                @Override
+                protected PooledHeapByteBuf newObject(Handle<PooledHeapByteBuf> handle) {
+                    return new PooledHeapByteBuf(handle, 0);
+                }
+            };
 
     static PooledHeapByteBuf newInstance(int maxCapacity) {
         PooledHeapByteBuf buf = RECYCLER.get();
@@ -97,7 +96,7 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     @Override
     public final ByteBuf getBytes(int index, ByteBuf dst, int dstIndex, int length) {
         checkDstIndex(index, length, dstIndex, dst.capacity());
-        if (dst.hasMemoryAddress()) {
+        if (dst.hasMemoryAddress() && PlatformDependent.hasUnsafe()) {
             PlatformDependent.copyMemory(memory, idx(index), dst.memoryAddress() + dstIndex, length);
         } else if (dst.hasArray()) {
             getBytes(index, dst.array(), dst.arrayOffset() + dstIndex, length);
@@ -177,7 +176,7 @@ class PooledHeapByteBuf extends PooledByteBuf<byte[]> {
     @Override
     public final ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.capacity());
-        if (src.hasMemoryAddress()) {
+        if (src.hasMemoryAddress() && PlatformDependent.hasUnsafe()) {
             PlatformDependent.copyMemory(src.memoryAddress() + srcIndex, memory, idx(index), length);
         } else if (src.hasArray()) {
             setBytes(index, src.array(), src.arrayOffset() + srcIndex, length);

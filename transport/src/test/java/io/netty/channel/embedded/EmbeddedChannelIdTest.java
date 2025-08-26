@@ -36,19 +36,13 @@ public class EmbeddedChannelIdTest {
         ChannelId normalInstance = EmbeddedChannelId.INSTANCE;
 
         ByteBuf buf = Unpooled.buffer();
-        ObjectOutputStream outStream = new ObjectOutputStream(new ByteBufOutputStream(buf));
-        try {
+        try (ObjectOutputStream outStream = new ObjectOutputStream(new ByteBufOutputStream(buf))) {
             outStream.writeObject(normalInstance);
-        } finally {
-            outStream.close();
         }
 
-        ObjectInputStream inStream = new ObjectInputStream(new ByteBufInputStream(buf, true));
         final ChannelId deserializedInstance;
-        try {
+        try (ObjectInputStream inStream = new ObjectInputStream(new ByteBufInputStream(buf, true))) {
             deserializedInstance = (ChannelId) inStream.readObject();
-        } finally {
-            inStream.close();
         }
 
         assertEquals(normalInstance, deserializedInstance);

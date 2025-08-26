@@ -46,11 +46,11 @@ final class PlatformDependent0 {
     private static final long LONG_ARRAY_BASE_OFFSET;
     private static final long LONG_ARRAY_INDEX_SCALE;
     private static final MethodHandle DIRECT_BUFFER_CONSTRUCTOR;
-    private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
     private static final MethodHandle ALLOCATE_ARRAY_METHOD;
     private static final MethodHandle ALIGN_SLICE;
-    private static final int JAVA_VERSION = javaVersion0();
     private static final boolean IS_ANDROID = isAndroid0();
+    private static final int JAVA_VERSION = javaVersion0();
+    private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
 
     private static final Throwable UNSAFE_UNAVAILABILITY_CAUSE;
 
@@ -60,6 +60,9 @@ final class PlatformDependent0 {
             "org.graalvm.nativeimage.imagecode");
 
     private static final boolean IS_EXPLICIT_TRY_REFLECTION_SET_ACCESSIBLE = explicitTryReflectionSetAccessible0();
+
+    // Package-private for testing.
+    static final MethodHandle IS_VIRTUAL_THREAD_METHOD_HANDLE = getIsVirtualThreadMethodHandle();
 
     static final Unsafe UNSAFE;
 
@@ -106,11 +109,7 @@ final class PlatformDependent0 {
                         }
                         // the unsafe instance
                         return unsafeField.get(null);
-                    } catch (NoSuchFieldException e) {
-                        return e;
-                    } catch (SecurityException e) {
-                        return e;
-                    } catch (IllegalAccessException e) {
+                    } catch (NoSuchFieldException | IllegalAccessException | SecurityException e) {
                         return e;
                     } catch (NoClassDefFoundError e) {
                         // Also catch NoClassDefFoundError in case someone uses for example OSGI and it made
@@ -128,7 +127,7 @@ final class PlatformDependent0 {
                 unsafe = null;
                 unsafeUnavailabilityCause = (Throwable) maybeUnsafe;
                 if (logger.isTraceEnabled()) {
-                    logger.debug("sun.misc.Unsafe.theUnsafe: unavailable", (Throwable) maybeUnsafe);
+                    logger.debug("sun.misc.Unsafe.theUnsafe: unavailable", unsafeUnavailabilityCause);
                 } else {
                     logger.debug("sun.misc.Unsafe.theUnsafe: unavailable: {}", unsafeUnavailabilityCause.getMessage());
                 }
@@ -186,11 +185,7 @@ final class PlatformDependent0 {
                                 finalUnsafe.freeMemory(address);
                             }
                             return null;
-                        } catch (UnsupportedOperationException e) {
-                            return e;
-                        } catch (NoSuchMethodException e) {
-                            return e;
-                        } catch (SecurityException e) {
+                        } catch (UnsupportedOperationException | SecurityException | NoSuchMethodException e) {
                             return e;
                         }
                     }
@@ -205,8 +200,7 @@ final class PlatformDependent0 {
                     if (logger.isTraceEnabled()) {
                         logger.debug("sun.misc.Unsafe method unavailable:", unsafeUnavailabilityCause);
                     } else {
-                        logger.debug("sun.misc.Unsafe method unavailable: {}",
-                                ((Throwable) maybeException).getMessage());
+                        logger.debug("sun.misc.Unsafe method unavailable: {}", unsafeUnavailabilityCause.getMessage());
                     }
                 }
             }
@@ -230,9 +224,7 @@ final class PlatformDependent0 {
                                 return null;
                             }
                             return field;
-                        } catch (NoSuchFieldException e) {
-                            return e;
-                        } catch (SecurityException e) {
+                        } catch (NoSuchFieldException | SecurityException e) {
                             return e;
                         }
                     }
@@ -349,7 +341,7 @@ final class PlatformDependent0 {
                         Class<?> bitsClass =
                                 Class.forName("java.nio.Bits", false, getSystemClassLoader());
                         int version = javaVersion();
-                        if (unsafeStaticFieldOffsetSupported() && version >= 9) {
+                        if (!isNativeImage() && version >= 9) {
                             // Java9/10 use all lowercase and later versions all uppercase.
                             String fieldName = version >= 11? "MAX_MEMORY" : "maxMemory";
                             // On Java9 and later we try to directly access the field as we can do this without
@@ -384,15 +376,8 @@ final class PlatformDependent0 {
                             return cause;
                         }
                         return unalignedMethod.invoke(null);
-                    } catch (NoSuchMethodException e) {
-                        return e;
-                    } catch (SecurityException e) {
-                        return e;
-                    } catch (IllegalAccessException e) {
-                        return e;
-                    } catch (ClassNotFoundException e) {
-                        return e;
-                    } catch (InvocationTargetException e) {
+                    } catch (NoSuchMethodException | SecurityException | IllegalAccessException |
+                             InvocationTargetException | ClassNotFoundException e) {
                         return e;
                     }
                 }
@@ -452,7 +437,7 @@ final class PlatformDependent0 {
                         try {
                             MethodHandle m = (MethodHandle) maybeException;
                             m = m.bindTo(finalInternalUnsafe);
-                            byte[] bytes = (byte[]) m.invokeExact(byte.class, 8);
+                            byte[] bytes = (byte[]) (Object) m.invokeExact(byte.class, 8);
                             assert bytes.length == 8;
                             allocateArrayMethod = m;
                         } catch (Throwable e) {
@@ -498,8 +483,44 @@ final class PlatformDependent0 {
                 DIRECT_BUFFER_CONSTRUCTOR != null ? "available" : "unavailable");
     }
 
-    private static boolean unsafeStaticFieldOffsetSupported() {
-        return !RUNNING_IN_NATIVE_IMAGE;
+    private static MethodHandle getIsVirtualThreadMethodHandle() {
+        try {
+            MethodHandle methodHandle = MethodHandles.publicLookup().findVirtual(Thread.class, "isVirtual",
+                    methodType(boolean.class));
+            // Call once to make sure the invocation works.
+            boolean isVirtual = (boolean) methodHandle.invokeExact(Thread.currentThread());
+            return methodHandle;
+        } catch (Throwable e) {
+            if (logger.isTraceEnabled()) {
+                logger.debug("Thread.isVirtual() is not available: ", e);
+            } else {
+                logger.debug("Thread.isVirtual() is not available: ", e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    /**
+     * @param thread The thread to be checked.
+     * @return {@code true} if this {@link Thread} is a virtual thread, {@code false} otherwise.
+     */
+    static boolean isVirtualThread(Thread thread) {
+        if (thread == null || IS_VIRTUAL_THREAD_METHOD_HANDLE == null) {
+            return false;
+        }
+        try {
+            return (boolean) IS_VIRTUAL_THREAD_METHOD_HANDLE.invokeExact(thread);
+        } catch (Throwable t) {
+            // Should not happen.
+            if (t instanceof Error) {
+                throw (Error) t;
+            }
+            throw new Error(t);
+        }
+    }
+
+    static boolean isNativeImage() {
+        return RUNNING_IN_NATIVE_IMAGE;
     }
 
     static boolean isExplicitNoUnsafe() {
@@ -507,19 +528,29 @@ final class PlatformDependent0 {
     }
 
     private static Throwable explicitNoUnsafeCause0() {
+        boolean explicitProperty = SystemPropertyUtil.contains("io.netty.noUnsafe");
         boolean noUnsafe = SystemPropertyUtil.getBoolean("io.netty.noUnsafe", false);
         logger.debug("-Dio.netty.noUnsafe: {}", noUnsafe);
 
         // See JDK 23 JEP 471 https://openjdk.org/jeps/471 and sun.misc.Unsafe.beforeMemoryAccess() on JDK 23+.
-        String unsafeMemoryAccess = SystemPropertyUtil.get("sun.misc.unsafe.memory.access", "<unspecified>");
-        if (!("allow".equals(unsafeMemoryAccess) || "<unspecified>".equals(unsafeMemoryAccess))) {
-            logger.debug("--sun-misc-unsafe-memory-access={}", unsafeMemoryAccess);
+        // And JDK 24 JEP 498 https://openjdk.org/jeps/498, that enable warnings by default.
+        // Due to JDK bugs, we only actually disable Unsafe by default on Java 25+, where we have memory segment APIs
+        // available, and working.
+        String reason = "io.netty.noUnsafe";
+        String unspecified = "<unspecified>";
+        String unsafeMemoryAccess = SystemPropertyUtil.get("sun.misc.unsafe.memory.access", unspecified);
+        if (!explicitProperty && unspecified.equals(unsafeMemoryAccess) && javaVersion() >= 25) {
+            reason = "io.netty.noUnsafe=true by default on Java 25+";
+            noUnsafe = true;
+        } else if (!("allow".equals(unsafeMemoryAccess) || unspecified.equals(unsafeMemoryAccess))) {
+            reason = "--sun-misc-unsafe-memory-access=" + unsafeMemoryAccess;
             noUnsafe = true;
         }
 
         if (noUnsafe) {
-            logger.debug("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
-            return new UnsupportedOperationException("sun.misc.Unsafe: unavailable (io.netty.noUnsafe)");
+            String msg = "sun.misc.Unsafe: unavailable (" + reason + ')';
+            logger.debug(msg);
+            return new UnsupportedOperationException(msg);
         }
 
         // Legacy properties
@@ -605,7 +636,7 @@ final class PlatformDependent0 {
 
     static byte[] allocateUninitializedArray(int size) {
         try {
-            return (byte[]) ALLOCATE_ARRAY_METHOD.invokeExact(byte.class, size);
+            return (byte[]) (Object) ALLOCATE_ARRAY_METHOD.invokeExact(byte.class, size);
         } catch (Throwable e) {
             rethrowIfPossible(e);
             throw new LinkageError("Unsafe.allocateUninitializedArray not available", e);
@@ -646,6 +677,22 @@ final class PlatformDependent0 {
 
     static int getInt(Object object, long fieldOffset) {
         return UNSAFE.getInt(object, fieldOffset);
+    }
+
+    static int getIntVolatile(Object object, long fieldOffset) {
+        return UNSAFE.getIntVolatile(object, fieldOffset);
+    }
+
+    static void putOrderedInt(Object object, long fieldOffset, int value) {
+        UNSAFE.putOrderedInt(object, fieldOffset, value);
+    }
+
+    static int getAndAddInt(Object object, long fieldOffset, int value) {
+        return UNSAFE.getAndAddInt(object, fieldOffset, value);
+    }
+
+    static boolean compareAndSwapInt(Object object, long fieldOffset, int expected, int value) {
+        return UNSAFE.compareAndSwapInt(object, fieldOffset, expected, value);
     }
 
     static void safeConstructPutInt(Object object, long fieldOffset, int value) {
@@ -697,14 +744,6 @@ final class PlatformDependent0 {
         return UNSAFE.getInt(data, INT_ARRAY_BASE_OFFSET + INT_ARRAY_INDEX_SCALE * index);
     }
 
-    static int getIntVolatile(long address) {
-        return UNSAFE.getIntVolatile(null, address);
-    }
-
-    static void putIntOrdered(long adddress, int newValue) {
-        UNSAFE.putOrderedInt(null, adddress, newValue);
-    }
-
     static long getLong(byte[] data, int index) {
         return UNSAFE.getLong(data, BYTE_ARRAY_BASE_OFFSET + index);
     }
@@ -721,9 +760,9 @@ final class PlatformDependent0 {
         UNSAFE.putShort(address, value);
     }
 
-    static void putShortOrdered(long adddress, short newValue) {
+    static void putShortOrdered(long address, short newValue) {
         UNSAFE.storeFence();
-        UNSAFE.putShort(null, adddress, newValue);
+        UNSAFE.putShort(null, address, newValue);
     }
 
     static void putInt(long address, int value) {
@@ -1029,7 +1068,7 @@ final class PlatformDependent0 {
     private static int javaVersion0() {
         final int majorVersion;
 
-        if (isAndroid0()) {
+        if (isAndroid()) {
             majorVersion = 6;
         } else {
             majorVersion = majorVersionFromJavaSpecificationVersion();

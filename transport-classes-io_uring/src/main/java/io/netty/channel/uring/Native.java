@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -37,7 +38,6 @@ import java.util.Locale;
 
 final class Native {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Native.class);
-    static final int DEFAULT_RING_SIZE = Math.max(64, SystemPropertyUtil.getInt("io.netty.iouring.ringSize", 4096));
 
     static {
         Selector selector = null;
@@ -88,7 +88,15 @@ final class Native {
     static final int SOCK_CLOEXEC = NativeStaticallyReferencedJniMethods.sockCloexec();
     static final short AF_INET = (short) NativeStaticallyReferencedJniMethods.afInet();
     static final short AF_INET6 = (short) NativeStaticallyReferencedJniMethods.afInet6();
+    static final short AF_UNIX = (short) NativeStaticallyReferencedJniMethods.afUnix();
     static final int SIZEOF_SOCKADDR_STORAGE = NativeStaticallyReferencedJniMethods.sizeofSockaddrStorage();
+    static final int SIZEOF_SOCKADDR_UN = NativeStaticallyReferencedJniMethods.sizeofSockaddrUn();
+    static final int SOCKADDR_UN_OFFSETOF_SUN_FAMILY =
+            NativeStaticallyReferencedJniMethods.sockaddrUnOffsetofSunFamily();
+    static final int SOCKADDR_UN_OFFSETOF_SUN_PATH =
+            NativeStaticallyReferencedJniMethods.sockaddrUnOffsetofSunPath();
+    static final int MAX_SUN_PATH_LEN =
+            NativeStaticallyReferencedJniMethods.maxSunPathLen();
     static final int SIZEOF_SOCKADDR_IN = NativeStaticallyReferencedJniMethods.sizeofSockaddrIn();
     static final int SIZEOF_SOCKADDR_IN6 = NativeStaticallyReferencedJniMethods.sizeofSockaddrIn6();
     static final int SOCKADDR_IN_OFFSETOF_SIN_FAMILY =
@@ -110,7 +118,10 @@ final class Native {
     static final int SIZEOF_SIZE_T = NativeStaticallyReferencedJniMethods.sizeofSizeT();
     static final int SIZEOF_IOVEC = NativeStaticallyReferencedJniMethods.sizeofIovec();
     static final int CMSG_SPACE = NativeStaticallyReferencedJniMethods.cmsgSpace();
+    static final int CMSG_SPACE_FOR_FD = NativeStaticallyReferencedJniMethods.cmsgSpaceForFd();
     static final int CMSG_LEN = NativeStaticallyReferencedJniMethods.cmsgLen();
+    static final int CMSG_LEN_FOR_FD = NativeStaticallyReferencedJniMethods.cmsgLenForFd();
+    static final int MSG_CONTROL_LEN_FOR_FD = NativeStaticallyReferencedJniMethods.msgControlLenForFd();
     static final int CMSG_OFFSETOF_CMSG_LEN = NativeStaticallyReferencedJniMethods.cmsghdrOffsetofCmsgLen();
     static final int CMSG_OFFSETOF_CMSG_LEVEL = NativeStaticallyReferencedJniMethods.cmsghdrOffsetofCmsgLevel();
     static final int CMSG_OFFSETOF_CMSG_TYPE = NativeStaticallyReferencedJniMethods.cmsghdrOffsetofCmsgType();
@@ -133,9 +144,10 @@ final class Native {
     static final int POLLRDHUP = NativeStaticallyReferencedJniMethods.pollrdhup();
     static final int ERRNO_ECANCELED_NEGATIVE = -NativeStaticallyReferencedJniMethods.ecanceled();
     static final int ERRNO_ETIME_NEGATIVE = -NativeStaticallyReferencedJniMethods.etime();
-    static final int ERRNO_NO_BUFFER_NEGATIVE = -NativeStaticallyReferencedJniMethods.enobufs();
+    static final int ERRNO_NOBUFS_NEGATIVE = -NativeStaticallyReferencedJniMethods.enobufs();
 
     static final int PAGE_SIZE = NativeStaticallyReferencedJniMethods.pageSize();
+    static final int MAX_SKB_FRAGS = NativeStaticallyReferencedJniMethods.maxSkbFrags();
 
     static final int SIZEOF_IOURING_BUF = NativeStaticallyReferencedJniMethods.sizeofIoUringBuf();
     static final int IOURING_BUFFER_OFFSETOF_ADDR = NativeStaticallyReferencedJniMethods.ioUringBufferOffsetAddr();
@@ -202,23 +214,53 @@ final class Native {
     static final byte IORING_OP_FIXED_FD_INSTALL = 54;
     static final byte IORING_OP_FTRUNCATE = 55;
     static final byte IORING_OP_BIND = 56;
+    static final byte IORING_CQE_F_BUFFER = 1 << 0;
+    static final byte IORING_CQE_F_MORE = 1 << 1;
     static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
+    static final byte IORING_CQE_F_NOTIF = 1 << 3;
+    static final byte IORING_CQE_F_BUF_MORE = 1 << 4;
 
     static final int IORING_SETUP_CQSIZE = 1 << 3;
+    static final int IORING_SETUP_CLAMP = 1 << 4;
+
     static final int IORING_SETUP_R_DISABLED = 1 << 6;
     static final int IORING_SETUP_SUBMIT_ALL = 1 << 7;
+    static final int IORING_SETUP_CQE32 = 1 << 11;
+
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
     static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
+    static final int IORING_SETUP_NO_SQARRAY = 1 << 16;
     static final int IORING_CQE_BUFFER_SHIFT = 16;
-    static final int IORING_CQE_F_BUF_MORE = 1 << 4;
+
+    static final short IORING_POLL_ADD_MULTI = 1 << 0;
 
     static final short IORING_RECVSEND_POLL_FIRST = 1 << 0;
+    static final short IORING_RECVSEND_BUNDLE = 1 << 4;
+    static final short IORING_RECV_MULTISHOT = 1 << 1;
+    static final short IORING_SEND_ZC_REPORT_USAGE = 1 << 3;
+
+    static final int IORING_NOTIF_USAGE_ZC_COPIED = 1 << 31;
+
+    static final short IORING_ACCEPT_MULTISHOT = 1 << 0;
     static final short IORING_ACCEPT_DONTWAIT = 1 << 1;
     static final short IORING_ACCEPT_POLL_FIRST = 1 << 2;
+
+    static final int IORING_FEAT_NODROP = 1 << 1;
+    static final int IORING_FEAT_SUBMIT_STABLE = 1 << 2;
     static final int IORING_FEAT_RECVSEND_BUNDLE = 1 << 14;
+
+    static final int IORING_SQ_NEED_WAKEUP = 1 << 0;
+    static final int IORING_SQ_CQ_OVERFLOW = 1 << 1;
+    static final int IORING_SQ_TASKRUN = 1 << 2;
+
     static final int SPLICE_F_MOVE = 1;
 
     static final int IOU_PBUF_RING_INC = 2;
+    static final int IO_URING_OP_SUPPORTED = 1;
+
+    static final int CQE_SIZE = 16;
+    static final int CQE32_SIZE = 32;
+
     static String opToStr(byte op) {
         switch (op) {
             case IORING_OP_NOP: return "NOP";
@@ -271,10 +313,13 @@ final class Native {
     static final int IOSQE_LINK = NativeStaticallyReferencedJniMethods.iosqeLink();
     static final int IOSQE_IO_DRAIN = NativeStaticallyReferencedJniMethods.iosqeDrain();
     static final int IOSQE_BUFFER_SELECT = NativeStaticallyReferencedJniMethods.iosqeBufferSelect();
+    static final int IOSQE_CQE_SKIP_SUCCESS = 1 << 6;
     static final int MSG_DONTWAIT = NativeStaticallyReferencedJniMethods.msgDontwait();
     static final int MSG_FASTOPEN = NativeStaticallyReferencedJniMethods.msgFastopen();
     static final int SOL_UDP = NativeStaticallyReferencedJniMethods.solUdp();
+    static final int SOL_SOCKET = NativeStaticallyReferencedJniMethods.solSocket();
     static final int UDP_SEGMENT = NativeStaticallyReferencedJniMethods.udpSegment();
+    static final int SCM_RIGHTS = NativeStaticallyReferencedJniMethods.scmRights();
     private static final int TFO_ENABLED_CLIENT_MASK = 0x1;
     private static final int TFO_ENABLED_SERVER_MASK = 0x2;
     private static final int TCP_FASTOPEN_MODE = NativeStaticallyReferencedJniMethods.tcpFastopenMode();
@@ -311,17 +356,22 @@ final class Native {
     };
 
     static int setupFlags() {
-        int flags = Native.IORING_SETUP_R_DISABLED;
-        if (IoUring.isIOUringSetupSubmitAllSupported()) {
+        int flags = Native.IORING_SETUP_R_DISABLED | Native.IORING_SETUP_CLAMP;
+        if (IoUring.isSetupSubmitAllSupported()) {
             flags |= Native.IORING_SETUP_SUBMIT_ALL;
         }
 
         // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#task-work
-        if (IoUring.isIOUringSetupSingleIssuerSupported()) {
+        if (IoUring.isSetupSingleIssuerSupported()) {
             flags |= Native.IORING_SETUP_SINGLE_ISSUER;
         }
-        if (IoUring.isIOUringSetupDeferTaskrunSupported()) {
+        if (IoUring.isSetupDeferTaskrunSupported()) {
             flags |= Native.IORING_SETUP_DEFER_TASKRUN;
+        }
+        // liburing uses IORING_SETUP_NO_SQARRAY by default these days, we should do the same by default if possible.
+        // See https://github.com/axboe/liburing/releases/tag/liburing-2.6
+        if (IoUring.isIoringSetupNoSqarraySupported()) {
+            flags  |= Native.IORING_SETUP_NO_SQARRAY;
         }
         return flags;
     }
@@ -334,47 +384,92 @@ final class Native {
         ObjectUtil.checkPositive(ringSize, "ringSize");
         ObjectUtil.checkPositive(cqeSize, "cqeSize");
         long[] values = ioUringSetup(ringSize, cqeSize, setupFlags);
-        assert values.length == 21;
+        assert values.length == 20;
+        long cqkhead = values[0];
+        long cqktail = values[1];
+        int cqringMask = (int) values[2];
+        int cqringEntries = (int) values[3];
+        long cqkflags = values[4];
+        long cqArrayAddress = values[5];
+        int cqringSize = (int) values[6];
+        long cqringAddress = values[7];
+        int cqringFd = (int) values[8];
+        int cqringCapacity = (int) values[9];
+        int cqeLength = (setupFlags & IORING_SETUP_CQE32) == 0 ? CQE_SIZE : CQE32_SIZE;
         CompletionQueue completionQueue = new CompletionQueue(
-                values[0],
-                values[1],
-                values[2],
-                values[3],
-                values[4],
-                values[5],
-                (int) values[6],
-                values[7],
-                (int) values[8]);
+                Buffer.wrapMemoryAddressWithNativeOrder(cqkhead, Integer.BYTES),
+                Buffer.wrapMemoryAddressWithNativeOrder(cqktail, Integer.BYTES),
+                cqringMask,
+                cqringEntries,
+                Buffer.wrapMemoryAddressWithNativeOrder(cqkflags, Integer.BYTES),
+                Buffer.wrapMemoryAddressWithNativeOrder(cqArrayAddress, cqringEntries * cqeLength),
+                cqringSize,
+                cqringAddress,
+                cqringFd,
+                cqringCapacity, cqeLength);
+
+        long sqkhead = values[10];
+        long sqktail = values[11];
+        int sqringMask = (int) values[12];
+        int sqringEntries = (int) values[13];
+        long sqkflags = values[14];
+        long sqArrayAddress = values[15];
+        int sqringSize = (int) values[16];
+        long sqringAddress = values[17];
+        int sqringFd = (int) values[18];
         SubmissionQueue submissionQueue = new SubmissionQueue(
-                values[9],
-                values[10],
-                values[11],
-                values[12],
-                values[13],
-                values[14],
-                values[15],
-                values[16],
-                (int) values[17],
-                values[18],
-                (int) values[19]);
-        return new RingBuffer(submissionQueue, completionQueue, (int) values[20]);
+                Buffer.wrapMemoryAddressWithNativeOrder(sqkhead, Integer.BYTES),
+                Buffer.wrapMemoryAddressWithNativeOrder(sqktail, Integer.BYTES),
+                sqringMask,
+                sqringEntries,
+                Buffer.wrapMemoryAddressWithNativeOrder(sqkflags, Integer.BYTES),
+                Buffer.wrapMemoryAddressWithNativeOrder(sqArrayAddress, sqringEntries * SubmissionQueue.SQE_SIZE),
+                sqringSize,
+                sqringAddress,
+                sqringFd);
+        return new RingBuffer(submissionQueue, completionQueue, (int) values[19]);
     }
 
-    static void checkAllIOSupported(int ringFd) {
-        if (!ioUringProbe(ringFd, REQUIRED_IORING_OPS)) {
+    static void checkAllIOSupported(IoUringProbe probe) {
+        if (!ioUringProbe(probe, REQUIRED_IORING_OPS)) {
             throw new UnsupportedOperationException("Not all operations are supported: "
                     + Arrays.toString(REQUIRED_IORING_OPS));
         }
     }
 
-    static boolean isIOUringCqeFSockNonEmptySupported(int ringFd) {
-        // IORING_OP_SOCKET was added in the same release (5.19);
-        return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SOCKET });
+    static boolean isRecvMultishotSupported() {
+        // Added in the same release as IORING_SETUP_SINGLE_ISSUER.
+        return Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
     }
 
-    static boolean isIOUringSupportSplice(int ringFd) {
+    static boolean isAcceptMultishotSupported(IoUringProbe probe) {
+        // IORING_OP_SOCKET was added in the same release (5.19);
+        return ioUringProbe(probe, new int[] { Native.IORING_OP_SOCKET });
+    }
+
+    static boolean isCqeFSockNonEmptySupported(IoUringProbe probe) {
+        // IORING_OP_SOCKET was added in the same release (5.19);
+        return ioUringProbe(probe, new int[] { Native.IORING_OP_SOCKET });
+    }
+
+    static boolean isSpliceSupported(IoUringProbe probe) {
         // IORING_OP_SPLICE Available since 5.7
-        return ioUringProbe(ringFd, new int[] { Native.IORING_OP_SPLICE });
+        return ioUringProbe(probe, new int[] { Native.IORING_OP_SPLICE });
+    }
+
+    static boolean isPollAddMultiShotSupported(IoUringProbe probe) {
+        // Was added in the same release and we also need this feature to correctly handle edge-triggered mode.
+        return isCqeFSockNonEmptySupported(probe);
+    }
+
+    static boolean isSendZcSupported(IoUringProbe probe) {
+        // IORING_OP_SEND_ZC Available since 6.0
+        return ioUringProbe(probe, new int[] { Native.IORING_OP_SEND_ZC });
+    }
+
+    static boolean isSendmsgZcSupported(IoUringProbe probe) {
+        // IORING_OP_SENDMSG_ZC Available since 6.0
+        return ioUringProbe(probe, new int[] { Native.IORING_OP_SENDMSG_ZC });
     }
 
     /**
@@ -382,7 +477,7 @@ final class Native {
      * Available since 5.15.
      * @return true if support io_uring_register_io_wq_worker
      */
-    static boolean isRegisterIOWQWorkerSupported(int ringFd) {
+    static boolean isRegisterIoWqWorkerSupported(int ringFd) {
         // See https://github.com/torvalds/linux/blob/v5.5/fs/io_uring.c#L5488C10-L5488C16
         int result = ioUringRegisterIoWqMaxWorkers(ringFd, 0, 0);
         if (result >= 0) {
@@ -395,7 +490,7 @@ final class Native {
     static boolean isRegisterBufferRingSupported(int ringFd, int flags) {
         int entries = 2;
         short bgid = 1;
-        long result = ioUringRegisterBuffRing(ringFd, entries, bgid, flags);
+        long result = ioUringRegisterBufRing(ringFd, entries, bgid, flags);
         if (result >= 0) {
             ioUringUnRegisterBufRing(ringFd, result, entries, bgid);
             return true;
@@ -449,17 +544,64 @@ final class Native {
         return nativeMinor >= minor;
     }
 
-    static native boolean ioUringSetupSupportsFlags(int setupFlags);
-    private static native boolean ioUringProbe(int ringFd, int[] ios);
+    static final class IoUringProbe {
+        final byte lastOp;
+        final byte opsLen;
+        final IoUringProbeOp[] ops;
+
+        IoUringProbe(int[] values) {
+            int idx = 0;
+            lastOp = (byte) values[idx++];
+            opsLen = (byte) values[idx++];
+            ops  = new IoUringProbeOp[opsLen];
+            for (int i = 0; i < opsLen; i++) {
+                ops[i] = new IoUringProbeOp((byte) values[idx++], values[idx++]);
+            }
+        }
+    }
+
+    static class IoUringProbeOp {
+        final byte op;
+        final int flags;
+
+        IoUringProbeOp(byte op, int flags) {
+            this.op = op;
+            this.flags = flags;
+        }
+    }
+
+    static boolean ioUringProbe(IoUringProbe probe, int[] ops) {
+        IoUringProbeOp[] ioUringProbeOps = probe.ops;
+        if (ioUringProbeOps == null) {
+            return false;
+        }
+        for (int op : ops) {
+            if (op > probe.lastOp || (ioUringProbeOps[op].flags & IO_URING_OP_SUPPORTED) == 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    static native boolean ioUringSetupSupportsFlags(int setupFlags);;
     private static native long[] ioUringSetup(int entries, int cqeSize, int setupFlags);
+
+    static IoUringProbe ioUringProbe(int ringfd) {
+        int[] values = ioUringProbe0(ringfd);
+        if (values == null) {
+            return null;
+        }
+        return new IoUringProbe(values);
+    }
+    private static native int[] ioUringProbe0(int ringFd);
 
     static native int ioUringRegisterIoWqMaxWorkers(int ringFd, int maxBoundedValue, int maxUnboundedValue);
     static native int ioUringRegisterEnableRings(int ringFd);
     static native int ioUringRegisterRingFds(int ringFds);
 
-    static native long ioUringRegisterBuffRing(int ringFd, int entries, short bufferGroup, int flags);
-    static native int ioUringUnRegisterBufRing(int ringFd, long ioUringBufRingAddr, int entries, int bufferGroupId);
-
+    static native long ioUringRegisterBufRing(int ringFd, int entries, short bufferGroup, int flags);
+    static native int ioUringUnRegisterBufRing(int ringFd, long ioUringBufRingAddr, int entries, short bufferGroupId);
+    static native int ioUringBufRingSize(int entries);
     static native int ioUringEnter(int ringFd, int toSubmit, int minComplete, int flags);
 
     static native void eventFdWrite(int fd, long value);
@@ -500,7 +642,7 @@ final class Native {
         if (!name.startsWith("linux")) {
             throw new IllegalStateException("Only supported on Linux");
         }
-        String staticLibName = "netty_transport_native_io_uring";
+        String staticLibName = "netty_transport_native_io_uring42";
         String sharedLibName = staticLibName + '_' + PlatformDependent.normalizedArch();
         ClassLoader cl = PlatformDependent.getClassLoader(Native.class);
         try {

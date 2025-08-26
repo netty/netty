@@ -16,7 +16,7 @@
 
 package io.netty.buffer;
 
-import io.netty.util.internal.LongCounter;
+import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static io.netty.buffer.PoolChunk.isSubpage;
@@ -55,9 +56,9 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     // Metrics for allocations and deallocations
     private long allocationsNormal;
     // We need to use the LongCounter here as this is not guarded via synchronized block.
-    private final LongCounter allocationsSmall = PlatformDependent.newLongCounter();
-    private final LongCounter allocationsHuge = PlatformDependent.newLongCounter();
-    private final LongCounter activeBytesHuge = PlatformDependent.newLongCounter();
+    private final LongAdder allocationsSmall = new LongAdder();
+    private final LongAdder allocationsHuge = new LongAdder();
+    private final LongAdder activeBytesHuge = new LongAdder();
 
     private long deallocationsSmall;
     private long deallocationsNormal;
@@ -66,7 +67,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
     private long pooledChunkDeallocations;
 
     // We need to use the LongCounter here as this is not guarded via synchronized block.
-    private final LongCounter deallocationsHuge = PlatformDependent.newLongCounter();
+    private final LongAdder deallocationsHuge = new LongAdder();
 
     // Number of thread caches backed by this arena.
     final AtomicInteger numThreadCaches = new AtomicInteger();
@@ -169,7 +170,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                         s.doNotDestroy + ", elemSize=" + s.elemSize + ", sizeIdx=" + sizeIdx;
                 long handle = s.allocate();
                 assert handle >= 0;
-                s.chunk.initBufWithSubpage(buf, null, handle, reqCapacity, cache);
+                s.chunk.initBufWithSubpage(buf, null, handle, reqCapacity, cache, false);
             }
         } finally {
             head.unlock();
@@ -214,6 +215,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         // Add a new chunk.
         PoolChunk<T> c = newChunk(sizeClass.pageSize, sizeClass.nPSizes, sizeClass.pageShifts, sizeClass.chunkSize);
+        PooledByteBufAllocator.onAllocateChunk(c, true);
         boolean success = c.allocate(buf, reqCapacity, sizeIdx, threadCache);
         assert success;
         qInit.add(c);
@@ -226,6 +228,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     private void allocateHuge(PooledByteBuf<T> buf, int reqCapacity) {
         PoolChunk<T> chunk = newUnpooledChunk(reqCapacity);
+        PooledByteBufAllocator.onAllocateChunk(chunk, false);
         activeBytesHuge.add(chunk.chunkSize());
         buf.initUnpooled(chunk, reqCapacity);
         allocationsHuge.increment();
@@ -397,7 +400,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         } finally {
             unlock();
         }
-        return allocationsSmall.value() + allocsNormal + allocationsHuge.value();
+        return allocationsSmall.sum() + allocsNormal + allocationsHuge.sum();
     }
 
     @Override
@@ -407,7 +410,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numSmallAllocations() {
-        return allocationsSmall.value();
+        return allocationsSmall.sum();
     }
 
     @Override
@@ -439,7 +442,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         } finally {
             unlock();
         }
-        return deallocs + deallocationsHuge.value();
+        return deallocs + deallocationsHuge.sum();
     }
 
     @Override
@@ -479,18 +482,18 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numHugeAllocations() {
-        return allocationsHuge.value();
+        return allocationsHuge.sum();
     }
 
     @Override
     public long numHugeDeallocations() {
-        return deallocationsHuge.value();
+        return deallocationsHuge.sum();
     }
 
     @Override
     public  long numActiveAllocations() {
-        long val = allocationsSmall.value() + allocationsHuge.value()
-                - deallocationsHuge.value();
+        long val = allocationsSmall.sum() + allocationsHuge.sum()
+                - deallocationsHuge.sum();
         lock();
         try {
             val += allocationsNormal - (deallocationsSmall + deallocationsNormal);
@@ -541,7 +544,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     @Override
     public long numActiveBytes() {
-        long val = activeBytesHuge.value();
+        long val = activeBytesHuge.sum();
         lock();
         try {
             for (int i = 0; i < chunkListMetrics.size(); i++) {
@@ -560,7 +563,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
      * pinned memory is not accessible for use by any other allocation, until the buffers using have all been released.
      */
     public long numPinnedBytes() {
-        long val = activeBytesHuge.value(); // Huge chunks are exact-sized for the buffers they were allocated to.
+        long val = activeBytesHuge.sum(); // Huge chunks are exact-sized for the buffers they were allocated to.
         for (int i = 0; i < chunkListMetrics.size(); i++) {
             for (PoolChunkMetric m: chunkListMetrics.get(i)) {
                 val += ((PoolChunk<?>) m).pinnedBytes();
@@ -684,16 +687,17 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                 return chunk; // The parameters are always the same, so it's fine to reuse a previously allocated chunk.
             }
             return new PoolChunk<byte[]>(
-                    this, null, newByteArray(chunkSize), pageSize, pageShifts, chunkSize, maxPageIdx);
+                    this, null, null, newByteArray(chunkSize), pageSize, pageShifts, chunkSize, maxPageIdx);
         }
 
         @Override
         protected PoolChunk<byte[]> newUnpooledChunk(int capacity) {
-            return new PoolChunk<byte[]>(this, null, newByteArray(capacity), capacity);
+            return new PoolChunk<byte[]>(this, null, null, newByteArray(capacity), capacity);
         }
 
         @Override
         protected void destroyChunk(PoolChunk<byte[]> chunk) {
+            PooledByteBufAllocator.onDeallocateChunk(chunk, !chunk.unpooled);
             // Rely on GC. But keep one chunk for reuse.
             if (!chunk.unpooled && lastDestroyedChunk.get() == null) {
                 lastDestroyedChunk.set(chunk); // The check-and-set does not need to be atomic.
@@ -730,41 +734,43 @@ abstract class PoolArena<T> implements PoolArenaMetric {
         @Override
         protected PoolChunk<ByteBuffer> newChunk(int pageSize, int maxPageIdx, int pageShifts, int chunkSize) {
             if (sizeClass.directMemoryCacheAlignment == 0) {
-                ByteBuffer memory = allocateDirect(chunkSize);
-                return new PoolChunk<ByteBuffer>(this, memory, memory, pageSize, pageShifts,
+                CleanableDirectBuffer cleanableDirectBuffer = allocateDirect(chunkSize);
+                ByteBuffer memory = cleanableDirectBuffer.buffer();
+                return new PoolChunk<ByteBuffer>(this, cleanableDirectBuffer, memory, memory, pageSize, pageShifts,
                         chunkSize, maxPageIdx);
             }
 
-            final ByteBuffer base = allocateDirect(chunkSize + sizeClass.directMemoryCacheAlignment);
+            CleanableDirectBuffer cleanableDirectBuffer = allocateDirect(
+                    chunkSize + sizeClass.directMemoryCacheAlignment);
+            final ByteBuffer base = cleanableDirectBuffer.buffer();
             final ByteBuffer memory = PlatformDependent.alignDirectBuffer(base, sizeClass.directMemoryCacheAlignment);
-            return new PoolChunk<ByteBuffer>(this, base, memory, pageSize,
+            return new PoolChunk<ByteBuffer>(this, cleanableDirectBuffer, base, memory, pageSize,
                     pageShifts, chunkSize, maxPageIdx);
         }
 
         @Override
         protected PoolChunk<ByteBuffer> newUnpooledChunk(int capacity) {
             if (sizeClass.directMemoryCacheAlignment == 0) {
-                ByteBuffer memory = allocateDirect(capacity);
-                return new PoolChunk<ByteBuffer>(this, memory, memory, capacity);
+                CleanableDirectBuffer cleanableDirectBuffer = allocateDirect(capacity);
+                ByteBuffer memory = cleanableDirectBuffer.buffer();
+                return new PoolChunk<ByteBuffer>(this, cleanableDirectBuffer, memory, memory, capacity);
             }
 
-            final ByteBuffer base = allocateDirect(capacity + sizeClass.directMemoryCacheAlignment);
+            CleanableDirectBuffer cleanableDirectBuffer = allocateDirect(
+                    capacity + sizeClass.directMemoryCacheAlignment);
+            final ByteBuffer base = cleanableDirectBuffer.buffer();
             final ByteBuffer memory = PlatformDependent.alignDirectBuffer(base, sizeClass.directMemoryCacheAlignment);
-            return new PoolChunk<ByteBuffer>(this, base, memory, capacity);
+            return new PoolChunk<ByteBuffer>(this, cleanableDirectBuffer, base, memory, capacity);
         }
 
-        private static ByteBuffer allocateDirect(int capacity) {
-            return PlatformDependent.useDirectBufferNoCleaner() ?
-                    PlatformDependent.allocateDirectNoCleaner(capacity) : ByteBuffer.allocateDirect(capacity);
+        private static CleanableDirectBuffer allocateDirect(int capacity) {
+            return PlatformDependent.allocateDirect(capacity);
         }
 
         @Override
         protected void destroyChunk(PoolChunk<ByteBuffer> chunk) {
-            if (PlatformDependent.useDirectBufferNoCleaner()) {
-                PlatformDependent.freeDirectNoCleaner((ByteBuffer) chunk.base);
-            } else {
-                PlatformDependent.freeDirectBuffer((ByteBuffer) chunk.base);
-            }
+            PooledByteBufAllocator.onDeallocateChunk(chunk, !chunk.unpooled);
+            chunk.cleanable.clean();
         }
 
         @Override

@@ -48,6 +48,10 @@ import java.io.Serializable;
 public class ObjectEncoder extends MessageToByteEncoder<Serializable> {
     private static final byte[] LENGTH_PLACEHOLDER = new byte[4];
 
+    public ObjectEncoder() {
+        super(Serializable.class);
+    }
+
     @Override
     protected void encode(ChannelHandlerContext ctx, Serializable msg, ByteBuf out) throws Exception {
         int startIdx = out.writerIndex();

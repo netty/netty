@@ -39,6 +39,7 @@ import org.bouncycastle.jcajce.spec.EdDSAParameterSpec;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.lang.reflect.Method;
 import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.URI;
@@ -62,6 +63,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.TreeSet;
@@ -116,6 +118,7 @@ public final class CertificateBuilder {
     private static final DistributionPoint[] EMPTY_DIST_POINTS = new DistributionPoint[0];
     private static final AlgorithmParameterSpec UNSUPPORTED_SPEC = new AlgorithmParameterSpec() {
     };
+    private static final String UNSUPPORTED_SIGN = "UNSUPPORTED_SIGN";
 
     SecureRandom random;
     Algorithm algorithm = Algorithm.ecp256;
@@ -658,6 +661,10 @@ public final class CertificateBuilder {
         if (publicKey != null) {
             throw new IllegalStateException("Cannot create a self-signed certificate with a public key from a CSR.");
         }
+        if (!algorithm.supportSigning()) {
+            throw new IllegalStateException("Cannot create a self-signed certificate with a " +
+                    "key algorithm that does not support signing: " + algorithm);
+        }
         KeyPair keyPair = generateKeyPair();
 
         V3TBSCertificateGenerator generator = createCertBuilder(subject, subject, keyPair, algorithm.signatureType);
@@ -736,7 +743,7 @@ public final class CertificateBuilder {
             return "SHA512withECDSA";
         }
         if (key instanceof DSAPublicKey) {
-            throw new IllegalArgumentException("DSA keys are not supported because they are obsolete.");
+            throw new IllegalArgumentException("DSA keys are not supported because they are obsolete");
         }
         String keyAlgorithm = key.getAlgorithm();
         if ("Ed25519".equals(keyAlgorithm) || "1.3.101.112".equals(keyAlgorithm)) {
@@ -753,6 +760,19 @@ public final class CertificateBuilder {
             if (encoded.length <= 69) {
                 return "Ed448";
             }
+        }
+        if ("ML-DSA".equals(keyAlgorithm)) {
+            try {
+                Method getParams = Class.forName("java.security.AsymmetricKey").getMethod("getParams");
+                Object params = getParams.invoke(key);
+                Method getName = params.getClass().getMethod("getName");
+                return (String) getName.invoke(params);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Cannot get algorithm name for ML-DSA key", e);
+            }
+        }
+        if ("ML-KEM".equals(keyAlgorithm)) {
+            throw new IllegalArgumentException("ML-KEM keys cannot be used for signing");
         }
         throw new IllegalArgumentException("Don't know what signature algorithm is best for " + key);
     }
@@ -935,7 +955,31 @@ public final class CertificateBuilder {
          * <p>
          * This algorithm was added in Java 24, and may not be supported everywhere.
          */
-        mlDsa87("ML-DSA", namedParameterSpec("ML-DSA-87"), "ML-DSA-87");
+        mlDsa87("ML-DSA", namedParameterSpec("ML-DSA-87"), "ML-DSA-87"),
+        /**
+         * The ML-KEM-512 algorithm is the NIST FIPS 203 version of the post-quantum Kyber algorithm.
+         * It has 128-bits of classical security strength, and is claimed to meet NIST Level 1
+         * quantum security strength (equivalent to finding the key for an AES-1128 block).
+         * <p>
+         * This algorithm was added in Java 24, and may not be supported everywhere.
+         */
+        mlKem512("ML-KEM", namedParameterSpec("ML-KEM-512"), UNSUPPORTED_SIGN),
+        /**
+         * The ML-KEM-768 algorithm is the NIST FIPS 203 version of the post-quantum Kyber algorithm.
+         * It has 192-bits of classical security strength, and is claimed to meet NIST Level 3
+         * quantum security strength (equivalent to finding the key for an AES-192 block).
+         * <p>
+         * This algorithm was added in Java 24, and may not be supported everywhere.
+         */
+        mlKem768("ML-KEM", namedParameterSpec("ML-KEM-768"), UNSUPPORTED_SIGN),
+        /**
+         * The ML-KEM-1024 algorithm is the NIST FIPS 203 version of the post-quantum Kyber algorithm.
+         * It has 256-bits of classical security strength, and is claimed to meet NIST Level 5
+         * quantum security strength (equivalent to finding the key for an AES-256 block).
+         * <p>
+         * This algorithm was added in Java 24, and may not be supported everywhere.
+         */
+        mlKem1024("ML-KEM", namedParameterSpec("ML-KEM-1024"), UNSUPPORTED_SIGN);
 
         final String keyType;
         final AlgorithmParameterSpec parameterSpec;
@@ -976,26 +1020,7 @@ public final class CertificateBuilder {
             if (parameterSpec == UNSUPPORTED_SPEC) {
                 throw new UnsupportedOperationException("This algorithm is not supported: " + this);
             }
-            if (this == mlDsa44 || this == mlDsa65 || this == mlDsa87) {
-                return genMlDsaKeyPair(secureRandom);
-            }
-            return genKeyPair(secureRandom);
-        }
 
-        private KeyPair genMlDsaKeyPair(SecureRandom secureRandom) throws GeneralSecurityException {
-            final byte[] seed = new byte[32];
-            KeyPair keyPair = genKeyPair(new SecureRandom() {
-                @Override
-                public void nextBytes(byte[] bytes) {
-                    assert bytes.length == 32;
-                    secureRandom.nextBytes(bytes);
-                    System.arraycopy(bytes, 0, seed, 0, seed.length);
-                }
-            });
-            return new KeyPair(keyPair.getPublic(), new MLDSASeedPrivateKey(keyPair.getPrivate(), this, seed));
-        }
-
-        private KeyPair genKeyPair(SecureRandom secureRandom) throws GeneralSecurityException {
             KeyPairGenerator keyGen = Algorithms.keyPairGenerator(keyType, parameterSpec, secureRandom);
             return keyGen.generateKeyPair();
         }
@@ -1006,6 +1031,20 @@ public final class CertificateBuilder {
          */
         public boolean isSupported() {
             return parameterSpec != UNSUPPORTED_SPEC;
+        }
+
+        /**
+         * Discern if this algorithm can be used for signing.
+         * Algorithms need to support signing in order to create self-signed certificates,
+         * or to be used as signing issuers of other certificates.
+         * <p>
+         * Note that this method only inspects a property of the algorithm, and does not check if the algorithm
+         * {@linkplain #isSupported() is supported} in your environment.
+         *
+         * @return {@code true} if this algorithm can be used for signing, otherwise {@code false}.
+         */
+        public boolean supportSigning() {
+            return !Objects.equals(signatureType, UNSUPPORTED_SIGN);
         }
     }
 

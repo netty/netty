@@ -33,7 +33,7 @@ import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.ObjectUtil;
+import io.netty.util.concurrent.Ticker;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -42,6 +42,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
 import java.util.ArrayDeque;
+import java.util.Objects;
 import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
@@ -61,7 +62,7 @@ public class EmbeddedChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA_NO_DISCONNECT = new ChannelMetadata(false);
     private static final ChannelMetadata METADATA_DISCONNECT = new ChannelMetadata(true);
 
-    private final EmbeddedEventLoop loop = new EmbeddedEventLoop();
+    private final EmbeddedEventLoop loop;
     private final ChannelFutureListener recordExceptionListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
@@ -83,7 +84,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * Create a new instance with an {@link EmbeddedChannelId} and an empty pipeline.
      */
     public EmbeddedChannel() {
-        this(EMPTY_HANDLERS);
+        this(builder());
     }
 
     /**
@@ -92,7 +93,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param channelId the {@link ChannelId} that will be used to identify this channel
      */
     public EmbeddedChannel(ChannelId channelId) {
-        this(channelId, EMPTY_HANDLERS);
+        this(builder().channelId(channelId));
     }
 
     /**
@@ -101,7 +102,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param handlers the {@link ChannelHandler}s which will be add in the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelHandler... handlers) {
-        this(EmbeddedChannelId.INSTANCE, handlers);
+        this(builder().handlers(handlers));
     }
 
     /**
@@ -112,7 +113,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
      */
     public EmbeddedChannel(boolean hasDisconnect, ChannelHandler... handlers) {
-        this(EmbeddedChannelId.INSTANCE, hasDisconnect, handlers);
+        this(builder().hasDisconnect(hasDisconnect).handlers(handlers));
     }
 
     /**
@@ -125,7 +126,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
      */
     public EmbeddedChannel(boolean register, boolean hasDisconnect, ChannelHandler... handlers) {
-        this(EmbeddedChannelId.INSTANCE, register, hasDisconnect, handlers);
+        this(builder().register(register).hasDisconnect(hasDisconnect).handlers(handlers));
     }
 
     /**
@@ -136,7 +137,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelId channelId, ChannelHandler... handlers) {
-        this(channelId, false, handlers);
+        this(builder().channelId(channelId).handlers(handlers));
     }
 
     /**
@@ -149,7 +150,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
      */
     public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, ChannelHandler... handlers) {
-        this(channelId, true, hasDisconnect, handlers);
+        this(builder().channelId(channelId).hasDisconnect(hasDisconnect).handlers(handlers));
     }
 
     /**
@@ -165,7 +166,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public EmbeddedChannel(ChannelId channelId, boolean register, boolean hasDisconnect,
                            ChannelHandler... handlers) {
-        this(null, channelId, register, hasDisconnect, handlers);
+        this(builder().channelId(channelId).register(register).hasDisconnect(hasDisconnect).handlers(handlers));
     }
 
     /**
@@ -182,10 +183,12 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public EmbeddedChannel(Channel parent, ChannelId channelId, boolean register, boolean hasDisconnect,
                            final ChannelHandler... handlers) {
-        super(parent, channelId);
-        metadata = metadata(hasDisconnect);
-        config = new DefaultChannelConfig(this);
-        setup(register, handlers);
+        this(builder()
+                .parent(parent)
+                .channelId(channelId)
+                .register(register)
+                .hasDisconnect(hasDisconnect)
+                .handlers(handlers));
     }
 
     /**
@@ -200,10 +203,25 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     public EmbeddedChannel(ChannelId channelId, boolean hasDisconnect, final ChannelConfig config,
                            final ChannelHandler... handlers) {
-        super(null, channelId);
-        metadata = metadata(hasDisconnect);
-        this.config = ObjectUtil.checkNotNull(config, "config");
-        setup(true, handlers);
+        this(builder().channelId(channelId).hasDisconnect(hasDisconnect).config(config).handlers(handlers));
+    }
+
+    /**
+     * Create a new instance with the configuration from the given builder. This method is {@code protected} for use by
+     * subclasses; Otherwise, please use {@link Builder#build()}.
+     *
+     * @param builder The builder
+     */
+    protected EmbeddedChannel(Builder builder) {
+        super(builder.parent, builder.channelId);
+        loop = new EmbeddedEventLoop(builder.ticker == null ? new EmbeddedEventLoop.FreezableTicker() : builder.ticker);
+        metadata = metadata(builder.hasDisconnect);
+        config = builder.config == null ? new DefaultChannelConfig(this) : builder.config;
+        if (builder.handler == null) {
+            setup(builder.register, builder.handlers);
+        } else {
+            setup(builder.register, builder.handler);
+        }
     }
 
     private static ChannelMetadata metadata(boolean hasDisconnect) {
@@ -211,11 +229,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     private void setup(boolean register, final ChannelHandler... handlers) {
-        ObjectUtil.checkNotNull(handlers, "handlers");
         ChannelPipeline p = pipeline();
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ChannelPipeline pipeline = ch.pipeline();
                 for (ChannelHandler h: handlers) {
                     if (h == null) {
@@ -225,6 +242,15 @@ public class EmbeddedChannel extends AbstractChannel {
                 }
             }
         });
+        if (register) {
+            ChannelFuture future = loop.register(this);
+            assert future.isDone();
+        }
+    }
+
+    private void setup(boolean register, final ChannelHandler handler) {
+        ChannelPipeline p = pipeline();
+        p.addLast(handler);
         if (register) {
             ChannelFuture future = loop.register(this);
             assert future.isDone();
@@ -865,12 +891,22 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     }
 
+    private EmbeddedEventLoop.FreezableTicker freezableTicker() {
+        Ticker ticker = eventLoop().ticker();
+        if (ticker instanceof EmbeddedEventLoop.FreezableTicker) {
+            return (EmbeddedEventLoop.FreezableTicker) ticker;
+        } else {
+            throw new IllegalStateException(
+                    "EmbeddedChannel constructed with custom ticker, time manipulation methods are unavailable.");
+        }
+    }
+
     /**
      * Advance the clock of the event loop of this channel by the given duration. Any scheduled tasks will execute
      * sooner by the given time (but {@link #runScheduledPendingTasks()} still needs to be called).
      */
     public void advanceTimeBy(long duration, TimeUnit unit) {
-        embeddedEventLoop().advanceTimeBy(unit.toNanos(duration));
+        freezableTicker().advance(duration, unit);
     }
 
     /**
@@ -879,7 +915,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * {@link #advanceTimeBy(long, TimeUnit) advance time} manually so that scheduled tasks execute.
      */
     public void freezeTime() {
-        embeddedEventLoop().freezeTime();
+        freezableTicker().freezeTime();
     }
 
     /**
@@ -890,7 +926,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * {@link #runScheduledPendingTasks()}).
      */
     public void unfreezeTime() {
-        embeddedEventLoop().unfreezeTime();
+        freezableTicker().unfreezeTime();
     }
 
     /**
@@ -1030,6 +1066,129 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     protected void handleInboundMessage(Object msg) {
         inboundMessages().add(msg);
+    }
+
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    public static final class Builder {
+        Channel parent;
+        ChannelId channelId = EmbeddedChannelId.INSTANCE;
+        boolean register = true;
+        boolean hasDisconnect;
+        //you should use either handlers or handler variable, but not both.
+        ChannelHandler[] handlers = EMPTY_HANDLERS;
+        ChannelHandler handler;
+        ChannelConfig config;
+        Ticker ticker;
+
+        private Builder() {
+        }
+
+        /**
+         * The parent {@link Channel} of this {@link EmbeddedChannel}.
+         *
+         * @param parent the parent {@link Channel} of this {@link EmbeddedChannel}.
+         * @return This builder
+         */
+        public Builder parent(Channel parent) {
+            this.parent = parent;
+            return this;
+        }
+
+        /**
+         * The {@link ChannelId} that will be used to identify this channel.
+         *
+         * @param channelId the {@link ChannelId} that will be used to identify this channel
+         * @return This builder
+         */
+        public Builder channelId(ChannelId channelId) {
+            this.channelId = Objects.requireNonNull(channelId, "channelId");
+            return this;
+        }
+
+        /**
+         * {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the constructor. If
+         * {@code false} the user will need to call {@link #register()}.
+         *
+         * @param register {@code true} if this {@link Channel} is registered to the {@link EventLoop} in the
+         *                 constructor. If {@code false} the user will need to call {@link #register()}.
+         * @return This builder
+         */
+        public Builder register(boolean register) {
+            this.register = register;
+            return this;
+        }
+
+        /**
+         * {@code false} if this {@link Channel} will delegate {@link #disconnect()} to {@link #close()}, {@code true}
+         * otherwise.
+         *
+         * @param hasDisconnect {@code false} if this {@link Channel} will delegate {@link #disconnect()} to
+         *                      {@link #close()}, {@code true} otherwise
+         * @return This builder
+         */
+        public Builder hasDisconnect(boolean hasDisconnect) {
+            this.hasDisconnect = hasDisconnect;
+            return this;
+        }
+
+        /**
+         * The {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}.
+         *
+         * @param handlers the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
+         * @return This builder
+         */
+        public Builder handlers(ChannelHandler... handlers) {
+            this.handlers = Objects.requireNonNull(handlers, "handlers");
+            this.handler = null;
+            return this;
+        }
+
+        /**
+         * The {@link ChannelHandler} which will be added to the {@link ChannelPipeline}.
+         *
+         * @param handler the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
+         * @return This builder
+         */
+        public Builder handlers(ChannelHandler handler) {
+            this.handler = Objects.requireNonNull(handler, "handler");
+            this.handlers = null;
+            return this;
+        }
+
+        /**
+         * The {@link ChannelConfig} which will be returned by {@link #config()}.
+         *
+         * @param config the {@link ChannelConfig} which will be returned by {@link #config()}
+         * @return This builder
+         */
+        public Builder config(ChannelConfig config) {
+            this.config = Objects.requireNonNull(config, "config");
+            return this;
+        }
+
+        /**
+         * Configure a custom ticker for this event loop.
+         *
+         * @param ticker The custom ticker
+         * @return This builder
+         */
+        public Builder ticker(Ticker ticker) {
+            this.ticker = ticker;
+            return this;
+        }
+
+        /**
+         * Create the channel. If you wish to extend {@link EmbeddedChannel}, please use the
+         * {@link #EmbeddedChannel(Builder)} constructor instead.
+         *
+         * @return The channel
+         */
+        public EmbeddedChannel build() {
+            return new EmbeddedChannel(this);
+        }
     }
 
     private final class EmbeddedUnsafe extends AbstractUnsafe {

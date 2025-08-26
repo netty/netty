@@ -21,9 +21,11 @@ import java.io.File;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.List;
 import java.util.Map;
 
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
@@ -178,7 +180,7 @@ public final class OpenSslClientContext extends OpenSslContext {
         this(toX509CertificatesInternal(trustCertCollectionFile), trustManagerFactory,
                 toX509CertificatesInternal(keyCertChainFile), toPrivateKeyInternal(keyFile, keyPassword),
                 keyPassword, keyManagerFactory, ciphers, cipherFilter, apn, null, sessionCacheSize,
-                sessionTimeout, false, KeyStore.getDefaultType(), null, null);
+                sessionTimeout, false, KeyStore.getDefaultType(), null, null, null);
     }
 
     OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
@@ -186,15 +188,16 @@ public final class OpenSslClientContext extends OpenSslContext {
                          KeyManagerFactory keyManagerFactory, Iterable<String> ciphers,
                          CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn, String[] protocols,
                          long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore,
-                         String endpointIdentificationAlgorithm, ResumptionController resumptionController,
+                         String endpointIdentificationAlgorithm, List<SNIServerName> serverNames,
+                         ResumptionController resumptionController,
                          Map.Entry<SslContextOption<?>, Object>... options)
             throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain, ClientAuth.NONE, protocols, false,
-                endpointIdentificationAlgorithm, enableOcsp, resumptionController, options);
+                endpointIdentificationAlgorithm, enableOcsp, serverNames, resumptionController, options);
         boolean success = false;
         try {
             OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
-            sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
+            sessionContext = newSessionContext(this, ctx, engines, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
                                                sessionCacheSize, sessionTimeout, resumptionController);
             success = true;

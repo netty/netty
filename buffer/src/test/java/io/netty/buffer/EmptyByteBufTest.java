@@ -18,10 +18,11 @@ package io.netty.buffer;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -65,26 +66,25 @@ public class EmptyByteBufTest {
     @Test
     public void testArray() {
         EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
-        assertThat(empty.hasArray(), is(true));
-        assertThat(empty.array().length, is(0));
-        assertThat(empty.arrayOffset(), is(0));
+        assertTrue(empty.hasArray());
+        assertEquals(0, empty.array().length);
+        assertEquals(0, empty.arrayOffset());
     }
 
     @Test
     public void testNioBuffer() {
         EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
-        assertThat(empty.nioBufferCount(), is(1));
-        assertThat(empty.nioBuffer().position(), is(0));
-        assertThat(empty.nioBuffer().limit(), is(0));
-        assertThat(empty.nioBuffer(), is(sameInstance(empty.nioBuffer())));
-        assertThat(empty.nioBuffer(), is(sameInstance(empty.internalNioBuffer(empty.readerIndex(), 0))));
+        assertEquals(1, empty.nioBufferCount());
+        assertEquals(0, empty.nioBuffer().position());
+        assertEquals(0, empty.nioBuffer().limit());
+        assertSame(empty.nioBuffer(), empty.internalNioBuffer(empty.readerIndex(), 0));
     }
 
     @Test
     public void testMemoryAddress() {
         EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
         if (empty.hasMemoryAddress()) {
-            assertThat(empty.memoryAddress(), is(not(0L)));
+            assertNotEquals(0L, empty.memoryAddress());
         } else {
             try {
                 empty.memoryAddress();
@@ -110,6 +110,18 @@ public class EmptyByteBufTest {
     public void testGetCharSequence() {
         EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
         assertEquals("", empty.readCharSequence(0, CharsetUtil.US_ASCII));
+    }
+
+    @Test
+    public void testReadString() {
+        EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
+        assertEquals("", empty.readString(0, CharsetUtil.US_ASCII));
+    }
+
+    @Test
+    public void testReadStringThrowsIndexOutOfBoundsException() {
+        EmptyByteBuf empty = new EmptyByteBuf(UnpooledByteBufAllocator.DEFAULT);
+        assertThrows(IndexOutOfBoundsException.class, () -> empty.readString(1, CharsetUtil.US_ASCII));
     }
 
 }

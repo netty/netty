@@ -1,0 +1,33 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: netty:centos-7-21
+    build:
+      args:
+        java_version : "21.0.6-zulu"
+
+  build:
+    image: netty:centos-7-21
+
+  build-leak:
+    image: netty:centos-7-21
+
+  build-with-oio-testsuite:
+    image: netty:centos-7-21
+
+  build-boringssl-static:
+    image: netty:centos-7-21
+
+  build-leak-boringssl-static:
+    image: netty:centos-7-21
+
+  build-boringssl-snapshot:
+    image: netty:centos-7-21
+
+  build-boringssl-static-jdk8-tests:
+    image: netty:centos-7-21
+
+  shell:
+    image: netty:centos-7-21

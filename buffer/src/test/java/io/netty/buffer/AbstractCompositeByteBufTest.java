@@ -18,7 +18,6 @@ package io.netty.buffer;
 import io.netty.util.ByteProcessor;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -31,19 +30,20 @@ import java.util.ConcurrentModificationException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.buffer;
 import static io.netty.buffer.Unpooled.compositeBuffer;
 import static io.netty.buffer.Unpooled.directBuffer;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
+import static io.netty.util.CharsetUtil.US_ASCII;
 import static io.netty.util.internal.EmptyArrays.EMPTY_BYTES;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -651,10 +651,10 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
     public void testComponentMustBeDuplicate() {
         CompositeByteBuf buf = compositeBuffer();
         buf.addComponent(buffer(4, 6).setIndex(1, 3));
-        assertThat(buf.component(0), is(instanceOf(AbstractDerivedByteBuf.class)));
-        assertThat(buf.component(0).capacity(), is(4));
-        assertThat(buf.component(0).maxCapacity(), is(6));
-        assertThat(buf.component(0).readableBytes(), is(2));
+        assertInstanceOf(AbstractDerivedByteBuf.class, buf.component(0));
+        assertEquals(4, buf.component(0).capacity());
+        assertEquals(6, buf.component(0).maxCapacity());
+        assertEquals(2, buf.component(0).readableBytes());
         buf.release();
     }
 
@@ -665,19 +665,19 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         ByteBuf c3 = buffer().writeByte(3).retain(2);
 
         CompositeByteBuf buf = compositeBuffer();
-        assertThat(buf.refCnt(), is(1));
+        assertEquals(1, buf.refCnt());
         buf.addComponents(c1, c2, c3);
 
-        assertThat(buf.refCnt(), is(1));
+        assertEquals(1, buf.refCnt());
 
         // Ensure that c[123]'s refCount did not change.
-        assertThat(c1.refCnt(), is(1));
-        assertThat(c2.refCnt(), is(2));
-        assertThat(c3.refCnt(), is(3));
+        assertEquals(1, c1.refCnt());
+        assertEquals(2, c2.refCnt());
+        assertEquals(3, c3.refCnt());
 
-        assertThat(buf.component(0).refCnt(), is(1));
-        assertThat(buf.component(1).refCnt(), is(2));
-        assertThat(buf.component(2).refCnt(), is(3));
+        assertEquals(1, buf.component(0).refCnt());
+        assertEquals(2, buf.component(1).refCnt());
+        assertEquals(3, buf.component(2).refCnt());
 
         c3.release(2);
         c2.release();
@@ -697,24 +697,24 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         bufB.addComponents(bufA);
 
         // Ensure that bufA.refCnt() did not change.
-        assertThat(bufA.refCnt(), is(1));
+        assertEquals(1, bufA.refCnt());
 
         // Ensure that c[123]'s refCnt did not change.
-        assertThat(c1.refCnt(), is(1));
-        assertThat(c2.refCnt(), is(2));
-        assertThat(c3.refCnt(), is(3));
+        assertEquals(1, c1.refCnt());
+        assertEquals(2, c2.refCnt());
+        assertEquals(3, c3.refCnt());
 
         // This should decrease bufA.refCnt().
         bufB.release();
-        assertThat(bufB.refCnt(), is(0));
+        assertEquals(0, bufB.refCnt());
 
         // Ensure bufA.refCnt() changed.
-        assertThat(bufA.refCnt(), is(0));
+        assertEquals(0, bufA.refCnt());
 
         // Ensure that c[123]'s refCnt also changed due to the deallocation of bufA.
-        assertThat(c1.refCnt(), is(0));
-        assertThat(c2.refCnt(), is(1));
-        assertThat(c3.refCnt(), is(2));
+        assertEquals(0, c1.refCnt());
+        assertEquals(1, c2.refCnt());
+        assertEquals(2, c3.refCnt());
 
         c3.release(2);
         c2.release();
@@ -727,20 +727,20 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         ByteBuf c3 = buffer().writeByte(3).retain(2);
 
         CompositeByteBuf buf = compositeBuffer();
-        assertThat(buf.refCnt(), is(1));
+        assertEquals(1, buf.refCnt());
 
         List<ByteBuf> components = new ArrayList<ByteBuf>();
         Collections.addAll(components, c1, c2, c3);
         buf.addComponents(components);
 
         // Ensure that c[123]'s refCount did not change.
-        assertThat(c1.refCnt(), is(1));
-        assertThat(c2.refCnt(), is(2));
-        assertThat(c3.refCnt(), is(3));
+        assertEquals(1, c1.refCnt());
+        assertEquals(2, c2.refCnt());
+        assertEquals(3, c3.refCnt());
 
-        assertThat(buf.component(0).refCnt(), is(1));
-        assertThat(buf.component(1).refCnt(), is(2));
-        assertThat(buf.component(2).refCnt(), is(3));
+        assertEquals(1, buf.component(0).refCnt());
+        assertEquals(2, buf.component(1).refCnt());
+        assertEquals(3, buf.component(2).refCnt());
 
         c3.release(2);
         c2.release();
@@ -756,11 +756,11 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
                         .addComponent(wrappedBuffer(new byte[]{3, 4})).slice(1, 2));
 
         ByteBuffer[] nioBuffers = buf.nioBuffers(0, 2);
-        assertThat(nioBuffers.length, is(2));
-        assertThat(nioBuffers[0].remaining(), is(1));
-        assertThat(nioBuffers[0].get(), is((byte) 2));
-        assertThat(nioBuffers[1].remaining(), is(1));
-        assertThat(nioBuffers[1].get(), is((byte) 3));
+        assertEquals(2, nioBuffers.length);
+        assertEquals(1, nioBuffers[0].remaining());
+        assertEquals(2, nioBuffers[0].get());
+        assertEquals(1, nioBuffers[1].remaining());
+        assertEquals(3, nioBuffers[1].get());
 
         buf.release();
     }
@@ -1456,7 +1456,7 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
 
     private void testDecompose(int offset, int length, int expectedListSize) {
         byte[] bytes = new byte[1024];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
         ByteBuf buf = wrappedBuffer(bytes);
 
         CompositeByteBuf composite = newCompositeBuffer();
@@ -1807,4 +1807,52 @@ public abstract class AbstractCompositeByteBufTest extends AbstractByteBufTest {
         assertArrayEquals(new byte[] {6, 5, 4, 3, 2, 1}, arrayDesc);
         buf.release();
     }
+
+    @Test
+    public void componentSliceFromFlattenedCompositeShouldHaveCorrectView() {
+        ByteBufAllocator alloc = new PooledByteBufAllocator();
+        ByteBuf buf = null;
+        CompositeByteBuf composite1 = null;
+        CompositeByteBuf composite2 = null;
+        ByteBuf component = null;
+
+        try {
+            buf = alloc.buffer(32).writeBytes("---01234".getBytes(US_ASCII));
+
+            composite1 = alloc.compositeBuffer(8).addFlattenedComponents(true, buf);
+            buf = null;
+
+            assertThat(composite1.readCharSequence(3, US_ASCII).toString()).isEqualTo("---");
+
+            composite2 = alloc.compositeBuffer(8).addFlattenedComponents(true, composite1);
+            composite1 = null;
+
+            assertThat(composite2.toString(US_ASCII)).isEqualTo("01234");
+
+            // Remove the last component from the cumulation, then add it back.
+            int tailComponentIndex = composite2.numComponents() - 1;
+            int tailStart = composite2.toByteIndex(tailComponentIndex);
+            component = composite2.componentSlice(tailComponentIndex);
+            assertThat(component.readableBytes()).isEqualTo(5);
+            assertThat(component.toString(US_ASCII)).isEqualTo("01234");
+
+            // Take temporary ownership of the component.
+            component.retain();
+
+            // Remove the component from the composite buf.
+            composite2.removeComponent(tailComponentIndex).setIndex(0, tailStart);
+
+            composite2.addFlattenedComponents(true, component);
+            component = null;
+
+            assertThat(composite2.toString(US_ASCII)).isEqualTo("01234");
+        } finally {
+            // On a success path, only composite2 will be non-null here.
+            ReferenceCountUtil.release(buf);
+            ReferenceCountUtil.release(composite1);
+            ReferenceCountUtil.release(composite2);
+            ReferenceCountUtil.release(component);
+        }
+    }
+
 }

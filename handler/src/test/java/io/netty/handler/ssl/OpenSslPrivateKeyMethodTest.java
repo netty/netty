@@ -38,8 +38,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.internal.ThreadLocalRandom;
-import org.hamcrest.Matchers;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -61,12 +59,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -93,7 +92,7 @@ public class OpenSslPrivateKeyMethodTest {
     public static void init() throws Exception {
         checkShouldUseKeyManagerFactory();
 
-        assumeTrue(OpenSsl.isBoringSSL());
+        assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         // Check if the cipher is supported at all which may not be the case for various JDK versions and OpenSSL API
         // implementations.
         assumeCipherAvailable(SslProvider.OPENSSL);
@@ -115,7 +114,7 @@ public class OpenSslPrivateKeyMethodTest {
 
     @AfterAll
     public static void destroy() {
-        if (OpenSsl.isBoringSSL()) {
+        if (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) {
             GROUP.shutdownGracefully();
             EXECUTOR.shutdown();
         }
@@ -374,7 +373,7 @@ public class OpenSslPrivateKeyMethodTest {
                         Throwable clientCause = clientSslHandler.handshakeFuture().await().cause();
                         Throwable serverCause = serverSslHandler.handshakeFuture().await().cause();
                         assertNotNull(clientCause);
-                        assertThat(serverCause, Matchers.instanceOf(SSLHandshakeException.class));
+                        assertInstanceOf(SSLHandshakeException.class, serverCause);
                     } finally {
                         client.close().sync();
                     }

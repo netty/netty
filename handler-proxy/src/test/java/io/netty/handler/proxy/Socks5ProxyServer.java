@@ -24,6 +24,7 @@ import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandResponse;
 import io.netty.handler.codec.socksx.v5.DefaultSocks5InitialResponse;
 import io.netty.handler.codec.socksx.v5.DefaultSocks5PasswordAuthResponse;
+import io.netty.handler.codec.socksx.v5.DefaultSocks5PrivateAuthResponse;
 import io.netty.handler.codec.socksx.v5.Socks5AddressType;
 import io.netty.handler.codec.socksx.v5.Socks5AuthMethod;
 import io.netty.handler.codec.socksx.v5.Socks5CommandRequest;
@@ -36,20 +37,25 @@ import io.netty.handler.codec.socksx.v5.Socks5InitialRequestDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthRequest;
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthRequestDecoder;
 import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthStatus;
+import io.netty.handler.codec.socksx.v5.Socks5PrivateAuthRequest;
+import io.netty.handler.codec.socksx.v5.Socks5PrivateAuthRequestDecoder;
+import io.netty.handler.codec.socksx.v5.Socks5PrivateAuthStatus;
 import io.netty.handler.codec.socksx.v5.Socks5ServerEncoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.internal.SocketUtils;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.util.Arrays;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 final class Socks5ProxyServer extends ProxyServer {
 
     private static final String ENCODER = "encoder";
     private static final String DECODER = "decoder";
+    private byte privateAuthMethod;
+    private byte[] privateToken;
 
     Socks5ProxyServer(boolean useSsl, TestMode testMode, InetSocketAddress destination) {
         super(useSsl, testMode, destination);
@@ -58,6 +64,14 @@ final class Socks5ProxyServer extends ProxyServer {
     Socks5ProxyServer(
             boolean useSsl, TestMode testMode, InetSocketAddress destination, String username, String password) {
         super(useSsl, testMode, destination, username, password);
+    }
+
+    Socks5ProxyServer(
+            boolean useSsl, TestMode testMode, InetSocketAddress destination, byte privateAuthMethod,
+            byte[] privateToken) {
+        super(useSsl, testMode, destination);
+        this.privateAuthMethod = privateAuthMethod;
+        this.privateToken = privateToken;
     }
 
     @Override
@@ -81,27 +95,70 @@ final class Socks5ProxyServer extends ProxyServer {
     }
 
     boolean authenticate(ChannelHandlerContext ctx, Object msg) {
-        if (username == null) {
+        if (username == null && privateToken == null) {
             ctx.pipeline().replace(DECODER, DECODER, new Socks5CommandRequestDecoder());
             ctx.write(new DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH));
             return true;
         }
 
         if (msg instanceof Socks5InitialRequest) {
+            Socks5InitialRequest initialRequest = (Socks5InitialRequest) msg;
+
+            if (privateToken != null) {
+                // Check if the client requested our private auth method
+                boolean hasPrivateMethod = false;
+                for (Socks5AuthMethod method : initialRequest.authMethods()) {
+                    if (method.byteValue() == privateAuthMethod) {
+                        hasPrivateMethod = true;
+                        break;
+                    }
+                }
+
+                if (hasPrivateMethod) {
+                    ctx.pipeline().replace(DECODER, DECODER, new Socks5PrivateAuthRequestDecoder());
+                    ctx.write(new DefaultSocks5InitialResponse(Socks5AuthMethod.valueOf(privateAuthMethod)));
+                    return false;
+                }
+            }
+
+            if (username != null) {
+                ctx.pipeline().replace(DECODER, DECODER, new Socks5PasswordAuthRequestDecoder());
+                ctx.write(new DefaultSocks5InitialResponse(Socks5AuthMethod.PASSWORD));
+                return false;
+            }
+
+            // Neither private nor password auth was matched
             ctx.pipeline().replace(DECODER, DECODER, new Socks5PasswordAuthRequestDecoder());
             ctx.write(new DefaultSocks5InitialResponse(Socks5AuthMethod.PASSWORD));
             return false;
         }
 
-        Socks5PasswordAuthRequest req = (Socks5PasswordAuthRequest) msg;
-        if (req.username().equals(username) && req.password().equals(password)) {
-            ctx.pipeline().replace(DECODER, DECODER, new Socks5CommandRequestDecoder());
-            ctx.write(new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.SUCCESS));
-            return true;
+        if (msg instanceof Socks5PasswordAuthRequest) {
+            Socks5PasswordAuthRequest req = (Socks5PasswordAuthRequest) msg;
+            if (req.username().equals(username) && req.password().equals(password)) {
+                ctx.pipeline().replace(DECODER, DECODER, new Socks5CommandRequestDecoder());
+                ctx.write(new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.SUCCESS));
+                return true;
+            }
+
+            ctx.pipeline().replace(DECODER, DECODER, new Socks5PasswordAuthRequestDecoder());
+            ctx.write(new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.FAILURE));
+            return false;
         }
 
-        ctx.pipeline().replace(DECODER, DECODER, new Socks5PasswordAuthRequestDecoder());
-        ctx.write(new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.FAILURE));
+        if (msg instanceof Socks5PrivateAuthRequest) {
+            Socks5PrivateAuthRequest req = (Socks5PrivateAuthRequest) msg;
+            if (Arrays.equals(req.privateToken(), privateToken)) {
+                ctx.pipeline().replace(DECODER, DECODER, new Socks5CommandRequestDecoder());
+                ctx.write(new DefaultSocks5PrivateAuthResponse(Socks5PrivateAuthStatus.SUCCESS));
+                return true;
+            }
+
+            ctx.pipeline().replace(DECODER, DECODER, new Socks5PrivateAuthRequestDecoder());
+            ctx.write(new DefaultSocks5PrivateAuthResponse(Socks5PrivateAuthStatus.FAILURE));
+            return false;
+        }
+
         return false;
     }
 
@@ -118,7 +175,7 @@ final class Socks5ProxyServer extends ProxyServer {
             }
 
             Socks5CommandRequest req = (Socks5CommandRequest) msg;
-            assertThat(req.type(), is(Socks5CommandType.CONNECT));
+            assertEquals(Socks5CommandType.CONNECT, req.type());
 
             Socks5CommandResponse res =
                     new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS, Socks5AddressType.IPv4);
@@ -150,7 +207,7 @@ final class Socks5ProxyServer extends ProxyServer {
             }
 
             Socks5CommandRequest req = (Socks5CommandRequest) msg;
-            assertThat(req.type(), is(Socks5CommandType.CONNECT));
+            assertEquals(Socks5CommandType.CONNECT, req.type());
 
             ctx.pipeline().addBefore(ctx.name(), "lineDecoder", new LineBasedFrameDecoder(64, false, true));
 

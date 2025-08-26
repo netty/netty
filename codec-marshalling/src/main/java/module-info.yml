@@ -18,4 +18,4 @@ requires:
   - module: io.netty.buffer
   - module: io.netty.transport
   - module: io.netty.codec
-  - module: jboss.marshalling
+  - module: org.jboss.marshalling

@@ -16,7 +16,6 @@
 
 package io.netty.handler.ssl;
 
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -24,6 +23,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -108,14 +108,14 @@ public final class CipherSuiteConverter {
      * Java-to-OpenSSL cipher suite conversion map
      * Note that the Java cipher suite has the protocol prefix (TLS_, SSL_)
      */
-    private static final ConcurrentMap<String, CachedValue> j2o = PlatformDependent.newConcurrentHashMap();
+    private static final ConcurrentMap<String, CachedValue> j2o = new ConcurrentHashMap<>();
 
     /**
      * OpenSSL-to-Java cipher suite conversion map.
      * Note that one OpenSSL cipher suite can be converted to more than one Java cipher suites because
      * a Java cipher suite has the protocol name prefix (TLS_, SSL_)
      */
-    private static final ConcurrentMap<String, Map<String, String>> o2j = PlatformDependent.newConcurrentHashMap();
+    private static final ConcurrentMap<String, Map<String, String>> o2j = new ConcurrentHashMap<>();
 
     private static final Map<String, String> j2oTls13;
     private static final Map<String, Map<String, String>> o2jTls13;
@@ -298,7 +298,7 @@ public final class CipherSuiteConverter {
      * Convert from OpenSSL cipher suite name convention to java cipher suite name convention.
      * @param openSslCipherSuite An OpenSSL cipher suite name.
      * @param protocol The cryptographic protocol (i.e. SSL, TLS, ...).
-     * @return The translated cipher suite name according to java conventions. This will not be {@code null}.
+     * @return The translated cipher suite name according to java conventions (or null if translation was not possible).
      */
     public static String toJava(String openSslCipherSuite, String protocol) {
         Map<String, String> p2j = o2j.get(openSslCipherSuite);

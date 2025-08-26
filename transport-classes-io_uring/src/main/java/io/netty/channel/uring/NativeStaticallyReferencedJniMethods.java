@@ -34,6 +34,7 @@ final class NativeStaticallyReferencedJniMethods {
     static native int sockCloexec();
     static native int afInet();
     static native int afInet6();
+    static native int afUnix();
     static native int sizeofSockaddrIn();
     static native int sizeofSockaddrIn6();
     static native int pageSize();
@@ -48,6 +49,10 @@ final class NativeStaticallyReferencedJniMethods {
     static native int sockaddrIn6OffsetofSin6ScopeId();
     static native int in6AddressOffsetofS6Addr();
     static native int sizeofSockaddrStorage();
+    static native int sizeofSockaddrUn();
+    static native int sockaddrUnOffsetofSunFamily();
+    static native int sockaddrUnOffsetofSunPath();
+    static native int maxSunPathLen();
     static native int sizeofSizeT();
     static native int sizeofIovec();
     static native int iovecOffsetofIovBase();
@@ -74,9 +79,14 @@ final class NativeStaticallyReferencedJniMethods {
     static native int iosqeBufferSelect();
     static native int msgFastopen();
     static native int cmsgSpace();
+    static native int cmsgSpaceForFd();
     static native int cmsgLen();
+    static native int cmsgLenForFd();
+    static native int msgControlLenForFd();
     static native int solUdp();
+    static native int solSocket();
     static native int udpSegment();
+    static native int scmRights();
     static native int cmsghdrOffsetofCmsgLen();
     static native int cmsghdrOffsetofCmsgLevel();
     static native int cmsghdrOffsetofCmsgType();
@@ -86,4 +96,5 @@ final class NativeStaticallyReferencedJniMethods {
     static native int ioUringBufferOffsetBid();
     static native int sizeofIoUringBuf();
     static native int tcpFastopenMode();
+    static native int maxSkbFrags();
 }

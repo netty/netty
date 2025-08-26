@@ -25,8 +25,6 @@ import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -58,10 +56,10 @@ public class DnsQueryTest {
                 new DefaultDnsQuestion("example.com", DnsRecordType.CNAME)));
 
         for (DnsQuery query: queries) {
-            assertThat(query.count(DnsSection.QUESTION), is(1));
-            assertThat(query.count(DnsSection.ANSWER), is(0));
-            assertThat(query.count(DnsSection.AUTHORITY), is(0));
-            assertThat(query.count(DnsSection.ADDITIONAL), is(0));
+            assertEquals(1, query.count(DnsSection.QUESTION));
+            assertEquals(0, query.count(DnsSection.ANSWER));
+            assertEquals(0, query.count(DnsSection.AUTHORITY));
+            assertEquals(0, query.count(DnsSection.ADDITIONAL));
 
             assertTrue(writeChannel.writeOutbound(query));
 

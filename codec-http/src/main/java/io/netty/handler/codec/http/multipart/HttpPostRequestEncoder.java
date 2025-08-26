@@ -35,7 +35,6 @@ import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.stream.ChunkedInput;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 
 import java.io.File;
@@ -46,12 +45,10 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
-import java.util.Map;
-import java.util.regex.Pattern;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static java.util.AbstractMap.SimpleImmutableEntry;
 
 /**
  * This encoder will help to encode Request for a FORM as POST.
@@ -94,16 +91,12 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         HTML5
     }
 
-    @SuppressWarnings("rawtypes")
-    private static final Map.Entry[] percentEncodings;
-
-    static {
-        percentEncodings = new Map.Entry[] {
-                new SimpleImmutableEntry<Pattern, String>(Pattern.compile("\\*"), "%2A"),
-                new SimpleImmutableEntry<Pattern, String>(Pattern.compile("\\+"), "%20"),
-                new SimpleImmutableEntry<Pattern, String>(Pattern.compile("~"), "%7E")
-        };
-    }
+    private static final String ASTERISK = "*";
+    private static final String PLUS = "+";
+    private static final String TILDE = "~";
+    private static final String ASTERISK_REPLACEMENT = "%2A";
+    private static final String PLUS_REPLACEMENT = "%20";
+    private static final String TILDE_REPLACEMENT = "%7E";
 
     /**
      * Factory used to create InterfaceHttpData
@@ -290,7 +283,7 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      */
     private static String getNewMultipartDelimiter() {
         // construct a generated delimiter
-        return Long.toHexString(PlatformDependent.threadLocalRandom().nextLong());
+        return Long.toHexString(ThreadLocalRandom.current().nextLong());
     }
 
     /**
@@ -832,7 +825,6 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
      * @throws ErrorDataEncoderException
      *             if the encoding is in error
      */
-    @SuppressWarnings("unchecked")
     private String encodeAttribute(String s, Charset charset) throws ErrorDataEncoderException {
         if (s == null) {
             return "";
@@ -840,10 +832,9 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         try {
             String encoded = URLEncoder.encode(s, charset.name());
             if (encoderMode == EncoderMode.RFC3986) {
-                for (Map.Entry<Pattern, String> entry : percentEncodings) {
-                    String replacement = entry.getValue();
-                    encoded = entry.getKey().matcher(encoded).replaceAll(replacement);
-                }
+                encoded = encoded.replace(ASTERISK, ASTERISK_REPLACEMENT)
+                                 .replace(PLUS, PLUS_REPLACEMENT)
+                                 .replace(TILDE, TILDE_REPLACEMENT);
             }
             return encoded;
         } catch (UnsupportedEncodingException e) {
@@ -969,11 +960,13 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
         ByteBuf delimiter = null;
         if (buffer.readableBytes() < size) {
             isKey = true;
+            currentData = null;
             delimiter = iterator.hasNext() ? wrappedBuffer("&".getBytes(charset)) : null;
         }
 
         // End for current InterfaceHttpData, need potentially more data
         if (buffer.capacity() == 0) {
+            isKey = true;
             currentData = null;
             if (currentBuffer == null) {
                 if (delimiter == null) {
@@ -1008,15 +1001,10 @@ public class HttpPostRequestEncoder implements ChunkedInput<HttpContent> {
             }
         }
 
-        // end for current InterfaceHttpData, need more data
-        if (currentBuffer.readableBytes() < HttpPostBodyUtil.chunkSize) {
-            currentData = null;
-            isKey = true;
-            return null;
+        if (currentBuffer.readableBytes() >= HttpPostBodyUtil.chunkSize) {
+            return new DefaultHttpContent(fillByteBuf());
         }
-
-        buffer = fillByteBuf();
-        return new DefaultHttpContent(buffer);
+        return null;
     }
 
     @Override

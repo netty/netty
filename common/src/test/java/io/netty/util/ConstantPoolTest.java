@@ -23,8 +23,9 @@ import java.util.Comparator;
 import java.util.Set;
 import java.util.TreeSet;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class ConstantPoolTest {
@@ -57,14 +58,14 @@ public class ConstantPoolTest {
     public void testUniqueness() {
         TestConstant a = pool.valueOf(new String("Leroy"));
         TestConstant b = pool.valueOf(new String("Leroy"));
-        assertThat(a, is(sameInstance(b)));
+        assertSame(a, b);
     }
 
     @Test
     public void testIdUniqueness() {
         TestConstant one = pool.valueOf("one");
         TestConstant two = pool.valueOf("two");
-        assertThat(one.id(), is(not(two.id())));
+        assertNotEquals(one.id(), two.id());
     }
 
     @Test
@@ -83,7 +84,7 @@ public class ConstantPoolTest {
         set.add(a);
 
         TestConstant[] array = set.toArray(new TestConstant[0]);
-        assertThat(array.length, is(5));
+        assertEquals(5, array.length);
 
         // Sort by name
         Arrays.sort(array, new Comparator<TestConstant>() {
@@ -93,16 +94,16 @@ public class ConstantPoolTest {
             }
         });
 
-        assertThat(array[0], is(sameInstance(a)));
-        assertThat(array[1], is(sameInstance(b)));
-        assertThat(array[2], is(sameInstance(c)));
-        assertThat(array[3], is(sameInstance(d)));
-        assertThat(array[4], is(sameInstance(e)));
+        assertSame(a, array[0]);
+        assertSame(b, array[1]);
+        assertSame(c, array[2]);
+        assertSame(d, array[3]);
+        assertSame(e, array[4]);
     }
 
     @Test
     public void testComposedName() {
         TestConstant a = pool.valueOf(Object.class, "A");
-        assertThat(a.name(), is("java.lang.Object#A"));
+        assertEquals("java.lang.Object#A", a.name());
     }
 }

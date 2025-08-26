@@ -37,7 +37,7 @@ import java.nio.charset.Charset;
  * indices on the fly because of internal optimizations made by {@link ByteBufUtil#writeAscii(ByteBuf, CharSequence)}
  * and {@link ByteBufUtil#writeUtf8(ByteBuf, CharSequence)}.
  */
-class WrappedByteBuf extends ByteBuf {
+public class WrappedByteBuf extends ByteBuf {
 
     protected final ByteBuf buf;
 
@@ -689,6 +689,11 @@ class WrappedByteBuf extends ByteBuf {
     @Override
     public CharSequence readCharSequence(int length, Charset charset) {
         return buf.readCharSequence(length, charset);
+    }
+
+    @Override
+    public String readString(int length, Charset charset) {
+        return buf.readString(length, charset);
     }
 
     @Override

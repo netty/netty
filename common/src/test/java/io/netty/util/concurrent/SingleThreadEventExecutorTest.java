@@ -17,7 +17,6 @@ package io.netty.util.concurrent;
 
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
-
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
@@ -36,8 +35,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -146,6 +143,7 @@ public class SingleThreadEventExecutorTest {
     }
 
     @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
     void testNotSuspendedUntilScheduledTaskIsCancelled() throws Exception {
         TestThreadFactory threadFactory = new TestThreadFactory();
         final SingleThreadEventExecutor executor = new SuspendingSingleThreadEventExecutor(threadFactory);
@@ -160,7 +158,12 @@ public class SingleThreadEventExecutorTest {
 
         // Now cancel the task which should allow the suspension to let the thread die once we call trySuspend() again
         assertTrue(future.cancel(false));
-        assertTrue(executor.trySuspend());
+        future.await();
+
+        // Call in a loop as removal of scheduled tasks from task queue might be lazy
+        while (!executor.trySuspend()) {
+            Thread.sleep(50);
+        }
 
         currentThread.join();
 
@@ -549,9 +552,9 @@ public class SingleThreadEventExecutorTest {
 
         f.sync();
 
-        assertThat(beforeTask.ran.get(), is(true));
-        assertThat(scheduledTask.ran.get(), is(true));
-        assertThat(afterTask.ran.get(), is(true));
+        assertTrue(beforeTask.ran.get());
+        assertTrue(scheduledTask.ran.get());
+        assertTrue(afterTask.ran.get());
         executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
     }
 
@@ -590,7 +593,7 @@ public class SingleThreadEventExecutorTest {
 
         f.sync();
 
-        assertThat(t.ran.get(), is(true));
+        assertTrue(t.ran.get());
         executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
     }
 

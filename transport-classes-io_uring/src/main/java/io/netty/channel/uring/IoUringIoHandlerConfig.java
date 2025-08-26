@@ -46,15 +46,44 @@ import java.util.Set;
  *   <tbody>
  *     <tr>
  *       <td>{@link IoUringIoHandlerConfig#setRingSize}</td>
- *       <td>Sets the size of the submission queue for the io_uring instance.</td>
+ *       <td>Sets the size of the submission queue for the io_uring instance.
+ *        <br>
+ *        If you want to submit a large number of io_uring requests at once,
+ *        it is recommended to properly configure this option.
+ *        The default value is 4096, which is sufficient for most scenarios.
+ *       </td>
  *     </tr>
  *     <tr>
  *       <td>{@link IoUringIoHandlerConfig#setMaxBoundedWorker}</td>
- *       <td>Defines the maximum number of bounded io_uring worker threads.</td>
+ *       <td>Defines the maximum number of bounded io_uring worker threads.
+ *        <br>
+ *        If you extend io_uring-related file operations based on Netty,
+ *        it is recommended to properly configure this option.
+ *        For more details, refer to the
+ *        <a href="https://man7.org/linux/man-pages/man3/io_uring_register_iowq_max_workers.3.html>
+ *            manual.
+ *        </a>
+ *       </td>
  *     </tr>
  *     <tr>
  *       <td>{@link IoUringIoHandlerConfig#setMaxUnboundedWorker}</td>
- *       <td>Defines the maximum number of unbounded io_uring worker threads.</td>
+ *       <td>Defines the maximum number of unbounded io_uring worker threads.
+ *        <br>
+ *        If you use FileRegion to perform `sendfile` operations in io_uring,
+ *        it is recommended to properly configure this option as otherwise you might
+ *        end up with an <a href="https://github.com/netty/netty/issues/15125>unexpected number of kernel threads</a>.
+ *       </td>
+ *     </tr>
+ *     <tr>
+ *       <td>{@link IoUringIoHandlerConfig#setCqSize}</td>
+ *       <td>Sets the size of the completionQueue queue for the io_uring instance.
+ *        <br>
+ *        If your current kernel supports some multishot variants
+ *        (such as IORING_RECV_MULTISHOT, IORING_ACCEPT_MULTISHOT) or IORING_RECVSEND_BUNDLE,
+ *        and you want to handle more CQEs in a single syscall
+ *        it is recommended to properly configure this option.
+ *        The default value is twice the ring size, which is sufficient for most scenarios.
+ *       </td>
  *     </tr>
  *     <tr>
  *       <td>{@link IoUringIoHandlerConfig#setBufferRingConfig}</td>
@@ -68,17 +97,15 @@ import java.util.Set;
  */
 
 public final class IoUringIoHandlerConfig {
-    private static final int DISABLE_SETUP_CQ_SIZE = -1;
 
-    private int ringSize = Native.DEFAULT_RING_SIZE;
-    private int cqSize = DISABLE_SETUP_CQ_SIZE;
+    private int ringSize = IoUring.DEFAULT_RING_SIZE;
+    private int cqSize = IoUring.DEFAULT_CQ_SIZE;
 
     private int maxBoundedWorker;
 
     private int maxUnboundedWorker;
 
     private Set<IoUringBufferRingConfig> bufferRingConfigs;
-    private IoUringBufferRingHandler bufferRingHandler;
 
     /**
      * Return the ring size of the io_uring instance.
@@ -172,20 +199,16 @@ public final class IoUringIoHandlerConfig {
      * Add a buffer ring configuration to the list of buffer ring configurations.
      * Each {@link IoUringBufferRingConfig} must have a different {@link IoUringBufferRingConfig#bufferGroupId()}.
      *
-     * @param bufferRingHandler the {@link IoUringBufferRingHandler} that is used to select the correct ring.
      * @param ringConfig        the buffer ring configuration to append.
      * @return reference to this, so the API can be used fluently
      */
-    public IoUringIoHandlerConfig setBufferRingConfig(IoUringBufferRingHandler bufferRingHandler,
-                                                      IoUringBufferRingConfig... ringConfig) {
-        Objects.requireNonNull(bufferRingHandler, "bufferRingHandler");
+    public IoUringIoHandlerConfig setBufferRingConfig(IoUringBufferRingConfig... ringConfig) {
         Set<IoUringBufferRingConfig> configSet = new HashSet<>(ringConfig.length);
         for (IoUringBufferRingConfig bufferRingConfig : ringConfig) {
             if (!configSet.add(bufferRingConfig)) {
                 throw new IllegalArgumentException("Duplicated buffer group id: " + bufferRingConfig.bufferGroupId());
             }
         }
-        this.bufferRingHandler = bufferRingHandler;
         bufferRingConfigs = configSet;
         return this;
     }
@@ -203,16 +226,7 @@ public final class IoUringIoHandlerConfig {
     }
 
     boolean needSetupCqeSize() {
-        return cqSize != DISABLE_SETUP_CQ_SIZE;
-    }
-
-    /**
-     * Returns the {@link IoUringBufferRingHandler} that is used or {@code null} if none.
-     *
-     * @return  the handler.
-     */
-    public IoUringBufferRingHandler getBufferRingHandler() {
-        return bufferRingHandler;
+        return cqSize != IoUring.DISABLE_SETUP_CQ_SIZE;
     }
 
     Set<IoUringBufferRingConfig> getInternBufferRingConfigs() {

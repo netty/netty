@@ -16,62 +16,172 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.channel.unix.Buffer;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.Arrays;
+import java.util.function.Consumer;
 
 final class IoUringBufferRing {
-    private final long ioUringBufRingAddr;
+    private static final VarHandle SHORT_HANDLE =
+            MethodHandles.byteBufferViewVarHandle(short[].class, ByteOrder.nativeOrder());
+    private final ByteBuffer ioUringBufRing;
+    private final int tailFieldPosition;
     private final short entries;
     private final short mask;
     private final short bufferGroupId;
     private final int ringFd;
-    // At the moment we are just always refill everything when there is nothing left.
-    // We could be smarter here as buffers[] is used as a ring buffer. So it would be possible to refill in between
-    // as well.
     private final ByteBuf[] buffers;
-    private final int chunkSize;
-    private final IoUringIoHandler source;
-    private final ByteBufAllocator byteBufAllocator;
+    private final IoUringBufferRingAllocator allocator;
+    private final boolean batchAllocation;
     private final IoUringBufferRingExhaustedEvent exhaustedEvent;
+    private final RingConsumer ringConsumer;
     private final boolean incremental;
-    private boolean hasSpareBuffer;
+    private final int batchSize;
+    private boolean corrupted;
+    private boolean closed;
+    private int usableBuffers;
+    private int allocatedBuffers;
+    private boolean needExpand;
+    private short lastGeneratedBid;
 
-    private short tail;
-    private int numBuffers;
-
-    IoUringBufferRing(int ringFd, long ioUringBufRingAddr,
-                      short entries, short bufferGroupId,
-                      int chunkSize, boolean incremental, IoUringIoHandler ioUringIoHandler,
-                      ByteBufAllocator byteBufAllocator) {
+    IoUringBufferRing(int ringFd, ByteBuffer ioUringBufRing,
+                      short entries, int batchSize, short bufferGroupId, boolean incremental,
+                      IoUringBufferRingAllocator allocator, boolean batchAllocation) {
         assert entries % 2 == 0;
-        this.ioUringBufRingAddr = ioUringBufRingAddr;
+        assert batchSize % 2 == 0;
+        this.batchSize = batchSize;
+        this.ioUringBufRing = ioUringBufRing;
+        this.tailFieldPosition = Native.IO_URING_BUFFER_RING_TAIL;
         this.entries = entries;
         this.mask = (short) (entries - 1);
         this.bufferGroupId = bufferGroupId;
         this.ringFd = ringFd;
         this.buffers = new ByteBuf[entries];
-        this.chunkSize = chunkSize;
         this.incremental = incremental;
-        this.source = ioUringIoHandler;
-        this.byteBufAllocator = byteBufAllocator;
+        this.allocator = allocator;
+        this.batchAllocation = batchAllocation;
+        this.ringConsumer  = new RingConsumer();
         this.exhaustedEvent = new IoUringBufferRingExhaustedEvent(bufferGroupId);
     }
 
-    void refillIfNecessary() {
-        if (!hasSpareBuffer) {
-            refill();
+    boolean isUsable() {
+        return !closed && !corrupted;
+    }
+
+    void initialize() {
+        // We already validated that batchSize is <= ring length.
+        fill((short) 0, batchSize);
+        allocatedBuffers = batchSize;
+    }
+
+    private final class RingConsumer implements Consumer<ByteBuf> {
+        private int expectedBuffers;
+        private short num;
+        private short bid;
+        private short oldTail;
+
+        short fill(short startBid, int numBuffers) {
+            // Fetch the tail once before allocate the batch.
+            oldTail = (short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition);
+
+            // At the moment we always start with bid 0 and so num and bid is the same. As this is more of an
+            // implementation detail it is better to still keep both separated.
+            this.num = 0;
+            this.bid = startBid;
+            this.expectedBuffers = numBuffers;
+            try {
+                if (batchAllocation) {
+                    allocator.allocateBatch(this, numBuffers);
+                } else {
+                    for (int i = 0; i < numBuffers; i++) {
+                        add(oldTail, bid++, num++, allocator.allocate());
+                    }
+                }
+            } catch (Throwable t) {
+                corrupted = true;
+                for (int i = 0; i < buffers.length; i++) {
+                    ByteBuf buffer = buffers[i];
+                    if (buffer != null) {
+                        buffer.release();
+                        buffers[i] = null;
+                    }
+                }
+                throw t;
+            }
+            // Now advanced the tail by the number of buffers that we just added.
+            SHORT_HANDLE.setRelease(ioUringBufRing, tailFieldPosition, (short) (oldTail + num));
+
+            return (short) (bid - 1);
+        }
+
+        void fill(short bid) {
+            short tail = (short) SHORT_HANDLE.get(ioUringBufRing, tailFieldPosition);
+            add(tail, bid, 0, allocator.allocate());
+            // Now advanced the tail by one
+            SHORT_HANDLE.setRelease(ioUringBufRing, tailFieldPosition, (short) (tail + 1));
+        }
+
+        @Override
+        public void accept(ByteBuf byteBuf) {
+            if (corrupted || closed) {
+                byteBuf.release();
+                throw new IllegalStateException("Already closed");
+            }
+            if (expectedBuffers == num) {
+                byteBuf.release();
+                throw new IllegalStateException("Produced too many buffers");
+            }
+            add(oldTail, bid++, num++, byteBuf);
+        }
+
+        private void add(int tail, short bid, int offset, ByteBuf byteBuf) {
+            short ringIndex = (short) ((tail + offset) & mask);
+            assert buffers[bid] == null;
+
+            long memoryAddress = IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex();
+            int writable = byteBuf.writableBytes();
+
+            //  see:
+            //  https://github.com/axboe/liburing/
+            //      blob/19134a8fffd406b22595a5813a3e319c19630ac9/src/include/liburing.h#L1561
+            int position = Native.SIZEOF_IOURING_BUF * ringIndex;
+            ioUringBufRing.putLong(position + Native.IOURING_BUFFER_OFFSETOF_ADDR, memoryAddress);
+            ioUringBufRing.putInt(position + Native.IOURING_BUFFER_OFFSETOF_LEN, writable);
+            ioUringBufRing.putShort(position + Native.IOURING_BUFFER_OFFSETOF_BID, bid);
+
+            buffers[bid] = byteBuf;
         }
     }
 
     /**
-     * Mark this buffer ring as exhausted. This should be done if a read failed because there were no more buffers left
-     * to use.
+     * Try to expand by adding more buffers to the ring if there is any space left, this will be done lazy.
+     *
+     * @return {@code true} if we can expand the number of buffers in the ring, {@code false} otherwise.
      */
-    void markExhausted() {
-        hasSpareBuffer = false;
-        source.idHandler.notifyAllBuffersUsed(bufferGroupId);
+    boolean expand() {
+        needExpand = true;
+        return allocatedBuffers < buffers.length;
+    }
+
+    private void fill(short startBid, int buffers) {
+        if (corrupted || closed) {
+            return;
+        }
+        assert buffers % 2 == 0;
+        lastGeneratedBid = ringConsumer.fill(startBid, buffers);
+        usableBuffers += buffers;
+    }
+
+    private void fill(short bid) {
+        if (corrupted || closed) {
+            return;
+        }
+        ringConsumer.fill(bid);
+        usableBuffers++;
     }
 
     /**
@@ -82,59 +192,80 @@ final class IoUringBufferRing {
         return exhaustedEvent;
     }
 
-    private short idx(short idx) {
-        return (short) (idx & mask);
+    /**
+     * Return the amount of bytes that we attempted to read for the given id.
+     * This method must be called before {@link #useBuffer(short, int, boolean)}.
+     *
+     * @param bid   the id of the buffer.
+     * @return      the attempted bytes.
+     */
+    int attemptedBytesRead(short bid) {
+        return buffers[bid].writableBytes();
     }
 
-    /**
-     * Refill the buffer ring with buffers allocated via our allocator.
-     */
-    private void refill() {
-        long tailFieldAddress = ioUringBufRingAddr + Native.IO_URING_BUFFER_RING_TAIL;
-        short oldTail = PlatformDependent.getShort(tailFieldAddress);
-
-        int num = entries - numBuffers;
-        for (short i = 0; i < num; i++) {
-            short bid = idx(tail++);
-            assert buffers[bid] == null : "buffer[" + bid + "] is already used";
-            ByteBuf byteBuf = byteBufAllocator.directBuffer(chunkSize);
-            byteBuf.writerIndex(byteBuf.capacity());
-            buffers[bid] = byteBuf;
-            int ringIndex = (oldTail + i) & mask;
-
-            //  see:
-            //  https://github.com/axboe/liburing/
-            //      blob/19134a8fffd406b22595a5813a3e319c19630ac9/src/include/liburing.h#L1561
-            long ioUringBufAddress = ioUringBufRingAddr + (long) Native.SIZEOF_IOURING_BUF * ringIndex;
-            PlatformDependent.putLong(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_ADDR,
-                    byteBuf.memoryAddress() + byteBuf.readerIndex());
-            PlatformDependent.putInt(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_LEN, byteBuf.capacity());
-            PlatformDependent.putShort(ioUringBufAddress + Native.IOURING_BUFFER_OFFSETOF_BID, bid);
-            numBuffers++;
-        }
-        // Now advanced the tail by the number of buffers that we just added.
-        PlatformDependent.putShortOrdered(tailFieldAddress, (short) (oldTail + entries));
-        hasSpareBuffer = true;
-        source.idHandler.notifyMoreBuffersReady(bufferGroupId);
+    private int calculateNextBufferBatch() {
+        return Math.min(batchSize, entries - allocatedBuffers);
     }
 
     /**
      * Use the buffer for the given buffer id. The returned {@link ByteBuf} must be released once not used anymore.
      *
      * @param bid           the id of the buffer
-     * @param readableBytes the number of bytes that could be read.
+     * @param read          the number of bytes that could be read. This value might be larger then what a single
+     *                      {@link ByteBuf} can hold. Because of this, the caller should call
+     *                      @link #useBuffer(short, int, boolean)} in a loop (obtaining the next bid to use by calling
+     *                      {@link #nextBid(short)}) until all buffers could be obtained.
      * @return              the buffer.
      */
-    ByteBuf useBuffer(short bid, int readableBytes, boolean more) {
+    ByteBuf useBuffer(short bid, int read, boolean more) {
+        assert read > 0;
         ByteBuf byteBuf = buffers[bid];
-        if (incremental && more) {
+
+        allocator.lastBytesRead(byteBuf.writableBytes(), read);
+        // We always slice so the user will not mess up things later.
+        ByteBuf buffer = byteBuf.retainedSlice(byteBuf.writerIndex(), read);
+        byteBuf.writerIndex(byteBuf.writerIndex() + read);
+
+        if (incremental && more && byteBuf.isWritable()) {
             // The buffer will be used later again, just slice out what we did read so far.
-            return byteBuf.readRetainedSlice(readableBytes);
+            return buffer;
         }
-        // Buffer is completely used. Remove it from the backing store, adjust writerIndex and return it.
+
+        // The buffer is considered to be used, null out the slot.
         buffers[bid] = null;
-        numBuffers--;
-        return byteBuf.writerIndex(byteBuf.readerIndex() + readableBytes);
+        byteBuf.release();
+        if (--usableBuffers == 0) {
+            int numBuffers = allocatedBuffers;
+            if (needExpand) {
+                // We did get a signal that our buffer ring did not have enough buffers, let's see if we
+                // can grow it.
+                needExpand = false;
+                numBuffers += calculateNextBufferBatch();
+            }
+            fill((short) 0, numBuffers);
+            allocatedBuffers = numBuffers;
+            assert allocatedBuffers % 2 == 0;
+        } else if (!batchAllocation) {
+            // If we don'T do bulk allocations to refill the buffer ring we need to fill in the just used bid again
+            // if we didn't get a signal that we need expansion.
+            fill(bid);
+
+            if (needExpand && lastGeneratedBid == bid) {
+                // We did get a signal that our buffer ring did not have enough buffers and we just did add the last
+                // generated bid at the tail of the ring. Now its safe to grow the buffer ring and still guarantee
+                // sequential ordering which is needed for our RECVSEND_BUNDLE implementation.
+                needExpand = false;
+                int numBuffers = calculateNextBufferBatch();
+                fill((short) (bid + 1), numBuffers);
+                allocatedBuffers += numBuffers;
+                assert allocatedBuffers % 2 == 0;
+            }
+        }
+        return buffer;
+    }
+
+    short nextBid(short bid) {
+        return (short) ((bid + 1) & allocatedBuffers - 1);
     }
 
     /**
@@ -147,19 +278,14 @@ final class IoUringBufferRing {
     }
 
     /**
-     * This size of the chunks that are allocated.
-     *
-     * @return chunk size.
-     */
-    int chunkSize() {
-        return chunkSize;
-    }
-
-    /**
      * Close this {@link IoUringBufferRing}, using it after this method is called will lead to undefined behaviour.
      */
     void close() {
-        Native.ioUringUnRegisterBufRing(ringFd, ioUringBufRingAddr, entries, bufferGroupId);
+        if (closed) {
+            return;
+        }
+        closed = true;
+        Native.ioUringUnRegisterBufRing(ringFd, Buffer.memoryAddress(ioUringBufRing), entries, bufferGroupId);
         for (ByteBuf byteBuf : buffers) {
             if (byteBuf != null) {
                 byteBuf.release();

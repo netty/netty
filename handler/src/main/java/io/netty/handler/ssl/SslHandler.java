@@ -63,6 +63,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLEngineResult.HandshakeStatus;
@@ -169,8 +170,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundHandler {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(SslHandler.class);
-    private static final Pattern IGNORABLE_CLASS_IN_STACK = Pattern.compile(
-            "^.*(?:Socket|Datagram|Sctp|Udt)Channel.*$");
     private static final Pattern IGNORABLE_ERROR_MESSAGE = Pattern.compile(
             "^.*(?:connection.*(?:reset|closed|abort|broken)|broken.*pipe).*$", Pattern.CASE_INSENSITIVE);
     private static final int STATE_SENT_FIRST_MESSAGE = 1;
@@ -303,7 +302,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             @Override
             SSLEngineResult unwrap(SslHandler handler, ByteBuf in, int len, ByteBuf out) throws SSLException {
                 int writerIndex = out.writerIndex();
-                ByteBuffer inNioBuffer = toByteBuffer(in, in.readerIndex(), len);
+                ByteBuffer inNioBuffer = getUnwrapInputBuffer(handler, toByteBuffer(in, in.readerIndex(), len));
                 int position = inNioBuffer.position();
                 final SSLEngineResult result = handler.engine.unwrap(inNioBuffer,
                     toByteBuffer(out, writerIndex, out.writableBytes()));
@@ -324,6 +323,23 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     }
                 }
                 return result;
+            }
+
+            private ByteBuffer getUnwrapInputBuffer(SslHandler handler, ByteBuffer inNioBuffer) {
+                int javaVersion = PlatformDependent.javaVersion();
+                if (javaVersion >= 22 && javaVersion < 25 && inNioBuffer.isDirect()) {
+                    // Work-around for https://bugs.openjdk.org/browse/JDK-8357268
+                    int remaining = inNioBuffer.remaining();
+                    ByteBuffer copy = handler.unwrapInputCopy;
+                    if (copy == null || copy.capacity() < remaining) {
+                        handler.unwrapInputCopy = copy = ByteBuffer.allocate(remaining);
+                    } else {
+                        copy.clear();
+                    }
+                    copy.put(inNioBuffer).flip();
+                    return copy;
+                }
+                return inNioBuffer;
             }
 
             @Override
@@ -410,6 +426,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * creation.
      */
     private final ByteBuffer[] singleBuffer = new ByteBuffer[1];
+    private ByteBuffer unwrapInputCopy;
 
     private final boolean startTls;
     private final ResumptionController resumptionController;
@@ -1257,9 +1274,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     continue;
                 }
 
-                // This will also match against SocketInputStream which is used by openjdk 7 and maybe
-                // also others
-                if (IGNORABLE_CLASS_IN_STACK.matcher(classname).matches()) {
+                if (isIgnorableClassInStack(classname)) {
                     return true;
                 }
 
@@ -1288,6 +1303,13 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         }
 
         return false;
+    }
+
+    private static boolean isIgnorableClassInStack(String classname) {
+        return classname.contains("SocketChannel") ||
+               classname.contains("DatagramChannel") ||
+               classname.contains("SctpChannel") ||
+               classname.contains("UdtChannel");
     }
 
     /**
@@ -1374,9 +1396,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         this.packetLength = 0;
         try {
             final int bytesConsumed = unwrap(ctx, in, packetLength);
-            assert bytesConsumed == packetLength || engine.isInboundDone() :
-                    "we feed the SSLEngine a packets worth of data: " + packetLength + " but it only consumed: " +
-                            bytesConsumed;
+            if (bytesConsumed != packetLength && !engine.isInboundDone()) {
+                // The JDK equivalent of getEncryptedPacketLength has some optimizations and can behave slightly
+                // differently to ours, but this should always be a sign of bad input data.
+                throw new NotSslRecordException();
+            }
         } catch (Throwable cause) {
             handleUnwrapThrowable(ctx, cause);
         }
@@ -1498,7 +1522,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 if (handshakeStatus == HandshakeStatus.FINISHED || handshakeStatus == HandshakeStatus.NOT_HANDSHAKING) {
                     wrapLater |= (decodeOut.isReadable() ?
                             setHandshakeSuccessUnwrapMarkReentry() : setHandshakeSuccess()) ||
-                            handshakeStatus == HandshakeStatus.FINISHED || !pendingUnencryptedWrites.isEmpty();
+                            handshakeStatus == HandshakeStatus.FINISHED ||
+                            // We need to check if pendingUnecryptedWrites is null as the SslHandler
+                            // might have been removed in the meantime.
+                            (pendingUnencryptedWrites != null  && !pendingUnencryptedWrites.isEmpty());
                 }
 
                 // Dispatch decoded data after we have notified of handshake success. If this method has been invoked
@@ -1977,8 +2004,8 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 throw exception;
             }
         }
-        final boolean notified;
-        if (notified = !handshakePromise.isDone() && handshakePromise.trySuccess(ctx.channel())) {
+        final boolean notified = !handshakePromise.isDone() && handshakePromise.trySuccess(ctx.channel());
+        if (notified) {
             if (logger.isDebugEnabled()) {
                 logger.debug(
                         "{} HANDSHAKEN: protocol:{} cipher suite:{}",

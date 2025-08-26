@@ -38,6 +38,10 @@ public class WebSocket00FrameEncoder extends MessageToMessageEncoder<WebSocketFr
     private static final ByteBuf _0XFF_0X00 = Unpooled.unreleasableBuffer(
             Unpooled.directBuffer(2, 2).writeByte((byte) 0xFF).writeByte(0x00)).asReadOnly();
 
+    public WebSocket00FrameEncoder() {
+        super(WebSocketFrame.class);
+    }
+
     @Override
     protected void encode(ChannelHandlerContext ctx, WebSocketFrame msg, List<Object> out) throws Exception {
         if (msg instanceof TextWebSocketFrame) {

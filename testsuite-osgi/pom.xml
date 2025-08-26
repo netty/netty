@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.0.RC4-SNAPSHOT</version>
+    <version>4.2.5.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-osgi</artifactId>
@@ -33,6 +33,9 @@
     <argLine.java9.extras>--add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/jdk.internal.loader=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.security=ALL-UNNAMED</argLine.java9.extras>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
+    <!-- Skip OSGI testsuite by default -->
+    <skipOsgiTestsuite>true</skipOsgiTestsuite>
   </properties>
 
   <profiles>
@@ -248,7 +251,6 @@
       <plugin>
         <groupId>com.github.veithen.alta</groupId>
         <artifactId>alta-maven-plugin</artifactId>
-        <version>0.6.2</version>
         <executions>
           <execution>
             <goals>

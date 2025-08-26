@@ -517,7 +517,6 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
             final ChannelPipeline pipeline = pipeline();
             final ByteBufAllocator allocator = config.getAllocator();
             allocHandle.reset(config);
-            readReadyBefore();
 
             ByteBuf byteBuf = null;
             boolean close = false;
@@ -568,7 +567,9 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, close, allocHandle);
             } finally {
-                readReadyFinally(config);
+                if (shouldStopReading(config)) {
+                    clearReadFilter0();
+                }
             }
         }
 

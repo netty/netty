@@ -16,6 +16,7 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.unix.Buffer;
+import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
@@ -23,6 +24,7 @@ import java.nio.ByteBuffer;
 /**
  * Represents an array of kevent structures, backed by offheap memory.
  *
+ * <pre>
  * struct kevent {
  *  uintptr_t ident;
  *  short     keventFilter;
@@ -31,6 +33,7 @@ import java.nio.ByteBuffer;
  *  intptr_t  data;
  *  void      *udata;
  * };
+ * </pre>
  */
 final class KQueueEventArray {
     private static final int KQUEUE_EVENT_SIZE = Native.sizeofKEvent();
@@ -39,7 +42,9 @@ final class KQueueEventArray {
     private static final int KQUEUE_FFLAGS_OFFSET = Native.offsetofKEventFFlags();
     private static final int KQUEUE_FLAGS_OFFSET = Native.offsetofKEventFlags();
     private static final int KQUEUE_DATA_OFFSET = Native.offsetofKeventData();
+    private static final int KQUEUE_UDATA_OFFSET = Native.offsetofKeventUdata();
 
+    private CleanableDirectBuffer memoryCleanable;
     private ByteBuffer memory;
     private long memoryAddress;
     private int size;
@@ -49,7 +54,8 @@ final class KQueueEventArray {
         if (capacity < 1) {
             throw new IllegalArgumentException("capacity must be >= 1 but was " + capacity);
         }
-        memory = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(capacity));
+        memoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(calculateBufferCapacity(capacity));
+        memory = memoryCleanable.buffer();
         memoryAddress = Buffer.memoryAddress(memory);
         this.capacity = capacity;
     }
@@ -77,9 +83,9 @@ final class KQueueEventArray {
         size = 0;
     }
 
-    void evSet(int ident, short filter, short flags, int fflags) {
+    void evSet(int ident, short filter, short flags, int fflags, long data, long udata) {
         reallocIfNeeded();
-        evSet(getKEventOffset(size++) + memoryAddress, ident, filter, flags, fflags);
+        evSet(getKEventOffset(size++) + memoryAddress, ident, filter, flags, fflags, data, udata);
     }
 
     private void reallocIfNeeded() {
@@ -96,16 +102,18 @@ final class KQueueEventArray {
         int newLength = capacity <= 65536 ? capacity << 1 : capacity + capacity >> 1;
 
         try {
-            ByteBuffer buffer = Buffer.allocateDirectWithNativeOrder(calculateBufferCapacity(newLength));
+            int newCapacity = calculateBufferCapacity(newLength);
+            CleanableDirectBuffer buffer = Buffer.allocateDirectBufferWithNativeOrder(newCapacity);
             // Copy over the old content of the memory and reset the position as we always act on the buffer as if
             // the position was never increased.
             memory.position(0).limit(size);
-            buffer.put(memory);
-            buffer.position(0);
+            buffer.buffer().put(memory);
+            buffer.buffer().position(0);
 
-            Buffer.free(memory);
-            memory = buffer;
-            memoryAddress = Buffer.memoryAddress(buffer);
+            memoryCleanable.clean();
+            memoryCleanable = buffer;
+            memory = buffer.buffer();
+            memoryAddress = Buffer.memoryAddress(memory);
         } catch (OutOfMemoryError e) {
             if (throwIfFail) {
                 OutOfMemoryError error = new OutOfMemoryError(
@@ -120,7 +128,7 @@ final class KQueueEventArray {
      * Free this {@link KQueueEventArray}. Any usage after calling this method may segfault the JVM!
      */
     void free() {
-        Buffer.free(memory);
+        memoryCleanable.clean();
         memoryAddress = size = capacity = 0;
     }
 
@@ -159,15 +167,24 @@ final class KQueueEventArray {
     }
 
     long data(int index) {
+        return getLong(index, KQUEUE_DATA_OFFSET);
+    }
+
+    long udata(int index) {
+        return getLong(index, KQUEUE_UDATA_OFFSET);
+    }
+
+    private long getLong(int index, int offset) {
         if (PlatformDependent.hasUnsafe()) {
-            return PlatformDependent.getLong(getKEventOffsetAddress(index) + KQUEUE_DATA_OFFSET);
+            return PlatformDependent.getLong(getKEventOffsetAddress(index) + offset);
         }
-        return memory.getLong(getKEventOffset(index) + KQUEUE_DATA_OFFSET);
+        return memory.getLong(getKEventOffset(index) + offset);
     }
 
     private static int calculateBufferCapacity(int capacity) {
         return capacity * KQUEUE_EVENT_SIZE;
     }
 
-    private static native void evSet(long keventAddress, int ident, short filter, short flags, int fflags);
+    private static native void evSet(
+            long keventAddress, int ident, short filter, short flags, int fflags, long data, long udata);
 }

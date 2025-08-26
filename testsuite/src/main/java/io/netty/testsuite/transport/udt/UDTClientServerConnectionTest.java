@@ -198,14 +198,11 @@ public class UDTClientServerConnectionTest {
         @Override
         public void run() {
             final ServerBootstrap boot = new ServerBootstrap();
-            final ThreadFactory acceptFactory = new DefaultThreadFactory("accept");
-            final ThreadFactory serverFactory = new DefaultThreadFactory("server");
-            final EventLoopGroup acceptGroup = new MultiThreadIoEventLoopGroup(1,
-                    acceptFactory, NioIoHandler.newFactory(NioUdtProvider.BYTE_PROVIDER));
-            final EventLoopGroup connectGroup = new MultiThreadIoEventLoopGroup(1,
-                    serverFactory, NioIoHandler.newFactory(NioUdtProvider.BYTE_PROVIDER));
+            final ThreadFactory factory = new DefaultThreadFactory("udp");
+            final EventLoopGroup eventLoopGroup = new MultiThreadIoEventLoopGroup(1,
+                    factory, NioIoHandler.newFactory(NioUdtProvider.BYTE_PROVIDER));
             try {
-                boot.group(acceptGroup, connectGroup)
+                boot.group(eventLoopGroup)
                         .channelFactory(NioUdtProvider.BYTE_ACCEPTOR)
                         .childHandler(new ChannelInitializer<UdtChannel>() {
                             @Override
@@ -236,11 +233,8 @@ public class UDTClientServerConnectionTest {
             } catch (final Throwable e) {
                 log.error("Server failure.", e);
             } finally {
-                acceptGroup.shutdownGracefully();
-                connectGroup.shutdownGracefully();
-
-                acceptGroup.terminationFuture().syncUninterruptibly();
-                connectGroup.terminationFuture().syncUninterruptibly();
+                eventLoopGroup.shutdownGracefully();
+                eventLoopGroup.terminationFuture().syncUninterruptibly();
             }
         }
 

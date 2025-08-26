@@ -33,13 +33,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.unreleasableBuffer;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -684,7 +682,7 @@ public class ByteBufUtilTest {
     }
 
     private static void assertWrapped(ByteBuf buf) {
-        assertThat(buf, instanceOf(WrappedByteBuf.class));
+        assertInstanceOf(WrappedByteBuf.class, buf);
     }
 
     @ParameterizedTest(name = PARAMETERIZED_NAME)
@@ -1034,8 +1032,8 @@ public class ByteBufUtilTest {
             slice.writerIndex(0);
 
             assertTrue(slice.hasArray());
-            assertThat(slice.arrayOffset(), is(1));
-            assertThat(slice.array().length, is(buf.capacity()));
+            assertEquals(1, slice.arrayOffset());
+            assertEquals(buf.capacity(), slice.array().length);
 
             checkGetBytes(slice);
         } finally {
@@ -1055,8 +1053,8 @@ public class ByteBufUtilTest {
             slice.writerIndex(0);
 
             assertTrue(slice.hasArray());
-            assertThat(slice.arrayOffset(), is(0));
-            assertThat(slice.array().length, greaterThan(slice.capacity()));
+            assertEquals(0, slice.arrayOffset());
+            assertThat(slice.array().length).isGreaterThan(slice.capacity());
 
             checkGetBytes(slice);
         } finally {

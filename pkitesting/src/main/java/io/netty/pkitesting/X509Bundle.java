@@ -314,7 +314,7 @@ public final class X509Bundle {
         }
         keyStore.setCertificateEntry("1", root);
         if (keyPair.getPrivate() != null) {
-            keyStore.setKeyEntry("2", MLDSASeedPrivateKey.unwrap(keyPair.getPrivate()), keyEntryPassword, certPath);
+            keyStore.setKeyEntry("2", keyPair.getPrivate(), keyEntryPassword, certPath);
         }
         return keyStore;
     }

@@ -43,6 +43,7 @@
 
 #include <sys/eventfd.h>
 #include <poll.h>
+
 // Needed for UDP_SEGMENT
 #include <netinet/udp.h>
 #include <sys/utsname.h>
@@ -62,9 +63,14 @@
 #define MSG_FASTOPEN 0x20000000
 #endif
 
+// This should be CONFIG_MAX_SKB_FRAGS these days.
+#ifndef MAX_SKB_FRAGS
+#define MAX_SKB_FRAGS 17
+#endif
+
 #define NATIVE_CLASSNAME "io/netty/channel/uring/Native"
 #define STATICALLY_CLASSNAME "io/netty/channel/uring/NativeStaticallyReferencedJniMethods"
-#define LIBRARYNAME "netty_transport_native_io_uring"
+#define LIBRARYNAME "netty_transport_native_io_uring42"
 
 static jclass longArrayClass = NULL;
 static char* staticPackagePrefix = NULL;
@@ -84,9 +90,42 @@ static void netty_io_uring_native_JNI_OnUnLoad(JNIEnv* env, const char* packageP
     NETTY_JNI_UTIL_UNLOAD_CLASS(env, longArrayClass);
 }
 
+void io_uring_setup_ring_pointers(struct io_uring_params *p,
+				  struct io_uring_sq *sq,
+				  struct io_uring_cq *cq)
+{
+	sq->khead = sq->ring_ptr + p->sq_off.head;
+	sq->ktail = sq->ring_ptr + p->sq_off.tail;
+	sq->kring_mask = sq->ring_ptr + p->sq_off.ring_mask;
+	sq->kring_entries = sq->ring_ptr + p->sq_off.ring_entries;
+	sq->kflags = sq->ring_ptr + p->sq_off.flags;
+	sq->kdropped = sq->ring_ptr + p->sq_off.dropped;
+
+	if (!(p->flags & IORING_SETUP_NO_SQARRAY)) {
+		sq->array = sq->ring_ptr + p->sq_off.array;
+	}
+
+	cq->khead = cq->ring_ptr + p->cq_off.head;
+	cq->ktail = cq->ring_ptr + p->cq_off.tail;
+	cq->kring_mask = cq->ring_ptr + p->cq_off.ring_mask;
+	cq->kring_entries = cq->ring_ptr + p->cq_off.ring_entries;
+	cq->koverflow = cq->ring_ptr + p->cq_off.overflow;
+	cq->cqes = cq->ring_ptr + p->cq_off.cqes;
+	if (p->cq_off.flags) {
+		cq->kflags = cq->ring_ptr + p->cq_off.flags;
+	}
+
+	sq->ring_mask = *sq->kring_mask;
+	sq->ring_entries = *sq->kring_entries;
+	cq->ring_mask = *cq->kring_mask;
+	cq->ring_entries = *cq->kring_entries;
+}
+
 static void io_uring_unmap_rings(struct io_uring_sq *sq, struct io_uring_cq *cq) {
-    munmap(sq->ring_ptr, sq->ring_sz);
-    if (cq->ring_ptr && cq->ring_ptr != sq->ring_ptr) {
+    if (sq->ring_ptr != NULL) {
+        munmap(sq->ring_ptr, sq->ring_sz);
+    }
+    if (cq->ring_ptr != NULL && cq->ring_ptr != sq->ring_ptr) {
         munmap(cq->ring_ptr, cq->ring_sz);
   }
 }
@@ -120,14 +159,6 @@ static int io_uring_mmap(int fd, struct io_uring_params *p, struct io_uring_sq *
         }
     }
 
-    sq->khead = sq->ring_ptr + p->sq_off.head;
-    sq->ktail = sq->ring_ptr + p->sq_off.tail;
-    sq->kring_mask = sq->ring_ptr + p->sq_off.ring_mask;
-    sq->kring_entries = sq->ring_ptr + p->sq_off.ring_entries;
-    sq->kflags = sq->ring_ptr + p->sq_off.flags;
-    sq->kdropped = sq->ring_ptr + p->sq_off.dropped;
-    sq->array = sq->ring_ptr + p->sq_off.array;
-
     size = p->sq_entries * sizeof(struct io_uring_sqe);
     sq->sqes = mmap(0, size, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_POPULATE, fd, IORING_OFF_SQES);
     if (sq->sqes == MAP_FAILED) {
@@ -135,22 +166,12 @@ static int io_uring_mmap(int fd, struct io_uring_params *p, struct io_uring_sq *
         goto err;
     }
 
-    cq->khead = cq->ring_ptr + p->cq_off.head;
-    cq->ktail = cq->ring_ptr + p->cq_off.tail;
-    cq->kring_mask = cq->ring_ptr + p->cq_off.ring_mask;
-    cq->kring_entries = cq->ring_ptr + p->cq_off.ring_entries;
-    cq->koverflow = cq->ring_ptr + p->cq_off.overflow;
-    cq->cqes = cq->ring_ptr + p->cq_off.cqes;
+    io_uring_setup_ring_pointers(p, sq, cq);
 
     return 0;
 err:
     io_uring_unmap_rings(sq, cq);
     return ret;
-}
-
-static int setup_io_uring(int ring_fd, struct io_uring *io_uring_ring,
-                    struct io_uring_params *p) {
-    return io_uring_mmap(ring_fd, p, &io_uring_ring->sq, &io_uring_ring->cq);
 }
 
 static jint netty_io_uring_enter(JNIEnv *env, jclass class1, jint ring_fd, jint to_submit,
@@ -218,11 +239,18 @@ static jint netty_io_uring_getFd0(JNIEnv* env, jclass clazz, jobject fileRegion)
 static void netty_io_uring_ring_buffer_exit(JNIEnv *env, jclass clazz,
         jlong submissionQueueArrayAddress, jint submissionQueueRingEntries, jlong submissionQueueRingAddress, jint submissionQueueRingSize,
         jlong completionQueueRingAddress, jint completionQueueRingSize, jint ringFd, jint enterRingFd) {
-    munmap((struct io_uring_sqe*) submissionQueueArrayAddress, submissionQueueRingEntries * sizeof(struct io_uring_sqe));
-    munmap((void*) submissionQueueRingAddress, submissionQueueRingSize);
+    void* sqa = (void *) submissionQueueArrayAddress;
+    void* sqr = (void *) submissionQueueRingAddress;
+    void* cqr = (void *) completionQueueRingAddress;
 
-    if (((void *) completionQueueRingAddress) && ((void *) completionQueueRingAddress) != ((void *) submissionQueueRingAddress)) {
-        munmap((void *)completionQueueRingAddress, completionQueueRingSize);
+    if (sqa != NULL) {
+        munmap(sqa, submissionQueueRingEntries * sizeof(struct io_uring_sqe));
+    }
+    if (sqr != NULL) {
+        munmap(sqr, submissionQueueRingSize);
+    }
+    if (cqr != NULL && cqr != sqr) {
+        munmap(cqr, completionQueueRingSize);
     }
     if (enterRingFd != ringFd) {
          struct io_uring_rsrc_update up = {
@@ -251,8 +279,8 @@ static jboolean netty_io_uring_setup_supports_flags(JNIEnv *env, jclass clazz, j
     return JNI_TRUE;
 }
 
-static jboolean netty_io_uring_probe(JNIEnv *env, jclass clazz, jint ring_fd, jintArray ops) {
-    jboolean supported = JNI_FALSE;
+static jintArray netty_io_uring_probe0(JNIEnv *env, jclass clazz, jint ring_fd) {
+    jintArray array = NULL;
     struct io_uring_probe *probe;
     size_t mallocLen = sizeof(*probe) + 256 * sizeof(struct io_uring_probe_op);
     probe = malloc(mallocLen);
@@ -260,28 +288,31 @@ static jboolean netty_io_uring_probe(JNIEnv *env, jclass clazz, jint ring_fd, ji
 
     if (sys_io_uring_register(ring_fd, IORING_REGISTER_PROBE, probe, 256) < 0) {
         netty_unix_errors_throwRuntimeExceptionErrorNo(env, "failed to probe via sys_io_uring_register(....) ", errno);
-        goto done;
+        goto cleanup;
     }
 
-    jsize opsLen = (*env)->GetArrayLength(env, ops);
-    jint *opsElements = (*env)->GetIntArrayElements(env, ops, 0);
-    if (opsElements == NULL) {
-        goto done;
+    array = (*env)->NewIntArray(env, 2 + probe->ops_len * 2);
+    if (array == NULL) {
+        goto cleanup;
     }
-    int i;
-    for (i = 0; i < opsLen; i++) {
-        int op = opsElements[i];
-        if (op > probe->last_op || (probe->ops[op].flags & IO_URING_OP_SUPPORTED) == 0) {
-            goto done;
-        }
+    int idx = 0;
+    jint lastOp = (jint) probe->last_op;
+    (*env)->SetIntArrayRegion(env, array, idx++, 1, &lastOp);
+
+    jint opsLen = (jint) probe->ops_len;
+    (*env)->SetIntArrayRegion(env, array, idx++, 1, &opsLen);
+
+    for (int i = 0; i < probe->ops_len; ++i) {
+        jint op = (jint) probe->ops[i].op;
+        (*env)->SetIntArrayRegion(env, array, idx++, 1, &op);
+
+        jint flags = (jint) probe->ops[i].flags;
+        (*env)->SetIntArrayRegion(env, array, idx++, 1, &flags);
     }
-    // all supported
-    supported = JNI_TRUE;
-done:
+cleanup:
     free(probe);
-    return supported;
+    return array;
 }
-
 
 static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, jint cqSize, jint setupFlags) {
     struct io_uring_params p;
@@ -293,7 +324,7 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
         p.cq_entries = (__u32) cqSize;
     }
 
-    jlongArray array = (*env)->NewLongArray(env, 21);
+    jlongArray array = (*env)->NewLongArray(env, 20);
     if (array == NULL) {
         // This will put an OOME on the stack
         return NULL;
@@ -311,44 +342,57 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
         }
         return NULL;
     }
+
     struct io_uring io_uring_ring;
-    int ret = setup_io_uring(ring_fd, &io_uring_ring, &p);
+    memset(&io_uring_ring, 0, sizeof(io_uring_ring));
+    int ret = io_uring_mmap(ring_fd, &p, &io_uring_ring.sq, &io_uring_ring.cq);
 
     if (ret != 0) {
+        // Close ring fd before return.
+        close(ring_fd);
         netty_unix_errors_throwRuntimeExceptionErrorNo(env, "failed to mmap io_uring ring buffer: ", ret);
         return NULL;
+    }
+
+    if (!(p.flags & IORING_SETUP_NO_SQARRAY)) {
+        for (int index = 0; index < p.sq_entries; index++) {
+            io_uring_ring.sq.array[index] = index;
+        }
     }
 
     jlong completionArrayElements[] = {
         (jlong)io_uring_ring.cq.khead,
         (jlong)io_uring_ring.cq.ktail,
-        (jlong)io_uring_ring.cq.kring_mask,
-        (jlong)io_uring_ring.cq.kring_entries,
-        (jlong)io_uring_ring.cq.koverflow,
+        // Should be replaced by ring_mask when we depend on later kernel versions
+        (jlong)*io_uring_ring.cq.kring_mask,
+        // Should be replaced by ring_entries when we depend on later kernel versions
+        (jlong)*io_uring_ring.cq.kring_entries,
+        (jlong)io_uring_ring.cq.kflags,
         (jlong)io_uring_ring.cq.cqes,
         (jlong)io_uring_ring.cq.ring_sz,
         (jlong)io_uring_ring.cq.ring_ptr,
-        (jlong)ring_fd
+        (jlong)ring_fd,
+        (jlong)p.cq_entries
     };
-    (*env)->SetLongArrayRegion(env, array, 0, 9, completionArrayElements);
+    (*env)->SetLongArrayRegion(env, array, 0, 10, completionArrayElements);
 
     jlong submissionArrayElements[] = {
         (jlong)io_uring_ring.sq.khead,
         (jlong)io_uring_ring.sq.ktail,
-        (jlong)io_uring_ring.sq.kring_mask,
-        (jlong)io_uring_ring.sq.kring_entries,
+        // Should be replaced by ring_mask when we depend on later kernel versions
+        (jlong)*io_uring_ring.sq.kring_mask,
+        // Should be replaced by ring_entries when we depend on later kernel versions
+        (jlong)*io_uring_ring.sq.kring_entries,
         (jlong)io_uring_ring.sq.kflags,
-        (jlong)io_uring_ring.sq.kdropped,
-        (jlong)io_uring_ring.sq.array,
         (jlong)io_uring_ring.sq.sqes,
         (jlong)io_uring_ring.sq.ring_sz,
         (jlong)io_uring_ring.sq.ring_ptr,
         (jlong)ring_fd
     };
-    (*env)->SetLongArrayRegion(env, array, 9, 11, submissionArrayElements);
+    (*env)->SetLongArrayRegion(env, array, 10, 9, submissionArrayElements);
 
     jlong features = (jlong) p.features;
-    (*env)->SetLongArrayRegion(env, array, 20, 1, &features);
+    (*env)->SetLongArrayRegion(env, array, 19, 1, &features);
     return array;
 }
 
@@ -389,7 +433,7 @@ static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
         return -errno;
     }
 
-    reg.ring_addr = (__u64) br;
+    reg.ring_addr = (unsigned long) (uintptr_t) br;
     reg.ring_entries = (__u32) nentries;
     reg.bgid = (__u16) bgid;
     reg.flags |= (__u16) flags;
@@ -401,19 +445,27 @@ static jlong netty_io_uring_register_buf_ring(JNIEnv* env, jclass clazz,
         return registerRes;
     }
     br->tail = 0;
-    return (jlong)br;
+    return (jlong) br;
+}
+
+static jint netty_io_uring_buf_ring_size(JNIEnv* env, jclass clazz, jint nentries) {
+    return (jint) nentries * sizeof(struct io_uring_buf);
 }
 
 static jint netty_io_uring_unregister_buf_ring(JNIEnv* env, jclass clazz,
-                                        int ringFd, struct io_uring_buf_ring *br,
-                                        unsigned int nentries, int bgid) {
-    struct io_uring_buf_reg reg = { .bgid = bgid };
+                                        jint ringFd, jlong br,
+                                        jint nentries, jshort bgid) {
+    struct io_uring_buf_reg reg = { .bgid = (__u16) bgid };
     int registerRes = sys_io_uring_register(ringFd, IORING_UNREGISTER_PBUF_RING, &reg, 1);
     if (registerRes) {
         return registerRes;
     }
     size_t ring_size = nentries * sizeof(struct io_uring_buf);
-    munmap(br,ring_size);
+
+    struct io_uring_buf_ring* ring = (struct io_uring_buf_ring *) br;
+    if (ring != NULL) {
+        munmap(ring, ring_size);
+    }
     return 0;
 }
 
@@ -448,6 +500,10 @@ static jint netty_io_uring_afInet(JNIEnv* env, jclass clazz) {
 
 static jint netty_io_uring_afInet6(JNIEnv* env, jclass clazz) {
     return AF_INET6;
+}
+
+static jint netty_io_uring_afUnix(JNIEnv* env, jclass clazz) {
+    return AF_UNIX;
 }
 
 static jint netty_io_uring_sizeofSockaddrIn(JNIEnv* env, jclass clazz) {
@@ -500,6 +556,23 @@ static jint netty_io_uring_in6AddressOffsetofS6Addr(JNIEnv* env, jclass clazz) {
 
 static jint netty_io_uring_sizeofSockaddrStorage(JNIEnv* env, jclass clazz) {
     return sizeof(struct sockaddr_storage);
+}
+
+static jint netty_io_uring_sizeofSockaddrUn(JNIEnv* env, jclass clazz) {
+    return sizeof(struct sockaddr_un);
+}
+
+static jint netty_io_uring_sockaddrUnOffsetofSunFamily(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_un, sun_family);
+}
+
+static jint netty_io_uring_sockaddrUnOffsetofSunPath(JNIEnv* env, jclass clazz) {
+    return offsetof(struct sockaddr_un, sun_path);
+}
+
+static jint netty_io_uring_max_sun_path_len(JNIEnv* env, jclass clazz) {
+     struct sockaddr_un addr;
+     return sizeof(addr.sun_path);
 }
 
 static jint netty_io_uring_sizeofSizeT(JNIEnv* env, jclass clazz) {
@@ -584,6 +657,10 @@ static jint netty_io_uring_sizeofIoUringBuf(JNIEnv* env, jclass clazz) {
     return sizeof(struct io_uring_buf);
 }
 
+static jint netty_io_uring_maxSkbFrags(JNIEnv* env, jclass clazz) {
+    return MAX_SKB_FRAGS;
+}
+
 static int getSysctlValue(const char * property, int* returnValue) {
     int rc = -1;
     FILE *fd=fopen(property, "r");
@@ -660,16 +737,37 @@ static jint netty_io_uring_cmsgSpace(JNIEnv* env, jclass clazz) {
     return CMSG_SPACE(sizeof(uint16_t));
 }
 
+static jint netty_io_uring_cmsgSpace_for_fd(JNIEnv* env, jclass clazz) {
+    return CMSG_SPACE(sizeof(int));
+}
+
+static jint netty_io_uring_msg_controllen_for_fd(JNIEnv* env, jclass clazz) {
+    char control[CMSG_SPACE(sizeof(int))] = { 0 };
+    return sizeof(control);
+}
+
 static jint netty_io_uring_cmsgLen(JNIEnv* env, jclass clazz) {
     return CMSG_LEN(sizeof(uint16_t));
+}
+
+static jint netty_io_uring_cmsgLen_for_fd(JNIEnv* env, jclass clazz) {
+    return CMSG_LEN(sizeof(int));
 }
 
 static jint netty_io_uring_solUdp(JNIEnv* env, jclass clazz) {
     return SOL_UDP;
 }
 
+static jint netty_io_uring_solSocket(JNIEnv* env, jclass clazz) {
+    return SOL_SOCKET;
+}
+
 static jint netty_io_uring_udpSegment(JNIEnv* env, jclass clazz) {
     return UDP_SEGMENT;
+}
+
+static jint netty_io_uring_ScmRights(JNIEnv* env, jclass clazz) {
+    return SCM_RIGHTS;
 }
 
 // JNI Method Registration Table Begin
@@ -678,6 +776,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockCloexec", "()I", (void *) netty_io_uring_sockCloexec },
   { "afInet", "()I", (void *) netty_io_uring_afInet },
   { "afInet6", "()I", (void *) netty_io_uring_afInet6 },
+  { "afUnix", "()I", (void*) netty_io_uring_afUnix},
   { "sizeofSockaddrIn", "()I", (void *) netty_io_uring_sizeofSockaddrIn },
   { "sizeofSockaddrIn6", "()I", (void *) netty_io_uring_sizeofSockaddrIn6 },
   { "pageSize", "()I", (void*) netty_io_uring_pageSize},
@@ -692,10 +791,17 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "sockaddrIn6OffsetofSin6ScopeId", "()I", (void *) netty_io_uring_sockaddrIn6OffsetofSin6ScopeId },
   { "in6AddressOffsetofS6Addr", "()I", (void *) netty_io_uring_in6AddressOffsetofS6Addr },
   { "sizeofSockaddrStorage", "()I", (void *) netty_io_uring_sizeofSockaddrStorage },
+  { "sizeofSockaddrUn", "()I", (void *) netty_io_uring_sizeofSockaddrUn },
+  { "sockaddrUnOffsetofSunFamily", "()I", (void *) netty_io_uring_sockaddrUnOffsetofSunFamily },
+  { "sockaddrUnOffsetofSunPath", "()I", (void *) netty_io_uring_sockaddrUnOffsetofSunPath },
+  { "maxSunPathLen", "()I", (void *) netty_io_uring_max_sun_path_len },
   { "sizeofSizeT", "()I", (void *) netty_io_uring_sizeofSizeT },
   { "sizeofIovec", "()I", (void *) netty_io_uring_sizeofIovec },
   { "cmsgSpace", "()I", (void *) netty_io_uring_cmsgSpace},
+  { "cmsgSpaceForFd", "()I", (void *) netty_io_uring_cmsgSpace_for_fd},
+  { "msgControlLenForFd", "()I", (void *) netty_io_uring_msg_controllen_for_fd},
   { "cmsgLen", "()I", (void *) netty_io_uring_cmsgLen},
+  { "cmsgLenForFd", "()I", (void *) netty_io_uring_cmsgLen_for_fd},
   { "iovecOffsetofIovBase", "()I", (void *) netty_io_uring_iovecOffsetofIovBase },
   { "iovecOffsetofIovLen", "()I", (void *) netty_io_uring_iovecOffsetofIovLen },
   { "sizeofMsghdr", "()I", (void *) netty_io_uring_sizeofMsghdr },
@@ -720,7 +826,9 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "msgDontwait", "()I", (void *) netty_io_uring_msgDontwait },
   { "msgFastopen", "()I", (void *) netty_io_uring_msgFastopen },
   { "solUdp", "()I", (void *) netty_io_uring_solUdp },
+  { "solSocket", "()I", (void *) netty_io_uring_solSocket },
   { "udpSegment", "()I", (void *) netty_io_uring_udpSegment },
+  { "scmRights", "()I", (void *) netty_io_uring_ScmRights },
   { "cmsghdrOffsetofCmsgLen", "()I", (void *) netty_io_uring_cmsghdrOffsetofCmsgLen },
   { "cmsghdrOffsetofCmsgLevel", "()I", (void *) netty_io_uring_cmsghdrOffsetofCmsgLevel },
   { "cmsghdrOffsetofCmsgType", "()I", (void *) netty_io_uring_cmsghdrOffsetofCmsgType },
@@ -730,6 +838,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "ioUringBufferOffsetLen", "()I", (void *) netty_io_uring_ioUringBufOffsetoflen },
   { "ioUringBufferOffsetBid", "()I", (void *) netty_io_uring_ioUringBufOffsetofbid },
   { "tcpFastopenMode", "()I", (void *) netty_io_uring_tcpFastopenMode },
+  { "maxSkbFrags", "()I", (void *) netty_io_uring_maxSkbFrags }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 
@@ -739,7 +848,7 @@ static const JNINativeMethod method_table[] = {
     {"ioUringRegisterIoWqMaxWorkers","(III)I", (void*) netty_io_uring_register_iowq_max_workers },
     {"ioUringRegisterEnableRings","(I)I", (void*) netty_io_uring_register_enable_rings },
     {"ioUringRegisterRingFds","(I)I", (void*) netty_io_uring_register_ring_fds },
-    {"ioUringProbe", "(I[I)Z", (void *) netty_io_uring_probe},
+    {"ioUringProbe0", "(I)[I", (void *) netty_io_uring_probe0},
     {"ioUringExit", "(JIJIJIII)V", (void *) netty_io_uring_ring_buffer_exit},
     {"createFile", "(Ljava/lang/String;)I", (void *) netty_create_file},
     {"ioUringEnter", "(IIII)I", (void *) netty_io_uring_enter},
@@ -749,8 +858,9 @@ static const JNINativeMethod method_table[] = {
     {"cmsghdrData", "(J)J", (void *) netty_io_uring_cmsghdrData},
     {"kernelVersion", "()Ljava/lang/String;", (void *) netty_io_uring_kernel_version },
     {"getFd0", "(Ljava/lang/Object;)I", (void *) netty_io_uring_getFd0 },
-    {"ioUringRegisterBuffRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring},
-    {"ioUringUnRegisterBufRing", "(IJII)I", (void *) netty_io_uring_unregister_buf_ring}
+    {"ioUringRegisterBufRing", "(IISI)J", (void *) netty_io_uring_register_buf_ring },
+    {"ioUringUnRegisterBufRing", "(IJIS)I", (void *) netty_io_uring_unregister_buf_ring },
+    {"ioUringBufRingSize", "(I)I", (void *) netty_io_uring_buf_ring_size }
 };
 static const jint method_table_size =
     sizeof(method_table) / sizeof(method_table[0]);

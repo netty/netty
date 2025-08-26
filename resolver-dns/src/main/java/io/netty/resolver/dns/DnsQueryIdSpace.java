@@ -16,9 +16,9 @@
 package io.netty.resolver.dns;
 
 import io.netty.util.internal.MathUtil;
-import io.netty.util.internal.PlatformDependent;
 
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Special data-structure that will allow to retrieve the next query id to use, while still guarantee some sort
@@ -61,7 +61,7 @@ final class DnsQueryIdSpace {
                 }
             } else if (freeIdx == -1 ||
                     // Let's make it somehow random which free slot is used.
-                    PlatformDependent.threadLocalRandom().nextBoolean()) {
+                    ThreadLocalRandom.current().nextBoolean()) {
                 // We have a slot that we can use to create a new bucket if we need to.
                 freeIdx = bucketIdx;
             }
@@ -178,7 +178,7 @@ final class DnsQueryIdSpace {
             }
             assert id <= startId + ids.length && id >= startId;
             // pick a slot for our index, and whatever was in that slot before will get moved to the tail.
-            Random random = PlatformDependent.threadLocalRandom();
+            Random random = ThreadLocalRandom.current();
             int insertionPosition = random.nextInt(count + 1);
             short moveId = ids[insertionPosition];
             short insertId = (short) id;

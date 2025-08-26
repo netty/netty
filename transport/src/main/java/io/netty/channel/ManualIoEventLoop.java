@@ -17,11 +17,14 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.Ticker;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ThreadExecutorMap;
 
 import java.util.Collection;
 import java.util.List;
@@ -33,6 +36,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * {@link IoEventLoop} implementation that is owned by the user and so needs to be driven by the user manually with the
@@ -44,12 +48,12 @@ import java.util.concurrent.atomic.AtomicInteger;
  * {@link #waitAndRun()}} methods are called in a timely fashion.
  */
 public final class ManualIoEventLoop extends AbstractScheduledEventExecutor implements IoEventLoop {
-    private static final int ST_STARTED = 4;
-    private static final int ST_SHUTTING_DOWN = 5;
-    private static final int ST_SHUTDOWN = 6;
-    private static final int ST_TERMINATED = 7;
+    private static final int ST_STARTED = 0;
+    private static final int ST_SHUTTING_DOWN = 1;
+    private static final int ST_SHUTDOWN = 2;
+    private static final int ST_TERMINATED = 3;
 
-    private final AtomicInteger state = new AtomicInteger();
+    private final AtomicInteger state;
     private final Promise<?> terminationFuture = new DefaultPromise<Void>(GlobalEventExecutor.INSTANCE);
     private final Queue<Runnable> taskQueue = PlatformDependent.newMpscQueue();
     private final IoHandlerContext nonBlockingContext = new IoHandlerContext() {
@@ -72,8 +76,10 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         }
     };
     private final BlockingIoHandlerContext blockingContext = new BlockingIoHandlerContext();
-    private final Thread owningThread;
+    private final IoEventLoopGroup parent;
+    private final AtomicReference<Thread> owningThread;
     private final IoHandler handler;
+    private final Ticker ticker;
 
     private volatile long gracefulShutdownQuietPeriod;
     private volatile long gracefulShutdownTimeout;
@@ -93,65 +99,176 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      *                          used by this {@link IoEventLoop}.
      */
     public ManualIoEventLoop(Thread owningThread, IoHandlerFactory factory) {
-        this.owningThread = Objects.requireNonNull(owningThread, "owningThread");
-        this.handler = factory.newHandler(this);
+        this(null, owningThread, factory);
     }
 
-    private int runAllTasks() {
+    /**
+     * Create a new {@link IoEventLoop} that is owned by the user and so needs to be driven by the user with the given
+     * {@link Thread}. This means that the user is responsible to call either {@link #runNow()} or
+     * {@link #run(long)} to execute IO or tasks that were submitted to this {@link IoEventLoop}.
+     *
+     * @param parent            the parent {@link IoEventLoopGroup} or {@code null} if no parent.
+     * @param owningThread      the {@link Thread} that executes the IO and tasks for this {@link IoEventLoop}. The
+     *                          user will use this {@link Thread} to call {@link #runNow()} or {@link #run(long)} to
+     *                          make progress. If {@code null}, must be set later using
+     *                          {@link #setOwningThread(Thread)}.
+     * @param factory           the {@link IoHandlerFactory} that will be used to create the {@link IoHandler} that is
+     *                          used by this {@link IoEventLoop}.
+     */
+    public ManualIoEventLoop(IoEventLoopGroup parent, Thread owningThread, IoHandlerFactory factory) {
+        this(parent, owningThread, factory, Ticker.systemTicker());
+    }
+
+    /**
+     * Create a new {@link IoEventLoop} that is owned by the user and so needs to be driven by the user with the given
+     * {@link Thread}. This means that the user is responsible to call either {@link #runNow()} or
+     * {@link #run(long)} to execute IO or tasks that were submitted to this {@link IoEventLoop}.
+     *
+     * @param parent            the parent {@link IoEventLoopGroup} or {@code null} if no parent.
+     * @param owningThread      the {@link Thread} that executes the IO and tasks for this {@link IoEventLoop}. The
+     *                          user will use this {@link Thread} to call {@link #runNow()} or {@link #run(long)} to
+     *                          make progress. If {@code null}, must be set later using
+     *                          {@link #setOwningThread(Thread)}.
+     * @param factory           the {@link IoHandlerFactory} that will be used to create the {@link IoHandler} that is
+     *                          used by this {@link IoEventLoop}.
+     * @param ticker            The {@link #ticker()} to use for this event loop. Note that the {@link IoHandler} does
+     *                          not use the ticker, so if the ticker advances faster than system time, you may have to
+     *                          {@link #wakeup()} this event loop manually.
+     */
+    public ManualIoEventLoop(IoEventLoopGroup parent, Thread owningThread, IoHandlerFactory factory, Ticker ticker) {
+        this.parent = parent;
+        this.owningThread = new AtomicReference<>(owningThread);
+        this.handler = factory.newHandler(this);
+        this.ticker = Objects.requireNonNull(ticker, "ticker");
+        state = new AtomicInteger(ST_STARTED);
+    }
+
+    @Override
+    public Ticker ticker() {
+        return ticker;
+    }
+
+    /**
+     * Poll and run tasks from the task queue, until the task queue is empty or the given deadline is exceeded.<br>
+     * If {@code timeoutNanos} is less or equals 0, no deadline is applied.
+     *
+     * @param timeoutNanos the maximum time in nanoseconds to run tasks.
+     */
+    public int runNonBlockingTasks(long timeoutNanos) {
+        return runAllTasks(timeoutNanos, true);
+    }
+
+    private int runAllTasks(long timeoutNanos, boolean setCurrentExecutor) {
         assert inEventLoop();
-        int numRun = 0;
-        boolean fetchedAll;
-        do {
-            fetchedAll = fetchFromScheduledTaskQueue(taskQueue);
+        final Queue<Runnable> taskQueue = this.taskQueue;
+        // since the taskQueue is unbounded we don't need to keep on calling this while draining it.
+        boolean alwaysTrue = fetchFromScheduledTaskQueue(taskQueue);
+        assert alwaysTrue;
+        Runnable task = taskQueue.poll();
+        if (task == null) {
+            return 0;
+        }
+        EventExecutor old = setCurrentExecutor? ThreadExecutorMap.setCurrentExecutor(this) : null;
+        try {
+            final long deadline = timeoutNanos > 0 ? getCurrentTimeNanos() + timeoutNanos : 0;
+            int runTasks = 0;
+            long lastExecutionTime;
+            final Ticker ticker = this.ticker;
             for (;;) {
-                Runnable task = taskQueue.poll();
+                safeExecute(task);
+
+                runTasks++;
+
+               if (timeoutNanos > 0) {
+                    lastExecutionTime = ticker.nanoTime();
+                    if ((lastExecutionTime - deadline) >= 0) {
+                        break;
+                    }
+                }
+
+                task = taskQueue.poll();
                 if (task == null) {
+                    lastExecutionTime = ticker.nanoTime();
                     break;
                 }
-                safeExecute(task);
-                numRun++;
             }
-        } while (!fetchedAll); // keep on processing until we fetched all scheduled tasks.
-        if (numRun > 0) {
-            lastExecutionTime = getCurrentTimeNanos();
+            this.lastExecutionTime = lastExecutionTime;
+            return runTasks;
+        } finally {
+            if (setCurrentExecutor) {
+                ThreadExecutorMap.setCurrentExecutor(old);
+            }
         }
-        return numRun;
     }
 
-    private int run(IoHandlerContext context) {
+    private int run(IoHandlerContext context, long runAllTasksTimeoutNanos) {
         if (!initialized) {
+            if (owningThread.get() == null) {
+                throw new IllegalStateException("Owning thread not set");
+            }
             initialized = true;
             handler.initialize();
         }
-        if (isShuttingDown()) {
-            if (terminationFuture.isDone()) {
-                // Already completely terminated
-                return 0;
-            }
-            // Run all tasks before prepare to destroy.
-            int run = runAllTasks();
-            handler.prepareToDestroy();
-            if (confirmShutdown()) {
-                // Destroy the handler now and run all remaining tasks.
-                try {
-                    handler.destroy();
-                    for (;;) {
-                        int r = runAllTasks();
-                        run += r;
-                        if (r == 0) {
-                            break;
-                        }
-                    }
-                } finally {
-                    state.set(ST_TERMINATED);
-                    terminationFuture.setSuccess(null);
+        EventExecutor old = ThreadExecutorMap.setCurrentExecutor(this);
+        try {
+            if (isShuttingDown()) {
+                if (terminationFuture.isDone()) {
+                    // Already completely terminated
+                    return 0;
                 }
+                return runAllTasksBeforeDestroy();
             }
-            return run;
+            final int ioTasks = handler.run(context);
+            // Now run all tasks.
+            if (runAllTasksTimeoutNanos < 0) {
+                return ioTasks;
+            }
+            assert runAllTasksTimeoutNanos >= 0;
+            return ioTasks + runAllTasks(runAllTasksTimeoutNanos, false);
+        } finally {
+            ThreadExecutorMap.setCurrentExecutor(old);
         }
-        int run = handler.run(context);
-        // Now run all tasks.
-        return run + runAllTasks();
+    }
+
+    private int runAllTasksBeforeDestroy() {
+        // Run all tasks before prepare to destroy.
+        int run = runAllTasks(-1, false);
+        handler.prepareToDestroy();
+        if (confirmShutdown()) {
+            // Destroy the handler now and run all remaining tasks.
+            try {
+                handler.destroy();
+                for (;;) {
+                    int r = runAllTasks(-1, false);
+                    run += r;
+                    if (r == 0) {
+                        break;
+                    }
+                }
+            } finally {
+                state.set(ST_TERMINATED);
+                terminationFuture.setSuccess(null);
+            }
+        }
+        return run;
+    }
+
+    /**
+     * Executes all ready IO and tasks for this {@link IoEventLoop}.
+     * This methods will <strong>NOT</strong> block and wait for IO / tasks to be ready, it will just
+     * return directly if there is nothing to do.
+     * <p>
+     * <strong>Must be called from the owning {@link Thread} that was passed as a parameter on construction.</strong>
+     * <p>
+     *
+     * @param runAllTasksTimeoutNanos the maximum time in nanoseconds to run tasks.
+     *                                If {@code = 0}, no timeout is applied; if {@code < 0} it just perform I/O tasks.
+     * @return the number of IO and tasks executed.
+     * @throws IllegalStateException if the method is not called from the owning {@link Thread}.
+     */
+    public int runNow(long runAllTasksTimeoutNanos) {
+        checkCurrentThread();
+        return run(nonBlockingContext, runAllTasksTimeoutNanos);
     }
 
     /**
@@ -159,13 +276,13 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      * This methods will <strong>NOT</strong> block and wait for IO / tasks to be ready, it will just
      * return directly if there is nothing to do.
      * <p>
-     * <strong>Must be called from the owning {@link Thread} that was passed as an parameter on construction.</strong>
+     * <strong>Must be called from the owning {@link Thread} that was passed as a parameter on construction.</strong>
      *
      * @return the number of IO and tasks executed.
      */
     public int runNow() {
         checkCurrentThread();
-        return run(nonBlockingContext);
+        return run(nonBlockingContext, 0);
     }
 
     /**
@@ -175,13 +292,40 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
      * <p>
      * <strong>Must be called from the owning {@link Thread} that was passed as an parameter on construction.</strong>
      *
-     * @param waitNanos the maximum amount of nanoseconds to wait before returning.
+     * @param runAllTasksTimeoutNanos the maximum time in nanoseconds to run tasks.
+     *                                If {@code = 0}, no timeout is applied; if {@code < 0} it just perform I/O tasks.
+     * @param waitNanos the maximum amount of nanoseconds to wait before returning. IF {@code 0} it will block until
+     *                  there is some IO / tasks ready, if {@code -1} will not block at all and just return directly
+     *                  if there is nothing to run (like {@link #runNow()}).
+     * @return          the number of IO and tasks executed.
+     */
+    public int run(long waitNanos, long runAllTasksTimeoutNanos) {
+        checkCurrentThread();
+
+        final IoHandlerContext context;
+        if (waitNanos < 0) {
+            context = nonBlockingContext;
+        } else {
+            context = blockingContext;
+            blockingContext.maxBlockingNanos = waitNanos == 0 ? Long.MAX_VALUE : waitNanos;
+        }
+        return run(context, runAllTasksTimeoutNanos);
+    }
+
+    /**
+     * Run all ready IO and tasks for this {@link IoEventLoop}.
+     * This methods will block and wait for IO / tasks to be ready if there is nothing to process atm for the given
+     * {@code waitNanos}.
+     * <p>
+     * <strong>Must be called from the owning {@link Thread} that was passed as an parameter on construction.</strong>
+     *
+     * @param waitNanos the maximum amount of nanoseconds to wait before returning. IF {@code 0} it will block until
+     *                  there is some IO / tasks ready, if {@code -1} will not block at all and just return directly
+     *                  if there is nothing to run (like {@link #runNow()}).
      * @return          the number of IO and tasks executed.
      */
     public int run(long waitNanos) {
-        checkCurrentThread();
-        blockingContext.maxBlockingNanos = waitNanos;
-        return run(blockingContext);
+        return run(waitNanos, 0);
     }
 
     private void checkCurrentThread() {
@@ -207,7 +351,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
 
     @Override
     public IoEventLoopGroup parent() {
-        return null;
+        return parent;
     }
 
     @Deprecated
@@ -269,7 +413,20 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
 
     @Override
     public boolean inEventLoop(Thread thread) {
-        return this.owningThread == thread;
+        return this.owningThread.get() == thread;
+    }
+
+    /**
+     * Set the owning thread that will call {@link #run}. May only be called once, and only if the owning thread was
+     * not set in the constructor already.
+     *
+     * @param owningThread The owning thread
+     */
+    public void setOwningThread(Thread owningThread) {
+        Objects.requireNonNull(owningThread, "owningThread");
+        if (!this.owningThread.compareAndSet(null, owningThread)) {
+            throw new IllegalStateException("Owning thread already set");
+        }
     }
 
     private void shutdown0(long quietPeriod, long timeout, int shutdownState) {
@@ -398,10 +555,10 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         cancelScheduledTasks();
 
         if (gracefulShutdownStartTime == 0) {
-            gracefulShutdownStartTime = getCurrentTimeNanos();
+            gracefulShutdownStartTime = ticker.nanoTime();
         }
 
-        if (runAllTasks() > 0) {
+        if (runAllTasks(-1, false) > 0) {
             if (isShutdown()) {
                 // Executor shut down - no new tasks anymore.
                 return true;
@@ -416,7 +573,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
             return false;
         }
 
-        final long nanoTime = getCurrentTimeNanos();
+        final long nanoTime = ticker.nanoTime();
 
         if (isShutdown() || nanoTime - gracefulShutdownStartTime > gracefulShutdownTimeout) {
             return true;
@@ -487,17 +644,18 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         @Override
         public long delayNanos(long currentTimeNanos) {
             assert inEventLoop();
-            return ManualIoEventLoop.this.delayNanos(currentTimeNanos, maxBlockingNanos);
+            return Math.min(maxBlockingNanos, ManualIoEventLoop.this.delayNanos(currentTimeNanos, maxBlockingNanos));
         }
 
         @Override
         public long deadlineNanos() {
             assert inEventLoop();
             long next = nextScheduledTaskDeadlineNanos();
+            long maxDeadlineNanos = ticker.nanoTime() + maxBlockingNanos;
             if (next == -1) {
-                return maxBlockingNanos;
+                return maxDeadlineNanos;
             }
-            return Math.min(next, maxBlockingNanos);
+            return Math.min(next, maxDeadlineNanos);
         }
     };
 }

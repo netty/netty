@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.0.RC4-SNAPSHOT</version>
+    <version>4.2.5.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-io_uring</artifactId>
 
@@ -41,7 +41,7 @@
     <skipTests>true</skipTests>
     <jniArch>${os.detected.arch}</jniArch>
     <jni.classifier>${os.detected.name}-${jniArch}</jni.classifier>
-    <jniLibName>netty_transport_native_io_uring_${jniArch}</jniLibName>
+    <jniLibName>netty_transport_native_io_uring42_${jniArch}</jniLibName>
     <nativeLibOnlyDir>${project.build.directory}/native-lib-only</nativeLibOnlyDir>
     <extraConfigureArg />
     <extraConfigureArg2 />
@@ -59,6 +59,7 @@
         </os>
       </activation>
       <properties>
+        <!-- Enable testsuite -->
         <skipTests>false</skipTests>
       </properties>
 
@@ -137,6 +138,27 @@
             </executions>
           </plugin>
           <plugin>
+            <groupId>org.apache.felix</groupId>
+            <artifactId>maven-bundle-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>native-manifest</id>
+                <phase>process-classes</phase>
+                <goals>
+                  <goal>manifest</goal>
+                </goals>
+                <configuration>
+                  <instructions>
+                    <Bundle-NativeCode>META-INF/native/libnetty_transport_native_io_uring42_${os.detected.arch}.so; osname=Linux; processor=${os.detected.arch},*</Bundle-NativeCode>
+                    <Bundle-SymbolicName>${maven-symbolicname}.${jni.classifier}</Bundle-SymbolicName>
+                    <Fragment-Host>io.netty.transport-classes-io_uring</Fragment-Host>
+                  </instructions>
+                  <manifestLocation>${project.build.directory}/${jni.classifier}</manifestLocation>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
             <artifactId>maven-jar-plugin</artifactId>
             <executions>
               <!-- Generate the JAR that contains the native library in it. -->
@@ -152,12 +174,10 @@
                       <addDefaultSpecificationEntries>true</addDefaultSpecificationEntries>
                     </manifest>
                     <manifestEntries>
-                      <Bundle-NativeCode>META-INF/native/libnetty_transport_native_io_uring_${os.detected.arch}.so; osname=Linux; processor=${os.detected.arch},*</Bundle-NativeCode>
-                      <Fragment-Host>io.netty.transport-classes-io_uring</Fragment-Host>
                       <Multi-Release>true</Multi-Release>
                     </manifestEntries>
                     <index>true</index>
-                    <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
+                    <manifestFile>${project.build.directory}/${jni.classifier}/MANIFEST.MF</manifestFile>
                   </archive>
                   <classifier>${jni.classifier}</classifier>
                 </configuration>
@@ -196,12 +216,6 @@
                     <logback.configurationFile>src/test/resources/logback-test.xml</logback.configurationFile>
                     <logLevel>debug</logLevel>
                   </systemPropertyVariables>
-                  <properties>
-                    <property>
-                      <name>listener</name>
-                      <value>io.netty.build.junit.TimedOutTestsListener</value>
-                    </property>
-                  </properties>
                   <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
                   <trimStackTrace>false</trimStackTrace>
                   <argLine>${test.argLine}</argLine>
@@ -229,12 +243,6 @@
                     <logback.configurationFile>src/test/resources/logback-test.xml</logback.configurationFile>
                     <logLevel>debug</logLevel>
                   </systemPropertyVariables>
-                  <properties>
-                    <property>
-                      <name>listener</name>
-                      <value>io.netty.build.junit.TimedOutTestsListener</value>
-                    </property>
-                  </properties>
                   <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
                   <trimStackTrace>false</trimStackTrace>
                   <argLine>${test.argLine}</argLine>
@@ -295,6 +303,18 @@
         <test.argLine>-Dio.netty.leakDetection.level=paranoid -Dio.netty.leakDetection.targetRecords=32</test.argLine>
       </properties>
     </profile>
+    <profile>
+      <id>oss-fuzz</id>
+      <properties>
+        <jni.compiler.args.cflags>CFLAGS=${env.CFLAGS} -I${unix.common.include.unpacked.dir}</jni.compiler.args.cflags>
+      </properties>
+    </profile>
+    <profile>
+      <id>jdk8-tests</id>
+      <properties>
+        <skipTests>true</skipTests>
+      </properties>
+    </profile>
   </profiles>
 
   <dependencies>
@@ -350,6 +370,26 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>${tcnative.artifactId}</artifactId>
       <classifier>${tcnative.classifier}</classifier>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -423,7 +463,7 @@
                   <Multi-Release>true</Multi-Release>
                 </manifestEntries>
                 <index>true</index>
-                <manifestFile>${project.build.directory}/manifests/MANIFEST.MF</manifestFile>
+                <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
               </archive>
             </configuration>
           </execution>
@@ -448,20 +488,6 @@
                 <copy todir="${fallbackOutputDirectory}" includeEmptyDirs="false">
                   <zipfileset dir="${project.build.outputDirectory}" excludes="META-INF/versions/**,META-INF/native/**" />
                 </copy>
-              </target>
-            </configuration>
-          </execution>
-          <!-- Copy the manifest file that we populated so far so we can use it as a starting point when generating the jars and adding more things to it. -->
-          <execution>
-            <id>copy-manifest</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <copy file="${project.build.outputDirectory}/META-INF/MANIFEST.MF" tofile="${project.build.directory}/manifests/MANIFEST.MF" />
-                <copy file="${project.build.outputDirectory}/META-INF/MANIFEST.MF" tofile="${project.build.directory}/manifests/MANIFEST-native.MF" />
               </target>
             </configuration>
           </execution>

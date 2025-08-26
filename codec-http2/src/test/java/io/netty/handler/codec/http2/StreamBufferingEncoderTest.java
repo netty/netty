@@ -15,30 +15,6 @@
 
 package io.netty.handler.codec.http2;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
-import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
-import static io.netty.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;
-import static io.netty.handler.codec.http2.Http2Error.CANCEL;
-import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.anyBoolean;
-import static org.mockito.Mockito.anyInt;
-import static org.mockito.Mockito.anyLong;
-import static org.mockito.Mockito.anyShort;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
@@ -57,6 +33,8 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -66,6 +44,32 @@ import org.mockito.verification.VerificationMode;
 
 import java.util.ArrayList;
 import java.util.List;
+
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
+import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
+import static io.netty.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;
+import static io.netty.handler.codec.http2.Http2Error.CANCEL;
+import static io.netty.handler.codec.http2.Http2PromisedRequestVerifier.ALWAYS_VERIFY;
+import static io.netty.handler.codec.http2.Http2Stream.State.HALF_CLOSED_LOCAL;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyBoolean;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyLong;
+import static org.mockito.Mockito.anyShort;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for {@link StreamBufferingEncoder}.
@@ -126,8 +130,8 @@ public class StreamBufferingEncoderTest {
         DefaultHttp2ConnectionEncoder defaultEncoder =
                 new DefaultHttp2ConnectionEncoder(connection, writer);
         encoder = new StreamBufferingEncoder(defaultEncoder);
-        DefaultHttp2ConnectionDecoder decoder =
-                new DefaultHttp2ConnectionDecoder(connection, encoder, mock(Http2FrameReader.class));
+        DefaultHttp2ConnectionDecoder decoder = new DefaultHttp2ConnectionDecoder(
+                connection, encoder, mock(Http2FrameReader.class), ALWAYS_VERIFY, false);
         Http2ConnectionHandler handler = new Http2ConnectionHandlerBuilder()
                 .frameListener(mock(Http2FrameListener.class))
                 .codec(decoder, encoder).build();
@@ -184,7 +188,6 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void ensureCanCreateNextStreamWhenStreamCloses() {
-        encoder.writeSettingsAck(ctx, newPromise());
         setMaxConcurrentStreams(1);
 
         encoderWriteHeaders(3, newPromise());
@@ -209,10 +212,10 @@ public class StreamBufferingEncoderTest {
         assertEquals(1, encoder.numBufferedStreams());
     }
 
-    @Test
-    public void alternatingWritesToActiveAndBufferedStreams() {
-        encoder.writeSettingsAck(ctx, newPromise());
-        setMaxConcurrentStreams(1);
+    @ParameterizedTest(name = "{displayName} [{index}]: autoAckSettings={0}")
+    @ValueSource(booleans = {true, false})
+    public void alternatingWritesToActiveAndBufferedStreams(boolean autoAckSettings) {
+        setMaxConcurrentStreams(autoAckSettings, 1);
 
         encoderWriteHeaders(3, newPromise());
         assertEquals(0, encoder.numBufferedStreams());
@@ -230,7 +233,6 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void bufferingNewStreamFailsAfterGoAwayReceived() throws Http2Exception {
-        encoder.writeSettingsAck(ctx, newPromise());
         setMaxConcurrentStreams(0);
         connection.goAwayReceived(1, 8, EMPTY_BUFFER);
 
@@ -243,7 +245,6 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void receivingGoAwayFailsBufferedStreams() throws Http2Exception {
-        encoder.writeSettingsAck(ctx, newPromise());
         setMaxConcurrentStreams(5);
 
         int streamId = 3;
@@ -271,19 +272,17 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void receivingGoAwayFailsNewStreamIfMaxConcurrentStreamsReached() throws Http2Exception {
-        encoder.writeSettingsAck(ctx, newPromise());
         setMaxConcurrentStreams(1);
         encoderWriteHeaders(3, newPromise());
         connection.goAwayReceived(11, 8, EMPTY_BUFFER);
         ChannelFuture f = encoderWriteHeaders(5, newPromise());
 
-        assertTrue(f.cause() instanceof Http2GoAwayException);
+        assertInstanceOf(Http2GoAwayException.class, f.cause());
         assertEquals(0, encoder.numBufferedStreams());
     }
 
     @Test
     public void sendingGoAwayShouldNotFailStreams() {
-        encoder.writeSettingsAck(ctx, newPromise());
         setMaxConcurrentStreams(1);
 
         when(writer.writeHeaders(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class), anyInt(),
@@ -308,10 +307,10 @@ public class StreamBufferingEncoderTest {
         assertFalse(f3.isDone());
     }
 
-    @Test
-    public void endStreamDoesNotFailBufferedStream() {
-        encoder.writeSettingsAck(ctx, newPromise());
-        setMaxConcurrentStreams(0);
+    @ParameterizedTest(name = "{displayName} [{index}]: autoAckSettings={0}")
+    @ValueSource(booleans = {true, false})
+    public void endStreamDoesNotFailBufferedStream(boolean autoAckSettings) {
+        setMaxConcurrentStreams(autoAckSettings, 0);
 
         encoderWriteHeaders(3, newPromise());
         assertEquals(1, encoder.numBufferedStreams());
@@ -323,8 +322,7 @@ public class StreamBufferingEncoderTest {
 
         // Simulate that we received a SETTINGS frame which
         // increased MAX_CONCURRENT_STREAMS to 1.
-        setMaxConcurrentStreams(1);
-        encoder.writeSettingsAck(ctx, newPromise());
+        setMaxConcurrentStreams(autoAckSettings, 1);
 
         assertEquals(1, connection.numActiveStreams());
         assertEquals(0, encoder.numBufferedStreams());
@@ -333,7 +331,6 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void rstStreamClosesBufferedStream() {
-        encoder.writeSettingsAck(ctx, newPromise());
         setMaxConcurrentStreams(0);
 
         encoderWriteHeaders(3, newPromise());
@@ -345,10 +342,10 @@ public class StreamBufferingEncoderTest {
         assertEquals(0, encoder.numBufferedStreams());
     }
 
-    @Test
-    public void bufferUntilActiveStreamsAreReset() throws Exception {
-        encoder.writeSettingsAck(ctx, newPromise());
-        setMaxConcurrentStreams(1);
+    @ParameterizedTest(name = "{displayName} [{index}]: autoAckSettings={0}")
+    @ValueSource(booleans = {true, false})
+    public void bufferUntilActiveStreamsAreReset(boolean autoAckSettings) throws Exception {
+        setMaxConcurrentStreams(autoAckSettings, 1);
 
         encoderWriteHeaders(3, newPromise());
         assertEquals(0, encoder.numBufferedStreams());
@@ -379,10 +376,10 @@ public class StreamBufferingEncoderTest {
         assertEquals(0, encoder.numBufferedStreams());
     }
 
-    @Test
-    public void bufferUntilMaxStreamsIncreased() {
-        encoder.writeSettingsAck(ctx, newPromise());
-        setMaxConcurrentStreams(2);
+    @ParameterizedTest(name = "{displayName} [{index}]: autoAckSettings={0}")
+    @ValueSource(booleans = {true, false})
+    public void bufferUntilMaxStreamsIncreased(boolean autoAckSettings) {
+        setMaxConcurrentStreams(autoAckSettings, 2);
 
         encoderWriteHeaders(3, newPromise());
         encoderWriteHeaders(5, newPromise());
@@ -397,8 +394,7 @@ public class StreamBufferingEncoderTest {
 
         // Simulate that we received a SETTINGS frame which
         // increased MAX_CONCURRENT_STREAMS to 5.
-        setMaxConcurrentStreams(5);
-        encoder.writeSettingsAck(ctx, newPromise());
+        setMaxConcurrentStreams(autoAckSettings, 5);
 
         assertEquals(0, encoder.numBufferedStreams());
         writeVerifyWriteHeaders(times(1), 7);
@@ -411,8 +407,9 @@ public class StreamBufferingEncoderTest {
         assertEquals(5, connection.local().numActiveStreams());
     }
 
-    @Test
-    public void bufferUntilSettingsReceived() throws Http2Exception {
+    @ParameterizedTest(name = "{displayName} [{index}]: autoAckSettings={0}")
+    @ValueSource(booleans = {true, false})
+    public void bufferUntilSettingsReceived(boolean autoAckSettings) {
         int initialLimit = SMALLEST_MAX_CONCURRENT_STREAMS;
         int numStreams = initialLimit * 2;
         for (int ix = 0, nextStreamId = 3; ix < numStreams; ++ix, nextStreamId += 2) {
@@ -426,7 +423,7 @@ public class StreamBufferingEncoderTest {
         assertEquals(numStreams / 2, encoder.numBufferedStreams());
 
         // Simulate that we received a SETTINGS frame.
-        setMaxConcurrentStreams(initialLimit * 2);
+        setMaxConcurrentStreams(autoAckSettings, initialLimit * 2);
 
         assertEquals(0, encoder.numBufferedStreams());
         assertEquals(numStreams, connection.local().numActiveStreams());
@@ -471,7 +468,6 @@ public class StreamBufferingEncoderTest {
 
     @Test
     public void closedBufferedStreamReleasesByteBuf() {
-        encoder.writeSettingsAck(ctx, newPromise());
         setMaxConcurrentStreams(0);
         ByteBuf data = mock(ByteBuf.class);
         ChannelFuture f1 = encoderWriteHeaders(3, newPromise());
@@ -525,8 +521,20 @@ public class StreamBufferingEncoderTest {
     }
 
     private void setMaxConcurrentStreams(int newValue) {
+        setMaxConcurrentStreams(true, newValue);
+    }
+
+    private void setMaxConcurrentStreams(boolean autoAckSettings, int newValue) {
         try {
-            encoder.remoteSettings(new Http2Settings().maxConcurrentStreams(newValue));
+            Http2Settings settings = new Http2Settings().maxConcurrentStreams(newValue);
+            // Mimic behavior of DefaultHttp2ConnectionDecoder.onSettingsRead:
+            if (autoAckSettings) {
+                encoder.writeSettingsAck(ctx, newPromise());
+                encoder.remoteSettings(settings);
+            } else {
+                encoder.consumeReceivedSettings(settings);
+                encoder.writeSettingsAck(ctx, newPromise());
+            }
             // Flush the remote flow controller to write data
             encoder.flowController().writePendingBytes();
         } catch (Http2Exception e) {

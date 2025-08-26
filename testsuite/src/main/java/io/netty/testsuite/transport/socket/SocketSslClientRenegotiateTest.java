@@ -58,7 +58,6 @@ import javax.net.ssl.SSLHandshakeException;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
@@ -129,8 +128,7 @@ public class SocketSslClientRenegotiateTest extends AbstractSocketTest {
     @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
     public void testSslRenegotiationRejected(final SslContext serverCtx, final SslContext clientCtx,
                                              final boolean delegate, TestInfo testInfo) throws Throwable {
-        // BoringSSL does not support renegotiation intentionally.
-        assumeFalse("BoringSSL".equals(OpenSsl.versionString()));
+        assumeTrue(OpenSsl.isRenegotiationSupported());
         assumeTrue(OpenSsl.isAvailable());
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override

@@ -24,27 +24,33 @@ on:
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
-  
+
 permissions: read-all
 
 env:
   MAVEN_OPTS: -Xmx6g -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
 
+# Cancel running jobs when a new push happens to the same branch as otherwise it will
+# tie up too many resources without providing much value.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  stage-snapshot:
+  stage-snapshot-linux:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         include:
-          - setup: linux-x86_64-java8
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.18.yaml run stage-snapshot"
+          - setup: linux-x86_64-java11
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run stage-snapshot"
           - setup: linux-aarch64
-            docker-compose-build: "-f docker/docker-compose.centos-7.yaml build"
-            docker-compose-run: "-f docker/docker-compose.centos-7.yaml run cross-compile-aarch64-stage-snapshot"
+            docker-compose-build: "-f docker/docker-compose.centos-7.cross.yaml build"
+            docker-compose-run: "-f docker/docker-compose.centos-7.cross.yaml run cross-compile-aarch64-stage-snapshot"
           - setup: linux-riscv64
-            docker-compose-build: "-f docker/docker-compose.ubuntu-20.04.yaml build"
-            docker-compose-run: "-f docker/docker-compose.ubuntu-20.04.yaml run cross-compile-riscv64-stage-snapshot"
+            docker-compose-build: "-f docker/docker-compose.ubuntu-20.04.cross.yaml build"
+            docker-compose-run: "-f docker/docker-compose.ubuntu-20.04.cross.yaml run cross-compile-riscv64-stage-snapshot"
 
     name: stage-snapshot-${{ matrix.setup }}
     steps:
@@ -56,10 +62,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-${{ matrix.setup }}-
-            ${{ runner.os }}-maven-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - name: Create local staging directory
         run: mkdir -p ~/local-staging
@@ -78,18 +84,71 @@ jobs:
           if-no-files-found: error
           include-hidden-files: true
 
-  deploy-staged-snapshots:
-    runs-on: ubuntu-latest
-    # Wait until we have staged everything
-    needs: stage-snapshot
+  stage-snapshot-macos:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - setup: macos-x86_64-java11
+            os: macos-13
+          - setup: macos-aarch64-java11
+            os: macos-15
+
+    runs-on: ${{ matrix.os }}
+    name:  ${{ matrix.setup }}  build
+
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 8
+      - name: Set up JDK 11
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '8'
+          java-version: '11'
+
+      # Cache .m2/repository
+      # Caching of maven dependencies
+      - uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: ~/.m2/repository
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
+
+      - name: Install tools via brew
+        run: brew bundle
+
+      - name: Create local staging directory
+        run: mkdir -p ~/local-staging
+
+      - name: Stage snapshots to local staging directory
+        run: ./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/local-staging -DskipTests=true
+
+      - name: Upload local staging directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.setup }}-local-staging
+          path: ~/local-staging
+          if-no-files-found: error
+          include-hidden-files: true
+
+  stage-snapshot-windows-x86_64:
+    runs-on: windows-2022
+    name: stage-snapshot-windows-x86_64
+    env:
+      # Let's limit the amount of ram that is used to unpack rustup as we saw
+      # failures sometimes due the fact that not enough memory could be reserved.
+      RUSTUP_UNPACK_RAM: 134217728  # Use 128 MiB
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: 11
 
       # Cache .m2/repository
       - name: Cache local Maven repository
@@ -97,18 +156,93 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-deploy-staged-snapshots-${{ hashFiles('**/pom.xml') }}
+          key: cache-windows-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-deploy-staged-snapshots-
-            ${{ runner.os }}-maven-
+            cache-windows-maven-${{ hashFiles('**/pom.xml') }}
+            cache-windows-maven-
 
-      # Setup some env to re-use later.
-      - name: Prepare environment variables
-        run: |
-          echo "LOCAL_STAGING_DIR=$HOME/local-staging" >> $GITHUB_ENV
+      - name: Install stable rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      - name: Add msbuild to PATH
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Configuring Developer Command Prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x86_amd64
+
+      - name: Install tools
+        uses: crazy-max/ghaction-chocolatey@v3
+        with:
+          args: install ninja nasm
+
+      - name: Stage snapshots to local staging directory
+        run: ./mvnw.cmd -B -ntp --file pom.xml clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=/local-staging -DskipTests=true
+
+      - name: Upload local staging directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-x86_64-local-staging
+          path: /local-staging
+          if-no-files-found: error
+          include-hidden-files: true
+
+  deploy-staged-snapshots:
+    runs-on: ubuntu-latest
+    # Wait until we have staged everything
+    needs: [ stage-snapshot-linux, stage-snapshot-windows-x86_64, stage-snapshot-macos ]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 11
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '11'
+
+      # Cache .m2/repository
+      - name: Cache local Maven repository
+        uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: ~/.m2/repository
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
+
+      - uses: s4u/maven-settings-action@v3.0.0
+        with:
+          servers: |
+            [{
+              "id": "central-portal-snapshots",
+              "username": "${{ secrets.MAVEN_CENTRAL_USERNAME }}",
+              "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
+            }]
 
       # Hardcode the staging artifacts that need to be downloaded.
       # These must match the matrix setups. There is currently no way to pull this out of the config.
+      - name: Download windows_x86_64 staging directory
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-x86_64-local-staging
+          path: ~/windows-x86_64-local-staging
+
+      - name: Download macos-aarch64-java11 staging directory
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-aarch64-java11-local-staging
+          path: ~/macos-aarch64-java11-local-staging
+
+      - name: Download macos-x86_64-java11 staging directory
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-x86_64-java11-local-staging
+          path: ~/macos-x86_64-java11-local-staging
+
       - name: Download linux-aarch64 staging directory
         uses: actions/download-artifact@v4
         with:
@@ -121,43 +255,27 @@ jobs:
           name: linux-riscv64-local-staging
           path: ~/linux-riscv64-local-staging
 
-      - name: Download linux-x86_64-java8 staging directory
+      - name: Download linux-x86_64-java11 staging directory
         uses: actions/download-artifact@v4
         with:
-          name: linux-x86_64-java8-local-staging
-          path: ~/linux-x86_64-java8-local-staging
+          name: linux-x86_64-java11-local-staging
+          path: ~/linux-x86_64-java11-local-staging
 
       - name: Copy previous build artifacts to local maven repository
+        run: bash ./.github/scripts/local_staging_install_snapshot.sh ~/.m2/repository ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging
+
+      - name: Generate netty-codec-http3 and deploy to local staging.
         run: |
-          cp -r ~/linux-aarch64-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/linux-riscv64-local-staging/deferred/* ~/.m2/repository/
-          cp -r ~/linux-x86_64-java8-local-staging/deferred/* ~/.m2/repository/
+          mkdir -p ~/codec-http3-local-staging
+          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/codec-http3-local-staging -DskipTests=true
 
       - name: Generate netty-all and deploy to local staging.
         run: |
           mkdir -p ~/all-local-staging
-          ./mvnw -B --file pom.xml -Plinux-native-dependencies -am -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=$HOME/all-local-staging -DskipRemoteStaging=true -DskipTests=true
+          ./mvnw -B --file pom.xml -Pnative-dependencies -pl all clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=$HOME/all-local-staging -DskipTests=true
 
       - name: Merge staging repositories
-        run: |
-          mkdir -p ~/local-staging/deferred
-          cat ~/linux-aarch64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-aarch64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-riscv64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-riscv64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-x86_64-java8-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-x86_64-java8-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/all-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/all-local-staging/deferred/io/netty/netty-all/* ~/local-staging/deferred/io/netty/netty-all/
-
-      - uses: s4u/maven-settings-action@v3.0.0
-        with:
-          servers: |
-            [{
-              "id": "sonatype-nexus-snapshots",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
-            }]
+        run: bash ./.github/scripts/local_staging_merge_snapshot.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ~/codec-http3-local-staging ~/all-local-staging
 
       - name: Deploy local staged artifacts
-        run: ./mvnw -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR
+        run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$HOME/local-staging -DserverId=central-portal-snapshots

@@ -694,10 +694,16 @@ public final class Unpooled {
     public static ByteBuf unmodifiableBuffer(ByteBuf buffer) {
         ByteOrder endianness = buffer.order();
         if (endianness == BIG_ENDIAN) {
-            return new ReadOnlyByteBuf(buffer);
+            return newReadyOnlyBuffer(buffer);
         }
 
-        return new ReadOnlyByteBuf(buffer.order(BIG_ENDIAN)).order(LITTLE_ENDIAN);
+        return newReadyOnlyBuffer(buffer.order(BIG_ENDIAN)).order(LITTLE_ENDIAN);
+    }
+
+    private static ReadOnlyByteBuf newReadyOnlyBuffer(ByteBuf buffer) {
+        return buffer instanceof AbstractByteBuf ?
+                new ReadOnlyAbstractByteBuf((AbstractByteBuf) buffer) :
+                new ReadOnlyByteBuf(buffer);
     }
 
     /**

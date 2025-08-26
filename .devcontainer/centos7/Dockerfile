@@ -1,0 +1,44 @@
+FROM --platform=linux/amd64 centos:7.6.1810
+
+# Update as we need to use the vault now.
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/\/7.6.1810\//g' /etc/yum.repos.d/CentOS-Base.repo
+
+# install dependencies
+RUN yum install -y \
+ apr-devel \
+ autoconf \
+ automake \
+ git \
+ glibc-devel \
+ libtool \
+ lksctp-tools \
+ lsb-core \
+ make \
+ openssl-devel \
+ tar \
+ unzip \
+ wget \
+ zip
+
+
+# Downloading and installing SDKMAN!
+RUN curl -s "https://get.sdkman.io?ci=true" | bash
+
+ARG java_version="11.0.26-zulu"
+ENV JAVA_VERSION=$java_version
+
+# Installing Java removing some unnecessary SDKMAN files
+RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
+    yes | sdk install java $JAVA_VERSION && \
+    rm -rf $HOME/.sdkman/archives/* && \
+    rm -rf $HOME/.sdkman/tmp/*"
+
+RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
+RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
+
+# Cleanup
+RUN yum clean all && \
+    rm -rf /var/cache/yum
+
+# when the JDK is GraalVM install native-image
+RUN if [ -O /root/.sdkman/candidates/java/current/bin/gu ]; then /root/.sdkman/candidates/java/current/bin/gu install native-image; else echo "Not GraalVM, skip installation of native-image" ; fi

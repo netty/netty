@@ -17,6 +17,8 @@ package io.netty.channel.uring;
 
 import io.netty.util.internal.MathUtil;
 
+import java.nio.ByteBuffer;
+
 /**
  * A buffer for completion events.
  */
@@ -32,7 +34,7 @@ final class CompletionBuffer {
     private int tail = -1;
 
     CompletionBuffer(int numCompletions, long tombstone) {
-        capacity = MathUtil.findNextPositivePowerOfTwo(numCompletions * 2);
+        capacity = MathUtil.findNextPositivePowerOfTwo(numCompletions);
         array = new long[capacity];
         mask = capacity - 1;
         for (int i = 0; i < capacity; i += 2) {
@@ -41,9 +43,17 @@ final class CompletionBuffer {
         this.tombstone = tombstone;
     }
 
-    private boolean add(int res, int flags, long udata) {
+    // Package-private for testing
+    boolean add(int res, int flags, long udata) {
+        return add(res, flags, udata, null);
+    }
+
+    private boolean add(int res, int flags, long udata, ByteBuffer extraCqeData) {
         if (udata == tombstone) {
             throw new IllegalStateException("udata can't be the same as the tombstone");
+        }
+        if (extraCqeData != null) {
+            throw new IllegalArgumentException("extraCqeData not supported");
         }
         // Pack res and flag into the first slot.
         array[combinedIdx(tail + 1)] = (((long) res) << 32) | (flags & 0xffffffffL);
@@ -98,14 +108,16 @@ final class CompletionBuffer {
     }
 
     boolean processOneNow(CompletionCallback callback, long udata) {
-        // We basically just scan over the whole array, if this turns out to be a performance problem
+        // We basically just scan over the whole array (in reverse order as it is most likely that the completion
+        // that belongs to the udata was submitted last), if this turns out to be a performance problem
         // (we actually don't expect too many outstanding completions) it's possible to be a bit smarter.
         //
         // We could make the udata generation shared across channels and always increase it. Then we could use
         // a binarySearch to find the right completion to handle. This only downside would be that this will not
         // work once we overflow so we would need to handle this somehow.
-        int idx = head;
-        for (int i = 0; i < size; i++, idx += 2) {
+        int idx = tail - 1;
+
+        for (int i = 0; i < size; i += 2, idx -= 2) {
             int udataIdx = udataIdx(idx);
             long data = array[udataIdx];
             if (udata != data) {
@@ -129,6 +141,6 @@ final class CompletionBuffer {
     private static boolean handle(CompletionCallback callback, long combined, long udata) {
         int res = (int) (combined >> 32);
         int flags = (int) combined;
-        return callback.handle(res, flags, udata);
+        return callback.handle(res, flags, udata, null);
     }
 }

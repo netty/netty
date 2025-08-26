@@ -383,6 +383,8 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
         @Override
         protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
+            assert outstanding != -1 : "multi-shot not implemented yet";
+
             final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             final ChannelPipeline pipeline = pipeline();
             ByteBuf byteBuf = this.readBuffer;
@@ -390,10 +392,9 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             try {
                 recvmsgComplete(pipeline, allocHandle, byteBuf, res, flags, data, outstanding);
             } catch (Throwable t) {
-                if (connected && t instanceof NativeIoException) {
-                    t = translateForConnected((NativeIoException) t);
-                }
-                pipeline.fireExceptionCaught(t);
+                Throwable e = (connected && t instanceof NativeIoException) ?
+                  translateForConnected((NativeIoException) t) : t;
+                pipeline.fireExceptionCaught(e);
             }
         }
 
@@ -411,7 +412,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 allocHandle.lastBytesRead(res);
                 if (hdr.hasPort(IoUringDatagramChannel.this)) {
                     allocHandle.incMessagesRead(1);
-                    DatagramPacket packet = hdr.read(
+                    DatagramPacket packet = hdr.get(
                             IoUringDatagramChannel.this, registration().attachment(), byteBuf, res);
                     pipeline.fireChannelRead(packet);
                 }
@@ -433,7 +434,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                             // trying to schedule a read. If it's supported and not part of the flags we know for sure
                             // that the next read (which would be using Native.MSG_DONTWAIT) will complete without
                             // be able to read any data. This is useless work and we can skip it.
-                            (!IoUring.isIOUringCqeFSockNonEmptySupported() ||
+                            (!IoUring.isCqeFSockNonEmptySupported() ||
                                     (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0)) {
                         // Let's schedule another read.
                         scheduleRead(false);
@@ -471,7 +472,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
         private int scheduleRecvmsg(ByteBuf byteBuf, int numDatagram, int datagramSize) {
             int writable = byteBuf.writableBytes();
-            long bufferAddress = byteBuf.memoryAddress() + byteBuf.writerIndex();
+            long bufferAddress = IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex();
             if (numDatagram <= 1) {
                 return scheduleRecvmsg0(bufferAddress, writable, true) ? 1 : 0;
             }
@@ -493,7 +494,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 // We can not continue reading before we did not submit the recvmsg(s) and received the results.
                 return false;
             }
-            msgHdrMemory.write(socket, null, bufferAddress, bufferLength, (short) 0);
+            msgHdrMemory.set(socket, null, bufferAddress, bufferLength, (short) 0);
 
             int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
@@ -501,7 +502,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             // We always use idx here so we can detect if no idx was used by checking if data < 0 in
             // readComplete0(...)
             IoUringIoOps ops = IoUringIoOps.newRecvmsg(
-                    fd, flags((byte) 0), msgFlags, msgHdrMemory.address(), msgHdrMemory.idx());
+                    fd, (byte) 0, msgFlags, msgHdrMemory.address(), msgHdrMemory.idx());
             long id = registration.submit(ops);
             if (id == 0) {
                 // Submission failed we don't used the MsgHdrMemory and so should give it back.
@@ -588,7 +589,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 segmentSize = 0;
             }
 
-            long bufferAddress = data.memoryAddress();
+            long bufferAddress = IoUring.memoryAddress(data);
             return scheduleSendmsg(remoteAddress, bufferAddress, data.readableBytes(), segmentSize, first);
         }
 
@@ -600,12 +601,12 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 // before we can write again.
                 return false;
             }
-            hdr.write(socket, remoteAddress, bufferAddress, bufferLength, (short) segmentSize);
+            hdr.set(socket, remoteAddress, bufferAddress, bufferLength, (short) segmentSize);
 
             int fd = fd().intValue();
             int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
             IoRegistration registration = registration();
-            IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, flags((byte) 0), msgFlags, hdr.address(), hdr.idx());
+            IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, msgFlags, hdr.address(), hdr.idx());
             long id = registration.submit(ops);
             if (id == 0) {
                 // Submission failed we don't used the MsgHdrMemory and so should give it back.
@@ -668,7 +669,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             }
             // Let's try to cancel outstanding op as these might be submitted and waiting for data
             // (via fastpoll).
-            IoUringIoOps ops = IoUringIoOps.newAsyncCancel(flags((byte) 0), id, op);
+            IoUringIoOps ops = IoUringIoOps.newAsyncCancel((byte) 0, id, op);
             registration.submit(ops);
             cancelled++;
         }
@@ -677,7 +678,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
     @Override
     protected boolean socketIsEmpty(int flags) {
-        return IoUring.isIOUringCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
+        return IoUring.isCqeFSockNonEmptySupported() && (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) == 0;
     }
 
     @Override

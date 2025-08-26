@@ -18,6 +18,7 @@ package io.netty.channel.unix;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
+import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
@@ -64,15 +65,50 @@ public final class IovArray implements MessageProcessor {
 
     private final long memoryAddress;
     private final ByteBuf memory;
+    private final CleanableDirectBuffer cleanable;
     private int count;
     private long size;
     private long maxBytes = SSIZE_MAX;
+    private int maxCount;
 
+    /**
+     * @deprecated Use {@link #IovArray(int)} instead.
+     */
+    @Deprecated
     public IovArray() {
-        this(Unpooled.wrappedBuffer(Buffer.allocateDirectWithNativeOrder(MAX_CAPACITY)).setIndex(0, 0));
+        this(IOV_MAX);
     }
 
+    /**
+     * Allocate an IovArray with enough room for the given number of <strong>entries</strong> (not bytes).
+     * @param numEntries The desired number of entries in the IovArray.
+     */
     @SuppressWarnings("deprecation")
+    public IovArray(int numEntries) {
+        int sizeBytes = Math.multiplyExact(checkPositive(numEntries, "numEntries"), IOV_SIZE);
+        cleanable = Buffer.allocateDirectBufferWithNativeOrder(sizeBytes);
+        ByteBuf bbuf = Unpooled.wrappedBuffer(cleanable.buffer()).setIndex(0, 0);
+        memory = PlatformDependent.hasUnsafe() ? bbuf : bbuf.order(
+                PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
+        if (memory.hasMemoryAddress()) {
+            memoryAddress = memory.memoryAddress();
+        } else {
+            // Fallback to using JNI as we were not be able to access the address otherwise.
+
+            // Use internalNioBuffer to reduce object creation.
+            // It is important to add the position as the returned ByteBuffer might be shared by multiple ByteBuf
+            // instances and so has an address that starts before the start of the ByteBuf itself.
+            ByteBuffer byteBuffer = memory.internalNioBuffer(0, memory.capacity());
+            memoryAddress = Buffer.memoryAddress(byteBuffer) + byteBuffer.position();
+        }
+        maxCount = IOV_MAX;
+    }
+
+    /**
+     * @param memory The underlying memory.
+     * @deprecated Use {@link #IovArray(int)} instead.
+     */
+    @Deprecated
     public IovArray(ByteBuf memory) {
         assert memory.writerIndex() == 0;
         assert memory.readerIndex() == 0;
@@ -82,13 +118,21 @@ public final class IovArray implements MessageProcessor {
             memoryAddress = memory.memoryAddress();
         } else {
             // Fallback to using JNI as we were not be able to access the address otherwise.
-            memoryAddress = Buffer.memoryAddress(memory.internalNioBuffer(0, memory.capacity()));
+
+            // Use internalNioBuffer to reduce object creation.
+            // It is important to add the position as the returned ByteBuffer might be shared by multiple ByteBuf
+            // instances and so has an address that starts before the start of the ByteBuf itself.
+            ByteBuffer byteBuffer = memory.internalNioBuffer(0, memory.capacity());
+            memoryAddress = Buffer.memoryAddress(byteBuffer) + byteBuffer.position();
         }
+        cleanable = null;
+        maxCount = IOV_MAX;
     }
 
     public void clear() {
         count = 0;
         size = 0;
+        maxCount = IOV_MAX;
     }
 
     /**
@@ -100,7 +144,7 @@ public final class IovArray implements MessageProcessor {
     }
 
     public boolean add(ByteBuf buf, int offset, int len) {
-        if (count == IOV_MAX) {
+        if (count == maxCount) {
             // No more room!
             return false;
         }
@@ -126,6 +170,15 @@ public final class IovArray implements MessageProcessor {
             }
             return true;
         }
+    }
+
+    /**
+     * Return {@code true} if there is no more space left in the {@link IovArray}.
+     *
+     * @return full or not.
+     */
+    public boolean isFull() {
+        return memory.capacity() < (count + 1) * IOV_SIZE || size >= maxBytes;
     }
 
     private boolean add(long memoryAddress, long addr, int len) {
@@ -201,11 +254,31 @@ public final class IovArray implements MessageProcessor {
     }
 
     /**
+     * Set the maximum amount of buffers that can be added to this {@link IovArray} via {@link #add(ByteBuf, int, int)}
+     * <p>
+     * This will not impact the existing state of the {@link IovArray}, and only applies to subsequent calls to
+     * {@link #add(ByteBuf)}.
+     * <p>
+     * @param maxCount the maximum amount of bytes that can be added to this {@link IovArray}.
+     */
+    public void maxCount(int maxCount) {
+        this.maxCount = min(IOV_MAX, checkPositive(maxCount, "maxCount"));
+    }
+
+    /**
      * Get the maximum amount of bytes that can be added to this {@link IovArray}.
      * @return the maximum amount of bytes that can be added to this {@link IovArray}.
      */
     public long maxBytes() {
         return maxBytes;
+    }
+
+    /**
+     * Get the maximum amount of buffers that can be added to this {@link IovArray}.
+     * @return the maximum amount of buffers that can be added to this {@link IovArray}.
+     */
+    public int maxCount() {
+        return maxCount;
     }
 
     /**
@@ -220,6 +293,10 @@ public final class IovArray implements MessageProcessor {
      */
     public void release() {
         memory.release();
+        if (cleanable != null) {
+            // The 'cleanable' will be 'null' if the 'IovArray(ByteBuf)' constructor was used.
+            cleanable.clean();
+        }
     }
 
     @Override

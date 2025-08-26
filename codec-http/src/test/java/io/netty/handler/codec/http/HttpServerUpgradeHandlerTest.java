@@ -229,4 +229,56 @@ public class HttpServerUpgradeHandlerTest {
         assertNull(channel.readOutbound());
         assertFalse(channel.finishAndReleaseAll());
     }
+
+    @Test
+    public void upgradeExpect() {
+        final HttpServerCodec httpServerCodec = new HttpServerCodec();
+        final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
+            @Override
+            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
+                return new TestUpgradeCodec();
+            }
+        };
+
+        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory);
+
+        EmbeddedChannel channel = new EmbeddedChannel(httpServerCodec, upgradeHandler);
+
+        // Build a h2c upgrade request, but without connection header.
+        String upgradeString = "GET / HTTP/1.1\r\n" +
+                "Expect: foo\r\n" +
+                "Upgrade: h2c\r\n" +
+                "\r\n" +
+                "GET / HTTP/1.1\r\n" +
+                "Content-Length: 0\r\n" +
+                "\r\n";
+        ByteBuf upgrade = Unpooled.copiedBuffer(upgradeString, CharsetUtil.US_ASCII);
+
+        assertTrue(channel.writeInbound(upgrade));
+        channel.checkException();
+        assertTrue(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void upgradePrematureClose() throws Exception {
+        final HttpServerCodec httpServerCodec = new HttpServerCodec();
+        final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
+            @Override
+            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
+                return new TestUpgradeCodec();
+            }
+        };
+
+        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory);
+
+        EmbeddedChannel channel = new EmbeddedChannel(httpServerCodec, upgradeHandler);
+
+        channel.writeInbound(Unpooled.copiedBuffer("POST / HTTP/1.1\n" +
+                "Upgrade:\n" +
+                "Expect:\n" +
+                "Content-Length: 8\n" +
+                "\n" +
+                "GET / HTTP/1.1\n", CharsetUtil.US_ASCII));
+        assertTrue(channel.finishAndReleaseAll());
+    }
 }

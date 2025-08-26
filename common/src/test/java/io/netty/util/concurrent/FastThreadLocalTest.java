@@ -25,17 +25,21 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.FutureTask;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.nullValue;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -43,7 +47,23 @@ public class FastThreadLocalTest {
     @BeforeEach
     public void setUp() {
         FastThreadLocal.removeAll();
-        assertThat(FastThreadLocal.size(), is(0));
+        assertEquals(0, FastThreadLocal.size());
+    }
+
+    @Test
+    public void testGetAndSetReturnsOldValue() {
+        FastThreadLocal<Boolean> threadLocal = new FastThreadLocal<Boolean>() {
+            @Override
+            protected Boolean initialValue() {
+                return Boolean.TRUE;
+            }
+        };
+
+        assertNull(threadLocal.getAndSet(Boolean.FALSE));
+        assertEquals(Boolean.FALSE, threadLocal.get());
+        assertEquals(Boolean.FALSE, threadLocal.getAndSet(Boolean.TRUE));
+        assertEquals(Boolean.TRUE, threadLocal.get());
+        threadLocal.remove();
     }
 
     @Test
@@ -75,13 +95,13 @@ public class FastThreadLocalTest {
         };
 
         // Initialize a thread-local variable.
-        assertThat(var.get(), is(nullValue()));
-        assertThat(FastThreadLocal.size(), is(1));
+        assertNull(var.get());
+        assertEquals(1, FastThreadLocal.size());
 
         // And then remove it.
         FastThreadLocal.removeAll();
-        assertThat(removed.get(), is(true));
-        assertThat(FastThreadLocal.size(), is(0));
+        assertTrue(removed.get());
+        assertEquals(0, FastThreadLocal.size());
     }
 
     @Test
@@ -168,32 +188,99 @@ public class FastThreadLocalTest {
     }
 
     @Test
+    public void testWrappedProperties() {
+        assertFalse(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+        assertFalse(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+        FastThreadLocalThread.runWithFastThreadLocal(() -> {
+            assertTrue(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+            assertTrue(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+        });
+    }
+
+    @Test
+    public void testWrapMany() throws ExecutionException, InterruptedException {
+        class Worker implements Runnable {
+            final Semaphore semaphore = new Semaphore(0);
+            final FutureTask<?> task = new FutureTask<>(this, null);
+
+            @Override
+            public void run() {
+                assertFalse(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+                assertFalse(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+                semaphore.acquireUninterruptibly();
+                FastThreadLocalThread.runWithFastThreadLocal(() -> {
+                    assertTrue(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+                    assertTrue(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+                    semaphore.acquireUninterruptibly();
+                    assertTrue(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+                    assertTrue(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+                });
+                assertFalse(FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals());
+                assertFalse(FastThreadLocalThread.currentThreadHasFastThreadLocal());
+            }
+        }
+
+        int n = 100;
+        List<Worker> workers = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            Worker worker = new Worker();
+            workers.add(worker);
+        }
+        Collections.shuffle(workers);
+        for (int i = 0; i < workers.size(); i++) {
+            new Thread(workers.get(i).task, "worker-" + i).start();
+        }
+        for (int i = 0; i < 2; i++) {
+            Collections.shuffle(workers);
+            for (Worker worker : workers) {
+                worker.semaphore.release();
+            }
+        }
+        for (Worker worker : workers) {
+            worker.task.get();
+        }
+    }
+
+    @Test
     @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
     public void testOnRemoveCalledForFastThreadLocalGet() throws Exception {
-        testOnRemoveCalled(true, true);
+        testOnRemoveCalled(true, false, true);
     }
 
     @Disabled("onRemoval(...) not called with non FastThreadLocal")
     @Test
     @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
     public void testOnRemoveCalledForNonFastThreadLocalGet() throws Exception {
-        testOnRemoveCalled(false, true);
+        testOnRemoveCalled(false, false, true);
     }
 
     @Test
     @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
     public void testOnRemoveCalledForFastThreadLocalSet() throws Exception {
-        testOnRemoveCalled(true, false);
+        testOnRemoveCalled(true, false, false);
     }
 
     @Disabled("onRemoval(...) not called with non FastThreadLocal")
     @Test
     @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
     public void testOnRemoveCalledForNonFastThreadLocalSet() throws Exception {
-        testOnRemoveCalled(false, false);
+        testOnRemoveCalled(false, false, false);
     }
 
-    private static void testOnRemoveCalled(boolean fastThreadLocal, final boolean callGet) throws Exception {
+    @Test
+    @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
+    public void testOnRemoveCalledForWrappedGet() throws Exception {
+        testOnRemoveCalled(false, true, true);
+    }
+
+    @Test
+    @Timeout(value = 4000, unit = TimeUnit.MILLISECONDS)
+    public void testOnRemoveCalledForWrappedSet() throws Exception {
+        testOnRemoveCalled(false, true, false);
+    }
+
+    private static void testOnRemoveCalled(boolean fastThreadLocal, boolean wrap, final boolean callGet)
+            throws Exception {
 
         final TestFastThreadLocal threadLocal = new TestFastThreadLocal();
         final TestFastThreadLocal threadLocal2 = new TestFastThreadLocal();
@@ -210,6 +297,10 @@ public class FastThreadLocalTest {
                 }
             }
         };
+        if (wrap) {
+            Runnable r = runnable;
+            runnable = () -> FastThreadLocalThread.runWithFastThreadLocal(r);
+        }
         Thread thread = fastThreadLocal ? new FastThreadLocalThread(runnable) : new Thread(runnable);
         thread.start();
         thread.join();
@@ -265,7 +356,7 @@ public class FastThreadLocalTest {
                 throwable.set(t);
             } finally {
                 // Assert the max index cannot greater than (ARRAY_LIST_CAPACITY_MAX_SIZE - 1).
-                assertThat(throwable.get(), is(instanceOf(IllegalStateException.class)));
+                assertInstanceOf(IllegalStateException.class, throwable.get());
                 // Assert the index was reset to ARRAY_LIST_CAPACITY_MAX_SIZE
                 // after it reaches ARRAY_LIST_CAPACITY_MAX_SIZE.
                 assertEquals(ARRAY_LIST_CAPACITY_MAX_SIZE - 1, InternalThreadLocalMap.lastVariableIndex());
@@ -300,7 +391,7 @@ public class FastThreadLocalTest {
         fastThreadLocalThread.start();
         fastThreadLocalThread.join();
         // assert the expanded size is not overflowed to negative value
-        assertThat(throwable.get(), is(not(instanceOf(NegativeArraySizeException.class))));
+        assertThat(throwable.get()).isNotInstanceOf(NegativeArraySizeException.class);
     }
 
     @Test
@@ -358,6 +449,6 @@ public class FastThreadLocalTest {
         FastThreadLocalThread fastThreadLocalThread = new FastThreadLocalThread(runnable);
         fastThreadLocalThread.start();
         fastThreadLocalThread.join();
-        assertThat(throwable.get(), is(instanceOf(IllegalArgumentException.class)));
+        assertInstanceOf(IllegalArgumentException.class, throwable.get());
     }
 }

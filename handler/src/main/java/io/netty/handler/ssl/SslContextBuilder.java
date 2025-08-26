@@ -22,8 +22,11 @@ import io.netty.util.internal.UnstableApi;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLParameters;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.File;
@@ -169,7 +172,7 @@ public final class SslContextBuilder {
 
     /**
      * Creates a builder for new server-side {@link SslContext}.
-     *
+     * <p>
      * If you use {@link SslProvider#OPENSSL} or {@link SslProvider#OPENSSL_REFCNT} consider using
      * {@link OpenSslX509KeyManagerFactory} or {@link OpenSslCachingX509KeyManagerFactory}.
      *
@@ -211,12 +214,14 @@ public final class SslContextBuilder {
     private String keyStoreType = KeyStore.getDefaultType();
     private String endpointIdentificationAlgorithm;
     private final Map<SslContextOption<?>, Object> options = new HashMap<SslContextOption<?>, Object>();
+    private final List<SNIServerName> serverNames;
 
     private SslContextBuilder(boolean forServer) {
         this.forServer = forServer;
         if (!forServer) {
             endpointIdentificationAlgorithm = SslUtils.defaultEndpointVerificationAlgorithm;
         }
+        serverNames = forServer ? null : new ArrayList<>(2); // Only for clients.
     }
 
     /**
@@ -272,7 +277,7 @@ public final class SslContextBuilder {
     /**
      * Trusted certificates for verifying the remote endpoint's certificate. The input stream should
      * contain an X.509 certificate collection in PEM format. {@code null} uses the system default.
-     *
+     * <p>
      * The caller is responsible for calling {@link InputStream#close()} after {@link #build()} has been called.
      */
     public SslContextBuilder trustManager(InputStream trustCertCollectionInputStream) {
@@ -317,9 +322,9 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder trustManager(TrustManager trustManager) {
         if (trustManager != null) {
-            this.trustManagerFactory = new TrustManagerFactoryWrapper(trustManager);
+            trustManagerFactory = new TrustManagerFactoryWrapper(trustManager);
         } else {
-            this.trustManagerFactory = null;
+            trustManagerFactory = null;
         }
         trustCertCollection = null;
         return this;
@@ -477,7 +482,7 @@ public final class SslContextBuilder {
      * if the used openssl version is 1.0.1+. You can check if your openssl version supports using a
      * {@link KeyManagerFactory} by calling {@link OpenSsl#supportsKeyManagerFactory()}. If this is not the case
      * you must use {@link #keyManager(File, File)} or {@link #keyManager(File, File, String)}.
-     *
+     * <p>
      * If you use {@link SslProvider#OPENSSL} or {@link SslProvider#OPENSSL_REFCNT} consider using
      * {@link OpenSslX509KeyManagerFactory} or {@link OpenSslCachingX509KeyManagerFactory}.
      */
@@ -504,9 +509,9 @@ public final class SslContextBuilder {
             checkNotNull(keyManager, "keyManager required for servers");
         }
         if (keyManager != null) {
-            this.keyManagerFactory = new KeyManagerFactoryWrapper(keyManager);
+            keyManagerFactory = new KeyManagerFactoryWrapper(keyManager);
         } else {
-            this.keyManagerFactory = null;
+            keyManagerFactory = null;
         }
         keyCertChain = null;
         key = null;
@@ -629,10 +634,33 @@ public final class SslContextBuilder {
      *     Java Security Standard Names</a> for a list of supported algorithms.
      *
      * @param algorithm either {@code "HTTPS"}, {@code "LDAPS"}, or {@code null} (disables hostname verification).
-     * @see javax.net.ssl.SSLParameters#setEndpointIdentificationAlgorithm(String)
+     * @see SSLParameters#setEndpointIdentificationAlgorithm(String)
      */
     public SslContextBuilder endpointIdentificationAlgorithm(String algorithm) {
         endpointIdentificationAlgorithm = algorithm;
+        return this;
+    }
+
+    /**
+     * Add the given server name indication to this client context. This will cause the client to include a
+     * Server Name Indication extension with its {@code ClientHello} message, as per
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6066#section-3">RFC 6066 section 3</a>.
+     * <p>
+     * Note that only one name per name type can be included in the message.
+     * Currently, only the {@link SNIHostName} type is supported.
+     * @param serverName The server name to include in the SNI extension.
+     */
+    public SslContextBuilder serverName(SNIServerName serverName) {
+        if (forServer) {
+            throw new UnsupportedOperationException("Cannot add Server Name Indication extension, " +
+                    "because this is a server context builder.");
+        }
+        checkNotNull(serverName, "serverName");
+        if (!(serverName instanceof SNIHostName)) {
+            throw new IllegalArgumentException("Only SNIHostName is supported. The given SNIServerName type was " +
+                    serverName.getClass().getName());
+        }
+        serverNames.add(serverName);
         return this;
     }
 
@@ -652,7 +680,7 @@ public final class SslContextBuilder {
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize,
                     sessionTimeout, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
-                    toArray(options.entrySet(), EMPTY_ENTRIES));
+                    serverNames, toArray(options.entrySet(), EMPTY_ENTRIES));
         }
     }
 

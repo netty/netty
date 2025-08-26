@@ -27,10 +27,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static io.netty.handler.codec.redis.RedisCodecTestUtil.*;
-import static org.hamcrest.CoreMatchers.equalTo;
-import static org.hamcrest.CoreMatchers.is;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Verifies the correct functionality of the {@link RedisEncoder}.
@@ -54,10 +53,10 @@ public class RedisEncoderTest {
         RedisMessage msg = new InlineCommandRedisMessage("ping");
 
         boolean result = channel.writeOutbound(msg);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = readAll(channel);
-        assertThat(bytesOf(written), is(bytesOf("ping\r\n")));
+        assertArrayEquals(bytesOf("ping\r\n"), bytesOf(written));
         written.release();
     }
 
@@ -66,10 +65,10 @@ public class RedisEncoderTest {
         RedisMessage msg = new SimpleStringRedisMessage("simple");
 
         boolean result = channel.writeOutbound(msg);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = readAll(channel);
-        assertThat(bytesOf(written), is(bytesOf("+simple\r\n")));
+        assertArrayEquals(bytesOf("+simple\r\n"), bytesOf(written));
         written.release();
     }
 
@@ -78,10 +77,10 @@ public class RedisEncoderTest {
         RedisMessage msg = new ErrorRedisMessage("error1");
 
         boolean result = channel.writeOutbound(msg);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = readAll(channel);
-        assertThat(bytesOf(written), is(equalTo(bytesOf("-error1\r\n"))));
+        assertArrayEquals(bytesOf("-error1\r\n"), bytesOf(written));
         written.release();
     }
 
@@ -90,10 +89,10 @@ public class RedisEncoderTest {
         RedisMessage msg = new IntegerRedisMessage(1234L);
 
         boolean result = channel.writeOutbound(msg);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = readAll(channel);
-        assertThat(bytesOf(written), is(equalTo(bytesOf(":1234\r\n"))));
+        assertArrayEquals(bytesOf(":1234\r\n"), bytesOf(written));
         written.release();
     }
 
@@ -103,12 +102,12 @@ public class RedisEncoderTest {
         RedisMessage body1 = new DefaultBulkStringRedisContent(byteBufOf("bulk\nstr").retain());
         RedisMessage body2 = new DefaultLastBulkStringRedisContent(byteBufOf("ing\ntest").retain());
 
-        assertThat(channel.writeOutbound(header), is(true));
-        assertThat(channel.writeOutbound(body1), is(true));
-        assertThat(channel.writeOutbound(body2), is(true));
+        assertTrue(channel.writeOutbound(header));
+        assertTrue(channel.writeOutbound(body1));
+        assertTrue(channel.writeOutbound(body2));
 
         ByteBuf written = readAll(channel);
-        assertThat(bytesOf(written), is(equalTo(bytesOf("$16\r\nbulk\nstring\ntest\r\n"))));
+        assertArrayEquals(bytesOf("$16\r\nbulk\nstring\ntest\r\n"), bytesOf(written));
         written.release();
     }
 
@@ -119,10 +118,10 @@ public class RedisEncoderTest {
         RedisMessage msg = new FullBulkStringRedisMessage(bulkString);
 
         boolean result = channel.writeOutbound(msg);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = readAll(channel);
-        assertThat(bytesOf(written), is(equalTo(bytesOf("$" + length + "\r\nbulk\nstring\ntest\r\n"))));
+        assertArrayEquals(bytesOf("$" + length + "\r\nbulk\nstring\ntest\r\n"), bytesOf(written));
         written.release();
     }
 
@@ -134,10 +133,10 @@ public class RedisEncoderTest {
         RedisMessage msg = new ArrayRedisMessage(children);
 
         boolean result = channel.writeOutbound(msg);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = readAll(channel);
-        assertThat(bytesOf(written), is(equalTo(bytesOf("*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n"))));
+        assertArrayEquals(bytesOf("*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n"), bytesOf(written));
         written.release();
     }
 
@@ -146,10 +145,10 @@ public class RedisEncoderTest {
         RedisMessage msg = ArrayRedisMessage.NULL_INSTANCE;
 
         boolean result = channel.writeOutbound(msg);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = readAll(channel);
-        assertThat(bytesOf(written), is(equalTo(bytesOf("*-1\r\n"))));
+        assertArrayEquals(bytesOf("*-1\r\n"), bytesOf(written));
         written.release();
     }
 
@@ -158,10 +157,10 @@ public class RedisEncoderTest {
         RedisMessage msg = ArrayRedisMessage.EMPTY_INSTANCE;
 
         boolean result = channel.writeOutbound(msg);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = readAll(channel);
-        assertThat(bytesOf(written), is(equalTo(bytesOf("*0\r\n"))));
+        assertArrayEquals(bytesOf("*0\r\n"), bytesOf(written));
         written.release();
     }
 
@@ -176,10 +175,10 @@ public class RedisEncoderTest {
         RedisMessage msg = new ArrayRedisMessage(children);
 
         boolean result = channel.writeOutbound(msg);
-        assertThat(result, is(true));
+        assertTrue(result);
 
         ByteBuf written = readAll(channel);
-        assertThat(bytesOf(written), is(equalTo(bytesOf("*2\r\n+foo\r\n*2\r\n$3\r\nbar\r\n:-1234\r\n"))));
+        assertArrayEquals(bytesOf("*2\r\n+foo\r\n*2\r\n$3\r\nbar\r\n:-1234\r\n"), bytesOf(written));
         written.release();
     }
 

@@ -19,14 +19,17 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.StringUtil;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteOrder;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static io.netty.buffer.Unpooled.copiedBuffer;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -104,11 +107,7 @@ public class Base64Test {
     private static X509Certificate certFromString(String string) throws Exception {
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
         ByteArrayInputStream bin = new ByteArrayInputStream(string.getBytes(CharsetUtil.US_ASCII));
-        try {
-            return (X509Certificate) factory.generateCertificate(bin);
-        } finally {
-            bin.close();
-        }
+        return (X509Certificate) factory.generateCertificate(bin);
     }
 
     private static void testEncode(ByteBuf src, ByteBuf expectedEncoded) {
@@ -123,42 +122,115 @@ public class Base64Test {
     }
 
     @Test
-    public void testEncodeDecodeBE() {
+    public void testEncodeDecodeBE() throws IOException {
         testEncodeDecode(ByteOrder.BIG_ENDIAN);
     }
 
     @Test
-    public void testEncodeDecodeLE() {
+    public void testEncodeDecodeLE() throws IOException {
         testEncodeDecode(ByteOrder.LITTLE_ENDIAN);
     }
 
-    private static void testEncodeDecode(ByteOrder order) {
-        testEncodeDecode(64, order);
-        testEncodeDecode(128, order);
-        testEncodeDecode(512, order);
-        testEncodeDecode(1024, order);
-        testEncodeDecode(4096, order);
-        testEncodeDecode(8192, order);
-        testEncodeDecode(16384, order);
+    private static void testEncodeDecode(ByteOrder order) throws IOException {
+        testEncodeDecode(order, Base64Dialect.STANDARD);
+        testEncodeDecode(order, Base64Dialect.URL_SAFE);
     }
 
-    private static void testEncodeDecode(int size, ByteOrder order) {
-        byte[] bytes = new byte[size];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+    private static void testEncodeDecode(ByteOrder order, Base64Dialect dialect) throws IOException {
+        testEncodeDecode(order, dialect, true, true);
+        testEncodeDecode(order, dialect, true, false);
+        testEncodeDecode(order, dialect, false, true);
+        testEncodeDecode(order, dialect, false, false);
+    }
 
-        ByteBuf src = Unpooled.wrappedBuffer(bytes).order(order);
-        ByteBuf encoded = Base64.encode(src);
-        ByteBuf decoded = Base64.decode(encoded);
-        ByteBuf expectedBuf = Unpooled.wrappedBuffer(bytes);
+    private static void testEncodeDecode(ByteOrder order, Base64Dialect dialect, boolean breakLines, boolean padded)
+            throws IOException {
+        testEncodeDecode(64, order, dialect, breakLines, padded);
+        testEncodeDecode(128, order, dialect, breakLines, padded);
+        testEncodeDecode(512, order, dialect, breakLines, padded);
+        testEncodeDecode(1024, order, dialect, breakLines, padded);
+        testEncodeDecode(4096, order, dialect, breakLines, padded);
+        testEncodeDecode(8192, order, dialect, breakLines, padded);
+        testEncodeDecode(16384, order, dialect, breakLines, padded);
+    }
+
+    private static void testEncodeDecode(
+            int size, ByteOrder order, Base64Dialect dialect, boolean breakLines, boolean padded) throws IOException {
+        byte[] bytes = new byte[size];
+        ThreadLocalRandom.current().nextBytes(bytes);
+
+        // JDK encoder / decoder
+        java.util.Base64.Encoder jdkEncoder =
+                dialect == Base64Dialect.STANDARD ? java.util.Base64.getEncoder() : java.util.Base64.getUrlEncoder();
+        jdkEncoder = padded ? jdkEncoder : jdkEncoder.withoutPadding();
+        java.util.Base64.Decoder jdkDecoder =
+                dialect == Base64Dialect.STANDARD ? java.util.Base64.getDecoder() : java.util.Base64.getUrlDecoder();
+
+        ByteBuf src = null;
+        ByteBuf encoded = null;
+        ByteBuf decoded = null;
+        ByteBuf expectedBuf = null;
+        byte[] jdKEncoded;
+        byte[] jdkDecoded;
         try {
+            jdKEncoded = breakLines ? insertNewLines(jdkEncoder.encode(bytes)) : jdkEncoder.encode(bytes);
+            src = Unpooled.wrappedBuffer(bytes).order(order);
+            encoded = Base64.encode(src, breakLines, dialect, padded);
+
+            // Assert JDK encoded equals netty encoded
+            assertEquals(Unpooled.wrappedBuffer(jdKEncoded), encoded,
+                    StringUtil.NEWLINE + "expected: " + ByteBufUtil.hexDump(jdKEncoded) +
+                    StringUtil.NEWLINE + "actual--: " +  ByteBufUtil.hexDump(encoded));
+
+            jdkDecoded = jdkDecoder.decode(stripNewLines(ByteBufUtil.getBytes(encoded)));
+            decoded = Base64.decode(encoded, dialect);
+            expectedBuf = Unpooled.wrappedBuffer(bytes);
+
+            // Assert JDK decoded equals netty decoded
+            assertEquals(Unpooled.wrappedBuffer(jdkDecoded) , decoded,
+                    StringUtil.NEWLINE + "expected: " + ByteBufUtil.hexDump(jdkDecoded) +
+                    StringUtil.NEWLINE + "actual--: " + ByteBufUtil.hexDump(decoded));
+
+            // Assert netty decoded equals expected
             assertEquals(expectedBuf, decoded,
-                        StringUtil.NEWLINE + "expected: " + ByteBufUtil.hexDump(expectedBuf) +
-                         StringUtil.NEWLINE + "actual--: " + ByteBufUtil.hexDump(decoded));
+                    StringUtil.NEWLINE + "expected: " + ByteBufUtil.hexDump(expectedBuf) +
+                    StringUtil.NEWLINE + "actual--: " + ByteBufUtil.hexDump(decoded));
         } finally {
-            src.release();
-            encoded.release();
-            decoded.release();
-            expectedBuf.release();
+            ReferenceCountUtil.safeRelease(src);
+            ReferenceCountUtil.safeRelease(encoded);
+            ReferenceCountUtil.safeRelease(decoded);
+            ReferenceCountUtil.safeRelease(expectedBuf);
+        }
+    }
+
+    private static byte[] insertNewLines(byte[] src) throws IOException {
+        if (src == null || src.length == 0) {
+            return src;
+        }
+
+        try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+            for (int i = 0; i < src.length; i++) {
+                os.write(src[i]);
+                if (i + 1 < src.length && (i + 1) % 76 == 0) {
+                    os.write('\n');
+                }
+            }
+            return os.toByteArray();
+        }
+    }
+
+    private static byte[] stripNewLines(byte[] src) throws IOException {
+        if (src == null || src.length == 0) {
+            return src;
+        }
+
+        try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
+            for (byte b : src) {
+                if (b != '\n') {
+                    os.write(b);
+                }
+            }
+            return os.toByteArray();
         }
     }
 

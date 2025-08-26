@@ -36,7 +36,7 @@ public class MqttMessageBuildersTest {
 
         final String clientId = (String) ackMsg.variableHeader()
                 .properties()
-                .getProperty(MqttProperties.MqttPropertyType.ASSIGNED_CLIENT_IDENTIFIER.value())
+                .getProperty(MqttProperties.ASSIGNED_CLIENT_IDENTIFIER)
                 .value();
 
         assertEquals("client1234", clientId);

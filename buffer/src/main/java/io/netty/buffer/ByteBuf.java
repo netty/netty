@@ -96,7 +96,7 @@ import java.nio.charset.UnsupportedCharsetException;
  *
  * <h4>Writable bytes</h4>
  *
- * This segment is a undefined space which needs to be filled.  Any operation
+ * This segment is an undefined space which needs to be filled.  Any operation
  * whose name starts with {@code write} will write the data at the current
  * {@link #writerIndex() writerIndex} and increase it by the number of written
  * bytes.  If the argument of the write operation is also a {@link ByteBuf},
@@ -1293,7 +1293,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
      * @param length the maximum number of bytes to transfer
      *
      * @return the actual number of bytes read in from the specified channel.
-     *         {@code -1} if the specified channel is closed or it reached EOF.
+     *         {@code -1} if the specified channel is closed or reached EOF.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -1313,7 +1313,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
      * @param length the maximum number of bytes to transfer
      *
      * @return the actual number of bytes read in from the specified channel.
-     *         {@code -1} if the specified channel is closed or it reached EOF.
+     *         {@code -1} if the specified channel is closed or reached EOF.
      *
      * @throws IndexOutOfBoundsException
      *         if the specified {@code index} is less than {@code 0} or
@@ -1737,6 +1737,23 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
     public abstract CharSequence readCharSequence(int length, Charset charset);
 
     /**
+     * Gets a {@link String} with the given length at the current {@code readerIndex}
+     * and increases the {@code readerIndex} by the given length.
+     *
+     * @param length the length to read
+     * @param charset that should be used
+     * @return the string
+     * @throws IndexOutOfBoundsException
+     *         if {@code length} is greater than {@code this.readableBytes}
+     */
+    public String readString(int length, Charset charset) {
+        int readerIndex = readerIndex();
+        String string = toString(readerIndex, length, charset);
+        readerIndex(readerIndex + length);
+        return string;
+    }
+
+    /**
      * Transfers this buffer's data starting at the current {@code readerIndex}
      * to the specified channel starting at the given file position.
      * This method does not modify the channel's position.
@@ -2011,7 +2028,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
      * @param length the maximum number of bytes to transfer
      *
      * @return the actual number of bytes read in from the specified channel.
-     *         {@code -1} if the specified channel is closed or it reached EOF.
+     *         {@code -1} if the specified channel is closed or reached EOF.
      *
      * @throws IOException
      *         if the specified channel threw an exception during I/O
@@ -2030,7 +2047,7 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
      * @param length the maximum number of bytes to transfer
      *
      * @return the actual number of bytes read in from the specified channel.
-     *         {@code -1} if the specified channel is closed or it reached EOF.
+     *         {@code -1} if the specified channel is closed or reached EOF.
      *
      * @throws IOException
      *         if the specified channel threw an exception during I/O
@@ -2051,7 +2068,6 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
     /**
      * Writes the specified {@link CharSequence} at the current {@code writerIndex} and increases
      * the {@code writerIndex} by the written bytes.
-     * in this buffer.
      * If {@code this.writableBytes} is not large enough to write the whole sequence,
      * {@link #ensureWritable(int)} will be called in an attempt to expand capacity to accommodate.
      *

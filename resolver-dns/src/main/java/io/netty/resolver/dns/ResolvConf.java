@@ -48,13 +48,10 @@ final class ResolvConf {
      * {@code /etc/resolv.conf} file, see {@code man resolv.conf}.
      */
     static ResolvConf fromFile(String file) throws IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(
-                // Use 1 MB to be a bit conservative
-                new BoundedInputStream(new FileInputStream(file), 1024 * 1024)));
-        try {
+        // Use 1 MB to be a bit conservative
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(
+                new BoundedInputStream(new FileInputStream(file), 1024 * 1024)))) {
             return fromReader(reader);
-        } finally {
-            reader.close();
         }
     }
 
@@ -71,7 +68,7 @@ final class ResolvConf {
     }
 
     private ResolvConf(BufferedReader reader) throws IOException {
-        List<InetSocketAddress> nameservers = new ArrayList<InetSocketAddress>();
+        List<InetSocketAddress> nameservers = new ArrayList<>();
         String ln;
         while ((ln = reader.readLine()) != null) {
             ln = ln.trim();
@@ -106,9 +103,7 @@ final class ResolvConf {
             ResolvConf resolvConf;
             try {
                 resolvConf = ResolvConf.fromFile("/etc/resolv.conf");
-            } catch (IOException e) {
-                resolvConf = null;
-            } catch (SecurityException ignore) {
+            } catch (IOException | SecurityException e) {
                 resolvConf = null;
             }
             machineResolvConf = resolvConf;

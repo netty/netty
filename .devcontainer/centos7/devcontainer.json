@@ -1,0 +1,12 @@
+{
+  "name": "netty-on-centos7",
+  "containerEnv": {
+  },
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "securityOpt": [ "seccomp=unconfined" ],
+  "runArgs": [
+    "--privileged"
+  ]
+}

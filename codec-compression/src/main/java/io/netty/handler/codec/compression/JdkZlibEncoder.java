@@ -55,7 +55,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     /*
      * GZIP support
      */
-    private final CRC32 crc = new CRC32();
+    private final CRC32 crc;
     private static final byte[] gzipHeader = {0x1f, (byte) 0x8b, Deflater.DEFLATED, 0, 0, 0, 0, 0, 0, 0};
     private boolean writeHeader = true;
 
@@ -74,7 +74,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the default compression level ({@code 6})
+     * Creates a new zlib encoder with a compression level of ({@code 6})
      * and the default wrapper ({@link ZlibWrapper#ZLIB}).
      *
      * @throws CompressionException if failed to initialize zlib
@@ -99,7 +99,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
     }
 
     /**
-     * Creates a new zlib encoder with the default compression level ({@code 6})
+     * Creates a new zlib encoder with a compression level of ({@code 6})
      * and the specified wrapper.
      *
      * @throws CompressionException if failed to initialize zlib
@@ -115,12 +115,14 @@ public class JdkZlibEncoder extends ZlibEncoder {
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
      *        best compression.  {@code 0} means no compression.  The default
-     *        compression level is {@code 6}.
+     *        compression level can be set as {@code -1} which correlates to the underlying
+     *        {@link Deflater#DEFAULT_COMPRESSION} level.
      *
      * @throws CompressionException if failed to initialize zlib
      */
     public JdkZlibEncoder(ZlibWrapper wrapper, int compressionLevel) {
-        ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
+        ObjectUtil.checkInRange(compressionLevel, Deflater.DEFAULT_COMPRESSION, Deflater.BEST_COMPRESSION,
+                "compressionLevel");
         ObjectUtil.checkNotNull(wrapper, "wrapper");
 
         if (wrapper == ZlibWrapper.ZLIB_OR_NONE) {
@@ -131,10 +133,11 @@ public class JdkZlibEncoder extends ZlibEncoder {
 
         this.wrapper = wrapper;
         deflater = new Deflater(compressionLevel, wrapper != ZlibWrapper.ZLIB);
+        this.crc = wrapper == ZlibWrapper.GZIP ? new CRC32() : null;
     }
 
     /**
-     * Creates a new zlib encoder with the default compression level ({@code 6})
+     * Creates a new zlib encoder with a compression level of ({@code 6})
      * and the specified preset dictionary.  The wrapper is always
      * {@link ZlibWrapper#ZLIB} because it is the only format that supports
      * the preset dictionary.
@@ -156,18 +159,21 @@ public class JdkZlibEncoder extends ZlibEncoder {
      * @param compressionLevel
      *        {@code 1} yields the fastest compression and {@code 9} yields the
      *        best compression.  {@code 0} means no compression.  The default
-     *        compression level is {@code 6}.
+     *        compression level can be set as {@code -1} which correlates to the underlying
+     *        {@link Deflater#DEFAULT_COMPRESSION} level.
      * @param dictionary  the preset dictionary
      *
      * @throws CompressionException if failed to initialize zlib
      */
     public JdkZlibEncoder(int compressionLevel, byte[] dictionary) {
-        ObjectUtil.checkInRange(compressionLevel, 0, 9, "compressionLevel");
+        ObjectUtil.checkInRange(compressionLevel, Deflater.DEFAULT_COMPRESSION, Deflater.BEST_COMPRESSION,
+                "compressionLevel");
         ObjectUtil.checkNotNull(dictionary, "dictionary");
 
         wrapper = ZlibWrapper.ZLIB;
         deflater = new Deflater(compressionLevel);
         deflater.setDictionary(dictionary);
+        crc = null;
     }
 
     @Override
@@ -183,12 +189,9 @@ public class JdkZlibEncoder extends ZlibEncoder {
             return finishEncode(ctx, promise);
         } else {
             final ChannelPromise p = ctx.newPromise();
-            executor.execute(new Runnable() {
-                @Override
-                public void run() {
-                    ChannelFuture f = finishEncode(ctx(), p);
-                    PromiseNotifier.cascade(f, promise);
-                }
+            executor.execute(() -> {
+                ChannelFuture f = finishEncode(ctx(), p);
+                PromiseNotifier.cascade(f, promise);
             });
             return p;
         }
@@ -329,14 +332,8 @@ public class JdkZlibEncoder extends ZlibEncoder {
         if (wrapper == ZlibWrapper.GZIP) {
             int crcValue = (int) crc.getValue();
             int uncBytes = deflater.getTotalIn();
-            footer.writeByte(crcValue);
-            footer.writeByte(crcValue >>> 8);
-            footer.writeByte(crcValue >>> 16);
-            footer.writeByte(crcValue >>> 24);
-            footer.writeByte(uncBytes);
-            footer.writeByte(uncBytes >>> 8);
-            footer.writeByte(uncBytes >>> 16);
-            footer.writeByte(uncBytes >>> 24);
+            footer.writeIntLE(crcValue);
+            footer.writeIntLE(uncBytes);
         }
         deflater.end();
         return ctx.writeAndFlush(footer, promise);

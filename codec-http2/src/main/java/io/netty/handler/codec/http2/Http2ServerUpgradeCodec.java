@@ -106,7 +106,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
         this(null, http2Codec, handlers);
     }
 
-    private Http2ServerUpgradeCodec(String handlerName, Http2ConnectionHandler connectionHandler,
+    public Http2ServerUpgradeCodec(String handlerName, Http2ConnectionHandler connectionHandler,
             ChannelHandler... handlers) {
         this.handlerName = handlerName;
         this.connectionHandler = connectionHandler;
@@ -134,7 +134,7 @@ public class Http2ServerUpgradeCodec implements HttpServerUpgradeHandler.Upgrade
             // Everything looks good.
             return true;
         } catch (Throwable cause) {
-            logger.info("Error during upgrade to HTTP/2", cause);
+            logger.info("{} Error during upgrade to HTTP/2", ctx.channel(), cause);
             return false;
         }
     }

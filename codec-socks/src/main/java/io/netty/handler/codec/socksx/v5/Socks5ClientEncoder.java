@@ -49,6 +49,7 @@ public class Socks5ClientEncoder extends MessageToByteEncoder<Socks5Message> {
      * Creates a new instance with the specified {@link Socks5AddressEncoder}.
      */
     public Socks5ClientEncoder(Socks5AddressEncoder addressEncoder) {
+        super(Socks5Message.class);
         this.addressEncoder = ObjectUtil.checkNotNull(addressEncoder, "addressEncoder");
     }
 
@@ -65,6 +66,8 @@ public class Socks5ClientEncoder extends MessageToByteEncoder<Socks5Message> {
             encodeAuthMethodRequest((Socks5InitialRequest) msg, out);
         } else if (msg instanceof Socks5PasswordAuthRequest) {
             encodePasswordAuthRequest((Socks5PasswordAuthRequest) msg, out);
+        } else if (msg instanceof Socks5PrivateAuthRequest) {
+            encodePrivateAuthRequest((Socks5PrivateAuthRequest) msg, out);
         } else if (msg instanceof Socks5CommandRequest) {
             encodeCommandRequest((Socks5CommandRequest) msg, out);
         } else {
@@ -100,6 +103,13 @@ public class Socks5ClientEncoder extends MessageToByteEncoder<Socks5Message> {
         final String password = msg.password();
         out.writeByte(password.length());
         ByteBufUtil.writeAscii(out, password);
+    }
+
+    private static void encodePrivateAuthRequest(Socks5PrivateAuthRequest msg, ByteBuf out) {
+        byte[] bytes = msg.privateToken();
+        out.writeByte(0x01);
+        out.writeByte(bytes.length);
+        out.writeBytes(bytes);
     }
 
     private void encodeCommandRequest(Socks5CommandRequest msg, ByteBuf out) throws Exception {

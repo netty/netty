@@ -17,67 +17,132 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.util.internal.PlatformDependent;
+import io.netty.channel.unix.Buffer;
+import io.netty.util.internal.CleanableDirectBuffer;
 
 import java.net.InetSocketAddress;
+import java.nio.ByteBuffer;
 
 final class MsgHdrMemory {
-    private final long memory;
+    private static final byte[] EMPTY_SOCKADDR_STORAGE = new byte[Native.SIZEOF_SOCKADDR_STORAGE];
+    // It is not possible to have a zero length buffer in sendFd,
+    // so we use a 1 byte buffer here.
+    private static final int GLOBAL_IOV_LEN = 1;
+    private static final ByteBuffer GLOBAL_IOV_BASE =  Buffer.allocateDirectWithNativeOrder(GLOBAL_IOV_LEN);
+    private static final long GLOBAL_IOV_BASE_ADDRESS = Buffer.memoryAddress(GLOBAL_IOV_BASE);
+    private final CleanableDirectBuffer msgHdrMemoryCleanable;
+    private final CleanableDirectBuffer socketAddrMemoryCleanable;
+    private final CleanableDirectBuffer iovMemoryCleanable;
+    private final CleanableDirectBuffer cmsgDataMemoryCleanable;
+    private final ByteBuffer msgHdrMemory;
+    private final ByteBuffer socketAddrMemory;
+    private final ByteBuffer iovMemory;
+    private final ByteBuffer cmsgDataMemory;
+
+    private final long msgHdrMemoryAddress;
     private final short idx;
-    private final long cmsgDataAddr;
+    private final int cmsgDataOffset;
 
     MsgHdrMemory(short idx) {
         this.idx = idx;
-        int size = Native.SIZEOF_MSGHDR + Native.SIZEOF_SOCKADDR_STORAGE + Native.SIZEOF_IOVEC + Native.CMSG_SPACE;
-        memory = PlatformDependent.allocateMemory(size);
-        PlatformDependent.setMemory(memory, size, (byte) 0);
+        msgHdrMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_MSGHDR);
+        socketAddrMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
+        iovMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_IOVEC);
+        cmsgDataMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.CMSG_SPACE);
 
-        // We retrieve the address of the data once so we can just be JNI free after construction.
-        cmsgDataAddr = Native.cmsghdrData(memory + Native.SIZEOF_MSGHDR +
-                Native.SIZEOF_SOCKADDR_STORAGE + Native.SIZEOF_IOVEC);
+        msgHdrMemory = msgHdrMemoryCleanable.buffer();
+        socketAddrMemory = socketAddrMemoryCleanable.buffer();
+        iovMemory = iovMemoryCleanable.buffer();
+        cmsgDataMemory = cmsgDataMemoryCleanable.buffer();
+
+        msgHdrMemoryAddress = Buffer.memoryAddress(msgHdrMemory);
+
+        long cmsgDataMemoryAddr = Buffer.memoryAddress(cmsgDataMemory);
+        long cmsgDataAddr = Native.cmsghdrData(cmsgDataMemoryAddr);
+        cmsgDataOffset = (int) (cmsgDataAddr - cmsgDataMemoryAddr);
     }
 
-    void write(LinuxSocket socket, InetSocketAddress address, long bufferAddress , int length, short segmentSize) {
-        long sockAddress = memory + Native.SIZEOF_MSGHDR;
-        long iovAddress = sockAddress + Native.SIZEOF_SOCKADDR_STORAGE;
-        long cmsgAddr = iovAddress + Native.SIZEOF_IOVEC;
+    MsgHdrMemory() {
+        this.idx = 0;
+        // jdk will memset the memory to 0, so we don't need to do it here.
+        msgHdrMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_MSGHDR);
+        socketAddrMemoryCleanable = null;
+        iovMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_IOVEC);
+        cmsgDataMemoryCleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.CMSG_SPACE_FOR_FD);
+
+        msgHdrMemory = msgHdrMemoryCleanable.buffer();
+        socketAddrMemory = null;
+        iovMemory = iovMemoryCleanable.buffer();
+        cmsgDataMemory = cmsgDataMemoryCleanable.buffer();
+
+        msgHdrMemoryAddress = Buffer.memoryAddress(msgHdrMemory);
+        // These two parameters must be set to valid values and cannot be 0,
+        // otherwise the fd we get in io_uring_recvmsg is 0
+        Iov.set(iovMemory, GLOBAL_IOV_BASE_ADDRESS, GLOBAL_IOV_LEN);
+
+        long cmsgDataMemoryAddr = Buffer.memoryAddress(cmsgDataMemory);
+        long cmsgDataAddr = Native.cmsghdrData(cmsgDataMemoryAddr);
+        cmsgDataOffset = (int) (cmsgDataAddr - cmsgDataMemoryAddr);
+    }
+
+    void set(LinuxSocket socket, InetSocketAddress address, long bufferAddress , int length, short segmentSize) {
         int addressLength;
         if (address == null) {
             addressLength = socket.isIpv6() ? Native.SIZEOF_SOCKADDR_IN6 : Native.SIZEOF_SOCKADDR_IN;
-            PlatformDependent.setMemory(sockAddress, Native.SIZEOF_SOCKADDR_STORAGE, (byte) 0);
+            socketAddrMemory.mark();
+            try {
+                socketAddrMemory.put(EMPTY_SOCKADDR_STORAGE);
+            } finally {
+                socketAddrMemory.reset();
+            }
         } else {
-            addressLength = SockaddrIn.write(socket.isIpv6(), sockAddress, address);
+            addressLength = SockaddrIn.set(socket.isIpv6(), socketAddrMemory, address);
         }
-        Iov.write(iovAddress, bufferAddress, length);
-        MsgHdr.write(memory, sockAddress, addressLength, iovAddress, 1, cmsgAddr, cmsgDataAddr, segmentSize);
+        Iov.set(iovMemory, bufferAddress, length);
+        MsgHdr.set(msgHdrMemory, socketAddrMemory, addressLength, iovMemory, 1, cmsgDataMemory,
+                cmsgDataOffset, segmentSize);
+    }
+
+    void set(long iovArray, int length) {
+        MsgHdr.set(msgHdrMemory, iovArray, length);
+    }
+
+    void setScmRightsFd(int fd) {
+        MsgHdr.prepSendFd(msgHdrMemory, fd, cmsgDataMemory, cmsgDataOffset, iovMemory, 1);
+    }
+
+    int getScmRightsFd() {
+        return MsgHdr.getCmsgData(msgHdrMemory, cmsgDataMemory, cmsgDataOffset);
+    }
+
+    void prepRecvReadFd() {
+        MsgHdr.prepReadFd(msgHdrMemory, cmsgDataMemory, cmsgDataOffset, iovMemory, 1);
     }
 
     boolean hasPort(IoUringDatagramChannel channel) {
-        long sockAddress = memory + Native.SIZEOF_MSGHDR;
         if (channel.socket.isIpv6()) {
-            return SockaddrIn.hasPortIpv6(sockAddress);
+            return SockaddrIn.hasPortIpv6(socketAddrMemory);
         }
-        return SockaddrIn.hasPortIpv4(sockAddress);
+        return SockaddrIn.hasPortIpv4(socketAddrMemory);
     }
 
-    DatagramPacket read(IoUringDatagramChannel channel, IoUringIoHandler handler, ByteBuf buffer, int bytesRead) {
-        long sockAddress = memory + Native.SIZEOF_MSGHDR;
+    DatagramPacket get(IoUringDatagramChannel channel, IoUringIoHandler handler, ByteBuf buffer, int bytesRead) {
         InetSocketAddress sender;
         if (channel.socket.isIpv6()) {
             byte[] ipv6Bytes = handler.inet6AddressArray();
             byte[] ipv4bytes = handler.inet4AddressArray();
 
-            sender = SockaddrIn.readIPv6(sockAddress, ipv6Bytes, ipv4bytes);
+            sender = SockaddrIn.getIPv6(socketAddrMemory, ipv6Bytes, ipv4bytes);
         } else {
             byte[] bytes = handler.inet4AddressArray();
-            sender = SockaddrIn.readIPv4(sockAddress, bytes);
+            sender = SockaddrIn.getIPv4(socketAddrMemory, bytes);
         }
-        long iovAddress = memory + Native.SIZEOF_MSGHDR + Native.SIZEOF_SOCKADDR_STORAGE;
-        long bufferAddress = Iov.readBufferAddress(iovAddress);
-        int bufferLength = Iov.readBufferLength(iovAddress);
+        long bufferAddress = Iov.getBufferAddress(iovMemory);
+        int bufferLength = Iov.getBufferLength(iovMemory);
         // reconstruct the reader index based on the memoryAddress of the buffer and the bufferAddress that was used
         // in the iovec.
-        int readerIndex = (int) (bufferAddress - buffer.memoryAddress());
+        long memoryAddress = IoUring.memoryAddress(buffer);
+        int readerIndex = (int) (bufferAddress - memoryAddress);
 
         ByteBuf slice = buffer.slice(readerIndex, bufferLength)
                 .writerIndex(bytesRead);
@@ -89,10 +154,15 @@ final class MsgHdrMemory {
     }
 
     long address() {
-        return memory;
+        return msgHdrMemoryAddress;
     }
 
     void release() {
-        PlatformDependent.freeMemory(memory);
+        msgHdrMemoryCleanable.clean();
+        if (socketAddrMemoryCleanable != null) {
+            socketAddrMemoryCleanable.clean();
+        }
+        iovMemoryCleanable.clean();
+        cmsgDataMemoryCleanable.clean();
     }
 }

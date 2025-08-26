@@ -40,7 +40,7 @@ import java.nio.charset.Charset;
 public final class EmptyByteBuf extends ByteBuf {
 
     static final int EMPTY_BYTE_BUF_HASH_CODE = 1;
-    private static final ByteBuffer EMPTY_BYTE_BUFFER = ByteBuffer.allocateDirect(0);
+    private static final ByteBuffer EMPTY_BYTE_BUFFER = PlatformDependent.allocateDirect(0).buffer();
     private static final long EMPTY_BYTE_BUFFER_ADDRESS;
 
     static {
@@ -677,6 +677,12 @@ public final class EmptyByteBuf extends ByteBuf {
 
     @Override
     public CharSequence readCharSequence(int length, Charset charset) {
+        checkLength(length);
+        return StringUtil.EMPTY_STRING;
+    }
+
+    @Override
+    public String readString(int length, Charset charset) {
         checkLength(length);
         return StringUtil.EMPTY_STRING;
     }

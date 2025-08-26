@@ -67,8 +67,11 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.Random;
 
-import static org.hamcrest.CoreMatchers.*;
-import static org.hamcrest.MatcherAssert.assertThat;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class ProxyHandlerTest {
@@ -128,11 +131,20 @@ public class ProxyHandlerTest {
     static final ProxyServer socks5Proxy =
             new Socks5ProxyServer(false, TestMode.TERMINAL, DESTINATION, USERNAME, PASSWORD);
 
+    // Define private auth method and token for SOCKS5 private authentication
+    static final byte PRIVATE_AUTH_METHOD = (byte) 0x80; // Custom authentication method (range 0x80-0xFE)
+    static final byte[] PRIVATE_AUTH_TOKEN = "privateAuthToken123".getBytes(CharsetUtil.US_ASCII);
+    static final byte[] BAD_PRIVATE_AUTH_TOKEN = "wrongAuthToken".getBytes(CharsetUtil.US_ASCII);
+
+    // SOCKS5 proxy with private authentication
+    static final ProxyServer socks5PrivateProxy =
+            new Socks5ProxyServer(false, TestMode.TERMINAL, DESTINATION, PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN);
+
     private static final Collection<ProxyServer> allProxies = Arrays.asList(
             deadHttpProxy, interHttpProxy, anonHttpProxy, httpProxy,
             deadHttpsProxy, interHttpsProxy, anonHttpsProxy, httpsProxy,
             deadSocks4Proxy, interSocks4Proxy, anonSocks4Proxy, socks4Proxy,
-            deadSocks5Proxy, interSocks5Proxy, anonSocks5Proxy, socks5Proxy
+            deadSocks5Proxy, interSocks5Proxy, anonSocks5Proxy, socks5Proxy, socks5PrivateProxy
     );
 
     // set to non-zero value in case you need predictable shuffling of test cases
@@ -357,6 +369,44 @@ public class ProxyHandlerTest {
                 new TimeoutTestItem(
                         "SOCKS5: timeout",
                         new Socks5ProxyHandler(deadSocks5Proxy.address())),
+
+                // SOCKS5 Private Authentication ---------------------------
+                new SuccessTestItem(
+                    "SOCKS5 Private Auth: successful connection, AUTO_READ on",
+                    DESTINATION,
+                    true,
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN,
+                        null)),
+
+                new SuccessTestItem(
+                    "SOCKS5: successful connection to anonymous server, AUTO_READ on",
+                    DESTINATION,
+                    true,
+                    new Socks5ProxyHandler(anonSocks5Proxy.address(), USERNAME, PASSWORD)),
+
+                new SuccessTestItem(
+                    "SOCKS5 Private Auth: successful connection, AUTO_READ off",
+                    DESTINATION,
+                    false,
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN,
+                        null)),
+
+                new FailureTestItem(
+                    "SOCKS5 Private Auth: rejected connection",
+                    BAD_DESTINATION, "status: FORBIDDEN",
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, PRIVATE_AUTH_TOKEN,
+                        null)),
+
+                new FailureTestItem(
+                    "SOCKS5 Private Auth: authentication failure",
+                    DESTINATION, "privateAuthStatus: FAILURE",
+                    new Socks5ProxyHandler(socks5PrivateProxy.address(), PRIVATE_AUTH_METHOD, BAD_PRIVATE_AUTH_TOKEN,
+                        null)),
+
+                new FailureTestItem(
+                    "SOCKS5 Private Auth: rejected anonymous connection",
+                    DESTINATION, "unexpected authMethod",
+                    new Socks5ProxyHandler(socks5PrivateProxy.address())),
 
                 // HTTP + HTTPS + SOCKS4 + SOCKS5
 
@@ -599,8 +649,8 @@ public class ProxyHandlerTest {
             for (ChannelHandler h: clientHandlers) {
                 if (h instanceof ProxyHandler) {
                     ProxyHandler ph = (ProxyHandler) h;
-                    assertThat(ph.connectFuture().isDone(), is(true));
-                    assertThat(ph.connectFuture().isSuccess(), is(success));
+                    assertTrue(ph.connectFuture().isDone());
+                    assertEquals(ph.connectFuture().isSuccess(), success);
                 }
             }
         }
@@ -668,10 +718,10 @@ public class ProxyHandlerTest {
 
             assertProxyHandlers(true);
 
-            assertThat(testHandler.received.toArray(), is(new Object[] { "0", "1", "2", "3" }));
-            assertThat(testHandler.exceptions.toArray(), is(EmptyArrays.EMPTY_OBJECTS));
-            assertThat(testHandler.eventCount, is(expectedEventCount));
-            assertThat(finished, is(true));
+            assertArrayEquals(new Object[] { "0", "1", "2", "3" }, testHandler.received.toArray());
+            assertArrayEquals(EmptyArrays.EMPTY_OBJECTS, testHandler.exceptions.toArray());
+            assertEquals(expectedEventCount, testHandler.eventCount);
+            assertTrue(finished);
         }
     }
 
@@ -709,11 +759,11 @@ public class ProxyHandlerTest {
 
             assertProxyHandlers(false);
 
-            assertThat(testHandler.exceptions.size(), is(1));
+            assertEquals(1, testHandler.exceptions.size());
             Throwable e = testHandler.exceptions.poll();
-            assertThat(e, is(instanceOf(ProxyConnectException.class)));
-            assertThat(String.valueOf(e), containsString(expectedMessage));
-            assertThat(finished, is(true));
+            assertInstanceOf(ProxyConnectException.class, e);
+            assertThat(String.valueOf(e)).contains(expectedMessage);
+            assertTrue(finished);
         }
     }
 
@@ -755,11 +805,11 @@ public class ProxyHandlerTest {
 
             assertProxyHandlers(false);
 
-            assertThat(testHandler.exceptions.size(), is(1));
+            assertEquals(1, testHandler.exceptions.size());
             Throwable e = testHandler.exceptions.poll();
-            assertThat(e, is(instanceOf(ProxyConnectException.class)));
-            assertThat(String.valueOf(e), containsString("timeout"));
-            assertThat(finished, is(true));
+            assertInstanceOf(ProxyConnectException.class, e);
+            assertThat(String.valueOf(e)).contains("timeout");
+            assertTrue(finished);
         }
     }
 }

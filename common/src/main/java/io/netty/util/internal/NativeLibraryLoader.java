@@ -20,7 +20,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -42,6 +41,7 @@ import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Helper class to load JNI resources.
@@ -65,7 +65,10 @@ public final class NativeLibraryLoader {
         String workdir = SystemPropertyUtil.get("io.netty.native.workdir");
         if (workdir != null) {
             File f = new File(workdir);
-            f.mkdirs();
+            if (!f.exists() && !f.mkdirs()) {
+                throw new ExceptionInInitializerError(
+                    new IOException("Custom native workdir mkdirs failed: " + workdir));
+            }
 
             try {
                 f = f.getAbsoluteFile();
@@ -157,7 +160,7 @@ public final class NativeLibraryLoader {
     public static void load(String originalName, ClassLoader loader) {
         String mangledPackagePrefix = calculateMangledPackagePrefix();
         String name = mangledPackagePrefix + originalName;
-        List<Throwable> suppressed = new ArrayList<Throwable>();
+        List<Throwable> suppressed = new ArrayList<>();
         try {
             // first try to load from java.library.path
             loadLibrary(loader, name, false);
@@ -169,8 +172,6 @@ public final class NativeLibraryLoader {
         String libname = System.mapLibraryName(name);
         String path = NATIVE_RESOURCE_HOME + libname;
 
-        InputStream in = null;
-        OutputStream out = null;
         File tmpFile = null;
         URL url = getResource(path, loader);
         try {
@@ -196,28 +197,26 @@ public final class NativeLibraryLoader {
             String suffix = libname.substring(index);
 
             tmpFile = PlatformDependent.createTempFile(prefix, suffix, WORKDIR);
-            in = url.openStream();
-            out = new FileOutputStream(tmpFile);
+            try (InputStream in = url.openStream();
+                 OutputStream out = new FileOutputStream(tmpFile)) {
 
-            byte[] buffer = new byte[8192];
-            int length;
-            while ((length = in.read(buffer)) > 0) {
-                out.write(buffer, 0, length);
+                byte[] buffer = new byte[8192];
+                int length;
+                while ((length = in.read(buffer)) > 0) {
+                    out.write(buffer, 0, length);
+                }
+                out.flush();
+
+                if (shouldShadedLibraryIdBePatched(mangledPackagePrefix)) {
+                    // Let's try to patch the id and re-sign it. This is a best-effort and might fail if a
+                    // SecurityManager is setup or the right executables are not installed :/
+                    tryPatchShadedLibraryIdAndSign(tmpFile, originalName);
+                }
             }
-            out.flush();
-
-            if (shouldShadedLibraryIdBePatched(mangledPackagePrefix)) {
-                // Let's try to patch the id and re-sign it. This is a best-effort and might fail if a
-                // SecurityManager is setup or the right executables are not installed :/
-                tryPatchShadedLibraryIdAndSign(tmpFile, originalName);
-            }
-
             // Close the output stream before loading the unpacked library,
             // because otherwise Windows will refuse to load it when it's in use by other process.
-            closeQuietly(out);
-            out = null;
-
             loadLibrary(loader, tmpFile.getPath(), true);
+
         } catch (UnsatisfiedLinkError e) {
             try {
                 if (tmpFile != null && tmpFile.isFile() && tmpFile.canRead() &&
@@ -225,10 +224,14 @@ public final class NativeLibraryLoader {
                     // Pass "io.netty.native.workdir" as an argument to allow shading tools to see
                     // the string. Since this is printed out to users to tell them what to do next,
                     // we want the value to be correct even when shading.
-                    logger.info("{} exists but cannot be executed even when execute permissions set; " +
-                                "check volume for \"noexec\" flag; use -D{}=[path] " +
-                                "to set native working directory separately.",
-                                tmpFile.getPath(), "io.netty.native.workdir");
+                    String message = String.format(
+                            "%s exists but cannot be executed even when execute permissions set; " +
+                                    "check volume for \"noexec\" flag; use -D%s=[path] " +
+                                    "to set native working directory separately.",
+                            tmpFile.getPath(), "io.netty.native.workdir");
+                    logger.info(message);
+                    suppressed.add(ThrowableUtil.unknownStackTrace(
+                            new UnsatisfiedLinkError(message), NativeLibraryLoader.class, "load"));
                 }
             } catch (Throwable t) {
                 suppressed.add(t);
@@ -243,8 +246,6 @@ public final class NativeLibraryLoader {
             ThrowableUtil.addSuppressedAndClear(ule, suppressed);
             throw ule;
         } finally {
-            closeQuietly(in);
-            closeQuietly(out);
             // After we load the library it is safe to delete the file.
             // We delete the file immediately to free up resources as soon as possible,
             // and if this fails fallback to deleting on JVM exit.
@@ -311,9 +312,7 @@ public final class NativeLibraryLoader {
     }
 
     private static byte[] digest(MessageDigest digest, URL url) {
-        InputStream in = null;
-        try {
-            in = url.openStream();
+        try (InputStream in = url.openStream()) {
             byte[] bytes = new byte[8192];
             int i;
             while ((i = in.read(bytes)) != -1) {
@@ -323,8 +322,6 @@ public final class NativeLibraryLoader {
         } catch (IOException e) {
             logger.debug("Can't read resource.", e);
             return null;
-        } finally {
-            closeQuietly(in);
         }
     }
 
@@ -369,7 +366,7 @@ public final class NativeLibraryLoader {
         byte[] idBytes = new byte[length];
         for (int i = 0; i < idBytes.length; i++) {
             // We should only use bytes as replacement that are in our UNIQUE_ID_BYTES array.
-            idBytes[i] = UNIQUE_ID_BYTES[PlatformDependent.threadLocalRandom()
+            idBytes[i] = UNIQUE_ID_BYTES[ThreadLocalRandom.current()
                     .nextInt(UNIQUE_ID_BYTES.length)];
         }
         return idBytes;
@@ -417,7 +414,7 @@ public final class NativeLibraryLoader {
             @Override
             public Object run() {
                 try {
-                    // Invoke the helper to load the native library, if succeed, then the native
+                    // Invoke the helper to load the native library, if it succeeds, then the native
                     // library belong to the specified ClassLoader.
                     Method method = helper.getMethod("loadLibrary", String.class, boolean.class);
                     method.setAccessible(true);
@@ -475,13 +472,7 @@ public final class NativeLibraryLoader {
                         }
                     }
                 });
-            } catch (ClassNotFoundException e2) {
-                ThrowableUtil.addSuppressed(e2, e1);
-                throw e2;
-            } catch (RuntimeException e2) {
-                ThrowableUtil.addSuppressed(e2, e1);
-                throw e2;
-            } catch (Error e2) {
+            } catch (ClassNotFoundException | RuntimeException | Error e2) {
                 ThrowableUtil.addSuppressed(e2, e1);
                 throw e2;
             }
@@ -506,28 +497,13 @@ public final class NativeLibraryLoader {
         }
         byte[] buf = new byte[1024];
         ByteArrayOutputStream out = new ByteArrayOutputStream(4096);
-        InputStream in = null;
-        try {
-            in = classUrl.openStream();
+        try (InputStream in = classUrl.openStream()) {
             for (int r; (r = in.read(buf)) != -1;) {
                 out.write(buf, 0, r);
             }
             return out.toByteArray();
         } catch (IOException ex) {
             throw new ClassNotFoundException(clazz.getName(), ex);
-        } finally {
-            closeQuietly(in);
-            closeQuietly(out);
-        }
-    }
-
-    private static void closeQuietly(Closeable c) {
-        if (c != null) {
-            try {
-                c.close();
-            } catch (IOException ignore) {
-                // ignore
-            }
         }
     }
 

@@ -31,35 +31,35 @@ import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.AUTHENTICATION_DATA;
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.AUTHENTICATION_METHOD;
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.MAXIMUM_PACKET_SIZE;
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.MAXIMUM_QOS;
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.PAYLOAD_FORMAT_INDICATOR;
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SESSION_EXPIRY_INTERVAL;
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.SUBSCRIPTION_IDENTIFIER;
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.USER_PROPERTY;
-import static io.netty.handler.codec.mqtt.MqttProperties.MqttPropertyType.WILL_DELAY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.AUTHENTICATION_DATA;
+import static io.netty.handler.codec.mqtt.MqttProperties.AUTHENTICATION_METHOD;
+import static io.netty.handler.codec.mqtt.MqttProperties.MAXIMUM_PACKET_SIZE;
+import static io.netty.handler.codec.mqtt.MqttProperties.MAXIMUM_QOS;
+import static io.netty.handler.codec.mqtt.MqttProperties.PAYLOAD_FORMAT_INDICATOR;
+import static io.netty.handler.codec.mqtt.MqttProperties.SESSION_EXPIRY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.SUBSCRIPTION_IDENTIFIER;
+import static io.netty.handler.codec.mqtt.MqttProperties.USER_PROPERTY;
+import static io.netty.handler.codec.mqtt.MqttProperties.WILL_DELAY_INTERVAL;
 import static io.netty.handler.codec.mqtt.MqttQoS.AT_LEAST_ONCE;
 import static io.netty.handler.codec.mqtt.MqttSubscriptionOption.RetainedHandlingPolicy.SEND_AT_SUBSCRIBE_IF_NOT_YET_EXISTS;
 import static io.netty.handler.codec.mqtt.MqttTestUtils.validateProperties;
 import static io.netty.handler.codec.mqtt.MqttTestUtils.validateSubscribePayload;
 import static io.netty.handler.codec.mqtt.MqttTestUtils.validateUnsubscribePayload;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.MatcherAssert.assertThat;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -81,12 +81,11 @@ public class MqttCodecTest {
     private static final String WILL_MESSAGE = "gone";
     private static final String USER_NAME = "happy_user";
     private static final String PASSWORD = "123_or_no_pwd";
+    private static final byte[] PASSWORD_BYTES = PASSWORD.getBytes(CharsetUtil.UTF_8);
 
     private static final int KEEP_ALIVE_SECONDS = 600;
 
     private static final ByteBufAllocator ALLOCATOR = new UnpooledByteBufAllocator(false);
-
-    private static final int DEFAULT_MAX_BYTES_IN_MESSAGE = 8092;
 
     @Mock
     private final ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
@@ -97,7 +96,7 @@ public class MqttCodecTest {
     @Mock
     private final Attribute<MqttVersion> versionAttrMock = mock(Attribute.class);
 
-    private final List<Object> out = new ArrayList<Object>();
+    private final List<Object> out = new ArrayList<>();
 
     private final MqttDecoder mqttDecoder = new MqttDecoder();
 
@@ -111,12 +110,9 @@ public class MqttCodecTest {
         MockitoAnnotations.initMocks(this);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.alloc()).thenReturn(ALLOCATOR);
-        when(ctx.fireChannelRead(any())).then(new Answer<ChannelHandlerContext>() {
-            @Override
-            public ChannelHandlerContext answer(InvocationOnMock invocation) {
-                out.add(invocation.getArguments()[0]);
-                return ctx;
-            }
+        when(ctx.fireChannelRead(any())).then((Answer<ChannelHandlerContext>) invocation -> {
+            out.add(invocation.getArguments()[0]);
+            return ctx;
         });
         when(channel.attr(MqttCodecUtil.MQTT_VERSION_KEY)).thenReturn(versionAttrMock);
     }
@@ -175,7 +171,7 @@ public class MqttCodecTest {
         final MqttMessage decodedMessage = (MqttMessage) out.get(0);
         assertTrue(decodedMessage.decoderResult().isFailure());
         Throwable cause = decodedMessage.decoderResult().cause();
-        assertThat(cause, instanceOf(DecoderException.class));
+        assertInstanceOf(DecoderException.class, cause);
         assertEquals("non-zero reserved flag", cause.getMessage());
     }
 
@@ -185,7 +181,7 @@ public class MqttCodecTest {
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
         byte firstByte = byteBuf.getByte(0);
         byteBuf.setByte(0, (byte) (firstByte | 1)); // set bit 0 to 1
-        final List<Object> out = new LinkedList<Object>();
+        final List<Object> out = new LinkedList<>();
         mqttDecoder.decode(ctx, byteBuf, out);
         checkForSingleDecoderException(out);
     }
@@ -196,7 +192,7 @@ public class MqttCodecTest {
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
         byte firstByte = byteBuf.getByte(0);
         byteBuf.setByte(0, (byte) (firstByte | 2)); // set bit 1 to 1
-        final List<Object> out = new LinkedList<Object>();
+        final List<Object> out = new LinkedList<>();
         mqttDecoder.decode(ctx, byteBuf, out);
         checkForSingleDecoderException(out);
     }
@@ -207,7 +203,7 @@ public class MqttCodecTest {
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
         byte firstByte = byteBuf.getByte(0);
         byteBuf.setByte(0, (byte) (firstByte | 4)); // set bit 2 to 1
-        final List<Object> out = new LinkedList<Object>();
+        final List<Object> out = new LinkedList<>();
         mqttDecoder.decode(ctx, byteBuf, out);
         checkForSingleDecoderException(out);
     }
@@ -218,9 +214,19 @@ public class MqttCodecTest {
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
         byte firstByte = byteBuf.getByte(0);
         byteBuf.setByte(0, (byte) (firstByte | 8)); // set bit 3 to 1
-        final List<Object> out = new LinkedList<Object>();
+        final List<Object> out = new LinkedList<>();
         mqttDecoder.decode(ctx, byteBuf, out);
         checkForSingleDecoderException(out);
+    }
+
+    @Test
+    public void testConnectMessageForPassword311() throws Exception {
+        assertFalse(createConnectMessage(MqttVersion.MQTT_3_1).toString().contains(Arrays.toString(PASSWORD_BYTES)));
+    }
+
+    @Test
+    public void testConnectMessageForPassword5() throws Exception {
+        assertFalse(createConnectMessage(MqttVersion.MQTT_5).toString().contains(Arrays.toString(PASSWORD_BYTES)));
     }
 
     @Test
@@ -229,7 +235,7 @@ public class MqttCodecTest {
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
         byte firstByte = byteBuf.getByte(0);
         byteBuf.setByte(0, (byte) (firstByte | 1)); // set bit 1 to 0
-        final List<Object> out = new LinkedList<Object>();
+        final List<Object> out = new LinkedList<>();
         mqttDecoder.decode(ctx, byteBuf, out);
         checkForSingleDecoderException(out);
     }
@@ -240,16 +246,16 @@ public class MqttCodecTest {
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
         byte firstByte = byteBuf.getByte(0);
         byteBuf.setByte(0, (byte) (firstByte & ~2)); // set bit 1 to 0
-        final List<Object> out = new LinkedList<Object>();
+        final List<Object> out = new LinkedList<>();
         mqttDecoder.decode(ctx, byteBuf, out);
         checkForSingleDecoderException(out);
     }
 
     private void checkForSingleDecoderException(final List<Object> out) {
         assertEquals(1, out.size());
-        assertThat(out.get(0), not(instanceOf(MqttConnectMessage.class)));
+        assertThat(out.get(0)).isNotInstanceOf(MqttConnectMessage.class);
         MqttMessage result = (MqttMessage) out.get(0);
-        assertThat(result.decoderResult().cause(), instanceOf(DecoderException.class));
+        assertInstanceOf(DecoderException.class, result.decoderResult().cause());
     }
 
     @Test
@@ -261,12 +267,7 @@ public class MqttCodecTest {
                 MqttProperties.NO_PROPERTIES,
                 MqttProperties.NO_PROPERTIES);
 
-        assertThrows(EncoderException.class, new Executable() {
-            @Override
-            public void execute() {
-                MqttEncoder.doEncode(ctx, message);
-            }
-        });
+        assertThrows(EncoderException.class, () -> MqttEncoder.doEncode(ctx, message));
     }
 
     @Test
@@ -422,7 +423,7 @@ public class MqttCodecTest {
         final MqttMessage decodedMessage = (MqttMessage) out.get(0);
         assertTrue(decodedMessage.decoderResult().isFailure());
         Throwable cause = decodedMessage.decoderResult().cause();
-        assertThat(cause, instanceOf(DecoderException.class));
+        assertInstanceOf(DecoderException.class, cause);
         assertEquals("AUTH message requires at least MQTT 5", cause.getMessage());
     }
 
@@ -556,10 +557,10 @@ public class MqttCodecTest {
     @Test
     public void testConnectMessageForMqtt5() throws Exception {
         MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(SESSION_EXPIRY_INTERVAL.value(), 10));
-        props.add(new MqttProperties.StringProperty(AUTHENTICATION_METHOD.value(), "Plain"));
+        props.add(new MqttProperties.IntegerProperty(SESSION_EXPIRY_INTERVAL, 10));
+        props.add(new MqttProperties.StringProperty(AUTHENTICATION_METHOD, "Plain"));
         MqttProperties willProps = new MqttProperties();
-        willProps.add(new MqttProperties.IntegerProperty(WILL_DELAY_INTERVAL.value(), 100));
+        willProps.add(new MqttProperties.IntegerProperty(WILL_DELAY_INTERVAL, 100));
         final MqttConnectMessage message =
                 createConnectMessage(MqttVersion.MQTT_5, USER_NAME, PASSWORD, props, willProps);
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
@@ -578,9 +579,9 @@ public class MqttCodecTest {
     @Test
     public void testConnAckMessageForMqtt5() throws Exception {
         MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(SESSION_EXPIRY_INTERVAL.value(), 10));
-        props.add(new MqttProperties.IntegerProperty(MAXIMUM_QOS.value(), 1));
-        props.add(new MqttProperties.IntegerProperty(MAXIMUM_PACKET_SIZE.value(), 1000));
+        props.add(new MqttProperties.IntegerProperty(SESSION_EXPIRY_INTERVAL, 10));
+        props.add(new MqttProperties.IntegerProperty(MAXIMUM_QOS, 1));
+        props.add(new MqttProperties.IntegerProperty(MAXIMUM_PACKET_SIZE, 1000));
         final MqttConnAckMessage message = createConnAckMessage(props);
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
 
@@ -597,18 +598,18 @@ public class MqttCodecTest {
     public void testPublishMessageForMqtt5() throws Exception {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
         MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 10));
-        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER.value(), 20));
-        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER, 10));
+        props.add(new MqttProperties.IntegerProperty(SUBSCRIPTION_IDENTIFIER, 20));
+        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR, 6));
         props.add(new MqttProperties.UserProperty("isSecret", "true"));
         props.add(new MqttProperties.UserProperty("tag", "firstTag"));
         props.add(new MqttProperties.UserProperty("tag", "secondTag"));
         assertEquals(2,
-                props.getProperties(SUBSCRIPTION_IDENTIFIER.value()).size());
+                props.getProperties(SUBSCRIPTION_IDENTIFIER).size());
         assertEquals(3,
-                props.getProperties(USER_PROPERTY.value()).size());
+                props.getProperties(USER_PROPERTY).size());
         assertEquals(3,
-                ((MqttProperties.UserProperties) props.getProperty(USER_PROPERTY.value())).value.size());
+                ((MqttProperties.UserProperties) props.getProperty(USER_PROPERTY)).value.size());
         final MqttPublishMessage message = createPublishMessage(props);
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
 
@@ -626,7 +627,7 @@ public class MqttCodecTest {
     public void testPubAckMessageForMqtt5() throws Exception {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
         MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
+        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR, 6));
         //0x87 - Not Authorized
         final MqttMessage message = createPubAckMessage((byte) 0x87, props);
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
@@ -660,8 +661,8 @@ public class MqttCodecTest {
     @Test
     public void testSubAckMessageForMqtt5() throws Exception {
         MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
-        final MqttSubAckMessage message = createSubAckMessage(props, new int[] {1, 2, 0, 0x87 /* not authorized */});
+        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR, 6));
+        final MqttSubAckMessage message = createSubAckMessage(new int[] {1, 2, 0, 0x87 /* not authorized */});
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
 
         mqttDecoder.channelRead(ctx, byteBuf);
@@ -683,7 +684,7 @@ public class MqttCodecTest {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
 
         MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
+        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR, 6));
         final MqttSubscribeMessage message = MqttMessageBuilders.subscribe()
                 .messageId((short) 1)
                 .properties(props)
@@ -713,7 +714,7 @@ public class MqttCodecTest {
 
         //Set parameters only available in MQTT5 to see if they're dropped when encoding as MQTT3
         MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
+        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR, 6));
         final MqttSubscribeMessage message = MqttMessageBuilders.subscribe()
                 .messageId((short) 1)
                 .properties(props)
@@ -747,7 +748,7 @@ public class MqttCodecTest {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
 
         MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR.value(), 6));
+        props.add(new MqttProperties.IntegerProperty(PAYLOAD_FORMAT_INDICATOR, 6));
         final MqttUnsubAckMessage message = MqttMessageBuilders.unsubAck()
                 .packetId((short) 1)
                 .properties(props)
@@ -773,7 +774,7 @@ public class MqttCodecTest {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
 
         MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.IntegerProperty(SESSION_EXPIRY_INTERVAL.value(), 6));
+        props.add(new MqttProperties.IntegerProperty(SESSION_EXPIRY_INTERVAL, 6));
         final MqttMessage message = MqttMessageBuilders.disconnect()
                 .reasonCode((byte) 0x96) // Message rate too high
                 .properties(props)
@@ -814,7 +815,7 @@ public class MqttCodecTest {
         when(versionAttrMock.get()).thenReturn(MqttVersion.MQTT_5);
 
         MqttProperties props = new MqttProperties();
-        props.add(new MqttProperties.BinaryProperty(AUTHENTICATION_DATA.value(), "secret".getBytes(CharsetUtil.UTF_8)));
+        props.add(new MqttProperties.BinaryProperty(AUTHENTICATION_DATA, "secret".getBytes(CharsetUtil.UTF_8)));
         final MqttMessage message = MqttMessageBuilders.auth()
                 .reasonCode((byte) 0x18) // Continue authentication
                 .properties(props)
@@ -989,7 +990,7 @@ public class MqttCodecTest {
                 new MqttFixedHeader(MqttMessageType.SUBSCRIBE, false, MqttQoS.AT_LEAST_ONCE, false, 0);
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
 
-        List<MqttTopicSubscription> topicSubscriptions = new LinkedList<MqttTopicSubscription>();
+        List<MqttTopicSubscription> topicSubscriptions = new LinkedList<>();
         topicSubscriptions.add(new MqttTopicSubscription("/abc", MqttQoS.AT_LEAST_ONCE));
         topicSubscriptions.add(new MqttTopicSubscription("/def", MqttQoS.AT_LEAST_ONCE));
         topicSubscriptions.add(new MqttTopicSubscription("/xyz", MqttQoS.EXACTLY_ONCE));
@@ -999,10 +1000,10 @@ public class MqttCodecTest {
     }
 
     private static MqttSubAckMessage createSubAckMessage() {
-        return createSubAckMessage(MqttProperties.NO_PROPERTIES, new int[] {1, 2, 0});
+        return createSubAckMessage(new int[] {1, 2, 0});
     }
 
-    private static MqttSubAckMessage createSubAckMessage(MqttProperties properties, int[] reasonCodes) {
+    private static MqttSubAckMessage createSubAckMessage(int[] reasonCodes) {
         MqttFixedHeader mqttFixedHeader =
                 new MqttFixedHeader(MqttMessageType.SUBACK, false, MqttQoS.AT_MOST_ONCE, false, 0);
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
@@ -1015,7 +1016,7 @@ public class MqttCodecTest {
                 new MqttFixedHeader(MqttMessageType.UNSUBSCRIBE, false, MqttQoS.AT_LEAST_ONCE, false, 0);
         MqttMessageIdVariableHeader mqttMessageIdVariableHeader = MqttMessageIdVariableHeader.from(12345);
 
-        List<String> topics = new LinkedList<String>();
+        List<String> topics = new LinkedList<>();
         topics.add("/abc");
         topics.add("/def");
         topics.add("/xyz");
@@ -1101,7 +1102,7 @@ public class MqttCodecTest {
         assertNull(message.payload());
         assertTrue(message.decoderResult().isFailure());
         Throwable cause = message.decoderResult().cause();
-        assertThat(cause, instanceOf(TooLongFrameException.class));
+        assertInstanceOf(TooLongFrameException.class, cause);
     }
 
     private static void validatePubReplyVariableHeader(

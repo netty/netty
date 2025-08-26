@@ -255,12 +255,13 @@ public final class IoUringIoOps implements IoOps {
      * @param fd        the filedescriptor
      * @param flags     the flags.
      * @param mask      the mask.
-     * @param data      the data
+     * @param len       the len.
+     * @param data      the data.
      * @return          ops.
      */
-    static IoUringIoOps newPollAdd(int fd, byte flags, int mask, short data) {
+    static IoUringIoOps newPollAdd(int fd, byte flags, int mask, int len, short data) {
         // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L554
-        return new IoUringIoOps(Native.IORING_OP_POLL_ADD, flags, (short) 0, fd, 0L, 0L, 0, mask, data,
+        return new IoUringIoOps(Native.IORING_OP_POLL_ADD, flags, (short) 0, fd, 0L, 0L, len, mask, data,
                 (short) 0, (short) 0, 0, 0);
     }
 
@@ -290,7 +291,26 @@ public final class IoUringIoOps implements IoOps {
      */
     static IoUringIoOps newConnect(int fd, byte flags, long remoteMemoryAddress, short data) {
         // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L695
-        return new IoUringIoOps(Native.IORING_OP_CONNECT, flags, (short) 0, fd, Native.SIZEOF_SOCKADDR_STORAGE,
+        return newConnect(
+                fd, flags,
+                remoteMemoryAddress, Native.SIZEOF_SOCKADDR_STORAGE,
+                data
+        );
+    }
+
+    /**
+     * Returns a new {@code OP_CONNECT} {@link IoUringIoOps}.
+     *
+     * @param fd                    the filedescriptor
+     * @param flags                 the flags.
+     * @param remoteMemoryAddress   the memory address of the sockaddr_storage.
+     * @param addrLen               then remoteMemory storage length.
+     * @param data                  the data
+     * @return                      ops.
+     */
+    static IoUringIoOps newConnect(int fd, byte flags, long remoteMemoryAddress, int addrLen, short data) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L695
+        return new IoUringIoOps(Native.IORING_OP_CONNECT, flags, (short) 0, fd, addrLen,
                 remoteMemoryAddress, 0, 0, data, (short) 0, (short) 0, 0, 0);
     }
 
@@ -372,6 +392,19 @@ public final class IoUringIoOps implements IoOps {
         // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L898
         return new IoUringIoOps(Native.IORING_OP_RECV, flags, ioPrio, fd,
                 0, memoryAddress, length, recvFlags, data, bid, (short) 0, 0, 0);
+    }
+
+    static IoUringIoOps newSendZc(
+            int fd, long memoryAddress, int length,
+            int flags, short data, int zcFlags) {
+        // See https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L867
+        return new IoUringIoOps(Native.IORING_OP_SEND_ZC, (byte) 0, (byte) zcFlags, fd,
+                0, memoryAddress, length, flags, data, (short) 0, (short) 0, 0, 0);
+    }
+
+    static IoUringIoOps newSendmsgZc(int fd, byte flags, int msgFlags, long address, short data) {
+        return new IoUringIoOps(Native.IORING_OP_SENDMSG_ZC, flags, (short) 0, fd, 0L, address, 1, msgFlags, data,
+                (short) 0, (short) 0, 0, 0);
     }
 
     /**

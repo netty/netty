@@ -29,12 +29,12 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.CharsetUtil;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
@@ -160,7 +160,7 @@ public class ByteToMessageDecoderTest {
             }
         });
         byte[] bytes = new byte[1024];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
 
         assertTrue(channel.writeInbound(Unpooled.wrappedBuffer(bytes)));
         assertTrue(channel.finishAndReleaseAll());
@@ -257,7 +257,7 @@ public class ByteToMessageDecoderTest {
             }
         });
         byte[] bytes = new byte[1024];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
 
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(bytes)));
         assertBuffer(Unpooled.wrappedBuffer(bytes), (ByteBuf) channel.readInbound());
@@ -289,7 +289,7 @@ public class ByteToMessageDecoderTest {
             }
         });
         byte[] bytes = new byte[1024];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
 
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(bytes)));
         assertBuffer(Unpooled.wrappedBuffer(bytes, 0, bytes.length - 1), (ByteBuf) channel.readInbound());
@@ -561,7 +561,7 @@ public class ByteToMessageDecoderTest {
             }
         });
         byte[] bytes = new byte[1024];
-        PlatformDependent.threadLocalRandom().nextBytes(bytes);
+        ThreadLocalRandom.current().nextBytes(bytes);
 
         assertFalse(channel.writeInbound(Unpooled.copiedBuffer(bytes)));
         assertNull(channel.readInbound());

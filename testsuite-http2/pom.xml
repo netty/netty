@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.0.RC4-SNAPSHOT</version>
+    <version>4.2.5.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-testsuite-http2</artifactId>
@@ -32,6 +32,8 @@
     <revapi.skip>true</revapi.skip>
     <!-- Do not deploy this module -->
     <skipDeploy>true</skipDeploy>
+    <javadocTestsuiteSkip>false</javadocTestsuiteSkip>
+    <maven.javadoc.skip>${javadocTestsuiteSkip}</maven.javadoc.skip>
   </properties>
 
   <dependencies>
@@ -87,7 +89,6 @@
       <plugin>
         <groupId>com.github.madgnome</groupId>
         <artifactId>h2spec-maven-plugin</artifactId>
-        <version>0.6</version>
         <configuration>
           <mainClass>io.netty.testsuite.http2.Http2Server</mainClass>
           <excludeSpecs>

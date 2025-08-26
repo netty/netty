@@ -69,6 +69,10 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
     private EmbeddedChannel encoder;
     private State state = State.AWAIT_HEADERS;
 
+    public HttpContentEncoder() {
+        super(HttpRequest.class, HttpObject.class);
+    }
+
     @Override
     public boolean acceptOutboundMessage(Object msg) throws Exception {
         return msg instanceof HttpContent || msg instanceof HttpResponse;
@@ -141,10 +145,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                  * See https://github.com/netty/netty/issues/5382
                  */
                 if (isPassthru(res.protocolVersion(), code, acceptEncoding)) {
-                    if (isFull) {
-                        out.add(ReferenceCountUtil.retain(res));
-                    } else {
-                        out.add(ReferenceCountUtil.retain(res));
+                    out.add(ReferenceCountUtil.retain(res));
+                    if (!isFull) {
                         // Pass through all following contents.
                         state = State.PASS_THROUGH;
                     }
@@ -164,10 +166,8 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
 
                 // If unable to encode, pass through.
                 if (result == null) {
-                    if (isFull) {
-                        out.add(ReferenceCountUtil.retain(res));
-                    } else {
-                        out.add(ReferenceCountUtil.retain(res));
+                    out.add(ReferenceCountUtil.retain(res));
+                    if (!isFull) {
                         // Pass through all following contents.
                         state = State.PASS_THROUGH;
                     }

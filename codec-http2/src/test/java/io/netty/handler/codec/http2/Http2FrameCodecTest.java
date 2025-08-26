@@ -63,10 +63,9 @@ import static io.netty.handler.codec.http2.Http2TestUtil.anyChannelPromise;
 import static io.netty.handler.codec.http2.Http2TestUtil.anyHttp2Settings;
 import static io.netty.handler.codec.http2.Http2TestUtil.assertEqualsAndRelease;
 import static io.netty.handler.codec.http2.Http2TestUtil.bb;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -390,7 +389,7 @@ public class Http2FrameCodecTest {
         f.await();
         assertTrue(f.isDone());
         assertFalse(f.isSuccess());
-        assertThat(f.cause(), instanceOf(UnsupportedMessageTypeException.class));
+        assertInstanceOf(UnsupportedMessageTypeException.class, f.cause());
         assertEquals(0, frame.refCnt());
     }
 
@@ -517,7 +516,7 @@ public class Http2FrameCodecTest {
         ChannelFuture f = channel.write(new DefaultHttp2WindowUpdateFrame(100).stream(stream2));
         assertTrue(f.isDone());
         assertFalse(f.isSuccess());
-        assertThat(f.cause(), instanceOf(Http2Exception.class));
+        assertInstanceOf(Http2Exception.class, f.cause());
     }
 
     @Test
@@ -740,7 +739,7 @@ public class Http2FrameCodecTest {
         assertEquals(NO_ERROR.code(), goAwayFrame.errorCode());
         assertEquals(Integer.MAX_VALUE, goAwayFrame.lastStreamId());
         goAwayFrame.release();
-        assertThat(writePromise.cause(), instanceOf(Http2NoMoreStreamIdsException.class));
+        assertInstanceOf(Http2NoMoreStreamIdsException.class, writePromise.cause());
     }
 
     @Test

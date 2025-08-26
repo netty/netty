@@ -57,7 +57,6 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.conscrypt.OpenSSLProvider;
-import org.hamcrest.Matcher;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -100,6 +99,7 @@ import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -110,7 +110,6 @@ import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.KeyManagerFactorySpi;
 import javax.net.ssl.ManagerFactoryParameters;
 import javax.net.ssl.SNIHostName;
-import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -133,10 +132,7 @@ import javax.net.ssl.X509TrustManager;
 import javax.security.cert.X509Certificate;
 
 import static io.netty.handler.ssl.SslUtils.*;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -318,7 +314,7 @@ public abstract class SSLEngineTest {
             case Heap:
                 return ByteBuffer.allocate(len);
             case Mixed:
-                return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                return ThreadLocalRandom.current().nextBoolean() ?
                         ByteBuffer.allocateDirect(len) : ByteBuffer.allocate(len);
             default:
                 throw new Error();
@@ -343,7 +339,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.heapBuffer();
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer() : allocator.heapBuffer();
                 default:
                     throw new Error();
@@ -358,7 +354,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.heapBuffer(initialCapacity);
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer(initialCapacity) : allocator.heapBuffer(initialCapacity);
                 default:
                     throw new Error();
@@ -373,7 +369,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.heapBuffer(initialCapacity, maxCapacity);
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer(initialCapacity, maxCapacity) :
                             allocator.heapBuffer(initialCapacity, maxCapacity);
                 default:
@@ -434,7 +430,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.compositeHeapBuffer();
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.compositeDirectBuffer() :
                             allocator.compositeHeapBuffer();
                 default:
@@ -450,7 +446,7 @@ public abstract class SSLEngineTest {
                 case Heap:
                     return allocator.compositeHeapBuffer(maxNumComponents);
                 case Mixed:
-                    return PlatformDependent.threadLocalRandom().nextBoolean() ?
+                    return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.compositeDirectBuffer(maxNumComponents) :
                             allocator.compositeHeapBuffer(maxNumComponents);
                 default:
@@ -636,7 +632,11 @@ public abstract class SSLEngineTest {
             serverEngine = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
             // Set the server to only support a single TLSv1.2 cipher
-            final String serverCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+            final String serverCipher =
+                    // JDK24+ does not support TLS_RSA_* ciphers by default anymore:
+                    // See https://www.java.com/en/configure_crypto.html
+                    PlatformDependent.javaVersion() >= 24 ? "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" :
+                            "TLS_RSA_WITH_AES_128_CBC_SHA";
             serverEngine.setEnabledCipherSuites(new String[] { serverCipher });
 
             // Set the client to only support a single TLSv1.3 cipher
@@ -742,9 +742,13 @@ public abstract class SSLEngineTest {
     private void testMutualAuthInvalidClientCertSucceed(SSLEngineTestParam param, ClientAuth auth) throws Exception {
         char[] password = "example".toCharArray();
         final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
-        serverKeyStore.load(getClass().getResourceAsStream("mutual_auth_server.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("mutual_auth_server.p12")) {
+            serverKeyStore.load(resourceAsStream, password);
+        }
         final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
-        clientKeyStore.load(getClass().getResourceAsStream("mutual_auth_invalid_client.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("mutual_auth_invalid_client.p12")) {
+            clientKeyStore.load(resourceAsStream, password);
+        }
         final KeyManagerFactory serverKeyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         serverKeyManagerFactory.init(serverKeyStore, password);
@@ -770,9 +774,13 @@ public abstract class SSLEngineTest {
             throws Exception {
         char[] password = "example".toCharArray();
         final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
-        serverKeyStore.load(getClass().getResourceAsStream("mutual_auth_server.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("mutual_auth_server.p12")) {
+            serverKeyStore.load(resourceAsStream, password);
+        }
         final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
-        clientKeyStore.load(getClass().getResourceAsStream(clientCert), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream(clientCert)) {
+            clientKeyStore.load(resourceAsStream, password);
+        }
         final KeyManagerFactory serverKeyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
         serverKeyManagerFactory.init(serverKeyStore, password);
@@ -851,8 +859,7 @@ public abstract class SSLEngineTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()),
-                new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
+        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1019,8 +1026,7 @@ public abstract class SSLEngineTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()),
-                new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
+        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1207,8 +1213,7 @@ public abstract class SSLEngineTest {
         sb = new ServerBootstrap();
         cb = new Bootstrap();
 
-        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()),
-                new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
+        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1907,8 +1912,7 @@ public abstract class SSLEngineTest {
     private void setupServer(final BufferType type, final boolean delegate) {
         serverConnectedChannel = null;
         sb = new ServerBootstrap();
-        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()),
-                new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
+        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -2000,8 +2004,7 @@ public abstract class SSLEngineTest {
                                  .ciphers(param.ciphers()).build());
 
         sb = new ServerBootstrap();
-        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()),
-                new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
+        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
 
         final Promise<String> promise = sb.config().group().next().newPromise();
@@ -2257,7 +2260,11 @@ public abstract class SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
         // due to no shared/supported cipher.
-        final String sharedCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        final String sharedCipher =
+                // JDK24+ does not support TLS_RSA_* ciphers by default anymore:
+                // See https://www.java.com/en/configure_crypto.html
+                PlatformDependent.javaVersion() >= 24 ? "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" :
+                "TLS_RSA_WITH_AES_128_CBC_SHA";
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher))
@@ -2290,7 +2297,11 @@ public abstract class SSLEngineTest {
         SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
         // Select a mandatory cipher from the TLSv1.2 RFC https://www.ietf.org/rfc/rfc5246.txt so handshakes won't fail
         // due to no shared/supported cipher.
-        final String sharedCipher = "TLS_RSA_WITH_AES_128_CBC_SHA";
+        final String sharedCipher =
+                // JDK24+ does not support TLS_RSA_* ciphers by default anymore:
+                // See https://www.java.com/en/configure_crypto.html
+                PlatformDependent.javaVersion() >= 24 ? "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256" :
+                        "TLS_RSA_WITH_AES_128_CBC_SHA";
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
                 .ciphers(Collections.singletonList(sharedCipher), SupportedCipherSuiteFilter.INSTANCE)
@@ -3091,54 +3102,54 @@ public abstract class SSLEngineTest {
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
 
-        clientSslCtx = wrapContext(param, SslContextBuilder
+        TrustManagerFactory clientTrustManagerFactory = new TrustManagerFactory(new TrustManagerFactorySpi() {
+            @Override
+            protected void engineInit(KeyStore keyStore) {
+                // NOOP
+            }
+
+            @Override
+            protected TrustManager[] engineGetTrustManagers() {
+                // Provide a custom trust manager, this manager trust all certificates
+                return new TrustManager[]{
+                        new X509TrustManager() {
+                            @Override
+                            public void checkClientTrusted(
+                                    java.security.cert.X509Certificate[] x509Certificates, String s) {
+                                // NOOP
+                            }
+
+                            @Override
+                            public void checkServerTrusted(
+                                    java.security.cert.X509Certificate[] x509Certificates, String s) {
+                                // NOOP
+                            }
+
+                            @Override
+                            public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                                return EmptyArrays.EMPTY_X509_CERTIFICATES;
+                            }
+                        }
+                };
+            }
+
+            @Override
+            protected void engineInit(ManagerFactoryParameters managerFactoryParameters) {
+            }
+        }, null, TrustManagerFactory.getDefaultAlgorithm()) {
+        };
+        SslContextBuilder clientSslContextBuilder = SslContextBuilder
                 .forClient()
-                .trustManager(new TrustManagerFactory(new TrustManagerFactorySpi() {
-                    @Override
-                    protected void engineInit(KeyStore keyStore) {
-                        // NOOP
-                    }
-                    @Override
-                    protected TrustManager[] engineGetTrustManagers() {
-                        // Provide a custom trust manager, this manager trust all certificates
-                        return new TrustManager[] {
-                                new X509TrustManager() {
-                                    @Override
-                                    public void checkClientTrusted(
-                                            java.security.cert.X509Certificate[] x509Certificates, String s) {
-                                        // NOOP
-                                    }
-
-                                    @Override
-                                    public void checkServerTrusted(
-                                            java.security.cert.X509Certificate[] x509Certificates, String s) {
-                                        // NOOP
-                                    }
-
-                                    @Override
-                                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
-                                        return EmptyArrays.EMPTY_X509_CERTIFICATES;
-                                    }
-                                }
-                        };
-                    }
-
-                    @Override
-                    protected void engineInit(ManagerFactoryParameters managerFactoryParameters) {
-                    }
-                }, null, TrustManagerFactory.getDefaultAlgorithm()) {
-                })
+                .trustManager(clientTrustManagerFactory)
                 .sslContextProvider(clientSslContextProvider())
                 .sslProvider(sslClientProvider())
-                .build());
+                .endpointIdentificationAlgorithm("HTTPS");
+        if (useSNI) {
+                clientSslContextBuilder.serverName(new SNIHostName(fqdn));
+        }
+        clientSslCtx = wrapContext(param, clientSslContextBuilder.build());
 
         SSLEngine client = wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT, "127.0.0.1", 1234));
-        SSLParameters sslParameters = client.getSSLParameters();
-        sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
-        if (useSNI) {
-            sslParameters.setServerNames(Collections.<SNIServerName>singletonList(new SNIHostName(fqdn)));
-        }
-        client.setSSLParameters(sslParameters);
 
         serverSslCtx = wrapContext(param, SslContextBuilder
                 .forServer(cert.getKeyPair().getPrivate(), cert.getCertificatePath())
@@ -3177,9 +3188,7 @@ public abstract class SSLEngineTest {
                     .ciphers(cipherList).build());
             server = wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
             fail();
-        } catch (IllegalArgumentException expected) {
-            // expected when invalid cipher is used.
-        } catch (SSLException expected) {
+        } catch (IllegalArgumentException | SSLException expected) {
             // expected when invalid cipher is used.
         } finally {
             cleanupServerSslEngine(server);
@@ -3345,15 +3354,14 @@ public abstract class SSLEngineTest {
                         assertEquals(Boolean.TRUE, clientEngine.getSession().getValue(key));
                     }
 
-                    Matcher<Long> creationTimeMatcher;
                     if (clientSessionReused == SessionReusedState.REUSED) {
                         // If we know for sure it was reused so the accessedTime needs to be larger.
-                        creationTimeMatcher = greaterThan(clientEngine.getSession().getCreationTime());
+                        assertThat(clientEngine.getSession().getLastAccessedTime())
+                                .isGreaterThan(clientEngine.getSession().getCreationTime());
                     } else {
-                        creationTimeMatcher = greaterThanOrEqualTo(clientEngine.getSession().getCreationTime());
+                        assertThat(clientEngine.getSession().getLastAccessedTime())
+                                .isGreaterThanOrEqualTo(clientEngine.getSession().getCreationTime());
                     }
-                    assertThat(clientEngine.getSession().getLastAccessedTime(),
-                            is(creationTimeMatcher));
                 }
             } else {
                 // Ensure we sleep 1ms in between as getLastAccessedTime() abd getCreationTime() are in milliseconds.
@@ -4537,12 +4545,10 @@ public abstract class SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .build());
-        Socket socket = null;
 
         try {
             sb = new ServerBootstrap();
-            sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()),
-                    new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
+            sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
             sb.channel(NioServerSocketChannel.class);
 
             final Promise<SecretKey> promise = sb.config().group().next().newPromise();
@@ -4570,30 +4576,20 @@ public abstract class SSLEngineTest {
 
             SSLContext sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, InsecureTrustManagerFactory.INSTANCE.getTrustManagers(), null);
-            socket = sslContext.getSocketFactory().createSocket(NetUtil.LOCALHOST, port);
-            OutputStream out = socket.getOutputStream();
-            out.write(1);
-            out.flush();
+            try (Socket socket = sslContext.getSocketFactory().createSocket(NetUtil.LOCALHOST, port)) {
+                OutputStream out = socket.getOutputStream();
+                out.write(1);
+                out.flush();
 
-            assertTrue(promise.await(10, TimeUnit.SECONDS));
-            SecretKey key = promise.get();
-            assertEquals(48, key.getEncoded().length, "AES secret key must be 48 bytes");
+                assertTrue(promise.await(10, TimeUnit.SECONDS));
+                SecretKey key = promise.get();
+                assertEquals(48, key.getEncoded().length, "AES secret key must be 48 bytes");
+            }
         } finally {
-            closeQuietly(socket);
             if (originalSystemPropertyValue != null) {
                 System.setProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY, originalSystemPropertyValue);
             } else {
                 System.clearProperty(SslMasterKeyHandler.SYSTEM_PROP_KEY);
-            }
-        }
-    }
-
-    private static void closeQuietly(Closeable c) {
-        if (c != null) {
-            try {
-                c.close();
-            } catch (IOException ignore) {
-                // ignore
             }
         }
     }
@@ -4715,10 +4711,14 @@ public abstract class SSLEngineTest {
         char[] password = "password".toCharArray();
 
         final KeyStore serverKeyStore = KeyStore.getInstance("PKCS12");
-        serverKeyStore.load(getClass().getResourceAsStream("rsaValidations-server-keystore.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("rsaValidations-server-keystore.p12")) {
+            serverKeyStore.load(resourceAsStream, password);
+        }
 
         final KeyStore clientKeyStore = KeyStore.getInstance("PKCS12");
-        clientKeyStore.load(getClass().getResourceAsStream("rsaValidation-user-certs.p12"), password);
+        try (InputStream resourceAsStream = getClass().getResourceAsStream("rsaValidation-user-certs.p12")) {
+            clientKeyStore.load(resourceAsStream, password);
+        }
 
         final KeyManagerFactory serverKeyManagerFactory =
                 KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());

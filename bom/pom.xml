@@ -25,7 +25,7 @@
 
   <groupId>io.netty</groupId>
   <artifactId>netty-bom</artifactId>
-  <version>4.2.0.RC4-SNAPSHOT</version>
+  <version>4.2.5.Final-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Netty/BOM</name>
@@ -63,9 +63,17 @@
     </developer>
   </developers>
 
+  <distributionManagement>
+    <snapshotRepository>
+      <name>Central Portal Snapshots</name>
+      <id>central-portal-snapshots</id>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
+
   <properties>
     <!-- Keep in sync with ../pom.xml -->
-    <tcnative.version>2.0.70.Final</tcnative.version>
+    <tcnative.version>2.0.72.Final</tcnative.version>
   </properties>
 
   <build>
@@ -79,7 +87,6 @@
   </build>
   <dependencyManagement>
     <dependencies>
-      <!-- All release modules -->
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-buffer</artifactId>
@@ -118,6 +125,11 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-codec-http2</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-http3</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -227,11 +239,6 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty-example</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.netty</groupId>
         <artifactId>netty-all</artifactId>
         <version>${project.version}</version>
       </dependency>
@@ -250,12 +257,14 @@
         <artifactId>netty-resolver-dns-native-macos</artifactId>
         <version>${project.version}</version>
         <classifier>osx-x86_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-resolver-dns-native-macos</artifactId>
         <version>${project.version}</version>
         <classifier>osx-aarch_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
@@ -267,30 +276,35 @@
         <artifactId>netty-transport-native-unix-common</artifactId>
         <version>${project.version}</version>
         <classifier>linux-aarch_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-unix-common</artifactId>
         <version>${project.version}</version>
         <classifier>linux-riscv64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-unix-common</artifactId>
         <version>${project.version}</version>
         <classifier>linux-x86_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-unix-common</artifactId>
         <version>${project.version}</version>
         <classifier>osx-x86_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-unix-common</artifactId>
         <version>${project.version}</version>
         <classifier>osx-aarch_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
@@ -307,18 +321,21 @@
         <artifactId>netty-transport-native-epoll</artifactId>
         <version>${project.version}</version>
         <classifier>linux-aarch_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-epoll</artifactId>
         <version>${project.version}</version>
         <classifier>linux-riscv64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-epoll</artifactId>
         <version>${project.version}</version>
         <classifier>linux-x86_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
@@ -335,18 +352,21 @@
         <artifactId>netty-transport-native-io_uring</artifactId>
         <version>${project.version}</version>
         <classifier>linux-aarch_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-io_uring</artifactId>
         <version>${project.version}</version>
         <classifier>linux-riscv64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-io_uring</artifactId>
         <version>${project.version}</version>
         <classifier>linux-x86_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
@@ -363,13 +383,61 @@
         <artifactId>netty-transport-native-kqueue</artifactId>
         <version>${project.version}</version>
         <classifier>osx-x86_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-native-kqueue</artifactId>
         <version>${project.version}</version>
         <classifier>osx-aarch_64</classifier>
+        <scope>runtime</scope>
       </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-classes-quic</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-native-quic</artifactId>
+        <version>${project.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-native-quic</artifactId>
+        <version>${project.version}</version>
+        <classifier>linux-x86_64</classifier>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-native-quic</artifactId>
+        <version>${project.version}</version>
+        <classifier>linux-aarch_64</classifier>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-native-quic</artifactId>
+        <version>${project.version}</version>
+        <classifier>osx-x86_64</classifier>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-native-quic</artifactId>
+        <version>${project.version}</version>
+        <classifier>osx-aarch_64</classifier>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-codec-native-quic</artifactId>
+        <version>${project.version}</version>
+        <classifier>windows-x86_64</classifier>
+        <scope>runtime</scope>
+      </dependency>
+
       <!-- Add netty-tcnative* as well as users need to ensure they use the correct version -->
       <dependency>
         <groupId>io.netty</groupId>
@@ -381,24 +449,28 @@
         <artifactId>netty-tcnative</artifactId>
         <version>${tcnative.version}</version>
         <classifier>linux-x86_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-tcnative</artifactId>
         <version>${tcnative.version}</version>
         <classifier>linux-x86_64-fedora</classifier>
-      </dependency>
-      <dependency>
-        <groupId>io.netty</groupId>
-        <artifactId>netty-tcnative</artifactId>
-        <version>${tcnative.version}</version>
-        <classifier>linux-aarch_64-fedora</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-tcnative</artifactId>
         <version>${tcnative.version}</version>
         <classifier>osx-x86_64</classifier>
+        <scope>runtime</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-tcnative</artifactId>
+        <version>${tcnative.version}</version>
+        <classifier>osx-aarch_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
@@ -410,30 +482,35 @@
         <artifactId>netty-tcnative-boringssl-static</artifactId>
         <version>${tcnative.version}</version>
         <classifier>linux-x86_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-tcnative-boringssl-static</artifactId>
         <version>${tcnative.version}</version>
         <classifier>linux-aarch_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-tcnative-boringssl-static</artifactId>
         <version>${tcnative.version}</version>
         <classifier>osx-x86_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-tcnative-boringssl-static</artifactId>
         <version>${tcnative.version}</version>
         <classifier>osx-aarch_64</classifier>
+        <scope>runtime</scope>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-tcnative-boringssl-static</artifactId>
         <version>${tcnative.version}</version>
         <classifier>windows-x86_64</classifier>
+        <scope>runtime</scope>
       </dependency>
     </dependencies>
   </dependencyManagement>

@@ -15,6 +15,7 @@
  */
 open module io.netty.testsuite_jpms.test {
     requires org.junit.jupiter.api;
+    requires jdk.jfr;
     requires io.netty.buffer;
     requires io.netty.codec;
     requires io.netty.codec.xml;
@@ -40,7 +41,9 @@ open module io.netty.testsuite_jpms.test {
     requires io.netty.resolver.dns;
     requires io.netty.codec.http;
     requires io.netty.codec.http2;
-    requires jboss.marshalling;
+    requires io.netty.codec.http3;
+    requires io.netty.codec.classes.quic;
+    requires org.jboss.marshalling;
     requires org.bouncycastle.pkix;
 
     requires static org.slf4j;

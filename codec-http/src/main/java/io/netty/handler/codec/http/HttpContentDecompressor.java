@@ -15,14 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
-import static io.netty.handler.codec.http.HttpHeaderValues.BR;
-import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
-import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
-import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
-import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
-import static io.netty.handler.codec.http.HttpHeaderValues.SNAPPY;
-import static io.netty.handler.codec.http.HttpHeaderValues.ZSTD;
-
+import io.netty.channel.Channel;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.BrotliDecoder;
@@ -32,6 +25,15 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.compression.ZstdDecoder;
 
+import static io.netty.handler.codec.http.HttpHeaderValues.BR;
+import static io.netty.handler.codec.http.HttpHeaderValues.DEFLATE;
+import static io.netty.handler.codec.http.HttpHeaderValues.GZIP;
+import static io.netty.handler.codec.http.HttpHeaderValues.SNAPPY;
+import static io.netty.handler.codec.http.HttpHeaderValues.X_DEFLATE;
+import static io.netty.handler.codec.http.HttpHeaderValues.X_GZIP;
+import static io.netty.handler.codec.http.HttpHeaderValues.ZSTD;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
 /**
  * Decompresses an {@link HttpMessage} and an {@link HttpContent} compressed in
  * {@code gzip} or {@code deflate} encoding.  For more information on how this
@@ -40,12 +42,25 @@ import io.netty.handler.codec.compression.ZstdDecoder;
 public class HttpContentDecompressor extends HttpContentDecoder {
 
     private final boolean strict;
+    private final int maxAllocation;
 
     /**
      * Create a new {@link HttpContentDecompressor} in non-strict mode.
+     * @deprecated
+     *            Use {@link HttpContentDecompressor#HttpContentDecompressor(int)}.
      */
+    @Deprecated
     public HttpContentDecompressor() {
-        this(false);
+        this(false, 0);
+    }
+
+    /**
+     * Create a new {@link HttpContentDecompressor} in non-strict mode.
+     * @param maxAllocation
+     *            Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
+     */
+    public HttpContentDecompressor(int maxAllocation) {
+        this(false, maxAllocation);
     }
 
     /**
@@ -53,38 +68,75 @@ public class HttpContentDecompressor extends HttpContentDecoder {
      *
      * @param strict    if {@code true} use strict handling of deflate if used, otherwise handle it in a
      *                  more lenient fashion.
+     * @deprecated
+     *            Use {@link HttpContentDecompressor#HttpContentDecompressor(boolean, int)}.
      */
+    @Deprecated
     public HttpContentDecompressor(boolean strict) {
+        this(strict, 0);
+    }
+
+    /**
+     * Create a new {@link HttpContentDecompressor}.
+     *
+     * @param strict    if {@code true} use strict handling of deflate if used, otherwise handle it in a
+     *                  more lenient fashion.
+     * @param maxAllocation
+     *             Maximum size of the decompression buffer. Must be &gt;= 0. If zero, maximum size is not limited.
+     */
+    public HttpContentDecompressor(boolean strict, int maxAllocation) {
         this.strict = strict;
+        this.maxAllocation = checkPositiveOrZero(maxAllocation, "maxAllocation");
     }
 
     @Override
     protected EmbeddedChannel newContentDecoder(String contentEncoding) throws Exception {
+        Channel channel = ctx.channel();
         if (GZIP.contentEqualsIgnoreCase(contentEncoding) ||
             X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP));
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP, maxAllocation))
+                    .build();
         }
         if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) ||
             X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
             final ZlibWrapper wrapper = strict ? ZlibWrapper.ZLIB : ZlibWrapper.ZLIB_OR_NONE;
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
-            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), ZlibCodecFactory.newZlibDecoder(wrapper));
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(ZlibCodecFactory.newZlibDecoder(wrapper, maxAllocation))
+                    .build();
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-              ctx.channel().config(), new BrotliDecoder());
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(new BrotliDecoder())
+                    .build();
         }
 
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new SnappyFrameDecoder());
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(new SnappyFrameDecoder())
+                    .build();
         }
 
         if (Zstd.isAvailable() && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
-            return new EmbeddedChannel(ctx.channel().id(), ctx.channel().metadata().hasDisconnect(),
-                    ctx.channel().config(), new ZstdDecoder());
+            return EmbeddedChannel.builder()
+                    .channelId(channel.id())
+                    .hasDisconnect(channel.metadata().hasDisconnect())
+                    .config(channel.config())
+                    .handlers(new ZstdDecoder())
+                    .build();
         }
 
         // 'identity' or unsupported

@@ -36,6 +36,33 @@ import static io.netty.handler.codec.mqtt.MqttCodecUtil.resetUnusedFields;
 import static io.netty.handler.codec.mqtt.MqttCodecUtil.validateFixedHeader;
 import static io.netty.handler.codec.mqtt.MqttConstant.DEFAULT_MAX_BYTES_IN_MESSAGE;
 import static io.netty.handler.codec.mqtt.MqttConstant.DEFAULT_MAX_CLIENT_ID_LENGTH;
+import static io.netty.handler.codec.mqtt.MqttProperties.ASSIGNED_CLIENT_IDENTIFIER;
+import static io.netty.handler.codec.mqtt.MqttProperties.AUTHENTICATION_DATA;
+import static io.netty.handler.codec.mqtt.MqttProperties.AUTHENTICATION_METHOD;
+import static io.netty.handler.codec.mqtt.MqttProperties.CONTENT_TYPE;
+import static io.netty.handler.codec.mqtt.MqttProperties.CORRELATION_DATA;
+import static io.netty.handler.codec.mqtt.MqttProperties.MAXIMUM_PACKET_SIZE;
+import static io.netty.handler.codec.mqtt.MqttProperties.MAXIMUM_QOS;
+import static io.netty.handler.codec.mqtt.MqttProperties.PAYLOAD_FORMAT_INDICATOR;
+import static io.netty.handler.codec.mqtt.MqttProperties.PUBLICATION_EXPIRY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.REASON_STRING;
+import static io.netty.handler.codec.mqtt.MqttProperties.RECEIVE_MAXIMUM;
+import static io.netty.handler.codec.mqtt.MqttProperties.REQUEST_PROBLEM_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.REQUEST_RESPONSE_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.RESPONSE_INFORMATION;
+import static io.netty.handler.codec.mqtt.MqttProperties.RESPONSE_TOPIC;
+import static io.netty.handler.codec.mqtt.MqttProperties.RETAIN_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SERVER_KEEP_ALIVE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SERVER_REFERENCE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SESSION_EXPIRY_INTERVAL;
+import static io.netty.handler.codec.mqtt.MqttProperties.SHARED_SUBSCRIPTION_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.SUBSCRIPTION_IDENTIFIER;
+import static io.netty.handler.codec.mqtt.MqttProperties.SUBSCRIPTION_IDENTIFIER_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.TOPIC_ALIAS;
+import static io.netty.handler.codec.mqtt.MqttProperties.TOPIC_ALIAS_MAXIMUM;
+import static io.netty.handler.codec.mqtt.MqttProperties.USER_PROPERTY;
+import static io.netty.handler.codec.mqtt.MqttProperties.WILDCARD_SUBSCRIPTION_AVAILABLE;
+import static io.netty.handler.codec.mqtt.MqttProperties.WILL_DELAY_INTERVAL;
 import static io.netty.handler.codec.mqtt.MqttSubscriptionOption.RetainedHandlingPolicy;
 
 /**
@@ -216,24 +243,29 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                 throw new DecoderException("Unknown message type, do not know how to validate fixed header");
         }
 
-        int remainingLength = 0;
-        int multiplier = 1;
-        short digit;
-        int loops = 0;
-        do {
-            digit = buffer.readUnsignedByte();
-            remainingLength += (digit & 127) * multiplier;
-            multiplier *= 128;
-            loops++;
-        } while ((digit & 128) != 0 && loops < 4);
-
-        // MQTT protocol limits Remaining Length to 4 bytes
-        if (loops == 4 && (digit & 128) != 0) {
-            throw new DecoderException("remaining length exceeds 4 digits (" + messageType + ')');
-        }
+        int remainingLength = parseRemainingLength(buffer, messageType);
         MqttFixedHeader decodedFixedHeader =
                 new MqttFixedHeader(messageType, dupFlag, MqttQoS.valueOf(qosLevel), retain, remainingLength);
         return validateFixedHeader(ctx, resetUnusedFields(decodedFixedHeader));
+    }
+
+    private static int parseRemainingLength(ByteBuf buffer, MqttMessageType messageType) {
+        int remainingLength = 0;
+        int multiplier = 1;
+
+        for (int i = 0; i < 4; i++) {
+            short digit = buffer.readUnsignedByte();
+            remainingLength += (digit & 127) * multiplier;
+
+            if ((digit & 128) == 0) {
+                return remainingLength;
+            }
+
+            multiplier *= 128;
+        }
+
+        // MQTT protocol limits Remaining Length to 4 bytes
+        throw new DecoderException("remaining length exceeds 4 digits (" + messageType + ')');
     }
 
     /**
@@ -646,8 +678,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             numberOfBytesConsumed += size;
             return new Result<String>(null, numberOfBytesConsumed);
         }
-        String s = buffer.toString(buffer.readerIndex(), size, CharsetUtil.UTF_8);
-        buffer.skipBytes(size);
+        String s = buffer.readString(size, CharsetUtil.UTF_8);
         numberOfBytesConsumed += size;
         return new Result<String>(s, numberOfBytesConsumed);
     }
@@ -701,19 +732,19 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
     private static long decodeVariableByteInteger(ByteBuf buffer) {
         int remainingLength = 0;
         int multiplier = 1;
-        short digit;
-        int loops = 0;
-        do {
-            digit = buffer.readUnsignedByte();
-            remainingLength += (digit & 127) * multiplier;
-            multiplier *= 128;
-            loops++;
-        } while ((digit & 128) != 0 && loops < 4);
 
-        if (loops == 4 && (digit & 128) != 0) {
-            throw new DecoderException("MQTT protocol limits Remaining Length to 4 bytes");
+        for (int i = 0; i < 4; i++) {
+            short digit = buffer.readUnsignedByte();
+            remainingLength += (digit & 127) * multiplier;
+
+            if ((digit & 128) == 0) {
+                return packInts(remainingLength, i + 1);
+            }
+
+            multiplier *= 128;
         }
-        return packInts(remainingLength, loops);
+
+        throw new DecoderException("MQTT protocol limits Remaining Length to 4 bytes");
     }
 
     private static final class Result<T> {
@@ -737,8 +768,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
             long propertyId = decodeVariableByteInteger(buffer);
             final int propertyIdValue = unpackA(propertyId);
             numberOfBytesConsumed += unpackB(propertyId);
-            MqttProperties.MqttPropertyType propertyType = MqttProperties.MqttPropertyType.valueOf(propertyIdValue);
-            switch (propertyType) {
+            switch (propertyIdValue) {
                 case PAYLOAD_FORMAT_INDICATOR:
                 case REQUEST_PROBLEM_INFORMATION:
                 case REQUEST_RESPONSE_INFORMATION:
@@ -798,7 +828,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
                     break;
                 default:
                     //shouldn't reach here
-                    throw new DecoderException("Unknown property type: " + propertyType);
+                    throw new DecoderException("Unknown property type: " + propertyIdValue);
             }
         }
 

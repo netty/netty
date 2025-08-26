@@ -16,7 +16,6 @@
 
 package io.netty.test.udt.util;
 
-import com.yammer.metrics.core.Meter;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
@@ -35,16 +34,11 @@ public class EchoMessageHandler extends ChannelInboundHandlerAdapter {
 
     private static final InternalLogger log = InternalLoggerFactory.getInstance(EchoMessageHandler.class);
 
-    private final Meter meter;
     private final UdtMessage message;
 
-    public Meter meter() {
-        return meter;
-    }
+    private volatile int counter;
 
-    public EchoMessageHandler(final Meter meter, final int messageSize) {
-        this.meter = meter;
-
+    public EchoMessageHandler(final int messageSize) {
         final ByteBuf byteBuf = Unpooled.buffer(messageSize);
 
         for (int i = 0; i < byteBuf.capacity(); i++) {
@@ -68,10 +62,11 @@ public class EchoMessageHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        UdtMessage udtMsg = (UdtMessage) msg;
-        if (meter != null) {
-            meter.mark(udtMsg.content().readableBytes());
-        }
+        counter += ((UdtMessage) msg).content().readableBytes();
         ctx.writeAndFlush(msg);
+    }
+
+    public int counter() {
+        return counter;
     }
 }

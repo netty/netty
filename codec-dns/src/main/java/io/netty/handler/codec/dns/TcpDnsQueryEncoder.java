@@ -36,6 +36,7 @@ public final class TcpDnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
      * Creates a new encoder with the specified {@code recordEncoder}.
      */
     public TcpDnsQueryEncoder(DnsRecordEncoder recordEncoder) {
+        super(DnsQuery.class);
         this.encoder = new DnsQueryEncoder(recordEncoder);
     }
 

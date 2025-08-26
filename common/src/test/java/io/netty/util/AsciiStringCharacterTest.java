@@ -23,8 +23,6 @@ import java.util.Random;
 
 import static io.netty.util.AsciiString.contains;
 import static io.netty.util.AsciiString.containsIgnoreCase;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -100,7 +98,7 @@ public class AsciiStringCharacterTest {
 
     @Test
     public void subSequenceTest() {
-        byte[] init = {'t', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 't', 'e', 's', 't' };
+        byte[] init = { 't', 'h', 'i', 's', ' ', 'i', 's', ' ', 'a', ' ', 't', 'e', 's', 't' };
         AsciiString ascii = new AsciiString(init);
         final int start = 2;
         final int end = init.length;
@@ -115,8 +113,8 @@ public class AsciiStringCharacterTest {
 
     @Test
     public void testContains() {
-        String[] falseLhs = {null, "a", "aa", "aaa" };
-        String[] falseRhs = {null, "b", "ba", "baa" };
+        String[] falseLhs = { null, "a", "aa", "aaa" };
+        String[] falseRhs = { null, "b", "ba", "baa" };
         for (int i = 0; i < falseLhs.length; ++i) {
             for (int j = 0; j < falseRhs.length; ++j) {
                 assertContains(falseLhs[i], falseRhs[i], false, false);
@@ -245,23 +243,23 @@ public class AsciiStringCharacterTest {
 
     @Test
     public void testEqualsIgnoreCase() {
-        assertThat(AsciiString.contentEqualsIgnoreCase(null, null), is(true));
-        assertThat(AsciiString.contentEqualsIgnoreCase(null, "foo"), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("bar", null), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"), is(true));
-        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", "bar"), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("Foo", "foobar"), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("foobar", "Foo"), is(false));
+        assertTrue(AsciiString.contentEqualsIgnoreCase(null, null));
+        assertFalse(AsciiString.contentEqualsIgnoreCase(null, "foo"));
+        assertFalse(AsciiString.contentEqualsIgnoreCase("bar", null));
+        assertTrue(AsciiString.contentEqualsIgnoreCase("FoO", "fOo"));
+        assertFalse(AsciiString.contentEqualsIgnoreCase("FoO", "bar"));
+        assertFalse(AsciiString.contentEqualsIgnoreCase("Foo", "foobar"));
+        assertFalse(AsciiString.contentEqualsIgnoreCase("foobar", "Foo"));
 
         // Test variations (Ascii + String, Ascii + Ascii, String + Ascii)
-        assertThat(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), "fOo"), is(true));
-        assertThat(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), new AsciiString("fOo")), is(true));
-        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", new AsciiString("fOo")), is(true));
+        assertTrue(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), "fOo"));
+        assertTrue(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), new AsciiString("fOo")));
+        assertTrue(AsciiString.contentEqualsIgnoreCase("FoO", new AsciiString("fOo")));
 
         // Test variations (Ascii + String, Ascii + Ascii, String + Ascii)
-        assertThat(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), "bAr"), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), new AsciiString("bAr")), is(false));
-        assertThat(AsciiString.contentEqualsIgnoreCase("FoO", new AsciiString("bAr")), is(false));
+        assertFalse(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), "bAr"));
+        assertFalse(AsciiString.contentEqualsIgnoreCase(new AsciiString("FoO"), new AsciiString("bAr")));
+        assertFalse(AsciiString.contentEqualsIgnoreCase("FoO", new AsciiString("bAr")));
     }
 
     @Test
@@ -364,7 +362,7 @@ public class AsciiStringCharacterTest {
 
     @Test
     public void testLastIndexOfCharSequence() {
-        final byte[] bytes = {'a', 'b', 'c', 'd', 'e'};
+        final byte[] bytes = { 'a', 'b', 'c', 'd', 'e' };
         final AsciiString ascii = new AsciiString(bytes, 2, 3, false);
 
         assertEquals(0, new AsciiString("abcd").lastIndexOf("abcd", 0));
@@ -462,5 +460,94 @@ public class AsciiStringCharacterTest {
     public void testToUpperCaseLong() {
         AsciiString foo = AsciiString.of("This is a test for longer sequences");
         assertEquals("THIS IS A TEST FOR LONGER SEQUENCES", foo.toUpperCase().toString());
+    }
+
+    @Test
+    public void testRegionMatchesReturnsTrueForEqualRegions() {
+        AsciiString str = new AsciiString("Hello, World!");
+        AsciiString hello = new AsciiString("Hello");
+        AsciiString world = new AsciiString("World");
+        assertTrue(AsciiString.regionMatches(str, false, 0, hello, 0, 5));
+        assertTrue(AsciiString.regionMatches(str, false, 7, world, 0, 5));
+    }
+
+    @Test
+    public void testRegionMatchesReturnsFalseForDifferentRegions() {
+        AsciiString str = new AsciiString("Hello, World!");
+        AsciiString world = new AsciiString("world");
+        AsciiString hello = new AsciiString("hello");
+        assertFalse(AsciiString.regionMatches(str, false, 0, world, 0, 5));
+        assertFalse(AsciiString.regionMatches(str, false, 7, hello, 0, 5));
+    }
+
+    @Test
+    public void testRegionMatchesIgnoreCaseReturnsTrueForEqualRegions() {
+        AsciiString str = new AsciiString("Hello, World!");
+        AsciiString hello = new AsciiString("hello");
+        AsciiString world = new AsciiString("world");
+        assertTrue(AsciiString.regionMatches(str, true, 0, hello, 0, 5));
+        assertTrue(AsciiString.regionMatches(str, true, 7, world, 0, 5));
+    }
+
+    @Test
+    public void testRegionMatchesIgnoreCaseReturnsFalseForDifferentRegions() {
+        AsciiString str = new AsciiString("Hello, World!");
+        AsciiString world = new AsciiString("world");
+        AsciiString hello = new AsciiString("hello");
+        assertFalse(AsciiString.regionMatches(str, true, 0, world, 0, 5));
+        assertFalse(AsciiString.regionMatches(str, true, 7, hello, 0, 5));
+    }
+
+    @Test
+    public void testRegionMatchesAsciiReturnsTrueForEqualRegions() {
+        AsciiString str = new AsciiString("Hello, World!");
+        AsciiString hello = new AsciiString("Hello");
+        AsciiString world = new AsciiString("World");
+        assertTrue(AsciiString.regionMatchesAscii(str, false, 0, hello, 0, 5));
+        assertTrue(AsciiString.regionMatchesAscii(str, false, 7, world, 0, 5));
+    }
+
+    @Test
+    public void testRegionMatchesAsciiReturnsFalseForDifferentRegions() {
+        AsciiString str = new AsciiString("Hello, World!");
+        AsciiString world = new AsciiString("world");
+        AsciiString hello = new AsciiString("hello");
+        assertFalse(AsciiString.regionMatchesAscii(str, false, 0, world, 0, 5));
+        assertFalse(AsciiString.regionMatchesAscii(str, false, 7, hello, 0, 5));
+    }
+
+    @Test
+    public void testRegionMatchesAsciiIgnoreCaseReturnsTrueForEqualRegions() {
+        AsciiString str = new AsciiString("Hello, World!");
+        AsciiString hello = new AsciiString("hello");
+        AsciiString world = new AsciiString("world");
+        assertTrue(AsciiString.regionMatchesAscii(str, true, 0, hello, 0, 5));
+        assertTrue(AsciiString.regionMatchesAscii(str, true, 7, world, 0, 5));
+    }
+
+    @Test
+    public void testRegionMatchesAsciiIgnoreCaseReturnsFalseForDifferentRegions() {
+        AsciiString str = new AsciiString("Hello, World!");
+        AsciiString world = new AsciiString("world");
+        AsciiString hello = new AsciiString("hello");
+        assertFalse(AsciiString.regionMatchesAscii(str, true, 0, world, 0, 5));
+        assertFalse(AsciiString.regionMatchesAscii(str, true, 7, hello, 0, 5));
+    }
+
+    @Test
+    public void testRegionMatchesHandlesOutOfBounds() {
+        AsciiString str = new AsciiString("Hello, World!");
+        AsciiString hello = new AsciiString("Hello");
+        assertFalse(AsciiString.regionMatches(str, false, -1, hello, 0, 5));
+        assertFalse(AsciiString.regionMatches(str, false, 0, hello, -1, 5));
+        assertFalse(AsciiString.regionMatches(str, false, 0, hello, 0, 20));
+    }
+
+    @Test
+    public void testRegionMatchesAsciiHandlesOutOfBounds() {
+        AsciiString str = new AsciiString("Hello, World!");
+        AsciiString hello = new AsciiString("Hello");
+        assertFalse(AsciiString.regionMatchesAscii(str, false, -1, hello, 0, 5));
+        assertFalse(AsciiString.regionMatchesAscii(str, false, 0, hello, -1, 5));
     }
 }

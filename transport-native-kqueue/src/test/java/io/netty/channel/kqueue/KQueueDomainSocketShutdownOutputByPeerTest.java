@@ -19,6 +19,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.unix.Buffer;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.testsuite.transport.socket.AbstractSocketShutdownOutputByPeerTest;
+import io.netty.util.internal.CleanableDirectBuffer;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -54,11 +55,12 @@ public class KQueueDomainSocketShutdownOutputByPeerTest extends AbstractSocketSh
 
     @Override
     protected void write(BsdSocket s, int data) throws IOException {
-        final ByteBuffer buf = Buffer.allocateDirectWithNativeOrder(4);
+        CleanableDirectBuffer cleanableDirectBuffer = Buffer.allocateDirectBufferWithNativeOrder(4);
+        final ByteBuffer buf = cleanableDirectBuffer.buffer();
         buf.putInt(data);
         buf.flip();
         s.write(buf, buf.position(), buf.limit());
-        Buffer.free(buf);
+        cleanableDirectBuffer.clean();
     }
 
     @Override

@@ -13,11 +13,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 # ----------------------------------------------------------------------------
-# For most projects, this workflow file will not need changing; you simply need
-# to commit it to your repository.
-#
-# You may wish to alter this file to override the set of languages analyzed,
-# or to provide custom queries or build logic.
 name: "CodeQL"
 
 on:
@@ -34,6 +29,12 @@ env:
 
 permissions:
   contents: read
+
+# Cancel running jobs when a new push happens to the same branch as otherwise it will
+# tie up too many resources without providing much value.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   analyze:
@@ -63,10 +64,10 @@ jobs:
       continue-on-error: true
       with:
         path: ~/.m2/repository
-        key: ${{ runner.os }}-maven-${{ matrix.language }} ${{ hashFiles('**/pom.xml') }}
+        key: cache-maven-${{ hashFiles('**/pom.xml') }}
         restore-keys: |
-          ${{ runner.os }}-maven-${{ matrix.language }}
-          ${{ runner.os }}-maven-
+          cache-maven-${{ hashFiles('**/pom.xml') }}
+          cache-maven-
 
     # Initializes the CodeQL tools for scanning.
     - name: Initialize CodeQL
@@ -92,10 +93,16 @@ jobs:
     - uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
-        java-version: '8' # The JDK version to make available on the path.
+        java-version: '11' # The JDK version to make available on the path.
+
+    #- run: |
+    #   make bootstrap
+    #   make release
+    - name: Install tools / libraries
+      run: sudo apt-get update && sudo apt-get -y install autoconf automake libtool make tar cmake perl ninja-build git cargo
 
     - name: Compile project
-      run: ./mvnw -B -ntp clean package -DskipTests=true
+      run: ./mvnw -B -ntp clean package -DskipTests=true -DskipH3Spec=true
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2

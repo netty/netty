@@ -93,6 +93,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
      * @param isSharable Set to {@code true} if this instance is shared else set to {@code false}
      */
     public BrotliEncoder(Encoder.Parameters parameters, boolean isSharable) {
+        super(ByteBuf.class);
         this.parameters = ObjectUtil.checkNotNull(parameters, "Parameters");
         this.isSharable = isSharable;
     }

@@ -29,6 +29,7 @@ import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.SingleThreadIoEventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.IntSupplier;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.Future;
@@ -47,10 +48,9 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -65,6 +65,11 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     @Override
     protected Class<? extends ServerSocketChannel> newChannel() {
         return NioServerSocketChannel.class;
+    }
+
+    @Override
+    protected Class<? extends io.netty.channel.socket.SocketChannel> newSocketChannel() {
+        return NioSocketChannel.class;
     }
 
     @Test
@@ -225,7 +230,7 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
             group.shutdownNow();
             t.join();
             group.terminationFuture().syncUninterruptibly();
-            assertThat(error.get(), instanceOf(RejectedExecutionException.class));
+            assertInstanceOf(RejectedExecutionException.class, error.get());
             error.set(null);
         }
     }

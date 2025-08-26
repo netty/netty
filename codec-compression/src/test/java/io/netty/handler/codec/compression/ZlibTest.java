@@ -24,7 +24,6 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
-import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -32,6 +31,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -90,7 +90,7 @@ public abstract class ZlibTest {
             "</body></html>").getBytes(CharsetUtil.UTF_8);
 
     static {
-        Random rand = PlatformDependent.threadLocalRandom();
+        Random rand = ThreadLocalRandom.current();
         rand.nextBytes(BYTES_SMALL);
         rand.nextBytes(BYTES_LARGE);
     }
@@ -367,8 +367,7 @@ public abstract class ZlibTest {
         }
 
         ByteBuf decoded = Unpooled.buffer();
-        GZIPInputStream stream = new GZIPInputStream(new ByteBufInputStream(encoded, true));
-        try {
+        try (GZIPInputStream stream = new GZIPInputStream(new ByteBufInputStream(encoded, true))) {
             byte[] buf = new byte[8192];
             for (;;) {
                 int readBytes = stream.read(buf);
@@ -377,8 +376,6 @@ public abstract class ZlibTest {
                 }
                 decoded.writeBytes(buf, 0, readBytes);
             }
-        } finally {
-            stream.close();
         }
 
         if (data != null) {
@@ -441,9 +438,9 @@ public abstract class ZlibTest {
 
     private static byte[] deflate(byte[] bytes) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        OutputStream stream = new DeflaterOutputStream(out);
-        stream.write(bytes);
-        stream.close();
+        try (OutputStream stream = new DeflaterOutputStream(out)) {
+            stream.write(bytes);
+        }
         return out.toByteArray();
     }
 

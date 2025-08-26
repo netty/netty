@@ -15,7 +15,7 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.util.internal.PlatformDependent;
+import java.nio.ByteBuffer;
 
 /**
  * <pre>{@code
@@ -29,39 +29,31 @@ final class Iov {
 
     private Iov() { }
 
-    static void write(long iovAddress, long bufferAddress, int length) {
+    static void set(ByteBuffer buffer, long bufferAddress, int length) {
+        int position = buffer.position();
         if (Native.SIZEOF_SIZE_T == 4) {
-            PlatformDependent.putInt(iovAddress + Native.IOVEC_OFFSETOF_IOV_BASE, (int) bufferAddress);
-            PlatformDependent.putInt(iovAddress + Native.IOVEC_OFFSETOF_IOV_LEN, length);
+            buffer.putInt(position + Native.IOVEC_OFFSETOF_IOV_BASE, (int) bufferAddress);
+            buffer.putInt(position + Native.IOVEC_OFFSETOF_IOV_LEN, length);
         } else {
             assert Native.SIZEOF_SIZE_T == 8;
-            PlatformDependent.putLong(iovAddress + Native.IOVEC_OFFSETOF_IOV_BASE, bufferAddress);
-            PlatformDependent.putLong(iovAddress + Native.IOVEC_OFFSETOF_IOV_LEN, length);
+            buffer.putLong(position + Native.IOVEC_OFFSETOF_IOV_BASE, bufferAddress);
+            buffer.putLong(position + Native.IOVEC_OFFSETOF_IOV_LEN, length);
         }
     }
 
-    static long readBufferAddress(long iovAddress) {
+    static long getBufferAddress(ByteBuffer iov) {
         if (Native.SIZEOF_SIZE_T == 4) {
-            return PlatformDependent.getInt(iovAddress + Native.IOVEC_OFFSETOF_IOV_BASE);
+            return iov.getInt(iov.position() + Native.IOVEC_OFFSETOF_IOV_BASE);
         }
         assert Native.SIZEOF_SIZE_T == 8;
-        return PlatformDependent.getLong(iovAddress + Native.IOVEC_OFFSETOF_IOV_BASE);
+        return iov.getLong(iov.position() + Native.IOVEC_OFFSETOF_IOV_BASE);
     }
 
-    static int readBufferLength(long iovAddress) {
+    static int getBufferLength(ByteBuffer iov) {
         if (Native.SIZEOF_SIZE_T == 4) {
-            return PlatformDependent.getInt(iovAddress + Native.IOVEC_OFFSETOF_IOV_LEN);
+            return iov.getInt(iov.position() + Native.IOVEC_OFFSETOF_IOV_LEN);
         }
         assert Native.SIZEOF_SIZE_T == 8;
-        return (int) PlatformDependent.getLong(iovAddress + Native.IOVEC_OFFSETOF_IOV_LEN);
-    }
-
-    static long sumSize(long iovAddress, int length) {
-        long sum = 0;
-        for (int i = 0; i < length; i++) {
-            sum += readBufferLength(iovAddress);
-            iovAddress += 2L * Native.SIZEOF_SIZE_T;
-        }
-        return sum;
+        return (int) iov.getLong(iov.position() + Native.IOVEC_OFFSETOF_IOV_LEN);
     }
 }

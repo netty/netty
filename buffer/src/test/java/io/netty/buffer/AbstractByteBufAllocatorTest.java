@@ -25,7 +25,9 @@ import java.lang.reflect.Method;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.abort;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -39,7 +41,7 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
 
     @Override
     protected boolean isDirectExpected(boolean preferDirect) {
-        return preferDirect && PlatformDependent.hasUnsafe();
+        return preferDirect && PlatformDependent.canReliabilyFreeDirectBuffers();
     }
 
     @Override
@@ -112,6 +114,21 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
     }
 
     @Test
+    void directBuffersMustHaveMemoryAddress() throws Exception {
+        // The memory address must always be available when we either have Unsafe available,
+        // or when we have memory segments available (though CleanerJava25 only enables for Java 25+).
+        assumeTrue(PlatformDependent.hasUnsafe() || PlatformDependent.javaVersion() >= 25);
+        T allocator = newAllocator(true);
+        ByteBuf buf = allocator.directBuffer();
+        try {
+            assertTrue(buf.hasMemoryAddress());
+            assertNotEquals(0L, buf.memoryAddress());
+        } finally {
+            buf.release();
+        }
+    }
+
+    @Test
     public void testUsedDirectMemory() {
         T allocator =  newAllocator(true);
         ByteBufAllocatorMetric metric = ((ByteBufAllocatorMetricProvider) allocator).metric();
@@ -127,6 +144,17 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
 
         buffer.release();
         assertEquals(expectedUsedMemoryAfterRelease(allocator, capacity), metric.usedDirectMemory());
+    }
+
+    @Test
+    public void testUsedDirectMemoryHuge() {
+        T allocator =  newAllocator(true);
+        ByteBufAllocatorMetric metric = ((ByteBufAllocatorMetricProvider) allocator).metric();
+        assertEquals(0, metric.usedHeapMemory());
+        int size = 32 * 1024 * 1024;
+        ByteBuf buffer = allocator.directBuffer(size, size);
+        assertEquals(size, metric.usedDirectMemory());
+        buffer.release();
     }
 
     @Test
@@ -146,6 +174,17 @@ public abstract class AbstractByteBufAllocatorTest<T extends AbstractByteBufAllo
 
         buffer.release();
         assertEquals(expectedUsedMemoryAfterRelease(allocator, capacity), metric.usedHeapMemory());
+    }
+
+    @Test
+    public void testUsedHeapMemoryHuge() {
+        T allocator =  newAllocator(true);
+        ByteBufAllocatorMetric metric = ((ByteBufAllocatorMetricProvider) allocator).metric();
+        assertEquals(0, metric.usedHeapMemory());
+        int size = 32 * 1024 * 1024;
+        ByteBuf buffer = allocator.heapBuffer(size, size);
+        assertEquals(size, metric.usedHeapMemory());
+        buffer.release();
     }
 
     @Test
