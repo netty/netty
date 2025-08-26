@@ -576,14 +576,14 @@ final class MiMallocByteBufAllocator {
                 last = start;
             } else {
                 last = getBlock(page, bSize, page.adjustment + (page.capacityBlocks + extend - 1) * bSize);
-                count++;
+                assert count++ > 0; // Increase `count` if assertion enabled
             }
             Block block = start;
             if (extend > 1) {
                 while (block.blockAdjustment < last.blockAdjustment - bSize) {
                     Block next = getBlock(page, bSize, block.blockAdjustment + bSize);
                     block.nextBlock = next;
-                    count++;
+                    assert count++ > 0; // Increase `count` if assertion enabled
                     assert next.blockAdjustment > block.blockAdjustment;
                     block = next;
                 }
