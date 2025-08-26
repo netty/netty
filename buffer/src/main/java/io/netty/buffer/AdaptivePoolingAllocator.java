@@ -260,8 +260,9 @@ final class AdaptivePoolingAllocator {
         if (size <= MAX_POOLED_BUF_SIZE) {
             final int index = sizeClassIndexOf(size);
             MagazineGroup[] magazineGroups;
-            ThreadLocalCache cache = threadLocalCache.get();
-            if (!FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals() || cache == null) {
+            ThreadLocalCache cache;
+            if (!FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals() ||
+                (cache = threadLocalCache.get()) == null) {
                 magazineGroups =  sizeClassedMagazineGroups;
             } else {
                 magazineGroups = cache.magazineGroups;
