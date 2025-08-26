@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -49,8 +48,14 @@ public class ByteBufStreamTest {
             // Expected
         }
 
-        ByteBufOutputStream out = new ByteBufOutputStream(buf);
+        final ByteBufOutputStream out = new ByteBufOutputStream(buf);
         try {
+            assertThrows(IndexOutOfBoundsException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    out.write(EMPTY_BYTES, -1, 0);
+                }
+            });
             assertSame(buf, out.buffer());
             out.writeBoolean(true);
             out.writeBoolean(false);
@@ -350,5 +355,19 @@ public class ByteBufStreamTest {
         // When releaseOnClose is not set or releaseOnClose is false, ByteBuf must be released manually.
         out.buffer().release();
         assertEquals(0, out.buffer().refCnt());
+    }
+
+    @Test
+    void writeStringMustIgnoreHigherOrderByte() throws Exception {
+        ByteBuf buf = Unpooled.buffer();
+        ByteBufOutputStream out = new ByteBufOutputStream(buf, false);
+        try {
+            out.writeBytes("√");
+        } finally {
+            out.close();
+        }
+        assertEquals(0x221A, '√'); // This is a multibyte character
+        assertEquals(0x1A, buf.readByte()); // Only the lower-order byte is written
+        assertEquals(0, buf.readableBytes());
     }
 }

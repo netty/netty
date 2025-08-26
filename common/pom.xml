@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.123.Final-SNAPSHOT</version>
+    <version>4.1.125.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-common</artifactId>
@@ -42,8 +42,8 @@
       <groupId>org.graalvm.nativeimage</groupId>
       <artifactId>svm</artifactId>
       <version>${graalvm.version}</version>
-      <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
-      <scope>provided</scope>
+      <!-- Optional so maven-bundle-plugin does not make com.oracle.svm.core.annotate a required import -->
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.jctools</groupId>
@@ -232,8 +232,14 @@
                 <!-- NativeLibraryLoader can be used to manually load native libraries from other bundles that this bundle does not depend on,
                 hence use DynamicImport-Package instruction to ensure the loading is successful -->
                 <DynamicImport-Package>*</DynamicImport-Package>
-                <!-- JCTools is shaded -->
-                <Import-Package>!org.jctools.*;sun.misc;resolution:=optional;*</Import-Package>
+                <Import-Package>
+                  <!-- JCTools is shaded -->
+                  !org.jctools.*,
+                  <!-- JVM vendor packages are optional -->
+                  sun.misc;resolution:=optional,
+                  sun.nio.ch;resolution:=optional,
+                  *
+                </Import-Package>
               </instructions>
             </configuration>
           </execution>

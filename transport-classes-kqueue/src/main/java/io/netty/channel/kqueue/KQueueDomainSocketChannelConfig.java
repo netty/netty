@@ -16,6 +16,7 @@
 package io.netty.channel.kqueue;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
@@ -174,7 +175,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig
         try {
             return ((KQueueDomainSocketChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ChannelException(e);
         }
     }
 
@@ -183,7 +184,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig
             ((KQueueDomainSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
             return this;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ChannelException(e);
         }
     }
 
@@ -191,7 +192,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig
         try {
             return ((KQueueDomainSocketChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ChannelException(e);
         }
     }
 
@@ -200,7 +201,7 @@ public final class KQueueDomainSocketChannelConfig extends KQueueChannelConfig
             ((KQueueDomainSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new ChannelException(e);
         }
     }
 
