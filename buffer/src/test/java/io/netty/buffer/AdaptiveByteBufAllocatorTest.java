@@ -15,14 +15,20 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.NettyRuntime;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<AdaptiveByteBufAllocator> {
     @Override
@@ -60,27 +66,69 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         heapBuffer.release();
     }
 
+    @Override
     @Test
-    void chunkMustDeallocateOrReuseWthBufferRelease() throws Exception {
+    public void testUsedDirectMemory() {
+        AdaptiveByteBufAllocator allocator =  newAllocator(true);
+        ByteBufAllocatorMetric metric = allocator.metric();
+        assertEquals(0, metric.usedDirectMemory());
+        ByteBuf buffer = allocator.directBuffer(1024, 4096);
+        int capacity = buffer.capacity();
+        assertEquals(expectedUsedMemory(allocator, capacity), metric.usedDirectMemory());
+
+        // Double the size of the buffer
+        buffer.capacity(capacity << 1);
+        capacity = buffer.capacity();
+        // This is a new size class, and a new magazine with a new chunk
+        assertEquals(2 * expectedUsedMemory(allocator, capacity), metric.usedDirectMemory(), buffer.toString());
+
+        buffer.release();
+        // Memory is still held by the magazines
+        assertEquals(2 * expectedUsedMemory(allocator, capacity), metric.usedDirectMemory());
+    }
+
+    @Override
+    @Test
+    public void testUsedHeapMemory() {
+        AdaptiveByteBufAllocator allocator =  newAllocator(true);
+        ByteBufAllocatorMetric metric = allocator.metric();
+        assertEquals(0, metric.usedHeapMemory());
+        ByteBuf buffer = allocator.heapBuffer(1024, 4096);
+        int capacity = buffer.capacity();
+        assertEquals(expectedUsedMemory(allocator, capacity), metric.usedHeapMemory());
+
+        // Double the size of the buffer
+        buffer.capacity(capacity << 1);
+        capacity = buffer.capacity();
+        // This is a new size class, and a new magazine with a new chunk
+        assertEquals(2 * expectedUsedMemory(allocator, capacity), metric.usedHeapMemory(), buffer.toString());
+
+        buffer.release();
+        // Memory is still held by the magazines
+        assertEquals(2 * expectedUsedMemory(allocator, capacity), metric.usedHeapMemory());
+    }
+
+    @Test
+    void adaptiveChunkMustDeallocateOrReuseWthBufferRelease() throws Exception {
         AdaptiveByteBufAllocator allocator = newAllocator(false);
-        ByteBuf a = allocator.heapBuffer(8192);
-        assertEquals(128 * 1024, allocator.usedHeapMemory());
-        ByteBuf b = allocator.heapBuffer(120 * 1024);
-        assertEquals(128 * 1024, allocator.usedHeapMemory());
+        ByteBuf a = allocator.heapBuffer(28 * 1024);
+        assertEquals(262144, allocator.usedHeapMemory());
+        ByteBuf b = allocator.heapBuffer(100 * 1024);
+        assertEquals(262144, allocator.usedHeapMemory());
         b.release();
         a.release();
-        assertEquals(128 * 1024, allocator.usedHeapMemory());
-        a = allocator.heapBuffer(8192);
-        assertEquals(128 * 1024, allocator.usedHeapMemory());
-        b = allocator.heapBuffer(120 * 1024);
-        assertEquals(128 * 1024, allocator.usedHeapMemory());
+        assertEquals(262144, allocator.usedHeapMemory());
+        a = allocator.heapBuffer(28 * 1024);
+        assertEquals(262144, allocator.usedHeapMemory());
+        b = allocator.heapBuffer(100 * 1024);
+        assertEquals(262144, allocator.usedHeapMemory());
         a.release();
-        ByteBuf c = allocator.heapBuffer(8192);
-        assertEquals(2 * 128 * 1024, allocator.usedHeapMemory());
+        ByteBuf c = allocator.heapBuffer(28 * 1024);
+        assertEquals(2 * 262144, allocator.usedHeapMemory());
         c.release();
-        assertEquals(2 * 128 * 1024, allocator.usedHeapMemory());
+        assertEquals(2 * 262144, allocator.usedHeapMemory());
         b.release();
-        assertEquals(2 * 128 * 1024, allocator.usedHeapMemory());
+        assertEquals(2 * 262144, allocator.usedHeapMemory());
     }
 
     @ParameterizedTest
@@ -112,5 +160,42 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         retainedDerived.release();
 
         assertTrue(buffer.release());
+    }
+
+    @Test
+    public void testAllocateWithoutLock() throws InterruptedException {
+        final AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator();
+        // Make `threadCount` bigger than `AdaptivePoolingAllocator.MAX_STRIPES`, to let thread collision easily happen.
+        int threadCount = NettyRuntime.availableProcessors() * 4;
+        final CountDownLatch countDownLatch = new CountDownLatch(threadCount);
+        final AtomicReference<Throwable> throwableAtomicReference = new AtomicReference<Throwable>();
+        for (int i = 0; i < threadCount; i++) {
+            new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    for (int j = 0; j < 1024; j++) {
+                        try {
+                            ByteBuf buffer = null;
+                            try {
+                                buffer = alloc.heapBuffer(128);
+                                buffer.ensureWritable(ThreadLocalRandom.current().nextInt(512, 32769));
+                            } finally {
+                                if (buffer != null) {
+                                    buffer.release();
+                                }
+                            }
+                        } catch (Throwable t) {
+                            throwableAtomicReference.set(t);
+                        }
+                    }
+                    countDownLatch.countDown();
+                }
+            }).start();
+        }
+        countDownLatch.await();
+        Throwable throwable = throwableAtomicReference.get();
+        if (throwable != null) {
+            fail("Expected no exception, but got", throwable);
+        }
     }
 }

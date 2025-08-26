@@ -33,12 +33,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.instanceOf;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.core.StringContains.containsString;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class SearchDomainTest {
@@ -291,9 +289,8 @@ public class SearchDomainTest {
         assertTrue(fut.await(10, TimeUnit.SECONDS));
         assertFalse(fut.isSuccess());
         final Throwable cause = fut.cause();
-        assertThat(cause, instanceOf(UnknownHostException.class));
-        assertThat("search domain is included in UnknownHostException", cause.getMessage(),
-            containsString("foo.com"));
+        assertInstanceOf(UnknownHostException.class, cause);
+        assertThat(cause.getMessage()).contains("foo.com");
     }
 
     @Test
@@ -308,8 +305,7 @@ public class SearchDomainTest {
         assertTrue(fut.await(10, TimeUnit.SECONDS));
         assertFalse(fut.isSuccess());
         final Throwable cause = fut.cause();
-        assertThat(cause, instanceOf(UnknownHostException.class));
-        assertThat("search domain is included in UnknownHostException", cause.getMessage(),
-                not(containsString("foo.com")));
+        assertInstanceOf(UnknownHostException.class, cause);
+        assertThat(cause.getMessage()).doesNotContain("foo.com");
     }
 }

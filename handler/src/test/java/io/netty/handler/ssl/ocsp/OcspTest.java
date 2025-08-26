@@ -42,7 +42,6 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -56,8 +55,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLHandshakeException;
 
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -255,7 +254,7 @@ public class OcspTest {
         assertArrayEquals(response, actual);
 
         Throwable cause = causeRef.get();
-        assertThat(cause, CoreMatchers.instanceOf(SSLHandshakeException.class));
+        assertInstanceOf(SSLHandshakeException.class, cause);
     }
 
     @Test

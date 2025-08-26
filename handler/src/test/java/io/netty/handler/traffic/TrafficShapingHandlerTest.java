@@ -76,7 +76,7 @@ public class TrafficShapingHandlerTest {
         Channel ch = null;
         try {
             ServerBootstrap serverBootstrap = new ServerBootstrap();
-            serverBootstrap.channel(LocalServerChannel.class).group(GROUP, GROUP)
+            serverBootstrap.channel(LocalServerChannel.class).group(GROUP)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {

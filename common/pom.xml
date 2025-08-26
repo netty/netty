@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.1.120.Final-SNAPSHOT</version>
+    <version>4.1.125.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-common</artifactId>
@@ -42,8 +42,8 @@
       <groupId>org.graalvm.nativeimage</groupId>
       <artifactId>svm</artifactId>
       <version>${graalvm.version}</version>
-      <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
-      <scope>provided</scope>
+      <!-- Optional so maven-bundle-plugin does not make com.oracle.svm.core.annotate a required import -->
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.jctools</groupId>
@@ -98,6 +98,31 @@
       <artifactId>netty-dev-tools</artifactId>
       <scope>test</scope>
       <optional>true</optional>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.assertj</groupId>
+      <artifactId>assertj-core</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>ch.qos.logback</groupId>
+      <artifactId>logback-classic</artifactId>
+      <scope>test</scope>
     </dependency>
   </dependencies>
 
@@ -207,8 +232,14 @@
                 <!-- NativeLibraryLoader can be used to manually load native libraries from other bundles that this bundle does not depend on,
                 hence use DynamicImport-Package instruction to ensure the loading is successful -->
                 <DynamicImport-Package>*</DynamicImport-Package>
-                <!-- JCTools is shaded -->
-                <Import-Package>!org.jctools.*;sun.misc;resolution:=optional;*</Import-Package>
+                <Import-Package>
+                  <!-- JCTools is shaded -->
+                  !org.jctools.*,
+                  <!-- JVM vendor packages are optional -->
+                  sun.misc;resolution:=optional,
+                  sun.nio.ch;resolution:=optional,
+                  *
+                </Import-Package>
               </instructions>
             </configuration>
           </execution>

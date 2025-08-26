@@ -43,9 +43,7 @@ public final class IpSubnetFilterExample {
     static final int PORT = Integer.parseInt(System.getProperty("port", "8009"));
 
     public static void main(String[] args) throws Exception {
-        EventLoopGroup bossGroup = new NioEventLoopGroup(1);
-        EventLoopGroup workerGroup = new NioEventLoopGroup(1);
-
+        EventLoopGroup group = new NioEventLoopGroup();
         try {
             List<IpSubnetFilterRule> rules = new ArrayList<IpSubnetFilterRule>();
 
@@ -57,7 +55,7 @@ public final class IpSubnetFilterExample {
             final IpSubnetFilter ipFilter = new IpSubnetFilter(rules);
 
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
+            b.group(group)
                     .channel(NioServerSocketChannel.class)
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new ChannelInitializer<SocketChannel>() {
@@ -83,8 +81,7 @@ public final class IpSubnetFilterExample {
             // shut down your server.
             f.channel().closeFuture().sync();
         } finally {
-            workerGroup.shutdownGracefully();
-            bossGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 }

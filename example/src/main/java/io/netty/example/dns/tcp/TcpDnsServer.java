@@ -57,8 +57,7 @@ public final class TcpDnsServer {
     private static final byte[] QUERY_RESULT = new byte[]{(byte) 192, (byte) 168, 1, 1};
 
     public static void main(String[] args) throws Exception {
-        ServerBootstrap bootstrap = new ServerBootstrap().group(new NioEventLoopGroup(1),
-                new NioEventLoopGroup())
+        ServerBootstrap bootstrap = new ServerBootstrap().group(new NioEventLoopGroup())
                 .channel(NioServerSocketChannel.class)
                 .handler(new LoggingHandler(LogLevel.INFO))
                 .childHandler(new ChannelInitializer<Channel>() {

@@ -25,7 +25,7 @@
 
   <groupId>io.netty</groupId>
   <artifactId>netty-bom</artifactId>
-  <version>4.1.120.Final-SNAPSHOT</version>
+  <version>4.1.125.Final-SNAPSHOT</version>
   <packaging>pom</packaging>
 
   <name>Netty/BOM</name>
@@ -63,9 +63,17 @@
     </developer>
   </developers>
 
+  <distributionManagement>
+    <snapshotRepository>
+      <name>Central Portal Snapshots</name>
+      <id>central-portal-snapshots</id>
+      <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
+
   <properties>
     <!-- Keep in sync with ../pom.xml -->
-    <tcnative.version>2.0.70.Final</tcnative.version>
+    <tcnative.version>2.0.72.Final</tcnative.version>
   </properties>
 
   <build>
@@ -76,6 +84,31 @@
         <version>0.4.0</version>
       </plugin>
     </plugins>
+
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.sonatype.central</groupId>
+          <artifactId>central-publishing-maven-plugin</artifactId>
+          <version>0.7.0</version>
+          <configuration>
+            <publishingServerId>central</publishingServerId>
+            <skipPublishing>true</skipPublishing>
+            <autoPublish>false</autoPublish>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.sonatype.plugins</groupId>
+          <artifactId>nexus-staging-maven-plugin</artifactId>
+          <version>1.7.0</version>
+          <configuration>
+            <serverId>central-portal-snapshots</serverId>
+            <nexusUrl>https://central.sonatype.com/repository/maven-snapshots</nexusUrl>
+            <skipRemoteStaging>true</skipRemoteStaging>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
   </build>
   <dependencyManagement>
     <dependencies>
@@ -198,11 +231,6 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-transport-udt</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.netty</groupId>
-        <artifactId>netty-example</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>
@@ -339,13 +367,13 @@
         <groupId>io.netty</groupId>
         <artifactId>netty-tcnative</artifactId>
         <version>${tcnative.version}</version>
-        <classifier>linux-aarch_64-fedora</classifier>
+        <classifier>osx-x86_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-tcnative</artifactId>
         <version>${tcnative.version}</version>
-        <classifier>osx-x86_64</classifier>
+        <classifier>osx-aarch_64</classifier>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>

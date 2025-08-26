@@ -38,6 +38,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -55,11 +56,12 @@ import static io.netty.handler.codec.mqtt.MqttSubscriptionOption.RetainedHandlin
 import static io.netty.handler.codec.mqtt.MqttTestUtils.validateProperties;
 import static io.netty.handler.codec.mqtt.MqttTestUtils.validateSubscribePayload;
 import static io.netty.handler.codec.mqtt.MqttTestUtils.validateUnsubscribePayload;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.MatcherAssert.assertThat;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -81,6 +83,7 @@ public class MqttCodecTest {
     private static final String WILL_MESSAGE = "gone";
     private static final String USER_NAME = "happy_user";
     private static final String PASSWORD = "123_or_no_pwd";
+    private static final byte[] PASSWORD_BYTES = PASSWORD.getBytes(CharsetUtil.UTF_8);
 
     private static final int KEEP_ALIVE_SECONDS = 600;
 
@@ -175,7 +178,7 @@ public class MqttCodecTest {
         final MqttMessage decodedMessage = (MqttMessage) out.get(0);
         assertTrue(decodedMessage.decoderResult().isFailure());
         Throwable cause = decodedMessage.decoderResult().cause();
-        assertThat(cause, instanceOf(DecoderException.class));
+        assertInstanceOf(DecoderException.class, cause);
         assertEquals("non-zero reserved flag", cause.getMessage());
     }
 
@@ -224,6 +227,16 @@ public class MqttCodecTest {
     }
 
     @Test
+    public void testConnectMessageForPassword311() throws Exception {
+        assertFalse(createConnectMessage(MqttVersion.MQTT_3_1).toString().contains(Arrays.toString(PASSWORD_BYTES)));
+    }
+
+    @Test
+    public void testConnectMessageForPassword5() throws Exception {
+        assertFalse(createConnectMessage(MqttVersion.MQTT_5).toString().contains(Arrays.toString(PASSWORD_BYTES)));
+    }
+
+    @Test
     public void testSubscribeMessageNonZeroReservedBit0Mqtt311() throws Exception {
         final MqttSubscribeMessage message = createSubscribeMessage();
         ByteBuf byteBuf = MqttEncoder.doEncode(ctx, message);
@@ -247,9 +260,9 @@ public class MqttCodecTest {
 
     private void checkForSingleDecoderException(final List<Object> out) {
         assertEquals(1, out.size());
-        assertThat(out.get(0), not(instanceOf(MqttConnectMessage.class)));
+        assertThat(out.get(0)).isNotInstanceOf(MqttConnectMessage.class);
         MqttMessage result = (MqttMessage) out.get(0);
-        assertThat(result.decoderResult().cause(), instanceOf(DecoderException.class));
+        assertInstanceOf(DecoderException.class, result.decoderResult().cause());
     }
 
     @Test
@@ -422,7 +435,7 @@ public class MqttCodecTest {
         final MqttMessage decodedMessage = (MqttMessage) out.get(0);
         assertTrue(decodedMessage.decoderResult().isFailure());
         Throwable cause = decodedMessage.decoderResult().cause();
-        assertThat(cause, instanceOf(DecoderException.class));
+        assertInstanceOf(DecoderException.class, cause);
         assertEquals("AUTH message requires at least MQTT 5", cause.getMessage());
     }
 
@@ -1101,7 +1114,7 @@ public class MqttCodecTest {
         assertNull(message.payload());
         assertTrue(message.decoderResult().isFailure());
         Throwable cause = message.decoderResult().cause();
-        assertThat(cause, instanceOf(TooLongFrameException.class));
+        assertInstanceOf(TooLongFrameException.class, cause);
     }
 
     private static void validatePubReplyVariableHeader(

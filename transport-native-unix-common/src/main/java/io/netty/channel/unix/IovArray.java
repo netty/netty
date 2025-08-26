@@ -82,7 +82,12 @@ public final class IovArray implements MessageProcessor {
             memoryAddress = memory.memoryAddress();
         } else {
             // Fallback to using JNI as we were not be able to access the address otherwise.
-            memoryAddress = Buffer.memoryAddress(memory.internalNioBuffer(0, memory.capacity()));
+
+            // Use internalNioBuffer to reduce object creation.
+            // It is important to add the position as the returned ByteBuffer might be shared by multiple ByteBuf
+            // instances and so has an address that starts before the start of the ByteBuf itself.
+            ByteBuffer byteBuffer = memory.internalNioBuffer(0, memory.capacity());
+            memoryAddress = Buffer.memoryAddress(byteBuffer) + byteBuffer.position();
         }
     }
 

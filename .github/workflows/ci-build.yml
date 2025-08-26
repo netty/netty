@@ -31,6 +31,12 @@ env:
 permissions:
   contents: read
 
+# Cancel running jobs when a new push happens to the same branch as otherwise it will
+# tie up too many resources without providing much value.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -54,10 +60,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-${{ matrix.setup }}-
-            ${{ runner.os }}-maven-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - name: Build docker image
         run: docker compose ${{ matrix.docker-compose-build }}

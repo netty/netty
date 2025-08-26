@@ -41,7 +41,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
 
         // initialize
         PerMessageDeflateServerExtensionHandshaker handshaker =
-                new PerMessageDeflateServerExtensionHandshaker();
+                new PerMessageDeflateServerExtensionHandshaker(0);
 
         // execute
         extension = handshaker.handshakeExtension(
@@ -102,7 +102,7 @@ public class PerMessageDeflateServerExtensionHandshakerTest {
 
         // initialize
         PerMessageDeflateServerExtensionHandshaker handshaker =
-                new PerMessageDeflateServerExtensionHandshaker(6, true, 10, true, true);
+                new PerMessageDeflateServerExtensionHandshaker(6, true, 10, true, true, 0);
 
         parameters = new HashMap<String, String>();
         parameters.put(CLIENT_MAX_WINDOW, null);

@@ -449,7 +449,7 @@ public class DataCompressionHttp2Test {
                 any(ByteBuf.class), anyInt(), anyBoolean());
 
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-        sb.group(new NioEventLoopGroup(), new NioEventLoopGroup());
+        sb.group(new NioEventLoopGroup());
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -466,7 +466,7 @@ public class DataCompressionHttp2Test {
                 Http2ConnectionDecoder decoder =
                         new DefaultHttp2ConnectionDecoder(serverConnection, encoder, new DefaultHttp2FrameReader());
                 Http2ConnectionHandler connectionHandler = new Http2ConnectionHandlerBuilder()
-                        .frameListener(new DelegatingDecompressorFrameListener(serverConnection, serverListener))
+                        .frameListener(new DelegatingDecompressorFrameListener(serverConnection, serverListener, 0))
                         .codec(decoder, encoder).build();
                 p.addLast(connectionHandler);
                 serverChannelLatch.countDown();
@@ -491,7 +491,7 @@ public class DataCompressionHttp2Test {
                         new DefaultHttp2ConnectionDecoder(clientConnection, clientEncoder,
                                 new DefaultHttp2FrameReader());
                 clientHandler = new Http2ConnectionHandlerBuilder()
-                        .frameListener(new DelegatingDecompressorFrameListener(clientConnection, clientListener))
+                        .frameListener(new DelegatingDecompressorFrameListener(clientConnection, clientListener, 0))
                         // By default tests don't wait for server to gracefully shutdown streams
                         .gracefulShutdownTimeoutMillis(0)
                         .codec(decoder, clientEncoder).build();

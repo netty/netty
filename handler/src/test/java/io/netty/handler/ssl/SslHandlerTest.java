@@ -61,8 +61,7 @@ import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
-import org.hamcrest.CoreMatchers;
-import org.hamcrest.Matchers;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
@@ -92,14 +91,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.netty.buffer.Unpooled.wrappedBuffer;
-import static org.hamcrest.CoreMatchers.containsString;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.not;
-import static org.hamcrest.CoreMatchers.nullValue;
-import static org.hamcrest.MatcherAssert.assertThat;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -165,10 +161,10 @@ public class SslHandlerTest {
             writeCauseLatch.await();
             Throwable writeCause = failureRef.get();
             assertNotNull(writeCause);
-            assertThat(writeCause, is(CoreMatchers.<Throwable>instanceOf(SSLException.class)));
+            assertInstanceOf(SSLException.class, writeCause);
             Throwable cause = handler.handshakeFuture().cause();
             assertNotNull(cause);
-            assertThat(cause, is(CoreMatchers.<Throwable>instanceOf(SSLException.class)));
+            assertInstanceOf(SSLException.class, cause);
         } finally {
             assertFalse(ch.finishAndReleaseAll());
         }
@@ -322,7 +318,7 @@ public class SslHandlerTest {
         ch.writeInbound(wrappedBuffer(new byte[]{22, 3, 1, 0, 5}));
 
         // Should decode nothing yet.
-        assertThat(ch.readInbound(), is(nullValue()));
+        assertNull(ch.readInbound());
 
         DecoderException e = assertThrows(DecoderException.class, new Executable() {
             @Override
@@ -337,7 +333,7 @@ public class SslHandlerTest {
         ch.finishAndReleaseAll();
 
         // The pushed message is invalid, so it should raise an exception if it decoded the message correctly.
-        assertThat(e.getCause(), is(instanceOf(SSLProtocolException.class)));
+        assertInstanceOf(SSLProtocolException.class, e.getCause());
     }
 
     @Test
@@ -362,7 +358,7 @@ public class SslHandlerTest {
                 ch.write(referenceCounted).get();
             }
         });
-        assertThat(e.getCause(), is(instanceOf(UnsupportedMessageTypeException.class)));
+        assertInstanceOf(UnsupportedMessageTypeException.class, e.getCause());
         assertEquals(0, referenceCounted.refCnt());
         assertTrue(ch.finishAndReleaseAll());
     }
@@ -392,7 +388,7 @@ public class SslHandlerTest {
         assertFalse(promise.isDone());
         assertTrue(ch.finishAndReleaseAll());
         assertTrue(promise.isDone());
-        assertThat(promise.cause(), is(instanceOf(SSLException.class)));
+        assertInstanceOf(SSLException.class, promise.cause());
     }
 
     @Test
@@ -489,7 +485,7 @@ public class SslHandlerTest {
             SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
             final Promise<Void> serverPromise = group.next().newPromise();
             ServerBootstrap serverBootstrap = new ServerBootstrap()
-                    .group(group, group)
+                    .group(group)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(newHandler(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build(),
                             serverPromise));
@@ -566,8 +562,8 @@ public class SslHandlerTest {
 
         assertFalse(ch.finishAndReleaseAll());
 
-        assertThat(handler.handshakeFuture().cause(), instanceOf(ClosedChannelException.class));
-        assertThat(handler.sslCloseFuture().cause(), instanceOf(ClosedChannelException.class));
+        assertInstanceOf(ClosedChannelException.class, handler.handshakeFuture().cause());
+        assertInstanceOf(ClosedChannelException.class, handler.sslCloseFuture().cause());
     }
 
     @Test
@@ -588,11 +584,11 @@ public class SslHandlerTest {
 
         SslCompletionEvent evt = events.take();
         assertTrue(evt instanceof SslHandshakeCompletionEvent);
-        assertThat(evt.cause(), instanceOf(ClosedChannelException.class));
+        assertInstanceOf(ClosedChannelException.class, evt.cause());
 
         evt = events.take();
         assertTrue(evt instanceof SslCloseCompletionEvent);
-        assertThat(evt.cause(), instanceOf(ClosedChannelException.class));
+        assertInstanceOf(ClosedChannelException.class, evt.cause());
         assertTrue(events.isEmpty());
     }
 
@@ -664,10 +660,10 @@ public class SslHandlerTest {
 
             SslCompletionEvent evt = (SslCompletionEvent) events.take();
             assertTrue(evt instanceof SslHandshakeCompletionEvent);
-            assertThat(evt.cause(), is(instanceOf(SSLException.class)));
+            assertInstanceOf(SSLException.class, evt.cause());
 
             ChannelFuture future = (ChannelFuture) events.take();
-            assertThat(future.cause(), is(instanceOf(SSLException.class)));
+            assertInstanceOf(SSLException.class, future.cause());
 
             serverChannel.close().sync();
             serverChannel = null;
@@ -677,7 +673,7 @@ public class SslHandlerTest {
             latch2.await();
             evt = (SslCompletionEvent) events.take();
             assertTrue(evt instanceof SslCloseCompletionEvent);
-            assertThat(evt.cause(), is(instanceOf(ClosedChannelException.class)));
+            assertInstanceOf(ClosedChannelException.class, evt.cause());
             assertTrue(events.isEmpty());
         } finally {
             if (serverChannel != null) {
@@ -895,8 +891,7 @@ public class SslHandlerTest {
             if (error != null) {
                 throw error;
             }
-            assertThat(sslHandler.handshakeFuture().await().cause(),
-                       CoreMatchers.<Throwable>instanceOf(SSLException.class));
+            assertInstanceOf(SSLException.class, sslHandler.handshakeFuture().await().cause());
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();
@@ -970,8 +965,8 @@ public class SslHandlerTest {
             cc = future.syncUninterruptibly().channel();
 
             Throwable cause = sslHandler.handshakeFuture().await().cause();
-            assertThat(cause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
-            assertThat(cause.getMessage(), containsString("timed out"));
+            assertInstanceOf(SSLException.class, cause);
+            assertThat(cause.getMessage()).contains("timed out");
         } finally {
             if (cc != null) {
                 cc.close().syncUninterruptibly();
@@ -1242,11 +1237,11 @@ public class SslHandlerTest {
 
             if (client) {
                 Throwable cause = clientSslHandler.handshakeFuture().await().cause();
-                assertThat(cause, CoreMatchers.<Throwable>instanceOf(SslHandshakeTimeoutException.class));
+                assertInstanceOf(SslHandshakeTimeoutException.class, cause);
                 assertFalse(serverSslHandler.handshakeFuture().await().isSuccess());
             } else {
                 Throwable cause = serverSslHandler.handshakeFuture().await().cause();
-                assertThat(cause, CoreMatchers.<Throwable>instanceOf(SslHandshakeTimeoutException.class));
+                assertInstanceOf(SslHandshakeTimeoutException.class, cause);
                 assertFalse(clientSslHandler.handshakeFuture().await().isSuccess());
             }
         } finally {
@@ -1544,8 +1539,8 @@ public class SslHandlerTest {
             assertFalse(serverSslHandler.handshakeFuture().await().isSuccess());
 
             Object error = errorQueue.take();
-            assertThat(error, Matchers.instanceOf(DecoderException.class));
-            assertThat(((Throwable) error).getCause(), Matchers.<Throwable>instanceOf(SSLException.class));
+            assertInstanceOf(DecoderException.class, error);
+            assertInstanceOf(SSLException.class, ((Throwable) error).getCause());
             Object terminal = errorQueue.take();
             assertSame(terminalEvent, terminal);
 
@@ -1660,23 +1655,21 @@ public class SslHandlerTest {
             cc = future.syncUninterruptibly().channel();
 
             Throwable clientCause = clientSslHandler.handshakeFuture().await().cause();
-            assertThat(clientCause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
-            assertThat(clientCause.getCause(), not(CoreMatchers.<Throwable>instanceOf(ClosedChannelException.class)));
+            assertInstanceOf(SSLException.class, clientCause);
+            assertNull(clientCause.getCause());
             Throwable serverCause = serverSslHandler.handshakeFuture().await().cause();
-            assertThat(serverCause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
-            assertThat(serverCause.getCause(), not(CoreMatchers.<Throwable>instanceOf(ClosedChannelException.class)));
+            assertInstanceOf(SSLException.class, serverCause);
+            assertNull(serverCause.getCause());
             cc.close().syncUninterruptibly();
             sc.close().syncUninterruptibly();
 
             Throwable eventClientCause = clientEvent.get().cause();
-            assertThat(eventClientCause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
-            assertThat(eventClientCause.getCause(),
-                    not(CoreMatchers.<Throwable>instanceOf(ClosedChannelException.class)));
+            assertInstanceOf(SSLException.class, eventClientCause);
+            assertNull(eventClientCause.getCause());
             Throwable serverEventCause = serverEvent.get().cause();
 
-            assertThat(serverEventCause, CoreMatchers.<Throwable>instanceOf(SSLException.class));
-            assertThat(serverEventCause.getCause(),
-                    not(CoreMatchers.<Throwable>instanceOf(ClosedChannelException.class)));
+            assertInstanceOf(SSLException.class, serverEventCause);
+            assertNull(serverEventCause.getCause());
         } finally {
             group.shutdownGracefully();
             ReferenceCountUtil.release(sslClientCtx);
@@ -1704,7 +1697,7 @@ public class SslHandlerTest {
                 channel.writeInbound(buf);
             }
         });
-        assertThat(e.getCause(), instanceOf(NotSslRecordException.class));
+        assertInstanceOf(NotSslRecordException.class, e.getCause());
         assertTrue(channel.finishAndReleaseAll());
     }
 

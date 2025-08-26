@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.dns;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -22,8 +23,7 @@ import org.junit.jupiter.api.Test;
 
 import java.util.Random;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.is;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -42,10 +42,32 @@ public class TcpDnsTest {
         assertTrue(channel.writeInbound(query));
 
         DnsQuery readQuery = channel.readInbound();
-        assertThat(readQuery, is(query));
-        assertThat(readQuery.recordAt(DnsSection.QUESTION).name(), is(query.recordAt(DnsSection.QUESTION).name()));
+        assertEquals(query, readQuery);
+        assertEquals(query.recordAt(DnsSection.QUESTION).name(), readQuery.recordAt(DnsSection.QUESTION).name());
         readQuery.release();
         assertFalse(channel.finish());
+    }
+
+    @Test
+    public void testDecoderLeak() {
+        EmbeddedChannel decoder = new EmbeddedChannel(new TcpDnsQueryDecoder());
+        EmbeddedChannel encoder = new EmbeddedChannel(new TcpDnsQueryEncoder());
+        int randomID = new Random().nextInt(60000 - 1000) + 1000;
+        DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)
+                .setRecord(DnsSection.QUESTION, new DefaultDnsQuestion(QUERY_DOMAIN, DnsRecordType.A));
+        assertTrue(encoder.writeOutbound(query));
+        final ByteBuf encoded = encoder.readOutbound();
+        assertTrue(decoder.writeInbound(encoded));
+        final DnsQuery decoded = decoder.readInbound();
+        assertEquals(query, decoded);
+
+        ReferenceCountUtil.release(decoded);
+
+        // Make sure the ByteBuf is released by TcpDnsQueryDecoder
+        assertTrue(encoded.refCnt() == 0);
+
+        assertFalse(encoder.finish());
+        assertFalse(decoder.finish());
     }
 
     @Test
@@ -60,11 +82,11 @@ public class TcpDnsTest {
         channel.writeInbound(newResponse(query, question, QUERY_RESULT));
 
         DnsResponse readResponse = channel.readInbound();
-        assertThat(readResponse.recordAt(DnsSection.QUESTION), is((DnsRecord) question));
+        assertEquals(question, readResponse.recordAt(DnsSection.QUESTION));
         DnsRawRecord record = new DefaultDnsRawRecord(question.name(),
                 DnsRecordType.A, TTL, Unpooled.wrappedBuffer(QUERY_RESULT));
-        assertThat(readResponse.recordAt(DnsSection.ANSWER), is((DnsRecord) record));
-        assertThat(readResponse.<DnsRawRecord>recordAt(DnsSection.ANSWER).content(), is(record.content()));
+        assertEquals(record, readResponse.recordAt(DnsSection.ANSWER));
+        assertEquals(record.content(), readResponse.<DnsRawRecord>recordAt(DnsSection.ANSWER).content());
         ReferenceCountUtil.release(readResponse);
         ReferenceCountUtil.release(record);
         query.release();

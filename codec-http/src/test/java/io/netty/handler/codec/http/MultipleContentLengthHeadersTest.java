@@ -31,11 +31,11 @@ import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_CHUNK_SI
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
 import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_VALIDATE_HEADERS;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.contains;
-import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.is;
-import static org.hamcrest.core.IsInstanceOf.instanceOf;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MultipleContentLengthHeadersTest {
 
@@ -69,24 +69,24 @@ public class MultipleContentLengthHeadersTest {
                                                          boolean sameValue, boolean singleField) {
         EmbeddedChannel channel = newChannel(allowDuplicateContentLengths);
         String requestStr = setupRequestString(sameValue, singleField);
-        assertThat(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)), is(true));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
 
         if (allowDuplicateContentLengths) {
             if (sameValue) {
                 assertValid(request);
                 List<String> contentLengths = request.headers().getAll(HttpHeaderNames.CONTENT_LENGTH);
-                assertThat(contentLengths, contains("1"));
+                assertThat(contentLengths).contains("1");
                 LastHttpContent body = channel.readInbound();
-                assertThat(body.content().readableBytes(), is(1));
-                assertThat(body.content().readCharSequence(1, CharsetUtil.US_ASCII).toString(), is("a"));
+                assertEquals(1, body.content().readableBytes());
+                assertEquals("a", body.content().readCharSequence(1, CharsetUtil.US_ASCII).toString());
             } else {
                 assertInvalid(request);
             }
         } else {
             assertInvalid(request);
         }
-        assertThat(channel.finish(), is(false));
+        assertFalse(channel.finish());
     }
 
     private static String setupRequestString(boolean sameValue, boolean singleField) {
@@ -111,20 +111,20 @@ public class MultipleContentLengthHeadersTest {
                             "Content-Length: 1,\r\n" +
                             "Connection: close\n\n" +
                             "ab";
-        assertThat(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)), is(true));
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
         assertInvalid(request);
-        assertThat(channel.finish(), is(false));
+        assertFalse(channel.finish());
     }
 
     private static void assertValid(HttpRequest request) {
-        assertThat(request.decoderResult().isFailure(), is(false));
+        assertFalse(request.decoderResult().isFailure());
     }
 
     private static void assertInvalid(HttpRequest request) {
-        assertThat(request.decoderResult().isFailure(), is(true));
-        assertThat(request.decoderResult().cause(), instanceOf(IllegalArgumentException.class));
-        assertThat(request.decoderResult().cause().getMessage(),
-                   containsString("Multiple Content-Length values found"));
+        assertTrue(request.decoderResult().isFailure());
+        assertInstanceOf(IllegalArgumentException.class, request.decoderResult().cause());
+        assertThat(request.decoderResult().cause().getMessage()).
+                   contains("Multiple Content-Length values found");
     }
 }

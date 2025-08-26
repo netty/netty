@@ -53,11 +53,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -177,14 +175,12 @@ public class LocalChannelTest {
                 cc.writeAndFlush(new Object()).sync();
                 fail("must raise a ClosedChannelException");
             } catch (Exception e) {
-                assertThat(e, is(instanceOf(ClosedChannelException.class)));
+                assertInstanceOf(ClosedChannelException.class, e);
                 // Ensure that the actual write attempt on a closed channel was never made by asserting that
                 // the ClosedChannelException has been created by AbstractUnsafe rather than transport implementations.
                 if (e.getStackTrace().length > 0) {
-                    assertThat(
-                            e.getStackTrace()[0].getClassName(), is(AbstractChannel.class.getName() +
-                                    "$AbstractUnsafe"));
-                    e.printStackTrace();
+                   assertEquals(AbstractChannel.class.getName() +
+                           "$AbstractUnsafe", e.getStackTrace()[0].getClassName());
                 }
             }
         } finally {

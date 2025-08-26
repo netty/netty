@@ -44,7 +44,7 @@ public class LocalTransportThreadModelTest2 {
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         LocalHandler serverHandler = new LocalHandler("SERVER");
         serverBootstrap
-                .group(new DefaultEventLoopGroup(), new DefaultEventLoopGroup())
+                .group(new DefaultEventLoopGroup())
                 .channel(LocalServerChannel.class)
                 .childHandler(serverHandler);
 
@@ -71,6 +71,8 @@ public class LocalTransportThreadModelTest2 {
 
         assertEquals(count * 2 * messageCountPerRun, serverHandler.count.get() +
                 clientHandler.count.get());
+        serverBootstrap.config().group().shutdownGracefully().sync();
+        clientBootstrap.config().group().shutdownGracefully().sync();
     }
 
     public void close(final Channel localChannel, final LocalHandler localRegistrationHandler) {

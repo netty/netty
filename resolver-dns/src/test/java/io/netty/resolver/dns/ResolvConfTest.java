@@ -31,9 +31,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import static java.util.Collections.emptyList;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.greaterThan;
-import static org.hamcrest.Matchers.is;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
@@ -41,7 +39,7 @@ public class ResolvConfTest {
     @Test
     @DisabledOnOs({OS.WINDOWS})
     public void readSystem() {
-        assertThat(ResolvConf.system().getNameservers().size(), is(greaterThan(0)));
+        assertThat(ResolvConf.system().getNameservers().size()).isGreaterThan(0);
     }
 
     @ParameterizedTest

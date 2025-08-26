@@ -35,6 +35,7 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.TestInfo;
 
+import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
@@ -171,11 +172,13 @@ public class SctpEchoTest extends AbstractSctpTest {
                 assertEquals(data[i + lastIdx], actual[i]);
             }
 
-            if (channel.parent() != null) {
-                channel.writeAndFlush(Unpooled.wrappedBuffer(actual));
-            }
-
+            // Update the counter before calling write(...) as write could in theory trigger another channelRead(...)
+            // which then would use the wrong lastIdx.
             counter += actual.length;
+
+            if (channel.parent() != null) {
+                channel.writeAndFlush(randomBufferType(channel.alloc(), actual, 0, actual.length));
+            }
         }
 
         @Override

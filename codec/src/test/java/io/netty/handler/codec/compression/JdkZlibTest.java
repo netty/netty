@@ -31,8 +31,10 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Queue;
+import java.util.zip.Deflater;
 import java.util.zip.GZIPOutputStream;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -86,7 +88,7 @@ public class JdkZlibTest extends ZlibTest {
 
     @Test
     public void testConcatenatedStreamsReadFully() throws IOException {
-        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true));
+        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
 
         try {
             byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
@@ -108,7 +110,7 @@ public class JdkZlibTest extends ZlibTest {
 
     @Test
     public void testConcatenatedStreamsReadFullyWhenFragmented() throws IOException {
-        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true));
+        EmbeddedChannel chDecoderGZip = new EmbeddedChannel(new JdkZlibDecoder(true, 0));
 
         try {
             byte[] bytes = IOUtils.toByteArray(getClass().getResourceAsStream("/multiple.gz"));
@@ -147,7 +149,7 @@ public class JdkZlibTest extends ZlibTest {
 
         byte[] compressed = bytesOut.toByteArray();
         ByteBuf buffer = Unpooled.buffer().writeBytes(compressed).writeBytes(compressed);
-        EmbeddedChannel channel = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, true));
+        EmbeddedChannel channel = new EmbeddedChannel(new JdkZlibDecoder(ZlibWrapper.GZIP, true, 0));
         // Write it into the Channel in a way that we were able to decompress the first data completely but not the
         // whole footer.
         assertTrue(channel.writeInbound(buffer.readRetainedSlice(compressed.length - 1)));
@@ -181,6 +183,16 @@ public class JdkZlibTest extends ZlibTest {
         assertTrue(channel.finish());
         channel.checkException();
         assertTrue(channel.releaseOutbound());
+    }
+
+    @Test
+    void testAllowDefaultCompression() {
+        assertDoesNotThrow(new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                new JdkZlibEncoder(Deflater.DEFAULT_COMPRESSION);
+            }
+        });
     }
 
     /**

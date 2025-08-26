@@ -23,7 +23,13 @@ on:
 permissions: read-all
 
 env:
-  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+  MAVEN_OPTS: -Xmx6g -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+
+# Cancel running jobs when a new push happens to the same branch as otherwise it will
+# tie up too many resources without providing much value.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   prepare-release:
@@ -56,10 +62,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-prepare-release-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-prepare-release-
-            ${{ runner.os }}-maven-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - name: Prepare release with Maven
         run: |
@@ -73,7 +79,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: prepare-release-workspace
-          path: ${{ github.workspace }}/**
+          path: |
+            ${{ github.workspace }}/**
+            !${{ github.workspace }}/.git/config
           include-hidden-files: true
 
   stage-release-linux:
@@ -83,14 +91,14 @@ jobs:
       matrix:
         include:
           - setup: linux-x86_64-java11
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run stage-release"
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run stage-release"
           - setup: linux-aarch64
-            docker-compose-build: "-f docker/docker-compose.centos-7.yaml build"
-            docker-compose-run: "-f docker/docker-compose.centos-7.yaml run cross-compile-aarch64-stage-release"
+            docker-compose-build: "-f docker/docker-compose.centos-7.cross.yaml build"
+            docker-compose-run: "-f docker/docker-compose.centos-7.cross.yaml run cross-compile-aarch64-stage-release"
           - setup: linux-riscv64
-            docker-compose-build: "-f docker/docker-compose.ubuntu-20.04.yaml build"
-            docker-compose-run: "-f docker/docker-compose.ubuntu-20.04.yaml run cross-compile-riscv64-stage-release"
+            docker-compose-build: "-f docker/docker-compose.ubuntu-20.04.cross.yaml build"
+            docker-compose-run: "-f docker/docker-compose.ubuntu-20.04.cross.yaml run cross-compile-riscv64-stage-release"
 
     name: stage-release-${{ matrix.setup }}
 
@@ -136,10 +144,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-${{ matrix.setup }}-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-${{ matrix.setup }}-
-            ${{ runner.os }}-maven-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - name: Create local staging directory
         run: mkdir -p ~/local-staging
@@ -242,10 +250,10 @@ jobs:
         continue-on-error: true
         with:
           path: ~/.m2/repository
-          key: ${{ runner.os }}-maven-deploy-staged-release-${{ hashFiles('**/pom.xml') }}
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
           restore-keys: |
-            ${{ runner.os }}-maven-deploy-staged-release-
-            ${{ runner.os }}-maven-
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
       - name: Deploy local staged artifacts
         working-directory: ./prepare-release-workspace/

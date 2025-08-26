@@ -40,7 +40,7 @@ public class WebSocketServerCompressionHandlerTest {
 
     @Test
     public void testNormalSuccess() {
-        EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerCompressionHandler());
+        EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerCompressionHandler(0));
 
         HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION);
         ch.writeInbound(req);
@@ -61,7 +61,7 @@ public class WebSocketServerCompressionHandlerTest {
     @Test
     public void testClientWindowSizeSuccess() {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
-                new PerMessageDeflateServerExtensionHandshaker(6, false, 10, false, false)));
+                new PerMessageDeflateServerExtensionHandshaker(6, false, 10, false, false, 0)));
 
         HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + CLIENT_MAX_WINDOW);
         ch.writeInbound(req);
@@ -82,7 +82,7 @@ public class WebSocketServerCompressionHandlerTest {
     @Test
     public void testClientWindowSizeUnavailable() {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
-                new PerMessageDeflateServerExtensionHandshaker(6, false, 10, false, false)));
+                new PerMessageDeflateServerExtensionHandshaker(6, false, 10, false, false, 0)));
 
         HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION);
         ch.writeInbound(req);
@@ -103,7 +103,7 @@ public class WebSocketServerCompressionHandlerTest {
     @Test
     public void testServerWindowSizeSuccess() {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
-                new PerMessageDeflateServerExtensionHandshaker(6, true, 15, false, false)));
+                new PerMessageDeflateServerExtensionHandshaker(6, true, 15, false, false, 0)));
 
         HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + SERVER_MAX_WINDOW + "=10");
         ch.writeInbound(req);
@@ -124,7 +124,7 @@ public class WebSocketServerCompressionHandlerTest {
     @Test
     public void testServerWindowSizeDisable() {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
-                new PerMessageDeflateServerExtensionHandshaker(6, false, 15, false, false)));
+                new PerMessageDeflateServerExtensionHandshaker(6, false, 15, false, false, 0)));
 
         HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + SERVER_MAX_WINDOW + "=10");
         ch.writeInbound(req);
@@ -141,7 +141,7 @@ public class WebSocketServerCompressionHandlerTest {
 
     @Test
     public void testServerNoContext() {
-        EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerCompressionHandler());
+        EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerCompressionHandler(0));
 
         HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + SERVER_NO_CONTEXT);
         ch.writeInbound(req);
@@ -158,7 +158,7 @@ public class WebSocketServerCompressionHandlerTest {
 
     @Test
     public void testClientNoContext() {
-        EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerCompressionHandler());
+        EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerCompressionHandler(0));
 
         HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + CLIENT_NO_CONTEXT);
         ch.writeInbound(req);
@@ -179,7 +179,7 @@ public class WebSocketServerCompressionHandlerTest {
     @Test
     public void testServerWindowSizeDisableThenFallback() {
         EmbeddedChannel ch = new EmbeddedChannel(new WebSocketServerExtensionHandler(
-                new PerMessageDeflateServerExtensionHandshaker(6, false, 15, false, false)));
+                new PerMessageDeflateServerExtensionHandshaker(6, false, 15, false, false, 0)));
 
         HttpRequest req = newUpgradeRequest(PERMESSAGE_DEFLATE_EXTENSION + "; " + SERVER_MAX_WINDOW + "=10, " +
                 PERMESSAGE_DEFLATE_EXTENSION);
