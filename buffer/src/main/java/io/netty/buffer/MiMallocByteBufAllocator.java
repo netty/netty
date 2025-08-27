@@ -100,6 +100,7 @@ final class MiMallocByteBufAllocator {
 
     private static final int SPAN_QUEUE_MAX_INDEX = 19;
 
+    // TODO: make it configurable?
     private static final int MAX_PAGE_CANDIDATE_SEARCH = 4;
 
     private static final Page EMPTY_PAGE = new Page();
