@@ -334,7 +334,10 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
 
     final void scheduleFromEventLoop(final ScheduledFutureTask<?> task) {
         // nextTaskId a long and so there is no chance it will overflow back to 0
-        scheduledTaskQueue().add(task.setId(++nextTaskId));
+        if (task.getId() == 0L) {
+            task.setId(++nextTaskId);
+        }
+        scheduledTaskQueue().add(task);
     }
 
     private <V> ScheduledFuture<V> schedule(final ScheduledFutureTask<V> task) {

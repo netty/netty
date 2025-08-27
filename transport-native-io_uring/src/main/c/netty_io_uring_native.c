@@ -43,6 +43,7 @@
 
 #include <sys/eventfd.h>
 #include <poll.h>
+
 // Needed for UDP_SEGMENT
 #include <netinet/udp.h>
 #include <sys/utsname.h>
@@ -60,6 +61,11 @@
 // Allow to compile on systems with older kernels
 #ifndef MSG_FASTOPEN
 #define MSG_FASTOPEN 0x20000000
+#endif
+
+// This should be CONFIG_MAX_SKB_FRAGS these days.
+#ifndef MAX_SKB_FRAGS
+#define MAX_SKB_FRAGS 17
 #endif
 
 #define NATIVE_CLASSNAME "io/netty/channel/uring/Native"
@@ -318,7 +324,7 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
         p.cq_entries = (__u32) cqSize;
     }
 
-    jlongArray array = (*env)->NewLongArray(env, 18);
+    jlongArray array = (*env)->NewLongArray(env, 20);
     if (array == NULL) {
         // This will put an OOME on the stack
         return NULL;
@@ -361,13 +367,14 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
         (jlong)*io_uring_ring.cq.kring_mask,
         // Should be replaced by ring_entries when we depend on later kernel versions
         (jlong)*io_uring_ring.cq.kring_entries,
+        (jlong)io_uring_ring.cq.kflags,
         (jlong)io_uring_ring.cq.cqes,
         (jlong)io_uring_ring.cq.ring_sz,
         (jlong)io_uring_ring.cq.ring_ptr,
         (jlong)ring_fd,
         (jlong)p.cq_entries
     };
-    (*env)->SetLongArrayRegion(env, array, 0, 9, completionArrayElements);
+    (*env)->SetLongArrayRegion(env, array, 0, 10, completionArrayElements);
 
     jlong submissionArrayElements[] = {
         (jlong)io_uring_ring.sq.khead,
@@ -376,15 +383,16 @@ static jlongArray netty_io_uring_setup(JNIEnv *env, jclass clazz, jint entries, 
         (jlong)*io_uring_ring.sq.kring_mask,
         // Should be replaced by ring_entries when we depend on later kernel versions
         (jlong)*io_uring_ring.sq.kring_entries,
+        (jlong)io_uring_ring.sq.kflags,
         (jlong)io_uring_ring.sq.sqes,
         (jlong)io_uring_ring.sq.ring_sz,
         (jlong)io_uring_ring.sq.ring_ptr,
         (jlong)ring_fd
     };
-    (*env)->SetLongArrayRegion(env, array, 9, 8, submissionArrayElements);
+    (*env)->SetLongArrayRegion(env, array, 10, 9, submissionArrayElements);
 
     jlong features = (jlong) p.features;
-    (*env)->SetLongArrayRegion(env, array, 17, 1, &features);
+    (*env)->SetLongArrayRegion(env, array, 19, 1, &features);
     return array;
 }
 
@@ -649,6 +657,10 @@ static jint netty_io_uring_sizeofIoUringBuf(JNIEnv* env, jclass clazz) {
     return sizeof(struct io_uring_buf);
 }
 
+static jint netty_io_uring_maxSkbFrags(JNIEnv* env, jclass clazz) {
+    return MAX_SKB_FRAGS;
+}
+
 static int getSysctlValue(const char * property, int* returnValue) {
     int rc = -1;
     FILE *fd=fopen(property, "r");
@@ -826,6 +838,7 @@ static const JNINativeMethod statically_referenced_fixed_method_table[] = {
   { "ioUringBufferOffsetLen", "()I", (void *) netty_io_uring_ioUringBufOffsetoflen },
   { "ioUringBufferOffsetBid", "()I", (void *) netty_io_uring_ioUringBufOffsetofbid },
   { "tcpFastopenMode", "()I", (void *) netty_io_uring_tcpFastopenMode },
+  { "maxSkbFrags", "()I", (void *) netty_io_uring_maxSkbFrags }
 };
 static const jint statically_referenced_fixed_method_table_size = sizeof(statically_referenced_fixed_method_table) / sizeof(statically_referenced_fixed_method_table[0]);
 

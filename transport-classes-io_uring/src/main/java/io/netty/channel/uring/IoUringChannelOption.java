@@ -55,4 +55,16 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Short> IO_URING_BUFFER_GROUP_ID =
             ChannelOption.valueOf(IoUringChannelOption.class, "IO_URING_BUFFER_GROUP_ID");
 
+    /**
+     * The threshold for zero-copy write (send_zc and sendmsg_zc).
+     * If it is set to {@code -1}, then this function will be disabled.
+     * <p>
+     * Check
+     * <a href="https://man.archlinux.org/man/io_uring_enter.2.en#IORING_OP_SEND_ZC"> man io_uring_enter</a>
+     * for more details.
+     * <p>
+     */
+    public static final ChannelOption<Integer> IO_URING_WRITE_ZERO_COPY_THRESHOLD =
+            ChannelOption.valueOf(IoUringChannelOption.class, "IO_URING_WRITE_ZERO_COPY_THRESHOLD");
+
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,23 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.ssl;
+package jdk.jfr;
 
-interface OpenSslEngineMap {
-
-    /**
-     * Remove the {@link OpenSslEngine} with the given {@code ssl} address and
-     * return it.
-     */
-    ReferenceCountedOpenSslEngine remove(long ssl);
-
-    /**
-     * Add a {@link OpenSslEngine} to this {@link OpenSslEngineMap}.
-     */
-    void add(ReferenceCountedOpenSslEngine engine);
-
-    /**
-     * Get the {@link OpenSslEngine} for the given {@code ssl} address.
-     */
-    ReferenceCountedOpenSslEngine get(long ssl);
+public final class EventType {
+    public String getName() {
+        throw new UnsupportedOperationException("Stub should only be used at compile time");
+    }
 }

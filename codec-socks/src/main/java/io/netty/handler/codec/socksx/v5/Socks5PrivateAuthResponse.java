@@ -13,25 +13,24 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer;
-
-import io.netty.util.internal.UnstableApi;
+package io.netty.handler.codec.socksx.v5;
 
 /**
- * The type of allocator that an event is related to.
+ * A SOCKS5 subnegotiation response for private authentication.
+ * <p>
+ * This interface corresponds to the response for private authentication methods
+ * in the range 0x80-0xFE as defined in RFC 1928. For custom private authentication
+ * protocols, this interface can be extended with additional methods.
+ * </p>
+ *
+ * @see <a href="https://www.ietf.org/rfc/rfc1928.txt">RFC 1928 Section 3</a>
  */
-@UnstableApi
-enum AllocatorType {
+public interface Socks5PrivateAuthResponse extends Socks5Message {
+
     /**
-     * The event is produced by the {@link io.netty.buffer.PooledByteBufAllocator}.
+     * Returns the status of this response.
+     *
+     * @return the authentication status
      */
-    pooled,
-    /**
-     * The event is produced by the {@link io.netty.buffer.AdaptiveByteBufAllocator}.
-     */
-    adaptive,
-    /**
-     * The event is produced by an unknown or indeterminate allocator.
-     */
-    unknown
+    Socks5PrivateAuthStatus status();
 }

@@ -805,7 +805,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         if (PlatformDependent.isJfrEnabled() && AllocateBufferEvent.isEventEnabled()) {
             AllocateBufferEvent event = new AllocateBufferEvent();
             if (event.shouldCommit()) {
-                event.fill(buf, AllocatorType.pooled);
+                event.fill(buf, PooledByteBufAllocator.class);
                 event.chunkPooled = pooled;
                 event.chunkThreadLocal = threadLocal;
                 event.commit();
@@ -817,7 +817,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         if (PlatformDependent.isJfrEnabled() && FreeBufferEvent.isEventEnabled()) {
             FreeBufferEvent event = new FreeBufferEvent();
             if (event.shouldCommit()) {
-                event.fill(buf, AllocatorType.pooled);
+                event.fill(buf, PooledByteBufAllocator.class);
                 event.commit();
             }
         }
@@ -827,7 +827,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         if (PlatformDependent.isJfrEnabled() && ReallocateBufferEvent.isEventEnabled()) {
             ReallocateBufferEvent event = new ReallocateBufferEvent();
             if (event.shouldCommit()) {
-                event.fill(buf, AllocatorType.pooled);
+                event.fill(buf, PooledByteBufAllocator.class);
                 event.newCapacity = newCapacity;
                 event.commit();
             }
@@ -838,7 +838,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         if (PlatformDependent.isJfrEnabled() && AllocateChunkEvent.isEventEnabled()) {
             AllocateChunkEvent event = new AllocateChunkEvent();
             if (event.shouldCommit()) {
-                event.fill(chunk, AllocatorType.pooled);
+                event.fill(chunk, PooledByteBufAllocator.class);
                 event.pooled = pooled;
                 event.threadLocal = false; // Chunks in the pooled allocator are always shared.
                 event.commit();
@@ -850,7 +850,7 @@ public class PooledByteBufAllocator extends AbstractByteBufAllocator implements 
         if (PlatformDependent.isJfrEnabled() && FreeChunkEvent.isEventEnabled()) {
             FreeChunkEvent event = new FreeChunkEvent();
             if (event.shouldCommit()) {
-                event.fill(chunk, AllocatorType.pooled);
+                event.fill(chunk, PooledByteBufAllocator.class);
                 event.pooled = pooled;
                 event.commit();
             }

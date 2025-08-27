@@ -17,6 +17,8 @@ package io.netty.channel.uring;
 
 import io.netty.util.internal.MathUtil;
 
+import java.nio.ByteBuffer;
+
 /**
  * A buffer for completion events.
  */
@@ -43,8 +45,15 @@ final class CompletionBuffer {
 
     // Package-private for testing
     boolean add(int res, int flags, long udata) {
+        return add(res, flags, udata, null);
+    }
+
+    private boolean add(int res, int flags, long udata, ByteBuffer extraCqeData) {
         if (udata == tombstone) {
             throw new IllegalStateException("udata can't be the same as the tombstone");
+        }
+        if (extraCqeData != null) {
+            throw new IllegalArgumentException("extraCqeData not supported");
         }
         // Pack res and flag into the first slot.
         array[combinedIdx(tail + 1)] = (((long) res) << 32) | (flags & 0xffffffffL);
@@ -132,6 +141,6 @@ final class CompletionBuffer {
     private static boolean handle(CompletionCallback callback, long combined, long udata) {
         int res = (int) (combined >> 32);
         int flags = (int) combined;
-        return callback.handle(res, flags, udata);
+        return callback.handle(res, flags, udata, null);
     }
 }

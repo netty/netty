@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.4.Final-SNAPSHOT</version>
+  <version>4.2.5.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -743,6 +743,8 @@
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <graalvm.version>19.3.6</graalvm.version>
     <brotli4j.version>1.16.0</brotli4j.version>
+    <aalto.version>1.3.3</aalto.version>
+    <rxtx.version>2.1.7</rxtx.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
     <skipShadingTestsuite>false</skipShadingTestsuite>
@@ -800,6 +802,7 @@
     <module>testsuite-autobahn</module>
     <module>testsuite-http2</module>
     <module>testsuite-jpms</module>
+    <module>testsuite-karaf</module>
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
     <module>testsuite-native</module>
@@ -809,6 +812,7 @@
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
     <module>jfr-stub</module>
+    <module>varhandle-stub</module>
     <module>bom</module>
   </modules>
 
@@ -952,7 +956,7 @@
       <dependency>
         <groupId>com.fasterxml</groupId>
         <artifactId>aalto-xml</artifactId>
-        <version>1.3.3</version>
+        <version>${aalto.version}</version>
       </dependency>
 
       <dependency>
@@ -1058,7 +1062,7 @@
       <dependency>
         <groupId>org.rxtx</groupId>
         <artifactId>rxtx</artifactId>
-        <version>2.1.7</version>
+        <version>${rxtx.version}</version>
       </dependency>
 
       <dependency>
@@ -1366,6 +1370,13 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method void io.netty.handler.codec.http2.Http2ServerUpgradeCodec::<![CDATA[<init>]]>(java.lang.String, io.netty.handler.codec.http2.Http2ConnectionHandler, io.netty.channel.ChannelHandler[])</old>
+                  <new>method void io.netty.handler.codec.http2.Http2ServerUpgradeCodec::<![CDATA[<init>]]>(java.lang.String, io.netty.handler.codec.http2.Http2ConnectionHandler, io.netty.channel.ChannelHandler[])</new>
+                  <justification>Be able to directly construct class</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.class.externalClassExposedInAPI</code>
                   <new>interface org.jboss.marshalling.ClassNameTransformer</new>
                   <justification>We need to build with upgraded JBoss Marshalling version. Otherwise, testsuite-jpms won't compile.</justification>
@@ -1556,25 +1567,11 @@
             <nativeimage.handlerMetadataArtifactId>${project.artifactId}</nativeimage.handlerMetadataArtifactId>
           </systemPropertyVariables>
           <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
-          <properties>
-            <property>
-              <name>listener</name>
-              <value>io.netty.build.junit.TimedOutTestsListener</value>
-            </property>
-          </properties>
           <skipTests>${skipTests}</skipTests>
           <jvm>${testJvm}</jvm>
            <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
         </configuration>
-        <dependencies>
-          <!-- Needed for TimedOutTestsListener -->
-          <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>netty-build-common</artifactId>
-            <version>${netty.build.version}</version>
-          </dependency>
-        </dependencies>
       </plugin>
       <!-- always produce osgi bundles -->
       <plugin>

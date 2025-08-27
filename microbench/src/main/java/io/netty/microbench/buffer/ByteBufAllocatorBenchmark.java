@@ -43,7 +43,6 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
     private static final ByteBufAllocator adaptiveAllocator = new AdaptiveByteBufAllocator();
 
     private static final int MAX_LIVE_BUFFERS = 8192;
-    private static final Random rand = new Random();
     private static final ByteBuf[] unpooledHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
     private static final ByteBuf[] unpooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
     private static final ByteBuf[] pooledHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
@@ -62,6 +61,22 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
             "65536",
     })
     public int size;
+    private static final short[] NEXT_INDEXES = new short[128 * 1024];
+    private static final int NEXT_INDEX_MASK = NEXT_INDEXES.length - 1;
+    private int nextIndex;
+
+    static {
+        Random r = new Random();
+        r.setSeed(42);
+        for (int i = 0; i < NEXT_INDEXES.length; i++) {
+            NEXT_INDEXES[i] = (short) r.nextInt(MAX_LIVE_BUFFERS);
+        }
+    }
+
+    private int nextIndex() {
+        this.nextIndex = (nextIndex + 1) & NEXT_INDEX_MASK;
+        return NEXT_INDEXES[nextIndex];
+    }
 
     @TearDown
     public void releaseBuffers() {
@@ -86,7 +101,7 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void unpooledHeapAllocAndFree() {
-        int idx = rand.nextInt(unpooledHeapBuffers.length);
+        int idx = nextIndex();
         ByteBuf oldBuf = unpooledHeapBuffers[idx];
         if (oldBuf != null) {
             oldBuf.release();
@@ -96,7 +111,7 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void unpooledDirectAllocAndFree() {
-        int idx = rand.nextInt(unpooledDirectBuffers.length);
+        int idx = nextIndex();
         ByteBuf oldBuf = unpooledDirectBuffers[idx];
         if (oldBuf != null) {
             oldBuf.release();
@@ -106,7 +121,7 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void pooledHeapAllocAndFree() {
-        int idx = rand.nextInt(pooledHeapBuffers.length);
+        int idx = nextIndex();
         ByteBuf oldBuf = pooledHeapBuffers[idx];
         if (oldBuf != null) {
             oldBuf.release();
@@ -116,7 +131,7 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void pooledDirectAllocAndFree() {
-        int idx = rand.nextInt(pooledDirectBuffers.length);
+        int idx = nextIndex();
         ByteBuf oldBuf = pooledDirectBuffers[idx];
         if (oldBuf != null) {
             oldBuf.release();
@@ -126,7 +141,7 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void defaultPooledHeapAllocAndFree() {
-        int idx = rand.nextInt(defaultPooledHeapBuffers.length);
+        int idx = nextIndex();
         ByteBuf oldBuf = defaultPooledHeapBuffers[idx];
         if (oldBuf != null) {
             oldBuf.release();
@@ -136,7 +151,7 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void defaultPooledDirectAllocAndFree() {
-        int idx = rand.nextInt(defaultPooledDirectBuffers.length);
+        int idx = nextIndex();
         ByteBuf oldBuf = defaultPooledDirectBuffers[idx];
         if (oldBuf != null) {
             oldBuf.release();
@@ -146,7 +161,7 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void adaptiveHeapAllocAndFree() {
-        int idx = rand.nextInt(adaptiveHeapBuffers.length);
+        int idx = nextIndex();
         ByteBuf oldBuf = adaptiveHeapBuffers[idx];
         if (oldBuf != null) {
             oldBuf.release();
@@ -156,7 +171,7 @@ public class ByteBufAllocatorBenchmark extends AbstractMicrobenchmark {
 
     @Benchmark
     public void adaptiveDirectAllocAndFree() {
-        int idx = rand.nextInt(adaptiveDirectBuffers.length);
+        int idx = nextIndex();
         ByteBuf oldBuf = adaptiveDirectBuffers[idx];
         if (oldBuf != null) {
             oldBuf.release();

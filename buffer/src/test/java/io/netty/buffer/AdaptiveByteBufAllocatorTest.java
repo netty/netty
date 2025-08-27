@@ -220,7 +220,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
 
             stream.enable(AllocateChunkEvent.class);
-            stream.onEvent(AllocateChunkEvent.class.getSimpleName(), allocateFuture::complete);
+            stream.onEvent(AllocateChunkEvent.NAME, allocateFuture::complete);
             stream.startAsync();
 
             AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, false);
@@ -242,7 +242,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         try (RecordingStream stream = new RecordingStream()) {
             final CountDownLatch eventsFlushed = new CountDownLatch(2);
             stream.enable(AllocateChunkEvent.class);
-            stream.onEvent(AllocateChunkEvent.class.getSimpleName(),
+            stream.onEvent(AllocateChunkEvent.NAME,
                            event -> {
                                 eventsFlushed.countDown();
                            });
@@ -274,7 +274,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             final CountDownLatch eventsFlushed = new CountDownLatch(1);
             final AtomicInteger chunksAllocations = new AtomicInteger();
             stream.enable(AllocateChunkEvent.class);
-            stream.onEvent(AllocateChunkEvent.class.getSimpleName(),
+            stream.onEvent(AllocateChunkEvent.NAME,
                            event -> {
                                chunksAllocations.incrementAndGet();
                                eventsFlushed.countDown();
@@ -310,9 +310,9 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
             CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
 
             stream.enable(AllocateBufferEvent.class);
-            stream.onEvent(AllocateBufferEvent.class.getSimpleName(), allocateFuture::complete);
+            stream.onEvent(AllocateBufferEvent.NAME, allocateFuture::complete);
             stream.enable(FreeBufferEvent.class);
-            stream.onEvent(FreeBufferEvent.class.getSimpleName(), releaseFuture::complete);
+            stream.onEvent(FreeBufferEvent.NAME, releaseFuture::complete);
             stream.startAsync();
 
             AdaptiveByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, false);
@@ -350,9 +350,9 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
                 alloc.directBuffer(128).release();
 
                 stream.enable(AllocateBufferEvent.class);
-                stream.onEvent(AllocateBufferEvent.class.getSimpleName(), allocateFuture::complete);
+                stream.onEvent(AllocateBufferEvent.NAME, allocateFuture::complete);
                 stream.enable(FreeBufferEvent.class);
-                stream.onEvent(FreeBufferEvent.class.getSimpleName(), releaseFuture::complete);
+                stream.onEvent(FreeBufferEvent.NAME, releaseFuture::complete);
                 stream.startAsync();
 
                 // Allocate out of the cache.
