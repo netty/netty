@@ -1840,11 +1840,25 @@ final class AdaptivePoolingAllocator {
             }
         }
 
+        /**
+         * Drains segments from the thread-safe externalFreeList into the non-thread-safe localFreeList.
+         * <p>
+         * A capacity check is needed here. Because segments can be released by any thread and are
+         * always added to the externalFreeList, a situation can arise where this method is called
+         * to drain more segments than the localFreeList has available slots.
+         * Without checking localFreeList.size() < capacity, this would cause an
+         * ArrayIndexOutOfBoundsException by pushing onto a full stack. The loop therefore terminates
+         * when either the local list is full or the external list is empty.
+         */
         private int copyIntoLocalFreeList(IntStack localFreeList) {
             final MpscIntQueue externalFreeList = this.externalFreeList;
-            int index;
+            final int capacity = localFreeList.stack.length;
             int count = 0;
-            while ((index = externalFreeList.poll()) != FREE_LIST_EMPTY) {
+            while (localFreeList.size() < capacity) {
+                int index = externalFreeList.poll();
+                if (index == FREE_LIST_EMPTY) {
+                    break;
+                }
                 localFreeList.push(index);
                 count++;
             }
