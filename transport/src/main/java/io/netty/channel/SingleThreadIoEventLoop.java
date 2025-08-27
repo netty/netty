@@ -58,6 +58,16 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
             assert inEventLoop();
             return SingleThreadIoEventLoop.this.deadlineNanos();
         }
+
+        @Override
+        public void reportActiveIoTime(long activeNanos) {
+            SingleThreadIoEventLoop.this.reportActiveIoTime(activeNanos);
+        }
+
+        @Override
+        public boolean shouldReportActiveIoTime() {
+            return isSuspensionSupported();
+        }
     };
 
     private final IoHandler ioHandler;
@@ -222,6 +232,11 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         }
 
         return promise;
+    }
+
+    @Override
+    protected int getNumOfRegisteredChannels() {
+        return numRegistrations.get();
     }
 
     private void registerForIo0(final IoHandle handle, Promise<IoRegistration> promise) {
