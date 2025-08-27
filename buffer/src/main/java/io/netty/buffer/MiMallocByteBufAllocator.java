@@ -478,28 +478,40 @@ final class MiMallocByteBufAllocator {
                 Page next = page.nextPage;
                 candidateCount++;
                 page.pageFreeCollect(false);
-                // Search up to N pages for the best candidate
-                boolean immediateAvailable = page.immediateAvailable();
-                // If the page is completely full, move it to the `pages_full` queue,
-                // so we don't visit long-lived pages too often.
-                if (!immediateAvailable && !page.isPageExpandable()) {
-                    pageToFull(page, pq);
+                if (MAX_PAGE_CANDIDATE_SEARCH > 1) {
+                    // Search up to N pages for the best candidate
+                    boolean immediateAvailable = page.immediateAvailable();
+                    // If the page is completely full, move it to the `pages_full` queue,
+                    // so we don't visit long-lived pages too often.
+                    if (!immediateAvailable && !page.isPageExpandable()) {
+                        pageToFull(page, pq);
+                    } else {
+                        // The page has free space, make it a candidate.
+                        // We prefer non-expandable pages with high usage as candidates
+                        // (to increase the chance of freeing up pages).
+                        if (pageCandidate == null) {
+                            pageCandidate = page;
+                            candidateCount = 0;
+                        } else if (page.usedBlocks >= pageCandidate.usedBlocks && !page.isMostlyUsed()
+                                && !page.isPageExpandable()) {
+                            // Prefer to reuse fuller pages (in the hope the less used page gets freed).
+                            pageCandidate = page;
+                        }
+                        // If we find a non-expandable candidate, or searched for N pages, return with the best candidate.
+                        if (immediateAvailable || candidateCount > MAX_PAGE_CANDIDATE_SEARCH) {
+                            break;
+                        }
+                    }
                 } else {
-                    // The page has free space, make it a candidate.
-                    // We prefer non-expandable pages with high usage as candidates
-                    // (to increase the chance of freeing up pages).
-                    if (pageCandidate == null) {
-                        pageCandidate = page;
-                        candidateCount = 0;
-                    } else if (page.usedBlocks >= pageCandidate.usedBlocks && !page.isMostlyUsed()
-                            && !page.isPageExpandable()) {
-                        // Prefer to reuse fuller pages (in the hope the less used page gets freed).
-                        pageCandidate = page;
+                    // First-fit algorithm
+                    // If the page contains free blocks
+                    if (page.immediateAvailable() || page.isPageExpandable()) {
+                        break;  // Pick this one
                     }
-                    // If we find a non-expandable candidate, or searched for N pages, return with the best candidate.
-                    if (immediateAvailable || candidateCount > MAX_PAGE_CANDIDATE_SEARCH) {
-                        break;
-                    }
+                    // If the page is completely full, move it to the full
+                    // queue so we don't visit long-lived pages too often.
+                    assert (!page.isInFull && !page.immediateAvailable());
+                    pageToFull(page, pq);
                 }
                 page = next;
             }
