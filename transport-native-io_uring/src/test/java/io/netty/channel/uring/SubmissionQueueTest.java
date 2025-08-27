@@ -212,4 +212,13 @@ public class SubmissionQueueTest {
             ringBuffer.close();
         }
     }
+
+    @Test
+    public void testGetOp() {
+        RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
+        SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+        submissionQueue.addEventFdRead(10, 0L, 0, 8, 1);
+        String expect = "SubmissionQueue [READ(fd=10)]";
+        assertEquals(expect, submissionQueue.toString());
+    }
 }
