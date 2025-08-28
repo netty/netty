@@ -31,6 +31,7 @@ import io.netty.pkitesting.X509Bundle;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -41,8 +42,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SNIHostName;
-
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class PkiTestingTlsTest {
 
@@ -123,6 +122,10 @@ public class PkiTestingTlsTest {
         testTlsConnection(serverContext, clientContext);
     }
 
+    static boolean isBoringSSLAvailable() {
+        return OpenSsl.isBoringSSL() && OpenSsl.isTlsv13Supported();
+    }
+
     /**
      * A TLS connection using the X25519MLKEM768 hybrid classical-and-quantum-safe key exchange.
      * This protects the ephemeral TLS session key from harvest-now-decrypt-later attacks.
@@ -131,9 +134,9 @@ public class PkiTestingTlsTest {
      * To make that quantum safe, we just need to double the bit-width, from AES-128 to AES-256.
      */
     @EnabledForJreRange(min = JRE.JAVA_24)
+    @EnabledIf("isBoringSSLAvailable")
     @Test
     void connectWithX25519MLKEM768() throws Exception {
-        assumeTrue(OpenSsl.isBoringSSL() && OpenSsl.isTlsv13Supported());
         X509Bundle cert = new CertificateBuilder()
                 .algorithm(CertificateBuilder.Algorithm.ecp256)
                 .setIsCertificateAuthority(true)
@@ -171,8 +174,10 @@ public class PkiTestingTlsTest {
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         LocalAddress serverAddress = new LocalAddress(getClass());
 
+        Channel serverChannel = null;
+        Channel clientChannel = null;
         try {
-            new ServerBootstrap()
+            serverChannel = new ServerBootstrap()
                     .channel(LocalServerChannel.class)
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
@@ -185,7 +190,7 @@ public class PkiTestingTlsTest {
 
             Promise<SslHandshakeCompletionEvent> promise = group.next().newPromise();
 
-            new Bootstrap()
+            clientChannel = new Bootstrap()
                     .channel(LocalChannel.class)
                     .group(group)
                     .handler(new ChannelInitializer<Channel>() {
@@ -219,10 +224,24 @@ public class PkiTestingTlsTest {
                                     });
                         }
                     })
-                    .connect(serverAddress).sync();
+                    .connect(serverAddress)
+                    .sync()
+                    .channel();
 
             promise.sync();
         } finally {
+            if (clientChannel != null) {
+                clientChannel.close();
+            }
+            if (serverChannel != null) {
+                serverChannel.close();
+            }
+            if (clientChannel != null) {
+                clientChannel.closeFuture().sync();
+            }
+            if (serverChannel != null) {
+                serverChannel.closeFuture().sync();
+            }
             group.shutdownGracefully(10, 1000, TimeUnit.MILLISECONDS)
                     .syncUninterruptibly();
         }
