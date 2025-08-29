@@ -412,13 +412,8 @@ public class Http2FrameCodecTest {
         frameInboundWriter.writeInboundFrame((byte) 0xb, 101, new Http2Flags(), debugData);
         channel.flush();
 
+        assertEquals(0, debugData.refCnt());
         assertTrue(channel.isActive());
-
-        Http2UnknownFrame unknownFrame = inboundHandler.readInbound();
-        assertEquals(0xb, unknownFrame.frameType());
-        assertEquals(101, unknownFrame.stream().id());
-        assertEquals("debug", unknownFrame.content().toString(CharsetUtil.UTF_8));
-        unknownFrame.release();
     }
 
     @Test
