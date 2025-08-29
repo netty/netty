@@ -172,6 +172,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     private final UpgradeCodecFactory upgradeCodecFactory;
     private final HttpHeadersFactory headersFactory;
     private final HttpHeadersFactory trailersFactory;
+    private final boolean removeAfterFirstRequest;
     private boolean handlingUpgrade;
     private boolean failedAggregationStart;
 
@@ -239,12 +240,33 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
     public HttpServerUpgradeHandler(
             SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory, int maxContentLength,
             HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory) {
+        this(sourceCodec, upgradeCodecFactory, maxContentLength, headersFactory, trailersFactory, false);
+    }
+
+    /**
+     * Constructs the upgrader with the supported codecs.
+     *
+     * @param sourceCodec the codec that is being used initially
+     * @param upgradeCodecFactory the factory that creates a new upgrade codec
+     *                            for one of the requested upgrade protocols
+     * @param maxContentLength the maximum length of the content of an upgrade request
+     * @param headersFactory The {@link HttpHeadersFactory} to use for headers.
+     * The recommended default factory is {@link DefaultHttpHeadersFactory#headersFactory()}.
+     * @param trailersFactory The {@link HttpHeadersFactory} to use for trailers.
+     * The recommended default factory is {@link DefaultHttpHeadersFactory#trailersFactory()}.
+     * @param removeAfterFirstRequest {@code true} if the handler should remove itself after the first request was
+     *                                processed (even if it was not an upgrade request), {@code false} otherwise.
+     */
+    public HttpServerUpgradeHandler(
+            SourceCodec sourceCodec, UpgradeCodecFactory upgradeCodecFactory, int maxContentLength,
+            HttpHeadersFactory headersFactory, HttpHeadersFactory trailersFactory, boolean removeAfterFirstRequest) {
         super(maxContentLength);
 
         this.sourceCodec = checkNotNull(sourceCodec, "sourceCodec");
         this.upgradeCodecFactory = checkNotNull(upgradeCodecFactory, "upgradeCodecFactory");
         this.headersFactory = checkNotNull(headersFactory, "headersFactory");
         this.trailersFactory = checkNotNull(trailersFactory, "trailersFactory");
+        this.removeAfterFirstRequest = removeAfterFirstRequest;
     }
 
     @Override
@@ -260,6 +282,10 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
                     handlingUpgrade = true;
                     failedAggregationStart = true; // reset if beginAggregation is called
                 } else {
+                    if (removeAfterFirstRequest) {
+                        // This is not an upgrade request, just remove this handler.
+                        ctx.pipeline().remove(this);
+                    }
                     ReferenceCountUtil.retain(msg);
                     ctx.fireChannelRead(msg);
                     return;
@@ -301,6 +327,9 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
             // so that it's not propagated to the next handler. This request will
             // be propagated as a user event instead.
             out.clear();
+        } else if (removeAfterFirstRequest) {
+            // We handle the first request and were not able to upgrade, just remove this handler.
+            ctx.pipeline().remove(this);
         }
 
         // The upgrade did not succeed, just allow the full request to propagate to the
