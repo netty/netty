@@ -94,7 +94,7 @@ final class OpenJdkSelfSignedCertGenerator {
                 @Override
                 public Object run() {
                     try {
-                        List<Class<?>> classes = new ArrayList<>();
+                        List<Class<?>> classes = new ArrayList<Class<?>>();
                         classes.add(Class.forName("sun.security.x509.X509CertInfo", false,
                                 PlatformDependent.getClassLoader(OpenJdkSelfSignedCertGenerator.class)));
                         classes.add(Class.forName("sun.security.x509.X500Name", false,
@@ -145,7 +145,7 @@ final class OpenJdkSelfSignedCertGenerator {
                 @Override
                 public Object run() {
                     try {
-                        List<Constructor<?>> constructors = new ArrayList<>();
+                        List<Constructor<?>> constructors = new ArrayList<Constructor<?>>();
                         constructors.add(
                                 x509CertInfoClass.getConstructor()
                         );
@@ -185,7 +185,7 @@ final class OpenJdkSelfSignedCertGenerator {
                 @Override
                 public Object run() {
                     try {
-                        List<Method> methods = new ArrayList<>();
+                        List<Method> methods = new ArrayList<Method>();
                         methods.add(x509CertInfoClass.getDeclaredMethod("set", void.class, String.class, Object.class));
                         methods.add(x509CertImplClass.getDeclaredMethod("get", Object.class, String.class));
 
