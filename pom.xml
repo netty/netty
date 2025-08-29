@@ -1094,6 +1094,14 @@
         <scope>provided</scope>
       </dependency>
 
+      <!-- sun.misc.Unsafe stubs -->
+      <dependency>
+        <groupId>org.jboss</groupId>
+        <artifactId>jdk-misc</artifactId>
+        <version>3.Final</version>
+        <scope>provided</scope>
+      </dependency>
+
       <dependency>
         <groupId>org.rxtx</groupId>
         <artifactId>rxtx</artifactId>
