@@ -36,6 +36,7 @@ import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.AsciiString;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultPromise;
@@ -403,6 +404,21 @@ public class Http2FrameCodecTest {
 
         assertEquals(0, debugData.refCnt());
         assertTrue(channel.isActive());
+    }
+
+    @Test
+    public void unknownFrameOnMissingStream() throws Exception {
+        ByteBuf debugData = bb("debug");
+        frameInboundWriter.writeInboundFrame((byte) 0xb, 101, new Http2Flags(), debugData);
+        channel.flush();
+
+        assertTrue(channel.isActive());
+
+        Http2UnknownFrame unknownFrame = inboundHandler.readInbound();
+        assertEquals(0xb, unknownFrame.frameType());
+        assertEquals(101, unknownFrame.stream().id());
+        assertEquals("debug", unknownFrame.content().toString(CharsetUtil.UTF_8));
+        unknownFrame.release();
     }
 
     @Test
