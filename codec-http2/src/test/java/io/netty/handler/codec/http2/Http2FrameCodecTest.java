@@ -36,7 +36,6 @@ import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.AsciiString;
-import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.DefaultPromise;
