@@ -208,7 +208,7 @@ public final class IoUringIoHandler implements IoHandler {
                 submitAndClearNow(submissionQueue);
             } else if (p == 0 &&
                     // Check if there are any more submissions pending, if not break the loop.
-                    (submissionQueue.count() == 0 || 
+                    (submissionQueue.count() == 0 ||
                     // Let's try to submit again and check if there are new completions to handle.
                     // Only break the loop if there was nothing submitted and there are no new completions.
                     (submitAndClearNow(submissionQueue) == 0 && !completionQueue.hasCompletions()))) {
