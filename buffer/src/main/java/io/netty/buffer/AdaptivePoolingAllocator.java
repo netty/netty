@@ -1468,7 +1468,7 @@ final class AdaptivePoolingAllocator {
                 AIF_UPDATER = null;
                 REFCNT_FIELD_OFFSET = -1;
                 REFCNT_FIELD_VH = PlatformDependent.findVarHandleOfIntField(MethodHandles.lookup(),
-                                                                            Chunk.class, "refCnt");
+                                                                            BumpChunk.class, "refCnt");
                 updater = new VarHandleReferenceCountUpdater<BumpChunk>() {
                     @Override
                     protected VarHandle varHandle() {
