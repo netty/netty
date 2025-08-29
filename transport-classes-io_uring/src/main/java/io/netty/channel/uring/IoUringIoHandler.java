@@ -206,7 +206,7 @@ public final class IoUringIoHandler implements IoHandler {
                 logger.warn("CompletionQueue overflow detected, consider increasing size: {} ",
                         completionQueue.ringEntries);
                 submitAndClearNow(submissionQueue);
-            } else if (p == 0 && 
+            } else if (p == 0 &&
                     // Check if there are any more submissions pending, if not break the loop.
                     (submissionQueue.count() == 0 || 
                     // Let's try to submit again and check if there are new completions to handle.
