@@ -1270,43 +1270,26 @@ final class AdaptivePoolingAllocator {
             int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
             Chunk curr = current;
             if (curr != null) {
-                // Optimistically attempt to allocate to avoid a remaining capacity check on the hot path.
-                // If it fails, the chunk is full.
-                if (curr instanceof SizeClassedChunk) {
-                    SizeClassedChunk scChunk = (SizeClassedChunk) curr;
-                    if (scChunk.tryReadInitInto(buf, size, startingCapacity, maxCapacity)) {
+                int remainingCapacity = curr.remainingCapacity();
+                if (remainingCapacity > startingCapacity) {
+                    curr.readInitInto(buf, size, startingCapacity, maxCapacity);
+                    return true;
+                }
+                current = null;
+                if (remainingCapacity >= size) {
+                    try {
+                        curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
                         return true;
-                    }
-                    current = null;
-                    scChunk.releaseFromMagazine();
-                } else {
-                    int remainingCapacity = curr.remainingCapacity();
-                    if (remainingCapacity > startingCapacity) {
-                        curr.readInitInto(buf, size, startingCapacity, maxCapacity);
-                        return true;
-                    }
-
-                    // The chunk is full or has too little space.
-                    current = null; // Unset current before potentially recycling it.
-                    if (remainingCapacity >= size) {
-                        try {
-                            curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
-                            return true;
-                        } finally {
-                            curr.releaseFromMagazine();
-                        }
-                    }
-
-                    if (remainingCapacity < RETIRE_CAPACITY) {
+                    } finally {
                         curr.releaseFromMagazine();
-                    } else {
-                        transferToNextInLineOrRelease(curr);
                     }
                 }
+                if (remainingCapacity < RETIRE_CAPACITY) {
+                    curr.releaseFromMagazine();
+                } else {
+                    transferToNextInLineOrRelease(curr);
+                }
             }
-
-            // If we reach here, it means 'current' was null or became full.
-            // We now need to find a new chunk to allocate from.
             return allocateAndRefillCurrentChunk(size, maxCapacity, buf, startingCapacity);
         }
 
@@ -1842,25 +1825,19 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public void readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
-            if (!tryReadInitInto(buf, size, startingCapacity, maxCapacity)) {
-                throw new IllegalStateException("Free list is empty.");
-            }
-        }
-
-        private boolean tryReadInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
             assert state == AVAILABLE;
             IntStack localFreeList = this.localFreeList;
             final int startIndex;
             if (localFreeList != null) {
                 assert Thread.currentThread() == ownerThread;
                 if (localFreeList.isEmpty() && copyIntoLocalFreeList(localFreeList) == 0) {
-                    return false;
+                    throw new IllegalStateException("Free list is empty");
                 }
                 startIndex = localFreeList.pop();
             } else {
                 startIndex = externalFreeList.poll();
                 if (startIndex == FREE_LIST_EMPTY) {
-                    return false;
+                    throw new IllegalStateException("Free list is empty");
                 }
             }
 
@@ -1869,7 +1846,6 @@ final class AdaptivePoolingAllocator {
             try {
                 buf.init(delegate, chunk, 0, 0, startIndex, size, startingCapacity, maxCapacity);
                 chunk = null;
-                return true;
             } finally {
                 if (chunk != null) {
                     // If chunk is not null we know that buf.init(...) failed and so we need to manually release
