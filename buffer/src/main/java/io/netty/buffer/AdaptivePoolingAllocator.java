@@ -837,6 +837,11 @@ final class AdaptivePoolingAllocator {
     }
 
     private abstract static class AbstractMagazine implements Recycler.Handle<AdaptiveByteBuf> {
+        protected static final AtomicReferenceFieldUpdater<AbstractMagazine, Chunk> NEXT_IN_LINE =
+                AtomicReferenceFieldUpdater.newUpdater(AbstractMagazine.class, Chunk.class, "nextInLine");
+
+        @SuppressWarnings("unused") // updated via NEXT_IN_LINE
+        protected volatile Chunk nextInLine;
         protected Chunk current;
         protected final MagazineGroup group;
         protected final ChunkController chunkController;
@@ -859,11 +864,6 @@ final class AdaptivePoolingAllocator {
          * The main allocation entry point.
          */
         abstract boolean tryAllocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate);
-
-        /**
-         * Tries to set the given chunk as the next-in-line chunk for this magazine.
-         */
-        abstract boolean trySetNextInLine(Chunk chunk);
 
         /**
          * Cleans up resources held by the magazine.
@@ -934,6 +934,13 @@ final class AdaptivePoolingAllocator {
             }
             return null;
         }
+
+        /**
+         * Tries to set the given chunk as the next-in-line chunk for this magazine.
+         */
+        protected boolean trySetNextInLine(Chunk chunk) {
+            return NEXT_IN_LINE.compareAndSet(this, null, chunk);
+        }
     }
 
     private static final class ChunkRegistry {
@@ -953,16 +960,11 @@ final class AdaptivePoolingAllocator {
     }
 
     private static class SharedMagazine extends AbstractMagazine {
-        private static final AtomicReferenceFieldUpdater<SharedMagazine, Chunk> NEXT_IN_LINE;
         private static final AtomicLongFieldUpdater<SharedMagazine> USED_MEMORY_UPDATER;
         static {
-            NEXT_IN_LINE = AtomicReferenceFieldUpdater.newUpdater(SharedMagazine.class, Chunk.class, "nextInLine");
             USED_MEMORY_UPDATER = AtomicLongFieldUpdater.newUpdater(SharedMagazine.class, "usedMemory");
         }
         private static final Chunk MAGAZINE_FREED = new BumpChunk();
-
-        @SuppressWarnings("unused") // updated via NEXT_IN_LINE
-        private volatile Chunk nextInLine;
         private volatile long usedMemory;
         private final StampedLock allocationLock = new StampedLock();
 
@@ -1201,11 +1203,6 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        boolean trySetNextInLine(Chunk chunk) {
-            return NEXT_IN_LINE.compareAndSet(this, null, chunk);
-        }
-
-        @Override
         void free() {
             // Release the current Chunk and the next that was stored for later usage.
             restoreMagazineFreed();
@@ -1225,7 +1222,6 @@ final class AdaptivePoolingAllocator {
         private static final AtomicLongFieldUpdater<ThreadLocalMagazine> EXTERNAL_USED_MEMORY_UPDATER =
                 AtomicLongFieldUpdater.newUpdater(ThreadLocalMagazine.class, "externalUsedMemory");
         private final ArrayDeque<AdaptiveByteBuf> localBuffers;
-        private volatile Chunk nextInLine;
         private volatile long externalUsedMemory; // For non-owneer threads
         private long localUsedMemory; // For owner threads
 
@@ -1316,8 +1312,7 @@ final class AdaptivePoolingAllocator {
 
         private boolean allocateAndRefillCurrentChunk(int size, int maxCapacity, AdaptiveByteBuf buf,
                                                       int startingCapacity) {
-            Chunk curr = nextInLine;
-            nextInLine = null;
+            Chunk curr = NEXT_IN_LINE.getAndSet(this, null);
 
             if (curr != null) {
                 int remainingCapacity = curr.remainingCapacity();
@@ -1386,17 +1381,31 @@ final class AdaptivePoolingAllocator {
         }
 
         private void transferToNextInLineOrRelease(Chunk chunk) {
-            if (nextInLine == null) {
-                nextInLine = chunk;
+            if (trySetNextInLine(chunk)) {
                 return;
             }
 
             Chunk lessUsefulChunk;
-            if (chunk.remainingCapacity() > nextInLine.remainingCapacity()) {
-                lessUsefulChunk = nextInLine;
-                nextInLine = chunk;
-            } else {
-                lessUsefulChunk = chunk;
+            for (;;) {
+                Chunk existingNext = nextInLine;
+                if (existingNext == null) {
+                    if (trySetNextInLine(chunk)) {
+                        return;
+                    }
+                    continue;
+                }
+
+                if (chunk.remainingCapacity() > existingNext.remainingCapacity()) {
+                    if (NEXT_IN_LINE.compareAndSet(this, existingNext, chunk)) {
+                        lessUsefulChunk = existingNext;
+                        break;
+                    }
+                    // Swap failed, another thread intervened. Retry loop.
+                    continue;
+                } else {
+                    lessUsefulChunk = chunk;
+                    break;
+                }
             }
 
             if (isOwnerThread() && localChunkCache.size() < LOCAL_CHUNK_REUSE_QUEUE_CAPACITY) {
@@ -1407,26 +1416,14 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        boolean trySetNextInLine(Chunk chunk) {
-            if (!isOwnerThread()) {
-                return false;
-            }
-            if (nextInLine == null) {
-                nextInLine = chunk;
-                return true;
-            }
-            return false;
-        }
-
-        @Override
         void free() {
             if (current != null) {
                 current.releaseFromMagazine();
                 current = null;
             }
-            if (nextInLine != null) {
-                nextInLine.releaseFromMagazine();
-                nextInLine = null;
+            Chunk chunk = NEXT_IN_LINE.getAndSet(this, null);
+            if (chunk != null) {
+                chunk.releaseFromMagazine();
             }
         }
     }
