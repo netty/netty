@@ -406,6 +406,16 @@ public class Http2FrameCodecTest {
     }
 
     @Test
+    public void unknownFrameOnMissingStream() throws Exception {
+        ByteBuf debugData = bb("debug");
+        frameInboundWriter.writeInboundFrame((byte) 0xb, 101, new Http2Flags(), debugData);
+        channel.flush();
+
+        assertEquals(0, debugData.refCnt());
+        assertTrue(channel.isActive());
+    }
+
+    @Test
     public void goAwayLastStreamIdOverflowed() throws Exception {
         frameInboundWriter.writeInboundHeaders(5, request, 31, false);
 
