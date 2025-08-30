@@ -21,11 +21,14 @@ import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodec;
 import io.netty5.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
+import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Resource;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -181,13 +184,15 @@ public class HttpServerUpgradeHandlerTest {
         assertFalse(channel.finishAndReleaseAll());
     }
 
-    @Test
-    public void upgradeFail() {
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    public void upgradeFail(boolean removeAfterFirst) {
         final HttpServerCodec httpServerCodec = new HttpServerCodec();
         final UpgradeCodecFactory factory = protocol -> new TestUpgradeCodec();
 
-        HttpServerUpgradeHandler<?> upgradeHandler =
-                new HttpServerUpgradeHandler<DefaultHttpContent>(httpServerCodec, factory);
+        HttpServerUpgradeHandler<?> upgradeHandler = new HttpServerUpgradeHandler<>(httpServerCodec, factory, 0,
+                DefaultHttpHeadersFactory.headersFactory(), DefaultHttpHeadersFactory.trailersFactory(),
+                removeAfterFirst);
 
         EmbeddedChannel channel = new EmbeddedChannel(httpServerCodec, upgradeHandler);
 
@@ -199,7 +204,11 @@ public class HttpServerUpgradeHandlerTest {
 
         assertTrue(channel.writeInbound(upgrade));
         assertNotNull(channel.pipeline().get(HttpServerCodec.class));
-        assertNotNull(channel.pipeline().get(HttpServerUpgradeHandler.class)); // Should not be removed.
+        if (removeAfterFirst) {
+            assertNull(channel.pipeline().get(HttpServerUpgradeHandler.class)); // Should be removed.
+        } else {
+            assertNotNull(channel.pipeline().get(HttpServerUpgradeHandler.class)); // Should not be removed.
+        }
         assertNull(channel.pipeline().get("marker"));
 
         HttpRequest req = channel.readInbound();
