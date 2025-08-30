@@ -625,6 +625,11 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         @Override
         public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                                    Buffer payload) throws Http2Exception {
+            Http2Stream stream = connection.stream(streamId);
+            if (stream == null) {
+                return;
+            }
+
             onUnknownFrame0(ctx, frameType, streamId, flags, payload);
         }
 
