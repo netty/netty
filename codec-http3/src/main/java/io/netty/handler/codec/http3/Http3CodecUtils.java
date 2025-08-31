@@ -142,17 +142,29 @@ final class Http3CodecUtils {
         int writerIndex = out.writerIndex();
         switch (numBytes) {
             case 1:
+                if (value < 0 || value > 0x3F) {
+                    throw new IllegalArgumentException("Value " + value + " out of range for 1-byte QUIC variable integer (0-63)");
+                }
                 out.writeByte((byte) value);
                 break;
             case 2:
+                if (value < 0 || value > 0x3FFF) {
+                    throw new IllegalArgumentException("Value " + value + " out of range for 2-byte QUIC variable integer (0-16383)");
+                }
                 out.writeShort((short) value);
                 encodeLengthIntoBuffer(out, writerIndex, (byte) 0x40);
                 break;
             case 4:
+                if (value < 0 || value > 0x3FFFFFFF) {
+                    throw new IllegalArgumentException("Value " + value + " out of range for 4-byte QUIC variable integer (0-1073741823)");
+                }
                 out.writeInt((int) value);
                 encodeLengthIntoBuffer(out, writerIndex, (byte) 0x80);
                 break;
             case 8:
+                if (value < 0 || value > 0x3FFFFFFFFFFFFFFFL) {
+                    throw new IllegalArgumentException("Value " + value + " out of range for 8-byte QUIC variable integer (0-4611686018427387903)");
+                }
                 out.writeLong(value);
                 encodeLengthIntoBuffer(out, writerIndex, (byte) 0xc0);
                 break;
