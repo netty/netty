@@ -766,6 +766,16 @@ public final class NioIoHandler implements IoHandler {
                                               final SelectStrategyFactory selectStrategyFactory) {
         ObjectUtil.checkNotNull(selectorProvider, "selectorProvider");
         ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
-        return context ->  new NioIoHandler(context, selectorProvider, selectStrategyFactory.newSelectStrategy());
+        return new IoHandlerFactory() {
+            @Override
+            public IoHandler newHandler(ThreadAwareExecutor executor) {
+                return new NioIoHandler(executor, selectorProvider, selectStrategyFactory.newSelectStrategy());
+            }
+
+            @Override
+            public boolean isChangingThreadSupported() {
+                return true;
+            }
+        };
     }
 }
