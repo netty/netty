@@ -22,7 +22,6 @@ import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.IovArray;
-import io.netty.util.ReferenceCountUtil;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -263,7 +262,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                         return false;
                     }
                     zcWriteQueue.add(m);
-                    ReferenceCountUtil.retain(m);
+                    ((ByteBuf) m).retain();
                     return true;
                 });
             } finally {
