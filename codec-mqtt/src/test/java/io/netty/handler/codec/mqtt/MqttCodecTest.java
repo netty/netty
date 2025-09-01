@@ -38,6 +38,7 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -59,6 +60,7 @@ import static io.netty.handler.codec.mqtt.MqttTestUtils.validateUnsubscribePaylo
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -81,6 +83,7 @@ public class MqttCodecTest {
     private static final String WILL_MESSAGE = "gone";
     private static final String USER_NAME = "happy_user";
     private static final String PASSWORD = "123_or_no_pwd";
+    private static final byte[] PASSWORD_BYTES = PASSWORD.getBytes(CharsetUtil.UTF_8);
 
     private static final int KEEP_ALIVE_SECONDS = 600;
 
@@ -221,6 +224,16 @@ public class MqttCodecTest {
         final List<Object> out = new LinkedList<Object>();
         mqttDecoder.decode(ctx, byteBuf, out);
         checkForSingleDecoderException(out);
+    }
+
+    @Test
+    public void testConnectMessageForPassword311() throws Exception {
+        assertFalse(createConnectMessage(MqttVersion.MQTT_3_1).toString().contains(Arrays.toString(PASSWORD_BYTES)));
+    }
+
+    @Test
+    public void testConnectMessageForPassword5() throws Exception {
+        assertFalse(createConnectMessage(MqttVersion.MQTT_5).toString().contains(Arrays.toString(PASSWORD_BYTES)));
     }
 
     @Test

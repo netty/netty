@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.1.123.Final-SNAPSHOT</version>
+  <version>4.1.125.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -194,6 +194,28 @@
         <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <testJvm />
+      </properties>
+    </profile>
+    <profile>
+      <id>java24</id>
+      <activation>
+        <jdk>24</jdk>
+      </activation>
+      <properties>
+        <argLine.java9.extras />
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- 1.4.x does not work in Java10+ -->
+        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
+        <!-- We need to use 1.8 as otherwise default methods are not picked up and so result in compile errors for
+             our EventExecutorGroup implementations
+        -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.release>8</maven.compiler.release>
+        <!-- pax-exam does not work on latest Java12 EA 22 build -->
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -614,7 +636,7 @@
       <id>boringssl-snapshot</id>
       <properties>
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
-        <tcnative.version>2.0.73.Final-SNAPSHOT</tcnative.version>
+        <tcnative.version>2.0.74.Final-SNAPSHOT</tcnative.version>
         <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
       </properties>
 
@@ -762,7 +784,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.72.Final</tcnative.version>
+    <tcnative.version>2.0.73.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -1069,6 +1091,14 @@
         <groupId>org.jetbrains</groupId>
         <artifactId>annotations-java5</artifactId>
         <version>23.0.0</version>
+        <scope>provided</scope>
+      </dependency>
+
+      <!-- sun.misc.Unsafe stubs -->
+      <dependency>
+        <groupId>org.jboss</groupId>
+        <artifactId>jdk-misc</artifactId>
+        <version>3.Final</version>
         <scope>provided</scope>
       </dependency>
 
@@ -1438,6 +1468,13 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.returnTypeErasureChanged</code>
+                  <old>method B io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T extends io.netty.handler.codec.http2.Http2ConnectionHandler, B extends io.netty.handler.codec.http2.AbstractHttp2ConnectionHandlerBuilder&lt;T, B&gt;&gt;::encoderEnforceMaxRstFramesPerWindow(int, int) @ io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder</old>
+                  <new>method io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder io.netty.handler.codec.http2.HttpToHttp2ConnectionHandlerBuilder::encoderEnforceMaxRstFramesPerWindow(int, int)</new>
+                  <justification>Acceptable incompatibility for required change, because the method was not previously exposed; protected visiblity in super-class, not made public in final sub-class until now</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.method.removed</code>
                   <old>method io.netty.channel.ChannelFactory&lt;&amp; extends io.netty.channel.socket.DatagramChannel&gt; io.netty.resolver.dns.DnsNameResolverBuilder::channelFactory()</old>
                   <justification>Protected methods of a final class.</justification>
@@ -1772,25 +1809,11 @@
             <nativeimage.handlerMetadataArtifactId>${project.artifactId}</nativeimage.handlerMetadataArtifactId>
           </systemPropertyVariables>
           <argLine>${argLine.common} ${argLine.printGC} ${argLine.alpnAgent} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
-          <properties>
-            <property>
-              <name>listener</name>
-              <value>io.netty.build.junit.TimedOutTestsListener</value>
-            </property>
-          </properties>
           <skipTests>${skipTests}</skipTests>
           <jvm>${testJvm}</jvm>
            <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
         </configuration>
-        <dependencies>
-          <!-- Needed for TimedOutTestsListener -->
-          <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>netty-build-common</artifactId>
-            <version>${netty.build.version}</version>
-          </dependency>
-        </dependencies>
       </plugin>
       <!-- always produce osgi bundles -->
       <plugin>

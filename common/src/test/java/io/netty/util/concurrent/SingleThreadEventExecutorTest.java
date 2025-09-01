@@ -16,7 +16,6 @@
 package io.netty.util.concurrent;
 
 import org.junit.jupiter.api.Test;
-
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
