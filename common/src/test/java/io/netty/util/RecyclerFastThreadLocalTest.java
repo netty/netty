@@ -17,9 +17,10 @@ package io.netty.util;
 
 import io.netty.util.concurrent.FastThreadLocalThread;
 import org.jetbrains.annotations.NotNull;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -36,15 +37,17 @@ public class RecyclerFastThreadLocalTest extends RecyclerTest {
     }
 
     @Override
-    @Test
+    @ParameterizedTest
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testThreadCanBeCollectedEvenIfHandledObjectIsReferenced() throws Exception {
-        final Recycler<HandledObject> recycler = newRecycler(1024);
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testThreadCanBeCollectedEvenIfHandledObjectIsReferenced(OwnerType ownerType, boolean unguarded)
+            throws Exception {
         final AtomicBoolean collected = new AtomicBoolean();
         final AtomicReference<HandledObject> reference = new AtomicReference<HandledObject>();
         Thread thread = new FastThreadLocalThread(new Runnable() {
             @Override
             public void run() {
+                final Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 1024);
                 HandledObject object = recycler.get();
                 // Store a reference to the HandledObject to ensure it is not collected when the run method finish.
                 reference.set(object);
@@ -63,6 +66,11 @@ public class RecyclerFastThreadLocalTest extends RecyclerTest {
         // Null out so it can be collected.
         thread = null;
 
+        if (ownerType == OwnerType.PINNED) {
+            // A pinned recycler extends the lifecycle with its Handles, so we need to null out the reference too.
+            reference.set(null);
+        }
+
         // Loop until the Thread was collected. If we can not collect it the Test will fail due of a timeout.
         while (!collected.get()) {
             System.gc();
@@ -71,6 +79,8 @@ public class RecyclerFastThreadLocalTest extends RecyclerTest {
         }
 
         // Now call recycle after the Thread was collected to ensure this still works...
-        reference.getAndSet(null).recycle();
+        if (reference.get() != null) {
+            reference.getAndSet(null).recycle();
+        }
     }
 }
