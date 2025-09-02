@@ -209,7 +209,7 @@ public class FixedChannelPool extends SimpleChannelPool {
                 };
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected AcquireTimeoutAction: " + action);
             }
         }
         executor = bootstrap.config().group().next();

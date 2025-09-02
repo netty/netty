@@ -1119,7 +1119,8 @@ final class AdaptivePoolingAllocator {
         private static final ReferenceCountUpdater<Chunk> updater;
 
         static {
-            switch (ReferenceCountUpdater.updaterTypeOf(Chunk.class, "refCnt")) {
+            ReferenceCountUpdater.UpdaterType updaterType = ReferenceCountUpdater.updaterTypeOf(Chunk.class, "refCnt");
+            switch (updaterType) {
                 case Atomic:
                     AIF_UPDATER = newUpdater(Chunk.class, "refCnt");
                     REFCNT_FIELD_OFFSET = -1;
@@ -1155,7 +1156,7 @@ final class AdaptivePoolingAllocator {
                     };
                     break;
                 default:
-                    throw new Error("Unknown updater type for Chunk");
+                    throw new Error("Unexpected updater type for Chunk: " + updaterType);
             }
         }
 

@@ -417,7 +417,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                         SSLContext.setAlpnProtos(ctx, appProtocols, selectorBehavior);
                         break;
                     default:
-                        throw new Error();
+                        throw new Error("Unexpected apn protocol: " + apn.protocol());
                 }
             }
 
@@ -482,7 +482,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             case CHOOSE_MY_LAST_PROTOCOL:
                 return SSL.SSL_SELECTOR_FAILURE_CHOOSE_MY_LAST_PROTOCOL;
             default:
-                throw new Error();
+                throw new Error("Unexpected behavior: " + behavior);
         }
     }
 
@@ -780,7 +780,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                                         " behavior");
                 }
             default:
-                throw new Error();
+                throw new Error("Unexpected protocol: " + config.protocol());
         }
     }
 

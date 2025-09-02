@@ -135,7 +135,7 @@ public final class KQueueDomainSocketChannel extends AbstractKQueueStreamChannel
                     readReadyFd();
                     break;
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected read mode: " + config().getReadMode());
             }
         }
 

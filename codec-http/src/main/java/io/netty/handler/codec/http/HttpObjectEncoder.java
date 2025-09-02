@@ -223,7 +223,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 encodeChunkedHttpContent(ctx, content, trailingHeaders, out);
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected http object encoder state: " + state);
         }
     }
 
@@ -394,7 +394,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                     encodedChunkedFileRegionContent(ctx, msg, out);
                     break;
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected http object encoder state: " + state);
             }
         } finally {
             msg.release();
@@ -438,7 +438,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 out.add(ZERO_CRLF_CRLF_BUF.duplicate());
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected http object encoder state: " + state);
         }
         return ST_INIT;
     }
@@ -481,7 +481,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 encodeChunkedHttpContent(ctx, content, trailingHeaders, out);
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected http object encoder state: " + state);
         }
     }
 

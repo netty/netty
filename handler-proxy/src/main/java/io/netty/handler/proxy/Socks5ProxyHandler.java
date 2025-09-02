@@ -205,7 +205,7 @@ public final class Socks5ProxyHandler extends ProxyHandler {
                 sendToProxyServer(new DefaultSocks5PrivateAuthRequest(privateToken));
             } else {
                 // Should never reach here.
-                throw new Error();
+                throw new Error("Unexpected authMethod: " + resAuthMethod);
             }
 
             return false;

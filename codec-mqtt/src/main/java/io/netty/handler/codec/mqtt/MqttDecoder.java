@@ -163,7 +163,7 @@ public final class MqttDecoder extends ReplayingDecoder<DecoderState> {
 
             default:
                 // Shouldn't reach here.
-                throw new Error();
+                throw new Error("Unexpected mqtt decoder state: " + state());
         }
     }
 

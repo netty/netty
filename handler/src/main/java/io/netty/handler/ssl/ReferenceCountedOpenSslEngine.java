@@ -1887,7 +1887,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 calculateMaxWrapOverhead();
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected handshake state: " + handshakeState);
         }
     }
 
@@ -2162,7 +2162,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                         SSL.setVerify(ssl, SSL.SSL_CVERIFY_OPTIONAL, ReferenceCountedOpenSslContext.VERIFY_DEPTH);
                         break;
                     default:
-                        throw new Error(mode.toString());
+                        throw new Error("Unexpected client auth mode: " + mode);
                 }
             }
             clientAuth = mode;
@@ -2314,7 +2314,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 }
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected apn protocol: " + apn.protocol());
         }
     }
 

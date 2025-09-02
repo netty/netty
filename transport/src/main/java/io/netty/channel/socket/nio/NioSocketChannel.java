@@ -328,7 +328,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     @Override
     protected void doFinishConnect() throws Exception {
         if (!javaChannel().finishConnect()) {
-            throw new Error();
+            throw new UnsupportedOperationException("finishConnect is not supported for " + getClass().getName());
         }
     }
 
