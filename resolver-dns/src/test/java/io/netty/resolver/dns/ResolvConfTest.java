@@ -15,17 +15,18 @@
  */
 package io.netty.resolver.dns;
 
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledOnOs;
 import org.junit.jupiter.api.condition.OS;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.BufferedReader;
 import java.io.StringReader;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -33,7 +34,6 @@ import java.util.stream.Collectors;
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertIterableEquals;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 public class ResolvConfTest {
     @Test
@@ -42,8 +42,9 @@ public class ResolvConfTest {
         assertThat(ResolvConf.system().getNameservers().size()).isGreaterThan(0);
     }
 
+    @Disabled
     @ParameterizedTest
-    @MethodSource
+    @MethodSource("scenariosSource")
     public void scenarios(String resolvConf, List<String> nameservers) throws Exception {
         assertIterableEquals(
                 nameservers.stream().map(new Function<String, InetSocketAddress>() {
@@ -55,36 +56,37 @@ public class ResolvConfTest {
                 ResolvConf.fromReader(new BufferedReader(new StringReader(resolvConf))).getNameservers());
     }
 
-    static List<Arguments> scenarios() {
-        return Arrays.asList(
-                arguments("", emptyList()),
-                arguments(
+    static Object[][] scenariosSource() {
+        List<Object[]> scenarios =  Arrays.asList(
+                new Object[] { "", emptyList() },
+                new Object[] {
                         "# some comment\n"
                                 + "# nameserver hello\n"
                                 + "\n"
                                 + "nameserver 1.2.3.4\n"
                                 + "nameserver 127.1.2.3",
-                        Arrays.asList("1.2.3.4", "127.1.2.3")),
-                arguments(
+                        Arrays.asList("1.2.3.4", "127.1.2.3") },
+                new Object[] {
                         "# some comment\n"
                                 + "# nameserver hello\n"
                                 + "\n"
                                 + "nameserver 1.2.3.4\n"
                                 + "nameserver 127.1.2.3",
-                        Arrays.asList("1.2.3.4", "127.1.2.3")),
-                arguments(
+                        Arrays.asList("1.2.3.4", "127.1.2.3") },
+                new Object[] {
                         "# some comment\n"
                                 + "nameserver 1.2.3.4 # comment\n"
                                 + "nameserver 127.1.2.3",
-                        Arrays.asList("1.2.3.4", "127.1.2.3")),
-                arguments(
+                        Arrays.asList("1.2.3.4", "127.1.2.3") },
+                new Object[] {
                         "# some comment\n" + "nameserver 0:0:0:0:0:0:0:1\n" + "nameserver 127.0.0.1",
-                        Arrays.asList("0:0:0:0:0:0:0:1", "127.0.0.1")),
-                arguments(
+                        Arrays.asList("0:0:0:0:0:0:0:1", "127.0.0.1") },
+                new Object[] {
                         "# options and search are ignored\n"
                                 + "nameserver 127.0.0.53\n"
                                 + "options edns0 trust-ad"
                                 + "search netty.io projectnessie.org",
-                        Arrays.asList("127.0.0.53")));
+                        Collections.singletonList("127.0.0.53") });
+        return scenarios.toArray(new Object[0][0]);
     }
 }

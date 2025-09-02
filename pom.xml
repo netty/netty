@@ -802,7 +802,7 @@
     <logging.logLevel>warn</logging.logLevel>
     <log4j2.version>2.17.2</log4j2.version>
     <enforcer.plugin.version>3.0.0</enforcer.plugin.version>
-    <junit.version>5.9.0</junit.version>
+    <junit.version>5.12.1</junit.version>
     <skipTests>false</skipTests>
     <testJavaHome>${java.home}</testJavaHome>
     <testJvm>${testJavaHome}/bin/java</testJvm>
@@ -2078,12 +2078,12 @@
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>
-          <version>2.22.2</version>
+          <version>3.5.3</version>
         </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-failsafe-plugin</artifactId>
-          <version>2.22.2</version>
+          <version>3.5.3</version>
         </plugin>
         <plugin>
           <artifactId>maven-clean-plugin</artifactId>
