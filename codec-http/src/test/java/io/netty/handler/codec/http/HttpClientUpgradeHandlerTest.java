@@ -241,4 +241,28 @@ public class HttpClientUpgradeHandlerTest {
         assertEquals(0, secondReq.refCnt());
         assertFalse(channel.finish());
     }
+
+    @Test
+    public void forwardOnFailure() {
+        HttpClientUpgradeHandler.SourceCodec sourceCodec = new FakeSourceCodec();
+        HttpClientUpgradeHandler.UpgradeCodec upgradeCodec = new FakeUpgradeCodec();
+        HttpClientUpgradeHandler handler = new HttpClientUpgradeHandler(sourceCodec, upgradeCodec, 1024);
+        final EmbeddedChannel channel = new EmbeddedChannel();
+        channel.pipeline().addFirst("upgrade", handler);
+
+        assertTrue(channel.writeOutbound(new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io")));
+        FullHttpRequest request = channel.readOutbound();
+        assertTrue(request.release());
+
+        DefaultHttpResponse response = new DefaultHttpResponse(
+                HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
+        response.headers().add(HttpHeaderNames.UPGRADE, "");
+        assertFalse(channel.writeInbound(response));
+        assertThrows(IllegalStateException.class, () -> channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
+
+        FullHttpResponse full = channel.readInbound();
+        assertTrue(full.release());
+
+        assertFalse(channel.finish());
+    }
 }

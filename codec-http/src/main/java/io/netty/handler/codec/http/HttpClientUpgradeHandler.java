@@ -252,7 +252,6 @@ public class HttpClientUpgradeHandler extends HttpObjectAggregator implements Ch
             out.clear();
             removeThisHandler(ctx);
         } catch (Throwable t) {
-            release(response);
             ctx.fireExceptionCaught(t);
             removeThisHandler(ctx);
         }
