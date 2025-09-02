@@ -27,7 +27,6 @@ import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -54,8 +53,7 @@ public class IoUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Override
     protected EventLoopGroup newAutoScalingEventLoopGroup() {
-        return new MultiThreadIoEventLoopGroup(SCALING_MAX_THREADS, (Executor) null, AUTO_SCALING_CHOOSER_FACTORY,
-                                               newIoHandlerFactory());
+        return null;
     }
 
     @Override

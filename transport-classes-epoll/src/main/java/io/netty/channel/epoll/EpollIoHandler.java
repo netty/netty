@@ -110,7 +110,17 @@ public class EpollIoHandler implements IoHandler {
                                               final SelectStrategyFactory selectStrategyFactory) {
         ObjectUtil.checkPositiveOrZero(maxEvents, "maxEvents");
         ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
-        return executor -> new EpollIoHandler(executor, maxEvents, selectStrategyFactory.newSelectStrategy());
+        return new IoHandlerFactory() {
+            @Override
+            public IoHandler newHandler(ThreadAwareExecutor executor) {
+                return new EpollIoHandler(executor, maxEvents, selectStrategyFactory.newSelectStrategy());
+            }
+
+            @Override
+            public boolean isChangingThreadSupported() {
+                return true;
+            }
+        };
     }
 
     // Package-private for testing

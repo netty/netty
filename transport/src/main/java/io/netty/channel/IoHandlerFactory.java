@@ -29,4 +29,16 @@ public interface IoHandlerFactory {
      * @return                  a new {@link IoHandler} instance.
      */
     IoHandler newHandler(ThreadAwareExecutor ioExecutor);
+
+    /**
+     * Returns {@code true} if it's supported that the {@link ThreadAwareExecutor} might change its {@link Thread}
+     * during the life-time of the {@link IoHandler} that can be created via {@link #newHandler(ThreadAwareExecutor)}.
+     * That said even if changing the {@link Thread} is supported it must be guaranteed that the access rules specified
+     * by {@link IoHandler} are not violated.
+     *
+     * @return {@code true} if changing is supported, {@code false} otherwise.
+     */
+    default boolean isChangingThreadSupported() {
+        return false;
+    }
 }
