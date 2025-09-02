@@ -93,7 +93,7 @@ public final class IoUringIoHandler implements IoHandler {
         IoUring.ensureAvailability();
         this.executor = requireNonNull(executor, "executor");
         requireNonNull(config, "config");
-        int setupFlags = Native.setupFlags();
+        int setupFlags = Native.setupFlags(config.singleIssuer());
 
         //The default cq size is always twice the ringSize.
         // It only makes sense when the user actually specifies the cq ring size.
@@ -696,6 +696,16 @@ public final class IoUringIoHandler implements IoHandler {
     public static IoHandlerFactory newFactory(IoUringIoHandlerConfig config) {
         IoUring.ensureAvailability();
         ObjectUtil.checkNotNull(config, "config");
-        return eventLoop -> new IoUringIoHandler(eventLoop, config);
+        return new IoHandlerFactory() {
+            @Override
+            public IoHandler newHandler(ThreadAwareExecutor eventLoop) {
+                return new IoUringIoHandler(eventLoop, config);
+            }
+
+            @Override
+            public boolean isChangingThreadSupported() {
+                return !config.singleIssuer();
+            }
+        };
     }
 }
