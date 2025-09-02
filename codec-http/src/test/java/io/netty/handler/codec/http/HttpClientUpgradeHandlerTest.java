@@ -258,7 +258,12 @@ public class HttpClientUpgradeHandlerTest {
                 HttpVersion.HTTP_1_1, HttpResponseStatus.SWITCHING_PROTOCOLS);
         response.headers().add(HttpHeaderNames.UPGRADE, "");
         assertFalse(channel.writeInbound(response));
-        assertThrows(IllegalStateException.class, () -> channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertThrows(IllegalStateException.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                channel.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT);
+            }
+        });
 
         FullHttpResponse full = channel.readInbound();
         assertTrue(full.release());
