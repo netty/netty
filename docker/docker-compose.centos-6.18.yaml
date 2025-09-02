@@ -8,7 +8,7 @@ services:
       context: ../
       dockerfile: docker/Dockerfile.centos6
       args:
-        java_version : "8.0.442-zulu"
+        java_version : "8.0.462-zulu"
 
   build:
     image: netty:centos-6-1.8

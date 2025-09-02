@@ -103,6 +103,10 @@ final class MsgHdrMemory {
                 cmsgDataOffset, segmentSize);
     }
 
+    void set(long iovArray, int length) {
+        MsgHdr.set(msgHdrMemory, iovArray, length);
+    }
+
     void setScmRightsFd(int fd) {
         MsgHdr.prepSendFd(msgHdrMemory, fd, cmsgDataMemory, cmsgDataOffset, iovMemory, 1);
     }

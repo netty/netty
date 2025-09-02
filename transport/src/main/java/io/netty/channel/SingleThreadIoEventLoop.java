@@ -20,6 +20,7 @@ import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.RejectedExecutionHandler;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 
 import java.util.Queue;
@@ -56,6 +57,16 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         public long deadlineNanos() {
             assert inEventLoop();
             return SingleThreadIoEventLoop.this.deadlineNanos();
+        }
+
+        @Override
+        public void reportActiveIoTime(long activeNanos) {
+            SingleThreadIoEventLoop.this.reportActiveIoTime(activeNanos);
+        }
+
+        @Override
+        public boolean shouldReportActiveIoTime() {
+            return isSuspensionSupported();
         }
     };
 
@@ -223,6 +234,11 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
         return promise;
     }
 
+    @Override
+    protected int getNumOfRegisteredChannels() {
+        return numRegistrations.get();
+    }
+
     private void registerForIo0(final IoHandle handle, Promise<IoRegistration> promise) {
         assert inEventLoop();
         final IoRegistration registration;
@@ -255,6 +271,17 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     @Override
     public boolean isIoType(Class<? extends IoHandler> handlerType) {
         return ioHandler.getClass().equals(handlerType);
+    }
+
+    @Override
+    protected Queue<Runnable> newTaskQueue(int maxPendingTasks) {
+        return newTaskQueue0(maxPendingTasks);
+    }
+
+    protected static Queue<Runnable> newTaskQueue0(int maxPendingTasks) {
+        // This event loop never calls takeTask()
+        return maxPendingTasks == Integer.MAX_VALUE ? PlatformDependent.<Runnable>newMpscQueue()
+                : PlatformDependent.<Runnable>newMpscQueue(maxPendingTasks);
     }
 
     private final class IoRegistrationWrapper implements IoRegistration {

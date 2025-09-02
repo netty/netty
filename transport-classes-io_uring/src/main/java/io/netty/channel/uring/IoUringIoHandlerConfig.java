@@ -97,10 +97,9 @@ import java.util.Set;
  */
 
 public final class IoUringIoHandlerConfig {
-    private static final int DISABLE_SETUP_CQ_SIZE = -1;
 
-    private int ringSize = Native.DEFAULT_RING_SIZE;
-    private int cqSize = DISABLE_SETUP_CQ_SIZE;
+    private int ringSize = IoUring.DEFAULT_RING_SIZE;
+    private int cqSize = IoUring.DEFAULT_CQ_SIZE;
 
     private int maxBoundedWorker;
 
@@ -227,7 +226,7 @@ public final class IoUringIoHandlerConfig {
     }
 
     boolean needSetupCqeSize() {
-        return cqSize != DISABLE_SETUP_CQ_SIZE;
+        return cqSize != IoUring.DISABLE_SETUP_CQ_SIZE;
     }
 
     Set<IoUringBufferRingConfig> getInternBufferRingConfigs() {

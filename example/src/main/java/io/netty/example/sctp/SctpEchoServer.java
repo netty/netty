@@ -36,12 +36,11 @@ public final class SctpEchoServer {
 
     public static void main(String[] args) throws Exception {
         // Configure the server.
-        EventLoopGroup bossGroup = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
-        EventLoopGroup workerGroup = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         final SctpEchoServerHandler serverHandler = new SctpEchoServerHandler();
         try {
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
+            b.group(group)
              .channel(NioSctpServerChannel.class)
              .option(ChannelOption.SO_BACKLOG, 100)
              .handler(new LoggingHandler(LogLevel.INFO))
@@ -61,8 +60,7 @@ public final class SctpEchoServer {
             f.channel().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 }

@@ -34,7 +34,6 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Ticker;
-import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.logging.InternalLogger;
@@ -218,7 +217,11 @@ public class EmbeddedChannel extends AbstractChannel {
         loop = new EmbeddedEventLoop(builder.ticker == null ? new EmbeddedEventLoop.FreezableTicker() : builder.ticker);
         metadata = metadata(builder.hasDisconnect);
         config = builder.config == null ? new DefaultChannelConfig(this) : builder.config;
-        setup(builder.register, builder.handlers);
+        if (builder.handler == null) {
+            setup(builder.register, builder.handlers);
+        } else {
+            setup(builder.register, builder.handler);
+        }
     }
 
     private static ChannelMetadata metadata(boolean hasDisconnect) {
@@ -226,11 +229,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     private void setup(boolean register, final ChannelHandler... handlers) {
-        ObjectUtil.checkNotNull(handlers, "handlers");
         ChannelPipeline p = pipeline();
         p.addLast(new ChannelInitializer<Channel>() {
             @Override
-            protected void initChannel(Channel ch) throws Exception {
+            protected void initChannel(Channel ch) {
                 ChannelPipeline pipeline = ch.pipeline();
                 for (ChannelHandler h: handlers) {
                     if (h == null) {
@@ -240,6 +242,15 @@ public class EmbeddedChannel extends AbstractChannel {
                 }
             }
         });
+        if (register) {
+            ChannelFuture future = loop.register(this);
+            assert future.isDone();
+        }
+    }
+
+    private void setup(boolean register, final ChannelHandler handler) {
+        ChannelPipeline p = pipeline();
+        p.addLast(handler);
         if (register) {
             ChannelFuture future = loop.register(this);
             assert future.isDone();
@@ -1066,7 +1077,9 @@ public class EmbeddedChannel extends AbstractChannel {
         ChannelId channelId = EmbeddedChannelId.INSTANCE;
         boolean register = true;
         boolean hasDisconnect;
+        //you should use either handlers or handler variable, but not both.
         ChannelHandler[] handlers = EMPTY_HANDLERS;
+        ChannelHandler handler;
         ChannelConfig config;
         Ticker ticker;
 
@@ -1129,6 +1142,19 @@ public class EmbeddedChannel extends AbstractChannel {
          */
         public Builder handlers(ChannelHandler... handlers) {
             this.handlers = Objects.requireNonNull(handlers, "handlers");
+            this.handler = null;
+            return this;
+        }
+
+        /**
+         * The {@link ChannelHandler} which will be added to the {@link ChannelPipeline}.
+         *
+         * @param handler the {@link ChannelHandler}s which will be added to the {@link ChannelPipeline}
+         * @return This builder
+         */
+        public Builder handlers(ChannelHandler handler) {
+            this.handler = Objects.requireNonNull(handler, "handler");
+            this.handlers = null;
             return this;
         }
 

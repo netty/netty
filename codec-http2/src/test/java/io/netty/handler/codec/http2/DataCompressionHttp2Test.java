@@ -450,8 +450,7 @@ public class DataCompressionHttp2Test {
                 any(ByteBuf.class), anyInt(), anyBoolean());
 
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
-        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()),
-                new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
+        sb.group(new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()));
         sb.channel(NioServerSocketChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override

@@ -16,10 +16,10 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.InternalThreadLocalMap;
+import io.netty.util.internal.LongLongHashMap;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -30,9 +30,10 @@ public class FastThreadLocalThread extends Thread {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(FastThreadLocalThread.class);
 
     /**
-     * Sorted array of thread IDs that are treated like {@link FastThreadLocalThread}.
+     * Set of thread IDs that are treated like {@link FastThreadLocalThread}.
      */
-    private static final AtomicReference<long[]> fallbackThreads = new AtomicReference<>(null);
+    private static final AtomicReference<FallbackThreadSet> fallbackThreads =
+            new AtomicReference<>(FallbackThreadSet.EMPTY);
 
     // This will be set to true if we have a chance to wrap the Runnable.
     private final boolean cleanupFastThreadLocals;
@@ -144,11 +145,7 @@ public class FastThreadLocalThread extends Thread {
     }
 
     private static boolean isFastThreadLocalVirtualThread() {
-        long[] arr = fallbackThreads.get();
-        if (arr == null) {
-            return false;
-        }
-        return Arrays.binarySearch(arr, Thread.currentThread().getId()) >= 0;
+        return fallbackThreads.get().contains(currentThread().getId());
     }
 
     /**
@@ -169,37 +166,17 @@ public class FastThreadLocalThread extends Thread {
             throw new IllegalStateException("Caller is a real FastThreadLocalThread");
         }
         long id = current.getId();
-        fallbackThreads.updateAndGet(arr -> {
-            if (arr == null) {
-                return new long[] { id };
-            }
-            int index = Arrays.binarySearch(arr, id);
-            if (index >= 0) {
+        fallbackThreads.updateAndGet(set -> {
+            if (set.contains(id)) {
                 throw new IllegalStateException("Reentrant call to run()");
             }
-            index = ~index; // same as -(index + 1)
-            long[] next = new long[arr.length + 1];
-            System.arraycopy(arr, 0, next, 0, index);
-            next[index] = id;
-            System.arraycopy(arr, index, next, index + 1, arr.length - index);
-            return next;
+            return set.add(id);
         });
+
         try {
             runnable.run();
         } finally {
-            fallbackThreads.getAndUpdate(arr -> {
-                if (arr == null || (arr.length == 1 && arr[0] == id)) {
-                    return null;
-                }
-                int index = Arrays.binarySearch(arr, id);
-                if (index < 0) {
-                    return arr;
-                }
-                long[] next = new long[arr.length - 1];
-                System.arraycopy(arr, 0, next, 0, index);
-                System.arraycopy(arr, index + 1, next, index, arr.length - index - 1);
-                return next;
-            });
+            fallbackThreads.getAndUpdate(set -> set.remove(id));
             FastThreadLocal.removeAll();
         }
     }
@@ -216,5 +193,64 @@ public class FastThreadLocalThread extends Thread {
      */
     public boolean permitBlockingCalls() {
         return false;
+    }
+
+    /**
+     * Immutable, thread-safe helper class that wraps {@link LongLongHashMap}
+     */
+    private static final class FallbackThreadSet {
+        static final FallbackThreadSet EMPTY = new FallbackThreadSet();
+        private static final long EMPTY_VALUE = 0L;
+
+        private final LongLongHashMap map;
+
+        private FallbackThreadSet() {
+            this.map = new LongLongHashMap(EMPTY_VALUE);
+        }
+
+        private FallbackThreadSet(LongLongHashMap map) {
+            this.map = map;
+        }
+
+        public boolean contains(long threadId) {
+            long key = threadId >>> 6;
+            long bit = 1L << (threadId & 63);
+
+            long bitmap = map.get(key);
+            return (bitmap & bit) != 0;
+        }
+
+        public FallbackThreadSet add(long threadId) {
+            long key = threadId >>> 6;
+            long bit = 1L << (threadId & 63);
+
+            LongLongHashMap newMap = new LongLongHashMap(map);
+            long oldBitmap = newMap.get(key);
+            long newBitmap = oldBitmap | bit;
+            newMap.put(key, newBitmap);
+
+            return new FallbackThreadSet(newMap);
+        }
+
+        public FallbackThreadSet remove(long threadId) {
+            long key = threadId >>> 6;
+            long bit = 1L << (threadId & 63);
+
+            long oldBitmap = map.get(key);
+            if ((oldBitmap & bit) == 0) {
+                return this;
+            }
+
+            LongLongHashMap newMap = new LongLongHashMap(map);
+            long newBitmap = oldBitmap & ~bit;
+
+            if (newBitmap != EMPTY_VALUE) {
+                newMap.put(key, newBitmap);
+            } else {
+                newMap.remove(key);
+            }
+
+            return new FallbackThreadSet(newMap);
+        }
     }
 }

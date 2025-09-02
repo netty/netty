@@ -16,6 +16,7 @@
 
 package io.netty.buffer;
 
+import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.ObjectUtil;
@@ -99,20 +100,36 @@ class SimpleLeakAwareByteBuf extends WrappedByteBuf {
 
     @Override
     public boolean release() {
-        if (super.release()) {
-            closeLeak();
-            return true;
+        try {
+            if (super.release()) {
+                closeLeak();
+                return true;
+            }
+            return false;
+        } catch (IllegalReferenceCountException irce) {
+            Throwable trace = leak.getCloseStackTraceIfAny();
+            if (trace != null) {
+                irce.addSuppressed(trace);
+            }
+            throw irce;
         }
-        return false;
     }
 
     @Override
     public boolean release(int decrement) {
-        if (super.release(decrement)) {
-            closeLeak();
-            return true;
+        try {
+            if (super.release(decrement)) {
+                closeLeak();
+                return true;
+            }
+            return false;
+        } catch (IllegalReferenceCountException irce) {
+            Throwable trace = leak.getCloseStackTraceIfAny();
+            if (trace != null) {
+                irce.addSuppressed(trace);
+            }
+            throw irce;
         }
-        return false;
     }
 
     private void closeLeak() {

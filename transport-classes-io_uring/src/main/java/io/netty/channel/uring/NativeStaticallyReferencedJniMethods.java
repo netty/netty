@@ -96,4 +96,5 @@ final class NativeStaticallyReferencedJniMethods {
     static native int ioUringBufferOffsetBid();
     static native int sizeofIoUringBuf();
     static native int tcpFastopenMode();
+    static native int maxSkbFrags();
 }

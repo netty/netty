@@ -855,6 +855,11 @@ class WrappedCompositeByteBuf extends CompositeByteBuf {
     }
 
     @Override
+    public final ByteBuf componentSlice(int cIndex) {
+        return wrapped.componentSlice(cIndex);
+    }
+
+    @Override
     public final ByteBuf componentAtOffset(int offset) {
         return wrapped.componentAtOffset(offset);
     }

@@ -170,7 +170,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
                         s.doNotDestroy + ", elemSize=" + s.elemSize + ", sizeIdx=" + sizeIdx;
                 long handle = s.allocate();
                 assert handle >= 0;
-                s.chunk.initBufWithSubpage(buf, null, handle, reqCapacity, cache);
+                s.chunk.initBufWithSubpage(buf, null, handle, reqCapacity, cache, false);
             }
         } finally {
             head.unlock();
@@ -215,6 +215,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         // Add a new chunk.
         PoolChunk<T> c = newChunk(sizeClass.pageSize, sizeClass.nPSizes, sizeClass.pageShifts, sizeClass.chunkSize);
+        PooledByteBufAllocator.onAllocateChunk(c, true);
         boolean success = c.allocate(buf, reqCapacity, sizeIdx, threadCache);
         assert success;
         qInit.add(c);
@@ -227,6 +228,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
     private void allocateHuge(PooledByteBuf<T> buf, int reqCapacity) {
         PoolChunk<T> chunk = newUnpooledChunk(reqCapacity);
+        PooledByteBufAllocator.onAllocateChunk(chunk, false);
         activeBytesHuge.add(chunk.chunkSize());
         buf.initUnpooled(chunk, reqCapacity);
         allocationsHuge.increment();
@@ -695,6 +697,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         @Override
         protected void destroyChunk(PoolChunk<byte[]> chunk) {
+            PooledByteBufAllocator.onDeallocateChunk(chunk, !chunk.unpooled);
             // Rely on GC. But keep one chunk for reuse.
             if (!chunk.unpooled && lastDestroyedChunk.get() == null) {
                 lastDestroyedChunk.set(chunk); // The check-and-set does not need to be atomic.
@@ -766,6 +769,7 @@ abstract class PoolArena<T> implements PoolArenaMetric {
 
         @Override
         protected void destroyChunk(PoolChunk<ByteBuffer> chunk) {
+            PooledByteBufAllocator.onDeallocateChunk(chunk, !chunk.unpooled);
             chunk.cleanable.clean();
         }
 

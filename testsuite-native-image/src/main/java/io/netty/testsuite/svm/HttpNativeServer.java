@@ -76,15 +76,14 @@ public final class HttpNativeServer {
 
     public static boolean testTransport(TransportType ioType, AllocatorType allocatorType) throws Exception {
         // Configure the server.
-        EventLoopGroup bossGroup = new MultiThreadIoEventLoopGroup(1, chooseFactory(ioType));
-        EventLoopGroup workerGroup = new MultiThreadIoEventLoopGroup(chooseFactory(ioType));
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(chooseFactory(ioType));
         // Control status.
         boolean serverStartSucess = false;
         try {
             CompletableFuture<Void> httpRequestFuture = new CompletableFuture<>();
             ServerBootstrap b = new ServerBootstrap();
             b.option(ChannelOption.SO_BACKLOG, 1024);
-            b.group(bossGroup, workerGroup)
+            b.group(group)
                     .channel(chooseServerChannelClass(ioType))
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childOption(ChannelOption.ALLOCATOR, chooseAllocator(allocatorType))
@@ -95,7 +94,7 @@ public final class HttpNativeServer {
 
             Channel httpClient = new HttpNativeClient(
                     ((InetSocketAddress) channel.localAddress()).getPort(),
-                    workerGroup, chooseChannelClass(ioType)
+                    group, chooseChannelClass(ioType)
             ).initClient();
             DefaultFullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello");
 
@@ -107,8 +106,7 @@ public final class HttpNativeServer {
             httpClient.close().sync();
             serverStartSucess = true;
         } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
         return serverStartSucess;
     }
@@ -121,10 +119,15 @@ public final class HttpNativeServer {
         if (ioType == TransportType.IO_URING) {
             IoUringIoHandlerConfig config = new IoUringIoHandlerConfig();
             if (IoUring.isRegisterBufferRingSupported()) {
-                config.setBufferRingConfig(new IoUringBufferRingConfig(
-                        (short) 0, (short) 16, 16 * 16,
-                        new IoUringFixedBufferRingAllocator(1024)
-                ));
+                config.setBufferRingConfig(
+                        IoUringBufferRingConfig.builder()
+                                .bufferGroupId((short) 0)
+                                .bufferRingSize((short) 16)
+                                .batchSize(16)
+                                .allocator(new IoUringFixedBufferRingAllocator(1024))
+                                .batchAllocation(false)
+                                .build()
+                );
             }
 
            return IoUringIoHandler.newFactory(config);

@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.3.Final-SNAPSHOT</version>
+    <version>4.2.5.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec-http3</artifactId>
@@ -37,12 +37,6 @@
   </properties>
 
   <profiles>
-    <profile>
-      <id>leak</id>
-      <properties>
-        <test.argLine>-Dio.netty.leakDetectionLevel=paranoid -Dio.netty.leakDetection.targetRecords=32</test.argLine>
-      </properties>
-    </profile>
     <profile>
       <id>x86_64</id>
       <activation>
@@ -188,6 +182,7 @@
       <groupId>com.google.code.findbugs</groupId>
       <artifactId>jsr305</artifactId>
       <version>3.0.2</version>
+      <optional>true</optional>
       <scope>provided</scope>
     </dependency>
   </dependencies>
@@ -235,7 +230,6 @@
       <plugin>
         <groupId>io.netty.incubator</groupId>
         <artifactId>netty-incubator-h3spec-maven-plugin</artifactId>
-        <version>0.0.7.Final</version>
         <configuration>
           <delay>1000</delay>
           <readyMessage>H3SPEC_SERVER_READY</readyMessage>

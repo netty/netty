@@ -40,7 +40,10 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -77,6 +80,12 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private static final AtomicReferenceFieldUpdater<SingleThreadEventExecutor, ThreadProperties> PROPERTIES_UPDATER =
             AtomicReferenceFieldUpdater.newUpdater(
                     SingleThreadEventExecutor.class, ThreadProperties.class, "threadProperties");
+    private static final AtomicLongFieldUpdater<SingleThreadEventExecutor> ACCUMULATED_ACTIVE_TIME_NANOS_UPDATER =
+            AtomicLongFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "accumulatedActiveTimeNanos");
+    private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> CONSECUTIVE_IDLE_CYCLES_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "consecutiveIdleCycles");
+    private static final AtomicIntegerFieldUpdater<SingleThreadEventExecutor> CONSECUTIVE_BUSY_CYCLES_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(SingleThreadEventExecutor.class, "consecutiveBusyCycles");
     private final Queue<Runnable> taskQueue;
 
     private volatile Thread thread;
@@ -93,6 +102,21 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final RejectedExecutionHandler rejectedExecutionHandler;
     private final boolean supportSuspension;
 
+    // A running total of nanoseconds this executor has spent in an "active" state.
+    private volatile long accumulatedActiveTimeNanos;
+    // Timestamp of the last recorded activity (tasks + I/O).
+    private volatile long lastActivityTimeNanos;
+    /**
+     * Tracks the number of consecutive monitor cycles this executor's
+     * utilization has been below the scale-down threshold.
+     */
+    private volatile int consecutiveIdleCycles;
+
+    /**
+     * Tracks the number of consecutive monitor cycles this executor's
+     * utilization has been above the scale-up threshold.
+     */
+    private volatile int consecutiveBusyCycles;
     private long lastExecutionTime;
 
     @SuppressWarnings({ "FieldMayBeFinal", "unused" })
@@ -201,6 +225,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         this.executor = ThreadExecutorMap.apply(executor, this);
         taskQueue = newTaskQueue(this.maxPendingTasks);
         rejectedExecutionHandler = ObjectUtil.checkNotNull(rejectedHandler, "rejectedHandler");
+        lastActivityTimeNanos = ticker().nanoTime();
     }
 
     protected SingleThreadEventExecutor(EventExecutorGroup parent, Executor executor,
@@ -492,6 +517,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * Poll all tasks from the task queue and run them via {@link Runnable#run()} method.  This method stops running
      * the tasks in the task queue and returns if it ran longer than {@code timeoutNanos}.
      */
+    @SuppressWarnings("NonAtomicOperationOnVolatileField")
     protected boolean runAllTasks(long timeoutNanos) {
         fetchFromScheduledTaskQueue(taskQueue);
         Runnable task = pollTask();
@@ -503,6 +529,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         final long deadline = timeoutNanos > 0 ? getCurrentTimeNanos() + timeoutNanos : 0;
         long runTasks = 0;
         long lastExecutionTime;
+
+        long workStartTime = ticker().nanoTime();
         for (;;) {
             safeExecute(task);
 
@@ -523,6 +551,10 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                 break;
             }
         }
+
+        long workEndTime = ticker().nanoTime();
+        accumulatedActiveTimeNanos += workEndTime - workStartTime;
+        lastActivityTimeNanos = workEndTime;
 
         afterRunningAllTasks();
         this.lastExecutionTime = lastExecutionTime;
@@ -568,7 +600,93 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
      * checks.
      */
     protected void updateLastExecutionTime() {
-        lastExecutionTime = getCurrentTimeNanos();
+        long now = getCurrentTimeNanos();
+        lastExecutionTime = now;
+        lastActivityTimeNanos = now;
+    }
+
+    /**
+     * Returns the number of registered channels for auto-scaling related decisions.
+     * This is intended to be used by {@link MultithreadEventExecutorGroup} for dynamic scaling.
+     *
+     * @return The number of registered channels, or {@code -1} if not applicable.
+     */
+    protected int getNumOfRegisteredChannels() {
+        return -1;
+    }
+
+    /**
+     * Adds the given duration to the total active time for the current measurement window.
+     * <p>
+     * <strong>Note:</strong> This method is not thread-safe and must only be called from the
+     * {@link #inEventLoop() event loop thread}.
+     *
+     * @param nanos The active time in nanoseconds to add.
+     */
+    @SuppressWarnings("NonAtomicOperationOnVolatileField")
+    protected void reportActiveIoTime(long nanos) {
+        assert inEventLoop();
+        if (nanos > 0) {
+            accumulatedActiveTimeNanos += nanos;
+            lastActivityTimeNanos = ticker().nanoTime();
+        }
+    }
+
+    /**
+     * Returns the accumulated active time since the last call and resets the counter.
+     */
+    protected long getAndResetAccumulatedActiveTimeNanos() {
+        return ACCUMULATED_ACTIVE_TIME_NANOS_UPDATER.getAndSet(this, 0);
+    }
+
+    /**
+     * Returns the timestamp of the last known activity (tasks + I/O).
+     */
+    protected long getLastActivityTimeNanos() {
+        return lastActivityTimeNanos;
+    }
+
+    /**
+     * Atomically increments the counter for consecutive monitor cycles where utilization was below the
+     * scale-down threshold. This is used by the auto-scaling monitor to track sustained idleness.
+     *
+     * @return The number of consecutive idle cycles before the increment.
+     */
+    protected int getAndIncrementIdleCycles() {
+        return CONSECUTIVE_IDLE_CYCLES_UPDATER.getAndIncrement(this);
+    }
+
+    /**
+     * Resets the counter for consecutive idle cycles to zero. This is typically called when the
+     * executor's utilization is no longer considered idle, breaking the streak.
+     */
+    protected void resetIdleCycles() {
+        CONSECUTIVE_IDLE_CYCLES_UPDATER.set(this, 0);
+    }
+
+    /**
+     * Atomically increments the counter for consecutive monitor cycles where utilization was above the
+     * scale-up threshold. This is used by the auto-scaling monitor to track a sustained high load.
+     *
+     * @return The number of consecutive busy cycles before the increment.
+     */
+    protected int getAndIncrementBusyCycles() {
+        return CONSECUTIVE_BUSY_CYCLES_UPDATER.getAndIncrement(this);
+    }
+
+    /**
+     * Resets the counter for consecutive busy cycles to zero. This is typically called when the
+     * executor's utilization is no longer considered busy, breaking the streak.
+     */
+    protected void resetBusyCycles() {
+        CONSECUTIVE_BUSY_CYCLES_UPDATER.set(this, 0);
+    }
+
+    /**
+     * Returns {@code true} if this {@link SingleThreadEventExecutor} supports suspension.
+     */
+    protected boolean isSuspensionSupported() {
+        return supportSuspension;
     }
 
     /**
@@ -1022,6 +1140,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
         int currentState = state;
         if (currentState == ST_NOT_STARTED || currentState == ST_SUSPENDED) {
             if (STATE_UPDATER.compareAndSet(this, currentState, ST_STARTED)) {
+                resetIdleCycles();
+                resetBusyCycles();
                 boolean success = false;
                 try {
                     doStartThread();

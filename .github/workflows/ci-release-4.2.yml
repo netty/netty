@@ -470,7 +470,7 @@ jobs:
         working-directory: ./prepare-release-workspace/
         run: |
           mkdir -p ~/codec-http3-local-staging
-          ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -pl all clean package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true -DskipH3Spec=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
+          ./mvnw -B --file pom.xml -Psonatype-oss-release,native-dependencies -pl codec-http3 clean package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true -DskipH3Spec=true -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -Dgpg.keyname=${{ secrets.GPG_KEYNAME }}
           cp -r ./codec-http3/target/central-staging/* ~/codec-http3-local-staging
 
       - name: Generate netty-all and deploy to local staging.

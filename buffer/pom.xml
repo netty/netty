@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.3.Final-SNAPSHOT</version>
+    <version>4.2.5.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-buffer</artifactId>
@@ -34,15 +34,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>org.graalvm.nativeimage</groupId>
-      <artifactId>svm</artifactId>
-      <version>${graalvm.version}</version>
-      <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
-      <scope>provided</scope>
-      <!-- Optional so maven-bundle-plugin does not make com.oracle.svm.core.annotate a required import -->
-      <optional>true</optional>
-    </dependency>
-    <dependency>
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-common</artifactId>
       <version>${project.version}</version>
@@ -52,6 +43,18 @@
       <artifactId>netty-jfr-stub</artifactId>
       <version>${project.version}</version>
       <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty-varhandle-stub</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.graalvm.nativeimage</groupId>
+      <artifactId>svm</artifactId>
+      <!-- Optional so maven-bundle-plugin does not make com.oracle.svm.core.annotate a required import -->
+      <optional>true</optional>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
@@ -121,6 +124,28 @@
 
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>generate-manifest</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+            <configuration>
+              <instructions>
+                <Import-Package>
+                  <!-- JFR is available only in JDK9+ and is optional -->
+                  jdk.jfr;resolution:=optional,
+                  *
+                </Import-Package>
+              </instructions>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
       <plugin>
         <groupId>io.github.dmlloyd.module-info</groupId>
         <artifactId>module-info</artifactId>

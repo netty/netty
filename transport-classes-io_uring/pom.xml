@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.3.Final-SNAPSHOT</version>
+    <version>4.2.5.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-classes-io_uring</artifactId>
 
@@ -60,7 +60,6 @@
     <plugins>
       <plugin>
         <artifactId>maven-compiler-plugin</artifactId>
-        <version>3.13.0</version>
         <!--
           We need to compile everything except the IoUring class with Java9+
           The reason for this is that we want still be able to use IoUring.ensureAvaibility() on Java8.

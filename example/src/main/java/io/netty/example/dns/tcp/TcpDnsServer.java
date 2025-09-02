@@ -60,7 +60,6 @@ public final class TcpDnsServer {
 
     public static void main(String[] args) throws Exception {
         ServerBootstrap bootstrap = new ServerBootstrap().group(
-                new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()),
                 new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory()))
                 .channel(NioServerSocketChannel.class)
                 .handler(new LoggingHandler(LogLevel.INFO))

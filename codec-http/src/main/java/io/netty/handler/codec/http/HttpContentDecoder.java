@@ -91,7 +91,7 @@ public abstract class HttpContentDecoder extends MessageToMessageDecoder<HttpObj
                 } else {
                     String transferEncoding = headers.get(HttpHeaderNames.TRANSFER_ENCODING);
                     if (transferEncoding != null) {
-                        int idx = transferEncoding.indexOf(",");
+                        int idx = transferEncoding.indexOf(',');
                         if (idx != -1) {
                             contentEncoding = transferEncoding.substring(0, idx).trim();
                         } else {

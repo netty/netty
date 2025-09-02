@@ -33,6 +33,8 @@ import io.netty.handler.codec.http.HttpServerUpgradeHandler.UpgradeCodecFactory;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -192,8 +194,9 @@ public class HttpServerUpgradeHandlerTest {
         assertFalse(channel.finishAndReleaseAll());
     }
 
-    @Test
-    public void upgradeFail() {
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    public void upgradeFail(boolean removeAfterFirst) {
         final HttpServerCodec httpServerCodec = new HttpServerCodec();
         final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
             @Override
@@ -202,7 +205,9 @@ public class HttpServerUpgradeHandlerTest {
             }
         };
 
-        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory);
+        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory, 0,
+                DefaultHttpHeadersFactory.headersFactory(), DefaultHttpHeadersFactory.trailersFactory(),
+                removeAfterFirst);
 
         EmbeddedChannel channel = new EmbeddedChannel(httpServerCodec, upgradeHandler);
 
@@ -214,7 +219,11 @@ public class HttpServerUpgradeHandlerTest {
 
         assertTrue(channel.writeInbound(upgrade));
         assertNotNull(channel.pipeline().get(HttpServerCodec.class));
-        assertNotNull(channel.pipeline().get(HttpServerUpgradeHandler.class)); // Should not be removed.
+        if (removeAfterFirst) {
+            assertNull(channel.pipeline().get(HttpServerUpgradeHandler.class)); // Should be removed.
+        } else {
+            assertNotNull(channel.pipeline().get(HttpServerUpgradeHandler.class)); // Should not be removed.
+        }
         assertNull(channel.pipeline().get("marker"));
 
         HttpRequest req = channel.readInbound();
@@ -256,6 +265,29 @@ public class HttpServerUpgradeHandlerTest {
 
         assertTrue(channel.writeInbound(upgrade));
         channel.checkException();
+        assertTrue(channel.finishAndReleaseAll());
+    }
+
+    @Test
+    public void upgradePrematureClose() throws Exception {
+        final HttpServerCodec httpServerCodec = new HttpServerCodec();
+        final UpgradeCodecFactory factory = new UpgradeCodecFactory() {
+            @Override
+            public UpgradeCodec newUpgradeCodec(CharSequence protocol) {
+                return new TestUpgradeCodec();
+            }
+        };
+
+        HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory);
+
+        EmbeddedChannel channel = new EmbeddedChannel(httpServerCodec, upgradeHandler);
+
+        channel.writeInbound(Unpooled.copiedBuffer("POST / HTTP/1.1\n" +
+                "Upgrade:\n" +
+                "Expect:\n" +
+                "Content-Length: 8\n" +
+                "\n" +
+                "GET / HTTP/1.1\n", CharsetUtil.US_ASCII));
         assertTrue(channel.finishAndReleaseAll());
     }
 }

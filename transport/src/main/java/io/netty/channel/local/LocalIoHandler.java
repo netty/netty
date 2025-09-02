@@ -62,6 +62,10 @@ public final class LocalIoHandler implements IoHandler {
             // Just block until there is a task ready to process or wakeup(...) is called.
             LockSupport.parkNanos(this, context.delayNanos(System.nanoTime()));
         }
+
+        if (context.shouldReportActiveIoTime()) {
+            context.reportActiveIoTime(0);
+        }
         return 0;
     }
 

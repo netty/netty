@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.3.Final-SNAPSHOT</version>
+  <version>4.2.5.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -578,7 +578,7 @@
       <id>boringssl-snapshot</id>
       <properties>
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
-        <tcnative.version>2.0.73.Final-SNAPSHOT</tcnative.version>
+        <tcnative.version>2.0.74.Final-SNAPSHOT</tcnative.version>
         <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
       </properties>
 
@@ -678,8 +678,8 @@
       <properties>
         <!-- Our Javadoc has poor enough quality to fail the build thanks to JDK8 javadoc which got more strict. -->
         <maven.javadoc.failOnError>false</maven.javadoc.failOnError>
-        <argLine.java9/>
-        <argLine.java9.extras/>
+        <argLine.java9 />
+        <argLine.java9.extras />
       </properties>
     </profile>
   </profiles>
@@ -716,7 +716,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.72.Final</tcnative.version>
+    <tcnative.version>2.0.73.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -743,6 +743,8 @@
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <graalvm.version>19.3.6</graalvm.version>
     <brotli4j.version>1.16.0</brotli4j.version>
+    <aalto.version>1.3.3</aalto.version>
+    <rxtx.version>2.1.7</rxtx.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
     <skipShadingTestsuite>false</skipShadingTestsuite>
@@ -800,6 +802,7 @@
     <module>testsuite-autobahn</module>
     <module>testsuite-http2</module>
     <module>testsuite-jpms</module>
+    <module>testsuite-karaf</module>
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
     <module>testsuite-native</module>
@@ -809,6 +812,7 @@
     <module>transport-blockhound-tests</module>
     <module>microbench</module>
     <module>jfr-stub</module>
+    <module>varhandle-stub</module>
     <module>bom</module>
   </modules>
 
@@ -952,7 +956,7 @@
       <dependency>
         <groupId>com.fasterxml</groupId>
         <artifactId>aalto-xml</artifactId>
-        <version>1.3.3</version>
+        <version>${aalto.version}</version>
       </dependency>
 
       <dependency>
@@ -1058,7 +1062,7 @@
       <dependency>
         <groupId>org.rxtx</groupId>
         <artifactId>rxtx</artifactId>
-        <version>2.1.7</version>
+        <version>${rxtx.version}</version>
       </dependency>
 
       <dependency>
@@ -1111,13 +1115,6 @@
           </exclusion>
         </exclusions>
         <optional>true</optional>
-      </dependency>
-
-      <!-- Metrics providers -->
-      <dependency>
-        <groupId>com.yammer.metrics</groupId>
-        <artifactId>metrics-core</artifactId>
-        <version>2.2.0</version>
       </dependency>
 
       <!-- Common test dependencies -->
@@ -1251,6 +1248,15 @@
         <artifactId>blockhound</artifactId>
         <version>1.0.13.RELEASE</version>
       </dependency>
+
+      <dependency>
+        <groupId>org.graalvm.nativeimage</groupId>
+        <artifactId>svm</artifactId>
+        <version>${graalvm.version}</version>
+        <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
+        <scope>provided</scope>
+      </dependency>
+
     </dependencies>
   </dependencyManagement>
 
@@ -1341,12 +1347,33 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method java.util.Queue<![CDATA[<java.lang.Runnable>]]> io.netty.channel.nio.NioEventLoop::newTaskQueue0(int)</old>
+                  <new>method java.util.Queue<![CDATA[<java.lang.Runnable>]]> io.netty.channel.SingleThreadIoEventLoop::newTaskQueue0(int) @ io.netty.channel.nio.NioEventLoop</new>
+                  <justification>Improved default performance behavior</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method java.util.Queue<![CDATA[<java.lang.Runnable>]]> io.netty.channel.epoll.EpollEventLoop::newTaskQueue0(int)</old>
+                  <new>method java.util.Queue<![CDATA[<java.lang.Runnable>]]> io.netty.channel.SingleThreadIoEventLoop::newTaskQueue0(int) @ io.netty.channel.epoll.EpollEventLoop</new>
+                  <justification>Improved default performance behavior</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.field.constantValueChanged</code>
                   <classQualifiedName>io.netty.handler.codec.http2.Http2CodecUtil</classQualifiedName>
                   <field>NUM_STANDARD_SETTINGS</field>
                   <oldValue>6</oldValue>
                   <newValue>7</newValue>
                   <justification>SETTINGS_ENABLE_CONNECT_PROTOCOL was added to the standard HTTP/2 settings.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method void io.netty.handler.codec.http2.Http2ServerUpgradeCodec::<![CDATA[<init>]]>(java.lang.String, io.netty.handler.codec.http2.Http2ConnectionHandler, io.netty.channel.ChannelHandler[])</old>
+                  <new>method void io.netty.handler.codec.http2.Http2ServerUpgradeCodec::<![CDATA[<init>]]>(java.lang.String, io.netty.handler.codec.http2.Http2ConnectionHandler, io.netty.channel.ChannelHandler[])</new>
+                  <justification>Be able to directly construct class</justification>
                 </item>
                 <item>
                   <ignore>true</ignore>
@@ -1540,25 +1567,11 @@
             <nativeimage.handlerMetadataArtifactId>${project.artifactId}</nativeimage.handlerMetadataArtifactId>
           </systemPropertyVariables>
           <argLine>${argLine.common} ${argLine.printGC} ${argLine.leak} ${argLine.coverage} ${argLine.noUnsafe} ${argLine.jni} ${argLine.java9} ${argLine.javaProperties} -Dio.netty.bootstrap.extensions=serviceload</argLine>
-          <properties>
-            <property>
-              <name>listener</name>
-              <value>io.netty.build.junit.TimedOutTestsListener</value>
-            </property>
-          </properties>
           <skipTests>${skipTests}</skipTests>
           <jvm>${testJvm}</jvm>
            <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
           <trimStackTrace>false</trimStackTrace>
         </configuration>
-        <dependencies>
-          <!-- Needed for TimedOutTestsListener -->
-          <dependency>
-            <groupId>${project.groupId}</groupId>
-            <artifactId>netty-build-common</artifactId>
-            <version>${netty.build.version}</version>
-          </dependency>
-        </dependencies>
       </plugin>
       <!-- always produce osgi bundles -->
       <plugin>
@@ -1825,6 +1838,56 @@
 
     <pluginManagement>
       <plugins>
+        <plugin>
+          <groupId>com.github.veithen.alta</groupId>
+          <artifactId>alta-maven-plugin</artifactId>
+          <version>0.6.2</version>
+        </plugin>
+        <plugin>
+          <groupId>com.github.madgnome</groupId>
+          <artifactId>h2spec-maven-plugin</artifactId>
+          <version>0.6</version>
+        </plugin>
+        <plugin>
+          <groupId>me.normanmaurer.maven.autobahntestsuite</groupId>
+          <artifactId>autobahntestsuite-maven-plugin</artifactId>
+          <version>0.1.5</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.gmaven</groupId>
+          <artifactId>groovy-maven-plugin</artifactId>
+          <version>2.1.1</version>
+          <dependencies>
+            <dependency>
+              <groupId>org.codehaus.groovy</groupId>
+              <artifactId>groovy</artifactId>
+              <version>3.0.9</version>
+            </dependency>
+            <dependency>
+              <groupId>ant</groupId>
+              <artifactId>ant-optional</artifactId>
+              <version>1.5.3-1</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <plugin>
+          <groupId>com.soebes.maven.plugins</groupId>
+          <artifactId>iterator-maven-plugin</artifactId>
+          <!-- Don't use 0.5.1, it contains a change that merges all properties,
+            and therefore doesn't re-evaluates "nested" properties (e.g. cargoTarget, which uses ${quicheTarget}).
+            Keep this version or provide a fix to disable merging of properties in iterator-maven-plugin -->
+          <version>0.5.0</version>
+        </plugin>
+        <plugin>
+          <groupId>io.netty.incubator</groupId>
+          <artifactId>netty-incubator-h3spec-maven-plugin</artifactId>
+          <version>0.0.7.Final</version>
+        </plugin>
+        <plugin>
+          <groupId>org.basepom.maven</groupId>
+          <artifactId>duplicate-finder-maven-plugin</artifactId>
+          <version>1.3.0</version>
+        </plugin>
         <!-- keep surefire and failsafe in sync -->
         <plugin>
           <artifactId>maven-surefire-plugin</artifactId>

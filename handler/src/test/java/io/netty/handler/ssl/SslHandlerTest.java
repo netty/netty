@@ -488,7 +488,7 @@ public class SslHandlerTest {
             SelfSignedCertificate ssc = CachedSelfSignedCertificate.getCachedCertificate();
             final Promise<Void> serverPromise = group.next().newPromise();
             ServerBootstrap serverBootstrap = new ServerBootstrap()
-                    .group(group, group)
+                    .group(group)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(newHandler(SslContextBuilder.forServer(ssc.certificate(), ssc.privateKey()).build(),
                             serverPromise));
@@ -1581,7 +1581,8 @@ public class SslHandlerTest {
     public void testHandshakeFailureCipherMissmatchTLSv13OpenSsl() throws Exception {
         OpenSsl.ensureAvailability();
         assumeTrue(SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
-        assumeFalse(OpenSsl.isBoringSSL(), "BoringSSL does not support setting ciphers for TLSv1.3 explicit");
+        assumeFalse(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC(),
+                "Provider does not support setting ciphers for TLSv1.3 explicitly");
         testHandshakeFailureCipherMissmatch(SslProvider.OPENSSL, true);
     }
 

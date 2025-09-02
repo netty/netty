@@ -56,11 +56,10 @@ public final class Http2StaticFileServer {
                         ApplicationProtocolNames.HTTP_1_1))
                 .build();
 
-        EventLoopGroup bossGroup = new MultiThreadIoEventLoopGroup(2, NioIoHandler.newFactory());
-        EventLoopGroup workerGroup = new MultiThreadIoEventLoopGroup(4, NioIoHandler.newFactory());
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         try {
             ServerBootstrap b = new ServerBootstrap();
-            b.group(bossGroup, workerGroup)
+            b.group(group)
                     .channel(NioServerSocketChannel.class)
                     .handler(new LoggingHandler(LogLevel.INFO))
                     .childHandler(new Http2StaticFileServerInitializer(sslCtx));
@@ -71,8 +70,7 @@ public final class Http2StaticFileServer {
 
             ch.closeFuture().sync();
         } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 }

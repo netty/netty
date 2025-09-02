@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.3.Final-SNAPSHOT</version>
+    <version>4.2.5.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec-native-quic</artifactId>
@@ -60,7 +60,7 @@
     <quicheHomeIncludeDir>${quicheHomeDir}/quiche/include</quicheHomeIncludeDir>
     <quicheRepository>https://github.com/cloudflare/quiche</quicheRepository>
     <quicheBranch>master</quicheBranch>
-    <quicheCommitSha>70d6d3e233568e906e66179a56c93cf9b0616899</quicheCommitSha>
+    <quicheCommitSha>5ea8d8e3569c1ed34b895e2211e62791e77c29ab</quicheCommitSha>
     <generatedSourcesDir>${project.build.directory}/generated-sources</generatedSourcesDir>
     <templateDir>${project.build.directory}/template</templateDir>
     <cargoTarget />
@@ -319,10 +319,6 @@
           <plugin>
             <groupId>com.soebes.maven.plugins</groupId>
             <artifactId>iterator-maven-plugin</artifactId>
-            <!-- Don't use 0.5.1, it contains a change that merges all properties, 
-              and therefore doesn't re-evaluates "nested" properties (e.g. cargoTarget, which uses ${quicheTarget}).
-              Keep this version or provide a fix to disable merging of properties in iterator-maven-plugin -->
-            <version>0.5.0</version>
             <executions>
               <execution>
                 <phase>package</phase>
@@ -616,13 +612,6 @@
   </profiles>
 
   <build>
-    <extensions>
-      <extension>
-        <groupId>kr.motd.maven</groupId>
-        <artifactId>os-maven-plugin</artifactId>
-        <version>1.7.0</version>
-      </extension>
-    </extensions>
     <plugins>
       <!-- Also include c files in source jar -->
       <plugin>
@@ -1162,7 +1151,6 @@
           </execution>
         </executions>
       </plugin>
-
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
@@ -1181,6 +1169,18 @@
                 <index>true</index>
                 <manifestFile>${project.build.directory}/manifests/MANIFEST.MF</manifestFile>
               </archive>
+            </configuration>
+          </execution>
+          <!-- We must generate a -javadoc JAR file to publish on Maven Central -->
+          <execution>
+            <id>empty-javadoc-jar</id>
+            <phase>package</phase>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <configuration>
+              <classifier>javadoc</classifier>
+              <classesDirectory>${basedir}/javadoc</classesDirectory>
             </configuration>
           </execution>
           <!-- Generate the JAR that contains the native library in it. -->

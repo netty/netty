@@ -161,8 +161,7 @@ public final class HttpHelloWorldServer {
                 .buildSelfSigned();
 
         // Configure the server.
-        EventLoopGroup bossGroup = new MultiThreadIoEventLoopGroup(1, ioHandlerFactory);
-        EventLoopGroup workerGroup = new MultiThreadIoEventLoopGroup(ioHandlerFactory);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(ioHandlerFactory);
         try {
             Channel ch;
             if (http3) {
@@ -180,7 +179,7 @@ public final class HttpHelloWorldServer {
                         .build();
 
                 Bootstrap bs = new Bootstrap();
-                ch = bs.group(workerGroup)
+                ch = bs.group(group)
                         .channel(NioDatagramChannel.class)
                         .handler(codec)
                         .bind(new InetSocketAddress(port)).sync().channel();
@@ -200,7 +199,7 @@ public final class HttpHelloWorldServer {
                 }
                 ServerBootstrap b = new ServerBootstrap();
                 b.option(ChannelOption.SO_BACKLOG, 1024);
-                b.group(bossGroup, workerGroup)
+                b.group(group)
                         .channel(serverSocketChannelFactory)
                         .handler(new LoggingHandler(LogLevel.INFO))
                         .childHandler(new HttpHelloWorldServerInitializer(sslContext));
@@ -213,8 +212,7 @@ public final class HttpHelloWorldServer {
 
             ch.closeFuture().sync();
         } finally {
-            bossGroup.shutdownGracefully();
-            workerGroup.shutdownGracefully();
+            group.shutdownGracefully();
         }
     }
 

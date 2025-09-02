@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.3.Final-SNAPSHOT</version>
+    <version>4.2.5.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-native-io_uring</artifactId>
 
@@ -216,12 +216,6 @@
                     <logback.configurationFile>src/test/resources/logback-test.xml</logback.configurationFile>
                     <logLevel>debug</logLevel>
                   </systemPropertyVariables>
-                  <properties>
-                    <property>
-                      <name>listener</name>
-                      <value>io.netty.build.junit.TimedOutTestsListener</value>
-                    </property>
-                  </properties>
                   <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
                   <trimStackTrace>false</trimStackTrace>
                   <argLine>${test.argLine}</argLine>
@@ -249,12 +243,6 @@
                     <logback.configurationFile>src/test/resources/logback-test.xml</logback.configurationFile>
                     <logLevel>debug</logLevel>
                   </systemPropertyVariables>
-                  <properties>
-                    <property>
-                      <name>listener</name>
-                      <value>io.netty.build.junit.TimedOutTestsListener</value>
-                    </property>
-                  </properties>
                   <!-- Ensure the whole stacktrace is preserved when an exception is thrown. See https://issues.apache.org/jira/browse/SUREFIRE-1457 -->
                   <trimStackTrace>false</trimStackTrace>
                   <argLine>${test.argLine}</argLine>

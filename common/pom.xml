@@ -21,7 +21,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.3.Final-SNAPSHOT</version>
+    <version>4.2.5.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-common</artifactId>
@@ -41,16 +41,14 @@
     <dependency>
       <groupId>org.graalvm.nativeimage</groupId>
       <artifactId>svm</artifactId>
-      <version>${graalvm.version}</version>
-      <!-- Provided scope as it is only needed for compiling the SVM substitution classes -->
-      <scope>provided</scope>
+      <!-- Optional so maven-bundle-plugin does not make com.oracle.svm.core.annotate a required import -->
+      <optional>true</optional>
     </dependency>
 
     <!-- sun.misc.Unsafe stubs -->
     <dependency>
       <groupId>org.jboss</groupId>
       <artifactId>jdk-misc</artifactId>
-      <scope>provided</scope>
     </dependency>
 
     <dependency>
@@ -102,6 +100,12 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-jfr-stub</artifactId>
+      <version>${project.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-varhandle-stub</artifactId>
       <version>${project.version}</version>
       <scope>provided</scope>
     </dependency>
@@ -205,19 +209,6 @@
       <plugin>
         <groupId>org.codehaus.gmaven</groupId>
         <artifactId>groovy-maven-plugin</artifactId>
-        <version>2.1.1</version>
-        <dependencies>
-          <dependency>
-            <groupId>org.codehaus.groovy</groupId>
-            <artifactId>groovy</artifactId>
-            <version>3.0.9</version>
-          </dependency>
-          <dependency>
-            <groupId>ant</groupId>
-            <artifactId>ant-optional</artifactId>
-            <version>1.5.3-1</version>
-          </dependency>
-        </dependencies>
         <executions>
           <execution>
             <id>generate-collections</id>
@@ -246,8 +237,16 @@
                 <!-- NativeLibraryLoader can be used to manually load native libraries from other bundles that this bundle does not depend on,
                 hence use DynamicImport-Package instruction to ensure the loading is successful -->
                 <DynamicImport-Package>*</DynamicImport-Package>
-                <!-- JCTools is shaded -->
-                <Import-Package>!org.jctools.*;sun.misc;resolution:=optional;*</Import-Package>
+                <Import-Package>
+                  <!-- JCTools is shaded -->
+                  !org.jctools.*,
+                  <!-- JFR is available only in JDK9+ and is optional -->
+                  jdk.jfr;resolution:=optional,
+                  <!-- JVM vendor packages are optional -->
+                  sun.misc;resolution:=optional,
+                  sun.nio.ch;resolution:=optional,
+                  *
+                </Import-Package>
               </instructions>
             </configuration>
           </execution>

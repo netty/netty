@@ -84,7 +84,7 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     private final Future<?> terminationFuture;
 
     private GlobalEventExecutor() {
-        scheduledTaskQueue().add(quietPeriodTask);
+        scheduleFromEventLoop(quietPeriodTask);
         threadFactory = ThreadExecutorMap.apply(new DefaultThreadFactory(
                 DefaultThreadFactory.toPoolName(getClass()), false, Thread.NORM_PRIORITY, null), this);
 

@@ -15,7 +15,6 @@
  */
 package io.netty.buffer;
 
-import io.netty.buffer.AdaptivePoolingAllocator.MagazineCaching;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -54,10 +53,8 @@ public final class AdaptiveByteBufAllocator extends AbstractByteBufAllocator
 
     public AdaptiveByteBufAllocator(boolean preferDirect, boolean useCacheForNonEventLoopThreads) {
         super(preferDirect);
-        MagazineCaching magazineCaching = useCacheForNonEventLoopThreads?
-                MagazineCaching.FastThreadLocalThreads : MagazineCaching.EventLoopThreads;
-        direct = new AdaptivePoolingAllocator(new DirectChunkAllocator(this), magazineCaching);
-        heap = new AdaptivePoolingAllocator(new HeapChunkAllocator(this), magazineCaching);
+        direct = new AdaptivePoolingAllocator(new DirectChunkAllocator(this), useCacheForNonEventLoopThreads);
+        heap = new AdaptivePoolingAllocator(new HeapChunkAllocator(this), useCacheForNonEventLoopThreads);
     }
 
     @Override
