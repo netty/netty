@@ -30,7 +30,6 @@
 
   <properties>
     <revapi.skip>true</revapi.skip>
-    <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
 </project>
 
