@@ -7,6 +7,13 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.netty.handler.codec.http2.DelegatingDecompressorFrameListener$Http2Decompressor$1",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http2.DelegatingDecompressorFrameListener$Http2Decompressor$1"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.netty.handler.codec.http2.Http2ChannelDuplexHandler",
     "condition": {
       "typeReachable": "io.netty.handler.codec.http2.Http2ChannelDuplexHandler"
