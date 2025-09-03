@@ -49,6 +49,13 @@
     "queryAllPublicMethods": true
   },
   {
+    "name": "io.netty.handler.codec.http.HttpContentDecoder$ByteBufForwarder",
+    "condition": {
+      "typeReachable": "io.netty.handler.codec.http.HttpContentDecoder$ByteBufForwarder"
+    },
+    "queryAllPublicMethods": true
+  },
+  {
     "name": "io.netty.handler.codec.http.HttpContentDecompressor",
     "condition": {
       "typeReachable": "io.netty.handler.codec.http.HttpContentDecompressor"
