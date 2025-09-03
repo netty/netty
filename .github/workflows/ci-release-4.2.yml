@@ -486,6 +486,11 @@ jobs:
         working-directory: ./prepare-release-workspace/
         run: bash ./.github/scripts/local_staging_merge_release.sh ~/local-staging ~/windows-x86_64-local-staging ~/macos-aarch64-java11-local-staging ~/macos-x86_64-java11-local-staging ~/linux-aarch64-local-staging ~/linux-riscv64-local-staging ~/linux-x86_64-java11-local-staging ~/codec-http3-local-staging ~/all-local-staging
 
+      # This is a workaround and should be removed.
+      - name: Remove netty-testsuite-karaf from bundle
+        working-directory: ./prepare-release-workspace/
+        run: rm -rf ~/local-staging/io/netty/netty-testsuite-karaf
+
       - name: Create bundle
         working-directory: ./prepare-release-workspace/
         run: bash ./.github/scripts/bundle_create.sh ~/central-bundle.zip ~/local-staging/
