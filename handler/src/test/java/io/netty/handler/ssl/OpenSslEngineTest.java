@@ -28,10 +28,7 @@ import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
-import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -1648,25 +1645,5 @@ public class OpenSslEngineTest extends SSLEngineTest {
             cleanupClientSslEngine(client);
             cleanupServerSslEngine(server);
         }
-    }
-
-    private static boolean isWrappingTrustManagerSupported() {
-        return OpenSslX509TrustManagerWrapper.isWrappingSupported();
-    }
-
-    @MethodSource("newTestParams")
-    @ParameterizedTest
-    @EnabledIf("isWrappingTrustManagerSupported")
-    @Override
-    public void testUsingX509TrustManagerVerifiesHostname(SSLEngineTestParam param) throws Exception {
-        super.testUsingX509TrustManagerVerifiesHostname(param);
-    }
-
-    @MethodSource("newTestParams")
-    @ParameterizedTest
-    @EnabledIf("isWrappingTrustManagerSupported")
-    @Override
-    public void testUsingX509TrustManagerVerifiesSNIHostname(SSLEngineTestParam param) throws Exception {
-        super.testUsingX509TrustManagerVerifiesSNIHostname(param);
     }
 }

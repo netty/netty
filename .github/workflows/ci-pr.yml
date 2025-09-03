@@ -189,9 +189,9 @@ jobs:
           - setup: linux-x86_64-java21
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.21.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.21.yaml run build-with-oio-testsuite"
-          - setup: linux-x86_64-java24
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.24.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.24.yaml run build"
+          - setup: linux-x86_64-java23
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.23.yaml build"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.23.yaml run build"
           - setup: linux-x86_64-java11-boringssl
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-6.111.yaml run build-leak-boringssl-static"

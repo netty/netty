@@ -197,28 +197,6 @@
       </properties>
     </profile>
     <profile>
-      <id>java24</id>
-      <activation>
-        <jdk>24</jdk>
-      </activation>
-      <properties>
-        <argLine.java9.extras />
-        <argLine.java9>${argLine.java9.extras}</argLine.java9>
-        <forbiddenapis.skip>true</forbiddenapis.skip>
-        <!-- 1.4.x does not work in Java10+ -->
-        <jboss.marshalling.version>2.0.5.Final</jboss.marshalling.version>
-        <!-- We need to use 1.8 as otherwise default methods are not picked up and so result in compile errors for
-             our EventExecutorGroup implementations
-        -->
-        <maven.compiler.source>1.8</maven.compiler.source>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <maven.compiler.release>8</maven.compiler.release>
-        <!-- pax-exam does not work on latest Java12 EA 22 build -->
-        <skipOsgiTestsuite>true</skipOsgiTestsuite>
-        <revapi.skip>true</revapi.skip>
-      </properties>
-    </profile>
-    <profile>
       <id>java23</id>
       <activation>
         <jdk>23</jdk>
@@ -1091,14 +1069,6 @@
         <groupId>org.jetbrains</groupId>
         <artifactId>annotations-java5</artifactId>
         <version>23.0.0</version>
-        <scope>provided</scope>
-      </dependency>
-
-      <!-- sun.misc.Unsafe stubs -->
-      <dependency>
-        <groupId>org.jboss</groupId>
-        <artifactId>jdk-misc</artifactId>
-        <version>3.Final</version>
         <scope>provided</scope>
       </dependency>
 

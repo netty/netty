@@ -45,13 +45,6 @@
       <!-- Optional so maven-bundle-plugin does not make com.oracle.svm.core.annotate a required import -->
       <optional>true</optional>
     </dependency>
-
-    <!-- sun.misc.Unsafe stubs -->
-    <dependency>
-      <groupId>org.jboss</groupId>
-      <artifactId>jdk-misc</artifactId>
-    </dependency>
-
     <dependency>
       <groupId>org.jctools</groupId>
       <artifactId>jctools-core</artifactId>
