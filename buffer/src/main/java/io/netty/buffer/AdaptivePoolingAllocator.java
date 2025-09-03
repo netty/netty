@@ -122,7 +122,7 @@ final class AdaptivePoolingAllocator {
             "io.netty.allocator.chunkReuseQueueCapacity", NettyRuntime.availableProcessors() * 2));
 
     private static final int LOCAL_CHUNK_REUSE_QUEUE_CAPACITY = SystemPropertyUtil.getInt(
-            "io.netty.allocator.localChunkReuseQueueCapacity", 16);
+            "io.netty.allocator.localChunkReuseQueueCapacity", 8);
 
     /**
      * The capacity if the magazine local buffer queue. This queue just pools the outer ByteBuf instance and not
@@ -405,9 +405,7 @@ final class AdaptivePoolingAllocator {
                 magazine = null;
                 AbstractMagazine[] mags = new AbstractMagazine[INITIAL_MAGAZINES];
                 for (int i = 0; i < mags.length; i++) {
-                    Queue<AdaptiveByteBuf> externalBuffers =
-                            PlatformDependent.newFixedMpmcQueue(MAGAZINE_BUFFER_QUEUE_CAPACITY);
-                    mags[i] = new SharedMagazine(this, chunkControllerFactory.create(this), externalBuffers);
+                    mags[i] = new SharedMagazine(this, chunkControllerFactory.create(this));
                 }
                 magazines = mags;
             }
@@ -470,10 +468,7 @@ final class AdaptivePoolingAllocator {
                     AbstractMagazine firstMagazine = mags[0];
                     AbstractMagazine[] expanded = new AbstractMagazine[mags.length * 2];
                     for (int i = 0, l = expanded.length; i < l; i++) {
-                        Queue<AdaptiveByteBuf> externalBuffers =
-                                PlatformDependent.newFixedMpmcQueue(MAGAZINE_BUFFER_QUEUE_CAPACITY);
-                        AbstractMagazine m = new SharedMagazine(this, chunkControllerFactory.create(this),
-                                                                externalBuffers);
+                        AbstractMagazine m = new SharedMagazine(this, chunkControllerFactory.create(this));
                         firstMagazine.initializeSharedStateIn(m);
                         expanded[i] = m;
                     }
@@ -856,8 +851,8 @@ final class AdaptivePoolingAllocator {
             this.chunkController = chunkController;
             this.externalBuffers = externalBuffers;
             this.ownerThread = ownerThread;
-            this.isShared = ownerThread == null;
-            this.localChunkCache = new ArrayList<>(LOCAL_CHUNK_REUSE_QUEUE_CAPACITY);
+            isShared = ownerThread == null;
+            localChunkCache = new ArrayList<>(LOCAL_CHUNK_REUSE_QUEUE_CAPACITY);
         }
 
         /**
@@ -968,8 +963,8 @@ final class AdaptivePoolingAllocator {
         private volatile long usedMemory;
         private final StampedLock allocationLock = new StampedLock();
 
-        SharedMagazine(MagazineGroup group, ChunkController chunkController, Queue<AdaptiveByteBuf> externalBuffers) {
-            super(group, chunkController, externalBuffers, null);
+        SharedMagazine(MagazineGroup group, ChunkController chunkController) {
+            super(group, chunkController, PlatformDependent.newFixedMpmcQueue(MAGAZINE_BUFFER_QUEUE_CAPACITY), null);
         }
 
         @Override
@@ -1003,43 +998,6 @@ final class AdaptivePoolingAllocator {
                 }
             }
             return allocateWithoutLock(size, maxCapacity, buf);
-        }
-
-        private boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
-            int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
-            Chunk curr = current;
-            if (curr != null) {
-                // We have a Chunk that has some space left.
-                int remainingCapacity = curr.remainingCapacity();
-                if (remainingCapacity > startingCapacity) {
-                    curr.readInitInto(buf, size, startingCapacity, maxCapacity);
-                    // We still have some bytes left that we can use for the next allocation, just early return.
-                    return true;
-                }
-
-                // At this point we know that this will be the last time current will be used, so directly set it to
-                // null and release it once we are done.
-                current = null;
-                if (remainingCapacity >= size) {
-                    try {
-                        curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
-                        return true;
-                    } finally {
-                        curr.releaseFromMagazine();
-                    }
-                }
-
-                // Check if we either retain the chunk in the nextInLine cache or releasing it.
-                if (remainingCapacity < RETIRE_CAPACITY) {
-                    curr.releaseFromMagazine();
-                } else {
-                    // See if it makes sense to transfer the Chunk to the nextInLine cache for later usage.
-                    // This method will release curr if this is not the case
-                    transferToNextInLineOrRelease(curr);
-                }
-            }
-
-            return allocateAndRefillCurrentChunk(size, maxCapacity, buf, startingCapacity);
         }
 
         private boolean allocateWithoutLock(int size, int maxCapacity, AdaptiveByteBuf buf) {
@@ -1077,6 +1035,43 @@ final class AdaptivePoolingAllocator {
                 }
             }
             return allocated;
+        }
+
+        private boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
+            int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
+            Chunk curr = current;
+            if (curr != null) {
+                // We have a Chunk that has some space left.
+                int remainingCapacity = curr.remainingCapacity();
+                if (remainingCapacity > startingCapacity) {
+                    curr.readInitInto(buf, size, startingCapacity, maxCapacity);
+                    // We still have some bytes left that we can use for the next allocation, just early return.
+                    return true;
+                }
+
+                // At this point we know that this will be the last time current will be used, so directly set it to
+                // null and release it once we are done.
+                current = null;
+                if (remainingCapacity >= size) {
+                    try {
+                        curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                        return true;
+                    } finally {
+                        curr.releaseFromMagazine();
+                    }
+                }
+
+                // Check if we either retain the chunk in the nextInLine cache or releasing it.
+                if (remainingCapacity < RETIRE_CAPACITY) {
+                    curr.releaseFromMagazine();
+                } else {
+                    // See if it makes sense to transfer the Chunk to the nextInLine cache for later usage.
+                    // This method will release curr if this is not the case
+                    transferToNextInLineOrRelease(curr);
+                }
+            }
+
+            return allocateAndRefillCurrentChunk(size, maxCapacity, buf, startingCapacity);
         }
 
         private boolean allocateAndRefillCurrentChunk(int size, int maxCapacity, AdaptiveByteBuf buf,
@@ -1462,7 +1457,6 @@ final class AdaptivePoolingAllocator {
         }
 
         BumpChunk() {
-            super();
         }
 
         BumpChunk(AbstractByteBuf delegate, AbstractMagazine magazine, boolean pooled,
@@ -1779,6 +1773,10 @@ final class AdaptivePoolingAllocator {
         public int size() {
             return top + 1;
         }
+
+        public int capacity() {
+            return stack.length;
+        }
     }
 
     private static final class SizeClassedChunk extends Chunk {
@@ -1819,7 +1817,7 @@ final class AdaptivePoolingAllocator {
             } else {
                 localFreeList = new IntStack(segmentOffsets);
             }
-            this.segments = segmentCount;
+            segments = segmentCount;
             STATE.lazySet(this, AVAILABLE);
         }
 
@@ -1869,7 +1867,7 @@ final class AdaptivePoolingAllocator {
          */
         private int copyIntoLocalFreeList(IntStack localFreeList) {
             final MpscIntQueue externalFreeList = this.externalFreeList;
-            final int capacity = localFreeList.stack.length;
+            final int capacity = localFreeList.capacity();
             int count = 0;
             while (localFreeList.size() < capacity) {
                 int index = externalFreeList.poll();
