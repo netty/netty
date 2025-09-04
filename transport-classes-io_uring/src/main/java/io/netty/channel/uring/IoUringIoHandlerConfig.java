@@ -92,6 +92,12 @@ import java.util.Set;
  *         It will be used to register the buffer ring for the io_uring instance.
  *       </td>
  *     </tr>
+ *     <tr>
+ *       <td>{@link IoUringIoHandlerConfig#setSingleIssuer}</td>
+ *       <td>
+ *         Enable or disable the use of {@code IORING_SETUP_SINGLE_ISSUER}.
+ *       </td>
+ *     </tr>
  *   </tbody>
  * </table>
  */
@@ -100,12 +106,10 @@ public final class IoUringIoHandlerConfig {
 
     private int ringSize = IoUring.DEFAULT_RING_SIZE;
     private int cqSize = IoUring.DEFAULT_CQ_SIZE;
-
     private int maxBoundedWorker;
-
     private int maxUnboundedWorker;
-
     private Set<IoUringBufferRingConfig> bufferRingConfigs;
+    private boolean singleIssuer = true;
 
     /**
      * Return the ring size of the io_uring instance.
@@ -214,6 +218,22 @@ public final class IoUringIoHandlerConfig {
     }
 
     /**
+     * Set if {@code IORING_SETUP_SINGLE_ISSUER} should be used when setup the ring. This is {@code true} by default
+     * for performance reasons but also means that the {@link Thread} that is used to drive the
+     * {@link io.netty.channel.IoHandler} can never change. If you want the flexibility to change the {@link Thread},
+     * to for example make use of the {@link io.netty.util.concurrent.AutoScalingEventExecutorChooserFactory} it's
+     * possible to not use {@code IORING_SETUP_SINGLE_ISSUER}. This will trade scalibility / flexibility
+     * and performance.
+     *
+     * @param singleIssuer  {@code true} if {@code IORING_SETUP_SINGLE_ISSUER} should be used, {@code false} otherwise
+     * @return reference to this, so the API can be used fluently
+     */
+    public IoUringIoHandlerConfig setSingleIssuer(boolean singleIssuer) {
+        this.singleIssuer = singleIssuer;
+        return this;
+    }
+
+    /**
      * Get the list of buffer ring configurations.
      * @return the copy of buffer ring configurations.
      */
@@ -231,5 +251,9 @@ public final class IoUringIoHandlerConfig {
 
     Set<IoUringBufferRingConfig> getInternBufferRingConfigs() {
         return bufferRingConfigs;
+    }
+
+    boolean singleIssuer() {
+        return singleIssuer;
     }
 }
