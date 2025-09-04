@@ -45,6 +45,32 @@ import java.util.concurrent.atomic.AtomicReference;
  */
 public final class AutoScalingEventExecutorChooserFactory implements EventExecutorChooserFactory {
 
+    /**
+     * A container for the utilization metric of a single EventExecutor.
+     * This object is intended to be created once and have its {@code utilization}
+     * field updated periodically.
+     */
+    public static final class AutoScalingUtilizationMetric {
+        final EventExecutor executor;
+        private volatile double utilization;
+
+        AutoScalingUtilizationMetric(EventExecutor executor) {
+            this.executor = executor;
+        }
+
+        /**
+         * Returns the most recently calculated utilization for the associated executor.
+         * @return a value from 0.0 to 1.0.
+         */
+        public double utilization() {
+            return utilization;
+        }
+
+        void setUtilization(double utilization) {
+            this.utilization = utilization;
+        }
+    }
+
     private static final Runnable NO_OOP_TASK = () -> { };
     private final int minChildren;
     private final int maxChildren;
@@ -72,13 +98,13 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                                                   TimeUnit windowUnit, double scaleDownThreshold,
                                                   double scaleUpThreshold, int maxRampUpStep, int maxRampDownStep,
                                                   int scalingPatienceCycles) {
-        this.minChildren = ObjectUtil.checkPositiveOrZero(minThreads, "minThreads");
-        this.maxChildren = ObjectUtil.checkPositive(maxThreads, "maxThreads");
+        minChildren = ObjectUtil.checkPositiveOrZero(minThreads, "minThreads");
+        maxChildren = ObjectUtil.checkPositive(maxThreads, "maxThreads");
         if (minThreads > maxThreads) {
             throw new IllegalArgumentException(String.format(
                     "minThreads: %d must not be greater than maxThreads: %d", minThreads, maxThreads));
         }
-        this.utilizationCheckPeriodNanos = ObjectUtil.checkNotNull(windowUnit, "windowUnit")
+        utilizationCheckPeriodNanos = ObjectUtil.checkNotNull(windowUnit, "windowUnit")
                                                      .toNanos(ObjectUtil.checkPositive(utilizationWindow,
                                                                                        "utilizationWindow"));
         this.scaleDownThreshold = ObjectUtil.checkInRange(scaleDownThreshold, 0.0, 1.0, "scaleDownThreshold");
@@ -112,21 +138,27 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
             this.activeChildrenCount = activeChildrenCount;
             this.nextWakeUpIndex = nextWakeUpIndex;
             this.activeExecutors = activeExecutors;
-            this.activeExecutorsChooser = DefaultEventExecutorChooserFactory.INSTANCE.newChooser(activeExecutors);
+            activeExecutorsChooser = DefaultEventExecutorChooserFactory.INSTANCE.newChooser(activeExecutors);
         }
     }
 
-    private final class AutoScalingEventExecutorChooser implements EventExecutorChooser {
+    private final class AutoScalingEventExecutorChooser implements ObservableEventExecutorChooser {
         private final EventExecutor[] executors;
         private final EventExecutorChooser allExecutorsChooser;
         private final AtomicReference<AutoScalingState> state;
+        private final List<AutoScalingUtilizationMetric> utilizationMetrics;
 
         AutoScalingEventExecutorChooser(EventExecutor[] executors) {
             this.executors = executors;
-            this.allExecutorsChooser = DefaultEventExecutorChooserFactory.INSTANCE.newChooser(executors);
+            List<AutoScalingUtilizationMetric> metrics = new ArrayList<>(executors.length);
+            for (EventExecutor executor : executors) {
+                metrics.add(new AutoScalingUtilizationMetric(executor));
+            }
+            this.utilizationMetrics = metrics;
+            allExecutorsChooser = DefaultEventExecutorChooserFactory.INSTANCE.newChooser(executors);
 
             AutoScalingState initialState = new AutoScalingState(maxChildren, 0L, executors);
-            this.state = new AtomicReference<>(initialState);
+            state = new AtomicReference<>(initialState);
 
             ScheduledFuture<?> utilizationMonitoringTask = GlobalEventExecutor.INSTANCE.scheduleAtFixedRate(
                     new UtilizationMonitor(), utilizationCheckPeriodNanos, utilizationCheckPeriodNanos,
@@ -213,8 +245,19 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
             }
         }
 
+        @Override
+        public int activeExecutorCount() {
+            return state.get().activeChildrenCount;
+        }
+
+        @Override
+        public List<AutoScalingUtilizationMetric> executorUtilizations() {
+            return Collections.unmodifiableList(utilizationMetrics);
+        }
+
         private final class UtilizationMonitor implements Runnable {
             private final List<SingleThreadEventExecutor> consistentlyIdleChildren = new ArrayList<>(maxChildren);
+            private long lastCheckTimeNanos;
 
             @Override
             public void run() {
@@ -224,57 +267,81 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                     return;
                 }
 
+                // Calculate the actual elapsed time since the last run.
+                final long now = executors[0].ticker().nanoTime();
+                long totalTime;
+
+                if (lastCheckTimeNanos == 0) {
+                    // On the first run, use the configured period as a baseline to avoid skipping the cycle.
+                    totalTime = utilizationCheckPeriodNanos;
+                } else {
+                    // On subsequent runs, calculate the actual elapsed time.
+                    totalTime = now - lastCheckTimeNanos;
+                }
+
+                // Always update the timestamp for the next cycle.
+                lastCheckTimeNanos = now;
+
+                if (totalTime <= 0) {
+                    // Skip this cycle if the clock has issues or the interval is invalid.
+                    return;
+                }
+
                 int consistentlyBusyChildren = 0;
                 consistentlyIdleChildren.clear();
 
                 final AutoScalingState currentState = state.get();
 
-                for (EventExecutor child : executors) {
-                    if (child.isSuspended() || !(child instanceof SingleThreadEventExecutor)) {
+                for (int i = 0; i < executors.length; i++) {
+                    EventExecutor child = executors[i];
+                    if (!(child instanceof SingleThreadEventExecutor)) {
                         continue;
                     }
 
-                    SingleThreadEventExecutor stee = (SingleThreadEventExecutor) child;
+                    SingleThreadEventExecutor eventLoop = (SingleThreadEventExecutor) child;
 
-                    long activeTime = stee.getAndResetAccumulatedActiveTimeNanos();
-                    final long totalTime = utilizationCheckPeriodNanos;
+                    double utilization = 0.0;
+                    if (!eventLoop.isSuspended()) {
+                        long activeTime = eventLoop.getAndResetAccumulatedActiveTimeNanos();
 
-                    if (activeTime == 0) {
-                        long lastActivity = stee.getLastActivityTimeNanos();
-                        long idleTime = stee.ticker().nanoTime() - lastActivity;
+                        if (activeTime == 0) {
+                            long lastActivity = eventLoop.getLastActivityTimeNanos();
+                            long idleTime = now - lastActivity;
 
-                        // If the event loop has been idle for less time than our utilization window,
-                        // it means it was active for the remainder of that window.
-                        if (idleTime < totalTime) {
-                            activeTime = totalTime - idleTime;
+                            // If the event loop has been idle for less time than our utilization window,
+                            // it means it was active for the remainder of that window.
+                            if (idleTime < totalTime) {
+                                activeTime = totalTime - idleTime;
+                            }
+                            // If idleTime >= totalTime, it was idle for the whole window, so activeTime remains 0.
                         }
-                        // If idleTime >= totalTime, it was idle for the whole window, so activeTime remains 0.
+
+                        utilization = Math.min(1.0, (double) activeTime / totalTime);
+
+                        if (utilization < scaleDownThreshold) {
+                            // Utilization is low, increment idle counter and reset busy counter.
+                            int idleCycles = eventLoop.getAndIncrementIdleCycles();
+                            eventLoop.resetBusyCycles();
+                            if (idleCycles >= scalingPatienceCycles && eventLoop.getNumOfRegisteredChannels() <= 0) {
+                                consistentlyIdleChildren.add(eventLoop);
+                            }
+                        } else if (utilization > scaleUpThreshold) {
+                            // Utilization is high, increment busy counter and reset idle counter.
+                            int busyCycles = eventLoop.getAndIncrementBusyCycles();
+                            eventLoop.resetIdleCycles();
+                            if (busyCycles >= scalingPatienceCycles) {
+                                consistentlyBusyChildren++;
+                            }
+                        } else {
+                            // Utilization is in the normal range, reset counters.
+                            eventLoop.resetIdleCycles();
+                            eventLoop.resetBusyCycles();
+                        }
                     }
 
-                    double utilization = Math.min(1.0, (double) activeTime / totalTime);
-
-                    if (utilization < scaleDownThreshold) {
-                        // Utilization is low, increment idle counter and reset busy counter.
-                        int idleCycles = stee.getAndIncrementIdleCycles();
-                        stee.resetBusyCycles();
-                        if (idleCycles >= scalingPatienceCycles && stee.getNumOfRegisteredChannels() <= 0) {
-                            consistentlyIdleChildren.add(stee);
-                        }
-                    } else if (utilization > scaleUpThreshold) {
-                        // Utilization is high, increment busy counter and reset idle counter.
-                        int busyCycles = stee.getAndIncrementBusyCycles();
-                        stee.resetIdleCycles();
-                        if (busyCycles >= scalingPatienceCycles) {
-                            consistentlyBusyChildren++;
-                        }
-                    } else {
-                        // Utilization is in the normal range, reset counters.
-                        stee.resetIdleCycles();
-                        stee.resetBusyCycles();
-                    }
+                    utilizationMetrics.get(i).setUtilization(utilization);
                 }
 
-                boolean changed = false; // Flag to track if we need to rebuild the active executors list.
                 int currentActive = currentState.activeChildrenCount;
 
                 // Make scaling decisions based on stable states.
@@ -289,6 +356,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                     }
                 }
 
+                boolean changed = false; // Flag to track if we need to rebuild the active executors list.
                 if (!consistentlyIdleChildren.isEmpty() && currentActive > minChildren) {
                     // Scale down, we have children that have been idle for multiple cycles.
 
