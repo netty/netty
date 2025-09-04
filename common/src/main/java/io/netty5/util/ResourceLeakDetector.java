@@ -164,13 +164,11 @@ public class ResourceLeakDetector<T> {
      *
      * @return the {@link ResourceLeakTracker} or {@code null}
      */
-    @SuppressWarnings("unchecked")
-    public final ResourceLeakTracker<T> track(T obj) {
+    public ResourceLeakTracker<T> track(T obj) {
         return track0(obj);
     }
 
-    @SuppressWarnings("unchecked")
-    private DefaultResourceLeak track0(T obj) {
+    private DefaultResourceLeak<T> track0(T obj) {
         Level level = ResourceLeakDetector.level;
         if (level == Level.DISABLED) {
             return null;
@@ -179,17 +177,17 @@ public class ResourceLeakDetector<T> {
         if (level.ordinal() < Level.PARANOID.ordinal()) {
             if (ThreadLocalRandom.current().nextInt(samplingInterval) == 0) {
                 reportLeak();
-                return new DefaultResourceLeak(obj, refQueue, allLeaks, getInitialHint(resourceType));
+                return new DefaultResourceLeak<>(obj, refQueue, allLeaks, getInitialHint(resourceType));
             }
             return null;
         }
         reportLeak();
-        return new DefaultResourceLeak(obj, refQueue, allLeaks, getInitialHint(resourceType));
+        return new DefaultResourceLeak<>(obj, refQueue, allLeaks, getInitialHint(resourceType));
     }
 
     private void clearRefQueue() {
         for (;;) {
-            DefaultResourceLeak ref = (DefaultResourceLeak) refQueue.poll();
+            DefaultResourceLeak<?> ref = (DefaultResourceLeak<?>) refQueue.poll();
             if (ref == null) {
                 break;
             }
