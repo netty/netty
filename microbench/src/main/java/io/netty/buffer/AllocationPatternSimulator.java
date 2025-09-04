@@ -494,12 +494,15 @@ public class AllocationPatternSimulator {
 
     void run(int concurrencyLevel, int runningTimeSeconds) throws Exception {
         AllocConfig[] allocs = {
-                new AllocConfig(true, 128),
-                new AllocConfig(false, 128),
-                new AllocConfig(true, 512),
-                new AllocConfig(false, 512),
-                new AllocConfig(true, 1024),
-                new AllocConfig(false, 1024),
+                new AllocConfig(new AdaptiveByteBufAllocator(), 128),
+                new AllocConfig(new PooledByteBufAllocator(), 128),
+                new AllocConfig(new MiByteBufAllocator(), 128),
+                new AllocConfig(new AdaptiveByteBufAllocator(), 512),
+                new AllocConfig(new PooledByteBufAllocator(), 512),
+                new AllocConfig(new MiByteBufAllocator(), 512),
+                new AllocConfig(new AdaptiveByteBufAllocator(), 1024),
+                new AllocConfig(new PooledByteBufAllocator(), 1024),
+                new AllocConfig(new MiByteBufAllocator(), 1024),
         };
 
         CountDownLatch startLatch = new CountDownLatch(1);
@@ -575,9 +578,19 @@ public class AllocationPatternSimulator {
         private final SplittableRandom rng;
         private final String name;
 
-        AllocConfig(boolean isAdaptive, int avgLiveBufs) {
-            allocator = isAdaptive ? new AdaptiveByteBufAllocator() : new PooledByteBufAllocator();
-            name = String.format(isAdaptive ? "Adaptive (%s)" : "Pooled (%s)", avgLiveBufs);
+        AllocConfig(AbstractByteBufAllocator allocator, int avgLiveBufs) {
+            this.allocator = allocator;
+            final String type;
+            if (allocator instanceof AdaptiveByteBufAllocator) {
+                type = "Adaptive";
+            } else if (allocator instanceof PooledByteBufAllocator) {
+                type = "Pooled";
+            } else if (allocator instanceof MiByteBufAllocator) {
+                type = "Mimalloc";
+            } else {
+                type = "Unknown";
+            }
+            name = String.format("%s (%s)", type, avgLiveBufs);
             this.avgLiveBufs = avgLiveBufs;
             rng = new SplittableRandom(0xBEEFBEEFL);
         }
@@ -589,6 +602,9 @@ public class AllocationPatternSimulator {
         long usedMemory() {
             if (allocator instanceof AdaptiveByteBufAllocator) {
                 return ((AdaptiveByteBufAllocator) allocator).usedHeapMemory();
+            }
+            if (allocator instanceof MiByteBufAllocator) {
+                return ((MiByteBufAllocator) allocator).usedHeapMemory();
             }
             return ((PooledByteBufAllocator) allocator).usedHeapMemory();
         }
