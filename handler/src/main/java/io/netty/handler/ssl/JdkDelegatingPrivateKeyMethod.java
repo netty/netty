@@ -16,6 +16,9 @@
 package io.netty.handler.ssl;
 
 import io.netty.internal.tcnative.SSLPrivateKeyMethod;
+import io.netty.util.collection.IntCollections;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -29,9 +32,6 @@ import java.security.Security;
 import java.security.Signature;
 import java.security.spec.MGF1ParameterSpec;
 import java.security.spec.PSSParameterSpec;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -45,11 +45,11 @@ final class JdkDelegatingPrivateKeyMethod implements SSLPrivateKeyMethod {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(JdkDelegatingPrivateKeyMethod.class);
 
-    private static final Map<Integer, String> SSL_TO_JDK_SIGNATURE_ALGORITHM;
+    private static final IntObjectMap<String> SSL_TO_JDK_SIGNATURE_ALGORITHM;
     private static final ConcurrentMap<CacheKey, String> PROVIDER_CACHE = new ConcurrentHashMap<>();
 
     static {
-        Map<Integer, String> algorithmMap = new HashMap<>();
+        IntObjectMap<String> algorithmMap = new IntObjectHashMap<>();
 
         // RSA PKCS#1 signatures
         algorithmMap.put(OpenSslAsyncPrivateKeyMethod.SSL_SIGN_RSA_PKCS1_SHA1, "SHA1withRSA");
@@ -72,10 +72,11 @@ final class JdkDelegatingPrivateKeyMethod implements SSLPrivateKeyMethod {
         // EdDSA signatures
         algorithmMap.put(OpenSslAsyncPrivateKeyMethod.SSL_SIGN_ED25519, "EdDSA");
 
-        SSL_TO_JDK_SIGNATURE_ALGORITHM = Collections.unmodifiableMap(algorithmMap);
+        SSL_TO_JDK_SIGNATURE_ALGORITHM = IntCollections.unmodifiableMap(algorithmMap);
     }
 
     private final PrivateKey privateKey;
+    private final String privateKeyTypeName;
 
     /**
      * Creates a new JDK delegating async private key method.
@@ -84,6 +85,7 @@ final class JdkDelegatingPrivateKeyMethod implements SSLPrivateKeyMethod {
      */
     JdkDelegatingPrivateKeyMethod(PrivateKey privateKey) {
         this.privateKey = ObjectUtil.checkNotNull(privateKey, "privateKey");
+        this.privateKeyTypeName = privateKey.getClass().getName();
     }
 
     @Override
@@ -105,7 +107,7 @@ final class JdkDelegatingPrivateKeyMethod implements SSLPrivateKeyMethod {
         throw new UnsupportedOperationException("Direct decryption is not supported");
     }
 
-    private Signature createSignature(Integer opensslAlgorithm)
+    private Signature createSignature(int opensslAlgorithm)
             throws NoSuchAlgorithmException {
         String jdkAlgorithm = SSL_TO_JDK_SIGNATURE_ALGORITHM.get(opensslAlgorithm);
         if (jdkAlgorithm == null) {
@@ -113,8 +115,7 @@ final class JdkDelegatingPrivateKeyMethod implements SSLPrivateKeyMethod {
             throw new NoSuchAlgorithmException(errorMsg);
         }
 
-        String keyType = privateKey.getClass().getName();
-        CacheKey cacheKey = new CacheKey(jdkAlgorithm, keyType);
+        CacheKey cacheKey = new CacheKey(jdkAlgorithm, privateKeyTypeName);
 
         // Try cached provider first
         String cachedProviderName = PROVIDER_CACHE.get(cacheKey);
@@ -125,7 +126,7 @@ final class JdkDelegatingPrivateKeyMethod implements SSLPrivateKeyMethod {
                 signature.initSign(privateKey);
                 if (logger.isDebugEnabled()) {
                     logger.debug("Using cached provider {} for OpenSSL algorithm {} ({}) with key type {}",
-                            cachedProviderName, opensslAlgorithm, jdkAlgorithm, keyType);
+                            cachedProviderName, opensslAlgorithm, jdkAlgorithm, privateKeyTypeName);
                 }
                 return signature;
             } catch (Exception e) {
@@ -133,7 +134,7 @@ final class JdkDelegatingPrivateKeyMethod implements SSLPrivateKeyMethod {
                 PROVIDER_CACHE.remove(cacheKey);
                 if (logger.isDebugEnabled()) {
                     logger.debug("Cached provider {} failed for key type {}, removing from cache: {}",
-                            cachedProviderName, keyType, e.getMessage());
+                            cachedProviderName, privateKeyTypeName, e.getMessage());
                 }
             }
         }
@@ -144,13 +145,13 @@ final class JdkDelegatingPrivateKeyMethod implements SSLPrivateKeyMethod {
 
         if (logger.isDebugEnabled()) {
             logger.debug("Discovered and cached provider {} for OpenSSL algorithm {} ({}) with key type {}",
-                    signature.getProvider().getName(), opensslAlgorithm, jdkAlgorithm, keyType);
+                    signature.getProvider().getName(), opensslAlgorithm, jdkAlgorithm, privateKeyTypeName);
         }
 
         return signature;
     }
 
-    private Signature findCompatibleSignature(Integer opensslAlgorithm,
+    private Signature findCompatibleSignature(int opensslAlgorithm,
                                               String jdkAlgorithm) throws NoSuchAlgorithmException {
 
         // 1. Try default provider first (optimization)
@@ -210,7 +211,7 @@ final class JdkDelegatingPrivateKeyMethod implements SSLPrivateKeyMethod {
                 " (" + jdkAlgorithm + ") with private key type: " + privateKey.getClass().getName());
     }
 
-    private static void configureOpenSslAlgorithmParameters(Signature signature, Integer opensslAlgorithm)
+    private static void configureOpenSslAlgorithmParameters(Signature signature, int opensslAlgorithm)
             throws InvalidAlgorithmParameterException {
         // Use the OpenSSL algorithm constants for precise parameter configuration
         if (opensslAlgorithm == OpenSslAsyncPrivateKeyMethod.SSL_SIGN_RSA_PSS_RSAE_SHA256) {

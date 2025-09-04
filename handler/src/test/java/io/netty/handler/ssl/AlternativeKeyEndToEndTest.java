@@ -53,12 +53,8 @@ import java.util.concurrent.TimeUnit;
 import static io.netty.handler.ssl.MockAlternativeKeyProvider.wrapPrivateKey;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 
-/**
- * End-to-end integration tests for alternative key providers using actual socket connections.
- */
-@EnabledIf("io.netty.handler.ssl.OpenSsl#isBoringSSL")
+@EnabledIf("isSignatureDelegationSupported")
 public class AlternativeKeyEndToEndTest {
 
     private static MockAlternativeKeyProvider mockProvider;
@@ -318,5 +314,9 @@ public class AlternativeKeyEndToEndTest {
                 ctx.close();
             });
         }
+    }
+
+    private static boolean isSignatureDelegationSupported() {
+        return OpenSsl.isBoringSSL() || OpenSsl.isAWSLC();
     }
 }
