@@ -26,7 +26,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.Arrays;
 import java.util.Random;
@@ -185,8 +185,8 @@ public abstract class AbstractIntegrationTest {
         }
     }
 
-    @DisabledIf("io.netty.util.ResourceLeakDetector#isEnabled")
     @Test
+    @ExtendWith(LeakPresenceExtension.class) // TODO: make global
     public void testHugeDecompress() {
         int chunkSize = 1024 * 1024;
         int numberOfChunks = 256;
