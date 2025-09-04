@@ -71,22 +71,22 @@ public class CompleteChannelFutureTest {
 
         @Override
         public Throwable cause() {
-            throw new Error();
+            throw new UnsupportedOperationException("cause is not supported for " + getClass().getName());
         }
 
         @Override
         public boolean isSuccess() {
-            throw new Error();
+            throw new UnsupportedOperationException("isSuccess is not supported for " + getClass().getName());
         }
 
         @Override
-        public ChannelFuture sync() throws InterruptedException {
-            throw new Error();
+        public ChannelFuture sync() {
+            throw new UnsupportedOperationException("sync is not supported for " + getClass().getName());
         }
 
         @Override
         public ChannelFuture syncUninterruptibly() {
-            throw new Error();
+            throw new UnsupportedOperationException("syncUninterruptibly is not supported for " + getClass().getName());
         }
     }
 }

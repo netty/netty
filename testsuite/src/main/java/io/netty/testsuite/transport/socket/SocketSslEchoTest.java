@@ -180,7 +180,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                             r = new Renegotiation(rt, cc.cipherSuites().get(cc.cipherSuites().size() - 1));
                             break;
                         default:
-                            throw new Error();
+                            throw new Error("Unexpected renegotiation type: " + rt);
                     }
 
                     for (int i = 0; i < 32; i++) {

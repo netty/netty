@@ -22,6 +22,7 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import io.netty.util.internal.AtomicReferenceCountUpdater;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.ReferenceCountUpdater;
+import io.netty.util.internal.ReferenceCountUpdater.UpdaterType;
 import io.netty.util.internal.UnsafeReferenceCountUpdater;
 import io.netty.util.internal.VarHandleReferenceCountUpdater;
 
@@ -38,7 +39,8 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
     private static final ReferenceCountUpdater<AbstractReferenceCounted> updater;
 
     static {
-        switch (ReferenceCountUpdater.updaterTypeOf(AbstractReferenceCounted.class, "refCnt")) {
+        UpdaterType updaterType = ReferenceCountUpdater.updaterTypeOf(AbstractReferenceCounted.class, "refCnt");
+        switch (updaterType) {
             case Atomic:
                 AIF_UPDATER = newUpdater(AbstractReferenceCounted.class, "refCnt");
                 REFCNT_FIELD_OFFSET = -1;
@@ -74,7 +76,7 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
                 };
                 break;
             default:
-                throw new Error("Unknown updater type for AbstractReferenceCounted");
+                throw new Error("Unexpected updater type for AbstractReferenceCounted: " + updaterType);
         }
     }
 

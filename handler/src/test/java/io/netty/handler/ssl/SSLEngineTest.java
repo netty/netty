@@ -317,7 +317,7 @@ public abstract class SSLEngineTest {
                 return ThreadLocalRandom.current().nextBoolean() ?
                         ByteBuffer.allocateDirect(len) : ByteBuffer.allocate(len);
             default:
-                throw new Error();
+                throw new Error("Unexpected buffer type: " + type);
         }
     }
 
@@ -342,7 +342,7 @@ public abstract class SSLEngineTest {
                     return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer() : allocator.heapBuffer();
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -357,7 +357,7 @@ public abstract class SSLEngineTest {
                     return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer(initialCapacity) : allocator.heapBuffer(initialCapacity);
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -373,7 +373,7 @@ public abstract class SSLEngineTest {
                             allocator.directBuffer(initialCapacity, maxCapacity) :
                             allocator.heapBuffer(initialCapacity, maxCapacity);
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -434,7 +434,7 @@ public abstract class SSLEngineTest {
                             allocator.compositeDirectBuffer() :
                             allocator.compositeHeapBuffer();
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -450,7 +450,7 @@ public abstract class SSLEngineTest {
                             allocator.compositeDirectBuffer(maxNumComponents) :
                             allocator.compositeHeapBuffer(maxNumComponents);
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 

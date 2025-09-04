@@ -717,7 +717,7 @@ public class Http2ConnectionRoundtripTest {
                                 (short) 16, false, 0, true, newPromise());
                         break;
                     default:
-                        throw new Error();
+                        throw new Error("Unexpected WriteEmptyBufferMode: " + mode);
                 }
                 http2Client.flush(ctx());
             }

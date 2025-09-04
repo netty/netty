@@ -493,7 +493,7 @@ public abstract class SslContext {
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
                     clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions);
         default:
-            throw new Error(provider.toString());
+            throw new Error("Unexpected provider: " + provider);
         }
     }
 
@@ -862,7 +862,7 @@ public abstract class SslContext {
                         enableOcsp, keyStoreType, endpointIdentificationAlgorithm, serverNames, resumptionController,
                         options);
             default:
-                throw new Error(provider.toString());
+                throw new Error("Unexpected provider: " + provider);
         }
     }
 

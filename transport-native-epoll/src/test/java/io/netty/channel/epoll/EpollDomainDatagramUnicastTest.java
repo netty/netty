@@ -162,7 +162,7 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
             case NONE:
                 return cc.write(new DomainDatagramPacket(buf.retain(), (DomainSocketAddress) remote));
             default:
-                throw new Error("unknown wrap type: " + wrapType);
+                throw new Error("Unexpected wrap type: " + wrapType);
         }
     }
 }
