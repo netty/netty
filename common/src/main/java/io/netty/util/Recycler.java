@@ -450,7 +450,6 @@ public abstract class Recycler<T> {
 
     private abstract static class LocalPool<H, T> {
         private final int ratioInterval;
-        private final int chunkSize;
         private final H[] batch;
         private int batchSize;
         private volatile Thread owner;
@@ -460,7 +459,6 @@ public abstract class Recycler<T> {
         @SuppressWarnings("unchecked")
         LocalPool(Thread owner, int maxCapacity, int ratioInterval, int chunkSize) {
             this.ratioInterval = ratioInterval;
-            this.chunkSize = chunkSize;
             this.owner = owner;
             batch = owner != null? (H[]) new Object[chunkSize] : null;
             batchSize = 0;
@@ -496,7 +494,7 @@ public abstract class Recycler<T> {
 
         protected final void release(H handle) {
             Thread owner = this.owner;
-            if (owner != null && Thread.currentThread() == owner && batchSize < chunkSize) {
+            if (owner != null && Thread.currentThread() == owner && batchSize < batch.length) {
                 batch[batchSize] = handle;
                 batchSize++;
             } else if (owner != null && isTerminated(owner)) {
