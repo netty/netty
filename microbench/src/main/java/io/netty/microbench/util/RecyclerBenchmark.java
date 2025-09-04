@@ -26,6 +26,7 @@ import org.openjdk.jmh.annotations.Group;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -73,6 +74,13 @@ public class RecyclerBenchmark extends AbstractMicrobenchmark {
 
     @State(Scope.Benchmark)
     public static class ProducerConsumerState {
+
+        @Param({ "false", "true" })
+        boolean unguarded;
+
+        @Param({ "false", "true" })
+        boolean fastThreadLocal;
+
         Queue<DummyObject> queue;
 
         Recycler<DummyObject> recycler;
@@ -81,12 +89,19 @@ public class RecyclerBenchmark extends AbstractMicrobenchmark {
         public void init() {
             queue = PlatformDependent.hasUnsafe()? new MpmcArrayQueue<DummyObject>(100) :
                     new MpmcAtomicArrayQueue<DummyObject>(100);
-            recycler = new Recycler<DummyObject>() {
-                @Override
-                protected DummyObject newObject(Recycler.Handle<DummyObject> handle) {
-                    return new DummyObject((EnhancedHandle<DummyObject>) handle);
-                }
-            };
+            recycler = !fastThreadLocal?
+                    new Recycler<DummyObject>(Thread.currentThread(), unguarded) {
+                        @Override
+                        protected DummyObject newObject(Recycler.Handle<DummyObject> handle) {
+                            return new DummyObject((EnhancedHandle<DummyObject>) handle);
+                        }
+                    } :
+                    new Recycler<DummyObject>(unguarded) {
+                        @Override
+                        protected DummyObject newObject(Recycler.Handle<DummyObject> handle) {
+                            return new DummyObject((EnhancedHandle<DummyObject>) handle);
+                        }
+                    };
         }
     }
 
