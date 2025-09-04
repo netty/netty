@@ -631,7 +631,7 @@ public class ResourceLeakDetector<T> {
     private static final AtomicReference<String[]> excludedMethods =
             new AtomicReference<>(EmptyArrays.EMPTY_STRINGS);
 
-    public static void addExclusions(Class<?> clz, String ... methodNames) {
+    public static void addExclusions(@SuppressWarnings("rawtypes") Class clz, String ... methodNames) {
         Set<String> nameSet = new HashSet<>(Arrays.asList(methodNames));
         // Use loop rather than lookup. This avoids knowing the parameters, and doesn't have to handle
         // NoSuchMethodException.
