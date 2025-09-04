@@ -175,7 +175,8 @@ public class ByteBufDerivationTest {
         Random rnd = new Random();
         for (int i = 0; i < buf.capacity(); i ++) {
             ByteBuf newDerived;
-            switch (rnd.nextInt(4)) {
+            int randomNumber = rnd.nextInt(4);
+            switch (randomNumber) {
             case 0:
                 newDerived = derived.slice(1, derived.capacity() - 1);
                 break;
@@ -190,7 +191,7 @@ public class ByteBufDerivationTest {
                 newDerived = Unpooled.unmodifiableBuffer(derived);
                 break;
             default:
-                throw new Error();
+                throw new Error("Unexpected random number: " + randomNumber);
             }
 
             assertThat(nestLevel(newDerived)).isLessThanOrEqualTo(3);

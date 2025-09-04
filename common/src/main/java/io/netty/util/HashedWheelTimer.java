@@ -350,7 +350,8 @@ public class HashedWheelTimer implements Timer {
      *                               {@linkplain #stop() stopped} already
      */
     public void start() {
-        switch (WORKER_STATE_UPDATER.get(this)) {
+        int state = WORKER_STATE_UPDATER.get(this);
+        switch (state) {
             case WORKER_STATE_INIT:
                 if (WORKER_STATE_UPDATER.compareAndSet(this, WORKER_STATE_INIT, WORKER_STATE_STARTED)) {
                     workerThread.start();
@@ -361,7 +362,7 @@ public class HashedWheelTimer implements Timer {
             case WORKER_STATE_SHUTDOWN:
                 throw new IllegalStateException("cannot be started once stopped");
             default:
-                throw new Error("Invalid WorkerState");
+                throw new Error("Invalid WorkerState: " + state);
         }
 
         // Wait until the startTime is initialized by the worker.

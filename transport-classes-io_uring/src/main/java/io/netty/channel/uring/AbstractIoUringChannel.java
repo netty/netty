@@ -66,6 +66,7 @@ import static io.netty.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERROR_EALREADY_NEGATIVE;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.StringUtil.className;
 
 
 abstract class AbstractIoUringChannel extends AbstractChannel implements UnixChannel {
@@ -1134,7 +1135,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) remoteAddress;
                     submitConnect(unixDomainSocketAddress);
                 } else {
-                    throw new Error("Unexpected SocketAddress implementation " + remoteAddress);
+                    throw new Error("Unexpected SocketAddress implementation " + className(remoteAddress));
                 }
 
                 if (connectId != 0) {

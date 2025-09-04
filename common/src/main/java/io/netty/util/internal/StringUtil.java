@@ -313,6 +313,17 @@ public final class StringUtil {
     }
 
     /**
+     * Generates a class name from a {@link Class}. Similar to {@link Class#getName()}, but null-safe.
+     */
+    public static String className(Object o) {
+        if (o == null) {
+            return "null_object";
+        } else {
+            return o.getClass().getName();
+        }
+    }
+
+    /**
      * The shortcut to {@link #simpleClassName(Class) simpleClassName(o.getClass())}.
      */
     public static String simpleClassName(Object o) {
