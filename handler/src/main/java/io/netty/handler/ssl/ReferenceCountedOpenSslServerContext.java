@@ -78,7 +78,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
         try {
             sessionContext = newSessionContext(this, ctx, engines, trustCertCollection, trustManagerFactory,
                     keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
-                    sessionCacheSize, sessionTimeout, resumptionController);
+                    sessionCacheSize, sessionTimeout, resumptionController, isJdkSignatureFallbackEnabled(options));
             if (SERVER_ENABLE_SESSION_TICKET) {
                 sessionContext.setTicketKeys();
             }
@@ -102,33 +102,39 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
                                                          X509Certificate[] keyCertChain, PrivateKey key,
                                                          String keyPassword, KeyManagerFactory keyManagerFactory,
                                                          String keyStore, long sessionCacheSize, long sessionTimeout,
-                                                         ResumptionController resumptionController)
+                                                         ResumptionController resumptionController,
+                                                         boolean fallbackToJdkSignatureProviders)
             throws SSLException {
         OpenSslKeyMaterialProvider keyMaterialProvider = null;
         try {
             try {
                 SSLContext.setVerify(ctx, SSL.SSL_CVERIFY_NONE, VERIFY_DEPTH);
-                if (!OpenSsl.useKeyManagerFactory()) {
+
+                // Check if we have an alternative key that requires special handling
+                // Only detect alternative keys when we have an actual key object that can't be accessed directly
+                if (keyManagerFactory == null && key != null && key.getEncoded() == null) {
+                    if (!fallbackToJdkSignatureProviders) {
+                        // Alternative key without fallback enabled
+                        throw new SSLException("Private key requiring alternative signature provider detected " +
+                                "(such as hardware security key, smart card, or remote signing service) but " +
+                                "alternative key fallback is disabled.");
+                    }
+                    keyMaterialProvider = setupSecurityProviderSignatureSource(thiz, ctx, keyCertChain, key,
+                            manager -> new OpenSslServerCertificateCallback(engines, manager));
+                } else if (!OpenSsl.useKeyManagerFactory()) {
                     if (keyManagerFactory != null) {
                         throw new IllegalArgumentException(
-                                "KeyManagerFactory not supported");
+                                "KeyManagerFactory not supported with external keys");
+                    } else {
+                        checkNotNull(keyCertChain, "keyCertChain");
+                        // Regular key without KeyManagerFactory support
+                        setKeyMaterial(ctx, keyCertChain, key, keyPassword);
                     }
-                    checkNotNull(keyCertChain, "keyCertChain");
-
-                    setKeyMaterial(ctx, keyCertChain, key, keyPassword);
                 } else {
                     // javadocs state that keyManagerFactory has precedent over keyCertChain, and we must have a
                     // keyManagerFactory for the server so build one if it is not specified.
                     if (keyManagerFactory == null) {
-                        char[] keyPasswordChars = keyStorePassword(keyPassword);
-                        KeyStore ks = buildKeyStore(keyCertChain, key, keyPasswordChars, keyStore);
-                        if (ks.aliases().hasMoreElements()) {
-                            keyManagerFactory = new OpenSslX509KeyManagerFactory();
-                        } else {
-                            keyManagerFactory = new OpenSslCachingX509KeyManagerFactory(
-                                    KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()));
-                        }
-                        keyManagerFactory.init(ks, keyPasswordChars);
+                        keyManagerFactory = certChainToKeyManagerFactory(keyCertChain, key, keyPassword, keyStore);
                     }
                     keyMaterialProvider = providerFor(keyManagerFactory, keyPassword);
 

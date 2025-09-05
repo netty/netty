@@ -70,7 +70,8 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
         try {
             sessionContext = newSessionContext(this, ctx, engines, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
-                                               sessionCacheSize, sessionTimeout, resumptionController);
+                                               sessionCacheSize, sessionTimeout, resumptionController,
+                                               isJdkSignatureFallbackEnabled(options));
             success = true;
         } finally {
             if (!success) {
@@ -91,7 +92,8 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                                                    X509Certificate[] keyCertChain, PrivateKey key,
                                                    String keyPassword, KeyManagerFactory keyManagerFactory,
                                                    String keyStore, long sessionCacheSize, long sessionTimeout,
-                                                   ResumptionController resumptionController)
+                                                   ResumptionController resumptionController,
+                                                   boolean fallbackToJdkProviders)
             throws SSLException {
         if (key == null && keyCertChain != null || key != null && keyCertChain == null) {
             throw new IllegalArgumentException(
@@ -100,7 +102,18 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
         OpenSslKeyMaterialProvider keyMaterialProvider = null;
         try {
             try {
-                if (!OpenSsl.useKeyManagerFactory()) {
+                // Check if we have an alternative key that requires special handling
+                // Only detect alternative keys when we have an actual key object that can't be accessed directly
+                if (keyManagerFactory == null && key != null && key.getEncoded() == null) {
+                    if (!fallbackToJdkProviders) {
+                        throw new SSLException("Private key requiring alternative signature provider detected " +
+                                "(such as hardware security key, smart card, or remote signing service) but " +
+                                "alternative key fallback is disabled.");
+                    }
+                    keyMaterialProvider = setupSecurityProviderSignatureSource(thiz, ctx, keyCertChain, key,
+                            materialManager -> new OpenSslClientCertificateCallback(
+                                    engines, materialManager));
+                } else if (!OpenSsl.useKeyManagerFactory()) {
                     if (keyManagerFactory != null) {
                         throw new IllegalArgumentException(
                                 "KeyManagerFactory not supported");
@@ -111,17 +124,9 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 } else {
                     // javadocs state that keyManagerFactory has precedent over keyCertChain
                     if (keyManagerFactory == null && keyCertChain != null) {
-                        char[] keyPasswordChars = keyStorePassword(keyPassword);
-                        KeyStore ks = buildKeyStore(keyCertChain, key, keyPasswordChars, keyStore);
-                        if (ks.aliases().hasMoreElements()) {
-                            keyManagerFactory = new OpenSslX509KeyManagerFactory();
-                        } else {
-                            keyManagerFactory = new OpenSslCachingX509KeyManagerFactory(
-                                    KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()));
-                        }
-                        keyManagerFactory.init(ks, keyPasswordChars);
-                        keyMaterialProvider = providerFor(keyManagerFactory, keyPassword);
-                    } else if (keyManagerFactory != null) {
+                        keyManagerFactory = certChainToKeyManagerFactory(keyCertChain, key, keyPassword, keyStore);
+                    }
+                    if (keyManagerFactory != null) {
                         keyMaterialProvider = providerFor(keyManagerFactory, keyPassword);
                     }
 

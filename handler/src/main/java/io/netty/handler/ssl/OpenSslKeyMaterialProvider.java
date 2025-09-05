@@ -39,14 +39,22 @@ class OpenSslKeyMaterialProvider {
         this.password = password;
     }
 
-    static void validateKeyMaterialSupported(X509Certificate[] keyCertChain, PrivateKey key, String keyPassword)
+    static void validateKeyMaterialSupported(X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
+                                             boolean allowSignatureFallback)
             throws SSLException {
         validateSupported(keyCertChain);
-        validateSupported(key, keyPassword);
+        validateSupported(key, keyPassword, allowSignatureFallback);
     }
 
-    private static void validateSupported(PrivateKey key, String password) throws SSLException {
+    private static void validateSupported(PrivateKey key, String password,
+                                          boolean allowSignatureFallback) throws SSLException {
         if (key == null) {
+            return;
+        }
+
+        // Skip validation for keys that don't expose encoded material
+        // These will be handled by the key fallback mechanism
+        if (key.getEncoded() == null && allowSignatureFallback) {
             return;
         }
 
