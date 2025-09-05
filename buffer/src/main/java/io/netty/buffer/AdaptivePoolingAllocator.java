@@ -1001,10 +1001,7 @@ final class AdaptivePoolingAllocator {
         }
 
         private boolean allocateWithoutLock(int size, int maxCapacity, AdaptiveByteBuf buf) {
-            Chunk curr = nextInLine;
-            if (curr == null || !NEXT_IN_LINE.compareAndSet(this, curr, null)) {
-                curr = null;
-            }
+            Chunk curr = NEXT_IN_LINE.getAndSet(this, null);
             if (curr == MAGAZINE_FREED) {
                 restoreMagazineFreed();
                 return false;
@@ -1941,7 +1938,7 @@ final class AdaptivePoolingAllocator {
             } else {
                 boolean segmentReturned = externalFreeList.offer(startIndex);
                 assert segmentReturned : "Unable to return segment " + startIndex + " to free list";
-                // this has implicitly a StoreLoad barrier due to the multi-producer nature of the queue
+                // This has implicitly a StoreLoad barrier due to the multi-producer nature of the queue
                 int state = this.state;
                 if (state != AVAILABLE) {
                     handleStateOnExternalReleaseSegment(state);
