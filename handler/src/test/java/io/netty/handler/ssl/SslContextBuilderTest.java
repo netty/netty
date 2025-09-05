@@ -19,6 +19,7 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -54,7 +55,7 @@ public class SslContextBuilderTest {
     @Test
     public void testClientContextFromFileOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testClientContextFromFile(SslProvider.OPENSSL);
+        testClientContextFromFile(SslProvider.OPENSSL_REFCNT);
     }
 
     @Test
@@ -65,7 +66,7 @@ public class SslContextBuilderTest {
     @Test
     public void testClientContextOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testClientContext(SslProvider.OPENSSL);
+        testClientContext(SslProvider.OPENSSL_REFCNT);
     }
 
     @Test
@@ -76,7 +77,7 @@ public class SslContextBuilderTest {
     @Test
     public void testCombinedPemFileClientContextOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testServerContextWithCombinedCertAndKeyInPem(SslProvider.OPENSSL);
+        testServerContextWithCombinedCertAndKeyInPem(SslProvider.OPENSSL_REFCNT);
     }
 
     @Test
@@ -87,7 +88,7 @@ public class SslContextBuilderTest {
     @Test
     public void testKeyStoreTypeOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testKeyStoreType(SslProvider.OPENSSL);
+        testKeyStoreType(SslProvider.OPENSSL_REFCNT);
     }
 
     @Test
@@ -98,7 +99,7 @@ public class SslContextBuilderTest {
     @Test
     public void testServerContextFromFileOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testServerContextFromFile(SslProvider.OPENSSL);
+        testServerContextFromFile(SslProvider.OPENSSL_REFCNT);
     }
 
     @Test
@@ -109,7 +110,7 @@ public class SslContextBuilderTest {
     @Test
     public void testServerContextOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testServerContext(SslProvider.OPENSSL);
+        testServerContext(SslProvider.OPENSSL_REFCNT);
     }
 
     @Test
@@ -121,7 +122,7 @@ public class SslContextBuilderTest {
     public void testContextFromManagersOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
         assumeTrue(OpenSsl.useKeyManagerFactory());
-        testContextFromManagers(SslProvider.OPENSSL);
+        testContextFromManagers(SslProvider.OPENSSL_REFCNT);
     }
 
     @Test
@@ -181,7 +182,7 @@ public class SslContextBuilderTest {
         assertThrows(SSLException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                builder.sslProvider(SslProvider.OPENSSL).build();
+                builder.sslProvider(SslProvider.OPENSSL_REFCNT).build();
             }
         });
     }
@@ -237,7 +238,7 @@ public class SslContextBuilderTest {
         try {
             // This may fail or not depending on the OpenSSL version used
             // See https://github.com/openssl/openssl/issues/7196
-            testInvalidCipher(SslProvider.OPENSSL);
+            testInvalidCipher(SslProvider.OPENSSL_REFCNT);
             if (!OpenSsl.versionString().contains("1.1.1")) {
                 fail();
             }
@@ -265,6 +266,7 @@ public class SslContextBuilderTest {
         SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(context);
     }
 
     private static void testInvalidCipher(SslProvider provider) throws Exception {
@@ -277,6 +279,7 @@ public class SslContextBuilderTest {
                 .trustManager(cert.certificate());
         SslContext context = builder.build();
         context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        ReferenceCountUtil.release(context);
     }
 
     private static void testClientContextFromFile(SslProvider provider) throws Exception {
@@ -293,6 +296,7 @@ public class SslContextBuilderTest {
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(context);
     }
 
     private static void testClientContext(SslProvider provider) throws Exception {
@@ -308,6 +312,7 @@ public class SslContextBuilderTest {
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(context);
     }
 
     private static void testServerContextFromFile(SslProvider provider) throws Exception {
@@ -322,6 +327,7 @@ public class SslContextBuilderTest {
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(context);
     }
 
     private static void testServerContext(SslProvider provider) throws Exception {
@@ -336,6 +342,7 @@ public class SslContextBuilderTest {
         assertTrue(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(context);
     }
 
     private static void testServerContextWithSecureRandom(SslProvider provider,
@@ -353,6 +360,7 @@ public class SslContextBuilderTest {
         assertTrue(secureRandom.getCount() > 0);
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(context);
     }
 
     private static void testClientContextWithSecureRandom(SslProvider provider,
@@ -371,6 +379,7 @@ public class SslContextBuilderTest {
         assertTrue(secureRandom.getCount() > 0);
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(context);
     }
 
     private static void testContextFromManagers(SslProvider provider) throws Exception {
@@ -471,6 +480,8 @@ public class SslContextBuilderTest {
         assertTrue(server_engine.getNeedClientAuth());
         server_engine.closeInbound();
         server_engine.closeOutbound();
+        ReferenceCountUtil.release(client_context);
+        ReferenceCountUtil.release(server_context);
     }
 
     private static final class SpySecureRandom extends SecureRandom {

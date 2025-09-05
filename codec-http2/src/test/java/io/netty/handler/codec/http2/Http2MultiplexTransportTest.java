@@ -354,13 +354,13 @@ public class Http2MultiplexTransportTest {
     @Test
     @Timeout(value = 5000L, unit = MILLISECONDS)
     public void testSSLExceptionOpenSslTLSv12() throws Exception {
-        testSslException(SslProvider.OPENSSL, false);
+        testSslException(SslProvider.OPENSSL_REFCNT, false);
     }
 
     @Test
     @Timeout(value = 5000L, unit = MILLISECONDS)
     public void testSSLExceptionOpenSslTLSv13() throws Exception {
-        testSslException(SslProvider.OPENSSL, true);
+        testSslException(SslProvider.OPENSSL_REFCNT, true);
     }
 
     @Disabled("JDK SSLEngine does not produce an alert")
@@ -519,6 +519,7 @@ public class Http2MultiplexTransportTest {
         if (error != null) {
             throw error;
         }
+        ReferenceCountUtil.release(sslCtx);
     }
 
     @Test
@@ -534,8 +535,8 @@ public class Http2MultiplexTransportTest {
     @Timeout(value = 5000L, unit = MILLISECONDS)
     public void testFireChannelReadAfterHandshakeSuccess_OPENSSL() throws Exception {
         assumeTrue(OpenSsl.isAvailable());
-        assumeTrue(SslProvider.isAlpnSupported(SslProvider.OPENSSL));
-        testFireChannelReadAfterHandshakeSuccess(SslProvider.OPENSSL);
+        assumeTrue(SslProvider.isAlpnSupported(SslProvider.OPENSSL_REFCNT));
+        testFireChannelReadAfterHandshakeSuccess(SslProvider.OPENSSL_REFCNT);
     }
 
     private void testFireChannelReadAfterHandshakeSuccess(SslProvider provider) throws Exception {
@@ -648,6 +649,9 @@ public class Http2MultiplexTransportTest {
         clientChannel = bs.connect(serverChannel.localAddress()).sync().channel();
 
         latch.await();
+
+        ReferenceCountUtil.release(serverCtx);
+        ReferenceCountUtil.release(clientCtx);
     }
 
     /**

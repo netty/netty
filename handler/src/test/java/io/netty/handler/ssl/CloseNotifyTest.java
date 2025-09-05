@@ -23,6 +23,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -61,8 +62,8 @@ public class CloseNotifyTest {
         return asList(new Object[][] {
                 { SslProvider.JDK, SslProtocols.TLS_v1_2 },
                 { SslProvider.JDK, SslProtocols.TLS_v1_3 },
-                { SslProvider.OPENSSL, SslProtocols.TLS_v1_2 },
-                { SslProvider.OPENSSL, SslProtocols.TLS_v1_3 },
+                { SslProvider.OPENSSL_REFCNT, SslProtocols.TLS_v1_2 },
+                { SslProvider.OPENSSL_REFCNT, SslProtocols.TLS_v1_3 },
         });
     }
 
@@ -70,7 +71,7 @@ public class CloseNotifyTest {
     @Timeout(30)
     @MethodSource("data")
     public void eventsOrder(SslProvider provider, String protocol) throws Exception {
-        assumeTrue(provider != SslProvider.OPENSSL || OpenSsl.isAvailable(), "OpenSSL is not available");
+        assumeTrue(provider != SslProvider.OPENSSL_REFCNT || OpenSsl.isAvailable(), "OpenSSL is not available");
 
         if (SslProtocols.TLS_v1_3.equals(protocol)) {
             // Ensure we support TLSv1.3
@@ -154,10 +155,12 @@ public class CloseNotifyTest {
                  .sslProvider(provider)
                  .protocols(protocol)
                 .build();
+        // use sslContext.newHandler(ALLOC) instead of new SslHandler(sslContext.newEngine(ALLOC)) to create
+        // non-JDK compatible OpenSSL engine that can process partial packets:
+        SslHandler handler = sslContext.newHandler(ALLOC);
+        ReferenceCountUtil.release(sslContext);
         return new EmbeddedChannel(
-                // use sslContext.newHandler(ALLOC) instead of new SslHandler(sslContext.newEngine(ALLOC)) to create
-                // non-JDK compatible OpenSSL engine that can process partial packets:
-                sslContext.newHandler(ALLOC),
+                handler,
                 new SimpleChannelInboundHandler<ByteBuf>() {
 
                     @Override

@@ -20,6 +20,7 @@ import org.junit.jupiter.api.BeforeAll;
 
 import javax.net.ssl.SSLException;
 import java.io.File;
+import java.security.KeyStore;
 
 public class OpenSslClientContextTest extends SslContextTest  {
 
@@ -30,7 +31,24 @@ public class OpenSslClientContextTest extends SslContextTest  {
 
     @Override
     protected SslContext newSslContext(File crtFile, File keyFile, String pass) throws SSLException {
-        return new OpenSslClientContext(crtFile, InsecureTrustManagerFactory.INSTANCE, crtFile, keyFile, pass,
-                null, null, IdentityCipherSuiteFilter.INSTANCE, ApplicationProtocolConfig.DISABLED, 0, 0);
+        return new ReferenceCountedOpenSslClientContext(
+                SslContext.toX509CertificatesInternal(crtFile),
+                InsecureTrustManagerFactory.INSTANCE,
+                SslContext.toX509CertificatesInternal(crtFile),
+                SslContext.toPrivateKeyInternal(keyFile, pass),
+                pass,
+                null,
+                null,
+                IdentityCipherSuiteFilter.INSTANCE,
+                ApplicationProtocolConfig.DISABLED,
+                null,
+                0,
+                0,
+                false,
+                KeyStore.getDefaultType(),
+                null,
+                null,
+                null
+        );
     }
 }

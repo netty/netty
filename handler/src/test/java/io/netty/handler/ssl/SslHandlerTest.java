@@ -400,7 +400,7 @@ public class SslHandlerTest {
 
         SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         SslContext sslContext = SslContextBuilder.forServer(cert.certificate(), cert.privateKey())
-                .sslProvider(SslProvider.OPENSSL)
+                .sslProvider(SslProvider.OPENSSL_REFCNT)
                 .build();
         try {
             assertEquals(1, ((ReferenceCounted) sslContext).refCnt());
@@ -1014,19 +1014,19 @@ public class SslHandlerTest {
     @Test
     public void testHandshakeWithExecutorThatExecuteDirectlyOpenSsl() throws Throwable {
         OpenSsl.ensureAvailability();
-        testHandshakeWithExecutor(DIRECT_EXECUTOR, SslProvider.OPENSSL, false);
+        testHandshakeWithExecutor(DIRECT_EXECUTOR, SslProvider.OPENSSL_REFCNT, false);
     }
 
     @Test
     public void testHandshakeWithImmediateExecutorOpenSsl() throws Throwable {
         OpenSsl.ensureAvailability();
-        testHandshakeWithExecutor(ImmediateExecutor.INSTANCE, SslProvider.OPENSSL, false);
+        testHandshakeWithExecutor(ImmediateExecutor.INSTANCE, SslProvider.OPENSSL_REFCNT, false);
     }
 
     @Test
     public void testHandshakeWithImmediateEventExecutorOpenSsl() throws Throwable {
         OpenSsl.ensureAvailability();
-        testHandshakeWithExecutor(ImmediateEventExecutor.INSTANCE, SslProvider.OPENSSL, false);
+        testHandshakeWithExecutor(ImmediateEventExecutor.INSTANCE, SslProvider.OPENSSL_REFCNT, false);
     }
 
     @Test
@@ -1034,7 +1034,7 @@ public class SslHandlerTest {
         OpenSsl.ensureAvailability();
         DelayingExecutor executorService = new DelayingExecutor();
         try {
-            testHandshakeWithExecutor(executorService, SslProvider.OPENSSL, false);
+            testHandshakeWithExecutor(executorService, SslProvider.OPENSSL_REFCNT, false);
         } finally {
             executorService.shutdown();
         }
@@ -1175,6 +1175,7 @@ public class SslHandlerTest {
             }
             group.shutdownGracefully();
             ReferenceCountUtil.release(sslClientCtx);
+            ReferenceCountUtil.release(sslServerCtx);
         }
     }
 
@@ -1260,6 +1261,7 @@ public class SslHandlerTest {
             }
             group.shutdownGracefully();
             ReferenceCountUtil.release(sslClientCtx);
+            ReferenceCountUtil.release(sslServerCtx);
         }
     }
 
