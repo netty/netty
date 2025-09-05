@@ -98,7 +98,7 @@ public final class Socks5PrivateAuthResponseDecoder extends ByteToMessageDecoder
                     in.skipBytes(in.readableBytes());
                     break;
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected response decoder state: " + state);
             }
         } catch (Exception e) {
             fail(out, e);

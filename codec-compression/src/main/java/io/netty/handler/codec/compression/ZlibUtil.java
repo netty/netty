@@ -41,43 +41,32 @@ final class ZlibUtil {
     }
 
     static JZlib.WrapperType convertWrapperType(ZlibWrapper wrapper) {
-        JZlib.WrapperType convertedWrapperType;
         switch (wrapper) {
         case NONE:
-            convertedWrapperType = JZlib.W_NONE;
-            break;
+            return JZlib.W_NONE;
         case ZLIB:
-            convertedWrapperType = JZlib.W_ZLIB;
-            break;
+            return JZlib.W_ZLIB;
         case GZIP:
-            convertedWrapperType = JZlib.W_GZIP;
-            break;
+            return JZlib.W_GZIP;
         case ZLIB_OR_NONE:
-            convertedWrapperType = JZlib.W_ANY;
-            break;
+            return JZlib.W_ANY;
         default:
-            throw new Error();
+            throw new Error("Unexpected wrapper type: " + wrapper);
         }
-        return convertedWrapperType;
     }
 
     static int wrapperOverhead(ZlibWrapper wrapper) {
-        int overhead;
         switch (wrapper) {
         case NONE:
-            overhead = 0;
-            break;
+            return 0;
         case ZLIB:
         case ZLIB_OR_NONE:
-            overhead = 2;
-            break;
+            return 2;
         case GZIP:
-            overhead = 10;
-            break;
+            return 10;
         default:
-            throw new Error();
+            throw new Error("Unexpected wrapper type: " + wrapper);
         }
-        return overhead;
     }
 
     private ZlibUtil() {

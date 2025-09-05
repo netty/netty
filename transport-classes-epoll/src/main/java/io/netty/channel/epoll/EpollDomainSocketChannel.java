@@ -141,7 +141,7 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
                     epollInReadFd();
                     break;
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected read mode: " + config().getReadMode());
             }
         }
 

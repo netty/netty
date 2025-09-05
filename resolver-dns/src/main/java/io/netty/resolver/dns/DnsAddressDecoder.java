@@ -59,7 +59,7 @@ final class DnsAddressDecoder {
             return InetAddress.getByAddress(decodeIdn ? IDN.toUnicode(name) : name, addrBytes);
         } catch (UnknownHostException e) {
             // Should never reach here.
-            throw new Error(e);
+            throw new Error("Failed to decode address \"" + name + '"', e);
         }
     }
 
