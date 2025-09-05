@@ -14,6 +14,8 @@
  */
 package io.netty5.util.collection;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.Map;
 
 /**
@@ -37,12 +39,13 @@ public interface @K@ObjectMap<V> extends Map<@O@, V> {
         /**
          * Gets the value for this entry.
          */
+        @Nullable
         V value();
 
         /**
          * Sets the value for this entry.
          */
-        void setValue(V value);
+        void setValue(@Nullable V value);
     }
 
     /**
@@ -51,6 +54,7 @@ public interface @K@ObjectMap<V> extends Map<@O@, V> {
      * @param key the key whose associated value is to be returned.
      * @return the value or {@code null} if the key was not found in the map.
      */
+    @Nullable
     V get(@k@ key);
 
     /**
@@ -60,7 +64,8 @@ public interface @K@ObjectMap<V> extends Map<@O@, V> {
      * @param value the value of the entry.
      * @return the previous value for this key or {@code null} if there was no previous mapping.
      */
-    V put(@k@ key, V value);
+     @Nullable
+     V put(@k@ key, @Nullable V value);
 
     /**
      * Removes the entry with the specified key.
@@ -68,7 +73,8 @@ public interface @K@ObjectMap<V> extends Map<@O@, V> {
      * @param key the key for the entry to be removed from this map.
      * @return the previous value for the key, or {@code null} if there was no mapping.
      */
-    V remove(@k@ key);
+     @Nullable
+     V remove(@k@ key);
 
     /**
      * Gets an iterable to traverse over the primitive entries contained in this map. As an optimization,
