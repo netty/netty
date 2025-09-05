@@ -21,6 +21,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
@@ -52,7 +53,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
      */
     public static final class AutoScalingUtilizationMetric {
         final EventExecutor executor;
-        private volatile double utilization;
+        private final AtomicLong utilizationBits = new AtomicLong();
 
         AutoScalingUtilizationMetric(EventExecutor executor) {
             this.executor = executor;
@@ -63,11 +64,12 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
          * @return a value from 0.0 to 1.0.
          */
         public double utilization() {
-            return utilization;
+            return Double.longBitsToDouble(utilizationBits.get());
         }
 
         void setUtilization(double utilization) {
-            this.utilization = utilization;
+            long bits = Double.doubleToRawLongBits(utilization);
+            utilizationBits.lazySet(bits);
         }
     }
 
