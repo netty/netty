@@ -29,7 +29,7 @@ import javax.net.ssl.SSLEngine;
 public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicationProtocolNegotiator {
     private static final boolean AVAILABLE = Conscrypt.isAvailable() ||
                                              JdkAlpnSslUtils.supportsAlpn() ||
-                                             BouncyCastleUtil.isBcTlsAvailable();
+            (BouncyCastleUtil.isBcTlsAvailable() && BouncyCastleAlpnSslUtils.isAlpnSupported());
 
     private static final SslEngineWrapperFactory ALPN_WRAPPER = AVAILABLE ? new AlpnWrapper() : new FailureWrapper();
 
@@ -132,7 +132,7 @@ public final class JdkAlpnApplicationProtocolNegotiator extends JdkBaseApplicati
                 return isServer ? ConscryptAlpnSslEngine.newServerEngine(engine, alloc, applicationNegotiator)
                         : ConscryptAlpnSslEngine.newClientEngine(engine, alloc, applicationNegotiator);
             }
-            if (BouncyCastleUtil.isBcJsseInUse(engine)) {
+            if (BouncyCastleUtil.isBcJsseInUse(engine) && BouncyCastleAlpnSslUtils.isAlpnSupported()) {
                 return new BouncyCastleAlpnSslEngine(engine, applicationNegotiator, isServer);
             }
             // ALPN support was recently backported to Java8 as
