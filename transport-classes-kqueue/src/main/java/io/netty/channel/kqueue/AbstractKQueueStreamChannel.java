@@ -46,6 +46,7 @@ import java.util.concurrent.Executor;
 
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
+import static io.netty.util.internal.StringUtil.className;
 
 public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel implements DuplexChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractKQueueStreamChannel.class);
@@ -326,7 +327,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
             return writeFileRegion(in, (FileRegion) msg);
         } else {
             // Should never reach here.
-            throw new Error();
+            throw new Error("Unexpected message type: " + className(msg));
         }
     }
 

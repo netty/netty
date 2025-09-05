@@ -37,6 +37,7 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SelectionKey;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
+import static io.netty.util.internal.StringUtil.className;
 
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
@@ -246,7 +247,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
             }
         } else {
             // Should not reach here.
-            throw new Error();
+            throw new Error("Unexpected message type: " + className(msg));
         }
         return WRITE_STATUS_SNDBUF_FULL;
     }

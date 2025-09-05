@@ -980,13 +980,14 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                         while (!finReceived && continueReading) {
                             byteBuf = allocHandle.allocate(allocator);
                             allocHandle.attemptedBytesRead(byteBuf.writableBytes());
-                            switch (parent.streamRecv(streamId(), byteBuf)) {
+                            QuicheQuicChannel.StreamRecvResult result = parent.streamRecv(streamId(), byteBuf);
+                            switch (result) {
                                 case DONE:
                                     // Nothing left to read;
                                     readable = false;
                                     break;
                                 case FIN:
-                                    // If we received a FIN we also should mark the channel as non readable as
+                                    // If we received a FIN we also should mark the channel as non-readable as
                                     // there is nothing left to read really.
                                     readable = false;
                                     finReceived = true;
@@ -995,7 +996,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                                 case OK:
                                     break;
                                 default:
-                                    throw new Error();
+                                    throw new Error("Unexpected StreamRecvResult: " + result);
                             }
                             allocHandle.lastBytesRead(byteBuf.readableBytes());
                             if (allocHandle.lastBytesRead() <= 0) {
