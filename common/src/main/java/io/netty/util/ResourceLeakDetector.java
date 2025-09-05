@@ -267,6 +267,16 @@ public class ResourceLeakDetector<T> {
         return track0(obj, true);
     }
 
+    /**
+     * Check whether {@link ResourceLeakTracker#record()} does anything for this detector.
+     *
+     * @return {@code true} if {@link ResourceLeakTracker#record()} should be called
+     */
+    public boolean isRecordEnabled() {
+        Level level = getLevel();
+        return (level == Level.ADVANCED || level == Level.PARANOID) && TARGET_RECORDS > 0;
+    }
+
     private DefaultResourceLeak<T> track0(T obj, boolean force) {
         Level level = ResourceLeakDetector.level;
         if (force ||

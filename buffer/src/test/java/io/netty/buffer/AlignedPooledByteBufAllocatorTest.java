@@ -71,7 +71,7 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
     }
 
     @Test
-    public void testDirectSubpageReleaseLock() {
+    public void testDirectSubpageReleaseLock() throws InterruptedException {
         assumeTrue(PooledByteBufAllocator.isDirectMemoryCacheAlignmentSupported());
         int initialCapacity = 0;
         int directMemoryCacheAlignment = 32;
@@ -86,10 +86,11 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
                 false,
                 directMemoryCacheAlignment);
 
-        final PooledByteBuf<?> byteBuf = pooledByteBuf(allocator.directBuffer(initialCapacity, 16));
+        final ByteBuf wrapper = allocator.directBuffer(initialCapacity, 16);
+        PooledByteBuf<?> unwrapped = pooledByteBuf(wrapper);
         // Get the smallSubpagePools[] array in arena.
         @SuppressWarnings("unchecked")
-        PoolSubpage<byte[]>[] smallSubpagePools = (PoolSubpage<byte[]>[]) byteBuf.chunk.arena.smallSubpagePools;
+        PoolSubpage<byte[]>[] smallSubpagePools = (PoolSubpage<byte[]>[]) unwrapped.chunk.arena.smallSubpagePools;
         PoolSubpage<byte[]> head = null;
         for (PoolSubpage<byte[]> subpage : smallSubpagePools) {
             if (subpage.next != subpage) {
@@ -103,7 +104,7 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
             @Override
             public void run() {
                 // Because the head subpage was already locked in the main thread, so this should hang and wait.
-                byteBuf.release();
+                wrapper.release();
             }
         });
         t1.setDaemon(true);
@@ -122,6 +123,7 @@ public class AlignedPooledByteBufAllocatorTest extends PooledByteBufAllocatorTes
         } finally {
             head.unlock();
         }
+        t1.join();
     }
 
     private static PooledByteBuf<?> pooledByteBuf(ByteBuf buffer) {

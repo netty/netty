@@ -186,7 +186,6 @@ public abstract class AbstractIntegrationTest {
     }
 
     @Test
-    @ExtendWith(LeakPresenceExtension.class) // TODO: make global
     public void testHugeDecompress() {
         int chunkSize = 1024 * 1024;
         int numberOfChunks = 256;
