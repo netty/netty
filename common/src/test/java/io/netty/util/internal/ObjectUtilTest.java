@@ -16,8 +16,10 @@ package io.netty.util.internal;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -591,5 +593,22 @@ public class ObjectUtilTest {
         }
         assertNotNull(actualEx, TEST_RESULT_NULLEX_OK);
         assertTrue(actualEx instanceof IllegalArgumentException, TEST_RESULT_EXTYPE_NOK);
+    }
+
+    @Test
+    public void testCheckInRangeDouble() {
+        assertDoesNotThrow(() -> ObjectUtil.checkInRange(0.5, 0.0, 1.0, "in range"));
+
+        assertDoesNotThrow(() -> ObjectUtil.checkInRange(0.0, 0.0, 1.0, "start of range"));
+
+        assertDoesNotThrow(() -> ObjectUtil.checkInRange(1.0, 0.0, 1.0, "end of range"));
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            ObjectUtil.checkInRange(-0.1, 0.0, 1.0, "below range");
+        });
+
+        assertThrows(IllegalArgumentException.class, () -> {
+            ObjectUtil.checkInRange(1.1, 0.0, 1.0, "above range");
+        });
     }
 }

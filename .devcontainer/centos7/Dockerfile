@@ -1,25 +1,55 @@
-FROM --platform=linux/amd64 centos:7.6.1810
+FROM --platform=linux/amd64 centos:7.9.2009
+
+ENV SOURCE_DIR=/root/source
+ENV LIBS_DIR=/root/libs
+ENV CMAKE_VERSION_BASE=3.26
+ENV CMAKE_VERSION=$CMAKE_VERSION_BASE.4
+ENV NINJA_VERSION=1.7.2
+ENV GO_VERSION=1.9.3
 
 # Update as we need to use the vault now.
-RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/\/7.6.1810\//g' /etc/yum.repos.d/CentOS-Base.repo
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/$releasever\//baseurl=https:\/\/linuxsoft.cern.ch\/centos-vault\/\/7.9.2009\//g' /etc/yum.repos.d/CentOS-Base.repo
 
 # install dependencies
 RUN yum install -y \
  apr-devel \
  autoconf \
  automake \
+ bzip2 \
  git \
  glibc-devel \
+ gnupg \
+ java-1.8.0-openjdk-devel \
  libtool \
  lksctp-tools \
  lsb-core \
  make \
  openssl-devel \
+ perl \
  tar \
  unzip \
  wget \
- zip
+ zip \
+ zlib-devel
 
+RUN mkdir $SOURCE_DIR
+WORKDIR $SOURCE_DIR
+
+RUN yum install -y centos-release-scl
+
+# Update to use the vault
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^# baseurl=http:\/\/mirror.centos.org\/centos\/7\/sclo\/$basearch\/sclo\//baseurl=https:\/\/vault.centos.org\/centos\/7\/sclo\/$basearch\/sclo\//g' /etc/yum.repos.d/CentOS-SCLo-scl.repo
+RUN sed -i -e 's/^mirrorlist/#mirrorlist/g' -e 's/^#baseurl=http:\/\/mirror.centos.org\/centos\/7\/sclo\/$basearch\/rh\//baseurl=https:\/\/vault.centos.org\/centos\/7\/sclo\/$basearch\/rh\//g' /etc/yum.repos.d/CentOS-SCLo-scl-rh.repo
+
+RUN yum -y install devtoolset-11-gcc devtoolset-11-gcc-c++
+RUN echo 'source /opt/rh/devtoolset-11/enable' >> ~/.bashrc
+
+RUN echo "export CMAKE_VERSION='$CMAKE_VERSION'" >> ~/.bashrc
+RUN echo "export NINJA_VERSION='$NINJA_VERSION'" >> ~/.bashrc
+RUN echo "export GO_VERSION='$GO_VERSION'" >> ~/.bashrc
+RUN wget -q https://github.com/ninja-build/ninja/releases/download/v$NINJA_VERSION/ninja-linux.zip && unzip ninja-linux.zip && mkdir -p /opt/ninja-$NINJA_VERSION/bin && mv ninja /opt/ninja-$NINJA_VERSION/bin && echo 'PATH=/opt/ninja-$NINJA_VERSION/bin:$PATH' >> ~/.bashrc
+RUN wget -q https://storage.googleapis.com/golang/go$GO_VERSION.linux-amd64.tar.gz && tar zxf go$GO_VERSION.linux-amd64.tar.gz && mv go /opt/ && echo 'PATH=/opt/go/bin:$PATH' >> ~/.bashrc && echo 'export GOROOT=/opt/go/' >> ~/.bashrc
+RUN curl -s https://cmake.org/files/v$CMAKE_VERSION_BASE/cmake-$CMAKE_VERSION-linux-x86_64.tar.gz --output cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && tar zxf cmake-$CMAKE_VERSION-linux-x86_64.tar.gz && mv cmake-$CMAKE_VERSION-linux-x86_64 /opt/ && echo 'PATH=/opt/cmake-$CMAKE_VERSION-linux-x86_64/bin:$PATH' >> ~/.bashrc
 
 # Downloading and installing SDKMAN!
 RUN curl -s "https://get.sdkman.io?ci=true" | bash
@@ -34,9 +64,18 @@ RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
     rm -rf $HOME/.sdkman/tmp/*"
 
 RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
-RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
+RUN echo 'PATH=$JAVA_HOME/bin:$PATH' >> ~/.bashrc
+
+# install rust and setup PATH
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
+
+# Prepare our own build
+ENV PATH=/root/.sdkman/candidates/maven/current:$PATH
+ENV JAVA_HOME=/root/.sdkman/candidates/java/current
 
 # Cleanup
+RUN rm -rf $SOURCE_DIR
 RUN yum clean all && \
     rm -rf /var/cache/yum
 

@@ -21,10 +21,10 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.5.Final-SNAPSHOT</version>
+    <version>4.2.6.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>testsuite-karaf</artifactId>
+  <artifactId>netty-testsuite-karaf</artifactId>
   <packaging>feature</packaging>
   <name>Netty/Testsuite/Karaf</name>
 
@@ -32,6 +32,7 @@
     <org.apache.karaf.version>4.4.8</org.apache.karaf.version>
     <skipDeploy>true</skipDeploy>
     <maven.javadoc.skip>true</maven.javadoc.skip>
+    <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
 
   <dependencyManagement>
@@ -85,6 +86,11 @@
     <dependency>
       <groupId>io.netty</groupId>
       <artifactId>netty-codec-http2</artifactId>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.netty</groupId>
+      <artifactId>netty-codec-http3</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -198,7 +204,6 @@
       <scope>provided</scope>
     </dependency>
 
-    <!-- TODO: netty-codec-http3 requires a header fix -->
     <!-- TODO: netty-codec-protobuf requires figuring out dependencies -->
     <!-- TODO: netty-transport-udt: requires figuring out slf4j dependency -->
     <!-- TODO: these require figuring out platform build

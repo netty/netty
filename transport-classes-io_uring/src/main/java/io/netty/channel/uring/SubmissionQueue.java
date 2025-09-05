@@ -175,7 +175,7 @@ final class SubmissionQueue {
             sb.add("closed");
         } else {
             int pending = tail - head;
-            int idx = tail;
+            int idx = head;
             for (int i = 0; i < pending; i++) {
                 int sqe = sqeIndex(idx++, ringMask);
                 sb.add(Native.opToStr(submissionQueueArray.get(sqe + SQE_OP_CODE_FIELD)) +

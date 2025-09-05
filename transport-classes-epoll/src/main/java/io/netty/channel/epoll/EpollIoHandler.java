@@ -110,7 +110,17 @@ public class EpollIoHandler implements IoHandler {
                                               final SelectStrategyFactory selectStrategyFactory) {
         ObjectUtil.checkPositiveOrZero(maxEvents, "maxEvents");
         ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
-        return executor -> new EpollIoHandler(executor, maxEvents, selectStrategyFactory.newSelectStrategy());
+        return new IoHandlerFactory() {
+            @Override
+            public IoHandler newHandler(ThreadAwareExecutor executor) {
+                return new EpollIoHandler(executor, maxEvents, selectStrategyFactory.newSelectStrategy());
+            }
+
+            @Override
+            public boolean isChangingThreadSupported() {
+                return true;
+            }
+        };
     }
 
     // Package-private for testing
@@ -386,6 +396,9 @@ public class EpollIoHandler implements IoHandler {
             int strategy = selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock());
             switch (strategy) {
                 case SelectStrategy.CONTINUE:
+                    if (context.shouldReportActiveIoTime()) {
+                        context.reportActiveIoTime(0); // Report zero as we did no I/O.
+                    }
                     return 0;
 
                 case SelectStrategy.BUSY_WAIT:
@@ -441,10 +454,22 @@ public class EpollIoHandler implements IoHandler {
             }
             if (strategy > 0) {
                 handled = strategy;
-                if (processReady(events, strategy)) {
-                    prevDeadlineNanos = NONE;
+                if (context.shouldReportActiveIoTime()) {
+                    long activeIoStartTimeNanos = System.nanoTime();
+                    if (processReady(events, strategy)) {
+                        prevDeadlineNanos = NONE;
+                    }
+                    long activeIoEndTimeNanos = System.nanoTime();
+                    context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
+                } else {
+                    if (processReady(events, strategy)) {
+                        prevDeadlineNanos = NONE;
+                    }
                 }
+            } else if (context.shouldReportActiveIoTime()) {
+                context.reportActiveIoTime(0);
             }
+
             if (allowGrowing && strategy == events.length()) {
                 //increase the size of the array as we needed the whole space for the events
                 events.increase();

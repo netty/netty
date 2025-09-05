@@ -15,9 +15,9 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
+import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
@@ -93,7 +93,7 @@ public final class IoUringIoHandler implements IoHandler {
         IoUring.ensureAvailability();
         this.executor = requireNonNull(executor, "executor");
         requireNonNull(config, "config");
-        int setupFlags = Native.setupFlags();
+        int setupFlags = Native.setupFlags(config.singleIssuer());
 
         //The default cq size is always twice the ringSize.
         // It only makes sense when the user actually specifies the cq ring size.
@@ -164,6 +164,9 @@ public final class IoUringIoHandler implements IoHandler {
     @Override
     public int run(IoHandlerContext context) {
         if (closeCompleted) {
+            if (context.shouldReportActiveIoTime()) {
+                context.reportActiveIoTime(0);
+            }
             return 0;
         }
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
@@ -178,7 +181,18 @@ public final class IoUringIoHandler implements IoHandler {
             // Even if we have some completions already pending we can still try to even fetch more.
             submitAndClearNow(submissionQueue);
         }
-        return processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+
+        int processed;
+        if (context.shouldReportActiveIoTime()) {
+            // Timer starts after the blocking wait, around the processing of completions.
+            long activeIoStartTimeNanos = System.nanoTime();
+            processed = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            long activeIoEndTimeNanos = System.nanoTime();
+            context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
+        } else {
+            processed = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+        }
+        return processed;
     }
 
     private int processCompletionsAndHandleOverflow(SubmissionQueue submissionQueue, CompletionQueue completionQueue,
@@ -193,12 +207,13 @@ public final class IoUringIoHandler implements IoHandler {
                         completionQueue.ringEntries);
                 submitAndClearNow(submissionQueue);
             } else if (p == 0 &&
+                    // Check if there are any more submissions pending, if not break the loop.
+                    (submissionQueue.count() == 0 ||
                     // Let's try to submit again and check if there are new completions to handle.
                     // Only break the loop if there was nothing submitted and there are no new completions.
-                    submitAndClearNow(submissionQueue) == 0 && !completionQueue.hasCompletions()) {
+                    (submitAndClearNow(submissionQueue) == 0 && !completionQueue.hasCompletions()))) {
                 break;
             }
-
             processed += p;
         }
         return processed;
@@ -681,6 +696,16 @@ public final class IoUringIoHandler implements IoHandler {
     public static IoHandlerFactory newFactory(IoUringIoHandlerConfig config) {
         IoUring.ensureAvailability();
         ObjectUtil.checkNotNull(config, "config");
-        return eventLoop -> new IoUringIoHandler(eventLoop, config);
+        return new IoHandlerFactory() {
+            @Override
+            public IoHandler newHandler(ThreadAwareExecutor eventLoop) {
+                return new IoUringIoHandler(eventLoop, config);
+            }
+
+            @Override
+            public boolean isChangingThreadSupported() {
+                return !config.singleIssuer();
+            }
+        };
     }
 }
