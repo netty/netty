@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
 import io.netty.handler.codec.http2.Http2FrameWriter.Configuration;
 import io.netty.handler.codec.http2.Http2HeadersEncoder.SensitivityDetector;
+import io.netty.util.LeakPresenceDetector;
 import io.netty.util.internal.PlatformDependent;
 
 import static io.netty.buffer.Unpooled.directBuffer;
@@ -78,8 +79,8 @@ public class DefaultHttp2FrameWriter implements Http2FrameWriter, Http2FrameSize
      * When padding is needed it can be taken as a slice of this buffer. Users should call {@link ByteBuf#retain()}
      * before using their slice.
      */
-    private static final ByteBuf ZERO_BUFFER =
-            unreleasableBuffer(directBuffer(MAX_UNSIGNED_BYTE).writeZero(MAX_UNSIGNED_BYTE)).asReadOnly();
+    private static final ByteBuf ZERO_BUFFER = LeakPresenceDetector.staticInitializer(() ->
+            unreleasableBuffer(directBuffer(MAX_UNSIGNED_BYTE).writeZero(MAX_UNSIGNED_BYTE)).asReadOnly());
 
     private final Http2HeadersEncoder headersEncoder;
     private int maxFrameSize;

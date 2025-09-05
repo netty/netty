@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2014 The Netty Project
+  ~ Copyright 2017 The Netty Project
   ~
   ~ The Netty Project licenses this file to you under the Apache License,
   ~ version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,23 +15,22 @@
   ~ under the License.
   -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
-
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
     <version>4.2.6.Final-SNAPSHOT</version>
   </parent>
-
-  <artifactId>netty-resolver</artifactId>
+  <artifactId>netty-testsuite-common</artifactId>
   <packaging>jar</packaging>
-
-  <name>Netty/Resolver</name>
-
+  <name>Netty/Testsuite/Common</name>
   <properties>
-    <javaModuleName>io.netty.resolver</javaModuleName>
+    <revapi.skip>true</revapi.skip>
+    <!-- Do not deploy this module -->
+    <skipDeploy>true</skipDeploy>
+    <javadocTestsuiteSkip>false</javadocTestsuiteSkip>
+    <maven.javadoc.skip>${javadocTestsuiteSkip}</maven.javadoc.skip>
   </properties>
-
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
@@ -39,50 +38,14 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-    </dependency>
-    <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-api</artifactId>
-      <scope>test</scope>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-engine</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.jupiter</groupId>
-      <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.assertj</groupId>
-      <artifactId>assertj-core</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-testsuite-common</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
+      <scope>compile</scope>
     </dependency>
   </dependencies>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>io.github.dmlloyd.module-info</groupId>
-        <artifactId>module-info</artifactId>
-        <executions>
-          <execution>
-            <id>module-info</id>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
-
 </project>
-
