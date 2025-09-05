@@ -293,7 +293,9 @@ public class AlternativeKeyEndToEndTest {
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             // Close connection after receiving echo
             if (msg instanceof ByteBuf) {
-                resultPromise.setSuccess(((ByteBuf) msg).toString(CharsetUtil.UTF_8));
+                ByteBuf bytes = (ByteBuf) msg;
+                resultPromise.setSuccess(bytes.toString(CharsetUtil.UTF_8));
+                bytes.release();
                 ctx.close();
             }
         }
