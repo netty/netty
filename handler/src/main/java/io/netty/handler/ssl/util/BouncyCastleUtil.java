@@ -133,6 +133,17 @@ public final class BouncyCastleUtil {
     }
 
     /**
+     * Returns the public {@link SSLEngine} sub-class that is used by bouncy-castle or {@code null} if
+     * it can't be loaded.
+     *
+     * @return engine class.
+     */
+    public static Class<? extends SSLEngine> getBcSSLEngineClass() {
+        ensureLoaded();
+        return bcSSLEngineClass;
+    }
+
+    /**
      * Reset the loaded providers. Useful for testing, to redo the loading under different conditions.
      */
     static void reset() {
