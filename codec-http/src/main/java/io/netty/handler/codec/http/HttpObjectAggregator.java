@@ -31,6 +31,7 @@ import static io.netty.handler.codec.http.HttpHeaderNames.CONNECTION;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
 import static io.netty.handler.codec.http.HttpHeaderNames.EXPECT;
 import static io.netty.handler.codec.http.HttpUtil.getContentLength;
+import static io.netty.util.internal.StringUtil.className;
 
 /**
  * A {@link ChannelHandler} that aggregates an {@link HttpMessage}
@@ -206,15 +207,13 @@ public class HttpObjectAggregator
 
         HttpUtil.setTransferEncodingChunked(start, false);
 
-        AggregatedFullHttpMessage ret;
         if (start instanceof HttpRequest) {
-            ret = new AggregatedFullHttpRequest((HttpRequest) start, content, null);
+            return new AggregatedFullHttpRequest((HttpRequest) start, content, null);
         } else if (start instanceof HttpResponse) {
-            ret = new AggregatedFullHttpResponse((HttpResponse) start, content, null);
+            return new AggregatedFullHttpResponse((HttpResponse) start, content, null);
         } else {
-            throw new Error();
+            throw new Error("Unexpected http message type: " + className(start));
         }
-        return ret;
     }
 
     @Override

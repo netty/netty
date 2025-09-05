@@ -53,6 +53,7 @@ import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.FileDescriptor.pipe;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty.util.internal.StringUtil.className;
 
 public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel implements DuplexChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
@@ -480,7 +481,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             return 1;
         } else {
             // Should never reach here.
-            throw new Error();
+            throw new Error("Unexpected message type: " + className(msg));
         }
     }
 

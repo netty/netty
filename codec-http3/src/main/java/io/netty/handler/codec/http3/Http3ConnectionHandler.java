@@ -174,7 +174,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
                     initUnidirectionalStream(ctx, channel);
                     break;
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected channel type: " + channel.type());
             }
         }
         ctx.fireChannelRead(msg);

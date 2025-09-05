@@ -58,7 +58,7 @@ public class SocksAuthRequestDecoder extends ReplayingDecoder<State> {
                 break;
             }
             default: {
-                throw new Error();
+                throw new Error("Unexpected request decoder state: " + state());
             }
         }
         ctx.pipeline().remove(this);

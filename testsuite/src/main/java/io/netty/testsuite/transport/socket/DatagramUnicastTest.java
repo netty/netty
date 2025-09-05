@@ -458,7 +458,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
             case NONE:
                 return cc.write(buf.retain());
             default:
-                throw new Error("unknown wrap type: " + wrapType);
+                throw new Error("Unexpected wrap type: " + wrapType);
         }
     }
 
