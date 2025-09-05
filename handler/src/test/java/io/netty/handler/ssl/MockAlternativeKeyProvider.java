@@ -18,16 +18,15 @@ package io.netty.handler.ssl;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.security.NoSuchProviderException;
 import java.security.PrivateKey;
 import java.security.Provider;
 import java.security.PublicKey;
 import java.security.SecureRandom;
-import java.security.Security;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.security.SignatureSpi;
 import java.security.spec.AlgorithmParameterSpec;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -35,7 +34,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  * by wrapping a real RSA key but returning null from getEncoded() while delegating all
  * cryptographic operations to the underlying JDK implementation.
  */
-final class MockAlternativeKeyProvider extends Provider {
+public final class MockAlternativeKeyProvider extends Provider {
 
     private static final String PROVIDER_NAME = "MockAlternativeKeyProvider";
     private static final double PROVIDER_VERSION = 1.0;
@@ -47,14 +46,19 @@ final class MockAlternativeKeyProvider extends Provider {
     MockAlternativeKeyProvider() {
         super(PROVIDER_NAME, PROVIDER_VERSION, PROVIDER_INFO);
 
-        Provider prototype = Security.getProvider("SunRsaSign");
-        assert prototype != null;
-        for (Map.Entry<Object, Object> entry : prototype.entrySet()) {
-            String key = (String) entry.getKey();
-            if (key.startsWith("Signature.")) {
-                put(entry.getKey(), MockRSASignature.class.getName());
-            }
-        }
+        // Register RSA signature algorithms
+        put("Signature.RSASSA-PSS", MockRsaPssSignature.class.getName());
+        put("Signature.SHA1withRSA", MockSha1WithRsaSignature.class.getName());
+        put("Signature.SHA256withRSA", MockSha256WithRsaSignature.class.getName());
+        put("Signature.SHA384withRSA", MockSha384WithRsaSignature.class.getName());
+        put("Signature.SHA512withRSA", MockSha512WithRsaSignature.class.getName());
+        put("Signature.MD5withRSA", MockMd5WithRsaSignature.class.getName());
+
+        // Register ECDSA signature algorithms
+        put("Signature.SHA1withECDSA", MockSha1WithEcdsaSignature.class.getName());
+        put("Signature.SHA256withECDSA", MockSha256WithEcdsaSignature.class.getName());
+        put("Signature.SHA384withECDSA", MockSha384WithEcdsaSignature.class.getName());
+        put("Signature.SHA512withECDSA", MockSha512WithEcdsaSignature.class.getName());
     }
 
     static PrivateKey wrapPrivateKey(PrivateKey realKey) {
@@ -106,17 +110,23 @@ final class MockAlternativeKeyProvider extends Provider {
         }
     }
 
-    // Needs to be public for the SPI structure to work
-    public static final class MockRSASignature extends SignatureSpi {
-        // TODO: is there a more robust way to do this? The typical pattern is class-per-algorithm
-        private static final String algorithm = "RSASSA-PSS";
+    // Abstract base class for all mock signatures
+    public abstract static class MockSignature extends SignatureSpi {
+        protected final String algorithm;
+        protected final String providerName;
+        protected final Signature realSignature;
 
-        private Signature realSignature;
+        protected MockSignature(String algorithm, String providerName)
+                throws NoSuchProviderException, NoSuchAlgorithmException {
+            this.algorithm = algorithm;
+            this.providerName = providerName;
+            this.realSignature = Signature.getInstance(algorithm, providerName);
+        }
 
         @Override
         protected void engineInitVerify(PublicKey publicKey) throws InvalidKeyException {
             try {
-                getRealSignature().initVerify(publicKey);
+                realSignature.initVerify(publicKey);
             } catch (Exception e) {
                 throw new InvalidKeyException("Failed to initialize signature", e);
             }
@@ -133,30 +143,12 @@ final class MockAlternativeKeyProvider extends Provider {
                 // Extract the real key if it's wrapped
                 if (privateKey instanceof AlternativePrivateKeyWrapper) {
                     privateKey = ((AlternativePrivateKeyWrapper) privateKey).getDelegate();
-                    getRealSignature().initSign(privateKey, random);
+                    realSignature.initSign(privateKey, random);
                 } else {
                     throw new InvalidKeyException("Unrecognized key type: " + privateKey.getClass().getName());
                 }
             } catch (Exception e) {
                 throw new InvalidKeyException("Failed to initialize signature", e);
-            }
-        }
-
-        private Signature getRealSignature() throws Exception {
-            if (realSignature == null) {
-                realSignature = Signature.getInstance(algorithm, "SunRsaSign");
-                configureParametersIfNeeded(realSignature);
-            }
-            return realSignature;
-        }
-
-        private static void configureParametersIfNeeded(Signature sig) throws Exception {
-            if ("RSASSA-PSS".equals(algorithm)) {
-                // Configure PSS parameters following the same pattern as JdkSignatureProviderDiscovery
-                java.security.spec.PSSParameterSpec pssSpec =
-                    new java.security.spec.PSSParameterSpec("SHA-256", "MGF1",
-                        java.security.spec.MGF1ParameterSpec.SHA256, 32, 1);
-                sig.setParameter(pssSpec);
             }
         }
 
@@ -184,40 +176,94 @@ final class MockAlternativeKeyProvider extends Provider {
 
         @Override
         protected void engineSetParameter(String param, Object value) {
-            if (realSignature != null) {
-                try {
-                    realSignature.setParameter(param, value);
-                } catch (Exception e) {
-                    // Ignore parameter setting errors for compatibility
-                }
+            try {
+                realSignature.setParameter(param, value);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
         }
 
         @Override
         protected void engineSetParameter(AlgorithmParameterSpec params)
                 throws InvalidAlgorithmParameterException {
-            if (realSignature != null) {
-                try {
-                    realSignature.setParameter(params);
-                } catch (InvalidAlgorithmParameterException e) {
-                    throw e;
-                } catch (Exception e) {
-                    throw new InvalidAlgorithmParameterException("Failed to set parameter", e);
-                }
+            try {
+                realSignature.setParameter(params);
+            } catch (InvalidAlgorithmParameterException e) {
+                throw e;
+            } catch (Exception e) {
+                throw new InvalidAlgorithmParameterException("Failed to set parameter", e);
             }
         }
 
         @Override
         protected Object engineGetParameter(String param) {
-            if (realSignature != null) {
-                try {
-                    return realSignature.getParameter(param);
-                } catch (Exception e) {
-                    // Ignore parameter retrieval errors for compatibility
-                    return null;
-                }
+            try {
+                return realSignature.getParameter(param);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
             }
-            return null;
+        }
+    }
+
+    // Concrete RSA signature implementations
+    public static final class MockRsaPssSignature extends MockSignature {
+        public MockRsaPssSignature() throws NoSuchAlgorithmException, NoSuchProviderException {
+            super("RSASSA-PSS", "SunRsaSign");
+        }
+    }
+
+    public static final class MockSha1WithRsaSignature extends MockSignature {
+        public MockSha1WithRsaSignature() throws NoSuchAlgorithmException, NoSuchProviderException {
+            super("SHA1withRSA", "SunRsaSign");
+        }
+    }
+
+    public static final class MockSha256WithRsaSignature extends MockSignature {
+        public MockSha256WithRsaSignature() throws NoSuchAlgorithmException, NoSuchProviderException {
+            super("SHA256withRSA", "SunRsaSign");
+        }
+    }
+
+    public static final class MockSha384WithRsaSignature extends MockSignature {
+        public MockSha384WithRsaSignature() throws NoSuchAlgorithmException, NoSuchProviderException {
+            super("SHA384withRSA", "SunRsaSign");
+        }
+    }
+
+    public static final class MockSha512WithRsaSignature extends MockSignature {
+       public  MockSha512WithRsaSignature() throws NoSuchAlgorithmException, NoSuchProviderException {
+            super("SHA512withRSA", "SunRsaSign");
+        }
+    }
+
+    public static final class MockMd5WithRsaSignature extends MockSignature {
+        public MockMd5WithRsaSignature() throws NoSuchAlgorithmException, NoSuchProviderException {
+            super("MD5withRSA", "SunRsaSign");
+        }
+    }
+
+    // Concrete ECDSA signature implementations
+    public static final class MockSha1WithEcdsaSignature extends MockSignature {
+        public MockSha1WithEcdsaSignature() throws NoSuchAlgorithmException, NoSuchProviderException {
+            super("SHA1withECDSA", "SunEC");
+        }
+    }
+
+    public static final class MockSha256WithEcdsaSignature extends MockSignature {
+        public MockSha256WithEcdsaSignature() throws NoSuchAlgorithmException, NoSuchProviderException {
+            super("SHA256withECDSA", "SunEC");
+        }
+    }
+
+    public static final class MockSha384WithEcdsaSignature extends MockSignature {
+        public MockSha384WithEcdsaSignature() throws NoSuchAlgorithmException, NoSuchProviderException {
+            super("SHA384withECDSA", "SunEC");
+        }
+    }
+
+    public static final class MockSha512WithEcdsaSignature extends MockSignature {
+        public MockSha512WithEcdsaSignature() throws NoSuchAlgorithmException, NoSuchProviderException {
+            super("SHA512withECDSA", "SunEC");
         }
     }
 }
