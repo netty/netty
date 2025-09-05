@@ -33,6 +33,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.Provider;
+import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -241,13 +242,18 @@ final class SslUtils {
 
     static SSLContext getSSLContext(Provider provider)
             throws NoSuchAlgorithmException, KeyManagementException, NoSuchProviderException {
+        return getSSLContext(provider, null);
+    }
+
+    static SSLContext getSSLContext(Provider provider, SecureRandom secureRandom)
+            throws NoSuchAlgorithmException, KeyManagementException, NoSuchProviderException {
         final SSLContext context;
         if (provider == null) {
             context = SSLContext.getInstance(getTlsVersion());
         } else {
             context = SSLContext.getInstance(getTlsVersion(), provider);
         }
-        context.init(null, new TrustManager[0], null);
+        context.init(null, new TrustManager[0], secureRandom);
         return context;
     }
 
