@@ -1013,16 +1013,28 @@ final class AdaptivePoolingAllocator {
                 }
                 curr.attachToMagazine(this);
             }
+
             boolean allocated = false;
-            int remainingCapacity = curr.remainingCapacity();
-            int startingCapacity = chunkController.computeBufferCapacity(
-                    size, maxCapacity, true /* never update stats as we don't hold the magazine lock */);
-            if (remainingCapacity >= size) {
+            if (curr instanceof SizeClassedChunk) {
+                allocated = ((SizeClassedChunk) curr).tryAllocate(buf, size, maxCapacity);
+            } else if (curr.hasRemainingCapacity(size)) {
+                int remainingCapacity = curr.remainingCapacity();
+                // never update stats as we don't hold the magazine lock
+                int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, true);
                 curr.readInitInto(buf, size, Math.min(remainingCapacity, startingCapacity), maxCapacity);
                 allocated = true;
             }
+
             try {
-                if (remainingCapacity >= RETIRE_CAPACITY) {
+                boolean keepChunk;
+                if (curr instanceof SizeClassedChunk) {
+                    // Keep a SizeClassedChunk if it has at least one segment remaining.
+                    keepChunk = curr.hasRemainingCapacity(1);
+                } else {
+                    keepChunk = curr.remainingCapacity() >= RETIRE_CAPACITY;
+                }
+
+                if (keepChunk) {
                     transferToNextInLineOrRelease(curr);
                     curr = null;
                 }
@@ -1035,39 +1047,52 @@ final class AdaptivePoolingAllocator {
         }
 
         private boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
-            int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
             Chunk curr = current;
             if (curr != null) {
-                // We have a Chunk that has some space left.
-                int remainingCapacity = curr.remainingCapacity();
-                if (remainingCapacity > startingCapacity) {
-                    curr.readInitInto(buf, size, startingCapacity, maxCapacity);
-                    // We still have some bytes left that we can use for the next allocation, just early return.
-                    return true;
-                }
-
-                // At this point we know that this will be the last time current will be used, so directly set it to
-                // null and release it once we are done.
-                current = null;
-                if (remainingCapacity >= size) {
-                    try {
-                        curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                if (curr instanceof SizeClassedChunk) {
+                    if (curr.hasRemainingCapacity(size)) {
+                        // We know it has a segment, so this allocation should succeed.
+                        // We use readInitInto which throws if something goes unexpectedly wrong.
+                        curr.readInitInto(buf, size, -1, maxCapacity);
                         return true;
-                    } finally {
-                        curr.releaseFromMagazine();
                     }
-                }
-
-                // Check if we either retain the chunk in the nextInLine cache or releasing it.
-                if (remainingCapacity < RETIRE_CAPACITY) {
+                    // Chunk is full. Release and fall through to get a new one.
+                    current = null;
                     curr.releaseFromMagazine();
                 } else {
-                    // See if it makes sense to transfer the Chunk to the nextInLine cache for later usage.
-                    // This method will release curr if this is not the case
-                    transferToNextInLineOrRelease(curr);
+                    int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
+                    int remainingCapacity = curr.remainingCapacity();
+                    if (remainingCapacity > startingCapacity) {
+                        curr.readInitInto(buf, size, startingCapacity, maxCapacity);
+                        // We still have some bytes left that we can use for the next allocation, just early return.
+                        return true;
+                    }
+
+                    // At this point we know that this will be the last time current will be used, so directly set it to
+                    // null and release it once we are done.
+                    current = null;
+                    if (remainingCapacity >= size) {
+                        try {
+                            curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                            return true;
+                        } finally {
+                            curr.releaseFromMagazine();
+                        }
+                    }
+
+                    // Check if we either retain the chunk in the nextInLine cache or releasing it.
+                    if (remainingCapacity < RETIRE_CAPACITY) {
+                        curr.releaseFromMagazine();
+                    } else {
+                        // See if it makes sense to transfer the Chunk to the nextInLine cache for later usage.
+                        // This method will release curr if this is not the case
+                        transferToNextInLineOrRelease(curr);
+                    }
                 }
             }
 
+            // current is null or was exhausted.
+            int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
             return allocateAndRefillCurrentChunk(size, maxCapacity, buf, startingCapacity);
         }
 
@@ -1091,28 +1116,38 @@ final class AdaptivePoolingAllocator {
                     return false;
                 }
 
-                int remainingCapacity = curr.remainingCapacity();
-                if (remainingCapacity > startingCapacity) {
-                    // We have a Chunk that has some space left.
-                    curr.readInitInto(buf, size, startingCapacity, maxCapacity);
-                    current = curr;
-                    return true;
-                }
-
-                if (remainingCapacity >= size) {
-                    // At this point we know that this will be the last time curr will be used, so directly set it to
-                    // null and release it once we are done.
-                    try {
-                        curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                if (curr instanceof SizeClassedChunk) {
+                    if (curr.hasRemainingCapacity(size)) {
+                        curr.readInitInto(buf, size, -1, maxCapacity);
+                        current = curr;
                         return true;
-                    } finally {
-                        // Release in a finally block so even if readInitInto(...) would throw we would still correctly
-                        // release the current chunk before null it out.
+                    }
+                    // Chunk is full, release it and fall through.
+                    curr.releaseFromMagazine();
+                } else {
+                    int remainingCapacity = curr.remainingCapacity();
+                    if (remainingCapacity > startingCapacity) {
+                        // We have a Chunk that has some space left.
+                        curr.readInitInto(buf, size, startingCapacity, maxCapacity);
+                        current = curr;
+                        return true;
+                    }
+
+                    if (remainingCapacity >= size) {
+                        // At this point we know that this will be the last time curr will be used,
+                        // so directly set it to null and release it once we are done.
+                        try {
+                            curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                            return true;
+                        } finally {
+                            // Release in a finally block so even if readInitInto(...) would throw we would
+                            // still correctly release the current chunk before null it out.
+                            curr.releaseFromMagazine();
+                        }
+                    } else {
+                        // Release it as it's too small.
                         curr.releaseFromMagazine();
                     }
-                } else {
-                    // Release it as it's too small.
-                    curr.releaseFromMagazine();
                 }
             }
 
@@ -1129,21 +1164,45 @@ final class AdaptivePoolingAllocator {
                 curr = pollFromLocalCache(size);
             }
 
+            if (curr != null) {
+                curr.attachToMagazine(this);
+                boolean hasCapacity = curr.hasRemainingCapacity(size);
+
+                if (!hasCapacity) {
+                    // Chunk from cache is unusable for this request.
+                    if (curr instanceof SizeClassedChunk) {
+                        // A SizeClassedChunk with no capacity is fully used. Release it.
+                        curr.releaseFromMagazine();
+                    } else {
+                        if (curr.remainingCapacity() < RETIRE_CAPACITY) {
+                            curr.releaseFromMagazine();
+                        } else {
+                            transferToNextInLineOrRelease(curr);
+                        }
+                    }
+                    curr = null;
+                }
+            }
+
             if (curr == null) {
                 curr = chunkController.newChunkAllocation(size, this);
-            } else {
-                curr.attachToMagazine(this);
             }
 
             current = curr;
             try {
-                int remainingCapacity = curr.remainingCapacity();
-                assert remainingCapacity >= size; // Should be guaranteed by pollFromLocalCache or newChunkAllocation
-                if (remainingCapacity > startingCapacity) {
-                    curr.readInitInto(buf, size, startingCapacity, maxCapacity);
-                    curr = null;
+                if (curr instanceof SizeClassedChunk) {
+                    // startingCapacity is not used for SizeClassedChunk's allocation logic.
+                    curr.readInitInto(buf, size, -1, maxCapacity);
+                    curr = null; // Clear curr so the finally block doesn't release it.
                 } else {
-                    curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                    int remainingCapacity = curr.remainingCapacity();
+                    assert remainingCapacity >= size;
+                    if (remainingCapacity > startingCapacity) {
+                        curr.readInitInto(buf, size, startingCapacity, maxCapacity);
+                        curr = null;
+                    } else {
+                        curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                    }
                 }
             } finally {
                 if (curr != null) {
@@ -1214,7 +1273,7 @@ final class AdaptivePoolingAllocator {
         private static final AtomicLongFieldUpdater<ThreadLocalMagazine> EXTERNAL_USED_MEMORY_UPDATER =
                 AtomicLongFieldUpdater.newUpdater(ThreadLocalMagazine.class, "externalUsedMemory");
         private final ArrayDeque<AdaptiveByteBuf> localBuffers;
-        private volatile long externalUsedMemory; // For non-owneer threads
+        private volatile long externalUsedMemory; // For non-owner threads
         private long localUsedMemory; // For owner threads
 
         ThreadLocalMagazine(MagazineGroup group, ChunkController chunkController,
@@ -1259,29 +1318,44 @@ final class AdaptivePoolingAllocator {
         }
 
         private boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
-            int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
             Chunk curr = current;
             if (curr != null) {
-                int remainingCapacity = curr.remainingCapacity();
-                if (remainingCapacity > startingCapacity) {
-                    curr.readInitInto(buf, size, startingCapacity, maxCapacity);
-                    return true;
-                }
-                current = null;
-                if (remainingCapacity >= size) {
-                    try {
-                        curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                if (curr instanceof SizeClassedChunk) {
+                    if (((SizeClassedChunk) curr).tryAllocate(buf, size, maxCapacity)) {
                         return true;
-                    } finally {
-                        curr.releaseFromMagazine();
                     }
-                }
-                if (remainingCapacity < RETIRE_CAPACITY) {
+                    // tryAllocate failed, which means the chunk is full.
+                    // Release it from the magazine and fall through to get a new one.
+                    current = null;
                     curr.releaseFromMagazine();
                 } else {
-                    transferToNextInLineOrRelease(curr);
+                    int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
+                    int remainingCapacity = curr.remainingCapacity();
+                    if (remainingCapacity > startingCapacity) {
+                        curr.readInitInto(buf, size, startingCapacity, maxCapacity);
+                        return true;
+                    }
+                    current = null;
+                    if (remainingCapacity >= size) {
+                        try {
+                            curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                            return true;
+                        } finally {
+                            curr.releaseFromMagazine();
+                        }
+                    }
+                    if (remainingCapacity < RETIRE_CAPACITY) {
+                        curr.releaseFromMagazine();
+                    } else {
+                        transferToNextInLineOrRelease(curr);
+                    }
                 }
             }
+
+            // If we reach here, `current` was null or the chunk was full.
+            // We need to find a new chunk to allocate from.
+            // Note: computeBufferCapacity is only needed if we allocate a new BumpChunk.
+            int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
             return allocateAndRefillCurrentChunk(size, maxCapacity, buf, startingCapacity);
         }
 
@@ -1290,23 +1364,34 @@ final class AdaptivePoolingAllocator {
             Chunk curr = NEXT_IN_LINE.getAndSet(this, null);
 
             if (curr != null) {
-                int remainingCapacity = curr.remainingCapacity();
-                if (remainingCapacity > startingCapacity) {
-                    curr.readInitInto(buf, size, startingCapacity, maxCapacity);
-                    current = curr;
-                    return true;
-                }
-                if (remainingCapacity >= size) {
-                    try {
-                        curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                if (curr instanceof SizeClassedChunk) {
+                    if (((SizeClassedChunk) curr).tryAllocate(buf, size, maxCapacity)) {
+                        current = curr;
                         return true;
-                    } finally {
+                    }
+                    // tryAllocate failed, chunk is full. Release it and fall through.
+                    curr.releaseFromMagazine();
+                } else {
+                    int remainingCapacity = curr.remainingCapacity();
+                    if (remainingCapacity > startingCapacity) {
+                        curr.readInitInto(buf, size, startingCapacity, maxCapacity);
+                        current = curr;
+                        return true;
+                    }
+                    if (remainingCapacity >= size) {
+                        try {
+                            curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                            return true;
+                        } finally {
+                            curr.releaseFromMagazine();
+                        }
+                    } else {
                         curr.releaseFromMagazine();
                     }
-                } else {
-                    curr.releaseFromMagazine();
                 }
             }
+
+            // nextInLine was null or the chunk was full.
             return allocateAndRefillCurrentFromGroup(size, maxCapacity, buf, startingCapacity);
         }
 
@@ -1321,30 +1406,51 @@ final class AdaptivePoolingAllocator {
                 // If not the owner or if the local cache is empty/unsuitable, use the group's external queue.
                 curr = group.pollFromExternalQueue();
             }
-            if (curr == null) {
-                curr = chunkController.newChunkAllocation(size, this);
-            } else {
+
+            if (curr != null) {
                 curr.attachToMagazine(this);
-                int remainingCapacity = curr.remainingCapacity();
-                if (remainingCapacity == 0 || remainingCapacity < size) {
-                    if (remainingCapacity < RETIRE_CAPACITY) {
+                boolean hasCapacity;
+
+                if (curr instanceof SizeClassedChunk) {
+                    hasCapacity = curr.hasRemainingCapacity(size);
+                } else {
+                    hasCapacity = curr.remainingCapacity() >= size;
+                }
+
+                if (!hasCapacity) {
+                    if (curr instanceof SizeClassedChunk) {
+                        // A SizeClassedChunk with no capacity is empty. Release it
+                        // directly, don't place it in the nextInLine.
                         curr.releaseFromMagazine();
                     } else {
-                        transferToNextInLineOrRelease(curr);
+                        if (curr.remainingCapacity() < RETIRE_CAPACITY) {
+                            curr.releaseFromMagazine();
+                        } else {
+                            transferToNextInLineOrRelease(curr);
+                        }
                     }
-                    curr = chunkController.newChunkAllocation(size, this);
+                    curr = null;
                 }
+            }
+
+            if (curr == null) {
+                curr = chunkController.newChunkAllocation(size, this);
             }
 
             current = curr;
             try {
-                int remainingCapacity = curr.remainingCapacity();
-                assert remainingCapacity >= size;
-                if (remainingCapacity > startingCapacity) {
-                    curr.readInitInto(buf, size, startingCapacity, maxCapacity);
+                if (curr instanceof SizeClassedChunk) {
+                    curr.readInitInto(buf, size, -1, maxCapacity);
                     curr = null;
                 } else {
-                    curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                    int remainingCapacity = curr.remainingCapacity();
+                    assert remainingCapacity >= size;
+                    if (remainingCapacity > startingCapacity) {
+                        curr.readInitInto(buf, size, startingCapacity, maxCapacity);
+                        curr = null;
+                    } else {
+                        curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
+                    }
                 }
             } finally {
                 if (curr != null) {
@@ -1822,26 +1928,39 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public void readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
+            if (!tryAllocate(buf, size, maxCapacity)) {
+                throw new IllegalStateException("Free list is empty");
+            }
+        }
+
+        /**
+         * Attempts to allocate a segment from this chunk.
+         *
+         * @return {@code true} if allocation was successful, {@code false} otherwise.
+         */
+        boolean tryAllocate(AdaptiveByteBuf buf, int size, int maxCapacity) {
             assert state == AVAILABLE;
             IntStack localFreeList = this.localFreeList;
             final int startIndex;
             if (localFreeList != null) {
                 assert Thread.currentThread() == ownerThread;
                 if (localFreeList.isEmpty() && copyIntoLocalFreeList(localFreeList) == 0) {
-                    throw new IllegalStateException("Free list is empty");
+                    return false;
                 }
                 startIndex = localFreeList.pop();
             } else {
                 startIndex = externalFreeList.poll();
                 if (startIndex == FREE_LIST_EMPTY) {
-                    throw new IllegalStateException("Free list is empty");
+                    return false;
                 }
             }
 
             allocatedBytes += segmentSize;
             SizeClassedChunk chunk = this;
             try {
-                buf.init(delegate, chunk, 0, 0, startIndex, size, startingCapacity, maxCapacity);
+                // For a size-classed chunk, the buffer's capacity is always the segment size.
+                // The 'size' parameter is just the initial length of the buffer.
+                buf.init(delegate, chunk, 0, 0, startIndex, size, segmentSize, maxCapacity);
                 chunk = null;
             } finally {
                 if (chunk != null) {
@@ -1852,6 +1971,7 @@ final class AdaptivePoolingAllocator {
                     chunk.releaseSegment(startIndex);
                 }
             }
+            return true;
         }
 
         /**
@@ -2069,12 +2189,12 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public ByteBuf capacity(int newCapacity) {
+            checkNewCapacity(newCapacity);
             if (length <= newCapacity && newCapacity <= maxFastCapacity) {
                 ensureAccessible();
                 length = newCapacity;
                 return this;
             }
-            checkNewCapacity(newCapacity);
             if (newCapacity < capacity()) {
                 length = newCapacity;
                 trimIndicesToCapacity(newCapacity);
