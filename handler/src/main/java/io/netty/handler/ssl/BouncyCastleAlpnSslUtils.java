@@ -26,6 +26,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.security.AccessController;
 import java.security.PrivilegedExceptionAction;
+import java.security.SecureRandom;
 import java.util.List;
 import java.util.function.BiFunction;
 import javax.net.ssl.SSLContext;
@@ -43,6 +44,7 @@ final class BouncyCastleAlpnSslUtils {
     private static final Method GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR;
     private static final Class<?> BC_APPLICATION_PROTOCOL_SELECTOR;
     private static final Method BC_APPLICATION_PROTOCOL_SELECTOR_SELECT;
+    private static final boolean SUPPORTED;
 
     static {
         Method setApplicationProtocols;
@@ -52,18 +54,26 @@ final class BouncyCastleAlpnSslUtils {
         Method getHandshakeApplicationProtocolSelector;
         Method bcApplicationProtocolSelectorSelect;
         Class<?> bcApplicationProtocolSelector;
+        boolean supported;
 
         try {
             if (!BouncyCastleUtil.isBcTlsAvailable()) {
                 throw new IllegalStateException(BouncyCastleUtil.unavailabilityCauseBcTls());
             }
-            SSLContext context = getSSLContext(BouncyCastleUtil.getBcProviderJsse());
+            SSLContext context = getSSLContext(BouncyCastleUtil.getBcProviderJsse(), new SecureRandom());
             SSLEngine engine = context.createSSLEngine();
-            final Class<? extends SSLEngine> engineClass = engine.getClass();
+            Class<? extends SSLEngine> engineClass = engine.getClass();
+            // We need to use the class returned by BounceCastleUtil below to access the methods as the engine
+            // returned by createSSLEngine might be package-private and so would not allow us to access the methods
+            // even thought the interface itself that it implements is public and so the methods are public.
+            // See https://github.com/netty/netty/issues/15627
+            final Class<? extends SSLEngine> bcEngineClass = BouncyCastleUtil.getBcSSLEngineClass();
+            if (bcEngineClass == null || !bcEngineClass.isAssignableFrom(engineClass)) {
+                throw new IllegalStateException("Unexpected engine class: " + engineClass);
+            }
 
             final SSLParameters bcSslParameters = engine.getSSLParameters();
             final Class<?> bCSslParametersClass = bcSslParameters.getClass();
-
             setApplicationProtocols = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
                 @Override
                 public Method run() throws Exception {
@@ -75,7 +85,7 @@ final class BouncyCastleAlpnSslUtils {
             getApplicationProtocol = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
                 @Override
                 public Method run() throws Exception {
-                    return engineClass.getMethod("getApplicationProtocol");
+                    return bcEngineClass.getMethod("getApplicationProtocol");
                 }
             });
             getApplicationProtocol.invoke(engine);
@@ -83,7 +93,7 @@ final class BouncyCastleAlpnSslUtils {
             getHandshakeApplicationProtocol = AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
                 @Override
                 public Method run() throws Exception {
-                    return engineClass.getMethod("getHandshakeApplicationProtocol");
+                    return bcEngineClass.getMethod("getHandshakeApplicationProtocol");
                 }
             });
             getHandshakeApplicationProtocol.invoke(engine);
@@ -104,7 +114,7 @@ final class BouncyCastleAlpnSslUtils {
                     AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
                         @Override
                         public Method run() throws Exception {
-                            return engineClass.getMethod("setBCHandshakeApplicationProtocolSelector",
+                            return bcEngineClass.getMethod("setBCHandshakeApplicationProtocolSelector",
                                     testBCApplicationProtocolSelector);
                         }
                     });
@@ -113,10 +123,11 @@ final class BouncyCastleAlpnSslUtils {
                     AccessController.doPrivileged(new PrivilegedExceptionAction<Method>() {
                         @Override
                         public Method run() throws Exception {
-                            return engineClass.getMethod("getBCHandshakeApplicationProtocolSelector");
+                            return bcEngineClass.getMethod("getBCHandshakeApplicationProtocolSelector");
                         }
                     });
             getHandshakeApplicationProtocolSelector.invoke(engine);
+            supported = true;
         } catch (Throwable t) {
             logger.error("Unable to initialize BouncyCastleAlpnSslUtils.", t);
             setApplicationProtocols = null;
@@ -126,6 +137,7 @@ final class BouncyCastleAlpnSslUtils {
             getHandshakeApplicationProtocolSelector = null;
             bcApplicationProtocolSelectorSelect = null;
             bcApplicationProtocolSelector = null;
+            supported = false;
         }
         SET_APPLICATION_PROTOCOLS = setApplicationProtocols;
         GET_APPLICATION_PROTOCOL = getApplicationProtocol;
@@ -134,6 +146,7 @@ final class BouncyCastleAlpnSslUtils {
         GET_HANDSHAKE_APPLICATION_PROTOCOL_SELECTOR = getHandshakeApplicationProtocolSelector;
         BC_APPLICATION_PROTOCOL_SELECTOR_SELECT = bcApplicationProtocolSelectorSelect;
         BC_APPLICATION_PROTOCOL_SELECTOR = bcApplicationProtocolSelector;
+        SUPPORTED = supported;
     }
 
     private BouncyCastleAlpnSslUtils() {
@@ -221,5 +234,9 @@ final class BouncyCastleAlpnSslUtils {
         } catch (Exception ex) {
             throw new IllegalStateException(ex);
         }
+    }
+
+    static boolean isAlpnSupported() {
+        return SUPPORTED;
     }
 }
