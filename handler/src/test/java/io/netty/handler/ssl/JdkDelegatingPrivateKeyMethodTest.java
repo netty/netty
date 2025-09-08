@@ -21,7 +21,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -128,37 +130,39 @@ public class JdkDelegatingPrivateKeyMethodTest {
      * Test data for supported signature algorithms
      */
     static Stream<Arguments> supportedAlgorithms() {
-        return Stream.of(
+        return Stream.of(true, false).flatMap(clientUsesProvider ->
+        Stream.of(
             // RSA PKCS#1 algorithms
             Arguments.of("RSA PKCS#1 SHA1", OpenSslAsyncPrivateKeyMethod.SSL_SIGN_RSA_PKCS1_SHA1,
-                    CertificateBuilder.Algorithm.rsa2048),
+                    CertificateBuilder.Algorithm.rsa2048, clientUsesProvider),
             Arguments.of("RSA PKCS#1 SHA256", OpenSslAsyncPrivateKeyMethod.SSL_SIGN_RSA_PKCS1_SHA256,
-                    CertificateBuilder.Algorithm.rsa2048),
+                    CertificateBuilder.Algorithm.rsa2048, clientUsesProvider),
             Arguments.of("RSA PKCS#1 SHA384", OpenSslAsyncPrivateKeyMethod.SSL_SIGN_RSA_PKCS1_SHA384,
-                    CertificateBuilder.Algorithm.rsa2048),
+                    CertificateBuilder.Algorithm.rsa2048, clientUsesProvider),
             Arguments.of("RSA PKCS#1 SHA512", OpenSslAsyncPrivateKeyMethod.SSL_SIGN_RSA_PKCS1_SHA512,
-                    CertificateBuilder.Algorithm.rsa2048),
+                    CertificateBuilder.Algorithm.rsa2048, clientUsesProvider),
             Arguments.of("RSA PKCS#1 MD5+SHA1", OpenSslAsyncPrivateKeyMethod.SSL_SIGN_RSA_PKCS1_MD5_SHA1,
-                    CertificateBuilder.Algorithm.rsa2048),
+                    CertificateBuilder.Algorithm.rsa2048, clientUsesProvider),
 
             // RSA-PSS algorithms
             Arguments.of("RSA-PSS SHA256", OpenSslAsyncPrivateKeyMethod.SSL_SIGN_RSA_PSS_RSAE_SHA256,
-                    CertificateBuilder.Algorithm.rsa2048),
+                    CertificateBuilder.Algorithm.rsa2048, clientUsesProvider),
             Arguments.of("RSA-PSS SHA384", OpenSslAsyncPrivateKeyMethod.SSL_SIGN_RSA_PSS_RSAE_SHA384,
-                    CertificateBuilder.Algorithm.rsa2048),
+                    CertificateBuilder.Algorithm.rsa2048, clientUsesProvider),
             Arguments.of("RSA-PSS SHA512", OpenSslAsyncPrivateKeyMethod.SSL_SIGN_RSA_PSS_RSAE_SHA512,
-                    CertificateBuilder.Algorithm.rsa2048),
+                    CertificateBuilder.Algorithm.rsa2048, clientUsesProvider),
 
             // ECDSA algorithms with different curves
             Arguments.of("ECDSA SHA1 P-256", OpenSslAsyncPrivateKeyMethod.SSL_SIGN_ECDSA_SHA1,
-                    CertificateBuilder.Algorithm.ecp256),
+                    CertificateBuilder.Algorithm.ecp256, clientUsesProvider),
             Arguments.of("ECDSA SHA256 P-256", OpenSslAsyncPrivateKeyMethod.SSL_SIGN_ECDSA_SECP256R1_SHA256,
-                    CertificateBuilder.Algorithm.ecp256),
+                    CertificateBuilder.Algorithm.ecp256, clientUsesProvider),
             Arguments.of("ECDSA SHA384 P-384", OpenSslAsyncPrivateKeyMethod.SSL_SIGN_ECDSA_SECP384R1_SHA384,
-                    CertificateBuilder.Algorithm.ecp384)
-//            Arguments.of("ECDSA SHA512 P-521",
-//                    OpenSslAsyncPrivateKeyMethod.SSL_SIGN_ECDSA_SECP521R1_SHA512, "EC", "secp521r1")
-        );
+                    CertificateBuilder.Algorithm.ecp384, clientUsesProvider)
+            // TODO: piktesting.CertificateBuilder doesn't yet support this algorithm.
+            // Arguments.of("ECDSA SHA512 P-521",
+            //        OpenSslAsyncPrivateKeyMethod.SSL_SIGN_ECDSA_SECP521R1_SHA512, "EC", "secp521r1")
+        ));
     }
 
     @ParameterizedTest(name = "{index}: scenario = {0}")
@@ -226,23 +230,40 @@ public class JdkDelegatingPrivateKeyMethodTest {
     @ParameterizedTest
     @MethodSource("supportedAlgorithms")
     void testAlgorithmSupport(String description, int opensslAlgorithm,
-                              CertificateBuilder.Algorithm algorithm) throws Exception {
+                              CertificateBuilder.Algorithm algorithm, boolean clientUsesProvider) throws Exception {
         // Generate certificate with matching key type
         X509Bundle certKeyPair = generateCertificateForAlgorithm(algorithm);
-        PrivateKey alternativeKey = wrapPrivateKey(certKeyPair.getKeyPair().getPrivate());
-        assertNull(alternativeKey.getEncoded(), "Alternative key should return null from getEncoded()");
+        PrivateKey wrappedKey = wrapPrivateKey(certKeyPair.getKeyPair().getPrivate());
+        assertNull(wrappedKey.getEncoded(), "Alternative key should return null from getEncoded()");
 
         // Reset signature operation counter
         MockAlternativeKeyProvider.resetSignatureOperationCount();
 
         // Configure SSL contexts with algorithm-specific settings
-        SslContextBuilder serverBuilder = SslContextBuilder.forServer(alternativeKey, certKeyPair.getCertificate())
-            .sslProvider(SslProvider.OPENSSL)
-            .option(OpenSslContextOption.USE_JDK_PROVIDER_SIGNATURES, true);
+        SslContextBuilder serverBuilder;
+        SslContextBuilder clientBuilder;
 
-        SslContextBuilder clientBuilder = SslContextBuilder.forClient()
-            .sslProvider(SslProvider.OPENSSL)
-            .trustManager(certKeyPair.getCertificate());
+        if (clientUsesProvider) {
+            serverBuilder = SslContextBuilder.forServer(certKeyPair.getKeyPair().getPrivate(),
+                            certKeyPair.getCertificate())
+                    .sslProvider(SslProvider.OPENSSL)
+                    .trustManager(certKeyPair.getCertificate())
+                    .clientAuth(ClientAuth.REQUIRE);
+
+            clientBuilder = SslContextBuilder.forClient()
+                    .sslProvider(SslProvider.OPENSSL)
+                    .option(OpenSslContextOption.USE_JDK_PROVIDER_SIGNATURES, true)
+                    .keyManager(wrappedKey, "", certKeyPair.getCertificate())
+                    .trustManager(certKeyPair.getCertificate());
+        } else {
+            serverBuilder = SslContextBuilder.forServer(wrappedKey, certKeyPair.getCertificate())
+                    .sslProvider(SslProvider.OPENSSL)
+                    .option(OpenSslContextOption.USE_JDK_PROVIDER_SIGNATURES, true);
+
+            clientBuilder = SslContextBuilder.forClient()
+                    .sslProvider(SslProvider.OPENSSL)
+                    .trustManager(certKeyPair.getCertificate());
+        }
 
         configureCipherSuitesForAlgorithm(serverBuilder, clientBuilder, opensslAlgorithm);
 
@@ -288,7 +309,7 @@ public class JdkDelegatingPrivateKeyMethodTest {
                         ChannelPipeline pipeline = ch.pipeline();
                         SslHandler sslHandler = serverSslContext.newHandler(ch.alloc());
                         pipeline.addLast(sslHandler);
-                        pipeline.addLast(new ServerHandler());
+                        pipeline.addLast(ServerHandler.INSTANCE);
                     }
                 });
 
@@ -413,7 +434,7 @@ public class JdkDelegatingPrivateKeyMethodTest {
                         ChannelPipeline pipeline = ch.pipeline();
                         SslHandler serverSslHandler = serverContext.newHandler(ch.alloc());
                         pipeline.addLast(serverSslHandler);
-                        pipeline.addLast(new ServerHandler());
+                        pipeline.addLast(ServerHandler.INSTANCE);
                     }
                 });
 
@@ -445,7 +466,12 @@ public class JdkDelegatingPrivateKeyMethodTest {
                     }
                 });
 
-        clientBootstrap.connect("localhost", serverPort);
+        clientBootstrap.connect("localhost", serverPort)
+                .addListener(future -> {
+                    if (!future.isSuccess()) {
+                        resultPromise.tryFailure(future.cause());
+                    }
+                });
         return resultPromise;
     }
 
@@ -453,7 +479,7 @@ public class JdkDelegatingPrivateKeyMethodTest {
      * Simple client handler that sends a single byte 'R' and expects echo back
      */
     private static final class ClientHandler extends ChannelInboundHandlerAdapter {
-        Promise<String> resultPromise;
+        final Promise<String> resultPromise;
 
         ClientHandler(Promise<String> resultPromise) {
             this.resultPromise = resultPromise;
@@ -487,7 +513,13 @@ public class JdkDelegatingPrivateKeyMethodTest {
     /**
      * Simple server handler that echoes messages back
      */
+    @ChannelHandler.Sharable
     private static final class ServerHandler extends ChannelInboundHandlerAdapter {
+
+        static final ChannelInboundHandler INSTANCE = new ServerHandler();
+
+        private ServerHandler() {
+        }
 
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
