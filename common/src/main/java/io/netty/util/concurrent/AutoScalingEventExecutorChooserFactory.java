@@ -156,7 +156,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
             for (EventExecutor executor : executors) {
                 metrics.add(new AutoScalingUtilizationMetric(executor));
             }
-            this.utilizationMetrics = metrics;
+            utilizationMetrics = Collections.unmodifiableList(metrics);
             allExecutorsChooser = DefaultEventExecutorChooserFactory.INSTANCE.newChooser(executors);
 
             AutoScalingState initialState = new AutoScalingState(maxChildren, 0L, executors);
@@ -254,7 +254,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
 
         @Override
         public List<AutoScalingUtilizationMetric> executorUtilizations() {
-            return Collections.unmodifiableList(utilizationMetrics);
+            return utilizationMetrics;
         }
 
         private final class UtilizationMonitor implements Runnable {
@@ -300,14 +300,14 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                         continue;
                     }
 
-                    SingleThreadEventExecutor eventLoop = (SingleThreadEventExecutor) child;
+                    SingleThreadEventExecutor eventExecutor = (SingleThreadEventExecutor) child;
 
                     double utilization = 0.0;
-                    if (!eventLoop.isSuspended()) {
-                        long activeTime = eventLoop.getAndResetAccumulatedActiveTimeNanos();
+                    if (!eventExecutor.isSuspended()) {
+                        long activeTime = eventExecutor.getAndResetAccumulatedActiveTimeNanos();
 
                         if (activeTime == 0) {
-                            long lastActivity = eventLoop.getLastActivityTimeNanos();
+                            long lastActivity = eventExecutor.getLastActivityTimeNanos();
                             long idleTime = now - lastActivity;
 
                             // If the event loop has been idle for less time than our utilization window,
@@ -322,22 +322,23 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
 
                         if (utilization < scaleDownThreshold) {
                             // Utilization is low, increment idle counter and reset busy counter.
-                            int idleCycles = eventLoop.getAndIncrementIdleCycles();
-                            eventLoop.resetBusyCycles();
-                            if (idleCycles >= scalingPatienceCycles && eventLoop.getNumOfRegisteredChannels() <= 0) {
-                                consistentlyIdleChildren.add(eventLoop);
+                            int idleCycles = eventExecutor.getAndIncrementIdleCycles();
+                            eventExecutor.resetBusyCycles();
+                            if (idleCycles >= scalingPatienceCycles &&
+                                eventExecutor.getNumOfRegisteredChannels() <= 0) {
+                                consistentlyIdleChildren.add(eventExecutor);
                             }
                         } else if (utilization > scaleUpThreshold) {
                             // Utilization is high, increment busy counter and reset idle counter.
-                            int busyCycles = eventLoop.getAndIncrementBusyCycles();
-                            eventLoop.resetIdleCycles();
+                            int busyCycles = eventExecutor.getAndIncrementBusyCycles();
+                            eventExecutor.resetIdleCycles();
                             if (busyCycles >= scalingPatienceCycles) {
                                 consistentlyBusyChildren++;
                             }
                         } else {
                             // Utilization is in the normal range, reset counters.
-                            eventLoop.resetIdleCycles();
-                            eventLoop.resetBusyCycles();
+                            eventExecutor.resetIdleCycles();
+                            eventExecutor.resetBusyCycles();
                         }
                     }
 
