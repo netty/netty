@@ -55,7 +55,7 @@ public class IoUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
     @Override
     protected EventLoopGroup newAutoScalingEventLoopGroup() {
         return new MultiThreadIoEventLoopGroup(SCALING_MAX_THREADS, (Executor) null, AUTO_SCALING_CHOOSER_FACTORY,
-                                               newIoHandlerFactory());
+                IoUringIoHandler.newFactory(new IoUringIoHandlerConfig().setSingleIssuer(false)));
     }
 
     @Override

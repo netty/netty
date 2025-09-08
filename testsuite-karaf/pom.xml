@@ -21,10 +21,10 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.5.Final-SNAPSHOT</version>
+    <version>4.2.7.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>testsuite-karaf</artifactId>
+  <artifactId>netty-testsuite-karaf</artifactId>
   <packaging>feature</packaging>
   <name>Netty/Testsuite/Karaf</name>
 
@@ -32,6 +32,7 @@
     <org.apache.karaf.version>4.4.8</org.apache.karaf.version>
     <skipDeploy>true</skipDeploy>
     <maven.javadoc.skip>true</maven.javadoc.skip>
+    <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
 
   <dependencyManagement>

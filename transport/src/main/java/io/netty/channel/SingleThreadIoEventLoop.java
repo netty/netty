@@ -84,9 +84,10 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
      */
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, ThreadFactory threadFactory,
                                    IoHandlerFactory ioHandlerFactory) {
-        super(parent, threadFactory, false, true);
+        super(parent, threadFactory, false,
+                ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").isChangingThreadSupported());
         this.maxTaskProcessingQuantumNs = DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS;
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
+        this.ioHandler = ioHandlerFactory.newHandler(this);
     }
 
     /**
@@ -98,9 +99,10 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
      *                          handle IO.
      */
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, Executor executor, IoHandlerFactory ioHandlerFactory) {
-        super(parent, executor, false, true);
+        super(parent, executor, false,
+                ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").isChangingThreadSupported());
         this.maxTaskProcessingQuantumNs = DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS;
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
+        this.ioHandler = ioHandlerFactory.newHandler(this);
     }
 
     /**
@@ -123,12 +125,14 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
     public SingleThreadIoEventLoop(IoEventLoopGroup parent, ThreadFactory threadFactory,
                                    IoHandlerFactory ioHandlerFactory, int maxPendingTasks,
                                    RejectedExecutionHandler rejectedExecutionHandler, long maxTaskProcessingQuantumMs) {
-        super(parent, threadFactory, false, true, maxPendingTasks, rejectedExecutionHandler);
+        super(parent, threadFactory, false,
+                ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").isChangingThreadSupported(),
+                maxPendingTasks, rejectedExecutionHandler);
         this.maxTaskProcessingQuantumNs =
                 ObjectUtil.checkPositiveOrZero(maxTaskProcessingQuantumMs, "maxTaskProcessingQuantumMs") == 0 ?
                         DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS :
                         TimeUnit.MILLISECONDS.toNanos(maxTaskProcessingQuantumMs);
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
+        this.ioHandler = ioHandlerFactory.newHandler(this);
     }
 
     /**
@@ -150,12 +154,14 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
                                    IoHandlerFactory ioHandlerFactory, int maxPendingTasks,
                                    RejectedExecutionHandler rejectedExecutionHandler,
                                    long maxTaskProcessingQuantumMs) {
-        super(parent, executor, false, true, maxPendingTasks, rejectedExecutionHandler);
+        super(parent, executor, false,
+                ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").isChangingThreadSupported(),
+                maxPendingTasks, rejectedExecutionHandler);
         this.maxTaskProcessingQuantumNs =
                 ObjectUtil.checkPositiveOrZero(maxTaskProcessingQuantumMs, "maxTaskProcessingQuantumMs") == 0 ?
                         DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS :
                         TimeUnit.MILLISECONDS.toNanos(maxTaskProcessingQuantumMs);
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
+        this.ioHandler = ioHandlerFactory.newHandler(this);
     }
 
     /**
@@ -175,9 +181,11 @@ public class SingleThreadIoEventLoop extends SingleThreadEventLoop implements Io
                                       IoHandlerFactory ioHandlerFactory, Queue<Runnable> taskQueue,
                                       Queue<Runnable> tailTaskQueue,
                                       RejectedExecutionHandler rejectedExecutionHandler) {
-        super(parent, executor, false, true, taskQueue, tailTaskQueue, rejectedExecutionHandler);
+        super(parent, executor, false,
+                ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").isChangingThreadSupported(),
+                taskQueue, tailTaskQueue, rejectedExecutionHandler);
         this.maxTaskProcessingQuantumNs = DEFAULT_MAX_TASK_PROCESSING_QUANTUM_NS;
-        this.ioHandler = ObjectUtil.checkNotNull(ioHandlerFactory, "ioHandlerFactory").newHandler(this);
+        this.ioHandler = ioHandlerFactory.newHandler(this);
     }
 
     @Override

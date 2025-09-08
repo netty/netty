@@ -193,7 +193,7 @@ final class PoolThreadCache {
         case Small:
             return cacheForSmall(area, sizeIdx);
         default:
-            throw new Error();
+            throw new Error("Unexpected size class: " + sizeClass);
         }
     }
 

@@ -100,11 +100,11 @@ public final class NativeInetAddress {
                     }
                     break;
                 default:
-                    throw new Error();
+                    throw new IllegalArgumentException("Unsupported length: " + len + " (allowed: 8 or 24)");
             }
             return new InetSocketAddress(address, port);
         } catch (UnknownHostException e) {
-            throw new Error("Should never happen", e);
+            throw new Error(e); // Should never happen
         }
     }
 

@@ -324,6 +324,9 @@ public abstract class AbstractSingleThreadEventLoopTest {
     @Timeout(30)
     public void testAutoScalingEventLoopGroupCanScaleDownAndBeUsed() throws Exception {
         EventLoopGroup group = newAutoScalingEventLoopGroup();
+        if (group == null) {
+            return;
+        }
         try {
             startAllExecutors(group);
             assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
@@ -345,6 +348,9 @@ public abstract class AbstractSingleThreadEventLoopTest {
     @Timeout(30)
     public void testSubmittingTaskWakesUpSuspendedExecutor() throws Exception {
         EventLoopGroup group = newAutoScalingEventLoopGroup();
+        if (group == null) {
+            return;
+        }
         try {
             startAllExecutors(group);
             assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),

@@ -17,16 +17,21 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledIf;
 
 import java.util.Arrays;
 import java.util.Random;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -177,6 +182,66 @@ public abstract class AbstractIntegrationTest {
             decompressed.release();
             in.release();
             closeChannels();
+        }
+    }
+
+    @DisabledIf("io.netty.util.ResourceLeakDetector#isEnabled")
+    @Test
+    public void testHugeDecompress() {
+        int chunkSize = 1024 * 1024;
+        int numberOfChunks = 256;
+        int memoryLimit = chunkSize * 128;
+
+        EmbeddedChannel compressChannel = createEncoder();
+        ByteBuf compressed = compressChannel.alloc().buffer();
+        for (int i = 0; i <= numberOfChunks; i++) {
+            if (i < numberOfChunks) {
+                ByteBuf in = compressChannel.alloc().buffer(chunkSize);
+                in.writeZero(chunkSize);
+                compressChannel.writeOutbound(in);
+            } else {
+                compressChannel.close();
+            }
+            while (true) {
+                ByteBuf buf = compressChannel.readOutbound();
+                if (buf == null) {
+                    break;
+                }
+                compressed.writeBytes(buf);
+                buf.release();
+            }
+        }
+
+        PooledByteBufAllocator allocator = new PooledByteBufAllocator(false);
+
+        HugeDecompressIncomingHandler endHandler = new HugeDecompressIncomingHandler(memoryLimit);
+        EmbeddedChannel decompressChannel = createDecoder();
+        decompressChannel.pipeline().addLast(endHandler);
+        decompressChannel.config().setAllocator(allocator);
+        decompressChannel.writeInbound(compressed);
+        decompressChannel.finishAndReleaseAll();
+        assertEquals((long) chunkSize * numberOfChunks, endHandler.total);
+    }
+
+    private static final class HugeDecompressIncomingHandler extends ChannelInboundHandlerAdapter {
+        final int memoryLimit;
+        long total;
+
+        HugeDecompressIncomingHandler(int memoryLimit) {
+            this.memoryLimit = memoryLimit;
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            ByteBuf buf = (ByteBuf) msg;
+            total += buf.readableBytes();
+            try {
+                PooledByteBufAllocator allocator = (PooledByteBufAllocator) ctx.alloc();
+                assertThat(allocator.metric().usedHeapMemory()).isLessThan(memoryLimit);
+                assertThat(allocator.metric().usedDirectMemory()).isLessThan(memoryLimit);
+            } finally {
+                buf.release();
+            }
         }
     }
 }

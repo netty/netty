@@ -80,6 +80,11 @@ public class MultiThreadIoEventLoopGroupTest {
                 }
             };
         }
+
+        @Override
+        public boolean isChangingThreadSupported() {
+            return true;
+        }
     }
 
     private static class TestableIoEventLoop extends SingleThreadIoEventLoop {

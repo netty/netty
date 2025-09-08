@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.DecoderResult;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
@@ -34,6 +35,7 @@ import java.util.Map;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.*;
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -86,30 +88,47 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
+    public void testDecodeWholeRequestAtOnceFailesWithLFDelimiters() {
+        testDecodeWholeRequestAtOnce(CONTENT_LF_DELIMITERS, HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE, true, true);
+    }
+
+    @Test
+    public void testDecodeWholeRequestAtOnceFailsWithMixedDelimiters() {
+        testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS, HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE, true, true);
+    }
+
+    @Test
     public void testDecodeWholeRequestAtOnceMixedDelimitersWithIntegerOverflowOnMaxBodySize() {
-        testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS, Integer.MAX_VALUE);
-        testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS, Integer.MAX_VALUE - 1);
+        testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS, Integer.MAX_VALUE, false, false);
+        testDecodeWholeRequestAtOnce(CONTENT_MIXED_DELIMITERS, Integer.MAX_VALUE - 1, false, false);
     }
 
     private static void testDecodeWholeRequestAtOnce(byte[] content) {
-        testDecodeWholeRequestAtOnce(content, HttpRequestDecoder.DEFAULT_MAX_HEADER_SIZE);
+        testDecodeWholeRequestAtOnce(content, HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE, false, false);
     }
 
-    private static void testDecodeWholeRequestAtOnce(byte[] content, int maxHeaderSize) {
-        EmbeddedChannel channel =
-                new EmbeddedChannel(new HttpRequestDecoder(HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH,
-                                                           maxHeaderSize,
-                                                           HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE));
+    private static void testDecodeWholeRequestAtOnce(byte[] content, int maxHeaderSize, boolean strictLineParsing,
+                                                     boolean expectFailure) {
+        HttpDecoderConfig config = new HttpDecoderConfig()
+                .setMaxHeaderSize(maxHeaderSize)
+                .setStrictLineParsing(strictLineParsing);
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(config));
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(content)));
         HttpRequest req = channel.readInbound();
         assertNotNull(req);
-        checkHeaders(req.headers());
-        LastHttpContent c = channel.readInbound();
-        assertEquals(CONTENT_LENGTH, c.content().readableBytes());
-        assertEquals(
-                Unpooled.wrappedBuffer(content, content.length - CONTENT_LENGTH, CONTENT_LENGTH),
-                c.content().readSlice(CONTENT_LENGTH));
-        c.release();
+        if (expectFailure) {
+            assertTrue(req.decoderResult().isFailure());
+            assertThat(req.decoderResult().cause()).isInstanceOf(InvalidLineSeparatorException.class);
+        } else {
+            assertFalse(req.decoderResult().isFailure());
+            checkHeaders(req.headers());
+            LastHttpContent c = channel.readInbound();
+            assertEquals(CONTENT_LENGTH, c.content().readableBytes());
+            assertEquals(
+                    Unpooled.wrappedBuffer(content, content.length - CONTENT_LENGTH, CONTENT_LENGTH),
+                    c.content().readSlice(CONTENT_LENGTH));
+            c.release();
+        }
 
         assertFalse(channel.finish());
         assertNull(channel.readInbound());
@@ -135,27 +154,41 @@ public class HttpRequestDecoderTest {
 
     @Test
     public void testDecodeWholeRequestInMultipleStepsCRLFDelimiters() {
-        testDecodeWholeRequestInMultipleSteps(CONTENT_CRLF_DELIMITERS);
+        testDecodeWholeRequestInMultipleSteps(CONTENT_CRLF_DELIMITERS, true, false);
     }
 
     @Test
     public void testDecodeWholeRequestInMultipleStepsLFDelimiters() {
-        testDecodeWholeRequestInMultipleSteps(CONTENT_LF_DELIMITERS);
+        testDecodeWholeRequestInMultipleSteps(CONTENT_LF_DELIMITERS, false, false);
     }
 
     @Test
     public void testDecodeWholeRequestInMultipleStepsMixedDelimiters() {
-        testDecodeWholeRequestInMultipleSteps(CONTENT_MIXED_DELIMITERS);
+        testDecodeWholeRequestInMultipleSteps(CONTENT_MIXED_DELIMITERS, false, false);
     }
 
-    private static void testDecodeWholeRequestInMultipleSteps(byte[] content) {
+    @Test
+    public void testDecodeWholeRequestInMultipleStepsFailsWithLFDelimiters() {
+        testDecodeWholeRequestInMultipleSteps(CONTENT_LF_DELIMITERS, true, true);
+    }
+
+    @Test
+    public void testDecodeWholeRequestInMultipleStepsFailsWithMixedDelimiters() {
+        testDecodeWholeRequestInMultipleSteps(CONTENT_MIXED_DELIMITERS, true, true);
+    }
+
+    private static void testDecodeWholeRequestInMultipleSteps(
+            byte[] content, boolean strictLineParsing, boolean expectFailure) {
         for (int i = 1; i < content.length; i++) {
-            testDecodeWholeRequestInMultipleSteps(content, i);
+            testDecodeWholeRequestInMultipleSteps(content, i, strictLineParsing, expectFailure);
         }
     }
 
-    private static void testDecodeWholeRequestInMultipleSteps(byte[] content, int fragmentSize) {
-        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+    private static void testDecodeWholeRequestInMultipleSteps(
+            byte[] content, int fragmentSize, boolean strictLineParsing, boolean expectFailure) {
+        HttpDecoderConfig config = new HttpDecoderConfig()
+                .setStrictLineParsing(strictLineParsing);
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder(config));
         int headerLength = content.length - CONTENT_LENGTH;
 
         // split up the header
@@ -177,6 +210,12 @@ public class HttpRequestDecoderTest {
 
         HttpRequest req = channel.readInbound();
         assertNotNull(req);
+        if (expectFailure) {
+            assertTrue(req.decoderResult().isFailure());
+            assertThat(req.decoderResult().cause()).isInstanceOf(InvalidLineSeparatorException.class);
+            return; // No more messages will be produced.
+        }
+        assertFalse(req.decoderResult().isFailure());
         checkHeaders(req.headers());
 
         for (int i = CONTENT_LENGTH; i > 1; i --) {
@@ -597,6 +636,66 @@ public class HttpRequestDecoderTest {
     }
 
     @Test
+    void mustRejectImproperlyTerminatedChunkExtensions() throws Exception {
+        // See full explanation: https://w4ke.info/2025/06/18/funky-chunks.html
+        String requestStr = "GET /one HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "2;\n" + // Chunk size followed by illegal single newline (not preceded by carraige return)
+                "xx\r\n" +
+                "45\r\n" +
+                "0\r\n\r\n" +
+                "GET /two HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertFalse(request.decoderResult().isFailure()); // We parse the headers just fine.
+        assertTrue(request.headers().names().contains("Transfer-Encoding"));
+        assertTrue(request.headers().contains("Transfer-Encoding", "chunked", false));
+        HttpContent content = channel.readInbound();
+        DecoderResult decoderResult = content.decoderResult();
+        assertTrue(decoderResult.isFailure()); // But parsing the chunk must fail.
+        assertThat(decoderResult.cause()).isInstanceOf(InvalidChunkExtensionException.class);
+        content.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
+    void mustRejectImproperlyTerminatedChunkBodies() throws Exception {
+        // See full explanation: https://w4ke.info/2025/06/18/funky-chunks.html
+        String requestStr = "GET /one HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "5\r\n" +
+                "AAAAAXX" + // Chunk body contains extra (XX) bytes, and no CRLF terminator.
+                "45\r\n" +
+                "0\r\n" +
+                "GET /two HTTP/1.1\r\n" +
+                "Host: localhost\r\n" +
+                "Transfer-Encoding: chunked\r\n\r\n" +
+                "0\r\n\r\n";
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
+        assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
+        HttpRequest request = channel.readInbound();
+        assertFalse(request.decoderResult().isFailure()); // We parse the headers just fine.
+        assertTrue(request.headers().names().contains("Transfer-Encoding"));
+        assertTrue(request.headers().contains("Transfer-Encoding", "chunked", false));
+        HttpContent content = channel.readInbound();
+        assertFalse(content.decoderResult().isFailure()); // We parse the content promised by the chunk length.
+        content.release();
+
+        content = channel.readInbound();
+        DecoderResult decoderResult = content.decoderResult();
+        assertTrue(decoderResult.isFailure()); // But then parsing the chunk delimiter must fail.
+        assertThat(decoderResult.cause()).isInstanceOf(InvalidChunkTerminationException.class);
+        content.release();
+        assertFalse(channel.finish());
+    }
+
+    @Test
     public void testOrderOfHeadersWithContentLength() {
         String requestStr = "GET /some/path HTTP/1.1\r\n" +
                 "Host: example.com\r\n" +
@@ -690,7 +789,7 @@ public class HttpRequestDecoderTest {
     public void testChunkSizeOverflow2() {
         String requestStr = "PUT /some/path HTTP/1.1\r\n" +
                 "Transfer-Encoding: chunked\r\n\r\n" +
-                "bbbbbbbe;\n\r\n";
+                "bbbbbbbe;\r\n\r\n";
         EmbeddedChannel channel = new EmbeddedChannel(new HttpRequestDecoder());
         assertTrue(channel.writeInbound(Unpooled.copiedBuffer(requestStr, CharsetUtil.US_ASCII)));
         HttpRequest request = channel.readInbound();
@@ -723,7 +822,7 @@ public class HttpRequestDecoderTest {
 
    @Test
     public void testNulInInitialLine() {
-        testInvalidHeaders0("GET / HTTP/1.1\r\u0000\nHost: whatever\r\n\r\n");
+        testInvalidHeaders0("GET / HTTP/1.1\u0000\r\nHost: whatever\r\n\r\n");
     }
 
     @Test
