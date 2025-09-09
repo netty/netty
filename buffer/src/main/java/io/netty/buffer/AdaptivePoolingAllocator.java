@@ -912,6 +912,10 @@ final class AdaptivePoolingAllocator {
             return ownerThread != null && Thread.currentThread() == ownerThread;
         }
 
+        protected final boolean isOwnerThread(Thread current) {
+            return ownerThread != null && current == ownerThread;
+        }
+
         protected final Chunk pollFromLocalCache(int size) {
             for (int i = 0; i < localChunkCache.size(); i++) {
                 Chunk candidate = localChunkCache.get(i);
@@ -1314,10 +1318,11 @@ final class AdaptivePoolingAllocator {
 
         @Override
         boolean tryAllocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
-            return allocate(size, maxCapacity, buf, reallocate);
+            return allocate(size, maxCapacity, buf, reallocate, Thread.currentThread());
         }
 
-        private boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
+        private boolean allocate(int size, int maxCapacity, AdaptiveByteBuf buf,
+                                 boolean reallocate, Thread currentThread) {
             Chunk curr = current;
             if (curr != null) {
                 if (curr instanceof SizeClassedChunk) {
@@ -1356,11 +1361,11 @@ final class AdaptivePoolingAllocator {
             // We need to find a new chunk to allocate from.
             // Note: computeBufferCapacity is only needed if we allocate a new BumpChunk.
             int startingCapacity = chunkController.computeBufferCapacity(size, maxCapacity, reallocate);
-            return allocateAndRefillCurrentChunk(size, maxCapacity, buf, startingCapacity);
+            return allocateAndRefillCurrentChunk(size, maxCapacity, buf, startingCapacity, currentThread);
         }
 
         private boolean allocateAndRefillCurrentChunk(int size, int maxCapacity, AdaptiveByteBuf buf,
-                                                      int startingCapacity) {
+                                                      int startingCapacity, Thread currentThread) {
             Chunk curr = NEXT_IN_LINE.getAndSet(this, null);
 
             if (curr != null) {
@@ -1392,13 +1397,13 @@ final class AdaptivePoolingAllocator {
             }
 
             // nextInLine was null or the chunk was full.
-            return allocateAndRefillCurrentFromGroup(size, maxCapacity, buf, startingCapacity);
+            return allocateAndRefillCurrentFromGroup(size, maxCapacity, buf, startingCapacity, currentThread);
         }
 
-        private boolean allocateAndRefillCurrentFromGroup(int size, int maxCapacity,
-                                                          AdaptiveByteBuf buf, int startingCapacity) {
+        private boolean allocateAndRefillCurrentFromGroup(int size, int maxCapacity, AdaptiveByteBuf buf,
+                                                          int startingCapacity, Thread currentThread) {
             Chunk curr = null;
-            if (isOwnerThread()) {
+            if (isOwnerThread(currentThread)) {
                 curr = pollFromLocalCache(size);
             }
 
