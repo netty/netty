@@ -286,7 +286,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
                 List<AutoScalingUtilizationMetric> utilizationMetrics = group.executorUtilizations();
                 TestEventExecutor finalActiveExecutor = activeExecutor;
                 double utilization = utilizationMetrics.stream()
-                                                       .filter(metric -> metric.executor.equals(finalActiveExecutor))
+                                                       .filter(metric -> metric.executor().equals(finalActiveExecutor))
                                                        .findFirst()
                         .map(AutoScalingUtilizationMetric::utilization)
                         .orElse(0.0);
@@ -303,7 +303,8 @@ public class AutoScalingEventExecutorChooserFactoryTest {
 
             TestEventExecutor finalActiveExecutor2 = activeExecutor;
             double activeUtilization = utilizationMetrics.stream()
-                                                         .filter(metric -> metric.executor.equals(finalActiveExecutor2))
+                                                         .filter(metric -> metric.executor()
+                                                                                 .equals(finalActiveExecutor2))
                                                          .findFirst()
                                                          .map(AutoScalingUtilizationMetric::utilization)
                                                          .orElse(0.0);
@@ -313,9 +314,9 @@ public class AutoScalingEventExecutorChooserFactoryTest {
 
             TestEventExecutor finalActiveExecutor1 = activeExecutor;
             utilizationMetrics.stream()
-                              .filter(metric -> metric.executor != finalActiveExecutor1)
+                              .filter(metric -> metric.executor() != finalActiveExecutor1)
                               .forEach(metric -> {
-                                  assertTrue(metric.executor.isSuspended(), "Other executors should be suspended.");
+                                  assertTrue(metric.executor().isSuspended(), "Other executors should be suspended.");
                                   assertEquals(0.0, metric.utilization(),
                                                "Suspended executor should have 0.0 utilization.");
                               });

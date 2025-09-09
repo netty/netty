@@ -52,7 +52,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
      * field updated periodically.
      */
     public static final class AutoScalingUtilizationMetric {
-        final EventExecutor executor;
+        private final EventExecutor executor;
         private final AtomicLong utilizationBits = new AtomicLong();
 
         AutoScalingUtilizationMetric(EventExecutor executor) {
@@ -65,6 +65,14 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
          */
         public double utilization() {
             return Double.longBitsToDouble(utilizationBits.get());
+        }
+
+        /**
+         * Returns the {@link EventExecutor} this metric belongs too.
+         * @return the executor.
+         */
+        public EventExecutor executor() {
+            return executor;
         }
 
         void setUtilization(double utilization) {
