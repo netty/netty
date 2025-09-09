@@ -58,7 +58,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
 import static io.netty.handler.ssl.MockAlternativeKeyProvider.wrapPrivateKey;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * Comprehensive tests for alternative key provider integration in Netty OpenSSL.

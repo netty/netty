@@ -944,7 +944,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      */
     @SafeVarargs
     static boolean isJdkSignatureFallbackEnabled(Map.Entry<SslContextOption<?>, Object>... ctxOptions) {
-        boolean allowJdkFallback = false;
+        boolean allowJdkFallback = true; // default to enabled.
         for (Map.Entry<SslContextOption<?>, Object> entry : ctxOptions) {
             SslContextOption<?> option = entry.getKey();
             if (option == OpenSslContextOption.USE_JDK_PROVIDER_SIGNATURES) {

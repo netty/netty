@@ -98,7 +98,7 @@ public final class OpenSslContextOption<T> extends SslContextOption<T> {
      * Set the policy for handling alternative key providers (such as hardware security keys,
      * smart cards, remote signing services, etc.) when using BoringSSL.
      * <p>
-     * Note: this feature only works when {@code BoringSSL} is used.
+     * Note: this feature only works when {@code BoringSSL} or {@code AWS-LC} is used.
      */
     public static final OpenSslContextOption<Boolean> USE_JDK_PROVIDER_SIGNATURES =
             new OpenSslContextOption<>("USE_JDK_PROVIDER_SIGNATURES");
