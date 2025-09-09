@@ -354,13 +354,13 @@ public class Http2MultiplexTransportTest {
     @Test
     @Timeout(value = 5000L, unit = MILLISECONDS)
     public void testSSLExceptionOpenSslTLSv12() throws Exception {
-        testSslException(SslProvider.OPENSSL_REFCNT, false);
+        testSslException(SslProvider.OPENSSL, false);
     }
 
     @Test
     @Timeout(value = 5000L, unit = MILLISECONDS)
     public void testSSLExceptionOpenSslTLSv13() throws Exception {
-        testSslException(SslProvider.OPENSSL_REFCNT, true);
+        testSslException(SslProvider.OPENSSL, true);
     }
 
     @Disabled("JDK SSLEngine does not produce an alert")
@@ -535,8 +535,8 @@ public class Http2MultiplexTransportTest {
     @Timeout(value = 5000L, unit = MILLISECONDS)
     public void testFireChannelReadAfterHandshakeSuccess_OPENSSL() throws Exception {
         assumeTrue(OpenSsl.isAvailable());
-        assumeTrue(SslProvider.isAlpnSupported(SslProvider.OPENSSL_REFCNT));
-        testFireChannelReadAfterHandshakeSuccess(SslProvider.OPENSSL_REFCNT);
+        assumeTrue(SslProvider.isAlpnSupported(SslProvider.OPENSSL));
+        testFireChannelReadAfterHandshakeSuccess(SslProvider.OPENSSL);
     }
 
     private void testFireChannelReadAfterHandshakeSuccess(SslProvider provider) throws Exception {

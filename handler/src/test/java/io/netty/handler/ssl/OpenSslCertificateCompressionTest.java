@@ -224,7 +224,7 @@ public class OpenSslCertificateCompressionTest {
     public void testTlsLessThan13() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         final SslContext clientSslContext = SslContextBuilder.forClient()
-             .sslProvider(SslProvider.OPENSSL_REFCNT)
+             .sslProvider(SslProvider.OPENSSL)
              .protocols(SslProtocols.TLS_v1_2)
              .trustManager(InsecureTrustManagerFactory.INSTANCE)
              .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,
@@ -234,7 +234,7 @@ public class OpenSslCertificateCompressionTest {
                              .build())
              .build();
         final SslContext serverSslContext = SslContextBuilder.forServer(cert.key(), cert.cert())
-               .sslProvider(SslProvider.OPENSSL_REFCNT)
+               .sslProvider(SslProvider.OPENSSL)
                .protocols(SslProtocols.TLS_v1_2)
                .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,
                        OpenSslCertificateCompressionConfig.newBuilder()
@@ -343,7 +343,7 @@ public class OpenSslCertificateCompressionTest {
 
     private SslContext buildServerContext(OpenSslCertificateCompressionConfig compressionConfig) throws SSLException {
         return SslContextBuilder.forServer(cert.key(), cert.cert())
-                .sslProvider(SslProvider.OPENSSL_REFCNT)
+                .sslProvider(SslProvider.OPENSSL)
                 .protocols(SslProtocols.TLS_v1_3)
             .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,
                     compressionConfig)
@@ -352,7 +352,7 @@ public class OpenSslCertificateCompressionTest {
 
     private SslContext buildClientContext(OpenSslCertificateCompressionConfig compressionConfig) throws SSLException {
         return SslContextBuilder.forClient()
-                .sslProvider(SslProvider.OPENSSL_REFCNT)
+                .sslProvider(SslProvider.OPENSSL)
                 .protocols(SslProtocols.TLS_v1_3)
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
             .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,

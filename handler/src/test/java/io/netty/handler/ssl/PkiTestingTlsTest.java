@@ -52,7 +52,7 @@ public class PkiTestingTlsTest {
             providers.add(SslProvider.JDK);
         }
         if (OpenSsl.isAvailable() && OpenSsl.supportsKeyManagerFactory() && OpenSsl.isTlsv13Supported()) {
-            providers.add(SslProvider.OPENSSL_REFCNT);
+            providers.add(SslProvider.OPENSSL);
         }
 
         List<Arguments> args = new ArrayList<>();
@@ -153,7 +153,7 @@ public class PkiTestingTlsTest {
                             "TLS_CHACHA20_POLY1305_SHA256"};
 
         final SslContext serverContext = SslContextBuilder.forServer(cert.toKeyManagerFactory())
-                .sslProvider(SslProvider.OPENSSL_REFCNT)
+                .sslProvider(SslProvider.OPENSSL)
                 .option(OpenSslContextOption.GROUPS, new String[]{"X25519MLKEM768"})
                 .protocols("TLSv1.3")
                 .ciphers(Arrays.asList(ciphers))
@@ -161,7 +161,7 @@ public class PkiTestingTlsTest {
 
         final SslContext clientContext = SslContextBuilder.forClient()
                 .trustManager(cert.toTrustManagerFactory())
-                .sslProvider(SslProvider.OPENSSL_REFCNT)
+                .sslProvider(SslProvider.OPENSSL)
                 .option(OpenSslContextOption.GROUPS, new String[]{"X25519MLKEM768"})
                 .serverName(new SNIHostName("localhost"))
                 .protocols("TLSv1.3")

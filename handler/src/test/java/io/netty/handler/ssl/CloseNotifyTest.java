@@ -62,8 +62,8 @@ public class CloseNotifyTest {
         return asList(new Object[][] {
                 { SslProvider.JDK, SslProtocols.TLS_v1_2 },
                 { SslProvider.JDK, SslProtocols.TLS_v1_3 },
-                { SslProvider.OPENSSL_REFCNT, SslProtocols.TLS_v1_2 },
-                { SslProvider.OPENSSL_REFCNT, SslProtocols.TLS_v1_3 },
+                { SslProvider.OPENSSL, SslProtocols.TLS_v1_2 },
+                { SslProvider.OPENSSL, SslProtocols.TLS_v1_3 },
         });
     }
 
@@ -71,7 +71,7 @@ public class CloseNotifyTest {
     @Timeout(30)
     @MethodSource("data")
     public void eventsOrder(SslProvider provider, String protocol) throws Exception {
-        assumeTrue(provider != SslProvider.OPENSSL_REFCNT || OpenSsl.isAvailable(), "OpenSSL is not available");
+        assumeTrue(provider != SslProvider.OPENSSL || OpenSsl.isAvailable(), "OpenSSL is not available");
 
         if (SslProtocols.TLS_v1_3.equals(protocol)) {
             // Ensure we support TLSv1.3

@@ -33,7 +33,7 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
 
     public OpenSslJdkSslEngineInteroptTest() {
         super(SslProvider.isTlsv13Supported(SslProvider.JDK) &&
-                SslProvider.isTlsv13Supported(SslProvider.OPENSSL_REFCNT));
+                SslProvider.isTlsv13Supported(SslProvider.OPENSSL));
     }
 
     @Override
@@ -53,7 +53,7 @@ public class OpenSslJdkSslEngineInteroptTest extends SSLEngineTest {
 
     @Override
     protected SslProvider sslClientProvider() {
-        return SslProvider.OPENSSL_REFCNT;
+        return SslProvider.OPENSSL;
     }
 
     @Override

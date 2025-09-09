@@ -55,7 +55,7 @@ public class SslContextBuilderTest {
     @Test
     public void testClientContextFromFileOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testClientContextFromFile(SslProvider.OPENSSL_REFCNT);
+        testClientContextFromFile(SslProvider.OPENSSL);
     }
 
     @Test
@@ -66,7 +66,7 @@ public class SslContextBuilderTest {
     @Test
     public void testClientContextOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testClientContext(SslProvider.OPENSSL_REFCNT);
+        testClientContext(SslProvider.OPENSSL);
     }
 
     @Test
@@ -77,7 +77,7 @@ public class SslContextBuilderTest {
     @Test
     public void testCombinedPemFileClientContextOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testServerContextWithCombinedCertAndKeyInPem(SslProvider.OPENSSL_REFCNT);
+        testServerContextWithCombinedCertAndKeyInPem(SslProvider.OPENSSL);
     }
 
     @Test
@@ -88,7 +88,7 @@ public class SslContextBuilderTest {
     @Test
     public void testKeyStoreTypeOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testKeyStoreType(SslProvider.OPENSSL_REFCNT);
+        testKeyStoreType(SslProvider.OPENSSL);
     }
 
     @Test
@@ -99,7 +99,7 @@ public class SslContextBuilderTest {
     @Test
     public void testServerContextFromFileOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testServerContextFromFile(SslProvider.OPENSSL_REFCNT);
+        testServerContextFromFile(SslProvider.OPENSSL);
     }
 
     @Test
@@ -110,7 +110,7 @@ public class SslContextBuilderTest {
     @Test
     public void testServerContextOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
-        testServerContext(SslProvider.OPENSSL_REFCNT);
+        testServerContext(SslProvider.OPENSSL);
     }
 
     @Test
@@ -122,7 +122,7 @@ public class SslContextBuilderTest {
     public void testContextFromManagersOpenssl() throws Exception {
         OpenSsl.ensureAvailability();
         assumeTrue(OpenSsl.useKeyManagerFactory());
-        testContextFromManagers(SslProvider.OPENSSL_REFCNT);
+        testContextFromManagers(SslProvider.OPENSSL);
     }
 
     @Test
@@ -182,7 +182,7 @@ public class SslContextBuilderTest {
         assertThrows(SSLException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                builder.sslProvider(SslProvider.OPENSSL_REFCNT).build();
+                builder.sslProvider(SslProvider.OPENSSL).build();
             }
         });
     }
@@ -240,7 +240,7 @@ public class SslContextBuilderTest {
         try {
             // This may fail or not depending on the OpenSSL version used
             // See https://github.com/openssl/openssl/issues/7196
-            testInvalidCipher(SslProvider.OPENSSL_REFCNT);
+            testInvalidCipher(SslProvider.OPENSSL);
             if (!OpenSsl.versionString().contains("1.1.1")) {
                 fail();
             }
@@ -282,9 +282,6 @@ public class SslContextBuilderTest {
                 .trustManager(cert.certificate());
         SslContext context = builder.build();
         SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
-        // Ensure engine is closed and released to prevent leaks
-        engine.closeInbound();
-        engine.closeOutbound();
         ReferenceCountUtil.release(engine);
         ReferenceCountUtil.release(context);
     }

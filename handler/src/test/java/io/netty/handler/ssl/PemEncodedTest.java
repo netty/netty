@@ -37,7 +37,7 @@ public class PemEncodedTest {
 
     @Test
     public void testPemEncodedOpenSsl() throws Exception {
-        testPemEncoded(SslProvider.OPENSSL_REFCNT);
+        testPemEncoded(SslProvider.OPENSSL);
     }
 
     @Test

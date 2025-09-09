@@ -76,9 +76,9 @@ public class OpenSslKeyMaterialManagerTest {
                 return null;
             }
         }, false);
-        SslContext context = SslContextBuilder.forClient().sslProvider(SslProvider.OPENSSL_REFCNT).build();
-        ReferenceCountedOpenSslEngine engine =
-                (ReferenceCountedOpenSslEngine) context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SslContext context = SslContextBuilder.forClient().sslProvider(SslProvider.OPENSSL).build();
+        OpenSslEngine engine =
+                (OpenSslEngine) context.newEngine(UnpooledByteBufAllocator.DEFAULT);
         manager.setKeyMaterialClientSide(engine, EmptyArrays.EMPTY_STRINGS, null);
         ReferenceCountUtil.release(engine);
         ReferenceCountUtil.release(context);
