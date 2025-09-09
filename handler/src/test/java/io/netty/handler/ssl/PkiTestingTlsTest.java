@@ -29,6 +29,7 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -51,7 +52,7 @@ public class PkiTestingTlsTest {
             providers.add(SslProvider.JDK);
         }
         if (OpenSsl.isAvailable() && OpenSsl.supportsKeyManagerFactory() && OpenSsl.isTlsv13Supported()) {
-            providers.add(SslProvider.OPENSSL);
+            providers.add(SslProvider.OPENSSL_REFCNT);
         }
 
         List<Arguments> args = new ArrayList<>();
@@ -152,7 +153,7 @@ public class PkiTestingTlsTest {
                             "TLS_CHACHA20_POLY1305_SHA256"};
 
         final SslContext serverContext = SslContextBuilder.forServer(cert.toKeyManagerFactory())
-                .sslProvider(SslProvider.OPENSSL)
+                .sslProvider(SslProvider.OPENSSL_REFCNT)
                 .option(OpenSslContextOption.GROUPS, new String[]{"X25519MLKEM768"})
                 .protocols("TLSv1.3")
                 .ciphers(Arrays.asList(ciphers))
@@ -160,7 +161,7 @@ public class PkiTestingTlsTest {
 
         final SslContext clientContext = SslContextBuilder.forClient()
                 .trustManager(cert.toTrustManagerFactory())
-                .sslProvider(SslProvider.OPENSSL)
+                .sslProvider(SslProvider.OPENSSL_REFCNT)
                 .option(OpenSslContextOption.GROUPS, new String[]{"X25519MLKEM768"})
                 .serverName(new SNIHostName("localhost"))
                 .protocols("TLSv1.3")
@@ -244,6 +245,9 @@ public class PkiTestingTlsTest {
             }
             group.shutdownGracefully(10, 1000, TimeUnit.MILLISECONDS)
                     .syncUninterruptibly();
+            // Release contexts created for this test to avoid leak failures with OPENSSL_REFCNT.
+            ReferenceCountUtil.release(clientContext);
+            ReferenceCountUtil.release(serverContext);
         }
     }
 }

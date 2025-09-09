@@ -32,6 +32,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.internal.tcnative.CertificateCompressionAlgo;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -223,7 +224,7 @@ public class OpenSslCertificateCompressionTest {
     public void testTlsLessThan13() throws Throwable {
         assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         final SslContext clientSslContext = SslContextBuilder.forClient()
-             .sslProvider(SslProvider.OPENSSL)
+             .sslProvider(SslProvider.OPENSSL_REFCNT)
              .protocols(SslProtocols.TLS_v1_2)
              .trustManager(InsecureTrustManagerFactory.INSTANCE)
              .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,
@@ -233,7 +234,7 @@ public class OpenSslCertificateCompressionTest {
                              .build())
              .build();
         final SslContext serverSslContext = SslContextBuilder.forServer(cert.key(), cert.cert())
-               .sslProvider(SslProvider.OPENSSL)
+               .sslProvider(SslProvider.OPENSSL_REFCNT)
                .protocols(SslProtocols.TLS_v1_2)
                .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,
                        OpenSslCertificateCompressionConfig.newBuilder()
@@ -335,12 +336,14 @@ public class OpenSslCertificateCompressionTest {
             serverChannel.close().syncUninterruptibly();
         } finally  {
             group.shutdownGracefully();
+            ReferenceCountUtil.release(clientSslContext);
+            ReferenceCountUtil.release(serverSslContext);
         }
     }
 
     private SslContext buildServerContext(OpenSslCertificateCompressionConfig compressionConfig) throws SSLException {
         return SslContextBuilder.forServer(cert.key(), cert.cert())
-                .sslProvider(SslProvider.OPENSSL)
+                .sslProvider(SslProvider.OPENSSL_REFCNT)
                 .protocols(SslProtocols.TLS_v1_3)
             .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,
                     compressionConfig)
@@ -349,7 +352,7 @@ public class OpenSslCertificateCompressionTest {
 
     private SslContext buildClientContext(OpenSslCertificateCompressionConfig compressionConfig) throws SSLException {
         return SslContextBuilder.forClient()
-                .sslProvider(SslProvider.OPENSSL)
+                .sslProvider(SslProvider.OPENSSL_REFCNT)
                 .protocols(SslProtocols.TLS_v1_3)
                 .trustManager(InsecureTrustManagerFactory.INSTANCE)
             .option(OpenSslContextOption.CERTIFICATE_COMPRESSION_ALGORITHMS,

@@ -58,7 +58,7 @@ public class ConscryptOpenSslEngineInteropTest extends ConscryptSslEngineTest {
 
     @Override
     protected SslProvider sslServerProvider() {
-        return SslProvider.OPENSSL;
+        return SslProvider.OPENSSL_REFCNT;
     }
 
     @Override

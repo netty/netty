@@ -95,7 +95,7 @@ public class OpenSslPrivateKeyMethodTest {
         assumeTrue(OpenSsl.isBoringSSL() || OpenSsl.isAWSLC());
         // Check if the cipher is supported at all which may not be the case for various JDK versions and OpenSSL API
         // implementations.
-        assumeCipherAvailable(SslProvider.OPENSSL);
+        assumeCipherAvailable(SslProvider.OPENSSL_REFCNT);
         assumeCipherAvailable(SslProvider.JDK);
 
         GROUP = new DefaultEventLoopGroup();
@@ -150,7 +150,7 @@ public class OpenSslPrivateKeyMethodTest {
         final KeyManagerFactory kmf = OpenSslX509KeyManagerFactory.newKeyless(CERT.getCertificatePath());
 
         return SslContextBuilder.forServer(kmf)
-                .sslProvider(SslProvider.OPENSSL)
+                .sslProvider(SslProvider.OPENSSL_REFCNT)
                 .ciphers(ciphers)
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.
                 .protocols(SslProtocols.TLS_v1_2)
@@ -177,7 +177,7 @@ public class OpenSslPrivateKeyMethodTest {
         final KeyManagerFactory kmf = OpenSslX509KeyManagerFactory.newKeyless(CERT.getCertificatePath());
 
         return SslContextBuilder.forServer(kmf)
-                .sslProvider(SslProvider.OPENSSL)
+                .sslProvider(SslProvider.OPENSSL_REFCNT)
                 .ciphers(ciphers)
                 // As this is not a TLSv1.3 cipher we should ensure we talk something else.
                 .protocols(SslProtocols.TLS_v1_2)

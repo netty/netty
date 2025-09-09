@@ -66,7 +66,7 @@ import javax.net.ssl.X509ExtendedKeyManager;
 import static io.netty.handler.ssl.OpenSslContextOption.MAX_CERTIFICATE_LIST_BYTES;
 import static io.netty.handler.ssl.OpenSslTestUtils.checkShouldUseKeyManagerFactory;
 import static io.netty.handler.ssl.ReferenceCountedOpenSslEngine.MAX_PLAINTEXT_LENGTH;
-import static io.netty.handler.ssl.SslProvider.OPENSSL;
+import static io.netty.handler.ssl.SslProvider.OPENSSL_REFCNT;
 import static io.netty.handler.ssl.SslProvider.isOptionSupported;
 import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static java.lang.Integer.MAX_VALUE;
@@ -87,7 +87,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
     private static final String FALLBACK_APPLICATION_LEVEL_PROTOCOL = "my-protocol-http1_1";
 
     public OpenSslEngineTest() {
-        super(SslProvider.isTlsv13Supported(OPENSSL));
+        super(SslProvider.isTlsv13Supported(OPENSSL_REFCNT));
     }
 
     @Override
@@ -1192,7 +1192,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
         serverSslCtx = wrapContext(param, SslContextBuilder.forServer(cert.key(), cert.cert())
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
-                .sslProvider(OPENSSL).build());
+                .sslProvider(OPENSSL_REFCNT).build());
         final SSLEngine serverEngine =
                 wrapEngine(serverSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
         clientSslCtx = wrapContext(param, SslContextBuilder.forClient()
@@ -1200,7 +1200,7 @@ public class OpenSslEngineTest extends SSLEngineTest {
                 .protocols(param.protocols())
                 .ciphers(param.ciphers())
                 .endpointIdentificationAlgorithm(null)
-                .sslProvider(OPENSSL).build());
+                .sslProvider(OPENSSL_REFCNT).build());
         final SSLEngine clientEngine =
                 wrapEngine(clientSslCtx.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
@@ -1491,12 +1491,12 @@ public class OpenSslEngineTest extends SSLEngineTest {
 
     @Override
     protected SslProvider sslClientProvider() {
-        return OPENSSL;
+        return OPENSSL_REFCNT;
     }
 
     @Override
     protected SslProvider sslServerProvider() {
-        return OPENSSL;
+        return OPENSSL_REFCNT;
     }
 
     private static ApplicationProtocolConfig acceptingNegotiator(Protocol protocol,

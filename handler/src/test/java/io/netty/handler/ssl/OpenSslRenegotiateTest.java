@@ -32,7 +32,7 @@ public class OpenSslRenegotiateTest extends RenegotiateTest {
 
     @Override
     protected SslProvider serverSslProvider() {
-        return SslProvider.OPENSSL;
+        return SslProvider.OPENSSL_REFCNT;
     }
 
     protected void verifyResult(AtomicReference<Throwable> error) throws Throwable {

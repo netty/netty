@@ -219,6 +219,8 @@ public class SslContextBuilderTest {
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(context);
     }
 
     @Test
@@ -266,6 +268,7 @@ public class SslContextBuilderTest {
         SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
         ReferenceCountUtil.release(context);
     }
 
@@ -278,7 +281,11 @@ public class SslContextBuilderTest {
                         cert.privateKey())
                 .trustManager(cert.certificate());
         SslContext context = builder.build();
-        context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        SSLEngine engine = context.newEngine(UnpooledByteBufAllocator.DEFAULT);
+        // Ensure engine is closed and released to prevent leaks
+        engine.closeInbound();
+        engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
         ReferenceCountUtil.release(context);
     }
 
@@ -296,6 +303,7 @@ public class SslContextBuilderTest {
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
         ReferenceCountUtil.release(context);
     }
 
@@ -312,6 +320,7 @@ public class SslContextBuilderTest {
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
         ReferenceCountUtil.release(context);
     }
 
@@ -327,6 +336,7 @@ public class SslContextBuilderTest {
         assertFalse(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
         ReferenceCountUtil.release(context);
     }
 
@@ -342,6 +352,7 @@ public class SslContextBuilderTest {
         assertTrue(engine.getNeedClientAuth());
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
         ReferenceCountUtil.release(context);
     }
 
@@ -360,6 +371,7 @@ public class SslContextBuilderTest {
         assertTrue(secureRandom.getCount() > 0);
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
         ReferenceCountUtil.release(context);
     }
 
@@ -379,6 +391,7 @@ public class SslContextBuilderTest {
         assertTrue(secureRandom.getCount() > 0);
         engine.closeInbound();
         engine.closeOutbound();
+        ReferenceCountUtil.release(engine);
         ReferenceCountUtil.release(context);
     }
 
@@ -470,6 +483,7 @@ public class SslContextBuilderTest {
         assertFalse(client_engine.getNeedClientAuth());
         client_engine.closeInbound();
         client_engine.closeOutbound();
+        ReferenceCountUtil.release(client_engine);
         SslContextBuilder server_builder = SslContextBuilder.forServer(customKeyManager)
                                                      .sslProvider(provider)
                                                      .trustManager(customTrustManager)
@@ -480,6 +494,7 @@ public class SslContextBuilderTest {
         assertTrue(server_engine.getNeedClientAuth());
         server_engine.closeInbound();
         server_engine.closeOutbound();
+        ReferenceCountUtil.release(server_engine);
         ReferenceCountUtil.release(client_context);
         ReferenceCountUtil.release(server_context);
     }
