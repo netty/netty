@@ -179,7 +179,7 @@ public class Http2MultiplexTransportTest {
         if (serverConnectedChannel != null) {
             serverConnectedChannel.close();
         }
-        eventLoopGroup.shutdownGracefully(0, 0, MILLISECONDS);
+        eventLoopGroup.shutdownGracefully(0, 0, MILLISECONDS).syncUninterruptibly();
     }
 
     @Test
