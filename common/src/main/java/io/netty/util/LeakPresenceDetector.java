@@ -308,6 +308,15 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
         }
 
         /**
+         * Check whether there are any open resources left, and {@link #close()} would throw.
+         *
+         * @return {@code true} if there are open resources
+         */
+        public boolean hasOpenResources() {
+            return openResourceCounter.sum() > 0;
+        }
+
+        /**
          * Close this scope. Closing a scope will prevent new resources from being allocated (or released) in this
          * scope. The call also throws an exception if there are any resources left open.
          */

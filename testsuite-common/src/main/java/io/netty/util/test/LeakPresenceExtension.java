@@ -24,6 +24,7 @@ import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Junit 5 extension for leak detection using {@link LeakPresenceDetector}.
@@ -95,9 +96,17 @@ public final class LeakPresenceExtension
     }
 
     @Override
-    public void afterAll(ExtensionContext context) {
-        ((LeakPresenceDetector.ResourceScope) context.getStore(ExtensionContext.Namespace.GLOBAL).get(SCOPE_KEY))
-                .close();
+    public void afterAll(ExtensionContext context) throws InterruptedException {
+        LeakPresenceDetector.ResourceScope scope =
+                (LeakPresenceDetector.ResourceScope) context.getStore(ExtensionContext.Namespace.GLOBAL).get(SCOPE_KEY);
+
+        // Wait some time for resources to close. Many tests do loop.shutdownGracefully without waiting, and that's ok.
+        long start = System.nanoTime();
+        while (scope.hasOpenResources() && System.nanoTime() - start < TimeUnit.SECONDS.toNanos(5)) {
+            TimeUnit.MILLISECONDS.sleep(100);
+        }
+
+        scope.close();
     }
 
     public static final class WithTransferableScope<T> extends LeakPresenceDetector<T> {
