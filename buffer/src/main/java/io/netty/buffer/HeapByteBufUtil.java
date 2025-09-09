@@ -129,7 +129,7 @@ final class HeapByteBufUtil {
     }
 
     static void setByte(byte[] memory, int index, int value) {
-        memory[index] = (byte) value;
+        memory[index] = (byte) (value & 0xFF);
     }
 
     static void setShort(byte[] memory, int index, int value) {
