@@ -21,7 +21,6 @@ import io.netty5.util.concurrent.EventExecutor;
 import io.netty5.util.concurrent.FastThreadLocalThread;
 import io.netty5.util.concurrent.Future;
 import io.netty5.util.internal.EmptyArrays;
-import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.ThreadExecutorMap;
 import org.openjdk.jmh.annotations.Fork;
@@ -139,9 +138,6 @@ public class AbstractMicrobenchmark extends AbstractMicrobenchmarkBase {
         jvmArgs.add("-Xms768m");
         jvmArgs.add("-Xmx768m");
         jvmArgs.add("-XX:MaxDirectMemorySize=768m");
-        if (PlatformDependent.javaVersion() < 15) { // not entirely sure when this option was removed, but
-            jvmArgs.add("-XX:BiasedLockingStartupDelay=0");
-        }
         if (!disableHarnessExecutor) {
             jvmArgs.add("-Djmh.executor=CUSTOM");
             jvmArgs.add("-Djmh.executor.class=" + HarnessExecutor.class.getName());

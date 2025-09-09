@@ -47,7 +47,6 @@ import java.util.function.Supplier;
 
 import static io.netty5.buffer.internal.InternalBufferUtils.allocatorClosedException;
 import static io.netty5.buffer.internal.InternalBufferUtils.standardDrop;
-import static io.netty5.util.internal.PlatformDependent.threadId;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -220,7 +219,7 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
                     return ((Magazine) mag).allocate(size, sizeBucket);
                 }
             }
-            long threadId = threadId(currentThread);
+            long threadId = currentThread.threadId();
             int expansions = 0;
             Magazine[] mags;
             do {

@@ -423,6 +423,7 @@ public class Http2FrameCodecTest {
 
     @Test
     public void unknownFrameOnMissingStream() throws Exception {
+        setUp();
         Buffer debugData = bb("debug");
         frameInboundWriter.writeInboundFrame((byte) 0xb, 101, new Http2Flags(), debugData);
         channel.flush();

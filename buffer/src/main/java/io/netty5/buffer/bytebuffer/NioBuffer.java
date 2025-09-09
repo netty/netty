@@ -39,8 +39,6 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 import static io.netty5.buffer.internal.InternalBufferUtils.MAX_BUFFER_SIZE;
-import static io.netty5.buffer.internal.InternalBufferUtils.bbput;
-import static io.netty5.buffer.internal.InternalBufferUtils.bbslice;
 import static io.netty5.buffer.internal.InternalBufferUtils.bufferIsReadOnly;
 import static io.netty5.buffer.internal.InternalBufferUtils.checkImplicitCapacity;
 import static io.netty5.buffer.internal.InternalBufferUtils.checkLength;
@@ -196,7 +194,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             // If both this buffer and the copy are read-only, they can safely share the memory.
             NioBuffer copy = newConstChild();
             if (offset > 0 || length < capacity()) {
-                copy.rmem = bbslice(copy.rmem, offset, length);
+                copy.rmem = copy.rmem.slice(offset, length);
             }
             copy.roff = 0;
             copy.woff = length;
@@ -250,7 +248,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             return;
         }
         dest = dest.duplicate().clear();
-        bbput(dest, destPos, rmem, srcPos, length);
+        dest.put(destPos, rmem, srcPos, length);
     }
 
     @Override
@@ -284,7 +282,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         if (hasWritableArray()) {
             System.arraycopy(source, srcPos, writableArray(), writableArrayOffset(), length);
         } else {
-            bbput(wmem, woff, source, srcPos, length);
+            wmem.put(woff, source, srcPos, length);
         }
 
         skipWritableBytes(length);
@@ -301,7 +299,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
         if (hasWritableArray()) {
             source.get(writableArray(), writableArrayOffset(), length);
         } else {
-            bbput(wmem, woff, source, source.position(), length);
+            wmem.put(woff, source, source.position(), length);
             source.position(source.position() + length);
         }
 
@@ -544,7 +542,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             throw attachTrace(new IllegalStateException("Cannot split a buffer that is not owned."));
         }
         var drop = unsafeGetDrop().fork();
-        var splitByteBuffer = bbslice(rmem, 0, splitOffset);
+        var splitByteBuffer = rmem.slice(0, splitOffset);
         var splitBuffer = new NioBuffer(base, splitByteBuffer, control, drop);
         drop.attach(splitBuffer);
         splitBuffer.woff = Math.min(woff, splitOffset);
@@ -554,7 +552,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
             splitBuffer.makeReadOnly();
         }
         // Split preserves const-state.
-        rmem = bbslice(rmem, splitOffset, rmem.capacity() - splitOffset);
+        rmem = rmem.slice(splitOffset, rmem.capacity() - splitOffset);
         if (!readOnly) {
             wmem = rmem;
         }
@@ -631,12 +629,12 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public ByteBuffer readableBuffer() {
-        return bbslice(rmem.asReadOnlyBuffer(), readerOffset(), readableBytes());
+        return rmem.asReadOnlyBuffer().slice(readerOffset(), readableBytes());
     }
 
     @Override
     public ByteBuffer mutableReadableBuffer() {
-        return bbslice(rmem, readerOffset(), readableBytes());
+        return rmem.slice(readerOffset(), readableBytes());
     }
 
     @Override
@@ -666,7 +664,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
 
     @Override
     public ByteBuffer writableBuffer() {
-        return bbslice(wmem, writerOffset(), writableBytes());
+        return wmem.slice(writerOffset(), writableBytes());
     }
 
     @Override

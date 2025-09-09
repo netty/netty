@@ -31,7 +31,6 @@ import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.PlatformDependent;
 
 import java.io.IOException;
-import java.lang.reflect.Method;
 import java.net.ProtocolFamily;
 import java.net.SocketAddress;
 import java.net.SocketOption;
@@ -70,13 +69,9 @@ public class NioSocketChannel
         implements io.netty5.channel.socket.SocketChannel {
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
-    private static final Method OPEN_SOCKET_CHANNEL_WITH_FAMILY =
-            NioChannelUtil.findOpenMethod("openSocketChannel");
-
     private static SocketChannel newChannel(SelectorProvider provider, ProtocolFamily family) {
         try {
-            SocketChannel channel = NioChannelUtil.newChannel(OPEN_SOCKET_CHANNEL_WITH_FAMILY, provider, family);
-            return channel == null ? provider.openSocketChannel() : channel;
+            return family == null? provider.openSocketChannel() : provider.openSocketChannel(family);
         } catch (IOException e) {
             throw new ChannelException("Failed to open a socket.", e);
         }

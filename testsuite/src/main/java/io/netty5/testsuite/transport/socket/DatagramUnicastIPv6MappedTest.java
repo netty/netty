@@ -15,10 +15,7 @@
  */
 package io.netty5.testsuite.transport.socket;
 
-import io.netty5.channel.socket.DatagramChannel;
-import io.netty5.channel.socket.nio.NioDatagramChannel;
 import io.netty5.util.NetUtil;
-import io.netty5.util.internal.PlatformDependent;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -38,14 +35,5 @@ public class DatagramUnicastIPv6MappedTest extends DatagramUnicastIPv6Test {
             return new InetSocketAddress(NetUtil.LOCALHOST4, serverAddress.getPort());
         }
         return serverAddress;
-    }
-
-    @Override
-    protected boolean disconnectMightFail(DatagramChannel channel) {
-        // See https://bugs.openjdk.org/browse/JDK-8285515
-        if (channel instanceof NioDatagramChannel && PlatformDependent.javaVersion() < 20) {
-            return true;
-        }
-        return super.disconnectMightFail(channel);
     }
 }

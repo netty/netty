@@ -44,7 +44,6 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 import static io.netty5.buffer.internal.InternalBufferUtils.MAX_BUFFER_SIZE;
-import static io.netty5.buffer.internal.InternalBufferUtils.bbslice;
 import static io.netty5.buffer.internal.InternalBufferUtils.bufferIsReadOnly;
 import static io.netty5.buffer.internal.InternalBufferUtils.checkImplicitCapacity;
 import static io.netty5.buffer.internal.InternalBufferUtils.checkLength;
@@ -689,7 +688,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     public ByteBuffer mutableReadableBuffer() {
         final ByteBuffer buf;
         if (hasReadableArray()) {
-            buf = bbslice(ByteBuffer.wrap(readableArray()), readableArrayOffset(), readableArrayLength());
+            buf = ByteBuffer.wrap(readableArray()).slice(readableArrayOffset(), readableArrayLength());
         } else {
             buf = PlatformDependent.directBuffer(address + roff, readableBytes(), memory);
         }
@@ -733,7 +732,7 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     public ByteBuffer writableBuffer() {
         final ByteBuffer buf;
         if (hasWritableArray()) {
-            buf = bbslice(ByteBuffer.wrap(writableArray()), writableArrayOffset(), writableArrayLength());
+            buf = ByteBuffer.wrap(writableArray()).slice(writableArrayOffset(), writableArrayLength());
         } else {
             buf = PlatformDependent.directBuffer(address + woff, writableBytes(), memory);
         }

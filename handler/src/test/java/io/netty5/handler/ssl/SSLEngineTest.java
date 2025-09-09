@@ -44,7 +44,6 @@ import io.netty5.util.concurrent.Future;
 import io.netty5.util.concurrent.ImmediateEventExecutor;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
-import io.netty5.util.internal.PlatformDependent;
 import io.netty5.util.internal.ResourcesUtil;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.SystemPropertyUtil;
@@ -3603,12 +3602,7 @@ public abstract class SSLEngineTest {
             assertTrue(serverSession.getPacketBufferSize() > 0);
 
             assertNotNull(clientSession.getSessionContext());
-
-            // Workaround for JDK 14 regression.
-            // See https://bugs.openjdk.java.net/browse/JDK-8242008
-            if (PlatformDependent.javaVersion() != 14) {
-                assertNotNull(serverSession.getSessionContext());
-            }
+            assertNotNull(serverSession.getSessionContext());
 
             Object value = new Object();
             // This is broken in conscrypt.
