@@ -449,7 +449,7 @@ public class AllocationPatternSimulator {
     }
 
     private static int[] buildPattern(String jfrFile) throws IOException {
-        Path path = Paths.get(jfrFile).toAbsolutePath();
+        Path path = toAbsolutePath(jfrFile);
         TreeMap<Integer, Integer> summation = new TreeMap<>();
         try (RecordingFile eventReader = new RecordingFile(path)) {
             while (eventReader.hasMoreEvents()) {
@@ -472,6 +472,11 @@ public class AllocationPatternSimulator {
             pattern[index++] = entry.getValue();
         }
         return pattern;
+    }
+
+    @SuppressWarnings("JvmTaintAnalysis")
+    private static Path toAbsolutePath(String jfrFile) {
+        return Paths.get(jfrFile).toAbsolutePath();
     }
 
     void setUp(int[] pattern) {

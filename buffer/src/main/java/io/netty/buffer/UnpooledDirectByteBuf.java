@@ -437,7 +437,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setByte(int index, int value) {
-        buffer.put(index, (byte) value);
+        buffer.put(index, (byte) (value & 0xFF));
     }
 
     @Override
@@ -461,7 +461,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
             varHandle.set(buffer, index, (short) value);
             return;
         }
-        buffer.putShort(index, (short) value);
+        buffer.putShort(index, (short) (value & 0xFFFF));
     }
 
     @Override
