@@ -28,16 +28,21 @@ import java.lang.annotation.Target;
 /**
  * Disable a test when slow leak detection is enabled.
  */
-@DisabledIf("io.netty.util.test.DisabledForSlowLeakDetection$Helper#slowLeakDetection")
+@DisabledIf("io.netty.util.test.Helper#slowLeakDetection")
 @Target({ ElementType.TYPE, ElementType.METHOD })
 @Retention(RetentionPolicy.RUNTIME)
 public @interface DisabledForSlowLeakDetection {
-    final class Helper {
-        private static final ResourceLeakDetector<Helper> DETECTOR =
-                ResourceLeakDetectorFactory.instance().newResourceLeakDetector(Helper.class);
 
-        static boolean slowLeakDetection() {
-            return DETECTOR.isRecordEnabled();
-        }
+}
+
+final class Helper {
+    private static final ResourceLeakDetector<Helper> DETECTOR =
+            ResourceLeakDetectorFactory.instance().newResourceLeakDetector(Helper.class);
+
+    private Helper() {
+    }
+
+    static boolean slowLeakDetection() {
+        return DETECTOR.isRecordEnabled();
     }
 }
