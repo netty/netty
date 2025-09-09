@@ -94,6 +94,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslContext.class);
 
+    private static final boolean DEFAULT_USE_JDK_PROVIDERS = SystemPropertyUtil.getBoolean(
+            "io.netty.handler.ssl.useJdkProviderSignatures", true);
     private static final int DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE = Math.max(1,
             SystemPropertyUtil.getInt("io.netty.handler.ssl.openssl.bioNonApplicationBufferSize",
                     2048));
@@ -944,7 +946,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
      */
     @SafeVarargs
     static boolean isJdkSignatureFallbackEnabled(Map.Entry<SslContextOption<?>, Object>... ctxOptions) {
-        boolean allowJdkFallback = true; // default to enabled.
+        boolean allowJdkFallback = DEFAULT_USE_JDK_PROVIDERS;
         for (Map.Entry<SslContextOption<?>, Object> entry : ctxOptions) {
             SslContextOption<?> option = entry.getKey();
             if (option == OpenSslContextOption.USE_JDK_PROVIDER_SIGNATURES) {
