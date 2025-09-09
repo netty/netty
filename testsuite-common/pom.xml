@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-  ~ Copyright 2017 The Netty Project
+  ~ Copyright 2025 The Netty Project
   ~
   ~ The Netty Project licenses this file to you under the Apache License,
   ~ version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,15 +15,19 @@
   ~ under the License.
   -->
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/maven-v4_0_0.xsd">
+
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
     <version>4.2.6.Final-SNAPSHOT</version>
   </parent>
+
   <artifactId>netty-testsuite-common</artifactId>
   <packaging>jar</packaging>
+
   <name>Netty/Testsuite/Common</name>
+
   <properties>
     <revapi.skip>true</revapi.skip>
     <!-- Do not deploy this module -->
@@ -31,6 +35,7 @@
     <javadocTestsuiteSkip>false</javadocTestsuiteSkip>
     <maven.javadoc.skip>${javadocTestsuiteSkip}</maven.javadoc.skip>
   </properties>
+
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
