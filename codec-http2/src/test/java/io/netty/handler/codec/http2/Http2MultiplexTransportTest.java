@@ -519,6 +519,7 @@ public class Http2MultiplexTransportTest {
         if (error != null) {
             throw error;
         }
+        ReferenceCountUtil.release(clientCtx);
         ReferenceCountUtil.release(sslCtx);
     }
 
