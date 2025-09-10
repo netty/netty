@@ -174,6 +174,8 @@ jobs:
   build-android:
     runs-on: ubuntu-latest
     name: android
+    # Skip the build for now as cargo ndk segfaults and we need to figure out why.
+    if: false
     env:
       SDK_VER: "android-21"
       NDK_VER: "25.2.9519653"
