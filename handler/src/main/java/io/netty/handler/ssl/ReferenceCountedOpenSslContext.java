@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.ssl.util.LazyX509Certificate;
 import io.netty.internal.tcnative.AsyncSSLPrivateKeyMethod;
+import io.netty.internal.tcnative.CertificateCallback;
 import io.netty.internal.tcnative.CertificateCompressionAlgo;
 import io.netty.internal.tcnative.CertificateVerifier;
 import io.netty.internal.tcnative.ResultCallback;
@@ -40,6 +41,7 @@ import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.SignatureException;
 import java.security.cert.CertPathValidatorException;
@@ -61,6 +63,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Function;
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SNIServerName;
@@ -91,6 +94,8 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ReferenceCountedOpenSslContext.class);
 
+    private static final boolean DEFAULT_USE_JDK_PROVIDERS = SystemPropertyUtil.getBoolean(
+            "io.netty.handler.ssl.useJdkProviderSignatures", true);
     private static final int DEFAULT_BIO_NON_APPLICATION_BUFFER_SIZE = Math.max(1,
             SystemPropertyUtil.getInt("io.netty.handler.ssl.openssl.bioNonApplicationBufferSize",
                     2048));
@@ -265,6 +270,9 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                         groupsSet.add(GroupsConverter.toOpenSsl(group));
                     }
                     groups = groupsSet.toArray(EmptyArrays.EMPTY_STRINGS);
+                } else if (option == OpenSslContextOption.USE_JDK_PROVIDER_SIGNATURES) {
+                    // Alternative key fallback policy - handled during key material setup
+                    logger.debug("Alternative key fallback policy set to: " + ctxOpt.getValue());
                 } else {
                     logger.debug("Skipping unsupported " + SslContextOption.class.getSimpleName()
                             + ": " + ctxOpt.getKey());
@@ -933,6 +941,27 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
     }
 
+    /**
+     * Check if JDK signature fallback is enabled in the given context options.
+     */
+    @SafeVarargs
+    static boolean isJdkSignatureFallbackEnabled(Map.Entry<SslContextOption<?>, Object>... ctxOptions) {
+        boolean allowJdkFallback = DEFAULT_USE_JDK_PROVIDERS;
+        for (Map.Entry<SslContextOption<?>, Object> entry : ctxOptions) {
+            SslContextOption<?> option = entry.getKey();
+            if (option == OpenSslContextOption.USE_JDK_PROVIDER_SIGNATURES) {
+                Boolean policy = (Boolean) entry.getValue();
+                allowJdkFallback = policy.booleanValue();
+            } else if (option == OpenSslContextOption.PRIVATE_KEY_METHOD ||
+                       option == OpenSslContextOption.ASYNC_PRIVATE_KEY_METHOD) {
+                // if the user has set a private key method already we don't want to support
+                // fallback.
+                return false;
+            }
+        }
+        return allowJdkFallback; // Default policy
+    }
+
     static void freeBio(long bio) {
         if (bio != 0) {
             SSL.freeBIO(bio);
@@ -1035,6 +1064,38 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
         }
         // We can not be sure if the material may change at runtime so we will not cache it.
         return new OpenSslKeyMaterialProvider(chooseX509KeyManager(factory.getKeyManagers()), password);
+    }
+
+    static KeyManagerFactory certChainToKeyManagerFactory(X509Certificate[] keyCertChain, PrivateKey key,
+                                                          String keyPassword, String keyStore) throws Exception {
+        KeyManagerFactory keyManagerFactory;
+        char[] keyPasswordChars = keyStorePassword(keyPassword);
+        KeyStore ks = buildKeyStore(keyCertChain, key, keyPasswordChars, keyStore);
+        if (ks.aliases().hasMoreElements()) {
+            keyManagerFactory = new OpenSslX509KeyManagerFactory();
+        } else {
+            keyManagerFactory = new OpenSslCachingX509KeyManagerFactory(
+                    KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()));
+        }
+        keyManagerFactory.init(ks, keyPasswordChars);
+        return keyManagerFactory;
+    }
+
+    static OpenSslKeyMaterialProvider setupSecurityProviderSignatureSource(
+            ReferenceCountedOpenSslContext thiz, long ctx, X509Certificate[] keyCertChain, PrivateKey key,
+            Function<OpenSslKeyMaterialManager, CertificateCallback> toCallback) throws Exception {
+        // 1. Set up the async private key method for signing operations
+        SSLContext.setPrivateKeyMethod(ctx, new JdkDelegatingPrivateKeyMethod(key));
+
+        // 2. Set up keyless KeyManagerFactory and certificate callback for certificate provision
+        KeyManagerFactory keylessKmf = OpenSslX509KeyManagerFactory.newKeyless(keyCertChain);
+        OpenSslKeyMaterialProvider keyMaterialProvider = providerFor(keylessKmf, "");
+
+        // Set up certificate callback for alternative keys - required for client certificates
+        OpenSslKeyMaterialManager materialManager =
+                new OpenSslKeyMaterialManager(keyMaterialProvider, thiz.hasTmpDhKeys);
+        SSLContext.setCertificateCallback(ctx, toCallback.apply(materialManager));
+        return keyMaterialProvider;
     }
 
     private static ReferenceCountedOpenSslEngine retrieveEngine(Map<Long, ReferenceCountedOpenSslEngine> engines,
