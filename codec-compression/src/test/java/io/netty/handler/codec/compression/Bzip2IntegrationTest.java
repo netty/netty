@@ -17,7 +17,6 @@ package io.netty.handler.codec.compression;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 
 public class Bzip2IntegrationTest extends AbstractIntegrationTest {
 
