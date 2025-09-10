@@ -20,7 +20,6 @@ import org.junit.jupiter.api.BeforeAll;
 
 import javax.net.ssl.SSLException;
 import java.io.File;
-import java.security.KeyStore;
 
 public class OpenSslClientContextTest extends SslContextTest  {
 
