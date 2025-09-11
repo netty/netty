@@ -72,22 +72,6 @@
       <groupId>org.apache.directory.server</groupId>
       <artifactId>apacheds-protocol-dns</artifactId>
       <scope>test</scope>
-      <exclusions>
-        <!--
-          We need to use commons-lang 2.6 to be able to run the tests with java9
-          See https://github.com/apache/bookkeeper/issues/385
-        -->
-        <exclusion>
-          <groupId>commons-lang</groupId>
-          <artifactId>commons-lang</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>commons-lang</groupId>
-      <artifactId>commons-lang</artifactId>
-      <version>2.6</version>
-      <scope>test</scope>
     </dependency>
 
     <!-- Automatic native-image reflection metadata generation for handlers dependencies -->
