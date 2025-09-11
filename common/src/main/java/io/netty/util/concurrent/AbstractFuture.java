@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import java.util.Locale;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -53,6 +54,6 @@ public abstract class AbstractFuture<V> implements Future<V> {
             }
             throw new ExecutionException(cause);
         }
-        throw new TimeoutException();
+        throw new TimeoutException("timeout after " + timeout + " " + unit.name().toLowerCase(Locale.ENGLISH));
     }
 }
