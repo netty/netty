@@ -18,14 +18,11 @@ package io.netty.util.test;
 
 import io.netty.util.LeakPresenceDetector;
 import org.junit.jupiter.api.extension.AfterAllCallback;
+import org.junit.jupiter.api.extension.AfterEachCallback;
 import org.junit.jupiter.api.extension.BeforeAllCallback;
-import org.junit.jupiter.api.extension.DynamicTestInvocationContext;
+import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
-import org.junit.jupiter.api.extension.InvocationInterceptor;
-import org.junit.jupiter.api.extension.ReflectiveInvocationContext;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
@@ -39,17 +36,18 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * This extension supports parallel test execution, but has to make some assumptions about the thread lifecycle. The
  * resource scope for the class is created in {@link org.junit.jupiter.api.BeforeAll}, and then saved in a thread local
- * on each {@link InvocationInterceptor intercepted method}. This appears to work well with junit's default
- * parallelism, despite the use of a fork-join pool that can transfer tasks between threads, but it may lead to
- * problems if tests make use of fork-join machinery themselves.
+ * on each {@link org.junit.jupiter.api.BeforeEach}. This appears to work well with junit's default parallelism,
+ * despite the use of a fork-join pool that can transfer tasks between threads, but it may lead to problems if tests
+ * make use of fork-join machinery themselves.
  * <p>
  * The ThreadLocal holding the scope is {@link InheritableThreadLocal inheritable}, so that e.g. event loops created
  * in a test are assigned to the test resource scope.
  */
 public final class LeakPresenceExtension
-        implements BeforeAllCallback, InvocationInterceptor, AfterAllCallback {
+        implements BeforeAllCallback, BeforeEachCallback, AfterEachCallback, AfterAllCallback {
 
     private static final Object SCOPE_KEY = new Object();
+    private static final Object PREVIOUS_SCOPE_KEY = new Object();
 
     static {
         System.setProperty("io.netty.customResourceLeakDetector", WithTransferableScope.class.getName());
@@ -67,7 +65,8 @@ public final class LeakPresenceExtension
         WithTransferableScope.SCOPE.set(scope);
     }
 
-    private <T> T interceptWithScope(Invocation<T> invocation, ExtensionContext context) throws Throwable {
+    @Override
+    public void beforeEach(ExtensionContext context) {
         LeakPresenceDetector.ResourceScope outerScope;
         ExtensionContext outerContext = context;
         while (true) {
@@ -82,78 +81,18 @@ public final class LeakPresenceExtension
 
         LeakPresenceDetector.ResourceScope previousScope = WithTransferableScope.SCOPE.get();
         WithTransferableScope.SCOPE.set(outerScope);
-        try {
-            return invocation.proceed();
-        } finally {
-            if (previousScope != null) {
-                WithTransferableScope.SCOPE.set(previousScope);
-            } else {
-                WithTransferableScope.SCOPE.remove();
-            }
+        if (previousScope != null) {
+            context.getStore(ExtensionContext.Namespace.GLOBAL).put(PREVIOUS_SCOPE_KEY, previousScope);
         }
     }
 
     @Override
-    public <T> T interceptTestClassConstructor(Invocation<T> invocation,
-                                               ReflectiveInvocationContext<Constructor<T>> invocationContext,
-                                               ExtensionContext extensionContext) throws Throwable {
-        return interceptWithScope(invocation, extensionContext);
-    }
-
-    @Override
-    public void interceptBeforeAllMethod(Invocation<Void> invocation,
-                                         ReflectiveInvocationContext<Method> invocationContext,
-                                         ExtensionContext extensionContext) throws Throwable {
-        interceptWithScope(invocation, extensionContext);
-    }
-
-    @Override
-    public void interceptBeforeEachMethod(Invocation<Void> invocation,
-                                          ReflectiveInvocationContext<Method> invocationContext,
-                                          ExtensionContext extensionContext) throws Throwable {
-        interceptWithScope(invocation, extensionContext);
-    }
-
-    @Override
-    public void interceptTestMethod(Invocation<Void> invocation,
-                                    ReflectiveInvocationContext<Method> invocationContext,
-                                    ExtensionContext extensionContext) throws Throwable {
-        interceptWithScope(invocation, extensionContext);
-    }
-
-    @Override
-    public <T> T interceptTestFactoryMethod(Invocation<T> invocation,
-                                            ReflectiveInvocationContext<Method> invocationContext,
-                                            ExtensionContext extensionContext) throws Throwable {
-        return interceptWithScope(invocation, extensionContext);
-    }
-
-    @Override
-    public void interceptTestTemplateMethod(Invocation<Void> invocation,
-                                            ReflectiveInvocationContext<Method> invocationContext,
-                                            ExtensionContext extensionContext) throws Throwable {
-        interceptWithScope(invocation, extensionContext);
-    }
-
-    @Override
-    public void interceptDynamicTest(Invocation<Void> invocation,
-                                     DynamicTestInvocationContext invocationContext,
-                                     ExtensionContext extensionContext) throws Throwable {
-        interceptWithScope(invocation, extensionContext);
-    }
-
-    @Override
-    public void interceptAfterEachMethod(Invocation<Void> invocation,
-                                         ReflectiveInvocationContext<Method> invocationContext,
-                                         ExtensionContext extensionContext) throws Throwable {
-        interceptWithScope(invocation, extensionContext);
-    }
-
-    @Override
-    public void interceptAfterAllMethod(Invocation<Void> invocation,
-                                        ReflectiveInvocationContext<Method> invocationContext,
-                                        ExtensionContext extensionContext) throws Throwable {
-        interceptWithScope(invocation, extensionContext);
+    public void afterEach(ExtensionContext context) {
+        LeakPresenceDetector.ResourceScope previousScope = (LeakPresenceDetector.ResourceScope)
+                context.getStore(ExtensionContext.Namespace.GLOBAL).get(PREVIOUS_SCOPE_KEY);
+        if (previousScope != null) {
+            WithTransferableScope.SCOPE.set(previousScope);
+        }
     }
 
     @Override
