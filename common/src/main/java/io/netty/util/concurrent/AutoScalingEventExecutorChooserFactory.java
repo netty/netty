@@ -307,8 +307,21 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                 }
 
                 // If a scale-down occurred, or if the actual state differs from our view, rebuild.
-                if (changed || currentActive != currentState.activeExecutors.length) {
+                if (changed) {
                     rebuildActiveExecutors();
+                } else {
+                    // As a final check, ensure our state reflects reality. This handles cases where
+                    // an executor was woken up externally (e.g., by direct task submission).
+                    int actualActiveCount = 0;
+                    for (EventExecutor executor : executors) {
+                        if (!executor.isSuspended()) {
+                            actualActiveCount++;
+                        }
+                    }
+
+                    if (actualActiveCount != currentState.activeChildrenCount) {
+                        rebuildActiveExecutors();
+                    }
                 }
             }
 
