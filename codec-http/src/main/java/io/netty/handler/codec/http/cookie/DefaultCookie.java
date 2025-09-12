@@ -22,6 +22,8 @@ import static io.netty.handler.codec.http.cookie.CookieUtil.validateAttributeVal
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 
+import java.util.Objects;
+
 /**
  * The default {@link Cookie} implementation.
  */
@@ -179,25 +181,11 @@ public class DefaultCookie implements Cookie {
             return false;
         }
 
-        if (path() == null) {
-            if (that.path() != null) {
-                return false;
-            }
-        } else if (that.path() == null) {
-            return false;
-        } else if (!path().equals(that.path())) {
+        if (!Objects.equals(path(), that.path())) {
             return false;
         }
 
-        if (domain() == null) {
-            if (that.domain() != null) {
-                return false;
-            }
-        } else {
-            return domain().equalsIgnoreCase(that.domain());
-        }
-
-        return true;
+        return domain() == null ? that.domain() == null : domain().equalsIgnoreCase(that.domain());
     }
 
     @Override

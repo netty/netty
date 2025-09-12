@@ -15,6 +15,8 @@
  */
 package io.netty.handler.codec.http2;
 
+import static io.netty.util.internal.ObjectUtil.hashSum;
+
 /**
  * Default implementation of {@linkplain Http2PriorityFrame}
  */
@@ -69,11 +71,7 @@ public final class DefaultHttp2PriorityFrame extends AbstractHttp2StreamFrame im
 
     @Override
     public int hashCode() {
-        int hash = super.hashCode();
-        hash = hash * 31 + streamDependency;
-        hash = hash * 31 + weight;
-        hash = hash * 31 + (exclusive ? 1 : 0);
-        return hash;
+        return hashSum(super.hashCode(), streamDependency, Short.hashCode(weight), Boolean.hashCode(exclusive));
     }
 
     @Override

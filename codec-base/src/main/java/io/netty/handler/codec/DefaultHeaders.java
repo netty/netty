@@ -1021,7 +1021,7 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
     }
 
     protected HeaderEntry<K, V> newHeaderEntry(int h, K name, V value, HeaderEntry<K, V> next) {
-        return new HeaderEntry<K, V>(h, name, value, next, head);
+        return new HeaderEntry<>(h, name, value, next, head);
     }
 
     protected ValueConverter<V> valueConverter() {

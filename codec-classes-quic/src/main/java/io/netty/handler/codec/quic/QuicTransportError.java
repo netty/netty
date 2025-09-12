@@ -17,7 +17,6 @@ package io.netty.handler.codec.quic;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * <a href="https://www.rfc-editor.org/rfc/rfc9000.html#name-transport-error-codes">
@@ -224,7 +223,7 @@ public final class QuicTransportError {
 
     @Override
     public int hashCode() {
-        return Objects.hash(code);
+        return Long.hashCode(code);
     }
 
     @Override

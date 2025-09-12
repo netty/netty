@@ -17,6 +17,9 @@ package io.netty.handler.codec.xml;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.hash;
 
 /**
  * Generic XML element in document, {@link XmlElementStart} represents open element and provides access to attributes,
@@ -28,7 +31,7 @@ public abstract class XmlElement {
     private final String namespace;
     private final String prefix;
 
-    private final List<XmlNamespace> namespaces = new ArrayList<XmlNamespace>();
+    private final List<XmlNamespace> namespaces = new ArrayList<>();
 
     protected XmlElement(String name, String namespace, String prefix) {
         this.name = name;
@@ -63,29 +66,15 @@ public abstract class XmlElement {
 
         XmlElement that = (XmlElement) o;
 
-        if (!name.equals(that.name)) {
-            return false;
-        }
-        if (namespace != null ? !namespace.equals(that.namespace) : that.namespace != null) {
-            return false;
-        }
-        if (!namespaces.equals(that.namespaces)) {
-            return false;
-        }
-        if (prefix != null ? !prefix.equals(that.prefix) : that.prefix != null) {
-            return false;
-        }
-
-        return true;
+        return Objects.equals(name, that.name) &&
+                Objects.equals(namespace, that.namespace) &&
+                Objects.equals(namespaces, that.namespaces) &&
+                Objects.equals(prefix, that.prefix);
     }
 
     @Override
     public int hashCode() {
-        int result = name.hashCode();
-        result = 31 * result + (namespace != null ? namespace.hashCode() : 0);
-        result = 31 * result + (prefix != null ? prefix.hashCode() : 0);
-        result = 31 * result + namespaces.hashCode();
-        return result;
+        return hash(name, namespace, prefix, namespaces);
     }
 
     @Override

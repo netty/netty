@@ -18,6 +18,7 @@ package io.netty.handler.codec.http2;
 import io.netty.util.internal.StringUtil;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * The default {@link Http2ResetFrame} implementation.
@@ -76,8 +77,6 @@ public final class DefaultHttp2ResetFrame extends AbstractHttp2StreamFrame imple
 
     @Override
     public int hashCode() {
-        int hash = super.hashCode();
-        hash = hash * 31 + (int) (errorCode ^ errorCode >>> 32);
-        return hash;
+        return hashSum(super.hashCode(), Long.hashCode(errorCode));
     }
 }
