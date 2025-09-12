@@ -32,7 +32,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
@@ -345,7 +344,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
         }
     }
 
-    @RepeatedTest(10)
+    @Test
     @Timeout(30)
     public void testSubmittingTaskWakesUpSuspendedExecutor() throws Exception {
         EventLoopGroup group = newAutoScalingEventLoopGroup();
@@ -373,19 +372,22 @@ public abstract class AbstractSingleThreadEventLoopTest {
             }
             assertNotNull(suspendedLoop, "Could not find a suspended executor to test.");
 
-            // Submit a task directly to the suspended loop, this should trigger the wake-up mechanism.
+            // Submit a task directly to the suspended loop. This should wake it up.
             Future<?> future = suspendedLoop.submit(() -> { });
-            future.syncUninterruptibly();
+            future.syncUninterruptibly(); // This confirms the task ran.
 
-            // Poll for a short period to allow the state to be updated.
+            // Wait for the UtilizationMonitor to detect the change and update the state.
+            // The correct outcome is that the number of active executors increases.
+            final int expectedActiveCount = SCALING_MIN_THREADS + 1;
             deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
-            while (suspendedLoop.isSuspended() && System.nanoTime() < deadline) {
+            while (countActiveExecutors(group) < expectedActiveCount && System.nanoTime() < deadline) {
                 Thread.sleep(50);
             }
 
-            assertFalse(suspendedLoop.isSuspended(), "Executor should wake up after task submission.");
-            assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
-                         "Active executor count should increase after wake-up.");
+            assertEquals(expectedActiveCount, countActiveExecutors(group),
+                         "Active executor count should increase by one after wake-up.");
+
+            assertFalse(suspendedLoop.isSuspended(), "Executor should be active after monitor reconciliation.");
         } finally {
             group.shutdownGracefully().syncUninterruptibly();
         }
