@@ -376,6 +376,12 @@ public abstract class AbstractSingleThreadEventLoopTest {
             Future<?> future = suspendedLoop.submit(() -> { });
             future.syncUninterruptibly();
 
+            // Poll for a short period to allow the state to be updated.
+            deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (suspendedLoop.isSuspended() && System.nanoTime() < deadline) {
+                Thread.sleep(50);
+            }
+
             assertFalse(suspendedLoop.isSuspended(), "Executor should wake up after task submission.");
             assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
                          "Active executor count should increase after wake-up.");
