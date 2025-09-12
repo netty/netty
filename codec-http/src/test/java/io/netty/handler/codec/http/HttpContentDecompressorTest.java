@@ -25,6 +25,7 @@ import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.compression.Brotli;
 import io.netty.handler.codec.compression.Zstd;
+import io.netty.util.test.DisabledForSlowLeakDetection;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -96,6 +97,7 @@ public class HttpContentDecompressorTest {
 
     @ParameterizedTest
     @MethodSource("encodings")
+    @DisabledForSlowLeakDetection
     public void testZipBomb(String encoding) {
         int chunkSize = 1024 * 1024;
         int numberOfChunks = 256;

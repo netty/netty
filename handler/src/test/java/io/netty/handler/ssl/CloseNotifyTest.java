@@ -23,6 +23,7 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -154,10 +155,13 @@ public class CloseNotifyTest {
                  .sslProvider(provider)
                  .protocols(protocol)
                 .build();
+        // use sslContext.newHandler(ALLOC) instead of new SslHandler(sslContext.newEngine(ALLOC)) to create
+        // non-JDK compatible OpenSSL engine that can process partial packets:
+        SslHandler handler = sslContext.newHandler(ALLOC);
+        // handler incremented the reference count and will destroy it when removed
+        ReferenceCountUtil.release(sslContext);
         return new EmbeddedChannel(
-                // use sslContext.newHandler(ALLOC) instead of new SslHandler(sslContext.newEngine(ALLOC)) to create
-                // non-JDK compatible OpenSSL engine that can process partial packets:
-                sslContext.newHandler(ALLOC),
+                handler,
                 new SimpleChannelInboundHandler<ByteBuf>() {
 
                     @Override

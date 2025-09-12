@@ -28,7 +28,7 @@ import java.util.concurrent.ExecutionException;
 import static io.netty.handler.ssl.ocsp.OcspServerCertificateValidator.createDefaultResolver;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-class OcspClientTest {
+class OcspClientTest extends AbstractOcspTest {
 
     @Test
     void simpleOcspQueryTest() throws IOException, ExecutionException, InterruptedException {
@@ -44,7 +44,7 @@ class OcspClientTest {
             X509Certificate certIssuer = certs[1];
 
             Promise<BasicOCSPResp> promise = OcspClient.query(serverCert, certIssuer, false,
-                    IoTransport.DEFAULT, createDefaultResolver(IoTransport.DEFAULT));
+                    createDefaultTransport(), createDefaultResolver(createDefaultTransport()));
             BasicOCSPResp basicOCSPResp = promise.get();
 
             // 'null' means certificate is valid

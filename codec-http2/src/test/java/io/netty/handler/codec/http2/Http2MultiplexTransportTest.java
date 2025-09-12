@@ -179,7 +179,7 @@ public class Http2MultiplexTransportTest {
         if (serverConnectedChannel != null) {
             serverConnectedChannel.close();
         }
-        eventLoopGroup.shutdownGracefully(0, 0, MILLISECONDS);
+        eventLoopGroup.shutdownGracefully(0, 0, MILLISECONDS).syncUninterruptibly();
     }
 
     @Test
@@ -519,6 +519,8 @@ public class Http2MultiplexTransportTest {
         if (error != null) {
             throw error;
         }
+        ReferenceCountUtil.release(clientCtx);
+        ReferenceCountUtil.release(sslCtx);
     }
 
     @Test
@@ -648,6 +650,9 @@ public class Http2MultiplexTransportTest {
         clientChannel = bs.connect(serverChannel.localAddress()).sync().channel();
 
         latch.await();
+
+        ReferenceCountUtil.release(serverCtx);
+        ReferenceCountUtil.release(clientCtx);
     }
 
     /**
