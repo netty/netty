@@ -424,7 +424,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         MqttVersion mqttVersion = getMqttVersion(ctx);
         MqttFixedHeader mqttFixedHeader = message.fixedHeader();
         MqttPublishVariableHeader variableHeader = message.variableHeader();
-        ByteBuf payload = message.payload().duplicate();
+        ByteBuf payload = message.payload();
 
         String topicName = variableHeader.topicName();
         int topicNameBytes = utf8Bytes(topicName);
@@ -453,6 +453,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
             return buf;
         } finally {
             propertiesBuf.release();
+            payload.release();
         }
     }
 
