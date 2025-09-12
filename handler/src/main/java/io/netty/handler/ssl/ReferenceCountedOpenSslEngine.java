@@ -262,7 +262,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                                     byte[] hostname = SSL.getSniHostname(ssl).getBytes(CharsetUtil.UTF_8);
                                     requestedServerNames = hostname.length == 0 ?
                                             Collections.emptyList() :
-                                                    Collections.singletonList(new SNIHostName(hostname));
+                                            Collections.singletonList(new SNIHostName(hostname));
                                 }
                             }
                         }
@@ -313,103 +313,114 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             }
         };
 
-        if (!context.sessionContext().useKeyManager()) {
-            session.setLocalCertificate(context.keyCertChain);
-        }
-
-        Lock readerLock = context.ctxLock.readLock();
-        readerLock.lock();
-        final long finalSsl;
         try {
-            finalSsl = SSL.newSSL(context.ctx, !context.isClient());
-        } finally {
-            readerLock.unlock();
-        }
-        synchronized (this) {
-            ssl = finalSsl;
+            // Let's retain the context before we try to use it so we ensure it is not released in between by someone
+            // calling context.release()
+            context.retain();
+
+            if (!context.sessionContext().useKeyManager()) {
+                session.setLocalCertificate(context.keyCertChain);
+            }
+
+            Lock readerLock = context.ctxLock.readLock();
+            readerLock.lock();
+            final long finalSsl;
             try {
-                networkBIO = SSL.bioNewByteBuffer(ssl, context.getBioNonApplicationBufferSize());
+                finalSsl = SSL.newSSL(context.ctx, !context.isClient());
+            } finally {
+                readerLock.unlock();
+            }
+            synchronized (this) {
+                ssl = finalSsl;
+                try {
+                    networkBIO = SSL.bioNewByteBuffer(ssl, context.getBioNonApplicationBufferSize());
 
-                // Set the client auth mode, this needs to be done via setClientAuth(...) method so we actually call the
-                // needed JNI methods.
-                setClientAuth(clientMode ? ClientAuth.NONE : context.clientAuth);
+                    // Set the client auth mode, this needs to be done via setClientAuth(...) method so we actually
+                    // call the needed JNI methods.
+                    setClientAuth(clientMode ? ClientAuth.NONE : context.clientAuth);
 
-                assert context.protocols != null;
-                hasTLSv13Cipher = context.hasTLSv13Cipher;
+                    assert context.protocols != null;
+                    hasTLSv13Cipher = context.hasTLSv13Cipher;
 
-                setEnabledProtocols(context.protocols);
+                    setEnabledProtocols(context.protocols);
 
-                // Use SNI if peerHost was specified and a valid hostname
-                // See https://github.com/netty/netty/issues/4746
-                boolean usePeerHost = SslUtils.isValidHostNameForSNI(peerHost) && isValidHostNameForSNI(peerHost);
-                boolean useServerNames = serverNames != null && !serverNames.isEmpty();
-                if (clientMode && (usePeerHost || useServerNames)) {
-                    // We do some extra validation to ensure we can construct the SNIHostName later again.
-                    if (usePeerHost) {
-                        SSL.setTlsExtHostName(ssl, peerHost);
-                        this.serverNames = Collections.singletonList(new SNIHostName(peerHost));
-                    } else {
-                        for (SNIServerName serverName : serverNames) {
-                            if (serverName instanceof SNIHostName) {
-                                SNIHostName name = (SNIHostName) serverName;
-                                SSL.setTlsExtHostName(ssl, name.getAsciiName());
-                            } else {
-                                throw new IllegalArgumentException("Only " + SNIHostName.class.getName()
-                                        + " instances are supported, but found: " + serverName);
+                    // Use SNI if peerHost was specified and a valid hostname
+                    // See https://github.com/netty/netty/issues/4746
+                    boolean usePeerHost = SslUtils.isValidHostNameForSNI(peerHost) && isValidHostNameForSNI(peerHost);
+                    boolean useServerNames = serverNames != null && !serverNames.isEmpty();
+                    if (clientMode && (usePeerHost || useServerNames)) {
+                        // We do some extra validation to ensure we can construct the SNIHostName later again.
+                        if (usePeerHost) {
+                            SSL.setTlsExtHostName(ssl, peerHost);
+                            this.serverNames = Collections.singletonList(new SNIHostName(peerHost));
+                        } else {
+                            for (SNIServerName serverName : serverNames) {
+                                if (serverName instanceof SNIHostName) {
+                                    SNIHostName name = (SNIHostName) serverName;
+                                    SSL.setTlsExtHostName(ssl, name.getAsciiName());
+                                } else {
+                                    throw new IllegalArgumentException("Only " + SNIHostName.class.getName()
+                                            + " instances are supported, but found: " + serverName);
+                                }
                             }
                         }
                     }
-                }
 
-                if (enableOcsp) {
-                    SSL.enableOcsp(ssl);
-                }
-
-                if (!jdkCompatibilityMode) {
-                    SSL.setMode(ssl, SSL.getMode(ssl) | SSL.SSL_MODE_ENABLE_PARTIAL_WRITE);
-                }
-
-                if (isProtocolEnabled(SSL.getOptions(ssl), SSL.SSL_OP_NO_TLSv1_3, SslProtocols.TLS_v1_3)) {
-                    final boolean enableTickets = clientMode ?
-                            ReferenceCountedOpenSslContext.CLIENT_ENABLE_SESSION_TICKET_TLSV13 :
-                            ReferenceCountedOpenSslContext.SERVER_ENABLE_SESSION_TICKET_TLSV13;
-                    if (enableTickets) {
-                        // We should enable session tickets for stateless resumption when TLSv1.3 is enabled. This
-                        // is also done by OpenJDK and without this session resumption does not work at all with
-                        // BoringSSL when TLSv1.3 is used as BoringSSL only supports stateless resumption with TLSv1.3:
-                        //
-                        // See:
-                        //  - https://bugs.openjdk.java.net/browse/JDK-8223922
-                        //  - https://boringssl.googlesource.com/boringssl/+/refs/heads/master/ssl/tls13_server.cc#104
-                        SSL.clearOptions(ssl, SSL.SSL_OP_NO_TICKET);
+                    if (enableOcsp) {
+                        SSL.enableOcsp(ssl);
                     }
+
+                    if (!jdkCompatibilityMode) {
+                        SSL.setMode(ssl, SSL.getMode(ssl) | SSL.SSL_MODE_ENABLE_PARTIAL_WRITE);
+                    }
+
+                    if (isProtocolEnabled(SSL.getOptions(ssl), SSL.SSL_OP_NO_TLSv1_3, SslProtocols.TLS_v1_3)) {
+                        final boolean enableTickets = clientMode ?
+                                ReferenceCountedOpenSslContext.CLIENT_ENABLE_SESSION_TICKET_TLSV13 :
+                                ReferenceCountedOpenSslContext.SERVER_ENABLE_SESSION_TICKET_TLSV13;
+                        if (enableTickets) {
+                            // We should enable session tickets for stateless resumption when TLSv1.3 is enabled. This
+                            // is also done by OpenJDK and without this session resumption does not work at all with
+                            // BoringSSL when TLSv1.3 is used as BoringSSL only supports stateless resumption with
+                            // TLSv1.3:
+                            //
+                            // See:
+                            //  https://bugs.openjdk.java.net/browse/JDK-8223922
+                            //  https://boringssl.googlesource.com/boringssl/+/refs/heads/master/ssl/tls13_server.cc#104
+                            SSL.clearOptions(ssl, SSL.SSL_OP_NO_TICKET);
+                        }
+                    }
+
+                    if ((OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) && clientMode) {
+                        // If in client-mode and provider is BoringSSL or AWS-LC let's allow to renegotiate once as the
+                        // server may use this for client auth.
+                        //
+                        // See https://github.com/netty/netty/issues/11529
+                        SSL.setRenegotiateMode(ssl, SSL.SSL_RENEGOTIATE_ONCE);
+                    }
+                    // setMode may impact the overhead.
+                    calculateMaxWrapOverhead();
+
+                    // Configure any endpoint verification specified by the SslContext.
+                    configureEndpointVerification(endpointIdentificationAlgorithm);
+                } catch (Throwable cause) {
+                    // Call shutdown so we are sure we correctly release all native memory and also guard against the
+                    // case when shutdown() will be called by the finalizer again.
+                    shutdown();
+
+                    PlatformDependent.throwException(cause);
                 }
-
-                if ((OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) && clientMode) {
-                    // If in client-mode and provider is BoringSSL or AWS-LC let's allow to renegotiate once as the
-                    // server may use this for client auth.
-                    //
-                    // See https://github.com/netty/netty/issues/11529
-                    SSL.setRenegotiateMode(ssl, SSL.SSL_RENEGOTIATE_ONCE);
-                }
-                // setMode may impact the overhead.
-                calculateMaxWrapOverhead();
-
-                // Configure any endpoint verification specified by the SslContext.
-                configureEndpointVerification(endpointIdentificationAlgorithm);
-            } catch (Throwable cause) {
-                // Call shutdown so we are sure we correctly release all native memory and also guard against the
-                // case when shutdown() will be called by the finalizer again.
-                shutdown();
-
-                PlatformDependent.throwException(cause);
             }
+        } catch (Throwable cause) {
+            // Something did go wrong which means we will not be able to release the context later on. Release it
+            // now to prevent leaks.
+            context.release();
+            PlatformDependent.throwException(cause);
         }
 
         // Now that everything looks good and we're going to successfully return the
         // object so we need to retain a reference to the parent context.
         parentContext = context;
-        parentContext.retain();
 
         // Only create the leak after everything else was executed and so ensure we don't produce a false-positive for
         // the ResourceLeakDetector.
