@@ -306,7 +306,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                     }
                 }
 
-                // If a scale-down occurred, or if the actual state differs from our view, rebuild.
+                // If a scale-down occurred, rebuild.
                 if (changed) {
                     rebuildActiveExecutors();
                 } else {

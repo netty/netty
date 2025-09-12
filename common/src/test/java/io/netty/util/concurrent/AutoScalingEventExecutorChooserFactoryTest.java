@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -22,6 +23,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -118,13 +120,13 @@ public class AutoScalingEventExecutorChooserFactoryTest {
         }
     }
 
-    @Test
+    @RepeatedTest(20)
     @Timeout(30)
-    void testScaleUp() throws InterruptedException {
+    void testScaleUp() throws Exception {
         TestEventExecutorGroup group = new TestEventExecutorGroup(1, 3, 50, TimeUnit.MILLISECONDS);
         try {
             startAllExecutors(group);
-            Thread.sleep(200);
+            waitForActiveExecutorCount(group, 1, 5, TimeUnit.SECONDS);
             assertEquals(1, countActiveExecutors(group));
 
             TestEventExecutor activeExecutor = null;
@@ -140,12 +142,9 @@ public class AutoScalingEventExecutorChooserFactoryTest {
 
             activeExecutor.setHighLoad(true);
 
-            // The monitor will see high utilization on the active thread. After 2 cycles (100 ms),
-            // it will decide to scale up.
-            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
-            while (countActiveExecutors(group) < 2 && System.nanoTime() < deadline) {
-                Thread.sleep(50);
-            }
+            // The monitor will see high utilization on the active thread.
+            // After 2 cycles (100 ms), it will decide to scale up.
+            waitForActiveExecutorCount(group, 2, 5, TimeUnit.SECONDS);
             assertEquals(2, countActiveExecutors(group),
                          "Should scale up to 2 after stressing one executor.");
 
@@ -155,9 +154,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
                 }
             }
 
-            while (countActiveExecutors(group) < 3 && System.nanoTime() < deadline) {
-                Thread.sleep(50);
-            }
+            waitForActiveExecutorCount(group, 3, 5, TimeUnit.SECONDS);
             assertEquals(3, countActiveExecutors(group),
                          "Should scale up to 3 after stressing two executors.");
         } finally {
@@ -270,5 +267,18 @@ public class AutoScalingEventExecutorChooserFactoryTest {
             }
         }
         return activeCount;
+    }
+
+    private static void waitForActiveExecutorCount(TestEventExecutorGroup group, int expectedCount, long timeout,
+                                                   TimeUnit unit) throws InterruptedException, TimeoutException {
+        long deadline = System.nanoTime() + unit.toNanos(timeout);
+        while (System.nanoTime() < deadline) {
+            if (countActiveExecutors(group) == expectedCount) {
+                return;
+            }
+            Thread.sleep(10);
+        }
+        throw new TimeoutException("Timed out waiting for active executor count to become " + expectedCount +
+                                   ". Final count was " + countActiveExecutors(group));
     }
 }
