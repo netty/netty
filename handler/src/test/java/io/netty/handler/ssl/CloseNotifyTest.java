@@ -158,6 +158,7 @@ public class CloseNotifyTest {
         // use sslContext.newHandler(ALLOC) instead of new SslHandler(sslContext.newEngine(ALLOC)) to create
         // non-JDK compatible OpenSSL engine that can process partial packets:
         SslHandler handler = sslContext.newHandler(ALLOC);
+        // handler incremented the reference count and will destroy it when removed
         ReferenceCountUtil.release(sslContext);
         return new EmbeddedChannel(
                 handler,

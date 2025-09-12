@@ -27,6 +27,7 @@ import java.util.function.Supplier;
 
 /**
  * Alternative leak detector implementation for reliable and performant detection in tests.
+ *
  * <h3>Background</h3>
  * <p>
  * The standard {@link ResourceLeakDetector} produces no "false positives", but this comes with tradeoffs. You either
@@ -35,6 +36,7 @@ import java.util.function.Supplier;
  * detailed recording of buffer access operations with heavy performance impact. Avoiding false negatives is necessary
  * for (unit, fuzz...) testing if bugs should lead to reliable test failures, but the performance impact can be
  * prohibitive for some tests.
+ *
  * <h3>The presence detector</h3>
  * <p>
  * The <i>leak presence detector</i> takes a different approach. It foregoes detailed tracking of allocation and
@@ -176,7 +178,7 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
     }
 
     @Override
-    public ResourceLeakTracker<T> track(T obj) {
+    public final ResourceLeakTracker<T> track(T obj) {
         if (inStaticInitializerFast()) {
             return null;
         }
@@ -184,12 +186,12 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
     }
 
     @Override
-    public ResourceLeakTracker<T> trackForcibly(T obj) {
+    public final ResourceLeakTracker<T> trackForcibly(T obj) {
         return new PresenceTracker<>(currentScope());
     }
 
     @Override
-    public boolean isRecordEnabled() {
+    public final boolean isRecordEnabled() {
         return false;
     }
 
@@ -246,9 +248,8 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
                 }
                 scope.checkOpen();
                 return true;
-            } else {
-                return false;
             }
+            return false;
         }
     }
 
@@ -287,7 +288,8 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
                     msg.append("Resource count was negative: A resource previously reported as a leak was released " +
                             "after all. Please ensure that that resource is released before its test finishes.");
                     throw new IllegalStateException(msg.toString());
-                } else if (TRACK_CREATION_STACK) {
+                } 
+                if (TRACK_CREATION_STACK) {
                     msg.append("Creation stack traces:");
                     IllegalStateException ise = new IllegalStateException(msg.toString());
                     int i = 0;
@@ -299,11 +301,10 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
                     }
                     creationStacks.clear();
                     throw ise;
-                } else {
-                    msg.append("Please use paranoid leak detection to get more information, or set " +
-                            "-D" + TRACK_CREATION_STACK_PROPERTY + "=true");
-                    throw new IllegalStateException(msg.toString());
                 }
+                msg.append("Please use paranoid leak detection to get more information, or set " +
+                        "-D" + TRACK_CREATION_STACK_PROPERTY + "=true");
+                throw new IllegalStateException(msg.toString());
             }
         }
 
