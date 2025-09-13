@@ -15,6 +15,7 @@
  */
 package io.netty.util.concurrent;
 
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -119,7 +120,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
         }
     }
 
-    @Test
+    @RepeatedTest(10)
     @Timeout(30)
     void testScaleUp() throws Exception {
         TestEventExecutorGroup group = new TestEventExecutorGroup(1, 3, 50, TimeUnit.MILLISECONDS);
