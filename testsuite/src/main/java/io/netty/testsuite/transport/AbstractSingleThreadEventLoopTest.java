@@ -32,6 +32,7 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 import io.netty.util.internal.PlatformDependent;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
@@ -59,14 +60,14 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public abstract class AbstractSingleThreadEventLoopTest {
     protected static final int SCALING_MIN_THREADS = 1;
     protected static final int SCALING_MAX_THREADS = 2;
-    protected static final long SCALING_WINDOW_SECONDS = 100;
+    protected static final long SCALING_WINDOW = 100;
     protected static final TimeUnit SCALING_WINDOW_UNIT = MILLISECONDS;
     protected static final double SCALEDOWN_THRESHOLD = 0.2;
     protected static final double SCALEUP_THRESHOLD = 0.9;
     protected static final int SCALING_PATIENCE_CYCLES = 1;
 
     protected static final EventExecutorChooserFactory AUTO_SCALING_CHOOSER_FACTORY =
-            new AutoScalingEventExecutorChooserFactory(SCALING_MIN_THREADS, SCALING_MAX_THREADS, SCALING_WINDOW_SECONDS,
+            new AutoScalingEventExecutorChooserFactory(SCALING_MIN_THREADS, SCALING_MAX_THREADS, SCALING_WINDOW,
                                                        SCALING_WINDOW_UNIT, SCALEDOWN_THRESHOLD, SCALEUP_THRESHOLD,
                                                        SCALING_MAX_THREADS, SCALING_MAX_THREADS, SCALING_PATIENCE_CYCLES
     );
@@ -344,42 +345,76 @@ public abstract class AbstractSingleThreadEventLoopTest {
         }
     }
 
-    @Test
+    @RepeatedTest(10)
     @Timeout(30)
     public void testSubmittingTaskWakesUpSuspendedExecutor() throws Exception {
         EventLoopGroup group = newAutoScalingEventLoopGroup();
         if (group == null) {
             return;
         }
+
+        ScheduledFuture<?> keepAliveTask = null;
         try {
             startAllExecutors(group);
             assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
                          "Group should start with max threads.");
 
-            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
             while (countActiveExecutors(group) > SCALING_MIN_THREADS && System.nanoTime() < deadline) {
                 Thread.sleep(100);
             }
             assertEquals(SCALING_MIN_THREADS, countActiveExecutors(group),
                          "Group did not scale down to min threads in time.");
 
+            EventLoop activeLoop = null;
             EventLoop suspendedLoop = null;
             for (EventExecutor exec : group) {
-                if (exec.isSuspended()) {
+                if (!exec.isSuspended()) {
+                    activeLoop = (EventLoop) exec;
+                } else if (suspendedLoop == null) {
                     suspendedLoop = (EventLoop) exec;
-                    break;
                 }
             }
+            assertNotNull(activeLoop, "Could not find the single active executor.");
             assertNotNull(suspendedLoop, "Could not find a suspended executor to test.");
 
-            // Submit a task directly to the suspended loop, this should trigger the wake-up mechanism.
-            Future<?> future = suspendedLoop.submit(() -> { });
-            future.syncUninterruptibly();
+            // Start a keep-alive task on the original active loop to prevent the monitor
+            // from suspending it while we test the wake-up logic on the other loop.
+            final long keepAliveWorkNanos = TimeUnit.MILLISECONDS.toNanos(SCALING_WINDOW / 2);
+            keepAliveTask = activeLoop.scheduleAtFixedRate(() -> {
+                long workDeadline = System.nanoTime() + keepAliveWorkNanos;
+                while (System.nanoTime() < workDeadline) {
+                    // Busy-wait to generate CPU utilization.
+                }
+            }, 0, SCALING_WINDOW, SCALING_WINDOW_UNIT);
 
-            assertFalse(suspendedLoop.isSuspended(), "Executor should wake up after task submission.");
-            assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
-                         "Active executor count should increase after wake-up.");
+            final CountDownLatch taskStartedLatch = new CountDownLatch(1);
+            final long workDurationNanos = TimeUnit.MILLISECONDS.toNanos(SCALING_WINDOW * 3);
+
+            Future<?> future = suspendedLoop.submit(() -> {
+                taskStartedLatch.countDown();
+                long workDeadline = System.nanoTime() + workDurationNanos;
+                while (System.nanoTime() < workDeadline) {
+                    // Busy-wait to generate CPU utilization.
+                }
+            });
+
+            assertTrue(taskStartedLatch.await(5, TimeUnit.SECONDS), "Task did not start in time.");
+
+            final int expectedActiveCount = SCALING_MIN_THREADS + 1;
+            deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (countActiveExecutors(group) < expectedActiveCount && System.nanoTime() < deadline) {
+                Thread.sleep(50);
+            }
+
+            assertEquals(expectedActiveCount, countActiveExecutors(group),
+                         "Active executor count should increase by one after wake-up.");
+            assertFalse(suspendedLoop.isSuspended(), "Executor should be active after monitor reconciliation.");
+            future.syncUninterruptibly();
         } finally {
+            if (keepAliveTask != null) {
+                keepAliveTask.cancel(false);
+            }
             group.shutdownGracefully().syncUninterruptibly();
         }
     }
