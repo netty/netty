@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
@@ -24,6 +25,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -49,10 +53,15 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.Semaphore;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Stream;
 
 import static io.netty.buffer.Unpooled.LITTLE_ENDIAN;
 import static io.netty.buffer.Unpooled.buffer;
@@ -2908,6 +2917,78 @@ public abstract class AbstractByteBufTest {
         latch.await(10, TimeUnit.SECONDS);
         barrier.await(5, TimeUnit.SECONDS);
         assertNull(cause.get());
+    }
+
+    public static Stream<Arguments> setCharSequenceCombinations() {
+        Stream.Builder<Arguments> builder = Stream.builder();
+        List<Charset> charsets = Arrays.asList(
+                StandardCharsets.UTF_8,
+                StandardCharsets.US_ASCII,
+                StandardCharsets.ISO_8859_1);
+        for (Charset charset : charsets) {
+            for (CharSequenceType charSequenceType : CharSequenceType.values()) {
+                builder.add(Arguments.of(charset, charSequenceType));
+            }
+        }
+        return builder.build();
+    }
+
+    enum CharSequenceType {
+        STRING,
+        ASCII_STRING;
+
+        public CharSequence create(char[] cs) {
+            switch (this) {
+                case STRING:
+                    return new String(cs);
+                case ASCII_STRING:
+                    return new AsciiString(cs);
+            }
+            throw new UnsupportedOperationException("Unknown type: " + this);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    @ParameterizedTest
+    @MethodSource("setCharSequenceCombinations")
+    void testSetCharSequenceMultipleThreads(final Charset charset, CharSequenceType charSeqType) throws Exception {
+        int bufSize = 32;
+        ByteBuf[] bufs = new ByteBuf[16];
+        for (int i = 0; i < bufs.length; i++) {
+            bufs[i] = newBuffer(bufSize);
+        }
+
+        int iterations = 256;
+        Semaphore start = new Semaphore(0);
+        Semaphore finish = new Semaphore(0);
+        char[] cs = new char[(int) (bufSize / charset.newEncoder().maxBytesPerChar())];
+        Arrays.fill(cs, 'a');
+        final CharSequence str = charSeqType.create(cs);
+        ExecutorService executor = Executors.newFixedThreadPool(bufs.length);
+        try {
+            Future<Void>[] futures = new Future[bufs.length];
+            for (int i = 0; i < bufs.length; i++) {
+                final ByteBuf buf = bufs[i];
+                futures[i] = executor.submit(() -> {
+                    finish.release();
+                    start.acquire();
+                    for (int j = 0; j < iterations; j++) {
+                        buf.setCharSequence(0, str, charset);
+                    }
+                    return null;
+                });
+            }
+            finish.acquire(bufs.length);
+            start.release(bufs.length);
+            for (Future<Void> future : futures) {
+                future.get();
+            }
+            for (ByteBuf buf : bufs) {
+                buf.release();
+            }
+        } finally {
+            executor.shutdown();
+        }
     }
 
     @Test
