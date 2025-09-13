@@ -380,7 +380,13 @@ public abstract class AbstractSingleThreadEventLoopTest {
 
             // Start a keep-alive task on the original active loop to prevent the monitor
             // from suspending it while we test the wake-up logic on the other loop.
-            keepAliveTask = activeLoop.scheduleAtFixedRate(() -> { }, 0, SCALING_WINDOW / 2, SCALING_WINDOW_UNIT);
+            final long keepAliveWorkNanos = TimeUnit.MILLISECONDS.toNanos(SCALING_WINDOW / 2);
+            keepAliveTask = activeLoop.scheduleAtFixedRate(() -> {
+                long workDeadline = System.nanoTime() + keepAliveWorkNanos;
+                while (System.nanoTime() < workDeadline) {
+                    // Busy-wait to generate CPU utilization.
+                }
+            }, 0, SCALING_WINDOW, SCALING_WINDOW_UNIT);
 
             final CountDownLatch taskStartedLatch = new CountDownLatch(1);
             final long workDurationNanos = TimeUnit.MILLISECONDS.toNanos(SCALING_WINDOW * 3);
