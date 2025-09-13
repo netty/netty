@@ -352,6 +352,8 @@ public abstract class AbstractSingleThreadEventLoopTest {
         if (group == null) {
             return;
         }
+
+        ScheduledFuture<?> keepAliveTask = null;
         try {
             startAllExecutors(group);
             assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
@@ -364,14 +366,21 @@ public abstract class AbstractSingleThreadEventLoopTest {
             assertEquals(SCALING_MIN_THREADS, countActiveExecutors(group),
                          "Group did not scale down to min threads in time.");
 
+            EventLoop activeLoop = null;
             EventLoop suspendedLoop = null;
             for (EventExecutor exec : group) {
-                if (exec.isSuspended()) {
+                if (!exec.isSuspended()) {
+                    activeLoop = (EventLoop) exec;
+                } else if (suspendedLoop == null) {
                     suspendedLoop = (EventLoop) exec;
-                    break;
                 }
             }
+            assertNotNull(activeLoop, "Could not find the single active executor.");
             assertNotNull(suspendedLoop, "Could not find a suspended executor to test.");
+
+            // Start a keep-alive task on the original active loop to prevent the monitor
+            // from suspending it while we test the wake-up logic on the other loop.
+            keepAliveTask = activeLoop.scheduleAtFixedRate(() -> { }, 0, SCALING_WINDOW / 2, SCALING_WINDOW_UNIT);
 
             final CountDownLatch taskStartedLatch = new CountDownLatch(1);
             final long workDurationNanos = TimeUnit.MILLISECONDS.toNanos(SCALING_WINDOW * 3);
@@ -397,6 +406,9 @@ public abstract class AbstractSingleThreadEventLoopTest {
             assertFalse(suspendedLoop.isSuspended(), "Executor should be active after monitor reconciliation.");
             future.syncUninterruptibly();
         } finally {
+            if (keepAliveTask != null) {
+                keepAliveTask.cancel(false);
+            }
             group.shutdownGracefully().syncUninterruptibly();
         }
     }
