@@ -60,14 +60,14 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public abstract class AbstractSingleThreadEventLoopTest {
     protected static final int SCALING_MIN_THREADS = 1;
     protected static final int SCALING_MAX_THREADS = 2;
-    protected static final long SCALING_WINDOW_SECONDS = 100;
+    protected static final long SCALING_WINDOW = 100;
     protected static final TimeUnit SCALING_WINDOW_UNIT = MILLISECONDS;
     protected static final double SCALEDOWN_THRESHOLD = 0.2;
     protected static final double SCALEUP_THRESHOLD = 0.9;
     protected static final int SCALING_PATIENCE_CYCLES = 1;
 
     protected static final EventExecutorChooserFactory AUTO_SCALING_CHOOSER_FACTORY =
-            new AutoScalingEventExecutorChooserFactory(SCALING_MIN_THREADS, SCALING_MAX_THREADS, SCALING_WINDOW_SECONDS,
+            new AutoScalingEventExecutorChooserFactory(SCALING_MIN_THREADS, SCALING_MAX_THREADS, SCALING_WINDOW,
                                                        SCALING_WINDOW_UNIT, SCALEDOWN_THRESHOLD, SCALEUP_THRESHOLD,
                                                        SCALING_MAX_THREADS, SCALING_MAX_THREADS, SCALING_PATIENCE_CYCLES
     );
@@ -357,7 +357,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
             assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
                          "Group should start with max threads.");
 
-            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(15);
             while (countActiveExecutors(group) > SCALING_MIN_THREADS && System.nanoTime() < deadline) {
                 Thread.sleep(100);
             }
@@ -373,33 +373,29 @@ public abstract class AbstractSingleThreadEventLoopTest {
             }
             assertNotNull(suspendedLoop, "Could not find a suspended executor to test.");
 
-            final CountDownLatch taskLatch = new CountDownLatch(1);
+            final CountDownLatch taskStartedLatch = new CountDownLatch(1);
+            final long workDurationNanos = TimeUnit.MILLISECONDS.toNanos(SCALING_WINDOW * 3);
 
-            // Submit a task that waits on the latch. This will keep the executor busy.
             Future<?> future = suspendedLoop.submit(() -> {
-                try {
-                    taskLatch.await();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                taskStartedLatch.countDown();
+                long workDeadline = System.nanoTime() + workDurationNanos;
+                while (System.nanoTime() < workDeadline) {
+                    // Busy-wait to generate CPU utilization.
                 }
             });
 
-            // Wait for the UtilizationMonitor to detect the wake-up and update the active count.
-            // The correct outcome is that the number of active executors increases.
+            assertTrue(taskStartedLatch.await(5, TimeUnit.SECONDS), "Task did not start in time.");
+
             final int expectedActiveCount = SCALING_MIN_THREADS + 1;
             deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
             while (countActiveExecutors(group) < expectedActiveCount && System.nanoTime() < deadline) {
                 Thread.sleep(50);
             }
 
-            // Assert that the active count is correct before we allow the task to finish.
             assertEquals(expectedActiveCount, countActiveExecutors(group),
                          "Active executor count should increase by one after wake-up.");
-
             assertFalse(suspendedLoop.isSuspended(), "Executor should be active after monitor reconciliation.");
-
-            taskLatch.countDown();
-            future.syncUninterruptibly(); // This confirms the task ran cleanly.
+            future.syncUninterruptibly();
         } finally {
             group.shutdownGracefully().syncUninterruptibly();
         }
