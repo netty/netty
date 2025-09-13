@@ -345,7 +345,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
         }
     }
 
-    @RepeatedTest(11)
+    @RepeatedTest(15)
     @Timeout(30)
     public void testSubmittingTaskWakesUpSuspendedExecutor() throws Exception {
         EventLoopGroup group = newAutoScalingEventLoopGroup();
@@ -373,11 +373,18 @@ public abstract class AbstractSingleThreadEventLoopTest {
             }
             assertNotNull(suspendedLoop, "Could not find a suspended executor to test.");
 
-            // Submit a task directly to the suspended loop. This should wake it up.
-            Future<?> future = suspendedLoop.submit(() -> { });
-            future.syncUninterruptibly(); // This confirms the task ran.
+            final CountDownLatch taskLatch = new CountDownLatch(1);
 
-            // Wait for the UtilizationMonitor to detect the change and update the state.
+            // Submit a task that waits on the latch. This will keep the executor busy.
+            Future<?> future = suspendedLoop.submit(() -> {
+                try {
+                    taskLatch.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+
+            // Wait for the UtilizationMonitor to detect the wake-up and update the active count.
             // The correct outcome is that the number of active executors increases.
             final int expectedActiveCount = SCALING_MIN_THREADS + 1;
             deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
@@ -385,10 +392,14 @@ public abstract class AbstractSingleThreadEventLoopTest {
                 Thread.sleep(50);
             }
 
+            // Assert that the active count is correct before we allow the task to finish.
             assertEquals(expectedActiveCount, countActiveExecutors(group),
                          "Active executor count should increase by one after wake-up.");
 
             assertFalse(suspendedLoop.isSuspended(), "Executor should be active after monitor reconciliation.");
+
+            taskLatch.countDown();
+            future.syncUninterruptibly(); // This confirms the task ran cleanly.
         } finally {
             group.shutdownGracefully().syncUninterruptibly();
         }
