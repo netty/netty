@@ -18,8 +18,11 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -229,10 +232,20 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                 final AutoScalingState oldState = state.get();
                 final AutoScalingState currentState = rebuildActiveExecutors();
                 if (oldState.activeChildrenCount != currentState.activeChildrenCount) {
+                    final Set<EventExecutor> oldActive = new HashSet<>(Arrays.asList(oldState.activeExecutors));
+
+                    for (EventExecutor currentActive : currentState.activeExecutors) {
+                        if (!oldActive.contains(currentActive) && currentActive instanceof SingleThreadEventExecutor) {
+                            SingleThreadEventExecutor eventExecutor = (SingleThreadEventExecutor) currentActive;
+                            eventExecutor.resetIdleCycles();
+                            eventExecutor.resetBusyCycles();
+                        }
+                    }
+
                     // The number of active children changed due to an external event (e.g., a task was
                     // submitted to a suspended executor). It's safer to wait for the next cycle to
                     // gather fresh utilization data before making a scaling decision.
-                    return;
+                    //return;
                 }
 
                 int consistentlyBusyChildren = 0;

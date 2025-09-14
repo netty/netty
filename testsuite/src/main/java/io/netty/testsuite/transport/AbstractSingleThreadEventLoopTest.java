@@ -390,13 +390,15 @@ public abstract class AbstractSingleThreadEventLoopTest {
             });
 
             final CountDownLatch taskStartedLatch = new CountDownLatch(1);
-            final long workDurationNanos = TimeUnit.MILLISECONDS.toNanos(SCALING_WINDOW * 3);
+            final CountDownLatch keepBusyLatch = new CountDownLatch(1);
 
             Future<?> future = suspendedLoop.submit(() -> {
                 taskStartedLatch.countDown();
-                long workDeadline = System.nanoTime() + workDurationNanos;
-                while (System.nanoTime() < workDeadline) {
-                    // Busy-wait to generate CPU utilization.
+                try {
+                    // This keeps the thread busy and prevents the monitor from suspending it.
+                    keepBusyLatch.await();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
                 }
             });
 
@@ -411,6 +413,8 @@ public abstract class AbstractSingleThreadEventLoopTest {
             assertEquals(expectedActiveCount, countActiveExecutors(group),
                          "Active executor count should increase by one after wake-up.");
             assertFalse(suspendedLoop.isSuspended(), "Executor should be active after monitor reconciliation.");
+
+            keepBusyLatch.countDown();
             future.syncUninterruptibly();
         } finally {
             keepAliveRunning.set(false);
