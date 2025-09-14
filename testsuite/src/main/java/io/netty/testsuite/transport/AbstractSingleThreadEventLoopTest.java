@@ -47,6 +47,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -353,7 +354,8 @@ public abstract class AbstractSingleThreadEventLoopTest {
             return;
         }
 
-        ScheduledFuture<?> keepAliveTask = null;
+        Future<?> keepAliveFuture = null;
+        final AtomicBoolean keepAliveRunning = new AtomicBoolean(true);
         try {
             startAllExecutors(group);
             assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
@@ -378,15 +380,14 @@ public abstract class AbstractSingleThreadEventLoopTest {
             assertNotNull(activeLoop, "Could not find the single active executor.");
             assertNotNull(suspendedLoop, "Could not find a suspended executor to test.");
 
-            // Start a keep-alive task on the original active loop to prevent the monitor
-            // from suspending it while we test the wake-up logic on the other loop.
-            final long keepAliveWorkNanos = TimeUnit.MILLISECONDS.toNanos(SCALING_WINDOW / 2);
-            keepAliveTask = activeLoop.scheduleAtFixedRate(() -> {
-                long workDeadline = System.nanoTime() + keepAliveWorkNanos;
-                while (System.nanoTime() < workDeadline) {
+            // Start a continuous keep-alive task on the original active loop to guarantee
+            // it isn't suspended by the monitor during the test.
+            keepAliveFuture = activeLoop.submit(() -> {
+                while (keepAliveRunning.get()) {
                     // Busy-wait to generate CPU utilization.
                 }
-            }, 0, SCALING_WINDOW, SCALING_WINDOW_UNIT);
+                return null;
+            });
 
             final CountDownLatch taskStartedLatch = new CountDownLatch(1);
             final long workDurationNanos = TimeUnit.MILLISECONDS.toNanos(SCALING_WINDOW * 3);
@@ -412,8 +413,9 @@ public abstract class AbstractSingleThreadEventLoopTest {
             assertFalse(suspendedLoop.isSuspended(), "Executor should be active after monitor reconciliation.");
             future.syncUninterruptibly();
         } finally {
-            if (keepAliveTask != null) {
-                keepAliveTask.cancel(false);
+            keepAliveRunning.set(false);
+            if (keepAliveFuture != null) {
+                keepAliveFuture.syncUninterruptibly();
             }
             group.shutdownGracefully().syncUninterruptibly();
         }

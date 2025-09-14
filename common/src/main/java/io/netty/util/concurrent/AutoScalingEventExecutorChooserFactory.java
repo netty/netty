@@ -226,16 +226,17 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
 
                 // First, ensure our state accurately reflects reality before making any decisions.
                 // This handles cases where an executor was woken up externally since the last check.
-                if (reconcileStateIfNeeded()) {
-                    // If the state was stale and had to be rebuilt, it's safer to wait for the
-                    // next cycle to gather fresh utilization data before making a scaling decision.
+                final AutoScalingState oldState = state.get();
+                final AutoScalingState currentState = rebuildActiveExecutors();
+                if (oldState.activeChildrenCount != currentState.activeChildrenCount) {
+                    // The number of active children changed due to an external event (e.g., a task was
+                    // submitted to a suspended executor). It's safer to wait for the next cycle to
+                    // gather fresh utilization data before making a scaling decision.
                     return;
                 }
 
                 int consistentlyBusyChildren = 0;
                 consistentlyIdleChildren.clear();
-
-                final AutoScalingState currentState = state.get();
 
                 for (EventExecutor child : executors) {
                     if (child.isSuspended() || !(child instanceof SingleThreadEventExecutor)) {
@@ -321,40 +322,9 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
             }
 
             /**
-             * Checks if the state's active count matches reality and rebuilds if not.
-             * @return {@code true} if the state was reconciled, {@code false} otherwise.
-             */
-            private boolean reconcileStateIfNeeded() {
-                for (;;) {
-                    final AutoScalingState currentState = state.get();
-
-                    List<EventExecutor> active = new ArrayList<>(executors.length);
-                    for (EventExecutor executor : executors) {
-                        if (!executor.isSuspended()) {
-                            active.add(executor);
-                        }
-                    }
-
-                    if (active.size() == currentState.activeChildrenCount) {
-                        return false;
-                    }
-
-                    EventExecutor[] newActiveExecutors = active.toArray(new EventExecutor[0]);
-                    AutoScalingState newState = new AutoScalingState(
-                            newActiveExecutors.length, currentState.nextWakeUpIndex, newActiveExecutors);
-
-                    if (state.compareAndSet(currentState, newState)) {
-                        return true;
-                    }
-
-                    // If we reach here, another thread modified the state.
-                }
-            }
-
-            /**
              * Atomically updates the state by creating a new snapshot with the current set of active executors.
              */
-            private void rebuildActiveExecutors() {
+            private AutoScalingState rebuildActiveExecutors() {
                 for (;;) {
                     AutoScalingState oldState = state.get();
                     List<EventExecutor> active = new ArrayList<>(oldState.activeChildrenCount);
@@ -372,7 +342,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                             newActiveExecutors.length, oldState.nextWakeUpIndex, newActiveExecutors);
 
                     if (state.compareAndSet(oldState, newState)) {
-                        break;
+                        return newState;
                     }
                 }
             }
