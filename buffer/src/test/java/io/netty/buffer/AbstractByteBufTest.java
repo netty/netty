@@ -53,6 +53,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -2943,8 +2944,9 @@ public abstract class AbstractByteBufTest {
                     return new String(cs);
                 case ASCII_STRING:
                     return new AsciiString(cs);
+                default:
+                    throw new UnsupportedOperationException("Unknown type: " + this);
             }
-            throw new UnsupportedOperationException("Unknown type: " + this);
         }
     }
 
@@ -2980,14 +2982,31 @@ public abstract class AbstractByteBufTest {
             }
             finish.acquire(bufs.length);
             start.release(bufs.length);
+            Exception e = null;
             for (Future<Void> future : futures) {
-                future.get();
+                try {
+                    future.get();
+                } catch (InterruptedException ex) {
+                    if (e != null) {
+                        ex.addSuppressed(e);
+                    }
+                    throw ex; // Propagate interrupted exceptions immediately.
+                } catch (ExecutionException ex) {
+                    if (e != null) {
+                        e = ex;
+                    } else {
+                        e.addSuppressed(ex);
+                    }
+                }
             }
-            for (ByteBuf buf : bufs) {
-                buf.release();
+            if (e != null) {
+                fail("Worker threads failed", e);
             }
         } finally {
             executor.shutdown();
+            for (ByteBuf buf : bufs) {
+                buf.release();
+            }
         }
     }
 
