@@ -411,7 +411,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
             // Something did go wrong which means we will not be able to release the context later on. Release it
             // now to prevent leaks.
             context.release();
-             PlatformDependent.throwException(cause);
+            PlatformDependent.throwException(cause);
         }
         parentContext = context;
 
