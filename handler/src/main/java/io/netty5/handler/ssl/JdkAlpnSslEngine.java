@@ -99,7 +99,7 @@ class JdkAlpnSslEngine extends JdkSslEngine {
                      @SuppressWarnings("deprecation") JdkApplicationProtocolNegotiator applicationNegotiator,
                      boolean isServer) {
        this(engine, applicationNegotiator, isServer,
-               JdkAlpnSslUtils::setHandshakeApplicationProtocolSelector,
+               SSLEngine::setHandshakeApplicationProtocolSelector,
                JdkAlpnSslUtils::setApplicationProtocols);
     }
 
@@ -176,21 +176,21 @@ class JdkAlpnSslEngine extends JdkSslEngine {
 
     @Override
     public String getApplicationProtocol() {
-        return JdkAlpnSslUtils.getApplicationProtocol(getWrappedEngine());
+        return getWrappedEngine().getApplicationProtocol();
     }
 
     @Override
     public String getHandshakeApplicationProtocol() {
-        return JdkAlpnSslUtils.getHandshakeApplicationProtocol(getWrappedEngine());
+        return getWrappedEngine().getHandshakeApplicationProtocol();
     }
 
     @Override
     public void setHandshakeApplicationProtocolSelector(BiFunction<SSLEngine, List<String>, String> selector) {
-        JdkAlpnSslUtils.setHandshakeApplicationProtocolSelector(getWrappedEngine(), selector);
+        getWrappedEngine().setHandshakeApplicationProtocolSelector(selector);
     }
 
     @Override
     public BiFunction<SSLEngine, List<String>, String> getHandshakeApplicationProtocolSelector() {
-        return JdkAlpnSslUtils.getHandshakeApplicationProtocolSelector(getWrappedEngine());
+        return getWrappedEngine().getHandshakeApplicationProtocolSelector();
     }
 }

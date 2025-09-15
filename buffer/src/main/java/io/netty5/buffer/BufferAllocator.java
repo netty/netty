@@ -15,7 +15,6 @@
  */
 package io.netty5.buffer;
 
-import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.buffer.pool.PooledBufferAllocator;
 import io.netty5.util.SafeCloseable;
 import io.netty5.util.Send;
@@ -262,7 +261,7 @@ public interface BufferAllocator extends SafeCloseable {
             for (var c = iteration.firstWritable(); c != null; c = c.nextWritable()) {
                 ByteBuffer dest = c.writableBuffer();
                 int length = Math.min(dest.capacity(), duplicate.remaining());
-                InternalBufferUtils.bbput(dest, 0, duplicate, duplicate.position(), length);
+                dest.put(0, duplicate, duplicate.position(), length);
                 duplicate.position(length + duplicate.position());
             }
         }

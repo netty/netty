@@ -806,17 +806,6 @@ public final class PlatformDependent {
     }
 
     /**
-     * Get the ID of the given thread. This is {@code Thread.threadId()} on Java 19 and newer,
-     * or {@code Thread.getId()} on older Java versions.
-     *
-     * @param thread The thread to get the ID from.
-     * @return The ID of the given thread.
-     */
-    public static long threadId(Thread thread) {
-        return PlatformDependent0.threadId(thread);
-    }
-
-    /**
      * Compare two {@code byte} arrays for equality. For performance reasons no bounds checking on the
      * parameters is performed.
      *
