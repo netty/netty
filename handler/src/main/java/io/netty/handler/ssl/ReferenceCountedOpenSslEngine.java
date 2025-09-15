@@ -232,6 +232,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         OpenSsl.ensureAvailability();
         engines = context.engines;
         enableOcsp = context.enableOcsp;
+        groups = context.groups.clone();
         this.jdkCompatibilityMode = jdkCompatibilityMode;
         this.alloc = checkNotNull(alloc, "alloc");
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
