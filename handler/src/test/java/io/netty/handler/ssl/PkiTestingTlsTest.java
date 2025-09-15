@@ -36,12 +36,14 @@ import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SSLParameters;
 
 public class PkiTestingTlsTest {
 
@@ -91,7 +93,7 @@ public class PkiTestingTlsTest {
                 .protocols("TLSv1.3")
                 .build();
 
-        testTlsConnection(serverContext, clientContext);
+        testTlsConnection(serverContext, clientContext, null);
     }
 
     @EnabledForJreRange(min = JRE.JAVA_15)
@@ -119,7 +121,7 @@ public class PkiTestingTlsTest {
                 .protocols("TLSv1.3")
                 .build();
 
-        testTlsConnection(serverContext, clientContext);
+        testTlsConnection(serverContext, clientContext, null);
     }
 
     static boolean isBoringSSLAvailable() {
@@ -135,8 +137,9 @@ public class PkiTestingTlsTest {
      */
     @EnabledForJreRange(min = JRE.JAVA_24)
     @EnabledIf("isBoringSSLAvailable")
-    @Test
-    void connectWithX25519MLKEM768() throws Exception {
+    @ParameterizedTest
+    @ValueSource(booleans = { true, false })
+    void connectWithX25519MLKEM768(boolean configureViaParameter) throws Exception {
         X509Bundle cert = new CertificateBuilder()
                 .algorithm(CertificateBuilder.Algorithm.ecp256)
                 .setIsCertificateAuthority(true)
@@ -151,26 +154,35 @@ public class PkiTestingTlsTest {
                             "TLS_AES_256_GCM_SHA384",
                             "TLS_CHACHA20_POLY1305_SHA256"};
 
-        final SslContext serverContext = SslContextBuilder.forServer(cert.toKeyManagerFactory())
+        String[] groups = new String[]{"X25519MLKEM768"};
+        SslContextBuilder serverBuilder = SslContextBuilder.forServer(cert.toKeyManagerFactory())
                 .sslProvider(SslProvider.OPENSSL)
-                .option(OpenSslContextOption.GROUPS, new String[]{"X25519MLKEM768"})
                 .protocols("TLSv1.3")
-                .ciphers(Arrays.asList(ciphers))
-                .build();
+                .ciphers(Arrays.asList(ciphers));
 
-        final SslContext clientContext = SslContextBuilder.forClient()
+        if (!configureViaParameter) {
+            serverBuilder.option(OpenSslContextOption.GROUPS, groups.clone());
+        }
+        final SslContext serverContext = serverBuilder.build();
+
+        SslContextBuilder clientBuilder = SslContextBuilder.forClient()
                 .trustManager(cert.toTrustManagerFactory())
                 .sslProvider(SslProvider.OPENSSL)
-                .option(OpenSslContextOption.GROUPS, new String[]{"X25519MLKEM768"})
                 .serverName(new SNIHostName("localhost"))
                 .protocols("TLSv1.3")
-                .ciphers(Arrays.asList(ciphers))
+                .ciphers(Arrays.asList(ciphers));
+
+        if (!configureViaParameter) {
+            clientBuilder.option(OpenSslContextOption.GROUPS, groups.clone());
+        }
+        final SslContext clientContext = clientBuilder
                 .build();
 
-        testTlsConnection(serverContext, clientContext);
+        testTlsConnection(serverContext, clientContext, configureViaParameter ? groups.clone() : null);
     }
 
-    private void testTlsConnection(SslContext serverContext, SslContext clientContext) throws InterruptedException {
+    private void testTlsConnection(SslContext serverContext, SslContext clientContext, String[] groups)
+            throws InterruptedException {
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         LocalAddress serverAddress = new LocalAddress(getClass());
 
@@ -182,7 +194,13 @@ public class PkiTestingTlsTest {
                     .childHandler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(serverContext.newHandler(ch.alloc()));
+                            SslHandler handler = serverContext.newHandler(ch.alloc());
+                            if (groups != null) {
+                                SSLParameters parameters = handler.engine().getSSLParameters();
+                                OpenSslParametersUtil.setNamesGroups(parameters, groups);
+                                handler.engine().setSSLParameters(parameters);
+                            }
+                            ch.pipeline().addLast(handler);
                         }
                     })
                     .group(group)
@@ -196,8 +214,14 @@ public class PkiTestingTlsTest {
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
+                            SslHandler handler = clientContext.newHandler(ch.alloc(), "localhost", 0);
+                            if (groups != null) {
+                                SSLParameters parameters = handler.engine().getSSLParameters();
+                                OpenSslParametersUtil.setNamesGroups(parameters, groups);
+                                handler.engine().setSSLParameters(parameters);
+                            }
                             ch.pipeline()
-                                    .addLast(clientContext.newHandler(ch.alloc(), "localhost", 0))
+                                    .addLast(handler)
                                     .addLast(new ChannelInboundHandlerAdapter() {
                                         @Override
                                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
