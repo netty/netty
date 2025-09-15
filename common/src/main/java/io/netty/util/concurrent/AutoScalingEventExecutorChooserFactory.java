@@ -407,8 +407,8 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                     }
                 }
 
-                // If a scale-down occurred, or if the actual state differs from our view, rebuild.
-                if (changed || currentActive != currentState.activeExecutors.length) {
+                // If a scale-down occurred, rebuild.
+                if (changed) {
                     rebuildActiveExecutors();
                 }
             }
