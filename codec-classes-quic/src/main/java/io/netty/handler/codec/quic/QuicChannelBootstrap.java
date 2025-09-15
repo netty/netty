@@ -60,8 +60,10 @@ public final class QuicChannelBootstrap {
      * pipeline.
      *
      * @param parent    the {@link Channel} that is used as the transport layer.
+     * @deprecated Use QuicChannel.newBootstrap() instead.
      */
-    QuicChannelBootstrap(Channel parent) {
+    @Deprecated
+    public QuicChannelBootstrap(Channel parent) {
         Quic.ensureAvailability();
         this.parent = ObjectUtil.checkNotNull(parent, "parent");
     }
