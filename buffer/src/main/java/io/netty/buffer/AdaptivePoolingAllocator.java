@@ -1008,7 +1008,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 curr.attachToMagazine(this);
 
                 int remainingCapacity = curr.remainingCapacity();
-                if (remainingCapacity < size) {
+                if (remainingCapacity == 0 || remainingCapacity < size) {
                     // Check if we either retain the chunk in the nextInLine cache or releasing it.
                     if (remainingCapacity < RETIRE_CAPACITY) {
                         curr.releaseFromMagazine();
