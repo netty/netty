@@ -298,7 +298,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                     // The number of active children changed due to an external event (e.g., a task was
                     // submitted to a suspended executor). It's safer to wait for the next cycle to
                     // gather fresh utilization data before making a scaling decision.
-                    //return;
+                    return;
                 }
 
                 // Calculate the actual elapsed time since the last run.

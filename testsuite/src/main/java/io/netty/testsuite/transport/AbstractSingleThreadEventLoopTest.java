@@ -415,13 +415,13 @@ public abstract class AbstractSingleThreadEventLoopTest {
             assertFalse(suspendedLoop.isSuspended(), "Executor should be active after monitor reconciliation.");
 
             keepBusyLatch.countDown();
-            future.syncUninterruptibly();
+            future.sync();
         } finally {
             keepAliveRunning.set(false);
             if (keepAliveFuture != null) {
-                keepAliveFuture.syncUninterruptibly();
+                keepAliveFuture.sync();
             }
-            group.shutdownGracefully().syncUninterruptibly();
+            group.shutdownGracefully().sync();
         }
     }
 
