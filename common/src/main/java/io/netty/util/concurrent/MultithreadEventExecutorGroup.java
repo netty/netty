@@ -15,16 +15,20 @@
  */
 package io.netty.util.concurrent;
 
-import static io.netty.util.internal.ObjectUtil.checkPositive;
+import io.netty.util.concurrent.AutoScalingEventExecutorChooserFactory.AutoScalingUtilizationMetric;
+import io.netty.util.concurrent.EventExecutorChooserFactory.ObservableEventExecutorChooser;
 
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
  * Abstract base class for {@link EventExecutorGroup} implementations that handles their tasks with multiple threads at
@@ -148,6 +152,33 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
      */
     public final int executorCount() {
         return children.length;
+    }
+
+    /**
+     * Returns the number of currently active threads if the group is using an
+     * {@link ObservableEventExecutorChooser}. Otherwise, for a non-scaling group,
+     * this method returns the total number of threads, as all are considered active.
+     *
+     * @return the count of active threads.
+     */
+    public int activeExecutorCount() {
+        if (chooser instanceof ObservableEventExecutorChooser) {
+            return ((ObservableEventExecutorChooser) chooser).activeExecutorCount();
+        }
+        return executorCount();
+    }
+
+    /**
+     * Returns a list of real-time utilization metrics if the group was configured
+     * with a compatible {@link EventExecutorChooserFactory}, otherwise an empty list.
+     *
+     * @return A list of {@link AutoScalingUtilizationMetric} objects.
+     */
+    public List<AutoScalingUtilizationMetric> executorUtilizations() {
+        if (chooser instanceof ObservableEventExecutorChooser) {
+            return ((ObservableEventExecutorChooser) chooser).executorUtilizations();
+        }
+        return Collections.emptyList();
     }
 
     /**
