@@ -25,7 +25,7 @@ public abstract class AbstractByteBufNoCleanerBenchmark extends AbstractMicroben
             @Override
             ByteBuf newBuffer(int initialCapacity) {
                 return new UnpooledUnsafeNoCleanerDirectByteBuf(
-                        UnpooledByteBufAllocator.DEFAULT, initialCapacity, Integer.MAX_VALUE);
+                        UnpooledByteBufAllocator.DEFAULT, initialCapacity, Integer.MAX_VALUE, true);
             }
         },
         UNPOOLED {
