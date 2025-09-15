@@ -268,6 +268,11 @@ public final class PlatformDependent {
                 PlatformDependent0.isNativeImage()) {
             return false;
         }
+        if (isAndroid()) {
+            // See https://github.com/netty/netty/issues/15654
+            logger.debug("java.lang.invoke.VarHandle: unavailable, due buggy implementation in android");
+            return false;
+        }
         boolean varHandleAvailable = false;
         Throwable varHandleFailure;
         try {
