@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,23 +15,18 @@
  */
 package io.netty.handler.codec.compression;
 
-import com.github.luben.zstd.Zstd;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
 
+public class Bzip2DecompressorTest extends Bzip2DecoderTest {
 
-public class ZstdDecoderTest extends AbstractDecoderTest {
-
-    public ZstdDecoderTest() throws Exception {
+    public Bzip2DecompressorTest() throws Exception {
     }
 
     @Override
-    public EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(new ZstdDecoder());
-    }
-
-    @Override
-    protected byte[] compress(byte[] data) throws Exception {
-        return Zstd.compress(data);
+    protected EmbeddedChannel createChannel() {
+        return new EmbeddedChannel(
+                new BackpressureDecompressionHandler(
+                        Bzip2Decompressor.builder(ByteBufAllocator.DEFAULT).build()));
     }
 }
