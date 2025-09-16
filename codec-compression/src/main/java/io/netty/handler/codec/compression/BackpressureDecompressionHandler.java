@@ -21,6 +21,11 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.RecyclableArrayList;
 
+/**
+ * A channel handler that decompresses incoming {@link ByteBuf}s using a {@link Decompressor}. This is designed as a
+ * drop-in replacement for the various decompression decoders (e.g. {@link BrotliDecoder}), but properly handles
+ * downstream backpressure.
+ */
 public final class BackpressureDecompressionHandler extends ChannelDuplexHandler {
     private final Decompressor decompressor;
     private RecyclableArrayList inputBuffer;
@@ -28,6 +33,11 @@ public final class BackpressureDecompressionHandler extends ChannelDuplexHandler
     private boolean downstreamWantsMore;
     private boolean reading;
 
+    /**
+     * Create a new handler using the given decompressor.
+     *
+     * @param decompressor The decompressor
+     */
     public BackpressureDecompressionHandler(Decompressor decompressor) {
         this.decompressor = decompressor;
     }
