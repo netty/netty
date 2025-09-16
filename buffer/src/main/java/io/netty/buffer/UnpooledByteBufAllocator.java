@@ -178,7 +178,7 @@ public final class UnpooledByteBufAllocator extends AbstractByteBufAllocator imp
             extends UnpooledUnsafeNoCleanerDirectByteBuf {
         InstrumentedUnpooledUnsafeNoCleanerDirectByteBuf(
                 UnpooledByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
-            super(alloc, initialCapacity, maxCapacity);
+            super(alloc, initialCapacity, maxCapacity, true);
         }
 
         @Override

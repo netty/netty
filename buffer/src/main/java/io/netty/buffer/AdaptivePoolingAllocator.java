@@ -543,9 +543,9 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         private SizeClassChunkControllerFactory(int segmentSize) {
             this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
-            this.chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
+            chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
             int segmentsCount = chunkSize / segmentSize;
-            this.segmentOffsets = new int[segmentsCount];
+            segmentOffsets = new int[segmentsCount];
             for (int i = 0; i < segmentsCount; i++) {
                 segmentOffsets[i] = i * segmentSize;
             }
@@ -1770,8 +1770,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 } else {
                     checkIndex(index, length);
                 }
-                // Directly pass in the rootParent() with the adjusted index
-                return ByteBufUtil.writeUtf8(rootParent(), idx(index), length, sequence, sequence.length());
+                return ByteBufUtil.writeUtf8(this, index, length, sequence, sequence.length());
             }
             if (charset.equals(CharsetUtil.US_ASCII) || charset.equals(CharsetUtil.ISO_8859_1)) {
                 int length = sequence.length();
@@ -1781,8 +1780,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 } else {
                     checkIndex(index, length);
                 }
-                // Directly pass in the rootParent() with the adjusted index
-                return ByteBufUtil.writeAscii(rootParent(), idx(index), sequence, length);
+                return ByteBufUtil.writeAscii(this, index, sequence, length);
             }
             byte[] bytes = sequence.toString().getBytes(charset);
             if (expand) {

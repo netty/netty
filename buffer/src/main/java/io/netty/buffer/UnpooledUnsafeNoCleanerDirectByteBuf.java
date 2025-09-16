@@ -21,8 +21,9 @@ import java.nio.ByteBuffer;
 
 class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
 
-    UnpooledUnsafeNoCleanerDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
-        super(alloc, initialCapacity, maxCapacity);
+    UnpooledUnsafeNoCleanerDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity,
+                                         boolean allowSectionedInternalNioBufferAccess) {
+        super(alloc, initialCapacity, maxCapacity, allowSectionedInternalNioBufferAccess);
     }
 
     @Override

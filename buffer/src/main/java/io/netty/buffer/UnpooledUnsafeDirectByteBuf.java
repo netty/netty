@@ -41,6 +41,11 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
         super(alloc, initialCapacity, maxCapacity);
     }
 
+    UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity,
+                                boolean allowSectionedInternalNioBufferAccess) {
+        super(alloc, initialCapacity, maxCapacity, allowSectionedInternalNioBufferAccess);
+    }
+
     /**
      * Creates a new direct buffer by wrapping the specified initial buffer.
      *
