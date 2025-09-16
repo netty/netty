@@ -22,7 +22,6 @@ import io.netty.util.internal.PlatformDependent;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
@@ -277,18 +276,16 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected short _getShort(int index) {
-        VarHandle varHandle = PlatformDependent.shortBeByteBufferView();
-        if (varHandle != null) {
-            return (short) varHandle.get(buffer, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getShortBE(buffer, index);
         }
         return buffer.getShort(index);
     }
 
     @Override
     protected short _getShortLE(int index) {
-        VarHandle varHandle = PlatformDependent.shortLeByteBufferView();
-        if (varHandle != null) {
-            return (short) varHandle.get(buffer, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getShortLE(buffer, index);
         }
         return ByteBufUtil.swapShort(buffer.getShort(index));
     }
@@ -327,18 +324,16 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected int _getInt(int index) {
-        VarHandle varHandle = PlatformDependent.intBeByteBufferView();
-        if (varHandle != null) {
-            return (int) varHandle.get(buffer, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getIntBE(buffer, index);
         }
         return buffer.getInt(index);
     }
 
     @Override
     protected int _getIntLE(int index) {
-        VarHandle varHandle = PlatformDependent.intLeByteBufferView();
-        if (varHandle != null) {
-            return (int) varHandle.get(buffer, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getIntLE(buffer, index);
         }
         return ByteBufUtil.swapInt(buffer.getInt(index));
     }
@@ -357,18 +352,16 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected long _getLong(int index) {
-        VarHandle varHandle = PlatformDependent.longBeByteBufferView();
-        if (varHandle != null) {
-            return (long) varHandle.get(buffer, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getLongBE(buffer, index);
         }
         return buffer.getLong(index);
     }
 
     @Override
     protected long _getLongLE(int index) {
-        VarHandle varHandle = PlatformDependent.longLeByteBufferView();
-        if (varHandle != null) {
-            return (long) varHandle.get(buffer, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getLongLE(buffer, index);
         }
         return ByteBufUtil.swapLong(buffer.getLong(index));
     }
@@ -471,9 +464,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setShort(int index, int value) {
-        VarHandle varHandle = PlatformDependent.shortBeByteBufferView();
-        if (varHandle != null) {
-            varHandle.set(buffer, index, (short) value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setShortBE(buffer, index, value);
             return;
         }
         buffer.putShort(index, (short) (value & 0xFFFF));
@@ -481,9 +473,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setShortLE(int index, int value) {
-        VarHandle varHandle = PlatformDependent.shortLeByteBufferView();
-        if (varHandle != null) {
-            varHandle.set(buffer, index, (short) value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setShortLE(buffer, index, value);
             return;
         }
         buffer.putShort(index, ByteBufUtil.swapShort((short) value));
@@ -533,9 +524,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setInt(int index, int value) {
-        VarHandle varHandle = PlatformDependent.intBeByteBufferView();
-        if (varHandle != null) {
-            varHandle.set(buffer, index, value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setIntBE(buffer, index, value);
             return;
         }
         buffer.putInt(index, value);
@@ -543,9 +533,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setIntLE(int index, int value) {
-        VarHandle varHandle = PlatformDependent.intLeByteBufferView();
-        if (varHandle != null) {
-            varHandle.set(buffer, index, value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setIntLE(buffer, index, value);
             return;
         }
         buffer.putInt(index, ByteBufUtil.swapInt(value));
@@ -567,9 +556,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setLong(int index, long value) {
-        VarHandle varHandle = PlatformDependent.longBeByteBufferView();
-        if (varHandle != null) {
-            varHandle.set(buffer, index, value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setLongBE(buffer, index, value);
             return;
         }
         buffer.putLong(index, value);
@@ -577,9 +565,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setLongLE(int index, long value) {
-        VarHandle varHandle = PlatformDependent.longLeByteBufferView();
-        if (varHandle != null) {
-            varHandle.set(buffer, index, value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setLongLE(buffer, index, value);
             return;
         }
         buffer.putLong(index, ByteBufUtil.swapLong(value));
