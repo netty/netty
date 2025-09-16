@@ -194,7 +194,7 @@ public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
     }
 
     public static final class Builder extends AbstractDecompressorBuilder {
-        private Checksum checksum = null;
+        private Checksum checksum;
 
         Builder(ByteBufAllocator allocator) {
             super(allocator);

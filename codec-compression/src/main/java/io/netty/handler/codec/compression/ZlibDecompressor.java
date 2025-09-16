@@ -29,7 +29,7 @@ abstract class ZlibDecompressor extends InputBufferingDecompressor {
         this.dictionary = builder.dictionary;
     }
 
-    static abstract class AbstractZlibDecompressorBuilder extends AbstractDecompressorBuilder {
+    abstract static class AbstractZlibDecompressorBuilder extends AbstractDecompressorBuilder {
         protected ZlibWrapper wrapper = ZlibWrapper.ZLIB;
         protected byte[] dictionary;
         protected int maxAllocation = 1024 * 1024;

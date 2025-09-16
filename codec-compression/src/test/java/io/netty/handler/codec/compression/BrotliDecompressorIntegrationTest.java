@@ -21,6 +21,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 public class BrotliDecompressorIntegrationTest extends BrotliIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(new BackpressureDecompressionHandler(BrotliDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
+        return new EmbeddedChannel(
+                new BackpressureDecompressionHandler(
+                        BrotliDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
     }
 }

@@ -21,6 +21,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 public class LzfDecompressorIntegrationTest extends LzfIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(new BackpressureDecompressionHandler(LzfDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
+        return new EmbeddedChannel(
+                new BackpressureDecompressionHandler(
+                        LzfDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
     }
 }

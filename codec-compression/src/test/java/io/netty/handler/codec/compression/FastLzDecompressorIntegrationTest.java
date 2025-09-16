@@ -21,6 +21,10 @@ import io.netty.channel.embedded.EmbeddedChannel;
 public class FastLzDecompressorIntegrationTest extends FastLzIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(new BackpressureDecompressionHandler(FastLzFrameDecompressor.builder(ByteBufAllocator.DEFAULT).defaultChecksum().build()));
+        return new EmbeddedChannel(
+                new BackpressureDecompressionHandler(
+                        FastLzFrameDecompressor.builder(ByteBufAllocator.DEFAULT)
+                                .defaultChecksum()
+                                .build()));
     }
 }

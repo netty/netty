@@ -76,7 +76,9 @@ public class JZlibDecompressor extends ZlibDecompressor {
     @Override
     ByteBuf processOutput(ByteBuf buf) throws DecompressionException {
         int proposedCapacity = z.avail_in << 1;
-        ByteBuf decompressed = allocator.heapBuffer(maxAllocation == 0 ? proposedCapacity : Math.min(maxAllocation, proposedCapacity));
+        int targetCapacity = maxAllocation == 0
+                ? proposedCapacity : Math.min(maxAllocation, proposedCapacity);
+        ByteBuf decompressed = allocator.heapBuffer(targetCapacity);
         z.avail_out = decompressed.writableBytes();
         z.next_out = decompressed.array();
         z.next_out_index = decompressed.arrayOffset() + decompressed.writerIndex();

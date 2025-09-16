@@ -21,6 +21,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 public class SnappyDecompressorJumboSizeIntegrationTest extends SnappyJumboSizeIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(new BackpressureDecompressionHandler(SnappyFrameDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
+        return new EmbeddedChannel(
+                new BackpressureDecompressionHandler(
+                        SnappyFrameDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
     }
 }

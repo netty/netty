@@ -21,6 +21,8 @@ import io.netty.channel.embedded.EmbeddedChannel;
 public class ZstdDecompressorIntegrationTest extends ZstdIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(new BackpressureDecompressionHandler(ZstdDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
+        return new EmbeddedChannel(
+                new BackpressureDecompressionHandler(
+                        ZstdDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
     }
 }

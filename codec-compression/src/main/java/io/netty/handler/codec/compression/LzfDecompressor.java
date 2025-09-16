@@ -158,7 +158,6 @@ public class LzfDecompressor extends InputBufferingDecompressor {
 
     @Override
     public void endOfInput() throws DecompressionException {
-
     }
 
     @Override
