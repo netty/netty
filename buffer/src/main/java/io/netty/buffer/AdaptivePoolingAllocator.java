@@ -47,13 +47,12 @@ import java.nio.channels.GatheringByteChannel;
 import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Queue;
-import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
 
 /**
@@ -185,14 +184,14 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
     }
 
     private final ChunkAllocator chunkAllocator;
-    private final Set<Chunk> chunkRegistry;
+    private final ChunkRegistry chunkRegistry;
     private final MagazineGroup[] sizeClassedMagazineGroups;
     private final MagazineGroup largeBufferMagazineGroup;
     private final FastThreadLocal<MagazineGroup[]> threadLocalGroup;
 
     AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, final boolean useCacheForNonEventLoopThreads) {
         this.chunkAllocator = ObjectUtil.checkNotNull(chunkAllocator, "chunkAllocator");
-        chunkRegistry = Collections.<Chunk>newSetFromMap(PlatformDependent.<Chunk, Boolean>newConcurrentHashMap());
+        chunkRegistry = new ChunkRegistry();
         sizeClassedMagazineGroups = createMagazineGroupSizeClasses(this, false);
         largeBufferMagazineGroup = new MagazineGroup(
                 this, chunkAllocator, new HistogramChunkControllerFactory(true), false);
@@ -310,6 +309,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         // Create a one-off chunk for this allocation.
         AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
         Chunk chunk = new Chunk(innerChunk, magazine, false, CHUNK_RELEASE_ALWAYS);
+        chunkRegistry.add(chunk);
         try {
             chunk.readInitInto(buf, size, size, maxCapacity);
         } finally {
@@ -336,11 +336,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
     @Override
     public long usedMemory() {
-        long sum = 0;
-        for (Chunk chunk : chunkRegistry) {
-            sum += chunk.capacity();
-        }
-        return sum;
+        return chunkRegistry.totalCapacity();
     }
 
     // Ensure that we release all previous pooled resources when this object is finalized. This is needed as otherwise
@@ -572,7 +568,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private final ChunkAllocator chunkAllocator;
         private final int segmentSize;
         private final int chunkSize;
-        private final Set<Chunk> chunkRegistry;
+        private final ChunkRegistry chunkRegistry;
         private final int[] segmentOffsets;
 
         private SizeClassChunkController(MagazineGroup group, int segmentSize, int chunkSize, int[] segmentOffsets) {
@@ -648,7 +644,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
                 new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
         };
-        private final Set<Chunk> chunkRegistry;
+        private final ChunkRegistry chunkRegistry;
         private short[] histo = histos[0];
         private final int[] sums = new int[HISTO_BUCKET_COUNT];
 
@@ -1111,6 +1107,23 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         public void initializeSharedStateIn(Magazine other) {
             chunkController.initializeSharedStateIn(other.chunkController);
+        }
+    }
+
+    @SuppressJava6Requirement(reason = "Guarded by version check")
+    private static final class ChunkRegistry {
+        private final LongAdder totalCapacity = new LongAdder();
+
+        public long totalCapacity() {
+            return totalCapacity.sum();
+        }
+
+        public void add(Chunk chunk) {
+            totalCapacity.add(chunk.capacity());
+        }
+
+        public void remove(Chunk chunk) {
+            totalCapacity.add(-chunk.capacity());
         }
     }
 
