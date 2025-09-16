@@ -59,9 +59,7 @@ public final class KQueueIoHandler implements IoHandler {
     // https://man.freebsd.org/cgi/man.cgi?query=kevent&apropos=0&sektion=0&manpath=FreeBSD+6.1-RELEASE&format=html#end
     private static final int KQUEUE_MAX_TIMEOUT_SECONDS = 86399; // 24 hours - 1 second
 
-    static {
-        // Ensure JNI is initialized by the time this class is loaded by this time!
-        // We use unix-common methods in this class which are backed by JNI methods.
+    {
         KQueue.ensureAvailability();
     }
 
@@ -116,6 +114,7 @@ public final class KQueueIoHandler implements IoHandler {
      */
     public static IoHandlerFactory newFactory(final int maxEvents,
                                               final SelectStrategyFactory selectStrategyFactory) {
+        KQueue.ensureAvailability();
         ObjectUtil.checkPositiveOrZero(maxEvents, "maxEvents");
         ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
         return new IoHandlerFactory() {
