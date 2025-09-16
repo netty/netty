@@ -16,7 +16,6 @@
 package io.netty.handler.codec.compression;
 
 import com.github.luben.zstd.Zstd;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 
