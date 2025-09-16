@@ -284,21 +284,21 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                 // This handles cases where an executor was woken up externally since the last check.
                 final AutoScalingState oldState = state.get();
                 final AutoScalingState currentState = rebuildActiveExecutors();
+                final Set<EventExecutor> newlyWokenExecutors = new HashSet<>();
+
                 if (oldState.activeChildrenCount != currentState.activeChildrenCount) {
                     final Set<EventExecutor> oldActive = new HashSet<>(Arrays.asList(oldState.activeExecutors));
 
                     for (EventExecutor currentActive : currentState.activeExecutors) {
-                        if (!oldActive.contains(currentActive) && currentActive instanceof SingleThreadEventExecutor) {
-                            SingleThreadEventExecutor eventExecutor = (SingleThreadEventExecutor) currentActive;
-                            eventExecutor.resetIdleCycles();
-                            eventExecutor.resetBusyCycles();
+                        if (!oldActive.contains(currentActive)) {
+                            newlyWokenExecutors.add(currentActive);
+                            if (currentActive instanceof SingleThreadEventExecutor) {
+                                SingleThreadEventExecutor eventExecutor = (SingleThreadEventExecutor) currentActive;
+                                eventExecutor.resetIdleCycles();
+                                eventExecutor.resetBusyCycles();
+                            }
                         }
                     }
-
-                    // The number of active children changed due to an external event (e.g., a task was
-                    // submitted to a suspended executor). It's safer to wait for the next cycle to
-                    // gather fresh utilization data before making a scaling decision.
-                    //return;
                 }
 
                 // Calculate the actual elapsed time since the last run.
@@ -326,6 +326,11 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
 
                 for (int i = 0; i < executors.length; i++) {
                     EventExecutor child = executors[i];
+                    if (newlyWokenExecutors.contains(child)) {
+                        utilizationMetrics.get(i).setUtilization(0.0);
+                        continue;
+                    }
+
                     if (!(child instanceof SingleThreadEventExecutor)) {
                         continue;
                     }
