@@ -7,7 +7,11 @@ import io.netty.buffer.ByteBufAllocator;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class ZstdDecompressor implements Decompressor {
+/**
+ * Decompresses a compressed block {@link ByteBuf} using the Zstandard algorithm.
+ * See <a href="https://facebook.github.io/zstd">Zstandard</a>.
+ */
+public final class ZstdDecompressor implements Decompressor {
     private final ByteBufAllocator allocator;
 
     private final MutableByteBufInputStream mutableInput = new MutableByteBufInputStream();

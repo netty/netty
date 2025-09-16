@@ -1,6 +1,5 @@
 package io.netty.handler.codec.compression;
 
-import com.ning.compress.BufferRecycler;
 import com.ning.compress.lzf.ChunkDecoder;
 import com.ning.compress.lzf.LZFChunk;
 import com.ning.compress.lzf.LZFException;
@@ -14,6 +13,12 @@ import static com.ning.compress.lzf.LZFChunk.BYTE_V;
 import static com.ning.compress.lzf.LZFChunk.BYTE_Z;
 import static com.ning.compress.lzf.LZFChunk.HEADER_LEN_NOT_COMPRESSED;
 
+/**
+ * Uncompresses a {@link ByteBuf} encoded with the LZF format.
+ * <p>
+ * See original <a href="http://oldhome.schmorp.de/marc/liblzf.html">LZF package</a>
+ * and <a href="https://github.com/ning/compress/wiki/LZFFormat">LZF format</a> for full description.
+ */
 public class LzfDecompressor extends InputBufferingDecompressor {
     /**
      * Current state of decompression.
@@ -196,6 +201,15 @@ public class LzfDecompressor extends InputBufferingDecompressor {
             super(allocator);
         }
 
+        /**
+         * If {@code true} decoder will use {@link ChunkDecoder} that only uses standard JDK access methods,
+         * and should work on all Java platforms and JVMs.
+         * Otherwise decoder will try to use highly optimized {@link ChunkDecoder} implementation that uses
+         * Sun JDK's {@link sun.misc.Unsafe} class (which may be included by other JDK's as well).
+         *
+         * @param safeInstance Whether to use the safe instance only
+         * @return This builder
+         */
         public Builder safeInstance(boolean safeInstance) {
             this.safeInstance = safeInstance;
             return this;

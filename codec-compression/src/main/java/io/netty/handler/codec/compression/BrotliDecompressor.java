@@ -7,6 +7,11 @@ import io.netty.buffer.ByteBufAllocator;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
+/**
+ * Decompresses a {@link ByteBuf} encoded with the brotli format.
+ *
+ * See <a href="https://github.com/google/brotli">brotli</a>.
+ */
 public final class BrotliDecompressor implements Decompressor {
     private final ByteBufAllocator allocator;
     private final DecoderJNI.Wrapper decoder;
@@ -111,6 +116,12 @@ public final class BrotliDecompressor implements Decompressor {
             super(allocator);
         }
 
+        /**
+         * Desired size of the input buffer in bytes. Default 8K.
+         *
+         * @param inputBufferSize desired size of the input buffer in bytes
+         * @return This builder
+         */
         public Builder inputBufferSize(int inputBufferSize) {
             this.inputBufferSize = inputBufferSize;
             return this;

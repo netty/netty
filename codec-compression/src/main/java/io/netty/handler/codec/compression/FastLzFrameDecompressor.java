@@ -11,7 +11,12 @@ import static io.netty.handler.codec.compression.FastLz.BLOCK_WITH_CHECKSUM;
 import static io.netty.handler.codec.compression.FastLz.MAGIC_NUMBER;
 import static io.netty.handler.codec.compression.FastLz.decompress;
 
-public class FastLzFrameDecompressor extends InputBufferingDecompressor {
+/**
+ * Uncompresses a {@link ByteBuf} encoded by {@link FastLzFrameEncoder} using the FastLZ algorithm.
+ *
+ * See <a href="https://github.com/netty/netty/issues/2750">FastLZ format</a>.
+ */
+public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
     /**
      * Current state of decompression.
      */
@@ -180,11 +185,22 @@ public class FastLzFrameDecompressor extends InputBufferingDecompressor {
             super(allocator);
         }
 
+        /**
+         * A checksum to use to validate each block. Defaults to no checksum validation.
+         *
+         * @param checksum The checksum to use for validation
+         * @return This builder
+         */
         public Builder checksum(Checksum checksum) {
             this.checksum = checksum;
             return this;
         }
 
+        /**
+         * Enable validation using the default checksum, Adler32.
+         *
+         * @return This builder
+         */
         public Builder defaultChecksum() {
             return checksum(new Adler32());
         }

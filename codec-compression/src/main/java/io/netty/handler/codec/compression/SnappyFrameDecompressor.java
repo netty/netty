@@ -5,6 +5,11 @@ import io.netty.buffer.ByteBufAllocator;
 
 import static io.netty.handler.codec.compression.Snappy.validateChecksum;
 
+/**
+ * Uncompresses a {@link ByteBuf} encoded with the Snappy framing format.
+ *
+ * See <a href="https://github.com/google/snappy/blob/master/framing_format.txt">Snappy framing format</a>.
+ */
 public class SnappyFrameDecompressor extends InputBufferingDecompressor {
 
     private enum ChunkType {
@@ -239,6 +244,14 @@ public class SnappyFrameDecompressor extends InputBufferingDecompressor {
             super(allocator);
         }
 
+        /**
+         * If true, the checksum field will be validated against the actual
+         * uncompressed data, and if the checksums do not match, a suitable
+         * {@link DecompressionException} will be thrown. Off by default.
+         *
+         * @param validateChecksums Whether to validate the checksums
+         * @return This builder
+         */
         public Builder validateChecksums(boolean validateChecksums) {
             this.validateChecksums = validateChecksums;
             return this;

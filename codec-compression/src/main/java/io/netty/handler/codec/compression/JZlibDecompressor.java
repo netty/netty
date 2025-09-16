@@ -111,16 +111,25 @@ public class JZlibDecompressor extends ZlibDecompressor {
             super(allocator);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Builder wrapper(ZlibWrapper wrapper) {
             return (Builder) super.wrapper(wrapper);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Builder dictionary(byte[] dictionary) {
             return (Builder) super.dictionary(dictionary);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Builder maxAllocation(int maxAllocation) {
             return (Builder) super.maxAllocation(maxAllocation);

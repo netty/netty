@@ -19,7 +19,12 @@ import static io.netty.handler.codec.compression.Bzip2Constants.MAX_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Bzip2Constants.MAX_SELECTORS;
 import static io.netty.handler.codec.compression.Bzip2Constants.MIN_BLOCK_SIZE;
 
-public class Bzip2Decompressor extends InputBufferingDecompressor {
+/**
+ * Uncompresses a {@link ByteBuf} encoded with the Bzip2 format.
+ *
+ * See <a href="https://en.wikipedia.org/wiki/Bzip2">Bzip2</a>.
+ */
+public final class Bzip2Decompressor extends InputBufferingDecompressor {
     private final int outputBufferSize;
 
     /**
@@ -328,6 +333,12 @@ public class Bzip2Decompressor extends InputBufferingDecompressor {
             super(allocator);
         }
 
+        /**
+         * Size of the output buffer to return from {@link #takeOutput()}. Default 64K.
+         *
+         * @param outputBufferSize Output buffer size
+         * @return This builder
+         */
         public Builder outputBufferSize(int outputBufferSize) {
             this.outputBufferSize = outputBufferSize;
             return this;

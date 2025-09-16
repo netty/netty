@@ -9,7 +9,10 @@ import java.util.zip.DataFormatException;
 import java.util.zip.Deflater;
 import java.util.zip.Inflater;
 
-public class JdkZlibDecompressor extends ZlibDecompressor {
+/**
+ * Decompress a {@link ByteBuf} using the inflate algorithm.
+ */
+public final class JdkZlibDecompressor extends ZlibDecompressor {
     private static final int FHCRC = 0x02;
     private static final int FEXTRA = 0x04;
     private static final int FNAME = 0x08;
@@ -402,16 +405,25 @@ public class JdkZlibDecompressor extends ZlibDecompressor {
             super(allocator);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Builder wrapper(ZlibWrapper wrapper) {
             return (Builder) super.wrapper(wrapper);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Builder dictionary(byte[] dictionary) {
             return (Builder) super.dictionary(dictionary);
         }
 
+        /**
+         * {@inheritDoc}
+         */
         @Override
         public Builder maxAllocation(int maxAllocation) {
             return (Builder) super.maxAllocation(maxAllocation);

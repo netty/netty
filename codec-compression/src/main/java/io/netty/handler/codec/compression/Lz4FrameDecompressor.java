@@ -5,6 +5,7 @@ import io.netty.buffer.ByteBufAllocator;
 import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
+import net.jpountz.lz4.LZ4SafeDecompressor;
 
 import java.util.zip.Checksum;
 
@@ -16,6 +17,22 @@ import static io.netty.handler.codec.compression.Lz4Constants.HEADER_LENGTH;
 import static io.netty.handler.codec.compression.Lz4Constants.MAGIC_NUMBER;
 import static io.netty.handler.codec.compression.Lz4Constants.MAX_BLOCK_SIZE;
 
+/**
+ * Uncompresses a {@link ByteBuf} encoded with the LZ4 format.
+ *
+ * See original <a href="https://github.com/Cyan4973/lz4">LZ4 Github project</a>
+ * and <a href="https://fastcompression.blogspot.ru/2011/05/lz4-explained.html">LZ4 block format</a>
+ * for full description.
+ *
+ * Since the original LZ4 block format does not contains size of compressed block and size of original data
+ * this encoder uses format like <a href="https://github.com/idelpivnitskiy/lz4-java">LZ4 Java</a> library
+ * written by Adrien Grand and approved by Yann Collet (author of original LZ4 library).
+ *
+ *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
+ *  * Magic * Token *  Compressed *  Decompressed *  Checksum *  +  *  LZ4 compressed *
+ *  *       *       *    length   *     length    *           *     *      block      *
+ *  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *     * * * * * * * * * *
+ */
 public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
     /**
      * Current state of stream.
@@ -60,7 +77,7 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
 
     Lz4FrameDecompressor(Builder builder) {
         super(builder.allocator);
-        this.decompressor = LZ4Factory.fastestInstance().fastDecompressor();
+        this.decompressor = builder.factory.fastDecompressor();
         this.checksum = builder.checksum == null ? null : ByteBufChecksum.wrapChecksum(builder.checksum);
     }
 
@@ -188,17 +205,43 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
     }
 
     public static final class Builder extends AbstractDecompressorBuilder {
+        private LZ4Factory factory = LZ4Factory.fastestJavaInstance();
         private Checksum checksum;
 
         Builder(ByteBufAllocator allocator) {
             super(allocator);
         }
 
+        /**
+         * User customizable {@link LZ4Factory} instance
+         * which may be JNI bindings to the original C implementation, a pure Java implementation
+         * or a Java implementation that uses the {@link sun.misc.Unsafe}.
+         *
+         * @param factory The factory to use
+         * @return This builder
+         */
+        public Builder factory(LZ4Factory factory) {
+            this.factory = factory;
+            return this;
+        }
+
+        /**
+         * The {@link Checksum} instance to use to check data for integrity. By default, no checksum validation is
+         * performed.
+         *
+         * @param checksum The checksum to use
+         * @return This builder
+         */
         public Builder checksum(Checksum checksum) {
             this.checksum = checksum;
             return this;
         }
 
+        /**
+         * Enable checksum validation using the default checksum, xxhash.
+         *
+         * @return This builder
+         */
         public Builder defaultChecksum() {
             return checksum(new Lz4XXHash32(DEFAULT_SEED));
         }
