@@ -17,8 +17,8 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.ByteToMessageDecoder;
 
 /**
  * Special decompressor implementation that buffers input so that it can be processed piecemeal, similar to
@@ -26,7 +26,7 @@ import io.netty.buffer.Unpooled;
  */
 abstract class InputBufferingDecompressor implements Decompressor {
     protected final ByteBufAllocator allocator;
-    private ByteBuf buffer;
+    private ByteBuf cumulation;
 
     InputBufferingDecompressor(ByteBufAllocator allocator) {
         this.allocator = allocator;
@@ -37,12 +37,9 @@ abstract class InputBufferingDecompressor implements Decompressor {
         if (!buf.isReadable()) {
             return;
         }
-        if (this.buffer != null) {
-            CompositeByteBuf composite = allocator.compositeBuffer(2);
-            composite.addComponent(true, this.buffer);
-            composite.addComponent(true, buf);
-            buf = composite;
-            this.buffer = null;
+        if (this.cumulation != null) {
+            buf = ByteToMessageDecoder.MERGE_CUMULATOR.cumulate(allocator, this.cumulation, buf);
+            this.cumulation = null;
         }
         try {
             processInput(buf);
@@ -51,7 +48,7 @@ abstract class InputBufferingDecompressor implements Decompressor {
             throw t;
         }
         if (buf.isReadable()) {
-            this.buffer = buf;
+            this.cumulation = buf;
         } else {
             buf.release();
         }
@@ -59,7 +56,7 @@ abstract class InputBufferingDecompressor implements Decompressor {
 
     @Override
     public final ByteBuf takeOutput() throws DecompressionException {
-        ByteBuf buf = buffer == null ? Unpooled.EMPTY_BUFFER : buffer;
+        ByteBuf buf = cumulation == null ? Unpooled.EMPTY_BUFFER : cumulation;
         ByteBuf output = processOutput(buf);
         if (status() == Status.NEED_INPUT && buf.isReadable()) {
             try {
@@ -69,9 +66,9 @@ abstract class InputBufferingDecompressor implements Decompressor {
                 throw t;
             }
         }
-        if (this.buffer != null && !this.buffer.isReadable()) {
-            this.buffer.release();
-            this.buffer = null;
+        if (this.cumulation != null && !this.cumulation.isReadable()) {
+            this.cumulation.release();
+            this.cumulation = null;
         }
         return output;
     }
@@ -98,13 +95,13 @@ abstract class InputBufferingDecompressor implements Decompressor {
      * @return Number of buffered bytes
      */
     final int available() {
-        return buffer == null ? 0 : buffer.readableBytes();
+        return cumulation == null ? 0 : cumulation.readableBytes();
     }
 
     @Override
     public void close() {
-        if (this.buffer != null) {
-            this.buffer.release();
+        if (this.cumulation != null) {
+            this.cumulation.release();
         }
     }
 }
