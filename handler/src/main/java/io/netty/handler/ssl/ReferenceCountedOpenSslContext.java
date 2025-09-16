@@ -165,7 +165,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     final List<SNIServerName> serverNames;
     final boolean hasTLSv13Cipher;
     final boolean hasTmpDhKeys;
-
+    final String[] groups;
     final boolean enableOcsp;
     final ConcurrentMap<Long, ReferenceCountedOpenSslEngine> engines = new ConcurrentHashMap<>();
     final ReadWriteLock ctxLock = new ReentrantReadWriteLock();
@@ -475,6 +475,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
                 }
                 throw new SSLException(msg);
             }
+            this.groups = groups;
             success = true;
         } finally {
             if (!success) {
