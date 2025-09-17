@@ -31,6 +31,9 @@
   <!-- Suppress warnings for URLs to old projects that don't have HTTPS links -->
   <suppress files="NOTICE\.txt" lines="34,35,43,59,102,199" checks="NoHttp"/>
 
+  <!-- Ignore boringssl license file -->
+  <suppress files="license[/\\]LICENSE.boringssl\.txt" checks="NoHttp"/>
+
   <!-- Those links don't support HTTPS or not reachable -->
   <suppress message="http://www.faqs.org" checks="NoHttp"/>
   <suppress message="http://autobahn.ws" checks="NoHttp"/>

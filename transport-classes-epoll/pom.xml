@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.6.Final-SNAPSHOT</version>
+    <version>4.2.7.Final-SNAPSHOT</version>
   </parent>
   <artifactId>netty-transport-classes-epoll</artifactId>
 
@@ -51,8 +51,23 @@
       <artifactId>netty-transport-native-unix-common</artifactId>
       <version>${project.version}</version>
     </dependency>
-  </dependencies>
 
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-engine</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
 
   <build>
     <plugins>
