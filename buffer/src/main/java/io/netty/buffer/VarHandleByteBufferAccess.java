@@ -96,4 +96,78 @@ final class VarHandleByteBufferAccess {
         //noinspection DataFlowIssue
         PlatformDependent.longLeByteBufferView().set(buffer, index, value);
     }
+
+    // --------------------------------------------------------------------
+    // byte[] (heap array) accessors
+    // These centralize VarHandle.get/set calls for heap arrays as well,
+    // so classes like HeapByteBufUtil do not call signature-polymorphic
+    // methods directly.
+    // Methods must only be called when PlatformDependent.hasVarHandle() is true.
+    // --------------------------------------------------------------------
+
+    // short (big endian)
+    static short getShortBE(byte[] memory, int index) {
+        //noinspection DataFlowIssue
+        return (short) PlatformDependent.shortBeArrayView().get(memory, index);
+    }
+
+    static void setShortBE(byte[] memory, int index, int value) {
+        //noinspection DataFlowIssue
+        PlatformDependent.shortBeArrayView().set(memory, index, (short) value);
+    }
+
+    // short (little endian)
+    static short getShortLE(byte[] memory, int index) {
+        //noinspection DataFlowIssue
+        return (short) PlatformDependent.shortLeArrayView().get(memory, index);
+    }
+
+    static void setShortLE(byte[] memory, int index, int value) {
+        //noinspection DataFlowIssue
+        PlatformDependent.shortLeArrayView().set(memory, index, (short) value);
+    }
+
+    // int (big endian)
+    static int getIntBE(byte[] memory, int index) {
+        //noinspection DataFlowIssue
+        return (int) PlatformDependent.intBeArrayView().get(memory, index);
+    }
+
+    static void setIntBE(byte[] memory, int index, int value) {
+        //noinspection DataFlowIssue
+        PlatformDependent.intBeArrayView().set(memory, index, value);
+    }
+
+    // int (little endian)
+    static int getIntLE(byte[] memory, int index) {
+        //noinspection DataFlowIssue
+        return (int) PlatformDependent.intLeArrayView().get(memory, index);
+    }
+
+    static void setIntLE(byte[] memory, int index, int value) {
+        //noinspection DataFlowIssue
+        PlatformDependent.intLeArrayView().set(memory, index, value);
+    }
+
+    // long (big endian)
+    static long getLongBE(byte[] memory, int index) {
+        //noinspection DataFlowIssue
+        return (long) PlatformDependent.longBeArrayView().get(memory, index);
+    }
+
+    static void setLongBE(byte[] memory, int index, long value) {
+        //noinspection DataFlowIssue
+        PlatformDependent.longBeArrayView().set(memory, index, value);
+    }
+
+    // long (little endian)
+    static long getLongLE(byte[] memory, int index) {
+        //noinspection DataFlowIssue
+        return (long) PlatformDependent.longLeArrayView().get(memory, index);
+    }
+
+    static void setLongLE(byte[] memory, int index, long value) {
+        //noinspection DataFlowIssue
+        PlatformDependent.longLeArrayView().set(memory, index, value);
+    }
 }
