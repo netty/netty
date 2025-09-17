@@ -54,7 +54,6 @@ import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
@@ -871,16 +870,6 @@ final class AdaptivePoolingAllocator {
          */
         abstract AdaptiveByteBuf pollFromLocalCache();
 
-        /**
-         * Adds the given value (can be negative) to the magazine's tracked used memory.
-         */
-        abstract void addUsedMemory(long value);
-
-        /**
-         * Returns the total memory currently in use by this magazine.
-         */
-        public abstract long usedMemory();
-
         @Override
         public abstract void recycle(AdaptiveByteBuf self);
 
@@ -959,12 +948,7 @@ final class AdaptivePoolingAllocator {
     }
 
     private static class SharedMagazine extends AbstractMagazine {
-        private static final AtomicLongFieldUpdater<SharedMagazine> USED_MEMORY_UPDATER;
-        static {
-            USED_MEMORY_UPDATER = AtomicLongFieldUpdater.newUpdater(SharedMagazine.class, "usedMemory");
-        }
         private static final Chunk MAGAZINE_FREED = new BumpChunk();
-        private volatile long usedMemory;
         private final StampedLock allocationLock = new StampedLock();
 
         SharedMagazine(MagazineGroup group, ChunkController chunkController) {
@@ -974,16 +958,6 @@ final class AdaptivePoolingAllocator {
         @Override
         AdaptiveByteBuf pollFromLocalCache() {
             return null;
-        }
-
-        @Override
-        void addUsedMemory(long value) {
-            USED_MEMORY_UPDATER.getAndAdd(this, value);
-        }
-
-        @Override
-        public long usedMemory() {
-            return usedMemory;
         }
 
         @Override
@@ -1275,14 +1249,8 @@ final class AdaptivePoolingAllocator {
     }
 
     private static final class ThreadLocalMagazine extends AbstractMagazine {
-        private static final AtomicLongFieldUpdater<ThreadLocalMagazine> EXTERNAL_USED_MEMORY_UPDATER =
-                AtomicLongFieldUpdater.newUpdater(ThreadLocalMagazine.class, "externalUsedMemory");
-        private static final AtomicLongFieldUpdater<ThreadLocalMagazine> LOCAL_USED_MEMORY_UPDATER =
-                AtomicLongFieldUpdater.newUpdater(ThreadLocalMagazine.class, "localUsedMemory");
         private final ArrayDeque<AdaptiveByteBuf> localBuffers;
         private final boolean isSizeClassed;
-        private volatile long externalUsedMemory; // For non-owner threads
-        private volatile long localUsedMemory; // For owner threads
 
         ThreadLocalMagazine(MagazineGroup group, ChunkController chunkController,
                             Queue<AdaptiveByteBuf> externalBuffers, ArrayDeque<AdaptiveByteBuf> localBuffers) {
@@ -1294,22 +1262,6 @@ final class AdaptivePoolingAllocator {
         @Override
         AdaptiveByteBuf pollFromLocalCache() {
             return localBuffers.pollLast();
-        }
-
-        @Override
-        void addUsedMemory(long value) {
-            if (isOwnerThread()) {
-                LOCAL_USED_MEMORY_UPDATER.lazySet(this, localUsedMemory + value);
-            } else {
-                EXTERNAL_USED_MEMORY_UPDATER.getAndAdd(this, value);
-            }
-        }
-
-        @Override
-        public long usedMemory() {
-            final long external = externalUsedMemory;
-            final long local = localUsedMemory;
-            return external + local;
         }
 
         @Override
@@ -1724,7 +1676,6 @@ final class AdaptivePoolingAllocator {
 
         void detachFromMagazine() {
             if (magazine != null) {
-                magazine.addUsedMemory(-capacity);
                 magazine = null;
             }
         }
@@ -1732,7 +1683,6 @@ final class AdaptivePoolingAllocator {
         void attachToMagazine(AbstractMagazine magazine) {
             assert this.magazine == null;
             this.magazine = magazine;
-            magazine.addUsedMemory(capacity);
         }
 
         /**
