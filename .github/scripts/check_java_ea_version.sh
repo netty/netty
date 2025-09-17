@@ -16,8 +16,8 @@
 # ----------------------------------------------------------------------------
 set -e
 
-# Keep this version in sync with docker-compose.centos-7.25.yaml
-export EXPECTED_VERSION='25.ea.36'
+# Keep this version in sync with docker-compose.centos-7.26.yaml
+export EXPECTED_VERSION='26.ea.15'
 
 curl -s "https://get.sdkman.io" | bash
 source "$HOME/.sdkman/bin/sdkman-init.sh"
