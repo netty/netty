@@ -356,6 +356,10 @@ public abstract class AbstractSingleThreadEventLoopTest {
 
         Future<?> keepAliveFuture = null;
         final AtomicBoolean keepAliveRunning = new AtomicBoolean(true);
+
+        final AtomicBoolean wokenThreadKeepBusy = new AtomicBoolean(true);
+        Future<?> wokenThreadFuture = null;
+
         try {
             startAllExecutors(group);
             assertEquals(SCALING_MAX_THREADS, countActiveExecutors(group),
@@ -390,16 +394,13 @@ public abstract class AbstractSingleThreadEventLoopTest {
             });
 
             final CountDownLatch taskStartedLatch = new CountDownLatch(1);
-            final CountDownLatch keepBusyLatch = new CountDownLatch(1);
 
-            Future<?> future = suspendedLoop.submit(() -> {
+            wokenThreadFuture = suspendedLoop.submit(() -> {
                 taskStartedLatch.countDown();
-                try {
-                    // This keeps the thread busy and prevents the monitor from suspending it.
-                    keepBusyLatch.await();
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
+                while (wokenThreadKeepBusy.get()) {
+                    // This busy-wait ensures the monitor sees this thread as utilized.
                 }
+                return null;
             });
 
             assertTrue(taskStartedLatch.await(5, TimeUnit.SECONDS), "Task did not start in time.");
@@ -413,13 +414,15 @@ public abstract class AbstractSingleThreadEventLoopTest {
             assertEquals(expectedActiveCount, countActiveExecutors(group),
                          "Active executor count should increase by one after wake-up.");
             assertFalse(suspendedLoop.isSuspended(), "Executor should be active after monitor reconciliation.");
-
-            keepBusyLatch.countDown();
-            future.sync();
         } finally {
             keepAliveRunning.set(false);
+            wokenThreadKeepBusy.set(false);
+
             if (keepAliveFuture != null) {
                 keepAliveFuture.sync();
+            }
+            if (wokenThreadFuture != null) {
+                wokenThreadFuture.sync();
             }
             group.shutdownGracefully().sync();
         }

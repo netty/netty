@@ -326,6 +326,10 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
 
                 for (int i = 0; i < executors.length; i++) {
                     EventExecutor child = executors[i];
+
+                    // Give a grace period to newly woken executors.
+                    // By skipping them entirely for one cycle, we prevent them from being
+                    // immediately re-suspended due to near-zero initial utilization.
                     if (newlyWokenExecutors.contains(child)) {
                         utilizationMetrics.get(i).setUtilization(0.0);
                         continue;
