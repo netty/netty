@@ -43,11 +43,11 @@ jobs:
     strategy:
       matrix:
         include:
-          - setup: linux-x86_64-java22
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=22.0.2-zulu"
+          - setup: linux-x86_64-java25
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=25-zulu"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build"
-          - setup: linux-x86_64-java22-boringssl-snapshot
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=22.0.2-zulu"
+          - setup: linux-x86_64-java25-boringssl-snapshot
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=25-zulu"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-boringssl-snapshot"
 
     name: ${{ matrix.setup }}

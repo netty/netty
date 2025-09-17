@@ -36,9 +36,9 @@ jobs:
       matrix:
         ignore-if-missing: [false]
         include:
-          - setup: linux-x86_64-java22-boringssl
-          - setup: linux-x86_64-java22
-          - setup: windows-x86_64-java22-boringssl
+          - setup: linux-x86_64-java25-boringssl
+          - setup: linux-x86_64-java25
+          - setup: windows-x86_64-java25-boringssl
     continue-on-error: ${{ matrix.ignore-if-missing }}
     steps:
       - name: Download Artifacts

@@ -1,7 +1,4 @@
-version: "3"
-
 services:
-
   runtime-setup:
     image: netty:default
     build:

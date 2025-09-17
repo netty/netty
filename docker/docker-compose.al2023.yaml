@@ -1,5 +1,4 @@
 services:
-
   runtime-setup:
     image: netty-al2023:x86_64
     build:
