@@ -280,24 +280,44 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                     return;
                 }
 
-                // First, ensure our state accurately reflects reality before making any decisions.
-                // This handles cases where an executor was woken up externally since the last check.
-                final AutoScalingState oldState = state.get();
-                final AutoScalingState currentState = rebuildActiveExecutors();
-                final Set<EventExecutor> newlyWokenExecutors = new HashSet<>();
+                final AutoScalingState currentState;
+                final Set<EventExecutor> newlyWokenExecutors;
 
-                if (oldState.activeChildrenCount != currentState.activeChildrenCount) {
-                    final Set<EventExecutor> oldActive = new HashSet<>(Arrays.asList(oldState.activeExecutors));
+                for (;;) {
+                    AutoScalingState oldState = state.get();
+                    List<EventExecutor> active = new ArrayList<>(oldState.activeChildrenCount);
+                    for (EventExecutor executor : executors) {
+                        if (!executor.isSuspended()) {
+                            active.add(executor);
+                        }
+                    }
 
-                    for (EventExecutor currentActive : currentState.activeExecutors) {
-                        if (!oldActive.contains(currentActive)) {
-                            newlyWokenExecutors.add(currentActive);
-                            if (currentActive instanceof SingleThreadEventExecutor) {
-                                SingleThreadEventExecutor eventExecutor = (SingleThreadEventExecutor) currentActive;
+                    EventExecutor[] newActiveExecutors = active.toArray(new EventExecutor[0]);
+                    if (newActiveExecutors.length == oldState.activeChildrenCount) {
+                        // No external state change was detected. We can proceed with the current state.
+                        currentState = oldState;
+                        newlyWokenExecutors = Collections.emptySet();
+                        break;
+                    }
+
+                    // An external change was detected.
+                    // Preserve nextWakeUpIndex as this is a reconciliation, not a scale-up.
+                    AutoScalingState newState = new AutoScalingState(
+                            newActiveExecutors.length, oldState.nextWakeUpIndex, newActiveExecutors);
+
+                    if (state.compareAndSet(oldState, newState)) {
+                        currentState = newState;
+                        newlyWokenExecutors = new HashSet<>(active);
+                        newlyWokenExecutors.removeAll(Arrays.asList(oldState.activeExecutors));
+
+                        for (EventExecutor woken : newlyWokenExecutors) {
+                            if (woken instanceof SingleThreadEventExecutor) {
+                                SingleThreadEventExecutor eventExecutor = (SingleThreadEventExecutor) woken;
                                 eventExecutor.resetIdleCycles();
                                 eventExecutor.resetBusyCycles();
                             }
                         }
+                        break;
                     }
                 }
 
