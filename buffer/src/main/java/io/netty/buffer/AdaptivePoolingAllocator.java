@@ -50,7 +50,6 @@ import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
@@ -837,7 +836,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         private volatile Chunk nextInLine;
         private final MagazineGroup group;
         private final ChunkController chunkController;
-        private final AtomicLong usedMemory;
         private final StampedLock allocationLock;
         private final Queue<AdaptiveByteBuf> bufferQueue;
         private final ObjectPool.Handle<AdaptiveByteBuf> handle;
@@ -863,7 +861,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
                 bufferQueue = null;
                 handle = null;
             }
-            usedMemory = new AtomicLong();
             this.sharedChunkQueue = sharedChunkQueue;
         }
 
@@ -1189,7 +1186,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
 
         void detachFromMagazine() {
             if (magazine != null) {
-                magazine.usedMemory.getAndAdd(-capacity);
                 magazine = null;
             }
         }
@@ -1197,7 +1193,6 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         void attachToMagazine(Magazine magazine) {
             assert this.magazine == null;
             this.magazine = magazine;
-            magazine.usedMemory.getAndAdd(capacity);
         }
 
         @Override
