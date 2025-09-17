@@ -72,7 +72,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
-          java-version: '22'
+          java-version: '25'
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3

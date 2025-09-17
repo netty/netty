@@ -39,11 +39,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up JDK 22
+      - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '22'
+          java-version: '25'
 
       # Cache .m2/repository
       - name: Cache local Maven repository
@@ -68,16 +68,16 @@ jobs:
 
   build-pr-windows:
     runs-on: windows-2022
-    name: windows-x86_64-java22
+    name: windows-x86_64-java25
     needs: verify-pr
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 22
+      - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '22'
+          java-version: '25'
 
       # Cache .m2/repository
       - name: Cache local Maven repository
@@ -101,7 +101,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: test-results-windows-x86_64-java22-boringssl
+          name: test-results-windows-x86_64-java25-boringssl
           path: '**/target/surefire-reports/TEST-*.xml'
 
       - uses: actions/upload-artifact@v4
@@ -157,14 +157,14 @@ jobs:
             curl -s https://repos.azul.com/azul-repo.key | gpg --dearmor -o /usr/share/keyrings/azul.gpg
             echo "deb [signed-by=/usr/share/keyrings/azul.gpg] https://repos.azul.com/zulu/deb stable main" | tee /etc/apt/sources.list.d/zulu.list
             apt-get update -q -y
-            apt-get install -q -y zulu22-jdk
+            apt-get install -q -y zulu25-jdk
 
           # Compile native code and the modules it depend on and run NativeLoadingTest. This is enough to ensure
           # we can load the native module on aarch64
           #
           # Use tcnative.classifier that is empty as we don't support using the shared lib version on ubuntu.
           run: |
-            JAVA_HOME=/usr/lib/jvm/zulu22 ./mvnw -B -ntp -pl testsuite-native -am clean package -Pboringssl -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
+            JAVA_HOME=/usr/lib/jvm/zulu25 ./mvnw -B -ntp -pl testsuite-native -am clean package -Pboringssl -DskipTests=true -Dcheckstyle.skip=true -DskipNativeTestsuite=false -Dtcnative.classifier=
 
   build-pr:
     runs-on: ubuntu-latest
@@ -172,41 +172,20 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - setup: linux-x86_64-java22
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=22.0.2-zulu"
+          - setup: linux-x86_64-java25
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=25-zulu"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak"
-          - setup: linux-x86_64-java22-unsafe-buffer
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=22.0.2-zulu"
+          - setup: linux-x86_64-java25-unsafe-buffer
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=25-zulu"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-unsafe-buffer"
-          - setup: linux-x86_64-java22-adaptive
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=22.0.2-zulu"
+          - setup: linux-x86_64-java25-adaptive
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=25-zulu"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak-adaptive"
-          - setup: linux-x86_64-java23
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=23.0.2-zulu"
+          - setup: linux-x86_64-java25-graal
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=25-graalce"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak"
-          - setup: linux-x86_64-java23-unsafe-buffer
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=23.0.2-zulu"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-unsafe-buffer"
-          - setup: linux-x86_64-java23-adaptive
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=23.0.2-zulu"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak-adaptive"
-          - setup: linux-x86_64-java23-graal
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=23.0.2-graalce"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak"
-          - setup: linux-x86_64-java24
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=24-zulu"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak"
-          - setup: linux-x86_64-java24-unsafe-buffer
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=24-zulu"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-unsafe-buffer"
-          - setup: linux-x86_64-java24-adaptive
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=24-zulu"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak-adaptive"
-          - setup: linux-x86_64-java24-graal
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=24-graalce"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-leak"
-          - setup: linux-x86_64-java11-awslc
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml build"
+          - setup: linux-x86_64-java25-awslc
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml build --build-arg java_version=25-amzn"
             docker-compose-install-tcnative: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run install-tcnative"
             docker-compose-update-tcnative-version: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run update-tcnative-version"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.al2023.yaml run build"
