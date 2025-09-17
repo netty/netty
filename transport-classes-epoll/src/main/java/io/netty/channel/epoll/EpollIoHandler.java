@@ -56,9 +56,7 @@ public class EpollIoHandler implements IoHandler {
     private static final long EPOLL_WAIT_MILLIS_THRESHOLD =
             SystemPropertyUtil.getLong("io.netty.channel.epoll.epollWaitThreshold", 10);
 
-    static {
-        // Ensure JNI is initialized by the time this class is loaded by this time!
-        // We use unix-common methods in this class which are backed by JNI methods.
+    {
         Epoll.ensureAvailability();
     }
 
@@ -108,6 +106,7 @@ public class EpollIoHandler implements IoHandler {
      */
     public static IoHandlerFactory newFactory(final int maxEvents,
                                               final SelectStrategyFactory selectStrategyFactory) {
+        Epoll.ensureAvailability();
         ObjectUtil.checkPositiveOrZero(maxEvents, "maxEvents");
         ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
         return new IoHandlerFactory() {
