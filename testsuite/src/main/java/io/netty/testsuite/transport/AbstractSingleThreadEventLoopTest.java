@@ -346,7 +346,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
         }
     }
 
-    @RepeatedTest(8)
+    @RepeatedTest(9)
     @Timeout(30)
     public void testSubmittingTaskWakesUpSuspendedExecutor() throws Exception {
         EventLoopGroup group = newAutoScalingEventLoopGroup();

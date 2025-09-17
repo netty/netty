@@ -123,7 +123,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
         }
     }
 
-    @RepeatedTest(8)
+    @RepeatedTest(9)
     @Timeout(30)
     void testScaleUp() throws Exception {
         TestEventExecutorGroup group = new TestEventExecutorGroup(1, 3, 50, TimeUnit.MILLISECONDS);
