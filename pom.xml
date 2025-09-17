@@ -203,6 +203,8 @@
       <properties>
         <argLine.java9.extras />
         <argLine.java9>${argLine.java9.extras}</argLine.java9>
+        <!-- pax-exam does not work -->
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
       </properties>
     </profile>
 
