@@ -1,12 +1,9 @@
-version: "3"
-
 services:
-
   runtime-setup:
     image: netty:centos-7-1.22
     build:
       args:
-        java_version : "22.0.2-zulu"
+        java_version : "25-zulu"
 
   build:
     image: netty:centos-7-1.22

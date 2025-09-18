@@ -42,8 +42,8 @@ jobs:
     strategy:
       matrix:
         include:
-          - setup: linux-x86_64-java22
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=22.0.2-zulu"
+          - setup: linux-x86_64-java25
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=25-zulu"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run stage-snapshot"
           - setup: linux-aarch64
             docker-compose-build: "-f docker/docker-compose.centos-7.yaml build"
@@ -88,11 +88,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up JDK 22
+      - name: Set up JDK 25
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '22'
+          java-version: '25'
 
       # Cache .m2/repository
       - name: Cache local Maven repository
@@ -118,19 +118,19 @@ jobs:
           name: linux-aarch64-local-staging
           path: ~/linux-aarch64-local-staging
 
-      - name: Download linux-x86_64-java22 staging directory
+      - name: Download linux-x86_64-java25 staging directory
         uses: actions/download-artifact@v4
         with:
-          name: linux-x86_64-java22-local-staging
-          path: ~/linux-x86_64-java22-local-staging
+          name: linux-x86_64-java25-local-staging
+          path: ~/linux-x86_64-java25-local-staging
 
       - name: Merge staging repositories
         run: |
           mkdir -p ~/local-staging/deferred
           cat ~/linux-aarch64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
           cp -r ~/linux-aarch64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-x86_64-java22-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
-          cp -r ~/linux-x86_64-java22-local-staging/deferred/* ~/local-staging/deferred/
+          cat ~/linux-x86_64-java25-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cp -r ~/linux-x86_64-java25-local-staging/deferred/* ~/local-staging/deferred/
 
       - uses: s4u/maven-settings-action@v3.0.0
         with:
