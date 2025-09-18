@@ -15,6 +15,8 @@
  */
 package io.netty.channel.uring;
 
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -39,6 +41,7 @@ public class LoadClassTest {
         return classes.toArray(new Class<?>[0]);
     }
 
+    @EnabledForJreRange(min = JRE.JAVA_9)
     @ParameterizedTest
     @MethodSource("classes")
     public void testLoadClassesWorkWithoutNativeLib(Class<?> clazz) {
