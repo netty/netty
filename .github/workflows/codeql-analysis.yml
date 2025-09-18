@@ -13,27 +13,23 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 # ----------------------------------------------------------------------------
-# For most projects, this workflow file will not need changing; you simply need
-# to commit it to your repository.
-#
-# You may wish to alter this file to override the set of languages analyzed,
-# or to provide custom queries or build logic.
 name: "CodeQL"
 
 on:
   push:
-    branches: ["4.1", main]
+    branches: ["4.1", "4.2"]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: ["4.1", main]
+    branches: ["4.1", "4.2"]
   schedule:
     - cron: '0 13 * * 3'
 
 env:
-  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+  MAVEN_OPTS: -Xmx6g -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
 
 permissions:
   contents: read
+  security-events: write
 
 # Cancel running jobs when a new push happens to the same branch as otherwise it will
 # tie up too many resources without providing much value.
@@ -43,10 +39,6 @@ concurrency:
 
 jobs:
   analyze:
-    permissions:
-      actions: read  # for github/codeql-action/init to get workflow details
-      contents: read  # for actions/checkout to fetch code
-      security-events: write  # for github/codeql-action/analyze to upload SARIF results
     name: Analyze
     runs-on: ubuntu-latest
 
@@ -55,49 +47,40 @@ jobs:
       matrix:
         # Override automatic language detection by changing the below list
         # Supported options are ['csharp', 'cpp', 'go', 'java', 'javascript', 'python']
-        language: ['java', 'cpp' ]
-        # Learn more...
-        # https://docs.github.com/en/github/finding-security-vulnerabilities-and-errors-in-your-code/configuring-code-scanning#overriding-automatic-language-detection
+        language: [ 'java', 'cpp' ]
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v5
 
-    # Cache .m2/repository
-    - name: Cache local Maven repository
-      uses: actions/cache@v4
-      continue-on-error: true
-      with:
-        path: ~/.m2/repository
-        key: cache-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          cache-maven-${{ hashFiles('**/pom.xml') }}
-          cache-maven-
+      - name: Cache local Maven repository
+        uses: actions/cache@v4
+        continue-on-error: true
+        with:
+          path: ~/.m2/repository
+          key: cache-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            cache-maven-${{ hashFiles('**/pom.xml') }}
+            cache-maven-
 
-    # Initializes the CodeQL tools for scanning.
-    - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
-      with:
-        languages: ${{ matrix.language }}
-        # If you wish to specify custom queries, you can do so here or in a config file.
-        # By default, queries listed here will override any specified in a config file.
-        # Prefix the list here with "+" to use these queries and those in the config file.
-        # queries: ./path/to/local/query, your-org/your-repo/queries@main
+      - name: Setup Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'zulu'
+          java-version: '11'
 
-    # Autobuild attempts to build any compiled languages  (C/C++, C#, or Java).
-    # If this step fails, then you should remove it and run the build manually (see below)
-    # - name: Autobuild
-    #  uses: github/codeql-action/autobuild@v2
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          tools: linked
+          build-mode: manual
+          languages: ${{ matrix.language }}
 
-    # ℹ️ Command-line programs to run using the OS shell.
-    # 📚 https://git.io/JvXDl
+      - name: Install tools / libraries
+        run: sudo apt-get update && sudo apt-get -y install autoconf automake libtool make tar cmake perl ninja-build git cargo
 
-    # ✏️ If the Autobuild fails above, remove it and uncomment the following three lines
-    #    and modify them (or add more) to build your code if your project
-    #    uses a compiled language
+      - name: Compile project
+        run: ./mvnw -B -ntp clean package -DskipTests=true
 
-    - name: Compile project
-      run: ./mvnw -B -ntp clean package -DskipTests=true
-
-    - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
