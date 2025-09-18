@@ -1,0 +1,33 @@
+version: "3"
+
+services:
+
+  runtime-setup:
+    image: netty:centos-7-26
+    build:
+      args:
+        java_version : "26.ea.15-open"
+
+  build:
+    image: netty:centos-7-26
+
+  build-leak:
+    image: netty:centos-7-26
+
+  build-with-oio-testsuite:
+    image: netty:centos-7-26
+
+  build-boringssl-static:
+    image: netty:centos-7-26
+
+  build-leak-boringssl-static:
+    image: netty:centos-7-26
+
+  build-boringssl-snapshot:
+    image: netty:centos-7-26
+
+  build-boringssl-static-jdk8-tests:
+    image: netty:centos-7-26
+
+  shell:
+    image: netty:centos-7-26
