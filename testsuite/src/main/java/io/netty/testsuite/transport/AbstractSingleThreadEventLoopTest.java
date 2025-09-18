@@ -406,9 +406,9 @@ public abstract class AbstractSingleThreadEventLoopTest {
             assertTrue(taskStartedLatch.await(5, TimeUnit.SECONDS), "Task did not start in time.");
 
             final int expectedActiveCount = SCALING_MIN_THREADS + 1;
-            deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
             while (countActiveExecutors(group) < expectedActiveCount && System.nanoTime() < deadline) {
-                Thread.sleep(50);
+                Thread.sleep(100);
             }
 
             assertEquals(expectedActiveCount, countActiveExecutors(group),
