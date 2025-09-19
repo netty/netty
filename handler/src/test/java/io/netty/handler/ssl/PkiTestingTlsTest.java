@@ -29,6 +29,7 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -268,6 +269,9 @@ public class PkiTestingTlsTest {
             }
             group.shutdownGracefully(10, 1000, TimeUnit.MILLISECONDS)
                     .syncUninterruptibly();
+            // Release contexts created for this test to avoid leak failures with OPENSSL_REFCNT.
+            ReferenceCountUtil.release(clientContext);
+            ReferenceCountUtil.release(serverContext);
         }
     }
 }

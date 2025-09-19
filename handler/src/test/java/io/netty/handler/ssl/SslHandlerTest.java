@@ -544,6 +544,7 @@ public class SslHandlerTest {
                     @Override
                     public void channelInactive(ChannelHandlerContext ctx) {
                         promise.trySuccess(null);
+                        ReferenceCountUtil.release(sslCtx);
                     }
                 });
             }
@@ -686,6 +687,7 @@ public class SslHandlerTest {
                 clientChannel.close();
             }
             group.shutdownGracefully();
+            ReferenceCountUtil.release(sslServerCtx);
         }
     }
 
@@ -837,6 +839,8 @@ public class SslHandlerTest {
         channel.close().syncUninterruptibly();
 
         assertTrue(engine.isOutboundDone());
+        ReferenceCountUtil.release(engine);
+        ReferenceCountUtil.release(context);
     }
 
     @Test
@@ -1175,6 +1179,7 @@ public class SslHandlerTest {
             }
             group.shutdownGracefully();
             ReferenceCountUtil.release(sslClientCtx);
+            ReferenceCountUtil.release(sslServerCtx);
         }
     }
 
@@ -1260,6 +1265,7 @@ public class SslHandlerTest {
             }
             group.shutdownGracefully();
             ReferenceCountUtil.release(sslClientCtx);
+            ReferenceCountUtil.release(sslServerCtx);
         }
     }
 
@@ -1298,7 +1304,7 @@ public class SslHandlerTest {
                 .build();
 
         // Explicit enable session cache as it's disabled by default atm.
-        ((OpenSslContext) sslClientCtx).sessionContext()
+        ((ReferenceCountedOpenSslContext) sslClientCtx).sessionContext()
                 .setSessionCacheEnabled(true);
 
         final SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
@@ -1357,6 +1363,11 @@ public class SslHandlerTest {
                                         ctx.writeAndFlush(Unpooled.wrappedBuffer(bytes));
                                     }
                                 }
+
+                                @Override
+                                public void handlerRemoved(ChannelHandlerContext ctx) {
+                                    ReferenceCountUtil.release(sslHandler.engine());
+                                }
                             });
                         }
                     })
@@ -1373,8 +1384,9 @@ public class SslHandlerTest {
             if (sc != null) {
                 sc.close().syncUninterruptibly();
             }
-            group.shutdownGracefully();
+            group.shutdownGracefully().syncUninterruptibly();
             ReferenceCountUtil.release(sslClientCtx);
+            ReferenceCountUtil.release(sslServerCtx);
         }
     }
 
@@ -1680,6 +1692,7 @@ public class SslHandlerTest {
             assertNull(serverEventCause.getCause());
         } finally {
             group.shutdownGracefully();
+            ReferenceCountUtil.release(sslServerCtx);
             ReferenceCountUtil.release(sslClientCtx);
         }
     }

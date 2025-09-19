@@ -38,45 +38,25 @@ public abstract class AbstractByteBufAllocator implements ByteBufAllocator {
     }
 
     protected static ByteBuf toLeakAwareBuffer(ByteBuf buf) {
-        ResourceLeakTracker<ByteBuf> leak;
-        switch (ResourceLeakDetector.getLevel()) {
-            case SIMPLE:
-                leak = AbstractByteBuf.leakDetector.track(buf);
-                if (leak != null) {
-                    buf = new SimpleLeakAwareByteBuf(buf, leak);
-                }
-                break;
-            case ADVANCED:
-            case PARANOID:
-                leak = AbstractByteBuf.leakDetector.track(buf);
-                if (leak != null) {
-                    buf = new AdvancedLeakAwareByteBuf(buf, leak);
-                }
-                break;
-            default:
-                break;
+        ResourceLeakTracker<ByteBuf> leak = AbstractByteBuf.leakDetector.track(buf);
+        if (leak != null) {
+            if (AbstractByteBuf.leakDetector.isRecordEnabled()) {
+                buf = new AdvancedLeakAwareByteBuf(buf, leak);
+            } else {
+                buf = new SimpleLeakAwareByteBuf(buf, leak);
+            }
         }
         return buf;
     }
 
     protected static CompositeByteBuf toLeakAwareBuffer(CompositeByteBuf buf) {
-        ResourceLeakTracker<ByteBuf> leak;
-        switch (ResourceLeakDetector.getLevel()) {
-            case SIMPLE:
-                leak = AbstractByteBuf.leakDetector.track(buf);
-                if (leak != null) {
-                    buf = new SimpleLeakAwareCompositeByteBuf(buf, leak);
-                }
-                break;
-            case ADVANCED:
-            case PARANOID:
-                leak = AbstractByteBuf.leakDetector.track(buf);
-                if (leak != null) {
-                    buf = new AdvancedLeakAwareCompositeByteBuf(buf, leak);
-                }
-                break;
-            default:
-                break;
+        ResourceLeakTracker<ByteBuf> leak = AbstractByteBuf.leakDetector.track(buf);
+        if (leak != null) {
+            if (AbstractByteBuf.leakDetector.isRecordEnabled()) {
+                buf = new AdvancedLeakAwareCompositeByteBuf(buf, leak);
+            } else {
+                buf = new SimpleLeakAwareCompositeByteBuf(buf, leak);
+            }
         }
         return buf;
     }
