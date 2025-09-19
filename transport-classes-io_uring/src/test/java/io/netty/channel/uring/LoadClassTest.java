@@ -15,8 +15,10 @@
  */
 package io.netty.channel.uring;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
+import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -24,6 +26,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class LoadClassTest {
 
@@ -47,5 +52,18 @@ public class LoadClassTest {
     public void testLoadClassesWorkWithoutNativeLib(Class<?> clazz) {
         // Force loading of class.
         assertDoesNotThrow(() -> Class.forName(clazz.getName()));
+    }
+
+    @Test
+    public void testCheckAvailability() {
+        // Calling ensureAvailability should work on any JDK version
+        assertThrows(UnsatisfiedLinkError.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                IoUring.ensureAvailability();
+            }
+        });
+        assertFalse(IoUring.isAvailable());
+        assertNotNull(IoUring.unavailabilityCause());
     }
 }
