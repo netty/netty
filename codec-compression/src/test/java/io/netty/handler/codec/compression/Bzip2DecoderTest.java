@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.apache.commons.compress.compressors.bzip2.BZip2CompressorOutputStream;
@@ -50,12 +51,7 @@ public class Bzip2DecoderTest extends AbstractDecoderTest {
         try {
             channel.writeInbound(in);
         } finally {
-            try {
-                destroyChannel();
-                fail();
-            } catch (DecompressionException ignored) {
-                // expected
-            }
+            destroyChannel();
         }
     }
 

@@ -20,6 +20,7 @@ import com.aayushatharva.brotli4j.encoder.BrotliOutputStream;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -80,7 +81,11 @@ public class BrotliDecoderTest {
 
     @BeforeEach
     public void initChannel() {
-        channel = new EmbeddedChannel(new BrotliDecoder());
+        channel = new EmbeddedChannel(createDecoder());
+    }
+
+    protected ChannelHandler createDecoder() {
+        return new BrotliDecoder();
     }
 
     @AfterEach

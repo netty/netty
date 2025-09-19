@@ -16,7 +16,9 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +36,11 @@ public class SnappyFrameDecoderTest {
 
     @BeforeEach
     public void initChannel() {
-        channel = new EmbeddedChannel(new SnappyFrameDecoder());
+        channel = new EmbeddedChannel(createDecoder());
+    }
+
+    protected ChannelHandler createDecoder() {
+        return new SnappyFrameDecoder();
     }
 
     @AfterEach
