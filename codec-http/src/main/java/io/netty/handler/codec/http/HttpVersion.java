@@ -22,6 +22,11 @@ import io.netty.util.internal.ObjectUtil;
 import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
+import static io.netty.util.internal.ObjectUtil.checkNonEmptyAfterTrim;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
+
 /**
  * The version of HTTP or its derived protocols, such as
  * <a href="https://en.wikipedia.org/wiki/Real_Time_Streaming_Protocol">RTSP</a> and
@@ -268,8 +273,7 @@ public class HttpVersion implements Comparable<HttpVersion> {
 
     @Override
     public int hashCode() {
-        return (protocolName().hashCode() * 31 + majorVersion()) * 31 +
-               minorVersion();
+        return hashSum(hash(protocolName()), majorVersion(), minorVersion());
     }
 
     @Override

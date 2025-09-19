@@ -16,6 +16,10 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.util.AsciiString;
+import io.netty.util.internal.ObjectUtil;
+
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * Defines the common schemes used for the WebSocket protocol as defined by
@@ -59,7 +63,7 @@ public final class WebSocketScheme {
 
     @Override
     public int hashCode() {
-        return port * 31 + name.hashCode();
+        return hashSum(port, hash(name));
     }
 
     @Override
