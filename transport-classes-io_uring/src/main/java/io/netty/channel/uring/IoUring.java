@@ -161,8 +161,8 @@ public final class IoUring {
                         "SETUP_SINGLE_ISSUER_SUPPORTED={}, " +
                         "SETUP_DEFER_TASKRUN_SUPPORTED={}, " +
                         "REGISTER_BUFFER_RING_SUPPORTED={}, " +
-                        "REGISTER_BUFFER_RING_INC_SUPPORTED={}," +
-                        "SEND_ZC_SUPPORTED={},",
+                        "REGISTER_BUFFER_RING_INC_SUPPORTED={}, " +
+                        "SEND_ZC_SUPPORTED={}, " +
                         "SENDMSG_ZC_SUPPORTED={}" +
                         ")", kernelVersion, socketNonEmptySupported, spliceSupported, acceptSupportNoWait,
                         acceptMultishotSupported, pollAddMultishotSupported, recvMultishotSupported,
