@@ -275,9 +275,5 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 zcWriteQueue.add(ZC_BATCH_MARKER);
             }
         }
-        @Override
-        protected boolean canCloseNow0() {
-            return (zcWriteQueue == null || zcWriteQueue.isEmpty()) && super.canCloseNow0();
-        }
     }
 }
