@@ -233,7 +233,8 @@ public abstract class AbstractIntegrationTest {
         assertArrayEquals(expectedData, digest.digest());
     }
 
-    private static final class HugeDecompressIncomingHandler extends ChannelInboundHandlerAdapter implements ByteProcessor {
+    private static final class HugeDecompressIncomingHandler
+            extends ChannelInboundHandlerAdapter implements ByteProcessor {
         final int memoryLimit;
         final MessageDigest digest;
         long total;
