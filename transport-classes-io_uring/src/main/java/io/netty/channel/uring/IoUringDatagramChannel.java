@@ -618,10 +618,10 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         @Override
-        protected void freeResourcesNow(IoRegistration reg) {
+        public void unregistered() {
+            super.unregistered();
             sendmsgHdrs.release();
             recvmsgHdrs.release();
-            super.freeResourcesNow(reg);
         }
     }
 
