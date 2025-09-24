@@ -170,7 +170,7 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
                             buffer.release();
                             causeRef.set(f.cause());
 
-                            for (int i = 0;i  < numBuffers;i++) {
+                            for (int i = 0; i < numBuffers; i++) {
                                 latch.countDown();
                             }
                         }
