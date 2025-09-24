@@ -59,6 +59,11 @@ public final class IoUringChannelOption<T> extends UnixChannelOption<T> {
      * The threshold for zero-copy write (send_zc and sendmsg_zc).
      * If it is set to {@code -1}, then this function will be disabled.
      * <p>
+     * If the locked memory limit is too low you will observe
+     * <a href="https://github.com/axboe/liburing/commit/e951bf0c08c81a2ea0c4b7bca7e4494f2043d367">-ENOMEM</a> and
+     * writes will be failed. This is a clear sign that you should increase the locked memory limit via
+     * {@code ulimit -l}.
+     * <p>
      * Check
      * <a href="https://man.archlinux.org/man/io_uring_enter.2.en#IORING_OP_SEND_ZC"> man io_uring_enter</a>
      * for more details.
