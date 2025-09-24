@@ -52,7 +52,7 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
         run(testInfo, new Runner<Bootstrap>() {
             @Override
             public void run(Bootstrap bootstrap) throws Throwable {
-                testBufferLifecycleCorrectlyHandled(bootstrap, false);
+                testBufferLifecycleCorrectlyHandled(bootstrap, false, false);
             }
         });
     }
@@ -63,12 +63,37 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
         run(testInfo, new Runner<Bootstrap>() {
             @Override
             public void run(Bootstrap bootstrap) throws Throwable {
-                testBufferLifecycleCorrectlyHandled(bootstrap, true);
+                testBufferLifecycleCorrectlyHandled(bootstrap, true, false);
             }
         });
     }
 
-    private static void testBufferLifecycleCorrectlyHandled(Bootstrap cb, boolean multiple) throws Throwable {
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testBufferLifecycleCorrectlyHandledUsingSendZcWhenRemotePeerCloseSocket(TestInfo testInfo)
+            throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testBufferLifecycleCorrectlyHandled(bootstrap, false, true);
+            }
+        });
+    }
+
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testBufferLifecycleCorrectlyHandledUsingSendmsgZcWhenRemotePeerCloseSocket(TestInfo testInfo)
+            throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testBufferLifecycleCorrectlyHandled(bootstrap, true, true);
+            }
+        });
+    }
+
+    private static void testBufferLifecycleCorrectlyHandled(Bootstrap cb, boolean multiple, boolean remoteClose)
+            throws Throwable {
         cb.handler(new ChannelInboundHandlerAdapter());
         // Force to use send_zc / sendmsg_zc if supported.
         cb.option(IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD, 0);
@@ -115,20 +140,26 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
                         fail(cause);
                     }
                     // The buffer should still have a reference count of 1 as we did not receive the second notification
-                    // yet as the remote peer did not start reading.
+                    // yet as the remote peer did not start reading and did not close the socket yet.
                     if (multiple) {
                         assertEquals(numBuffers, buffer.refCnt());
                     } else {
                         assertEquals(numBuffers, buffer.refCnt());
                     }
 
-                    // Let's read the bytes now so the buffer can be released again from the NIC.
-                    try (InputStream stream = socket.getInputStream()) {
-                        byte[] bytes = new byte[64 * 1024];
-                        int r;
-                        while (bufferSize != 0 &&
-                                (r = stream.read(bytes, 0, Math.min(bufferSize, bytes.length))) != -1) {
-                            bufferSize -= r;
+                    if (remoteClose) {
+                        // Don't read any data but just close the socket. This should trigger the required notifications
+                        // to release the buffers.
+                        socket.close();
+                    } else {
+                        // Let's read the bytes now so the buffer can be released again from the NIC.
+                        try (InputStream stream = socket.getInputStream()) {
+                            byte[] bytes = new byte[64 * 1024];
+                            int r;
+                            while (bufferSize != 0 &&
+                                    (r = stream.read(bytes, 0, Math.min(bufferSize, bytes.length))) != -1) {
+                                bufferSize -= r;
+                            }
                         }
                     }
 
