@@ -15,9 +15,11 @@
  */
 package io.netty.util.concurrent;
 
+import io.netty.util.concurrent.AutoScalingEventExecutorChooserFactory.AutoScalingUtilizationMetric;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -25,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class AutoScalingEventExecutorChooserFactoryTest {
@@ -108,11 +111,11 @@ public class AutoScalingEventExecutorChooserFactoryTest {
         TestEventExecutorGroup group = new TestEventExecutorGroup(1, 3, 50, TimeUnit.MILLISECONDS);
         try {
             startAllExecutors(group);
-            assertEquals(3, countActiveExecutors(group));
+            assertEquals(3, group.activeExecutorCount());
             Thread.sleep(200);
 
             // The monitor should have suspended 2 executors, leaving 1 active.
-            assertEquals(1, countActiveExecutors(group));
+            assertEquals(1, group.activeExecutorCount());
         } finally {
             group.shutdownGracefully().syncUninterruptibly();
         }
@@ -125,7 +128,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
         try {
             startAllExecutors(group);
             Thread.sleep(200);
-            assertEquals(1, countActiveExecutors(group));
+            assertEquals(1, group.activeExecutorCount());
 
             TestEventExecutor activeExecutor = null;
             for (EventExecutor exec : group) {
@@ -143,10 +146,10 @@ public class AutoScalingEventExecutorChooserFactoryTest {
             // The monitor will see high utilization on the active thread. After 2 cycles (100 ms),
             // it will decide to scale up.
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
-            while (countActiveExecutors(group) < 2 && System.nanoTime() < deadline) {
+            while (group.activeExecutorCount() < 2 && System.nanoTime() < deadline) {
                 Thread.sleep(50);
             }
-            assertEquals(2, countActiveExecutors(group),
+            assertEquals(2, group.activeExecutorCount(),
                          "Should scale up to 2 after stressing one executor.");
 
             for (EventExecutor exec : group) {
@@ -155,10 +158,10 @@ public class AutoScalingEventExecutorChooserFactoryTest {
                 }
             }
 
-            while (countActiveExecutors(group) < 3 && System.nanoTime() < deadline) {
+            while (group.activeExecutorCount() < 3 && System.nanoTime() < deadline) {
                 Thread.sleep(50);
             }
-            assertEquals(3, countActiveExecutors(group),
+            assertEquals(3, group.activeExecutorCount(),
                          "Should scale up to 3 after stressing two executors.");
         } finally {
             group.shutdownGracefully().syncUninterruptibly();
@@ -172,7 +175,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
         try {
             startAllExecutors(group);
             Thread.sleep(200);
-            assertEquals(2, countActiveExecutors(group), "Should not scale below minThreads");
+            assertEquals(2, group.activeExecutorCount(), "Should not scale below minThreads");
         } finally {
             group.shutdownGracefully().syncUninterruptibly();
         }
@@ -185,7 +188,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
         try {
             startAllExecutors(group);
             Thread.sleep(200); // Allow time for initial scale-down to minThreads
-            assertEquals(1, countActiveExecutors(group));
+            assertEquals(1, group.activeExecutorCount());
 
             TestEventExecutor activeExecutor = null;
             for (EventExecutor exec : group) {
@@ -201,10 +204,10 @@ public class AutoScalingEventExecutorChooserFactoryTest {
 
             // Wait for the UtilizationMonitor to react and scale up.
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
-            while (countActiveExecutors(group) < 2 && System.nanoTime() < deadline) {
+            while (group.activeExecutorCount() < 2 && System.nanoTime() < deadline) {
                 Thread.sleep(50);
             }
-            assertEquals(2, countActiveExecutors(group), "Should scale up to maxThreads");
+            assertEquals(2, group.activeExecutorCount(), "Should scale up to maxThreads");
 
             // Now that we have scaled up, put all active executors under a high load
             // to prevent the new one from being scaled back down immediately.
@@ -219,7 +222,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
             group.next();
             Thread.sleep(200); // Give the monitor time to check again.
 
-            assertEquals(2, countActiveExecutors(group),
+            assertEquals(2, group.activeExecutorCount(),
                          "Should not scale back down while load is high");
         } finally {
             group.shutdownGracefully().syncUninterruptibly();
@@ -234,10 +237,10 @@ public class AutoScalingEventExecutorChooserFactoryTest {
             startAllExecutors(group);
 
             long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
-            while (countActiveExecutors(group) > 1 && System.nanoTime() < deadline) {
+            while (group.activeExecutorCount() > 1 && System.nanoTime() < deadline) {
                 Thread.sleep(50);
             }
-            assertEquals(1, countActiveExecutors(group),
+            assertEquals(1, group.activeExecutorCount(),
                          "Group should scale down to 1 active executor");
 
             // Simulate a slow trickle of new work (e.g., new connections) by calling next() a few times.
@@ -246,9 +249,77 @@ public class AutoScalingEventExecutorChooserFactoryTest {
                 Thread.sleep(20);
             }
 
-            assertEquals(1, countActiveExecutors(group),
+            assertEquals(1, group.activeExecutorCount(),
                          "Should consolidate the trickle of work onto the single active executor, without" +
                          " waking up the suspended ones");
+        } finally {
+            group.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    @Test
+    @Timeout(30)
+    void testMetricsProvideCorrectUtilizationAndActiveExecutorCount() throws InterruptedException {
+        TestEventExecutorGroup group = new TestEventExecutorGroup(1, 3, 50, TimeUnit.MILLISECONDS);
+        try {
+            startAllExecutors(group);
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (group.activeExecutorCount() > 1 && System.nanoTime() < deadline) {
+                Thread.sleep(50);
+            }
+            assertEquals(1, group.activeExecutorCount(), "Should have scaled down to 1 active executor.");
+
+            TestEventExecutor activeExecutor = null;
+            for (EventExecutor exec : group) {
+                if (!exec.isSuspended()) {
+                    activeExecutor = (TestEventExecutor) exec;
+                    break;
+                }
+            }
+            if (activeExecutor == null) {
+                fail("Could not find an active executor.");
+            }
+
+            activeExecutor.setHighLoad(true);
+
+            while (System.nanoTime() < deadline) {
+                List<AutoScalingUtilizationMetric> utilizationMetrics = group.executorUtilizations();
+                TestEventExecutor finalActiveExecutor = activeExecutor;
+                double utilization = utilizationMetrics.stream()
+                                                       .filter(metric -> metric.executor().equals(finalActiveExecutor))
+                                                       .findFirst()
+                        .map(AutoScalingUtilizationMetric::utilization)
+                        .orElse(0.0);
+                if (utilization > 0.4) {
+                    break;
+                }
+                Thread.sleep(50);
+            }
+
+            assertEquals(1, group.activeExecutorCount(), "Active count should still be 1 before scaling up.");
+
+            List<AutoScalingUtilizationMetric> utilizationMetrics = group.executorUtilizations();
+            assertEquals(3, utilizationMetrics.size(), "Utilization list should report on all executors.");
+
+            TestEventExecutor finalActiveExecutor2 = activeExecutor;
+            double activeUtilization = utilizationMetrics.stream()
+                                                         .filter(metric -> metric.executor()
+                                                                                 .equals(finalActiveExecutor2))
+                                                         .findFirst()
+                                                         .map(AutoScalingUtilizationMetric::utilization)
+                                                         .orElse(0.0);
+            assertTrue(activeUtilization > 0.4,
+                       "Active executor should have utilization above the scale-down threshold. " +
+                       "Was: " + activeUtilization);
+
+            TestEventExecutor finalActiveExecutor1 = activeExecutor;
+            utilizationMetrics.stream()
+                              .filter(metric -> metric.executor() != finalActiveExecutor1)
+                              .forEach(metric -> {
+                                  assertTrue(metric.executor().isSuspended(), "Other executors should be suspended.");
+                                  assertEquals(0.0, metric.utilization(),
+                                               "Suspended executor should have 0.0 utilization.");
+                              });
         } finally {
             group.shutdownGracefully().syncUninterruptibly();
         }
@@ -260,15 +331,5 @@ public class AutoScalingEventExecutorChooserFactoryTest {
             executor.execute(startLatch::countDown);
         }
         startLatch.await();
-    }
-
-    private static int countActiveExecutors(MultithreadEventExecutorGroup group) {
-        int activeCount = 0;
-        for (EventExecutor executor : group) {
-            if (!executor.isSuspended()) {
-                activeCount++;
-            }
-        }
-        return activeCount;
     }
 }

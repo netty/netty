@@ -149,6 +149,15 @@
         <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods -XX:+EnableDynamicAgentLoading</argLine.common>
       </properties>
     </profile>
+    <profile>
+      <id>java26</id>
+      <activation>
+        <jdk>26</jdk>
+      </activation>
+      <properties>
+        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods -XX:+EnableDynamicAgentLoading</argLine.common>
+      </properties>
+    </profile>
   </profiles>
 
   <properties>

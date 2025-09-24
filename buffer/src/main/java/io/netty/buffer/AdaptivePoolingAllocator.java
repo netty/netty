@@ -50,12 +50,9 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
@@ -537,9 +534,9 @@ final class AdaptivePoolingAllocator {
 
         private SizeClassChunkControllerFactory(int segmentSize) {
             this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
-            this.chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
+            chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
             int segmentsCount = chunkSize / segmentSize;
-            this.segmentOffsets = new int[segmentsCount];
+            segmentOffsets = new int[segmentsCount];
             for (int i = 0; i < segmentsCount; i++) {
                 segmentOffsets[i] = i * segmentSize;
             }
@@ -823,7 +820,6 @@ final class AdaptivePoolingAllocator {
         private volatile Chunk nextInLine;
         private final MagazineGroup group;
         private final ChunkController chunkController;
-        private final AtomicLong usedMemory;
         private final StampedLock allocationLock;
         private final Queue<AdaptiveByteBuf> bufferQueue;
         private final ObjectPool.Handle<AdaptiveByteBuf> handle;
@@ -849,7 +845,6 @@ final class AdaptivePoolingAllocator {
                 bufferQueue = null;
                 handle = null;
             }
-            usedMemory = new AtomicLong();
             this.sharedChunkQueue = sharedChunkQueue;
         }
 
@@ -1212,7 +1207,6 @@ final class AdaptivePoolingAllocator {
 
         void detachFromMagazine() {
             if (magazine != null) {
-                magazine.usedMemory.getAndAdd(-capacity);
                 magazine = null;
             }
         }
@@ -1220,7 +1214,6 @@ final class AdaptivePoolingAllocator {
         void attachToMagazine(Magazine magazine) {
             assert this.magazine == null;
             this.magazine = magazine;
-            magazine.usedMemory.getAndAdd(capacity);
         }
 
         @Override
@@ -1858,8 +1851,7 @@ final class AdaptivePoolingAllocator {
                 } else {
                     checkIndex(index, length);
                 }
-                // Directly pass in the rootParent() with the adjusted index
-                return ByteBufUtil.writeUtf8(rootParent(), idx(index), length, sequence, sequence.length());
+                return ByteBufUtil.writeUtf8(this, index, length, sequence, sequence.length());
             }
             if (charset.equals(CharsetUtil.US_ASCII) || charset.equals(CharsetUtil.ISO_8859_1)) {
                 int length = sequence.length();
@@ -1869,8 +1861,7 @@ final class AdaptivePoolingAllocator {
                 } else {
                     checkIndex(index, length);
                 }
-                // Directly pass in the rootParent() with the adjusted index
-                return ByteBufUtil.writeAscii(rootParent(), idx(index), sequence, length);
+                return ByteBufUtil.writeAscii(this, index, sequence, length);
             }
             byte[] bytes = sequence.toString().getBytes(charset);
             if (expand) {
