@@ -429,13 +429,15 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C, F>, C 
             Channel channel, ChannelOption<?> option, Object value, Logger logger) {
         try {
             if (!channel.isOptionSupported(option)) {
-                logger.warn("Unknown channel option '{}' for channel '{}'", option, channel);
+                logger.warn("Unknown channel option '{}' for channel '{}' of type '{}'",
+                        option, channel, channel.getClass());
             } else {
                 channel.setOption((ChannelOption<Object>) option, value);
             }
         } catch (Throwable t) {
             logger.warn(
-                    "Failed to set channel option '{}' with value '{}' for channel '{}'", option, value, channel, t);
+                    "Failed to set channel option '{}' with value '{}' for channel '{}' of type '{}'",
+                    option, value, channel, channel.getClass(), t);
         }
     }
 
