@@ -587,6 +587,7 @@ public final class IoUringIoHandler implements IoHandler {
         private void remove() {
             DefaultIoUringIoRegistration old = registrations.remove(id);
             assert old == this;
+            handle.unregistered();
         }
 
         void close() {

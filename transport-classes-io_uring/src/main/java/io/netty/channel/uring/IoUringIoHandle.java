@@ -15,11 +15,20 @@
  */
 package io.netty.channel.uring;
 
+import io.netty.channel.IoEvent;
 import io.netty.channel.IoHandle;
+import io.netty.channel.IoRegistration;
 
 /**
  * {@link IoHandle} implementation for io_uring.
  */
 public interface IoUringIoHandle extends IoHandle {
-    // Marker interface.
+
+    /**
+     * Called once this {@link IoUringIoHandle} was unregistered and so will not receive any more events
+     * via {@link #handle(IoRegistration, IoEvent)}.
+     */
+    default void unregistered() {
+        // Noop by default.
+    }
 }
