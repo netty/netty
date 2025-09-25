@@ -202,9 +202,9 @@ public class HttpClientCodecTest {
             clientChannel.writeAndFlush(new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/"));
             assertTrue(responseReceivedLatch.await(5, SECONDS));
         } finally {
-            sb.config().group().shutdownGracefully();
-            sb.config().childGroup().shutdownGracefully();
-            cb.config().group().shutdownGracefully();
+            sb.config().group().shutdownGracefully().syncUninterruptibly();
+            sb.config().childGroup().shutdownGracefully().syncUninterruptibly();
+            cb.config().group().shutdownGracefully().syncUninterruptibly();
         }
     }
 

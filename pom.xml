@@ -99,7 +99,7 @@
             <configuration>
               <legacyMode>true</legacyMode>
               <skippedModules>
-                netty-all,netty-bom,netty-testsuite,netty-testsuite-autobahn,netty-testsuite-http2,
+                netty-all,netty-bom,netty-testsuite,netty-testsuite-autobahn,testsuite-common,netty-testsuite-http2,
                 netty-testsuite-native,netty-testsuite-native-image,netty-testsuite-native-image-client,
                 netty-testsuite-native-image-client-runtime-init,netty-testsuite-osgi,netty-testsuite-shading,
                 netty-transport-blockhound-tests,netty-transport-native-unix-common-tests,netty-microbench,
@@ -722,7 +722,8 @@
       -XX:+HeapDumpOnOutOfMemoryError
     </argLine.common>
     <argLine.jni>-D_</argLine.jni>
-    <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
+    <!-- This default enables leak presence detection. The leak profile replaces this with normal paranoid leak detection. -->
+    <argLine.leak>-Djunit.jupiter.extensions.autodetection.enabled=true</argLine.leak>
     <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
     <jacoco.argLine />
@@ -820,6 +821,7 @@
     <module>testsuite</module>
     <module>pkitesting</module>
     <module>testsuite-autobahn</module>
+    <module>testsuite-common</module>
     <module>testsuite-http2</module>
     <module>testsuite-jpms</module>
     <module>testsuite-karaf</module>

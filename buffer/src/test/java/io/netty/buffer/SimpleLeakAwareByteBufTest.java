@@ -159,8 +159,7 @@ public class SimpleLeakAwareByteBufTest extends BigEndianHeapByteBufTest {
     @EnumSource(ReleaseMechanism.class)
     void mustAddStackTraceForOriginalCloseMethodOnDoubleFree(ReleaseMechanism mechanism) throws Exception {
         int trackEveryBuffer = 1;
-        ResourceLeakDetector<ByteBuf> detector = ResourceLeakDetectorFactory.instance()
-                .newResourceLeakDetector(ByteBuf.class, trackEveryBuffer);
+        ResourceLeakDetector<ByteBuf> detector = new ResourceLeakDetector<>(ByteBuf.class, trackEveryBuffer);
         ByteBuf origin = Unpooled.buffer();
         ByteBuf buf = wrap(origin, detector.track(origin));
         originalCloseCall(buf, mechanism);
