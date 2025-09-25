@@ -176,7 +176,7 @@ public class LocalChannel extends AbstractChannel {
             });
         } else {
             try {
-                ((LocalUnsafe) unsafe()).registerNow();
+                ((LocalUnsafe) unsafe()).registered();
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
@@ -194,7 +194,7 @@ public class LocalChannel extends AbstractChannel {
                 registration.cancel();
             }
         } else {
-            ((LocalUnsafe) unsafe()).deregisterNow();
+            ((LocalUnsafe) unsafe()).unregistered();
         }
     }
 
@@ -484,7 +484,7 @@ public class LocalChannel extends AbstractChannel {
         }
 
         @Override
-        public void registerNow() {
+        public void registered() {
             // Check if both peer and parent are non-null because this channel was created by a LocalServerChannel.
             // This is needed as a peer may not be null also if a LocalChannel was connected before and
             // deregistered / registered later again.
@@ -520,7 +520,7 @@ public class LocalChannel extends AbstractChannel {
         }
 
         @Override
-        public void deregisterNow() {
+        public void unregistered() {
             // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
             ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
         }

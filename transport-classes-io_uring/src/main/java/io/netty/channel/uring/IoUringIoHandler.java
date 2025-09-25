@@ -487,6 +487,7 @@ public final class IoUringIoHandler implements IoHandler {
                 registrations.put(id, old);
             } else {
                 registration.setId(id);
+                ioHandle.registered();
                 break;
             }
         }

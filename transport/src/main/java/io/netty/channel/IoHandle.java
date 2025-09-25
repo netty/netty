@@ -31,4 +31,20 @@ public interface IoHandle extends AutoCloseable {
      *                      while this method is executed and so must not escape it.
      */
     void handle(IoRegistration registration, IoEvent ioEvent);
+
+    /**
+     * Called once this {@link IoHandle} was registered and so will start to receive events
+     * via {@link #handle(IoRegistration, IoEvent)}.
+     */
+    default void registered() {
+        // Noop by default.
+    }
+
+    /**
+     * Called once this {@link IoHandle} was unregistered and so will not receive any more events
+     * via {@link #handle(IoRegistration, IoEvent)}.
+     */
+    default void unregistered() {
+        // Noop by default.
+    }
 }
