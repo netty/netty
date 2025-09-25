@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.unix.IntegerUnixChannelOption;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractClientSocketTest;
 import org.junit.jupiter.api.Test;
@@ -52,7 +53,7 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
         run(testInfo, new Runner<Bootstrap>() {
             @Override
             public void run(Bootstrap bootstrap) throws Throwable {
-                testBufferLifecycleCorrectlyHandled(bootstrap, false);
+                testBufferLifecycleCorrectlyHandled(bootstrap, false, Close.NONE);
             }
         });
     }
@@ -63,15 +64,77 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
         run(testInfo, new Runner<Bootstrap>() {
             @Override
             public void run(Bootstrap bootstrap) throws Throwable {
-                testBufferLifecycleCorrectlyHandled(bootstrap, true);
+                testBufferLifecycleCorrectlyHandled(bootstrap, true, Close.NONE);
             }
         });
     }
 
-    private static void testBufferLifecycleCorrectlyHandled(Bootstrap cb, boolean multiple) throws Throwable {
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testBufferLifecycleCorrectlyHandledUsingSendZcWhenRemoteClose(TestInfo testInfo)
+            throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testBufferLifecycleCorrectlyHandled(bootstrap, false, Close.REMOTE);
+            }
+        });
+    }
+
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testBufferLifecycleCorrectlyHandledUsingSendmsgZcWhenRemoteClose(TestInfo testInfo)
+            throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testBufferLifecycleCorrectlyHandled(bootstrap, true, Close.REMOTE);
+            }
+        });
+    }
+
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testBufferLifecycleCorrectlyHandledUsingSendZcWhenLocalClose(TestInfo testInfo)
+            throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testBufferLifecycleCorrectlyHandled(bootstrap, false, Close.LOCAL);
+            }
+        });
+    }
+
+    @Test
+    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
+    public void testBufferLifecycleCorrectlyHandledUsingSendmsgZcWhenLocalClose(TestInfo testInfo)
+            throws Throwable {
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testBufferLifecycleCorrectlyHandled(bootstrap, true, Close.LOCAL);
+            }
+        });
+    }
+
+    private enum Close {
+        REMOTE,
+        LOCAL,
+        NONE
+    }
+
+    private static void testBufferLifecycleCorrectlyHandled(Bootstrap cb, boolean multiple, Close remoteClose)
+            throws Throwable {
         cb.handler(new ChannelInboundHandlerAdapter());
         // Force to use send_zc / sendmsg_zc if supported.
         cb.option(IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD, 0);
+        if (remoteClose == Close.LOCAL) {
+            // Configure TCP_USER_TIMEOUT to a small number so the buffers can be returned quickly.
+            // See:
+            // - https://man7.org/linux/man-pages/man7/tcp.7.html
+            // - https://github.com/torvalds/linux/blob/v6.16/include/uapi/linux/tcp.h#L111
+            cb.option(new IntegerUnixChannelOption("TCP_USER_TIMEOUT", 6, 18), 1000);
+        }
 
         try (ServerSocket serverSocket = new ServerSocket()) {
             serverSocket.bind(new InetSocketAddress(0));
@@ -106,7 +169,10 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
                         } else {
                             buffer.release();
                             causeRef.set(f.cause());
-                            latch.countDown();
+
+                            for (int i = 0; i < numBuffers; i++) {
+                                latch.countDown();
+                            }
                         }
                     });
                     latch.await();
@@ -115,21 +181,35 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
                         fail(cause);
                     }
                     // The buffer should still have a reference count of 1 as we did not receive the second notification
-                    // yet as the remote peer did not start reading.
+                    // yet as the remote peer did not start reading and did not close the socket yet.
                     if (multiple) {
                         assertEquals(numBuffers, buffer.refCnt());
                     } else {
                         assertEquals(numBuffers, buffer.refCnt());
                     }
 
-                    // Let's read the bytes now so the buffer can be released again from the NIC.
-                    try (InputStream stream = socket.getInputStream()) {
-                        byte[] bytes = new byte[64 * 1024];
-                        int r;
-                        while (bufferSize != 0 &&
-                                (r = stream.read(bytes, 0, Math.min(bufferSize, bytes.length))) != -1) {
-                            bufferSize -= r;
-                        }
+                    switch (remoteClose) {
+                        case REMOTE:
+                            // Don't read any data but just close the socket. This should trigger the required
+                            // notifications to release the buffers.
+                            socket.close();
+                            break;
+                        case LOCAL:
+                            // Don't read any data but just close the channel. Once we did not see an ack for the
+                            // configured TCP_USER_TIMEOUT we will get the required notifications to release the buffers
+                            channel.close().sync();
+                            break;
+                        case NONE:
+                            // Let's read the bytes now so the buffer can be released again from the NIC.
+                            try (InputStream stream = socket.getInputStream()) {
+                                byte[] bytes = new byte[64 * 1024];
+                                int r;
+                                while (bufferSize != 0 &&
+                                        (r = stream.read(bytes, 0, Math.min(bufferSize, bytes.length))) != -1) {
+                                    bufferSize -= r;
+                                }
+                            }
+                            break;
                     }
 
                     // Wait till the buffer was finally released, which should be done in a timely fashion.

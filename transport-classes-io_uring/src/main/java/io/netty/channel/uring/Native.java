@@ -303,6 +303,8 @@ final class Native {
             case IORING_OP_MKDIRAT: return "MKDIRAT";
             case IORING_OP_SYMLINKAT: return "SYMLINKAT";
             case IORING_OP_LINKAT: return "LINKAT";
+            case IORING_OP_SEND_ZC: return "SEND_ZC";
+            case IORING_OP_SENDMSG_ZC: return "SENDMSG_ZC";
             default: return "[OP CODE " + op + ']';
         }
     }
