@@ -155,9 +155,6 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
 
         private boolean handleWriteCompleteZeroCopy(byte op, ChannelOutboundBuffer channelOutboundBuffer,
                                                     int res, int flags) {
-            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                return true;
-            }
             if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
                 // We only want to reset these if IORING_CQE_F_NOTIF is not set.
                 // If it's set we know this is only an extra notification for a write but we already handled
@@ -204,6 +201,15 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                     }
                     return true;
                 } else {
+                    if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                        if (more) {
+                            // The send was cancelled but we expect another notification. Just add the marker to the
+                            // queue so we don't get into trouble once the final notification for this operation is
+                            // received.
+                            zcWriteQueue.add(ZC_BATCH_MARKER);
+                        }
+                        return true;
+                    }
                     try {
                         String msg = op == Native.IORING_OP_SEND_ZC ? "io_uring sendzc" : "io_uring sendmsg_zc";
                         int result = ioResult(msg, res);
@@ -268,10 +274,6 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
             } finally {
                 zcWriteQueue.add(ZC_BATCH_MARKER);
             }
-        }
-        @Override
-        protected boolean canCloseNow0() {
-            return (zcWriteQueue == null || zcWriteQueue.isEmpty()) && super.canCloseNow0();
         }
     }
 }

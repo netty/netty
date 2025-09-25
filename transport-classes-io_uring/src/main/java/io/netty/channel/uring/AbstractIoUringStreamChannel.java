@@ -612,8 +612,8 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        protected void freeResourcesNow(IoRegistration reg) {
-            super.freeResourcesNow(reg);
+        public void unregistered() {
+            super.unregistered();
             assert readBuffer == null;
         }
     }
