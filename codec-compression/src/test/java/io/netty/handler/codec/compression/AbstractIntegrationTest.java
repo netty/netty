@@ -24,6 +24,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.ResourceLeakDetector;
 import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.DisabledIf;
@@ -185,7 +186,11 @@ public abstract class AbstractIntegrationTest {
         }
     }
 
-    @DisabledIf("io.netty.util.ResourceLeakDetector#isEnabled")
+    static boolean hasLeakDetector() {
+        return ResourceLeakDetector.getLevel().ordinal() > ResourceLeakDetector.Level.SIMPLE.ordinal();
+    }
+
+    @DisabledIf("hasLeakDetector")
     @Test
     public void testHugeDecompress() {
         int chunkSize = 1024 * 1024;
