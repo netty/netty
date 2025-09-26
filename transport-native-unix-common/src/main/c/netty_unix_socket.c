@@ -30,6 +30,7 @@
 #include "netty_unix_jni.h"
 #include "netty_unix_socket.h"
 #include "netty_unix_util.h"
+#include "netty_unix_vmsocket.h"
 #include "netty_jni_util.h"
 
 #define SOCKET_CLASSNAME "io/netty/channel/unix/Socket"
@@ -167,6 +168,30 @@ static jbyteArray netty_unix_socket_createDomainSocketAddressArray(JNIEnv* env, 
 
     (*env)->SetByteArrayRegion(env, pathBytes, 0, pathLength, (jbyte*) &s->sun_path);
     return pathBytes;
+}
+
+static jbyteArray createVSockAddressArray(JNIEnv* env, const struct sockaddr_vm* addr) {
+    jbyteArray bArray = (*env)->NewByteArray(env, 8);
+    if (bArray == NULL) {
+        return NULL;
+    }
+
+    unsigned int cid = (addr->svm_cid);
+    unsigned int port = (addr->svm_port);
+
+    unsigned char a[4];
+    a[0] = cid >> 24;
+    a[1] = cid >> 16;
+    a[2] = cid >> 8;
+    a[3] = cid;
+    (*env)->SetByteArrayRegion(env, bArray, 0, 4, (jbyte*) &a);
+
+    a[0] = port >> 24;
+    a[1] = port >> 16;
+    a[2] = port >> 8;
+    a[3] = port;
+    (*env)->SetByteArrayRegion(env, bArray, 4, 4, (jbyte*) &a);
+    return bArray;
 }
 
 static jsize addressLength(const struct sockaddr_storage* addr) {
@@ -568,6 +593,22 @@ static jint netty_unix_socket_bind(JNIEnv* env, jclass clazz, jint fd, jboolean 
     return 0;
 }
 
+static jint netty_unix_socket_bindVSock(JNIEnv* env, jclass clazz, jint fd, jint cid, jint port) {
+    struct sockaddr_vm addr;
+    memset(&addr, 0, sizeof(struct sockaddr_vm));
+
+    addr.svm_family = AF_VSOCK;
+    addr.svm_port = port;
+    addr.svm_cid = cid;
+
+    int res = bind(fd, (struct sockaddr*) &addr, sizeof(struct sockaddr_vm));
+
+    if (res == -1) {
+        return -errno;
+    }
+    return res;
+}
+
 static jint netty_unix_socket_listen(JNIEnv* env, jclass clazz, jint fd, jint backlog) {
     if (listen(fd, backlog) == -1) {
         return -errno;
@@ -593,6 +634,25 @@ static jint netty_unix_socket_connect(JNIEnv* env, jclass clazz, jint fd, jboole
         return -err;
     }
     return 0;
+}
+
+static jint netty_unix_socket_connectVSock(JNIEnv* env, jclass clazz, jint fd, jint cid, jint port) {
+    struct sockaddr_vm addr;
+    memset(&addr, 0, sizeof(struct sockaddr_vm));
+    addr.svm_family = AF_VSOCK;
+    addr.svm_port = port;
+    addr.svm_cid = cid;
+
+    int res;
+    int err;
+    do {
+        res = connect(fd, (struct sockaddr*) &addr, sizeof(struct sockaddr_vm));
+    } while (res == -1 && ((err = errno) == EINTR));
+
+    if (res == -1) {
+        return -errno;
+    }
+    return res;
 }
 
 static jint netty_unix_socket_finishConnect(JNIEnv* env, jclass clazz, jint fd) {
@@ -712,6 +772,15 @@ static jbyteArray netty_unix_socket_remoteDomainSocketAddress(JNIEnv* env, jclas
     return netty_unix_socket_createDomainSocketAddressArray(env, &addr);
 }
 
+static jbyteArray netty_unix_socket_remoteVSockAddress(JNIEnv* env, jclass clazz, jint fd) {
+    struct sockaddr_vm addr = { 0 };
+    socklen_t len = sizeof(addr);
+    if (getpeername(fd, (struct sockaddr*) &addr, &len) == -1) {
+        return NULL;
+    }
+    return createVSockAddressArray(env, &addr);
+}
+
 static jbyteArray netty_unix_socket_localAddress(JNIEnv* env, jclass clazz, jint fd) {
     struct sockaddr_storage addr = { 0 };
     socklen_t len = sizeof(addr);
@@ -730,9 +799,26 @@ static jbyteArray netty_unix_socket_localDomainSocketAddress(JNIEnv* env, jclass
     return netty_unix_socket_createDomainSocketAddressArray(env, &addr);
 }
 
+static jbyteArray netty_unix_socket_localVSockAddress(JNIEnv* env, jclass clazz, jint fd) {
+    struct sockaddr_vm addr = { 0 };
+    socklen_t len = sizeof(addr);
+    if (getsockname(fd, (struct sockaddr*) &addr, &len) == -1) {
+        return NULL;
+    }
+    return createVSockAddressArray(env, &addr);
+}
+
 static jint netty_unix_socket_newSocketDgramFd(JNIEnv* env, jclass clazz, jboolean ipv6) {
     int domain = ipv6 == JNI_TRUE ? AF_INET6 : AF_INET;
     return _socket(env, clazz, domain, SOCK_DGRAM);
+}
+
+static jint netty_unix_socket_newSocketVSockFd(JNIEnv* env, jclass clazz) {
+    int fd = netty_unix_socket_nonBlockingSocket(AF_VSOCK, SOCK_STREAM, 0);
+    if (fd == -1) {
+        return -errno;
+    }
+    return fd;
 }
 
 static jint netty_unix_socket_newSocketStreamFd(JNIEnv* env, jclass clazz, jboolean ipv6) {
@@ -1211,8 +1297,10 @@ static jint netty_unix_socket_msgFastopen(JNIEnv* env, jclass clazz) {
 static const JNINativeMethod fixed_method_table[] = {
   { "shutdown", "(IZZ)I", (void *) netty_unix_socket_shutdown },
   { "bind", "(IZ[BII)I", (void *) netty_unix_socket_bind },
+  { "bindVSock", "(III)I", (void *) netty_unix_socket_bindVSock },
   { "listen", "(II)I", (void *) netty_unix_socket_listen },
   { "connect", "(IZ[BII)I", (void *) netty_unix_socket_connect },
+  { "connectVSock", "(III)I", (void *) netty_unix_socket_connectVSock },
   { "finishConnect", "(I)I", (void *) netty_unix_socket_finishConnect },
   { "disconnect", "(IZ)I", (void *) netty_unix_socket_disconnect},
   { "accept", "(I[B)I", (void *) netty_unix_socket_accept },
@@ -1220,7 +1308,10 @@ static const JNINativeMethod fixed_method_table[] = {
   { "localAddress", "(I)[B", (void *) netty_unix_socket_localAddress },
   { "remoteDomainSocketAddress", "(I)[B", (void *) netty_unix_socket_remoteDomainSocketAddress },
   { "localDomainSocketAddress", "(I)[B", (void *) netty_unix_socket_localDomainSocketAddress },
+  { "remoteVSockAddress", "(I)[B", (void *) netty_unix_socket_remoteVSockAddress },
+  { "localVSockAddress", "(I)[B", (void *) netty_unix_socket_localVSockAddress },
   { "newSocketDgramFd", "(Z)I", (void *) netty_unix_socket_newSocketDgramFd },
+  { "newSocketVSockFd", "()I", (void *) netty_unix_socket_newSocketVSockFd },
   { "newSocketStreamFd", "(Z)I", (void *) netty_unix_socket_newSocketStreamFd },
   { "newSocketDomainFd", "()I", (void *) netty_unix_socket_newSocketDomainFd },
   { "newSocketDomainDgramFd", "()I", (void *) netty_unix_socket_newSocketDomainDgramFd },
