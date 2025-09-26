@@ -47,4 +47,11 @@ public interface IoHandle extends AutoCloseable {
     default void unregistered() {
         // Noop by default.
     }
+
+    /**
+     * Called once the {@link IoHandle} should be closed. Even once this method is called this handle might
+     * still receive events via {@link #handle(IoRegistration, IoEvent)} (if it was previous be registered and so its
+     * {@link #registered()} method was called) until the {@link #unregistered()} method is called.
+     */
+    void close() throws Exception;
 }
