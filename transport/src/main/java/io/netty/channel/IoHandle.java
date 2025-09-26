@@ -17,7 +17,7 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.ThreadAwareExecutor;
 /**
- * A handle that can be registered to am {@link IoHandler}.
+ * A handle that can be registered to an {@link IoHandler}.
  * All methods must be called from the {@link ThreadAwareExecutor} thread (which means
  * {@link ThreadAwareExecutor#isExecutorThread(Thread)} must return {@code true}).
  *<p>
