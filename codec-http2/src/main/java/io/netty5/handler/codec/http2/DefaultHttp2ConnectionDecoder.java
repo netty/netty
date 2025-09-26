@@ -235,7 +235,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         connection.goAwayReceived(lastStreamId, errorCode, debugData);
     }
 
-    void onUnknownFrame0(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, Buffer payload)
+    void onUnknownFrame0(ChannelHandlerContext ctx, short frameType, int streamId, Http2Flags flags, Buffer payload)
             throws Http2Exception {
         listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);
     }
@@ -623,7 +623,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         @Override
-        public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+        public void onUnknownFrame(ChannelHandlerContext ctx, short frameType, int streamId, Http2Flags flags,
                                    Buffer payload) throws Http2Exception {
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
@@ -799,7 +799,7 @@ public class DefaultHttp2ConnectionDecoder implements Http2ConnectionDecoder {
         }
 
         @Override
-        public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+        public void onUnknownFrame(ChannelHandlerContext ctx, short frameType, int streamId, Http2Flags flags,
                                    Buffer payload) throws Http2Exception {
             onUnknownFrame0(ctx, frameType, streamId, flags, payload);
         }
