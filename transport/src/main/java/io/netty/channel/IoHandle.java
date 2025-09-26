@@ -17,9 +17,12 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.ThreadAwareExecutor;
 /**
- * A handle that can be registered to a {@link IoHandler}.
+ * A handle that can be registered to am {@link IoHandler}.
  * All methods must be called from the {@link ThreadAwareExecutor} thread (which means
- * {@link ThreadAwareExecutor#isExecutorThread(Thread)} must return {@code true})
+ * {@link ThreadAwareExecutor#isExecutorThread(Thread)} must return {@code true}).
+ *<p>
+ * All the methods are expected to be called from the {@link IoHandler} on which this {@link IoHandle}
+ * was registered via {@link IoHandler#register(IoHandle)}.
  */
 public interface IoHandle extends AutoCloseable {
 
