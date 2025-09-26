@@ -32,10 +32,9 @@ import java.net.URL;
 import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -66,7 +65,7 @@ public final class ChannelHandlerMetadataUtil {
             subtypes.add(ChannelHandler.class);
         }
 
-        Set<HandlerMetadata> handlerMetadata = new HashSet<HandlerMetadata>();
+        Set<HandlerMetadata> handlerMetadata = new HashSet<>();
         for (Class<?> subtype : subtypes) {
             handlerMetadata.add(new HandlerMetadata(subtype.getName(), new Condition(subtype.getName()), true));
         }
@@ -76,7 +75,7 @@ public final class ChannelHandlerMetadataUtil {
         File existingMetadataFile = new File(projectRelativeResourcePath);
         String existingMetadataPath = existingMetadataFile.getAbsolutePath();
         if (!existingMetadataFile.exists()) {
-            if (handlerMetadata.size() == 0) {
+            if (handlerMetadata.isEmpty()) {
                 return;
             }
 
@@ -97,10 +96,10 @@ public final class ChannelHandlerMetadataUtil {
             Assertions.fail("Failed to open the native-image metadata file at: " + existingMetadataPath, e);
         }
 
-        Set<HandlerMetadata> newMetadata = new HashSet<HandlerMetadata>(handlerMetadata);
-        newMetadata.removeAll(existingMetadata);
+        Set<HandlerMetadata> newMetadata = new HashSet<>(handlerMetadata);
+        existingMetadata.forEach(newMetadata::remove);
 
-        Set<HandlerMetadata> removedMetadata = new HashSet<HandlerMetadata>(existingMetadata);
+        Set<HandlerMetadata> removedMetadata = new HashSet<>(existingMetadata);
         removedMetadata.removeAll(handlerMetadata);
 
         if (!newMetadata.isEmpty() || !removedMetadata.isEmpty()) {
@@ -133,7 +132,7 @@ public final class ChannelHandlerMetadataUtil {
                         .forPackages(packageNames));
 
         Set<Class<? extends ChannelHandler>> allSubtypes = reflections.getSubTypesOf(ChannelHandler.class);
-        Set<Class<? extends ChannelHandler>> targetSubtypes = new HashSet<Class<? extends ChannelHandler>>();
+        Set<Class<? extends ChannelHandler>> targetSubtypes = new HashSet<>();
 
         for (Class<? extends ChannelHandler> subtype : allSubtypes) {
             if (isTestClass(subtype)) {
@@ -168,13 +167,8 @@ public final class ChannelHandlerMetadataUtil {
     }
 
     private static String getMetadataJsonString(Set<HandlerMetadata> metadata) {
-        List<HandlerMetadata> metadataList = new ArrayList<HandlerMetadata>(metadata);
-        Collections.sort(metadataList, new Comparator<HandlerMetadata>() {
-            @Override
-            public int compare(HandlerMetadata h1, HandlerMetadata h2) {
-                return Collator.getInstance().compare(h1.name, h2.name);
-            }
-        });
+        List<HandlerMetadata> metadataList = new ArrayList<>(metadata);
+        metadataList.sort((h1, h2) -> Collator.getInstance().compare(h1.name, h2.name));
         return gson.toJson(metadataList, HANDLER_METADATA_LIST_TYPE);
     }
 
@@ -233,8 +227,8 @@ public final class ChannelHandlerMetadataUtil {
 
             HandlerMetadata that = (HandlerMetadata) o;
             return queryAllPublicMethods == that.queryAllPublicMethods
-                    && (name != null && name.equals(that.name))
-                    && (condition != null && condition.equals(that.condition));
+                    && Objects.equals(name, that.name)
+                    && Objects.equals(condition, that.condition);
         }
 
         @Override

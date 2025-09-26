@@ -72,6 +72,7 @@ import static io.netty.handler.ssl.SslProvider.isOptionSupported;
 import static io.netty.internal.tcnative.SSL.SSL_CVERIFY_IGNORED;
 import static java.lang.Integer.MAX_VALUE;
 import static org.assertj.core.api.Assertions.assertThat;
+import static java.lang.Integer.parseInt;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -185,24 +186,22 @@ public class OpenSslEngineTest extends SSLEngineTest {
         if (versionStringParts.length == 2 && "LibreSSL".equals(versionStringParts[0])) {
             String[] versionParts = versionStringParts[1].split("\\.", -1);
             if (versionParts.length == 3) {
-                int major = Integer.parseInt(versionParts[0]);
+                int major = parseInt(versionParts[0]);
                 if (major < 2) {
                     return true;
                 }
                 if (major > 2) {
                     return false;
                 }
-                int minor = Integer.parseInt(versionParts[1]);
+                int minor = parseInt(versionParts[1]);
                 if (minor < 6) {
                     return true;
                 }
                 if (minor > 6) {
                     return false;
                 }
-                int bugfix = Integer.parseInt(versionParts[2]);
-                if (bugfix > 0) {
-                    return false;
-                }
+                int bugfix = parseInt(versionParts[2]);
+                return bugfix <= 0;
             }
         }
         return true;

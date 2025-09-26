@@ -35,6 +35,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
+
 /**
  * Utility methods for hpack tests.
  */
@@ -77,9 +80,7 @@ public final class HpackBenchmarkUtil {
 
         @Override
         public int hashCode() {
-            int result = size.hashCode();
-            result = 31 * result + (limitToAscii ? 1 : 0);
-            return result;
+            return hashSum(hash(size), hash(limitToAscii));
         }
     }
 
@@ -87,7 +88,7 @@ public final class HpackBenchmarkUtil {
 
     static {
         HpackHeadersSize[] sizes = HpackHeadersSize.values();
-        headersMap = new HashMap<HeadersKey, List<HpackHeader>>(sizes.length * 2);
+        headersMap = new HashMap<>(sizes.length * 2);
         for (HpackHeadersSize size : sizes) {
             HeadersKey key = new HeadersKey(size, true);
             headersMap.put(key, key.newHeaders());
