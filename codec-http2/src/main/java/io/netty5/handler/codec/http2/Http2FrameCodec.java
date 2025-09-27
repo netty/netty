@@ -43,9 +43,6 @@ import static io.netty5.handler.codec.http2.Http2Error.NO_ERROR;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 
 /**
- * <p><em>This API is very immature.</em> The Http2Connection-based API is currently preferred over this API.
- * This API is targeted to eventually replace or reduce the need for the {@link Http2ConnectionHandler} API.
- *
  * <p>An HTTP/2 handler that maps HTTP/2 frames to {@link Http2Frame} objects and vice versa. For every incoming HTTP/2
  * frame, an {@link Http2Frame} object is created and propagated via {@link #channelRead}. Outbound {@link Http2Frame}
  * objects received via {@link #write} are converted to the HTTP/2 wire format. HTTP/2 frames specific to a stream
