@@ -15,11 +15,17 @@
 */
 package io.netty.util;
 
+import io.netty.util.internal.MathUtil;
+import org.assertj.core.api.Assumptions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
+import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -29,8 +35,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -38,15 +47,73 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class RecyclerTest {
 
-    protected static Recycler<HandledObject> newRecycler(int maxCapacityPerThread) {
-        return newRecycler(maxCapacityPerThread, 8, maxCapacityPerThread >> 1);
+    public enum OwnerType {
+        NONE,
+        PINNED,
+        FAST_THREAD_LOCAL,
     }
 
-    protected static Recycler<HandledObject> newRecycler(int maxCapacityPerThread, int ratio, int chunkSize) {
-        return new Recycler<HandledObject>(maxCapacityPerThread, ratio, chunkSize) {
+    public static Stream<Arguments> ownerTypeAndUnguarded() {
+        return Arrays.stream(OwnerType.values())
+                     .flatMap(owner -> Stream.of(true, false)
+                                             .map(unguarded -> Arguments.of(owner, unguarded)));
+    }
+
+    protected static Recycler<HandledObject> newRecycler(OwnerType ownerType, boolean unguarded,
+                                                         int maxCapacityPerThread) {
+        return newRecycler(ownerType, unguarded, maxCapacityPerThread, null);
+    }
+
+    protected static Recycler<HandledObject> newRecycler(OwnerType ownerType, boolean unguarded,
+                                                         int maxCapacityPerThread,
+                                                         Consumer<HandledObject> onNewObject) {
+        switch (ownerType) {
+        case NONE:
+            return new Recycler<HandledObject>(maxCapacityPerThread, unguarded) {
+                @Override
+                protected HandledObject newObject(Handle<HandledObject> handle) {
+                    HandledObject newObj = new HandledObject(handle);
+                    if (onNewObject != null) {
+                        onNewObject.accept(newObj);
+                    }
+                    return newObj;
+                }
+            };
+        case PINNED:
+            return new Recycler<HandledObject>(maxCapacityPerThread >> 1, maxCapacityPerThread, Thread.currentThread(),
+                                               unguarded) {
+                @Override
+                protected HandledObject newObject(
+                        Recycler.Handle<HandledObject> handle) {
+                    HandledObject newObj = new HandledObject(handle);
+                    if (onNewObject != null) {
+                        onNewObject.accept(newObj);
+                    }
+                    return newObj;
+                }
+            };
+        case FAST_THREAD_LOCAL:
+            return new Recycler<HandledObject>(maxCapacityPerThread >> 1, maxCapacityPerThread, unguarded) {
+                @Override
+                protected HandledObject newObject(Handle<HandledObject> handle) {
+                    HandledObject newObj = new HandledObject(handle);
+                    if (onNewObject != null) {
+                        onNewObject.accept(newObj);
+                    }
+                    return newObj;
+                }
+            };
+        default:
+            throw new Error();
+        }
+    }
+
+    protected static Recycler<HandledObject> newRecycler(boolean unguarded, int maxCapacityPerThread) {
+        return new Recycler<HandledObject>(maxCapacityPerThread >> 1, maxCapacityPerThread, unguarded) {
             @Override
             protected HandledObject newObject(
                     Recycler.Handle<HandledObject> handle) {
@@ -55,23 +122,63 @@ public class RecyclerTest {
         };
     }
 
+    protected static Recycler<HandledObject> newRecycler(int maxCapacityPerThread) {
+        return newRecycler(OwnerType.FAST_THREAD_LOCAL, false, maxCapacityPerThread, 8, maxCapacityPerThread >> 1);
+    }
+
+    protected static Recycler<HandledObject> newRecycler(OwnerType ownerType, boolean unguarded,
+                                                         int maxCapacityPerThread, int ratio, int chunkSize) {
+        // NOTE: ration and chunk size will be ignored for NONE owner type!
+        switch (ownerType) {
+        case NONE:
+            return new Recycler<HandledObject>(maxCapacityPerThread, unguarded) {
+                @Override
+                protected HandledObject newObject(Handle<HandledObject> handle) {
+                    return new HandledObject(handle);
+                }
+            };
+        case PINNED:
+            return new Recycler<HandledObject>(maxCapacityPerThread, ratio, chunkSize, Thread.currentThread(),
+                                               unguarded) {
+                @Override
+                protected HandledObject newObject(
+                        Recycler.Handle<HandledObject> handle) {
+                    return new HandledObject(handle);
+                }
+            };
+        case FAST_THREAD_LOCAL:
+            return new Recycler<HandledObject>(maxCapacityPerThread, ratio, chunkSize, unguarded) {
+                @Override
+                protected HandledObject newObject(
+                        Recycler.Handle<HandledObject> handle) {
+                    return new HandledObject(handle);
+                }
+            };
+        default:
+            throw new Error();
+        }
+    }
+
     @NotNull
     protected Thread newThread(Runnable runnable) {
         return new Thread(runnable);
     }
 
-    @Test
+    @ParameterizedTest
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
-    public void testThreadCanBeCollectedEvenIfHandledObjectIsReferenced() throws Exception {
-        final Recycler<HandledObject> recycler = newRecycler(1024);
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testThreadCanBeCollectedEvenIfHandledObjectIsReferenced(OwnerType ownerType, boolean unguarded)
+            throws Exception {
         final AtomicBoolean collected = new AtomicBoolean();
         final AtomicReference<HandledObject> reference = new AtomicReference<HandledObject>();
         Thread thread = new Thread(new Runnable() {
             @Override
             public void run() {
+                final Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 1024);
                 HandledObject object = recycler.get();
                 // Store a reference to the HandledObject to ensure it is not collected when the run method finish.
                 reference.set(object);
+                Recycler.unpinOwner(recycler);
             }
         }) {
             @Override
@@ -95,17 +202,22 @@ public class RecyclerTest {
         }
 
         // Now call recycle after the Thread was collected to ensure this still works...
-        reference.getAndSet(null).recycle();
+        if (reference.get() != null) {
+            reference.getAndSet(null).recycle();
+        }
     }
 
-    @Test
-    public void verySmallRecycer() {
-        newRecycler(2, 0, 1).get();
+    @ParameterizedTest
+    @MethodSource("ownerTypeAndUnguarded")
+    public void verySmallRecycer(OwnerType ownerType, boolean unguarded) {
+        newRecycler(ownerType, unguarded, 2, 0, 1).get();
     }
 
-    @Test
-    public void testMultipleRecycle() {
-        Recycler<HandledObject> recycler = newRecycler(1024);
+    @ParameterizedTest
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testMultipleRecycle(OwnerType ownerType, boolean unguarded) {
+        assumeFalse(unguarded);
+        Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 1024);
         final HandledObject object = recycler.get();
         object.recycle();
         assertThrows(IllegalStateException.class, new Executable() {
@@ -117,8 +229,19 @@ public class RecyclerTest {
     }
 
     @Test
-    public void testMultipleRecycleAtDifferentThread() throws InterruptedException {
-        Recycler<HandledObject> recycler = newRecycler(1024);
+    public void testUnguardedMultipleRecycle() {
+        Recycler<HandledObject> recycler = newRecycler(true, 1024);
+        final HandledObject object = recycler.get();
+        object.recycle();
+        object.recycle();
+    }
+
+    @ParameterizedTest
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testMultipleRecycleAtDifferentThread(OwnerType ownerType, boolean unguarded)
+            throws InterruptedException {
+        assumeFalse(unguarded, "This test makes only sense for guarded recyclers");
+        Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 1024);
         final HandledObject object = recycler.get();
         final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
         final Thread thread1 = newThread(new Runnable() {
@@ -149,9 +272,12 @@ public class RecyclerTest {
         assertNotNull(exception);
     }
 
-    @Test
-    public void testMultipleRecycleAtDifferentThreadRacing() throws InterruptedException {
-        Recycler<HandledObject> recycler = newRecycler(1024);
+    @ParameterizedTest
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testMultipleRecycleAtDifferentThreadRacing(OwnerType ownerType, boolean unguarded)
+            throws InterruptedException {
+        assumeFalse(unguarded, "This test makes only sense for guarded recyclers");
+        Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 1024);
         final HandledObject object = recycler.get();
         final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
 
@@ -206,9 +332,11 @@ public class RecyclerTest {
         }
     }
 
-    @Test
-    public void testMultipleRecycleRacing() throws InterruptedException {
-        Recycler<HandledObject> recycler = newRecycler(1024);
+    @ParameterizedTest
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testMultipleRecycleRacing(OwnerType ownerType, boolean unguarded) throws InterruptedException {
+        assumeFalse(unguarded, "This test makes only sense for guarded recyclers");
+        Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 1024);
         final HandledObject object = recycler.get();
         final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
 
@@ -251,9 +379,10 @@ public class RecyclerTest {
         }
     }
 
-    @Test
-    public void testRecycle() {
-        Recycler<HandledObject> recycler = newRecycler(1024);
+    @ParameterizedTest
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testRecycle(OwnerType ownerType, boolean unguarded) {
+        Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 1024);
         HandledObject object = recycler.get();
         object.recycle();
         HandledObject object2 = recycler.get();
@@ -261,9 +390,10 @@ public class RecyclerTest {
         object2.recycle();
     }
 
-    @Test
-    public void testRecycleDisable() {
-        Recycler<HandledObject> recycler = newRecycler(-1);
+    @ParameterizedTest
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testRecycleDisable(OwnerType ownerType, boolean unguarded) {
+        Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, -1);
         HandledObject object = recycler.get();
         object.recycle();
         HandledObject object2 = recycler.get();
@@ -271,9 +401,10 @@ public class RecyclerTest {
         object2.recycle();
     }
 
-    @Test
-    public void testRecycleDisableDrop() {
-        Recycler<HandledObject> recycler = newRecycler(1024, 0, 16);
+    @ParameterizedTest
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testRecycleDisableDrop(OwnerType ownerType, boolean unguarded) {
+        Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 1024, 0, 16);
         HandledObject object = recycler.get();
         object.recycle();
         HandledObject object2 = recycler.get();
@@ -288,17 +419,18 @@ public class RecyclerTest {
      * Test to make sure bug #2848 never happens again
      * https://github.com/netty/netty/issues/2848
      */
-    @Test
-    public void testMaxCapacity() {
-        testMaxCapacity(300);
+    @ParameterizedTest
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testMaxCapacity(OwnerType ownerType, boolean unguarded) {
+        testMaxCapacity(ownerType, unguarded, 300);
         Random rand = new Random();
         for (int i = 0; i < 50; i++) {
-            testMaxCapacity(rand.nextInt(1000) + 256); // 256 - 1256
+            testMaxCapacity(ownerType, unguarded, rand.nextInt(1000) + 256); // 256 - 1256
         }
     }
 
-    private static void testMaxCapacity(int maxCapacity) {
-        Recycler<HandledObject> recycler = newRecycler(maxCapacity);
+    private static void testMaxCapacity(OwnerType ownerType, boolean unguarded, int maxCapacity) {
+        Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, maxCapacity);
         HandledObject[] objects = new HandledObject[maxCapacity * 3];
         for (int i = 0; i < objects.length; i++) {
             objects[i] = recycler.get();
@@ -309,14 +441,16 @@ public class RecyclerTest {
             objects[i] = null;
         }
 
-        assertTrue(maxCapacity >= recycler.threadLocalSize(),
+        assertTrue(MathUtil.findNextPositivePowerOfTwo(maxCapacity) >= recycler.threadLocalSize(),
                 "The threadLocalSize (" + recycler.threadLocalSize() + ") must be <= maxCapacity ("
                 + maxCapacity + ") as we not pool all new handles internally");
     }
 
-    @Test
-    public void testRecycleAtDifferentThread() throws Exception {
-        final Recycler<HandledObject> recycler = newRecycler(256, 2, 16);
+    @ParameterizedTest
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testRecycleAtDifferentThread(OwnerType ownerType, boolean unguarded) throws Exception {
+        assumeThat(ownerType).isNotEqualTo(OwnerType.NONE);
+        final Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 256, 2, 16);
         final HandledObject o = recycler.get();
         final HandledObject o2 = recycler.get();
 
@@ -334,9 +468,10 @@ public class RecyclerTest {
         assertNotSame(recycler.get(), o2);
     }
 
-    @Test
-    public void testRecycleAtTwoThreadsMulti() throws Exception {
-        final Recycler<HandledObject> recycler = newRecycler(256);
+    @ParameterizedTest
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testRecycleAtTwoThreadsMulti(OwnerType ownerType, boolean unguarded) throws Exception {
+        final Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 256);
         final HandledObject o = recycler.get();
 
         ExecutorService single = Executors.newSingleThreadExecutor(new ThreadFactory() {
@@ -376,10 +511,12 @@ public class RecyclerTest {
         single.shutdown();
     }
 
-    @Test
-    public void testMaxCapacityWithRecycleAtDifferentThread() throws Exception {
+    @ParameterizedTest
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testMaxCapacityWithRecycleAtDifferentThread(OwnerType ownerType, boolean unguarded) throws Exception {
+        assumeThat(ownerType).isNotEqualTo(OwnerType.NONE);
         final int maxCapacity = 4;
-        final Recycler<HandledObject> recycler = newRecycler(maxCapacity, 4, 4);
+        final Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, maxCapacity, 4, 4);
 
         // Borrow 2 * maxCapacity objects.
         // Return the half from the same thread.
@@ -414,18 +551,16 @@ public class RecyclerTest {
         assertEquals(0, recycler.threadLocalSize());
     }
 
-    @Test
-    public void testDiscardingExceedingElementsWithRecycleAtDifferentThread() throws Exception {
+    @ParameterizedTest
+    @MethodSource("ownerTypeAndUnguarded")
+    public void testDiscardingExceedingElementsWithRecycleAtDifferentThread(OwnerType ownerType, boolean unguarded)
+            throws Exception {
+        assumeThat(ownerType).isNotEqualTo(OwnerType.NONE);
         final int maxCapacity = 32;
         final AtomicInteger instancesCount = new AtomicInteger(0);
 
-        final Recycler<HandledObject> recycler = new Recycler<HandledObject>(maxCapacity) {
-            @Override
-            protected HandledObject newObject(Recycler.Handle<HandledObject> handle) {
-                instancesCount.incrementAndGet();
-                return new HandledObject(handle);
-            }
-        };
+        final Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, maxCapacity, ignore ->
+                instancesCount.incrementAndGet());
 
         // Borrow 2 * maxCapacity objects.
         final HandledObject[] array = new HandledObject[maxCapacity * 2];
