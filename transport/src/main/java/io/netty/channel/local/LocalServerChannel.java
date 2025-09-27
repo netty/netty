@@ -112,7 +112,7 @@ public class LocalServerChannel extends AbstractServerChannel {
             });
         } else {
             try {
-                ((LocalServerUnsafe) unsafe()).registerNow();
+                ((LocalServerUnsafe) unsafe()).registered();
             } catch (Throwable cause) {
                 promise.setFailure(cause);
                 return;
@@ -149,7 +149,7 @@ public class LocalServerChannel extends AbstractServerChannel {
                 registration.cancel();
             }
         } else {
-            ((LocalServerUnsafe) unsafe()).deregisterNow();
+            ((LocalServerUnsafe) unsafe()).unregistered();
         }
     }
 
@@ -237,12 +237,12 @@ public class LocalServerChannel extends AbstractServerChannel {
         }
 
         @Override
-        public void registerNow() {
+        public void registered() {
             ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
         }
 
         @Override
-        public void deregisterNow() {
+        public void unregistered() {
             ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
         }
 

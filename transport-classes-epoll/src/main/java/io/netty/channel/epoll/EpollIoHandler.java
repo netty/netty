@@ -296,6 +296,7 @@ public class EpollIoHandler implements IoHandler {
                         logger.debug("Unable to remove fd {} from epoll {}", fd, epollFd.intValue());
                     }
                 }
+                handle.unregistered();
             }
         }
 
@@ -333,6 +334,7 @@ public class EpollIoHandler implements IoHandler {
         if (epollHandle instanceof AbstractEpollChannel.AbstractEpollUnsafe) {
             numChannels++;
         }
+        handle.registered();
         return registration;
     }
 

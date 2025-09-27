@@ -309,6 +309,7 @@ public final class KQueueIoHandler implements IoHandler {
             if (removed.isHandleForChannel()) {
                 numChannels--;
             }
+            removed.handle.unregistered();
         }
     }
 
@@ -394,10 +395,10 @@ public final class KQueueIoHandler implements IoHandler {
             registrations.put(old.id, old);
             throw new IllegalStateException();
         }
-
         if (registration.isHandleForChannel()) {
             numChannels++;
         }
+        handle.registered();
         return registration;
     }
 

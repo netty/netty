@@ -349,6 +349,9 @@ public final class NioIoHandler implements IoHandler {
 
         @Override
         public long submit(IoOps ops) {
+            if (!isValid()) {
+                return -1;
+            }
             int v = cast(ops).value;
             key.interestOps(v);
             return v;
@@ -365,6 +368,7 @@ public final class NioIoHandler implements IoHandler {
                 cancelledKeys = 0;
                 needsToSelectAgain = true;
             }
+            handle.unregistered();
             return true;
         }
 
@@ -378,6 +382,9 @@ public final class NioIoHandler implements IoHandler {
         }
 
         void handle(int ready) {
+            if (!isValid()) {
+                return;
+            }
             handle.handle(this, NioIoOps.eventOf(ready));
         }
     }
@@ -390,7 +397,9 @@ public final class NioIoHandler implements IoHandler {
         boolean selected = false;
         for (;;) {
             try {
-                return new DefaultNioRegistration(executor, nioHandle, ops, unwrappedSelector());
+                IoRegistration registration = new DefaultNioRegistration(executor, nioHandle, ops, unwrappedSelector());
+                handle.registered();
+                return registration;
             } catch (CancelledKeyException e) {
                 if (!selected) {
                     // Force the Selector to select now as the "canceled" SelectionKey may still be
