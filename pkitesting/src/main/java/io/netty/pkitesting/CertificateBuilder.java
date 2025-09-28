@@ -48,6 +48,7 @@ import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.cert.CertificateFactory;
@@ -120,6 +121,7 @@ public final class CertificateBuilder {
     };
     private static final String UNSUPPORTED_SIGN = "UNSUPPORTED_SIGN";
 
+    Provider provider;
     SecureRandom random;
     Algorithm algorithm = Algorithm.ecp256;
     Instant notBefore = Instant.now().minus(1, ChronoUnit.DAYS);
@@ -165,6 +167,16 @@ public final class CertificateBuilder {
         copy.keyUsage = keyUsage;
         copy.extendedKeyUsage = new TreeSet<>(extendedKeyUsage);
         return copy;
+    }
+
+    /**
+     * Set the {@link Provider} instance to use when generating keys.
+     * @param provider The provider instance to use.
+     * @return This certificate builder.
+     */
+    public CertificateBuilder provider(Provider provider) {
+        this.provider = requireNonNull(provider);
+        return this;
     }
 
     /**
@@ -665,7 +677,7 @@ public final class CertificateBuilder {
             throw new IllegalStateException("Cannot create a self-signed certificate with a " +
                     "key algorithm that does not support signing: " + algorithm);
         }
-        KeyPair keyPair = generateKeyPair();
+        KeyPair keyPair = generateKeyPair(provider);
 
         V3TBSCertificateGenerator generator = createCertBuilder(subject, subject, keyPair, algorithm.signatureType);
 
@@ -673,7 +685,7 @@ public final class CertificateBuilder {
 
         Signed signed = new Signed(tbsCertToBytes(generator), algorithm.signatureType, keyPair.getPrivate());
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
-        X509Certificate cert = (X509Certificate) factory.generateCertificate(signed.toInputStream());
+        X509Certificate cert = (X509Certificate) factory.generateCertificate(signed.toInputStream(provider));
         return X509Bundle.fromRootCertificateAuthority(cert, keyPair);
     }
 
@@ -697,7 +709,7 @@ public final class CertificateBuilder {
     public X509Bundle buildIssuedBy(X509Bundle issuerBundle, String signAlg) throws Exception {
         final KeyPair keyPair;
         if (publicKey == null) {
-            keyPair = generateKeyPair();
+            keyPair = generateKeyPair(provider);
         } else {
             keyPair = new KeyPair(publicKey, null);
         }
@@ -714,7 +726,7 @@ public final class CertificateBuilder {
         }
         Signed signed = new Signed(tbsCertToBytes(generator), signAlg, issuerPrivateKey);
         CertificateFactory factory = CertificateFactory.getInstance("X.509");
-        X509Certificate cert = (X509Certificate) factory.generateCertificate(signed.toInputStream());
+        X509Certificate cert = (X509Certificate) factory.generateCertificate(signed.toInputStream(provider));
         X509Certificate[] issuerPath = issuerBundle.getCertificatePath();
         X509Certificate[] path = new X509Certificate[issuerPath.length + 1];
         path[0] = cert;
@@ -777,8 +789,8 @@ public final class CertificateBuilder {
         throw new IllegalArgumentException("Don't know what signature algorithm is best for " + key);
     }
 
-    private KeyPair generateKeyPair() throws GeneralSecurityException {
-        return algorithm.generateKeyPair(getSecureRandom());
+    private KeyPair generateKeyPair(Provider provider) throws GeneralSecurityException {
+        return algorithm.generateKeyPair(getSecureRandom(), provider);
     }
 
     private V3TBSCertificateGenerator createCertBuilder(
@@ -1015,13 +1027,26 @@ public final class CertificateBuilder {
          */
         public KeyPair generateKeyPair(SecureRandom secureRandom)
                 throws GeneralSecurityException {
+            return generateKeyPair(secureRandom, null);
+        }
+
+        /**
+         * Generate a new {@link KeyPair} using this algorithm, and the given {@link SecureRandom} generator.
+         * @param secureRandom The {@link SecureRandom} generator to use, not {@code null}.
+         * @param provider The {@link Provider} to use, when {@code null}, the default will be used.
+         * @return The generated {@link KeyPair}.
+         * @throws GeneralSecurityException if the key pair cannot be generated using this algorithm for some reason.
+         * @throws UnsupportedOperationException if this algorithm is not support in the current JVM.
+         */
+        public KeyPair generateKeyPair(SecureRandom secureRandom, Provider provider)
+                throws GeneralSecurityException {
             requireNonNull(secureRandom, "secureRandom");
 
             if (parameterSpec == UNSUPPORTED_SPEC) {
                 throw new UnsupportedOperationException("This algorithm is not supported: " + this);
             }
 
-            KeyPairGenerator keyGen = Algorithms.keyPairGenerator(keyType, parameterSpec, secureRandom);
+            KeyPairGenerator keyGen = Algorithms.keyPairGenerator(keyType, parameterSpec, secureRandom, provider);
             return keyGen.generateKeyPair();
         }
 

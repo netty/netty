@@ -29,6 +29,7 @@ import java.io.UncheckedIOException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
+import java.security.Provider;
 import java.security.Signature;
 import java.security.SignatureException;
 import java.util.Objects;
@@ -48,8 +49,8 @@ final class Signed {
         this.privateKey = privateKey;
     }
 
-    byte[] getEncoded() throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
-        Signature signature = Algorithms.signature(algorithmIdentifier);
+    byte[] getEncoded(Provider provider) throws NoSuchAlgorithmException, InvalidKeyException, SignatureException {
+        Signature signature = Algorithms.signature(algorithmIdentifier, provider);
         signature.initSign(privateKey);
         signature.update(toBeSigned);
         byte[] signatureBytes = signature.sign();
@@ -65,7 +66,8 @@ final class Signed {
         }
     }
 
-    InputStream toInputStream() throws NoSuchAlgorithmException, SignatureException, InvalidKeyException {
-        return new ByteArrayInputStream(getEncoded());
+    InputStream toInputStream(Provider provider)
+            throws NoSuchAlgorithmException, SignatureException, InvalidKeyException {
+        return new ByteArrayInputStream(getEncoded(provider));
     }
 }

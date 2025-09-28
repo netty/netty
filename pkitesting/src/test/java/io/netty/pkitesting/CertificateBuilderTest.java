@@ -18,7 +18,8 @@ package io.netty.pkitesting;
 import io.netty.pkitesting.CertificateBuilder.Algorithm;
 import io.netty.pkitesting.CertificateBuilder.KeyUsage;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.jupiter.api.Disabled;
+
+import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
@@ -27,6 +28,7 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import java.math.BigInteger;
 import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.cert.CertPathBuilder;
@@ -93,7 +95,18 @@ class CertificateBuilderTest {
         assumeTrue(algorithm != Algorithm.rsa4096 && algorithm != Algorithm.rsa8192);
         assumeTrue(algorithm.isSupported());
 
-        KeyPair keyPair = algorithm.generateKeyPair(RNG);
+        KeyPair keyPair = algorithm.generateKeyPair(RNG, null);
+        assertNotNull(keyPair);
+        assertNotNull(keyPair.getPrivate());
+        assertNotNull(keyPair.getPublic());
+    }
+
+    @ParameterizedTest
+    @EnumSource(names = {"ecp256", "ecp384", "rsa2048", "rsa3072"})
+    void createKeyPairWithProvider(Algorithm algorithm) throws Exception {
+        assumeTrue(algorithm.isSupported());
+
+        KeyPair keyPair = algorithm.generateKeyPair(RNG, new BouncyCastleJsseProvider());
         assertNotNull(keyPair);
         assertNotNull(keyPair.getPrivate());
         assertNotNull(keyPair.getPublic());
@@ -133,6 +146,28 @@ class CertificateBuilderTest {
             mlDsaBuilder.buildIssuedBy(mlKemBundle);
         });
         assertThat(e).hasMessageContaining("cannot be used for signing");
+    }
+
+    @ParameterizedTest
+    @EnabledForJreRange(
+            max = JRE.JAVA_11,
+            disabledReason = "EdXxx are supported in recent Java version")
+    @EnumSource(names = {"ed25519", "ed448"})
+    void createEdCertsWithProvider(Algorithm algorithm) throws Exception {
+        CertificateBuilder builder = BASE.copy()
+                .algorithm(algorithm)
+                .provider(new BouncyCastleJsseProvider());
+
+        CertificateBuilder mlDsaBuilder = BASE.copy()
+                .algorithm(Algorithm.rsa2048);
+        X509Bundle issuer = mlDsaBuilder
+                .subject("CN=issuer.netty.io, O=Netty")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+
+        // edXxx are not supported by BouncyCastleJsseProvider
+        assertThrows(NoSuchAlgorithmException.class,
+            () -> builder.buildIssuedBy(issuer));
     }
 
     @Test
@@ -216,7 +251,7 @@ class CertificateBuilderTest {
         assertThat(leaf.getCertificate().getIssuerX500Principal()).isEqualTo(
                 new X500Principal(SUBJECT));
 
-        Signature signature = Algorithms.signature(leaf.getCertificate().getSigAlgName());
+        Signature signature = Algorithms.signature(leaf.getCertificate().getSigAlgName(), null);
         signature.initVerify(root.getCertificate());
         signature.update(leaf.getCertificate().getTBSCertificate());
         assertTrue(signature.verify(leaf.getCertificate().getSignature()));
@@ -238,7 +273,7 @@ class CertificateBuilderTest {
         assertThat(leaf.getCertificate().getIssuerX500Principal()).isEqualTo(
                 new X500Principal(SUBJECT));
 
-        Signature signature = Algorithms.signature(leaf.getCertificate().getSigAlgName());
+        Signature signature = Algorithms.signature(leaf.getCertificate().getSigAlgName(), null);
         signature.initVerify(root.getCertificate());
         signature.update(leaf.getCertificate().getTBSCertificate());
         assertTrue(signature.verify(leaf.getCertificate().getSignature()));
@@ -375,7 +410,7 @@ class CertificateBuilderTest {
                 .setIsCertificateAuthority(true)
                 .setKeyUsage(true, KeyUsage.digitalSignature, KeyUsage.keyCertSign, KeyUsage.cRLSign)
                 .buildSelfSigned();
-        KeyPair keyPair = Algorithm.ecp256.generateKeyPair(new SecureRandom());
+        KeyPair keyPair = Algorithm.ecp256.generateKeyPair(new SecureRandom(), null);
         X509Bundle bundle = BASE.copy()
                 .subject("CN=leaf.netty.io")
                 .publicKey(keyPair.getPublic())
