@@ -175,7 +175,7 @@ public final class CertificateBuilder {
      * @return This certificate builder.
      */
     public CertificateBuilder provider(Provider provider) {
-        this.provider = requireNonNull(provider);
+        this.provider = provider;
         return this;
     }
 

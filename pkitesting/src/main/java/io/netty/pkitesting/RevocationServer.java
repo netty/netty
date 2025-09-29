@@ -22,6 +22,7 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.URI;
+import java.security.Provider;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
 import java.util.Collections;
@@ -120,10 +121,20 @@ public final class RevocationServer {
      * @param issuer The issuer to register.
      */
     public void register(X509Bundle issuer) {
+        register(issuer, null);
+    }
+
+    /**
+     * Register an issuer with the revocation server.
+     * This must be done before CRLs can be served for that issuer, and before any of its certificates can be revoked.
+     * @param issuer The issuer to register.
+     * @param provider The {@code Provider} to use (or {@code null} to fallback to default)
+     */
+    public void register(X509Bundle issuer, Provider provider) {
         issuers.computeIfAbsent(issuer.getCertificate(), bundle -> {
             String path = "/crl/" + issuerCounter.incrementAndGet() + ".crl";
             URI uri = URI.create(crlBaseAddress + path);
-            CrlInfo info = new CrlInfo(issuer, uri);
+            CrlInfo info = new CrlInfo(issuer, uri, provider);
             paths.put(path, info);
             return info;
         });
@@ -169,7 +180,7 @@ public final class RevocationServer {
         CertificateList list = new CertificateList(issuer, now, now, certs.entrySet());
         try {
             Signed signed = new Signed(list.getEncoded(), issuer);
-            return signed.getEncoded(null);
+            return signed.getEncoded(info.provider);
         } catch (Exception e) {
             throw new IllegalStateException("Failed to sign CRL", e);
         }
@@ -179,10 +190,12 @@ public final class RevocationServer {
         private final X509Bundle issuer;
         private final URI uri;
         private final Map<BigInteger, Instant> revokedCerts;
+        private final Provider provider;
 
-        CrlInfo(X509Bundle issuer, URI uri) {
+        CrlInfo(X509Bundle issuer, URI uri, Provider provider) {
             this.issuer = issuer;
             this.uri = uri;
+            this.provider = provider;
             revokedCerts = new ConcurrentHashMap<>();
         }
     }

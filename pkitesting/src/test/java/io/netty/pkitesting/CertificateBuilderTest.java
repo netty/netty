@@ -25,10 +25,12 @@ import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigInteger;
 import java.security.KeyPair;
 import java.security.NoSuchAlgorithmException;
+import java.security.Provider;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.cert.CertPathBuilder;
@@ -361,14 +363,15 @@ class CertificateBuilderTest {
         assertThat(NOW.plus(1, DAYS).truncatedTo(SECONDS).toEpochMilli()).isEqualTo(cert.getNotAfter().getTime());
     }
 
-    @Test
-    void validCertificatesWithCrlMustPassValidation() throws Exception {
+    @ParameterizedTest
+    @MethodSource("providers")
+    void validCertificatesWithCrlMustPassValidation(Provider provider) throws Exception {
         X509Bundle root = BASE.copy()
                 .setIsCertificateAuthority(true)
                 .setKeyUsage(true, KeyUsage.digitalSignature, KeyUsage.keyCertSign, KeyUsage.cRLSign)
                 .buildSelfSigned();
         RevocationServer server = RevocationServer.getInstance();
-        server.register(root);
+        server.register(root, provider);
         X509Bundle cert = BASE.copy()
                 .subject("CN=leaf.netty.io")
                 .addCrlDistributionPoint(server.getCrlUri(root))
@@ -381,14 +384,15 @@ class CertificateBuilderTest {
         tm.checkClientTrusted(cert.getCertificatePath(), "EC");
     }
 
-    @Test
-    void revokedCertificatesWithCrlMustFailValidation() throws Exception {
+    @ParameterizedTest
+    @MethodSource("providers")
+    void revokedCertificatesWithCrlMustFailValidation(Provider provider) throws Exception {
         X509Bundle root = BASE.copy()
                 .setIsCertificateAuthority(true)
                 .setKeyUsage(true, KeyUsage.digitalSignature, KeyUsage.keyCertSign, KeyUsage.cRLSign)
                 .buildSelfSigned();
         RevocationServer server = RevocationServer.getInstance();
-        server.register(root);
+        server.register(root, provider);
         X509Bundle cert = BASE.copy()
                 .subject("CN=leaf.netty.io")
                 .addCrlDistributionPoint(server.getCrlUri(root))
@@ -433,5 +437,12 @@ class CertificateBuilderTest {
 
         tmf.init(new CertPathTrustManagerParameters(params));
         return (X509TrustManager) tmf.getTrustManagers()[0];
+    }
+
+    private static Provider[] providers() {
+        return new Provider[] {
+            null /* default */,
+            new BouncyCastleJsseProvider()
+        };
     }
 }
