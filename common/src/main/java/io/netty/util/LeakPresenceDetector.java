@@ -288,7 +288,7 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
                     msg.append("Resource count was negative: A resource previously reported as a leak was released " +
                             "after all. Please ensure that that resource is released before its test finishes.");
                     throw new IllegalStateException(msg.toString());
-                } 
+                }
                 if (TRACK_CREATION_STACK) {
                     msg.append("Creation stack traces:");
                     IllegalStateException ise = new IllegalStateException(msg.toString());
