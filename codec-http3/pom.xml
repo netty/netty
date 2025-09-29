@@ -59,7 +59,6 @@
           <groupId>${project.groupId}</groupId>
           <artifactId>netty-codec-native-quic</artifactId>
           <version>${project.version}</version>
-          <type>test-jar</type>
           <classifier>linux-x86_64</classifier>
           <scope>runtime</scope>
         </dependency>
@@ -190,7 +189,6 @@
       <groupId>${project.groupId}</groupId>
       <artifactId>netty-testsuite-common</artifactId>
       <version>${project.version}</version>
-      <type>test-jar</type>
       <scope>test</scope>
     </dependency>
   </dependencies>
