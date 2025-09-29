@@ -166,6 +166,7 @@ public final class CertificateBuilder {
         copy.publicKey = publicKey;
         copy.keyUsage = keyUsage;
         copy.extendedKeyUsage = new TreeSet<>(extendedKeyUsage);
+        copy.provider = provider;
         return copy;
     }
 
