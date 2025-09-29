@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * Shared API for various decompression algorithms. A decompressor reports its current status using {@link #status()}.
@@ -51,7 +52,7 @@ public interface Decompressor extends AutoCloseable {
      * Take a decompressed buffer from this decompressor. Only permitted for {@link Status#NEED_OUTPUT}. Buffer
      * ownership transfers to the caller.
      *
-     * @return The decompressed buffer. May be empty
+     * @return The decompressed buffer. May be empty.
      */
     ByteBuf takeOutput() throws DecompressionException;
 
@@ -83,7 +84,7 @@ public interface Decompressor extends AutoCloseable {
         protected final ByteBufAllocator allocator;
 
         protected AbstractDecompressorBuilder(ByteBufAllocator allocator) {
-            this.allocator = allocator;
+            this.allocator = ObjectUtil.checkNotNull(allocator, "allocator");
         }
 
         public abstract Decompressor build() throws DecompressionException;
