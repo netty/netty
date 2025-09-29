@@ -20,7 +20,6 @@ import io.netty.util.internal.ObjectUtil;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -111,6 +110,15 @@ public final class IoUringIoHandlerConfig {
     private Set<IoUringBufferRingConfig> bufferRingConfigs;
     private boolean singleIssuer = true;
 
+    public IoUringIoHandlerConfig() { }
+
+    private IoUringIoHandlerConfig(IoUringIoHandlerConfig config) {
+        this.ringSize = config.ringSize;
+        this.cqSize = config.cqSize;
+        this.maxBoundedWorker = config.maxBoundedWorker;
+        this.maxUnboundedWorker = config.maxUnboundedWorker;
+        this.bufferRingConfigs = new HashSet<>(config.bufferRingConfigs);
+    }
     /**
      * Return the ring size of the io_uring instance.
      * @return the ring size of the io_uring instance.
@@ -165,7 +173,7 @@ public final class IoUringIoHandlerConfig {
         return this;
     }
 
-    int checkCqSize(int cqSize) {
+    private int checkCqSize(int cqSize) {
         if (cqSize < ringSize) {
             throw new IllegalArgumentException("cqSize must be greater than or equal to ringSize");
         }
@@ -255,5 +263,25 @@ public final class IoUringIoHandlerConfig {
 
     boolean singleIssuer() {
         return singleIssuer;
+    }
+
+    IoUringIoHandlerConfig verifyAndClone() {
+        // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
+        IoUring.ensureAvailability();
+
+        if (needSetupCqeSize()) {
+            if (!IoUring.isSetupCqeSizeSupported()) {
+                throw new UnsupportedOperationException("IORING_SETUP_CQSIZE is not supported");
+            }
+            checkCqSize(getCqSize());
+        }
+
+        Set<IoUringBufferRingConfig> bufferRingConfigs = getInternBufferRingConfigs();
+        if (bufferRingConfigs != null && !bufferRingConfigs.isEmpty() && !IoUring.isRegisterBufferRingSupported()) {
+            // Close ringBuffer before throwing to ensure we release all memory on failure.
+            throw new UnsupportedOperationException("IORING_REGISTER_PBUF_RING is not supported");
+        }
+
+        return new IoUringIoHandlerConfig(this);
     }
 }
