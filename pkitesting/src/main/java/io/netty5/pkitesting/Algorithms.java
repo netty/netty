@@ -59,15 +59,16 @@ final class Algorithms {
         }
     }
 
-    static KeyPairGenerator keyPairGenerator(String keyType, AlgorithmParameterSpec spec, SecureRandom rng)
-            throws GeneralSecurityException {
+    static KeyPairGenerator keyPairGenerator(String keyType, AlgorithmParameterSpec spec,
+            SecureRandom rng, Provider provider) throws GeneralSecurityException {
         try {
             KeyPairGenerator keyGen = KeyPairGenerator.getInstance(keyType);
             keyGen.initialize(spec, rng);
             return keyGen;
         } catch (GeneralSecurityException e) {
             try {
-                KeyPairGenerator keyGen = KeyPairGenerator.getInstance(keyType, bouncyCastle());
+                KeyPairGenerator keyGen = KeyPairGenerator.getInstance(keyType,
+                    provider != null ? provider : bouncyCastle());
                 keyGen.initialize(spec, rng);
                 return keyGen;
             } catch (GeneralSecurityException ex) {
@@ -77,12 +78,12 @@ final class Algorithms {
         }
     }
 
-    static Signature signature(String algorithmIdentifier) throws NoSuchAlgorithmException {
+    static Signature signature(String algorithmIdentifier, Provider provider) throws NoSuchAlgorithmException {
         try {
             return Signature.getInstance(algorithmIdentifier);
         } catch (NoSuchAlgorithmException e) {
             try {
-                return Signature.getInstance(algorithmIdentifier, bouncyCastle());
+                return Signature.getInstance(algorithmIdentifier, provider != null ? provider : bouncyCastle());
             } catch (NoSuchAlgorithmException ex) {
                 e.addSuppressed(ex);
             }
