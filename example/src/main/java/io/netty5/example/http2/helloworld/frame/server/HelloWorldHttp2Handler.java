@@ -31,9 +31,7 @@ import java.nio.charset.StandardCharsets;
 import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
 
 /**
- * A simple handler that responds with the message "Hello World!".
- *
- * <p>This example is making use of the "frame codec" http2 API. This API is very experimental and incomplete.
+ * A simple handler that responds with the message "Hello World!" using "frame codec" http2 API.
  */
 public class HelloWorldHttp2Handler implements ChannelHandler {
 
