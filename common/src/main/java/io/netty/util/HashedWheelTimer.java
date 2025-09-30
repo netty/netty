@@ -777,6 +777,9 @@ public class HashedWheelTimer implements Timer {
             }
         }
 
+        /**
+         * Add {@link HashedWheelTimeout} to the head of this bucket.
+         */
         public void addTimeoutFirst(HashedWheelTimeout timeout) {
             assert timeout.bucket == null;
             timeout.bucket = this;
