@@ -278,7 +278,6 @@ public final class IoUringIoHandlerConfig {
 
         Set<IoUringBufferRingConfig> bufferRingConfigs = getInternBufferRingConfigs();
         if (bufferRingConfigs != null && !bufferRingConfigs.isEmpty() && !IoUring.isRegisterBufferRingSupported()) {
-            // Close ringBuffer before throwing to ensure we release all memory on failure.
             throw new UnsupportedOperationException("IORING_REGISTER_PBUF_RING is not supported");
         }
 
