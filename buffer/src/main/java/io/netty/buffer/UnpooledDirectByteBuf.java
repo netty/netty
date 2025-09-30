@@ -767,7 +767,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         checkIndex(index, length);
-        return ((ByteBuffer) buffer.duplicate().position(index).limit(index + length)).slice();
+        return PlatformDependent.offsetSlice(buffer, index, length);
     }
 
     @Override
