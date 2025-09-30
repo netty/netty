@@ -118,6 +118,7 @@ public final class IoUringIoHandlerConfig {
         this.maxBoundedWorker = config.maxBoundedWorker;
         this.maxUnboundedWorker = config.maxUnboundedWorker;
         this.bufferRingConfigs = config.bufferRingConfigs == null ? null : new HashSet<>(config.bufferRingConfigs);
+        this.singleIssuer = config.singleIssuer;
     }
     /**
      * Return the ring size of the io_uring instance.
