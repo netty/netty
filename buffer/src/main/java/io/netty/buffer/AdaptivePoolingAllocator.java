@@ -1735,7 +1735,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         public int setBytes(int index, ScatteringByteChannel in, int length)
                 throws IOException {
             try {
-                return in.read(internalNioBuffer(index, length).duplicate());
+                return in.read(internalNioBuffer(index, length));
             } catch (ClosedChannelException ignored) {
                 return -1;
             }
@@ -1745,7 +1745,7 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
         public int setBytes(int index, FileChannel in, long position, int length)
                 throws IOException {
             try {
-                return in.read(internalNioBuffer(index, length).duplicate(), position);
+                return in.read(internalNioBuffer(index, length), position);
             } catch (ClosedChannelException ignored) {
                 return -1;
             }
