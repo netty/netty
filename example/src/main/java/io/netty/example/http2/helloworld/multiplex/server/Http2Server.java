@@ -40,9 +40,6 @@ import io.netty.handler.ssl.util.SelfSignedCertificate;
 /**
  * An HTTP/2 Server that responds to requests with a Hello World. Once started, you can test the
  * server with the example client.
- *
- * <p>This example is making use of the "multiplexing" http2 API, where streams are mapped to child
- * Channels. This API is very experimental and incomplete.
  */
 public final class Http2Server {
 
