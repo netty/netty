@@ -30,9 +30,6 @@ import static io.netty5.handler.codec.http.HttpResponseStatus.OK;
 
 /**
  * A simple handler that responds with the message "Hello World!".
- *
- * <p>This example is making use of the "multiplexing" http2 API, where streams are mapped to child
- * Channels. This API is very experimental and incomplete.
  */
 public class HelloWorldHttp2Handler implements ChannelHandler {
 
