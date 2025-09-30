@@ -15,19 +15,13 @@
  */
 package io.netty.util;
 
-import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -39,6 +33,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.StringUtil.simpleClassName;
 
 /**
@@ -540,7 +536,11 @@ public class HashedWheelTimer implements Timer {
                 int stopIndex = (int) (ticks & mask);
 
                 HashedWheelBucket bucket = wheel[stopIndex];
-                bucket.addTimeout(timeout);
+                if (calculated < tick) {
+                    bucket.addTimeoutFirst(timeout);
+                } else {
+                    bucket.addTimeout(timeout);
+                }
             }
         }
 
@@ -774,6 +774,18 @@ public class HashedWheelTimer implements Timer {
                 tail.next = timeout;
                 timeout.prev = tail;
                 tail = timeout;
+            }
+        }
+
+        public void addTimeoutFirst(HashedWheelTimeout timeout) {
+            assert timeout.bucket == null;
+            timeout.bucket = this;
+            if (head == null) {
+                head = tail = timeout;
+            } else {
+                head.prev = timeout;
+                timeout.next = head;
+                head = timeout;
             }
         }
 
