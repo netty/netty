@@ -1056,6 +1056,14 @@ public final class PlatformDependent {
         return Pow2.align(value, alignment);
     }
 
+    public static ByteBuffer offsetSlice(ByteBuffer buffer, int index, int length) {
+        if (PlatformDependent0.hasOffsetSliceMethod()) {
+            return PlatformDependent0.offsetSlice(buffer, index, length);
+        } else {
+            return ((ByteBuffer) buffer.duplicate().clear().position(index).limit(index + length)).slice();
+        }
+    }
+
     private static void incrementMemoryCounter(int capacity) {
         if (DIRECT_MEMORY_COUNTER != null) {
             long newUsedMemory = DIRECT_MEMORY_COUNTER.addAndGet(capacity);

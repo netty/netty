@@ -18,15 +18,19 @@ package io.netty.pkitesting;
 import io.netty.pkitesting.CertificateBuilder.Algorithm;
 import io.netty.pkitesting.CertificateBuilder.KeyUsage;
 import io.netty.util.internal.PlatformDependent;
-import org.junit.jupiter.api.Disabled;
+
+import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
 import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import java.math.BigInteger;
 import java.security.KeyPair;
+import java.security.NoSuchAlgorithmException;
+import java.security.Provider;
 import java.security.SecureRandom;
 import java.security.Signature;
 import java.security.cert.CertPathBuilder;
@@ -93,7 +97,18 @@ class CertificateBuilderTest {
         assumeTrue(algorithm != Algorithm.rsa4096 && algorithm != Algorithm.rsa8192);
         assumeTrue(algorithm.isSupported());
 
-        KeyPair keyPair = algorithm.generateKeyPair(RNG);
+        KeyPair keyPair = algorithm.generateKeyPair(RNG, null);
+        assertNotNull(keyPair);
+        assertNotNull(keyPair.getPrivate());
+        assertNotNull(keyPair.getPublic());
+    }
+
+    @ParameterizedTest
+    @EnumSource(names = {"ecp256", "ecp384", "rsa2048", "rsa3072"})
+    void createKeyPairWithProvider(Algorithm algorithm) throws Exception {
+        assumeTrue(algorithm.isSupported());
+
+        KeyPair keyPair = algorithm.generateKeyPair(RNG, new BouncyCastleJsseProvider());
         assertNotNull(keyPair);
         assertNotNull(keyPair.getPrivate());
         assertNotNull(keyPair.getPublic());
@@ -133,6 +148,28 @@ class CertificateBuilderTest {
             mlDsaBuilder.buildIssuedBy(mlKemBundle);
         });
         assertThat(e).hasMessageContaining("cannot be used for signing");
+    }
+
+    @ParameterizedTest
+    @EnabledForJreRange(
+            max = JRE.JAVA_11,
+            disabledReason = "EdXxx are supported in recent Java version")
+    @EnumSource(names = {"ed25519", "ed448"})
+    void createEdCertsWithProvider(Algorithm algorithm) throws Exception {
+        CertificateBuilder builder = BASE.copy()
+                .algorithm(algorithm)
+                .provider(new BouncyCastleJsseProvider());
+
+        CertificateBuilder mlDsaBuilder = BASE.copy()
+                .algorithm(Algorithm.rsa2048);
+        X509Bundle issuer = mlDsaBuilder
+                .subject("CN=issuer.netty.io, O=Netty")
+                .setIsCertificateAuthority(true)
+                .buildSelfSigned();
+
+        // edXxx are not supported by BouncyCastleJsseProvider
+        assertThrows(NoSuchAlgorithmException.class,
+            () -> builder.buildIssuedBy(issuer));
     }
 
     @Test
@@ -216,7 +253,7 @@ class CertificateBuilderTest {
         assertThat(leaf.getCertificate().getIssuerX500Principal()).isEqualTo(
                 new X500Principal(SUBJECT));
 
-        Signature signature = Algorithms.signature(leaf.getCertificate().getSigAlgName());
+        Signature signature = Algorithms.signature(leaf.getCertificate().getSigAlgName(), null);
         signature.initVerify(root.getCertificate());
         signature.update(leaf.getCertificate().getTBSCertificate());
         assertTrue(signature.verify(leaf.getCertificate().getSignature()));
@@ -238,7 +275,7 @@ class CertificateBuilderTest {
         assertThat(leaf.getCertificate().getIssuerX500Principal()).isEqualTo(
                 new X500Principal(SUBJECT));
 
-        Signature signature = Algorithms.signature(leaf.getCertificate().getSigAlgName());
+        Signature signature = Algorithms.signature(leaf.getCertificate().getSigAlgName(), null);
         signature.initVerify(root.getCertificate());
         signature.update(leaf.getCertificate().getTBSCertificate());
         assertTrue(signature.verify(leaf.getCertificate().getSignature()));
@@ -326,14 +363,15 @@ class CertificateBuilderTest {
         assertThat(NOW.plus(1, DAYS).truncatedTo(SECONDS).toEpochMilli()).isEqualTo(cert.getNotAfter().getTime());
     }
 
-    @Test
-    void validCertificatesWithCrlMustPassValidation() throws Exception {
+    @ParameterizedTest
+    @MethodSource("providers")
+    void validCertificatesWithCrlMustPassValidation(Provider provider) throws Exception {
         X509Bundle root = BASE.copy()
                 .setIsCertificateAuthority(true)
                 .setKeyUsage(true, KeyUsage.digitalSignature, KeyUsage.keyCertSign, KeyUsage.cRLSign)
                 .buildSelfSigned();
         RevocationServer server = RevocationServer.getInstance();
-        server.register(root);
+        server.register(root, provider);
         X509Bundle cert = BASE.copy()
                 .subject("CN=leaf.netty.io")
                 .addCrlDistributionPoint(server.getCrlUri(root))
@@ -346,14 +384,15 @@ class CertificateBuilderTest {
         tm.checkClientTrusted(cert.getCertificatePath(), "EC");
     }
 
-    @Test
-    void revokedCertificatesWithCrlMustFailValidation() throws Exception {
+    @ParameterizedTest
+    @MethodSource("providers")
+    void revokedCertificatesWithCrlMustFailValidation(Provider provider) throws Exception {
         X509Bundle root = BASE.copy()
                 .setIsCertificateAuthority(true)
                 .setKeyUsage(true, KeyUsage.digitalSignature, KeyUsage.keyCertSign, KeyUsage.cRLSign)
                 .buildSelfSigned();
         RevocationServer server = RevocationServer.getInstance();
-        server.register(root);
+        server.register(root, provider);
         X509Bundle cert = BASE.copy()
                 .subject("CN=leaf.netty.io")
                 .addCrlDistributionPoint(server.getCrlUri(root))
@@ -375,7 +414,7 @@ class CertificateBuilderTest {
                 .setIsCertificateAuthority(true)
                 .setKeyUsage(true, KeyUsage.digitalSignature, KeyUsage.keyCertSign, KeyUsage.cRLSign)
                 .buildSelfSigned();
-        KeyPair keyPair = Algorithm.ecp256.generateKeyPair(new SecureRandom());
+        KeyPair keyPair = Algorithm.ecp256.generateKeyPair(new SecureRandom(), null);
         X509Bundle bundle = BASE.copy()
                 .subject("CN=leaf.netty.io")
                 .publicKey(keyPair.getPublic())
@@ -398,5 +437,12 @@ class CertificateBuilderTest {
 
         tmf.init(new CertPathTrustManagerParameters(params));
         return (X509TrustManager) tmf.getTrustManagers()[0];
+    }
+
+    private static Provider[] providers() {
+        return new Provider[] {
+            null /* default */,
+            new BouncyCastleJsseProvider()
+        };
     }
 }
