@@ -15,13 +15,19 @@
  */
 package io.netty.util;
 
+import static io.netty.util.internal.ObjectUtil.checkPositive;
+import static io.netty.util.internal.ObjectUtil.checkNotNull;
+
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.internal.MathUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.*;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Queue;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -33,8 +39,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLong;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static io.netty.util.internal.StringUtil.simpleClassName;
 
 /**
@@ -783,27 +787,12 @@ public class HashedWheelTimer implements Timer {
         public void addTimeoutFirst(HashedWheelTimeout timeout) {
             assert timeout.bucket == null;
             timeout.bucket = this;
-
-            HashedWheelTimeout current = head;
-            HashedWheelTimeout prev = null;
-            while (current != null && current.deadline > timeout.deadline) {
-                prev = current;
-                current = current.next;
-            }
-
-            timeout.prev = prev;
-            timeout.next = current;
-
-            if (prev == null) {
+            if (head == null) {
+                head = tail = timeout;
+            } else {
+                head.prev = timeout;
+                timeout.next = head;
                 head = timeout;
-            } else {
-                prev.next = timeout;
-            }
-
-            if (current == null) {
-                tail = timeout;
-            } else {
-                current.prev = timeout;
             }
         }
 
