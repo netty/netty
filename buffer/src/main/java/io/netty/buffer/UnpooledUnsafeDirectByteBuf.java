@@ -70,7 +70,8 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
      * Creates a new direct ByteBuf by wrapping the specified initial buffer.
      * Allows subclasses to control if initialBuffer.slice() should be invoked.
      *
-     *  Attention: this is a dangerous API and should only be used by someone who really knows the possible consequences.
+     *  Attention: this is a dangerous API and should only be used by someone
+     *  who really knows the possible consequences.
      *  It allows to disable a protective slicing for the provided ByteBuffer instance
      *  and can cause sharing of this ByteBuffer instance between several UnpooledUnsafeDirectByteBuf objects,
      *  as a result modifications would be racy and unsafe.
