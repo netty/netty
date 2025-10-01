@@ -99,11 +99,9 @@ public final class IoUringIoHandler implements IoHandler {
         // It only makes sense when the user actually specifies the cq ring size.
         int cqSize = 2 * config.getRingSize();
         if (config.needSetupCqeSize()) {
-            if (!IoUring.isSetupCqeSizeSupported()) {
-                throw new UnsupportedOperationException("IORING_SETUP_CQSIZE is not supported");
-            }
+            assert IoUring.isSetupCqeSizeSupported();
             setupFlags |= Native.IORING_SETUP_CQSIZE;
-            cqSize = config.checkCqSize(config.getCqSize());
+            cqSize = config.getCqSize();
         }
         this.ringBuffer = Native.createRingBuffer(config.getRingSize(), cqSize, setupFlags);
         if (IoUring.isRegisterIowqMaxWorkersSupported() && config.needRegisterIowqMaxWorker()) {
@@ -120,11 +118,6 @@ public final class IoUringIoHandler implements IoHandler {
         registeredIoUringBufferRing = new IntObjectHashMap<>();
         Collection<IoUringBufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
         if (bufferRingConfigs != null && !bufferRingConfigs.isEmpty()) {
-            if (!IoUring.isRegisterBufferRingSupported()) {
-                // Close ringBuffer before throwing to ensure we release all memory on failure.
-                ringBuffer.close();
-                throw new UnsupportedOperationException("IORING_REGISTER_PBUF_RING is not supported");
-            }
             for (IoUringBufferRingConfig bufferRingConfig : bufferRingConfigs) {
                 try {
                     IoUringBufferRing ring = newBufferRing(ringBuffer.fd(), bufferRingConfig);
@@ -696,16 +689,16 @@ public final class IoUringIoHandler implements IoHandler {
      */
     public static IoHandlerFactory newFactory(IoUringIoHandlerConfig config) {
         IoUring.ensureAvailability();
-        ObjectUtil.checkNotNull(config, "config");
+        final IoUringIoHandlerConfig copy = ObjectUtil.checkNotNull(config, "config").verifyAndClone();
         return new IoHandlerFactory() {
             @Override
             public IoHandler newHandler(ThreadAwareExecutor eventLoop) {
-                return new IoUringIoHandler(eventLoop, config);
+                return new IoUringIoHandler(eventLoop, copy);
             }
 
             @Override
             public boolean isChangingThreadSupported() {
-                return !config.singleIssuer();
+                return !copy.singleIssuer();
             }
         };
     }
