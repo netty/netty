@@ -16,13 +16,13 @@
 package io.netty.util;
 
 import io.netty.util.internal.MathUtil;
-import org.assertj.core.api.Assumptions;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Arrays;
@@ -39,7 +39,6 @@ import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assumptions.assumeThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -47,7 +46,6 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class RecyclerTest {
 
@@ -61,6 +59,10 @@ public class RecyclerTest {
         return Arrays.stream(OwnerType.values())
                      .flatMap(owner -> Stream.of(true, false)
                                              .map(unguarded -> Arguments.of(owner, unguarded)));
+    }
+
+    public static Stream<Arguments> notNoneOwnerAndUnguarded() {
+        return ownerTypeAndUnguarded().filter(args -> args.get()[0] != OwnerType.NONE);
     }
 
     protected static Recycler<HandledObject> newRecycler(OwnerType ownerType, boolean unguarded,
@@ -128,7 +130,7 @@ public class RecyclerTest {
 
     protected static Recycler<HandledObject> newRecycler(OwnerType ownerType, boolean unguarded,
                                                          int maxCapacityPerThread, int ratio, int chunkSize) {
-        // NOTE: ration and chunk size will be ignored for NONE owner type!
+        // NOTE: ratio and chunk size will be ignored for NONE owner type!
         switch (ownerType) {
         case NONE:
             return new Recycler<HandledObject>(maxCapacityPerThread, unguarded) {
@@ -214,10 +216,10 @@ public class RecyclerTest {
     }
 
     @ParameterizedTest
-    @MethodSource("ownerTypeAndUnguarded")
-    public void testMultipleRecycle(OwnerType ownerType, boolean unguarded) {
-        assumeFalse(unguarded);
-        Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 1024);
+    @EnumSource(OwnerType.class)
+    public void testMultipleRecycle(OwnerType ownerType) {
+        // This test makes only sense for guarded recyclers
+        Recycler<HandledObject> recycler = newRecycler(ownerType, false, 1024);
         final HandledObject object = recycler.get();
         object.recycle();
         assertThrows(IllegalStateException.class, new Executable() {
@@ -237,11 +239,11 @@ public class RecyclerTest {
     }
 
     @ParameterizedTest
-    @MethodSource("ownerTypeAndUnguarded")
-    public void testMultipleRecycleAtDifferentThread(OwnerType ownerType, boolean unguarded)
+    @EnumSource(OwnerType.class)
+    public void testMultipleRecycleAtDifferentThread(OwnerType ownerType)
             throws InterruptedException {
-        assumeFalse(unguarded, "This test makes only sense for guarded recyclers");
-        Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 1024);
+        // This test makes only sense for guarded recyclers
+        Recycler<HandledObject> recycler = newRecycler(ownerType, false, 1024);
         final HandledObject object = recycler.get();
         final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
         final Thread thread1 = newThread(new Runnable() {
@@ -273,11 +275,11 @@ public class RecyclerTest {
     }
 
     @ParameterizedTest
-    @MethodSource("ownerTypeAndUnguarded")
-    public void testMultipleRecycleAtDifferentThreadRacing(OwnerType ownerType, boolean unguarded)
+    @EnumSource(OwnerType.class)
+    public void testMultipleRecycleAtDifferentThreadRacing(OwnerType ownerType)
             throws InterruptedException {
-        assumeFalse(unguarded, "This test makes only sense for guarded recyclers");
-        Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 1024);
+        // This test makes only sense for guarded recyclers
+        Recycler<HandledObject> recycler = newRecycler(ownerType, false, 1024);
         final HandledObject object = recycler.get();
         final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
 
@@ -333,10 +335,10 @@ public class RecyclerTest {
     }
 
     @ParameterizedTest
-    @MethodSource("ownerTypeAndUnguarded")
-    public void testMultipleRecycleRacing(OwnerType ownerType, boolean unguarded) throws InterruptedException {
-        assumeFalse(unguarded, "This test makes only sense for guarded recyclers");
-        Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 1024);
+    @EnumSource(OwnerType.class)
+    public void testMultipleRecycleRacing(OwnerType ownerType) throws InterruptedException {
+        // This test makes only sense for guarded recyclers
+        Recycler<HandledObject> recycler = newRecycler(ownerType, false, 1024);
         final HandledObject object = recycler.get();
         final AtomicReference<IllegalStateException> exceptionStore = new AtomicReference<IllegalStateException>();
 
@@ -447,9 +449,8 @@ public class RecyclerTest {
     }
 
     @ParameterizedTest
-    @MethodSource("ownerTypeAndUnguarded")
+    @MethodSource("notNoneOwnerAndUnguarded")
     public void testRecycleAtDifferentThread(OwnerType ownerType, boolean unguarded) throws Exception {
-        assumeThat(ownerType).isNotEqualTo(OwnerType.NONE);
         final Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, 256, 2, 16);
         final HandledObject o = recycler.get();
         final HandledObject o2 = recycler.get();
@@ -512,9 +513,8 @@ public class RecyclerTest {
     }
 
     @ParameterizedTest
-    @MethodSource("ownerTypeAndUnguarded")
+    @MethodSource("notNoneOwnerAndUnguarded")
     public void testMaxCapacityWithRecycleAtDifferentThread(OwnerType ownerType, boolean unguarded) throws Exception {
-        assumeThat(ownerType).isNotEqualTo(OwnerType.NONE);
         final int maxCapacity = 4;
         final Recycler<HandledObject> recycler = newRecycler(ownerType, unguarded, maxCapacity, 4, 4);
 
@@ -552,10 +552,9 @@ public class RecyclerTest {
     }
 
     @ParameterizedTest
-    @MethodSource("ownerTypeAndUnguarded")
+    @MethodSource("notNoneOwnerAndUnguarded")
     public void testDiscardingExceedingElementsWithRecycleAtDifferentThread(OwnerType ownerType, boolean unguarded)
             throws Exception {
-        assumeThat(ownerType).isNotEqualTo(OwnerType.NONE);
         final int maxCapacity = 32;
         final AtomicInteger instancesCount = new AtomicInteger(0);
 
