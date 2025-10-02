@@ -101,7 +101,7 @@ class BackpressureDecompressionHandlerTest {
         private final List<Status> events;
         private int index;
 
-        public MockDecompressor(List<Status> events) {
+        MockDecompressor(List<Status> events) {
             this.events = events;
         }
 
