@@ -17,9 +17,12 @@ package io.netty.channel;
 
 import io.netty.util.concurrent.ThreadAwareExecutor;
 /**
- * A handle that can be registered to a {@link IoHandler}.
+ * A handle that can be registered to an {@link IoHandler}.
  * All methods must be called from the {@link ThreadAwareExecutor} thread (which means
- * {@link ThreadAwareExecutor#isExecutorThread(Thread)} must return {@code true})
+ * {@link ThreadAwareExecutor#isExecutorThread(Thread)} must return {@code true}).
+ *<p>
+ * All the methods are expected to be called from the {@link IoHandler} on which this {@link IoHandle}
+ * was registered via {@link IoHandler#register(IoHandle)}.
  */
 public interface IoHandle extends AutoCloseable {
 
@@ -31,4 +34,27 @@ public interface IoHandle extends AutoCloseable {
      *                      while this method is executed and so must not escape it.
      */
     void handle(IoRegistration registration, IoEvent ioEvent);
+
+    /**
+     * Called once this {@link IoHandle} was registered and so will start to receive events
+     * via {@link #handle(IoRegistration, IoEvent)}.
+     */
+    default void registered() {
+        // Noop by default.
+    }
+
+    /**
+     * Called once this {@link IoHandle} was unregistered and so will not receive any more events
+     * via {@link #handle(IoRegistration, IoEvent)}.
+     */
+    default void unregistered() {
+        // Noop by default.
+    }
+
+    /**
+     * Called once the {@link IoHandle} should be closed. Even once this method is called this handle might
+     * still receive events via {@link #handle(IoRegistration, IoEvent)} (if it was previous be registered and so its
+     * {@link #registered()} method was called) until the {@link #unregistered()} method is called.
+     */
+    void close() throws Exception;
 }
