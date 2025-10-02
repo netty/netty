@@ -35,6 +35,7 @@ abstract class InputBufferingDecompressor implements Decompressor {
     @Override
     public final void addInput(ByteBuf buf) throws DecompressionException {
         if (!buf.isReadable()) {
+            buf.release();
             return;
         }
         if (this.cumulation != null) {
