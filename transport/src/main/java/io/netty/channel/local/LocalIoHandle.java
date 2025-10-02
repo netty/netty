@@ -21,7 +21,5 @@ import io.netty.channel.IoHandle;
  * {@link IoHandle} sub-type that is used by the local transport internally.
  */
 interface LocalIoHandle extends IoHandle {
-    void registerNow();
-    void deregisterNow();
     void closeNow();
 }

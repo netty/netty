@@ -35,6 +35,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
@@ -228,6 +229,9 @@ public class JdkDelegatingPrivateKeyMethodTest {
         int actualSignatureOperations = MockAlternativeKeyProvider.getSignatureOperationCount();
         assertEquals(expectedSignatureOperations, actualSignatureOperations,
             "Unexpected number of signature operations for scenario: " + scenario.description);
+
+        ReferenceCountUtil.release(serverSslContext);
+        ReferenceCountUtil.release(clientSslContext);
     }
 
     @ParameterizedTest
@@ -279,6 +283,9 @@ public class JdkDelegatingPrivateKeyMethodTest {
         int signatureOperations = MockAlternativeKeyProvider.getSignatureOperationCount();
         assertTrue(signatureOperations > 0,
             "Expected signature operations to be recorded for " + description + ", got: " + signatureOperations);
+
+        ReferenceCountUtil.release(serverContext);
+        ReferenceCountUtil.release(clientContext);
     }
 
     @Test
@@ -333,6 +340,8 @@ public class JdkDelegatingPrivateKeyMethodTest {
             }
         } finally {
             serverChannel.close().sync();
+            ReferenceCountUtil.release(serverSslContext);
+            ReferenceCountUtil.release(clientSslContext);
         }
     }
 
@@ -356,6 +365,9 @@ public class JdkDelegatingPrivateKeyMethodTest {
 
         assertNotNull(context1, "First context should be created");
         assertNotNull(context2, "Second context should be created");
+
+        ReferenceCountUtil.release(context1);
+        ReferenceCountUtil.release(context2);
     }
 
     private static void configureCipherSuitesForAlgorithm(SslContextBuilder serverBuilder,

@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -63,6 +64,25 @@ public class UnpooledUnsafeDirectByteBuf extends UnpooledDirectByteBuf {
         //
         // We also call slice() explicitly here to preserve behaviour with previous netty releases.
         super(alloc, initialBuffer, maxCapacity, /* doFree = */ false, /* slice = */ true);
+    }
+
+    /**
+     * Creates a new direct ByteBuf by wrapping the specified initial buffer.
+     * Allows subclasses to control if initialBuffer.slice() should be invoked.
+     *
+     *  Attention: this is a dangerous API and should only be used by someone
+     *  who really knows the possible consequences.
+     *  It allows to disable a protective slicing for the provided ByteBuffer instance
+     *  and can cause sharing of this ByteBuffer instance between several UnpooledUnsafeDirectByteBuf objects,
+     *  as a result modifications would be racy and unsafe.
+     *
+     * @param slice true means slice() should be called for the provided initialBuffer
+     * @param maxCapacity the maximum capacity of the underlying direct buffer
+     */
+    @UnstableApi
+    protected UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, boolean slice,
+                                          ByteBuffer initialBuffer, int maxCapacity) {
+        super(alloc, initialBuffer, maxCapacity, /* doFree = */ false, slice);
     }
 
     UnpooledUnsafeDirectByteBuf(ByteBufAllocator alloc, ByteBuffer initialBuffer, int maxCapacity, boolean doFree) {

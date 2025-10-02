@@ -98,7 +98,7 @@ public class DefaultHttp2PushPromiseFrameTest {
 
     @AfterEach
     public void shutdown() {
-        eventLoopGroup.shutdownGracefully();
+        eventLoopGroup.shutdownGracefully().syncUninterruptibly();
     }
 
     private final class ServerHandler extends Http2ChannelDuplexHandler {
