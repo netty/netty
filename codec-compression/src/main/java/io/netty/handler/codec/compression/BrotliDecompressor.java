@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import com.aayushatharva.brotli4j.decoder.DecoderJNI;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -138,7 +139,7 @@ public final class BrotliDecompressor implements Decompressor {
          * @return This builder
          */
         public Builder inputBufferSize(int inputBufferSize) {
-            this.inputBufferSize = inputBufferSize;
+            this.inputBufferSize = ObjectUtil.checkPositive(inputBufferSize, "inputBufferSize");
             return this;
         }
 

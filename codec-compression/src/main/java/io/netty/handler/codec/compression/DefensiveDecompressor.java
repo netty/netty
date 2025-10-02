@@ -16,6 +16,7 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.util.internal.ObjectUtil;
 
 /**
  * Most decompressor implementations play fast and loose with {@link Decompressor} API contracts. This wrapper makes
@@ -28,7 +29,7 @@ final class DefensiveDecompressor implements Decompressor {
     private boolean failed;
 
     DefensiveDecompressor(Decompressor delegate) {
-        this.delegate = delegate;
+        this.delegate = ObjectUtil.checkNotNull(delegate, "delegate");
     }
 
     @Override

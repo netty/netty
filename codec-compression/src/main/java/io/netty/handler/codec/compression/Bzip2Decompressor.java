@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.internal.ObjectUtil;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.BASE_BLOCK_SIZE;
 import static io.netty.handler.codec.compression.Bzip2Constants.BLOCK_HEADER_MAGIC_1;
@@ -354,7 +355,7 @@ public final class Bzip2Decompressor extends InputBufferingDecompressor {
          * @return This builder
          */
         public Builder outputBufferSize(int outputBufferSize) {
-            this.outputBufferSize = outputBufferSize;
+            this.outputBufferSize = ObjectUtil.checkPositive(outputBufferSize, "outputBufferSize");
             return this;
         }
 

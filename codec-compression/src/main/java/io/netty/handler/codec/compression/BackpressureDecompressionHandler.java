@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.RecyclableArrayList;
 
 /**
@@ -39,7 +40,7 @@ public final class BackpressureDecompressionHandler extends ChannelDuplexHandler
      * @param decompressor The decompressor
      */
     public BackpressureDecompressionHandler(Decompressor decompressor) {
-        this.decompressor = decompressor;
+        this.decompressor = ObjectUtil.checkNotNull(decompressor, "decompressor");
     }
 
     private void handleException(Exception e) {
