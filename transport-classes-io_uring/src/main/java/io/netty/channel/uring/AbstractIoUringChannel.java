@@ -308,7 +308,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         } else {
             // This one was never registered just use a syscall to close.
             socket.close();
-            ioUringUnsafe().freeResourcesNowIfNeeded(null);
+            ioUringUnsafe().unregistered();
         }
     }
 
@@ -431,7 +431,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     protected abstract class AbstractUringUnsafe extends AbstractUnsafe implements IoUringIoHandle {
         private IoUringRecvByteAllocatorHandle allocHandle;
         private boolean closed;
-        private boolean freed;
         private boolean socketIsEmpty;
 
         /**
@@ -499,28 +498,15 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             handleDelayedClosed();
 
             if (ioState == 0 && closed) {
-                freeResourcesNowIfNeeded(registration);
+                // Cancel the registration now.
+                registration.cancel();
             }
         }
 
-        private void freeResourcesNowIfNeeded(IoRegistration reg) {
-            if (!freed) {
-                freed = true;
-                freeResourcesNow(reg);
-            }
-        }
-
-        /**
-         * Free all resources now. No new IO will be submitted for this channel via io_uring
-         *
-         * @param reg   the {@link IoRegistration} or {@code null} if it was never registered
-         */
-        protected void freeResourcesNow(IoRegistration reg) {
+        @Override
+        public void unregistered() {
             freeMsgHdrArray();
             freeRemoteAddressMemory();
-            if (reg != null) {
-                reg.cancel();
-            }
         }
 
         private void handleDelayedClosed() {

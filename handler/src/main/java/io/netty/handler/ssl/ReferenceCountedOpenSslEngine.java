@@ -189,6 +189,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
 
     private String endpointIdentificationAlgorithm;
     private List<SNIServerName> serverNames;
+    private String[] groups;
     private AlgorithmConstraints algorithmConstraints;
 
     // Mark as volatile as accessed by checkSniHostnameMatch(...).
@@ -231,6 +232,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         OpenSsl.ensureAvailability();
         engines = context.engines;
         enableOcsp = context.enableOcsp;
+        groups = context.groups.clone();
         this.jdkCompatibilityMode = jdkCompatibilityMode;
         this.alloc = checkNotNull(alloc, "alloc");
         apn = (OpenSslApplicationProtocolNegotiator) context.applicationProtocolNegotiator();
@@ -2199,6 +2201,9 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
         sslParameters.setEndpointIdentificationAlgorithm(endpointIdentificationAlgorithm);
         sslParameters.setAlgorithmConstraints(algorithmConstraints);
         sslParameters.setServerNames(serverNames);
+        if (groups != null) {
+            OpenSslParametersUtil.setNamesGroups(sslParameters, groups.clone());
+        }
         if (!destroyed) {
             sslParameters.setUseCipherSuitesOrder((SSL.getOptions(ssl) & SSL.SSL_OP_CIPHER_SERVER_PREFERENCE) != 0);
         }
@@ -2230,6 +2235,25 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                     }
                 }
                 serverNames = proposedServerNames;
+            }
+
+            String[] groups = OpenSslParametersUtil.getNamesGroups(sslParameters);
+            if (groups != null) {
+                Set<String> groupsSet = new LinkedHashSet<String>(groups.length);
+                for (String group : groups) {
+                    if (group == null || group.isEmpty()) {
+                        // See SSLParameters.html#setNamedGroups(java.lang.String[])
+                        throw new IllegalArgumentException();
+                    }
+                    if (!groupsSet.add(GroupsConverter.toOpenSsl(group))) {
+                        // See SSLParameters.html#setNamedGroups(java.lang.String[])
+                        throw new IllegalArgumentException("named groups contains a duplicate");
+                    }
+                }
+                if (!SSL.setCurvesList(ssl, groupsSet.toArray(EMPTY_STRINGS))) {
+                    throw new UnsupportedOperationException();
+                }
+                this.groups = groups;
             }
             if (sslParameters.getUseCipherSuitesOrder()) {
                 SSL.setOptions(ssl, SSL.SSL_OP_CIPHER_SERVER_PREFERENCE);

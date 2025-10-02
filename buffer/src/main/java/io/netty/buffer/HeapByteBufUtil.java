@@ -17,8 +17,6 @@ package io.netty.buffer;
 
 import io.netty.util.internal.PlatformDependent;
 
-import java.lang.invoke.VarHandle;
-
 /**
  * Utility class for heap buffers.
  */
@@ -29,9 +27,8 @@ final class HeapByteBufUtil {
     }
 
     static short getShort(byte[] memory, int index) {
-        VarHandle shortBeArrayView = PlatformDependent.shortBeArrayView();
-        if (shortBeArrayView != null) {
-            return (short) shortBeArrayView.get(memory, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getShortBE(memory, index);
         }
         return getShort0(memory, index);
     }
@@ -41,9 +38,8 @@ final class HeapByteBufUtil {
     }
 
     static short getShortLE(byte[] memory, int index) {
-        VarHandle shortLeArrayView = PlatformDependent.shortLeArrayView();
-        if (shortLeArrayView != null) {
-            return (short) shortLeArrayView.get(memory, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getShortLE(memory, index);
         }
         return (short) (memory[index] & 0xff | memory[index + 1] << 8);
     }
@@ -61,9 +57,8 @@ final class HeapByteBufUtil {
     }
 
     static int getInt(byte[] memory, int index) {
-        VarHandle intBeArrayView  = PlatformDependent.intBeArrayView();
-        if (intBeArrayView != null) {
-            return (int) intBeArrayView.get(memory, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getIntBE(memory, index);
         }
         return getInt0(memory, index);
     }
@@ -76,9 +71,8 @@ final class HeapByteBufUtil {
     }
 
     static int getIntLE(byte[] memory, int index) {
-        VarHandle intLeArrayView = PlatformDependent.intLeArrayView();
-        if (intLeArrayView != null) {
-            return (int) intLeArrayView.get(memory, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getIntLE(memory, index);
         }
         return getIntLE0(memory, index);
     }
@@ -91,9 +85,8 @@ final class HeapByteBufUtil {
     }
 
     static long getLong(byte[] memory, int index) {
-        VarHandle longBeArrayView = PlatformDependent.longBeArrayView();
-        if (longBeArrayView != null) {
-            return (long) longBeArrayView.get(memory, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getLongBE(memory, index);
         }
         return getLong0(memory, index);
     }
@@ -110,9 +103,8 @@ final class HeapByteBufUtil {
     }
 
     static long getLongLE(byte[] memory, int index) {
-        VarHandle longLeArrayView = PlatformDependent.longLeArrayView();
-        if (longLeArrayView != null) {
-            return (long) longLeArrayView.get(memory, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getLongLE(memory, index);
         }
         return getLongLE0(memory, index);
     }
@@ -133,9 +125,8 @@ final class HeapByteBufUtil {
     }
 
     static void setShort(byte[] memory, int index, int value) {
-        VarHandle shortBeArrayView = PlatformDependent.shortBeArrayView();
-        if (shortBeArrayView != null) {
-            shortBeArrayView.set(memory, index, (short) value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setShortBE(memory, index, value);
             return;
         }
         memory[index]     = (byte) (value >>> 8);
@@ -143,9 +134,8 @@ final class HeapByteBufUtil {
     }
 
     static void setShortLE(byte[] memory, int index, int value) {
-        VarHandle shortLeArrayView = PlatformDependent.shortLeArrayView();
-        if (shortLeArrayView != null) {
-            shortLeArrayView.set(memory, index, (short) value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setShortLE(memory, index, value);
             return;
         }
         memory[index]     = (byte) value;
@@ -165,9 +155,8 @@ final class HeapByteBufUtil {
     }
 
     static void setInt(byte[] memory, int index, int value) {
-        VarHandle intBeArrayView = PlatformDependent.intBeArrayView();
-        if (intBeArrayView != null) {
-            intBeArrayView.set(memory, index, value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setIntBE(memory, index, value);
             return;
         }
         setInt0(memory, index, value);
@@ -181,9 +170,8 @@ final class HeapByteBufUtil {
     }
 
     static void setIntLE(byte[] memory, int index, int value) {
-        VarHandle intLeArrayView = PlatformDependent.intLeArrayView();
-        if (intLeArrayView != null) {
-            intLeArrayView.set(memory, index, value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setIntLE(memory, index, value);
             return;
         }
         setIntLE0(memory, index, value);
@@ -197,9 +185,8 @@ final class HeapByteBufUtil {
     }
 
     static void setLong(byte[] memory, int index, long value) {
-        VarHandle longBeArrayView = PlatformDependent.longBeArrayView();
-        if (longBeArrayView != null) {
-            longBeArrayView.set(memory, index, value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setLongBE(memory, index, value);
             return;
         }
         setLong0(memory, index, value);
@@ -217,9 +204,8 @@ final class HeapByteBufUtil {
     }
 
     static void setLongLE(byte[] memory, int index, long value) {
-        VarHandle longLeArrayView = PlatformDependent.longLeArrayView();
-        if (longLeArrayView != null) {
-            longLeArrayView.set(memory, index, value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setLongLE(memory, index, value);
             return;
         }
         setLongLE0(memory, index, value);

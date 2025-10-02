@@ -955,7 +955,7 @@ public abstract class SSLEngineTest {
 
     protected static void rethrowIfNotNull(Throwable error) {
         if (error != null) {
-            throw new AssertionFailedError("Expected no error", error);
+            fail("Expected no error", error);
         }
     }
 

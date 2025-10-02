@@ -239,8 +239,8 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         }
 
         @Override
-        protected void freeResourcesNow(IoRegistration reg) {
-            super.freeResourcesNow(reg);
+        public void unregistered() {
+            super.unregistered();
             if (readMsgHdrMemory != null) {
                 readMsgHdrMemory.release();
                 readMsgHdrMemory = null;

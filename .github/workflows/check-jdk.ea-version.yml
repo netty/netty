@@ -10,5 +10,5 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: "Check latest JDK 25 EA version"
+      - name: "Check latest JDK 26 EA version"
         run: ./.github/scripts/check_java_ea_version.sh
