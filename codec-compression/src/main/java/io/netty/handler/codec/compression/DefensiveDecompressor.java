@@ -86,6 +86,7 @@ final class DefensiveDecompressor implements Decompressor {
             throw new IllegalStateException("Already closed");
         }
         closed = true;
+        delegate.close();
     }
 
     private void checkReady() {

@@ -305,20 +305,25 @@ public final class Bzip2Decompressor extends InputBufferingDecompressor {
             throw new IllegalStateException("Not in state NEED_OUTPUT");
         }
         ByteBuf uncompressed = allocator.buffer(outputBufferSize);
-        int uncByte;
-        while ((uncByte = blockDecompressor.read()) >= 0) {
-            uncompressed.writeByte(uncByte);
-            if (uncompressed.readableBytes() >= outputBufferSize) {
-                break;
+        try {
+            int uncByte;
+            while ((uncByte = blockDecompressor.read()) >= 0) {
+                uncompressed.writeByte(uncByte);
+                if (uncompressed.readableBytes() >= outputBufferSize) {
+                    break;
+                }
             }
+            if (uncByte < 0) {
+                // all data read
+                currentState = State.INIT_BLOCK;
+                int currentBlockCRC = blockDecompressor.checkCRC();
+                streamCRC = (streamCRC << 1 | streamCRC >>> 31) ^ currentBlockCRC;
+            }
+            return uncompressed;
+        } catch (Throwable t) {
+            uncompressed.release();
+            throw t;
         }
-        if (uncByte < 0) {
-            // all data read
-            currentState = State.INIT_BLOCK;
-            int currentBlockCRC = blockDecompressor.checkCRC();
-            streamCRC = (streamCRC << 1 | streamCRC >>> 31) ^ currentBlockCRC;
-        }
-        return uncompressed;
     }
 
     @Override
