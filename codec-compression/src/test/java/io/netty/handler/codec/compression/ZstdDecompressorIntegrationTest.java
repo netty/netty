@@ -22,7 +22,7 @@ public class ZstdDecompressorIntegrationTest extends ZstdIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
         return new EmbeddedChannel(
-                new BackpressureDecompressionHandler(
-                        ZstdDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
+                BackpressureDecompressionHandler.create(
+                        ZstdDecompressor.builder(ByteBufAllocator.DEFAULT)));
     }
 }

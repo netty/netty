@@ -22,7 +22,7 @@ public class JdkZlibDecompressorIntegrationTest extends JdkZlibIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
         return new EmbeddedChannel(
-                new BackpressureDecompressionHandler(
-                        JdkZlibDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
+                BackpressureDecompressionHandler.create(
+                        JdkZlibDecompressor.builder(ByteBufAllocator.DEFAULT)));
     }
 }

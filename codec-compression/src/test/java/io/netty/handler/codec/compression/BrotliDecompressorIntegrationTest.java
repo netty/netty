@@ -22,7 +22,7 @@ public class BrotliDecompressorIntegrationTest extends BrotliIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
         return new EmbeddedChannel(
-                new BackpressureDecompressionHandler(
-                        BrotliDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
+                BackpressureDecompressionHandler.create(
+                        BrotliDecompressor.builder(ByteBufAllocator.DEFAULT)));
     }
 }

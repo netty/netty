@@ -22,9 +22,8 @@ public class FastLzDecompressorIntegrationTest extends FastLzIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
         return new EmbeddedChannel(
-                new BackpressureDecompressionHandler(
+                BackpressureDecompressionHandler.create(
                         FastLzFrameDecompressor.builder(ByteBufAllocator.DEFAULT)
-                                .defaultChecksum()
-                                .build()));
+                                .defaultChecksum()));
     }
 }

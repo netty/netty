@@ -26,7 +26,7 @@ public class Lz4FrameDecompressorTest extends Lz4FrameDecoderTest {
     @Override
     protected EmbeddedChannel createChannel() {
         return new EmbeddedChannel(
-                new BackpressureDecompressionHandler(
-                        Lz4FrameDecompressor.builder(ByteBufAllocator.DEFAULT).defaultChecksum().build()));
+                BackpressureDecompressionHandler.create(
+                        Lz4FrameDecompressor.builder(ByteBufAllocator.DEFAULT).defaultChecksum()));
     }
 }

@@ -21,6 +21,6 @@ import io.netty.channel.ChannelHandler;
 public class BrotliDecompressorTest extends BrotliDecoderTest {
     @Override
     protected ChannelHandler createDecoder() {
-        return new BackpressureDecompressionHandler(BrotliDecompressor.builder(ByteBufAllocator.DEFAULT).build());
+        return BackpressureDecompressionHandler.create(BrotliDecompressor.builder(ByteBufAllocator.DEFAULT));
     }
 }

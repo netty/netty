@@ -22,7 +22,7 @@ public class SnappyDecompressorIntegrationTest extends SnappyIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
         return new EmbeddedChannel(
-                new BackpressureDecompressionHandler(
-                        SnappyFrameDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
+                BackpressureDecompressionHandler.create(
+                        SnappyFrameDecompressor.builder(ByteBufAllocator.DEFAULT)));
     }
 }

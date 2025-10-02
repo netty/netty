@@ -22,7 +22,7 @@ public class Bzip2DecompressorIntegrationTest extends Bzip2IntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
         return new EmbeddedChannel(
-                new BackpressureDecompressionHandler(
-                        Bzip2Decompressor.builder(ByteBufAllocator.DEFAULT).build()));
+                BackpressureDecompressionHandler.create(
+                        Bzip2Decompressor.builder(ByteBufAllocator.DEFAULT)));
     }
 }

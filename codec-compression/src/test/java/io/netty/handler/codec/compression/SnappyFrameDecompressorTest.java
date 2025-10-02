@@ -21,6 +21,6 @@ import io.netty.channel.ChannelHandler;
 public class SnappyFrameDecompressorTest extends SnappyFrameDecoderTest {
     @Override
     protected ChannelHandler createDecoder() {
-        return new BackpressureDecompressionHandler(SnappyFrameDecompressor.builder(ByteBufAllocator.DEFAULT).build());
+        return BackpressureDecompressionHandler.create(SnappyFrameDecompressor.builder(ByteBufAllocator.DEFAULT));
     }
 }

@@ -22,7 +22,7 @@ public class SnappyDecompressorJumboSizeIntegrationTest extends SnappyJumboSizeI
     @Override
     protected EmbeddedChannel createDecoder() {
         return new EmbeddedChannel(
-                new BackpressureDecompressionHandler(
-                        SnappyFrameDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
+                BackpressureDecompressionHandler.create(
+                        SnappyFrameDecompressor.builder(ByteBufAllocator.DEFAULT)));
     }
 }

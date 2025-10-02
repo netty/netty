@@ -28,19 +28,60 @@ import io.netty.util.internal.RecyclableArrayList;
  * downstream backpressure.
  */
 public final class BackpressureDecompressionHandler extends ChannelDuplexHandler {
-    private final Decompressor decompressor;
+    private static final int DEFAULT_MAX_MESSAGES_PER_READ = 32;
+
+    private final Decompressor.AbstractDecompressorBuilder decompressorBuilder;
+    /**
+     * Decompressor is created lazily to avoid memory leaks when a BackpressureDecompressionHandler is never added to a
+     * channel.
+     */
+    private Decompressor decompressor;
+    private final int maxMessagesPerRead;
     private RecyclableArrayList inputBuffer;
     private boolean closed;
-    private boolean downstreamWantsMore;
+    private int downstreamWantsMore;
     private boolean reading;
 
+    BackpressureDecompressionHandler(Builder builder) {
+        this.decompressorBuilder = builder.decompressorBuilder;
+        this.maxMessagesPerRead = builder.maxMessagesPerRead;
+    }
+
     /**
-     * Create a new handler using the given decompressor.
+     * Create a new handler builder.
      *
-     * @param decompressor The decompressor
+     * @param decompressorBuilder The decompressor builder to use. This builder is invoked lazily when the handler
+     *                            is added to the pipeline.
+     * @return The builder for the decompression handler
      */
-    public BackpressureDecompressionHandler(Decompressor decompressor) {
-        this.decompressor = ObjectUtil.checkNotNull(decompressor, "decompressor");
+    public static Builder builder(Decompressor.AbstractDecompressorBuilder decompressorBuilder) {
+        return new Builder(decompressorBuilder);
+    }
+
+    /**
+     * Create a new decompression handler with default settings. Equivalent to
+     * {@code builder(decompressorBuilder).build()}.
+     *
+     * @param decompressorBuilder The decompressor builder to use. This builder is invoked lazily when the handler
+     *                            is added to the pipeline.
+     * @return The decompression handler
+     */
+    public static BackpressureDecompressionHandler create(
+            Decompressor.AbstractDecompressorBuilder decompressorBuilder) {
+        return builder(decompressorBuilder).build();
+    }
+
+    @Override
+    public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        decompressor = decompressorBuilder.build();
+    }
+
+    @Override
+    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        if (!closed) {
+            decompressor.close();
+            closed = true;
+        }
     }
 
     private void handleException(Exception e) {
@@ -62,7 +103,11 @@ public final class BackpressureDecompressionHandler extends ChannelDuplexHandler
     }
 
     private boolean downstreamWantsMore(ChannelHandlerContext ctx) {
-        return downstreamWantsMore || ctx.channel().config().isAutoRead();
+        return downstreamWantsMore > 0 || isAutoRead(ctx);
+    }
+
+    private static boolean isAutoRead(ChannelHandlerContext ctx) {
+        return ctx.channel().config().isAutoRead();
     }
 
     private void processSome(ChannelHandlerContext ctx) {
@@ -82,9 +127,14 @@ public final class BackpressureDecompressionHandler extends ChannelDuplexHandler
                         buf.release();
                         break;
                     }
-                    downstreamWantsMore = false;
+                    int newDemand = --downstreamWantsMore;
+                    if (newDemand == 0 && isAutoRead(ctx)) {
+                        downstreamWantsMore = maxMessagesPerRead;
+                    }
                     ctx.fireChannelRead(buf);
-                    ctx.fireChannelReadComplete();
+                    if (newDemand == 0) {
+                        ctx.fireChannelReadComplete();
+                    }
                     break;
                 case NEED_INPUT:
                     if (inputBuffer == null) {
@@ -138,9 +188,7 @@ public final class BackpressureDecompressionHandler extends ChannelDuplexHandler
     @Override
     public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
         reading = false;
-        if (!ctx.channel().config().isAutoRead() && downstreamWantsMore) {
-            ctx.read();
-        }
+        endOfRead(ctx, false);
     }
 
     @Override
@@ -148,10 +196,61 @@ public final class BackpressureDecompressionHandler extends ChannelDuplexHandler
         if (closed) {
             return;
         }
-        downstreamWantsMore = true;
+        downstreamWantsMore = maxMessagesPerRead;
         processSome(ctx);
-        if (downstreamWantsMore && !reading) {
-           ctx.read();
+        if (!reading) {
+            endOfRead(ctx, true);
+        }
+    }
+
+    /**
+     * Called when we just finished processing a batch of data and no more upstream data is forthcoming until we ask
+     * for it. This method checks for downstream demand and potentially sends an upstream read request.
+     *
+     * @param ctx       The context
+     * @param forceRead Whether to force an upstream .read even if auto read is on
+     */
+    private void endOfRead(ChannelHandlerContext ctx, boolean forceRead) {
+        if (downstreamWantsMore == maxMessagesPerRead) {
+            // no new data, ask upstream
+            if (forceRead || !isAutoRead(ctx)) {
+                ctx.read();
+            }
+        } else if (downstreamWantsMore > 0) {
+            // we forwarded some data, let's wait for downstream demand before asking for more
+            downstreamWantsMore = isAutoRead(ctx) ? maxMessagesPerRead : 0;
+            ctx.fireChannelReadComplete();
+        } // if downstreamWantsMore == 0, we already fired readComplete
+    }
+
+    public static final class Builder {
+        private final Decompressor.AbstractDecompressorBuilder decompressorBuilder;
+        private int maxMessagesPerRead = DEFAULT_MAX_MESSAGES_PER_READ;
+
+        Builder(Decompressor.AbstractDecompressorBuilder decompressorBuilder) {
+            this.decompressorBuilder = ObjectUtil.checkNotNull(decompressorBuilder, "decompressorBuilder");
+        }
+
+        /**
+         * The maximum number of buffers to send down the pipeline before a new downstream read request is required. If
+         * the channel has auto read enabled, more buffers than this may be sent.
+         *
+         * @param maxMessagesPerRead The maximum number of buffers to send per single read request
+         * @return This builder
+         */
+        public Builder maxMessagesPerRead(int maxMessagesPerRead) {
+            this.maxMessagesPerRead = ObjectUtil.checkPositive(maxMessagesPerRead, "maxMessagesPerRead");
+            return this;
+        }
+
+        /**
+         * Create a new decompression handler. Note that the actual decompressor is only created when the handler is
+         * added to a pipeline, to avoid memory leaks if the handler is never used.
+         *
+         * @return The handler
+         */
+        public BackpressureDecompressionHandler build() {
+            return new BackpressureDecompressionHandler(this);
         }
     }
 }

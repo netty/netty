@@ -26,7 +26,7 @@ public class LzfDecompressorTest extends LzfDecoderTest {
     @Override
     protected EmbeddedChannel createChannel() {
         return new EmbeddedChannel(
-                new BackpressureDecompressionHandler(
-                        LzfDecompressor.builder(ByteBufAllocator.DEFAULT).build()));
+                BackpressureDecompressionHandler.create(
+                        LzfDecompressor.builder(ByteBufAllocator.DEFAULT)));
     }
 }
