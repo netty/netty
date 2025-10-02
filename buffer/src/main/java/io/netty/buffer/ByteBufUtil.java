@@ -76,8 +76,17 @@ public final class ByteBufUtil {
     static final ByteBufAllocator DEFAULT_ALLOCATOR;
 
     static {
-        String allocType = SystemPropertyUtil.get(
-                "io.netty.allocator.type", "adaptive");
+        String allocType = SystemPropertyUtil.get("io.netty.allocator.type");
+
+        if (allocType == null) {
+            long adaptivePoolThreshold = 512 * 1024 * 1024;
+            if (PlatformDependent.maxDirectMemory() >= adaptivePoolThreshold ||
+                    Runtime.getRuntime().maxMemory() >= adaptivePoolThreshold) {
+                allocType = "adaptive";
+            } else {
+                allocType = "unpooled";
+            }
+        }
 
         ByteBufAllocator alloc;
         if ("unpooled".equals(allocType)) {
