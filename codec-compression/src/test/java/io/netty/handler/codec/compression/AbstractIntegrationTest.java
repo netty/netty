@@ -25,10 +25,9 @@ import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.ResourceLeakDetector;
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.test.DisabledForSlowLeakDetection;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.DisabledIf;
 
 import java.security.MessageDigest;
 import java.util.Arrays;
@@ -189,12 +188,8 @@ public abstract class AbstractIntegrationTest {
         }
     }
 
-    static boolean hasLeakDetector() {
-        return ResourceLeakDetector.getLevel().ordinal() > ResourceLeakDetector.Level.SIMPLE.ordinal();
-    }
-
-    @DisabledIf("hasLeakDetector")
     @Test
+    @DisabledForSlowLeakDetection
     public void testHugeDecompress() throws Exception {
         int chunkSize = 1024 * 1024;
         int numberOfChunks = 256;

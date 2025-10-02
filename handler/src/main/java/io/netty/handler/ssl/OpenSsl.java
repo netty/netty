@@ -24,6 +24,7 @@ import io.netty.internal.tcnative.Library;
 import io.netty.internal.tcnative.SSL;
 import io.netty.internal.tcnative.SSLContext;
 import io.netty.util.CharsetUtil;
+import io.netty.util.LeakPresenceDetector;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
 import io.netty.util.internal.EmptyArrays;
@@ -274,11 +275,27 @@ public final class OpenSsl {
                             SSLContext.setCertificateCallback(sslCtx, null);
 
                             X509Certificate certificate = selfSignedCertificate();
-                            certBio = ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, certificate);
+                            certBio = LeakPresenceDetector.staticInitializer(() -> {
+                                try {
+                                    return ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, certificate);
+                                } catch (Exception e) {
+                                    // go to catch outside lambda
+                                    PlatformDependent.throwException(e);
+                                    throw new AssertionError(e);
+                                }
+                            });
                             cert = SSL.parseX509Chain(certBio);
 
-                            keyBio = ReferenceCountedOpenSslContext.toBIO(
-                                    UnpooledByteBufAllocator.DEFAULT, privateKey.retain());
+                            keyBio = LeakPresenceDetector.staticInitializer(() -> {
+                                try {
+                                    return ReferenceCountedOpenSslContext.toBIO(
+                                            UnpooledByteBufAllocator.DEFAULT, privateKey.retain());
+                                } catch (Exception e) {
+                                    // go to catch outside lambda
+                                    PlatformDependent.throwException(e);
+                                    throw new AssertionError(e);
+                                }
+                            });
                             key = SSL.parsePrivateKey(keyBio, null);
 
                             SSL.setKeyMaterial(ssl, cert, key);

@@ -24,6 +24,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.util.AsciiString;
+import io.netty.util.LeakPresenceDetector;
 import io.netty.util.concurrent.EventExecutor;
 
 import static io.netty.buffer.Unpooled.directBuffer;
@@ -62,9 +63,9 @@ public final class Http2CodecUtil {
     public static final short MAX_WEIGHT = 256;
     public static final short MIN_WEIGHT = 1;
 
-    private static final ByteBuf CONNECTION_PREFACE =
+    private static final ByteBuf CONNECTION_PREFACE = LeakPresenceDetector.staticInitializer(() ->
             unreleasableBuffer(directBuffer(24).writeBytes("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes(UTF_8)))
-                    .asReadOnly();
+                    .asReadOnly());
 
     private static final int MAX_PADDING_LENGTH_LENGTH = 1;
     public static final int DATA_FRAME_HEADER_LENGTH = FRAME_HEADER_LENGTH + MAX_PADDING_LENGTH_LENGTH;

@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageEncoder;
+import io.netty.util.LeakPresenceDetector;
 
 import java.util.List;
 
@@ -31,12 +32,12 @@ import java.util.List;
  */
 @Sharable
 public class WebSocket00FrameEncoder extends MessageToMessageEncoder<WebSocketFrame> implements WebSocketFrameEncoder {
-    private static final ByteBuf _0X00 = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer(1, 1).writeByte(0x00)).asReadOnly();
-    private static final ByteBuf _0XFF = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer(1, 1).writeByte((byte) 0xFF)).asReadOnly();
-    private static final ByteBuf _0XFF_0X00 = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer(2, 2).writeByte((byte) 0xFF).writeByte(0x00)).asReadOnly();
+    private static final ByteBuf _0X00 = LeakPresenceDetector.staticInitializer(() -> Unpooled.unreleasableBuffer(
+            Unpooled.directBuffer(1, 1).writeByte(0x00)).asReadOnly());
+    private static final ByteBuf _0XFF = LeakPresenceDetector.staticInitializer(() -> Unpooled.unreleasableBuffer(
+            Unpooled.directBuffer(1, 1).writeByte((byte) 0xFF)).asReadOnly());
+    private static final ByteBuf _0XFF_0X00 = LeakPresenceDetector.staticInitializer(() -> Unpooled.unreleasableBuffer(
+            Unpooled.directBuffer(2, 2).writeByte((byte) 0xFF).writeByte(0x00)).asReadOnly());
 
     public WebSocket00FrameEncoder() {
         super(WebSocketFrame.class);
