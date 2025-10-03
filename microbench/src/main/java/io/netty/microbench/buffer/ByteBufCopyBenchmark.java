@@ -16,7 +16,7 @@
 package io.netty.microbench.buffer;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -44,14 +44,18 @@ public class ByteBufCopyBenchmark extends AbstractMicrobenchmark {
             "true",
             "false",
     })
-    private boolean directByteBuff;
+    private boolean directByteBuf;
 
     @Param({
             "true",
             "false",
     })
     private boolean directByteBuffer;
-    @Param({"false", "true" })
+
+    @Param({
+            "false",
+            "true"
+    })
     private boolean readonlyByteBuffer;
 
     @Param({
@@ -90,11 +94,11 @@ public class ByteBufCopyBenchmark extends AbstractMicrobenchmark {
                 ByteBuffer.allocateDirect(requiredByteBufferSize) :
                 ByteBuffer.allocate(requiredByteBufferSize);
         if (pooledByteBuf) {
-            buffer = directByteBuff ?
-                    PooledByteBufAllocator.DEFAULT.directBuffer(requiredByteBufSize, requiredByteBufSize) :
-                    PooledByteBufAllocator.DEFAULT.heapBuffer(requiredByteBufSize, requiredByteBufSize);
+            buffer = directByteBuf ?
+                    ByteBufAllocator.DEFAULT.directBuffer(requiredByteBufSize, requiredByteBufSize) :
+                    ByteBufAllocator.DEFAULT.heapBuffer(requiredByteBufSize, requiredByteBufSize);
         } else {
-            buffer = directByteBuff ?
+            buffer = directByteBuf ?
                     Unpooled.directBuffer(requiredByteBufSize, requiredByteBufSize) :
                     Unpooled.buffer(requiredByteBufSize, requiredByteBufSize);
         }

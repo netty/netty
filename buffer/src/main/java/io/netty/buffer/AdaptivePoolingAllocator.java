@@ -1761,16 +1761,30 @@ final class AdaptivePoolingAllocator {
         @Override
         public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
             checkIndex(index, length);
-            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
-            tmp.put(src.nioBuffer(srcIndex, length));
+            ByteBuffer tmp = internalNioBuffer();
+            if (src instanceof AdaptiveByteBuf && PlatformDependent.javaVersion() >= 16) {
+                AdaptiveByteBuf srcBuf = (AdaptiveByteBuf) src;
+                PlatformDependent.absolutePut(tmp, index, srcBuf.internalNioBuffer(), srcIndex, length);
+            } else {
+                tmp.position(index);
+                tmp.put(src.nioBuffer(srcIndex, length));
+            }
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuffer src) {
-            checkIndex(index, src.remaining());
-            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
-            tmp.put(src);
+            int length = src.remaining();
+            checkIndex(index, length);
+            ByteBuffer tmp = internalNioBuffer();
+            if (PlatformDependent.javaVersion() >= 16) {
+                int offset = src.position();
+                PlatformDependent.absolutePut(tmp, index, src, offset, length);
+                src.position(offset + length);
+            } else {
+                tmp.position(index);
+                tmp.put(src);
+            }
             return this;
         }
 
@@ -1779,7 +1793,8 @@ final class AdaptivePoolingAllocator {
                 throws IOException {
             checkIndex(index, length);
             if (length != 0) {
-                ByteBufUtil.readBytes(alloc(), internalNioBuffer().duplicate(), index, length, out);
+                ByteBuffer tmp = internalNioBuffer();
+                ByteBufUtil.readBytes(alloc(), tmp.hasArray() ? tmp : tmp.duplicate(), index, length, out);
             }
             return this;
         }
