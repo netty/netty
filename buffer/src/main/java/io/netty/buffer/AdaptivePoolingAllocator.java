@@ -194,10 +194,10 @@ final class AdaptivePoolingAllocator {
         largeBufferMagazineGroup = new MagazineGroup(
                 this, chunkAllocator, new HistogramChunkControllerFactory(true), false);
 
-        threadLocalGroup = new FastThreadLocal<MagazineGroup[]>() {
+        threadLocalGroup = IS_LOW_MEM ? null : new FastThreadLocal<MagazineGroup[]>() {
             @Override
             protected MagazineGroup[] initialValue() {
-                if (!IS_LOW_MEM && (useCacheForNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null)) {
+                if (useCacheForNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null) {
                     return createMagazineGroupSizeClasses(AdaptivePoolingAllocator.this, true);
                 }
                 return null;
@@ -259,6 +259,7 @@ final class AdaptivePoolingAllocator {
             final int index = sizeClassIndexOf(size);
             MagazineGroup[] magazineGroups;
             if (!FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals() ||
+                    IS_LOW_MEM ||
                     (magazineGroups = threadLocalGroup.get()) == null) {
                 magazineGroups =  sizeClassedMagazineGroups;
             }
