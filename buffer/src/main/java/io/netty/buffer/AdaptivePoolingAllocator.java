@@ -89,6 +89,9 @@ import static java.util.concurrent.atomic.AtomicIntegerFieldUpdater.newUpdater;
  */
 @UnstableApi
 final class AdaptivePoolingAllocator {
+    private static final int LOW_MEM_THRESHOLD = 512 * 1024 * 1024;
+    private static final boolean IS_LOW_MEM = Runtime.getRuntime().maxMemory() <= LOW_MEM_THRESHOLD;
+
     /**
      * The 128 KiB minimum chunk size is chosen to encourage the system allocator to delegate to mmap for chunk
      * allocations. For instance, glibc will do this.
@@ -100,7 +103,7 @@ final class AdaptivePoolingAllocator {
     private static final int EXPANSION_ATTEMPTS = 3;
     private static final int INITIAL_MAGAZINES = 1;
     private static final int RETIRE_CAPACITY = 256;
-    private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
+    private static final int MAX_STRIPES = IS_LOW_MEM ? 1 : NettyRuntime.availableProcessors() * 2;
     private static final int BUFS_PER_CHUNK = 8; // For large buffers, aim to have about this many buffers per chunk.
 
     /**
@@ -108,7 +111,9 @@ final class AdaptivePoolingAllocator {
      * <p>
      * This number is 8 MiB, and is derived from the limitations of internal histograms.
      */
-    private static final int MAX_CHUNK_SIZE = 8 * 1024 * 1024; // 8 MiB.
+    private static final int MAX_CHUNK_SIZE = IS_LOW_MEM ?
+            2 * 1024 * 1024 : // 2 MiB for systems with small heaps.
+            8 * 1024 * 1024; // 8 MiB.
     private static final int MAX_POOLED_BUF_SIZE = MAX_CHUNK_SIZE / BUFS_PER_CHUNK;
 
     /**
@@ -192,7 +197,7 @@ final class AdaptivePoolingAllocator {
         threadLocalGroup = new FastThreadLocal<MagazineGroup[]>() {
             @Override
             protected MagazineGroup[] initialValue() {
-                if (useCacheForNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null) {
+                if (!IS_LOW_MEM && (useCacheForNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null)) {
                     return createMagazineGroupSizeClasses(AdaptivePoolingAllocator.this, true);
                 }
                 return null;
@@ -259,7 +264,7 @@ final class AdaptivePoolingAllocator {
             }
             if (index < magazineGroups.length) {
                 allocated = magazineGroups[index].allocate(size, maxCapacity, currentThread, buf);
-            } else {
+            } else if (!IS_LOW_MEM) {
                 allocated = largeBufferMagazineGroup.allocate(size, maxCapacity, currentThread, buf);
             }
         }
