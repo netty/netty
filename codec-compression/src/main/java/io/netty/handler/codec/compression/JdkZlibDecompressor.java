@@ -86,7 +86,7 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
 
     @Override
     public Status status() throws DecompressionException {
-        if (inflater.needsInput() || gzipState == GzipState.FOOTER_START) {
+        if (inflater == null || inflater.needsInput() || gzipState == GzipState.FOOTER_START) {
             return Status.NEED_INPUT;
         } else if (finished) {
             return Status.COMPLETE;
@@ -201,6 +201,7 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
             } else {
                 gzipState = GzipState.FOOTER_START;
             }
+            inputBufferInInflater = false;
         }
         return decompressed;
     }
