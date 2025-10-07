@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.compression;
 
-import com.github.luben.zstd.ZstdIOException;
 import com.github.luben.zstd.ZstdInputStreamNoFinalizer;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
@@ -30,7 +29,10 @@ import java.util.List;
 /**
  * Decompresses a compressed block {@link ByteBuf} using the Zstandard algorithm.
  * See <a href="https://facebook.github.io/zstd">Zstandard</a>.
+ *
+ * @deprecated Superseded by {@link ZstdDecompressor} and {@link BackpressureDecompressionHandler}
  */
+@Deprecated
 public final class ZstdDecoder extends ByteToMessageDecoder {
     // Don't use static here as we want to still allow to load the classes.
     {
