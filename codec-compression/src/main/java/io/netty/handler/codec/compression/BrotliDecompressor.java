@@ -33,8 +33,8 @@ public final class BrotliDecompressor implements Decompressor {
     private final DecoderJNI.Wrapper decoder;
     private ByteBuf unusedInput;
 
-    BrotliDecompressor(Builder builder) throws DecompressionException {
-        this.allocator = builder.allocator;
+    BrotliDecompressor(Builder builder, ByteBufAllocator allocator) throws DecompressionException {
+        this.allocator = allocator;
         try {
             this.decoder = new DecoderJNI.Wrapper(builder.inputBufferSize);
         } catch (IOException ioe) {
@@ -121,15 +121,14 @@ public final class BrotliDecompressor implements Decompressor {
         return limit;
     }
 
-    public static Builder builder(ByteBufAllocator allocator) {
-        return new Builder(allocator);
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static final class Builder extends AbstractDecompressorBuilder {
         private int inputBufferSize = 8 * 1024;
 
-        Builder(ByteBufAllocator allocator) {
-            super(allocator);
+        Builder() {
         }
 
         /**
@@ -144,8 +143,8 @@ public final class BrotliDecompressor implements Decompressor {
         }
 
         @Override
-        public Decompressor build() throws DecompressionException {
-            return new DefensiveDecompressor(new BrotliDecompressor(this));
+        public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
+            return new DefensiveDecompressor(new BrotliDecompressor(this, allocator));
         }
     }
 }

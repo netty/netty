@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 public class LzfDecompressorTest extends LzfDecoderTest {
@@ -25,8 +24,7 @@ public class LzfDecompressorTest extends LzfDecoderTest {
 
     @Override
     protected EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(
-                BackpressureDecompressionHandler.create(
-                        LzfDecompressor.builder(ByteBufAllocator.DEFAULT)));
+        return new EmbeddedChannel(BackpressureDecompressionHandler.create(
+                LzfDecompressor.builder()));
     }
 }

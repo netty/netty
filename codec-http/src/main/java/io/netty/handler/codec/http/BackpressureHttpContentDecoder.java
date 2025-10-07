@@ -124,7 +124,7 @@ public abstract class BackpressureHttpContentDecoder extends ChannelDuplexHandle
                 }
             }
 
-            decoder = newContentDecoder(ctx.alloc(), contentEncoding);
+            decoder = newContentDecoder(contentEncoding);
 
             if (decoder == null) {
                 needRead = false;
@@ -223,7 +223,7 @@ public abstract class BackpressureHttpContentDecoder extends ChannelDuplexHandle
         }
     }
 
-    protected abstract ChannelDuplexHandler newContentDecoder(ByteBufAllocator allocator, String contentEncoding) throws Exception;
+    protected abstract ChannelDuplexHandler newContentDecoder(String contentEncoding) throws Exception;
 
     /**
      * Returns the expected content encoding of the decoded content.

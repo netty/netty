@@ -23,8 +23,8 @@ abstract class ZlibDecompressor extends InputBufferingDecompressor {
     protected final int maxAllocation;
     protected final byte[] dictionary;
 
-    ZlibDecompressor(AbstractZlibDecompressorBuilder builder) {
-        super(builder.allocator);
+    ZlibDecompressor(AbstractZlibDecompressorBuilder builder, ByteBufAllocator allocator) {
+        super(allocator);
         this.maxAllocation = builder.maxAllocation;
         this.dictionary = builder.dictionary;
     }
@@ -34,8 +34,7 @@ abstract class ZlibDecompressor extends InputBufferingDecompressor {
         protected byte[] dictionary;
         protected int maxAllocation = 1024 * 1024;
 
-        protected AbstractZlibDecompressorBuilder(ByteBufAllocator allocator) {
-            super(allocator);
+        protected AbstractZlibDecompressorBuilder() {
         }
 
         /**

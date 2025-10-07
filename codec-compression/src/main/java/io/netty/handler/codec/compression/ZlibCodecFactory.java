@@ -203,11 +203,10 @@ public final class ZlibCodecFactory {
     /**
      * Create a new decompressor builder that delegates to {@link JZlibDecompressor} or {@link JdkZlibDecompressor}.
      *
-     * @param allocator The allocator
      * @return The decompressor builder
      */
-    public static ZlibDecompressorBuilder decompressorBuilder(ByteBufAllocator allocator) {
-        return new ZlibDecompressorBuilder(allocator);
+    public static ZlibDecompressorBuilder decompressorBuilder() {
+        return new ZlibDecompressorBuilder();
     }
 
     private ZlibCodecFactory() {
@@ -217,9 +216,8 @@ public final class ZlibCodecFactory {
     public static class ZlibDecompressorBuilder extends Decompressor.AbstractDecompressorBuilder {
         private final ZlibDecompressor.AbstractZlibDecompressorBuilder delegate;
 
-        ZlibDecompressorBuilder(ByteBufAllocator allocator) {
-            super(allocator);
-            this.delegate = noJdkZlibDecoder ? new JZlibDecompressor.Builder(allocator) : new JdkZlibDecompressor.Builder(allocator);
+        ZlibDecompressorBuilder() {
+            this.delegate = noJdkZlibDecoder ? new JZlibDecompressor.Builder() : new JdkZlibDecompressor.Builder();
         }
 
         /**
@@ -256,8 +254,8 @@ public final class ZlibCodecFactory {
         }
 
         @Override
-        public Decompressor build() throws DecompressionException {
-            return delegate.build();
+        public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
+            return delegate.build(allocator);
         }
     }
 }

@@ -52,7 +52,7 @@ public class BackpressureHttpContentDecoderTest extends HttpContentDecoderTest {
                 new BackpressureHttpContentDecoder() {
 
                     @Override
-                    protected ChannelDuplexHandler newContentDecoder(ByteBufAllocator allocator, String contentEncoding) throws Exception {
+                    protected ChannelDuplexHandler newContentDecoder(String contentEncoding) throws Exception {
                         return BackpressureDecompressionHandler.builder(new MockDecompressor.Builder()
                                 .needInput()
                                 .needOutput(4)
@@ -162,10 +162,6 @@ public class BackpressureHttpContentDecoderTest extends HttpContentDecoderTest {
         static final class Builder extends AbstractDecompressorBuilder {
             private final List<Status> events = new ArrayList<>();
 
-            Builder() {
-                super(ByteBufAllocator.DEFAULT);
-            }
-
             Builder needInput() {
                 events.add(NEED_INPUT);
                 return this;
@@ -184,7 +180,7 @@ public class BackpressureHttpContentDecoderTest extends HttpContentDecoderTest {
             }
 
             @Override
-            public Decompressor build() throws DecompressionException {
+            public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
                 return new MockDecompressor(events);
             }
         }

@@ -73,7 +73,7 @@ public final class BackpressureDecompressionHandler extends ChannelDuplexHandler
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        decompressor = decompressorBuilder.build();
+        decompressor = decompressorBuilder.build(ctx.alloc());
     }
 
     @Override

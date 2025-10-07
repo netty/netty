@@ -15,12 +15,11 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandler;
 
 public class BrotliDecompressorTest extends BrotliDecoderTest {
     @Override
     protected ChannelHandler createDecoder() {
-        return BackpressureDecompressionHandler.create(BrotliDecompressor.builder(ByteBufAllocator.DEFAULT));
+        return BackpressureDecompressionHandler.create(BrotliDecompressor.builder());
     }
 }

@@ -26,8 +26,8 @@ public class JZlibDecompressor extends ZlibDecompressor {
     private boolean finished;
     private boolean inputBufferInInflater;
 
-    JZlibDecompressor(Builder builder) {
-        super(builder);
+    JZlibDecompressor(Builder builder, ByteBufAllocator allocator) {
+        super(builder, allocator);
         int resultCode;
         if (dictionary == null) {
             resultCode = z.init(ZlibUtil.convertWrapperType(builder.wrapper));
@@ -119,13 +119,12 @@ public class JZlibDecompressor extends ZlibDecompressor {
         return decompressed;
     }
 
-    public static Builder builder(ByteBufAllocator allocator) {
-        return new Builder(allocator);
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static final class Builder extends AbstractZlibDecompressorBuilder {
-        Builder(ByteBufAllocator allocator) {
-            super(allocator);
+        Builder() {
         }
 
         /**
@@ -153,8 +152,8 @@ public class JZlibDecompressor extends ZlibDecompressor {
         }
 
         @Override
-        public Decompressor build() throws DecompressionException {
-            return new DefensiveDecompressor(new JZlibDecompressor(this));
+        public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
+            return new DefensiveDecompressor(new JZlibDecompressor(this, allocator));
         }
     }
 }

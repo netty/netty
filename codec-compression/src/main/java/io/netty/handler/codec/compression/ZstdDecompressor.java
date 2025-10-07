@@ -41,8 +41,8 @@ public final class ZstdDecompressor implements Decompressor {
         output.setContinuous(true);
     }
 
-    ZstdDecompressor(Builder builder) {
-        this.allocator = builder.allocator;
+    ZstdDecompressor(ByteBufAllocator allocator) {
+        this.allocator = allocator;
     }
 
     @Override
@@ -90,18 +90,17 @@ public final class ZstdDecompressor implements Decompressor {
         }
     }
 
-    public static Builder builder(ByteBufAllocator allocator) {
-        return new Builder(allocator);
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static final class Builder extends AbstractDecompressorBuilder {
-        Builder(ByteBufAllocator allocator) {
-            super(allocator);
+        Builder() {
         }
 
         @Override
-        public Decompressor build() throws DecompressionException {
-            return new DefensiveDecompressor(new ZstdDecompressor(this));
+        public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
+            return new DefensiveDecompressor(new ZstdDecompressor(allocator));
         }
     }
 

@@ -51,8 +51,8 @@ public class SnappyFrameDecompressor extends InputBufferingDecompressor {
 
     private ByteBuf pendingOutput;
 
-    SnappyFrameDecompressor(Builder builder) {
-        super(builder.allocator);
+    SnappyFrameDecompressor(Builder builder, ByteBufAllocator allocator) {
+        super(allocator);
         this.validateChecksums = builder.validateChecksums;
     }
 
@@ -248,15 +248,14 @@ public class SnappyFrameDecompressor extends InputBufferingDecompressor {
         }
     }
 
-    public static Builder builder(ByteBufAllocator allocator) {
-        return new Builder(allocator);
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static final class Builder extends AbstractDecompressorBuilder {
         boolean validateChecksums;
 
-        Builder(ByteBufAllocator allocator) {
-            super(allocator);
+        Builder() {
         }
 
         /**
@@ -273,8 +272,8 @@ public class SnappyFrameDecompressor extends InputBufferingDecompressor {
         }
 
         @Override
-        public Decompressor build() throws DecompressionException {
-            return new DefensiveDecompressor(new SnappyFrameDecompressor(this));
+        public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
+            return new DefensiveDecompressor(new SnappyFrameDecompressor(this, allocator));
         }
     }
 }

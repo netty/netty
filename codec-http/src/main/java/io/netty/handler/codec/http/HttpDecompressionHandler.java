@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.handler.codec.compression.BackpressureDecompressionHandler;
 import io.netty.handler.codec.compression.Brotli;
@@ -41,27 +40,27 @@ import static io.netty.handler.codec.http.HttpHeaderValues.ZSTD;
  * handler modifies the message, please refer to {@link BackpressureHttpContentDecoder}.
  */
 public class HttpDecompressionHandler extends BackpressureHttpContentDecoder {
-    protected Decompressor.AbstractDecompressorBuilder newDecompressorBuilder(ByteBufAllocator allocator, String contentEncoding) {
+    protected Decompressor.AbstractDecompressorBuilder newDecompressorBuilder(String contentEncoding) {
         if (GZIP.contentEqualsIgnoreCase(contentEncoding) ||
                 X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
-            return ZlibCodecFactory.decompressorBuilder(allocator)
+            return ZlibCodecFactory.decompressorBuilder()
                     .wrapper(ZlibWrapper.GZIP);
         }
         if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) ||
                 X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
-            return ZlibCodecFactory.decompressorBuilder(allocator)
+            return ZlibCodecFactory.decompressorBuilder()
                     .wrapper(ZlibWrapper.ZLIB_OR_NONE);
         }
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
-            return BrotliDecompressor.builder(allocator);
+            return BrotliDecompressor.builder();
         }
 
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
-            return SnappyFrameDecompressor.builder(allocator);
+            return SnappyFrameDecompressor.builder();
         }
 
         if (Zstd.isAvailable() && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
-            return ZstdDecompressor.builder(allocator);
+            return ZstdDecompressor.builder();
         }
 
         // 'identity' or unsupported
@@ -69,8 +68,8 @@ public class HttpDecompressionHandler extends BackpressureHttpContentDecoder {
     }
 
     @Override
-    protected final ChannelDuplexHandler newContentDecoder(ByteBufAllocator allocator, String contentEncoding) throws Exception {
-        Decompressor.AbstractDecompressorBuilder builder = newDecompressorBuilder(allocator, contentEncoding);
+    protected final ChannelDuplexHandler newContentDecoder(String contentEncoding) throws Exception {
+        Decompressor.AbstractDecompressorBuilder builder = newDecompressorBuilder(contentEncoding);
         if (builder != null) {
             return BackpressureDecompressionHandler.create(builder);
         } else {

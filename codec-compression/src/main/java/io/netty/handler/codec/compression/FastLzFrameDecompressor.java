@@ -74,8 +74,8 @@ public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
      */
     private int currentChecksum;
 
-    FastLzFrameDecompressor(Builder builder) {
-        super(builder.allocator);
+    FastLzFrameDecompressor(Builder builder, ByteBufAllocator allocator) {
+        super(allocator);
         this.checksum = builder.checksum == null ? null : ByteBufChecksum.wrapChecksum(builder.checksum);
     }
 
@@ -189,15 +189,14 @@ public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
         }
     }
 
-    public static Builder builder(ByteBufAllocator allocator) {
-        return new Builder(allocator);
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static final class Builder extends AbstractDecompressorBuilder {
         private Checksum checksum;
 
-        Builder(ByteBufAllocator allocator) {
-            super(allocator);
+        Builder() {
         }
 
         /**
@@ -221,8 +220,8 @@ public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
         }
 
         @Override
-        public Decompressor build() throws DecompressionException {
-            return new DefensiveDecompressor(new FastLzFrameDecompressor(this));
+        public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
+            return new DefensiveDecompressor(new FastLzFrameDecompressor(this, allocator));
         }
     }
 }

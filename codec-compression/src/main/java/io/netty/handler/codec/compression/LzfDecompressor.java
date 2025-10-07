@@ -69,8 +69,8 @@ public class LzfDecompressor extends InputBufferingDecompressor {
      */
     private boolean isCompressed;
 
-    LzfDecompressor(Builder builder) {
-        super(builder.allocator);
+    LzfDecompressor(Builder builder, ByteBufAllocator allocator) {
+        super(allocator);
         decoder = builder.safeInstance ?
                 ChunkDecoderFactory.safeInstance()
                 : ChunkDecoderFactory.optimalInstance();
@@ -204,15 +204,14 @@ public class LzfDecompressor extends InputBufferingDecompressor {
         }
     }
 
-    public static Builder builder(ByteBufAllocator allocator) {
-        return new Builder(allocator);
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static final class Builder extends AbstractDecompressorBuilder {
         private boolean safeInstance;
 
-        Builder(ByteBufAllocator allocator) {
-            super(allocator);
+        Builder() {
         }
 
         /**
@@ -230,8 +229,8 @@ public class LzfDecompressor extends InputBufferingDecompressor {
         }
 
         @Override
-        public Decompressor build() throws DecompressionException {
-            return new DefensiveDecompressor(new LzfDecompressor(this));
+        public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
+            return new DefensiveDecompressor(new LzfDecompressor(this, allocator));
         }
     }
 }

@@ -90,8 +90,8 @@ public final class Bzip2Decompressor extends InputBufferingDecompressor {
      */
     private int streamCRC;
 
-    Bzip2Decompressor(Builder builder) {
-        super(builder.allocator);
+    Bzip2Decompressor(Builder builder, ByteBufAllocator allocator) {
+        super(allocator);
         this.outputBufferSize = builder.outputBufferSize;
     }
 
@@ -342,15 +342,14 @@ public final class Bzip2Decompressor extends InputBufferingDecompressor {
         }
     }
 
-    public static Builder builder(ByteBufAllocator allocator) {
-        return new Builder(allocator);
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static final class Builder extends AbstractDecompressorBuilder {
         private int outputBufferSize = 65536;
 
-        Builder(ByteBufAllocator allocator) {
-            super(allocator);
+        Builder() {
         }
 
         /**
@@ -365,8 +364,8 @@ public final class Bzip2Decompressor extends InputBufferingDecompressor {
         }
 
         @Override
-        public Decompressor build() throws DecompressionException {
-            return new DefensiveDecompressor(new Bzip2Decompressor(this));
+        public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
+            return new DefensiveDecompressor(new Bzip2Decompressor(this, allocator));
         }
     }
 }

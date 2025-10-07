@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 public class ZstdDecompressorTest extends ZstdDecoderTest {
@@ -25,8 +24,6 @@ public class ZstdDecompressorTest extends ZstdDecoderTest {
 
     @Override
     public EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(
-                BackpressureDecompressionHandler.create(
-                        ZstdDecompressor.builder(ByteBufAllocator.DEFAULT)));
+        return new EmbeddedChannel(BackpressureDecompressionHandler.create(ZstdDecompressor.builder()));
     }
 }

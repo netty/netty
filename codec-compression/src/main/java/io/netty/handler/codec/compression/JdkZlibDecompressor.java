@@ -58,8 +58,8 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
     private boolean finished;
     private boolean inputBufferInInflater;
 
-    JdkZlibDecompressor(Builder builder) {
-        super(builder);
+    JdkZlibDecompressor(Builder builder, ByteBufAllocator allocator) {
+        super(builder, allocator);
         this.decompressConcatenated = builder.decompressConcatenated;
         switch (builder.wrapper) {
             case GZIP:
@@ -411,15 +411,14 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
                 cmf_flg % 31 == 0;
     }
 
-    public static Builder builder(ByteBufAllocator allocator) {
-        return new Builder(allocator);
+    public static Builder builder() {
+        return new Builder();
     }
 
     public static final class Builder extends AbstractZlibDecompressorBuilder {
         boolean decompressConcatenated;
 
-        Builder(ByteBufAllocator allocator) {
-            super(allocator);
+        Builder() {
         }
 
         /**
@@ -452,8 +451,8 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
         }
 
         @Override
-        public Decompressor build() throws DecompressionException {
-            return new DefensiveDecompressor(new JdkZlibDecompressor(this));
+        public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
+            return new DefensiveDecompressor(new JdkZlibDecompressor(this, allocator));
         }
     }
 }
