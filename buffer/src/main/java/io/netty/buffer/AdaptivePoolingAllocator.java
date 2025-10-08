@@ -814,12 +814,33 @@ final class AdaptivePoolingAllocator {
         }
         private static final Chunk MAGAZINE_FREED = new Chunk();
 
-        private static final Recycler<AdaptiveByteBuf> EVENT_LOOP_LOCAL_BUFFER_POOL = new Recycler<AdaptiveByteBuf>() {
-            @Override
-            protected AdaptiveByteBuf newObject(Handle<AdaptiveByteBuf> handle) {
-                return new AdaptiveByteBuf(handle);
+        private static final class AdaptiveRecycler extends Recycler<AdaptiveByteBuf> {
+
+            private AdaptiveRecycler(boolean unguarded) {
+                // uses fast thread local
+                super(unguarded);
             }
-        };
+
+            private AdaptiveRecycler(int maxCapacity, boolean unguarded) {
+                // doesn't use fast thread local, shared
+                super(maxCapacity, unguarded);
+            }
+
+            @Override
+            protected AdaptiveByteBuf newObject(final Handle<AdaptiveByteBuf> handle) {
+                return new AdaptiveByteBuf((EnhancedHandle<AdaptiveByteBuf>) handle);
+            }
+
+            public static AdaptiveRecycler threadLocal() {
+                return new AdaptiveRecycler(true);
+            }
+
+            public static AdaptiveRecycler sharedWith(int maxCapacity) {
+                return new AdaptiveRecycler(maxCapacity, true);
+            }
+        }
+
+        private static final AdaptiveRecycler EVENT_LOOP_LOCAL_BUFFER_POOL = AdaptiveRecycler.threadLocal();
 
         private Chunk current;
         @SuppressWarnings("unused") // updated via NEXT_IN_LINE
@@ -827,8 +848,7 @@ final class AdaptivePoolingAllocator {
         private final MagazineGroup group;
         private final ChunkController chunkController;
         private final StampedLock allocationLock;
-        private final Queue<AdaptiveByteBuf> bufferQueue;
-        private final ObjectPool.Handle<AdaptiveByteBuf> handle;
+        private final AdaptiveRecycler recycler;
         private final Queue<Chunk> sharedChunkQueue;
 
         Magazine(MagazineGroup group, boolean shareable, Queue<Chunk> sharedChunkQueue,
@@ -839,17 +859,10 @@ final class AdaptivePoolingAllocator {
             if (shareable) {
                 // We only need the StampedLock if this Magazine will be shared across threads.
                 allocationLock = new StampedLock();
-                bufferQueue = PlatformDependent.newFixedMpmcQueue(MAGAZINE_BUFFER_QUEUE_CAPACITY);
-                handle = new ObjectPool.Handle<AdaptiveByteBuf>() {
-                    @Override
-                    public void recycle(AdaptiveByteBuf self) {
-                        bufferQueue.offer(self);
-                    }
-                };
+                recycler = AdaptiveRecycler.sharedWith(MAGAZINE_BUFFER_QUEUE_CAPACITY);
             } else {
                 allocationLock = null;
-                bufferQueue = null;
-                handle = null;
+                recycler = null;
             }
             this.sharedChunkQueue = sharedChunkQueue;
         }
@@ -1074,15 +1087,8 @@ final class AdaptivePoolingAllocator {
         }
 
         public AdaptiveByteBuf newBuffer() {
-            AdaptiveByteBuf buf;
-            if (handle == null) {
-                buf = EVENT_LOOP_LOCAL_BUFFER_POOL.get();
-            } else {
-                buf = bufferQueue.poll();
-                if (buf == null) {
-                    buf = new AdaptiveByteBuf(handle);
-                }
-            }
+            AdaptiveRecycler recycler = this.recycler;
+            AdaptiveByteBuf buf = recycler == null? EVENT_LOOP_LOCAL_BUFFER_POOL.get() : recycler.get();
             buf.resetRefCnt();
             buf.discardMarks();
             return buf;
@@ -1377,7 +1383,7 @@ final class AdaptivePoolingAllocator {
 
     static final class AdaptiveByteBuf extends AbstractReferenceCountedByteBuf {
 
-        private final ObjectPool.Handle<AdaptiveByteBuf> handle;
+        private final EnhancedHandle<AdaptiveByteBuf> handle;
 
         // this both act as adjustment and the start index for a free list segment allocation
         private int startIndex;
@@ -1389,7 +1395,7 @@ final class AdaptivePoolingAllocator {
         private boolean hasArray;
         private boolean hasMemoryAddress;
 
-        AdaptiveByteBuf(ObjectPool.Handle<AdaptiveByteBuf> recyclerHandle) {
+        AdaptiveByteBuf(EnhancedHandle<AdaptiveByteBuf> recyclerHandle) {
             super(0);
             handle = ObjectUtil.checkNotNull(recyclerHandle, "recyclerHandle");
         }
@@ -1866,12 +1872,7 @@ final class AdaptivePoolingAllocator {
             tmpNioBuf = null;
             chunk = null;
             rootParent = null;
-            if (handle instanceof EnhancedHandle) {
-                EnhancedHandle<AdaptiveByteBuf>  enhancedHandle = (EnhancedHandle<AdaptiveByteBuf>) handle;
-                enhancedHandle.unguardedRecycle(this);
-            } else {
-                handle.recycle(this);
-            }
+            handle.unguardedRecycle(this);
         }
     }
 
