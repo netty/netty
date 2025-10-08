@@ -17,9 +17,9 @@ package io.netty.handler.codec.compression;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 
-public class Bzip2DecompressorIntegrationTest extends Bzip2IntegrationTest {
+public class BrotliDecompressorHandlerIntegrationTest extends BrotliIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(BackpressureDecompressionHandler.create(Bzip2Decompressor.builder()));
+        return new EmbeddedChannel(BackpressureDecompressionHandler.create(BrotliDecompressor.builder()));
     }
 }

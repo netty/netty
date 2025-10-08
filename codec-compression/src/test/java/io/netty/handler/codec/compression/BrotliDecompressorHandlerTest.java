@@ -15,11 +15,11 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.ChannelHandler;
 
-public class ZstdDecompressorIntegrationTest extends ZstdIntegrationTest {
+public class BrotliDecompressorHandlerTest extends BrotliDecoderTest {
     @Override
-    protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(BackpressureDecompressionHandler.create(ZstdDecompressor.builder()));
+    protected ChannelHandler createDecoder() {
+        return BackpressureDecompressionHandler.create(BrotliDecompressor.builder());
     }
 }

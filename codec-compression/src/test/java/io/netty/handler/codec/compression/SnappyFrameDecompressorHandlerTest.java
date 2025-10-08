@@ -15,12 +15,11 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.ChannelHandler;
 
-public class FastLzDecompressorIntegrationTest extends FastLzIntegrationTest {
+public class SnappyFrameDecompressorHandlerTest extends SnappyFrameDecoderTest {
     @Override
-    protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(BackpressureDecompressionHandler.create(
-                FastLzFrameDecompressor.builder().defaultChecksum()));
+    protected ChannelHandler createDecoder() {
+        return BackpressureDecompressionHandler.create(SnappyFrameDecompressor.builder());
     }
 }

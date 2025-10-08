@@ -17,9 +17,9 @@ package io.netty.handler.codec.compression;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 
-public class JdkZlibDecompressorIntegrationTest extends JdkZlibIntegrationTest {
+public class JZlibDecompressorHandlerIntegrationTest extends JZlibIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(BackpressureDecompressionHandler.create(JdkZlibDecompressor.builder()));
+        return new EmbeddedChannel(BackpressureDecompressionHandler.create(JZlibDecompressor.builder()));
     }
 }

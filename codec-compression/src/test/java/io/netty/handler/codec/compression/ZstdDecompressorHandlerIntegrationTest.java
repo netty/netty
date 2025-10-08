@@ -17,9 +17,9 @@ package io.netty.handler.codec.compression;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 
-public class SnappyDecompressorJumboSizeIntegrationTest extends SnappyJumboSizeIntegrationTest {
+public class ZstdDecompressorHandlerIntegrationTest extends ZstdIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(BackpressureDecompressionHandler.create(SnappyFrameDecompressor.builder()));
+        return new EmbeddedChannel(BackpressureDecompressionHandler.create(ZstdDecompressor.builder()));
     }
 }

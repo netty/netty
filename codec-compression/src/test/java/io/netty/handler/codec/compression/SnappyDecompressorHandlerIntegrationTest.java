@@ -15,11 +15,11 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.channel.ChannelHandler;
+import io.netty.channel.embedded.EmbeddedChannel;
 
-public class BrotliDecompressorTest extends BrotliDecoderTest {
+public class SnappyDecompressorHandlerIntegrationTest extends SnappyIntegrationTest {
     @Override
-    protected ChannelHandler createDecoder() {
-        return BackpressureDecompressionHandler.create(BrotliDecompressor.builder());
+    protected EmbeddedChannel createDecoder() {
+        return new EmbeddedChannel(BackpressureDecompressionHandler.create(SnappyFrameDecompressor.builder()));
     }
 }

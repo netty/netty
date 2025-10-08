@@ -17,13 +17,13 @@ package io.netty.handler.codec.compression;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 
-public class Bzip2DecompressorTest extends Bzip2DecoderTest {
+public class ZstdDecompressorHandlerTest extends ZstdDecoderTest {
 
-    public Bzip2DecompressorTest() throws Exception {
+    public ZstdDecompressorHandlerTest() throws Exception {
     }
 
     @Override
-    protected EmbeddedChannel createChannel() {
-        return new EmbeddedChannel(BackpressureDecompressionHandler.create(Bzip2Decompressor.builder()));
+    public EmbeddedChannel createChannel() {
+        return new EmbeddedChannel(BackpressureDecompressionHandler.create(ZstdDecompressor.builder()));
     }
 }

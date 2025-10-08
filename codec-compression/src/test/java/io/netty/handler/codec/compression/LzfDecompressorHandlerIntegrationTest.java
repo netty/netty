@@ -17,10 +17,9 @@ package io.netty.handler.codec.compression;
 
 import io.netty.channel.embedded.EmbeddedChannel;
 
-public class Lz4FrameDecompressorIntegrationTest extends Lz4FrameIntegrationTest {
+public class LzfDecompressorHandlerIntegrationTest extends LzfIntegrationTest {
     @Override
     protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(BackpressureDecompressionHandler.create(
-                Lz4FrameDecompressor.builder().defaultChecksum()));
+        return new EmbeddedChannel(BackpressureDecompressionHandler.create(LzfDecompressor.builder()));
     }
 }
