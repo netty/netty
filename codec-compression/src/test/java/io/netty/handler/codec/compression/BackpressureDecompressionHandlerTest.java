@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -69,6 +70,32 @@ class BackpressureDecompressionHandlerTest {
         channel.finish();
     }
 
+    @Test
+    public void endOfInput() {
+        EmbeddedChannel channel = new EmbeddedChannel(
+                new NumberToBuffer(),
+                BackpressureDecompressionHandler.builder(new MockDecompressor.Builder()
+                                .needInput()
+                                .needOutput(1)
+                                .needInput()
+                                .needOutput(1)
+                                .complete())
+                        .maxMessagesPerRead(100)
+                        .build(),
+                new BufferToNumber()
+        );
+
+        channel.writeInbound(0);
+        assertEquals(1, channel.<Integer>readInbound());
+        assertEquals(READ_COMPLETE, channel.readInbound());
+
+        channel.pipeline().firstContext()
+                .fireUserEventTriggered(BackpressureDecompressionHandler.EndOfContentEvent.INSTANCE);
+
+        assertEquals(3, channel.<Integer>readInbound());
+        assertEquals(BackpressureDecompressionHandler.EndOfContentEvent.INSTANCE, channel.readInbound());
+    }
+
     private static ByteBuf numberedBuffer(int index) {
         ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(4);
         buf.writeInt(index);
@@ -94,6 +121,14 @@ class BackpressureDecompressionHandlerTest {
         public void channelReadComplete(ChannelHandlerContext ctx) throws Exception {
             ctx.fireChannelRead(READ_COMPLETE);
             ctx.fireChannelReadComplete();
+        }
+
+        @Override
+        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+            if (evt == BackpressureDecompressionHandler.EndOfContentEvent.INSTANCE) {
+                ctx.fireChannelRead(BackpressureDecompressionHandler.EndOfContentEvent.INSTANCE);
+                ctx.fireChannelReadComplete();
+            }
         }
     }
 

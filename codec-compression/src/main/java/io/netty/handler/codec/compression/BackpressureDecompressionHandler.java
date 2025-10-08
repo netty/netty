@@ -18,6 +18,7 @@ package io.netty.handler.codec.compression;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.DecoderException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.RecyclableArrayList;
@@ -146,7 +147,11 @@ public final class BackpressureDecompressionHandler extends ChannelDuplexHandler
                         inputBuffer = null;
                     }
                     try {
-                        decompressor.addInput((ByteBuf) item);
+                        if (item == EndOfContentEvent.INSTANCE) {
+                            decompressor.endOfInput();
+                        } else {
+                            decompressor.addInput((ByteBuf) item);
+                        }
                     } catch (Exception e) {
                         handleException(e);
                         throw e;
@@ -154,6 +159,7 @@ public final class BackpressureDecompressionHandler extends ChannelDuplexHandler
                     break;
                 case COMPLETE:
                     decompressor.close();
+                    ctx.fireUserEventTriggered(EndOfContentEvent.INSTANCE);
                     closed = true;
                     break;
                 default:
@@ -168,6 +174,9 @@ public final class BackpressureDecompressionHandler extends ChannelDuplexHandler
         if (closed) {
             ReferenceCountUtil.release(msg);
             return;
+        }
+        if (!(msg instanceof ByteBuf)) {
+            throw new DecoderException("Only byte bufs allowed");
         }
         if (status() == Decompressor.Status.NEED_INPUT) {
             try {
@@ -223,6 +232,19 @@ public final class BackpressureDecompressionHandler extends ChannelDuplexHandler
         } // if downstreamWantsMore == 0, we already fired readComplete
     }
 
+    @Override
+    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
+        if (evt == EndOfContentEvent.INSTANCE) {
+            if (inputBuffer == null) {
+                inputBuffer = RecyclableArrayList.newInstance();
+            }
+            inputBuffer.add(evt);
+            processSome(ctx);
+            return;
+        }
+        super.userEventTriggered(ctx, evt);
+    }
+
     public static final class Builder {
         private final Decompressor.AbstractDecompressorBuilder decompressorBuilder;
         private int maxMessagesPerRead = DEFAULT_MAX_MESSAGES_PER_READ;
@@ -251,6 +273,21 @@ public final class BackpressureDecompressionHandler extends ChannelDuplexHandler
          */
         public BackpressureDecompressionHandler build() {
             return new BackpressureDecompressionHandler(this);
+        }
+    }
+
+    /**
+     * Special {@link #userEventTriggered(ChannelHandlerContext, Object) user event} that is used to signify that no
+     * more {@link #channelRead(ChannelHandlerContext, Object)} events are forthcoming.
+     * {@link BackpressureDecompressionHandler} will handle this event and
+     * {@link Decompressor#endOfInput() forward it to the decompressor}. When the decompressor signals no more output
+     * is available, the handler will also fire this event.
+     */
+    public static final class EndOfContentEvent {
+        @SuppressWarnings("InstantiationOfUtilityClass")
+        public static final EndOfContentEvent INSTANCE = new EndOfContentEvent();
+
+        private EndOfContentEvent() {
         }
     }
 }
