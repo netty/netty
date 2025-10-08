@@ -17,6 +17,7 @@ package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.ByteBufUtil;
 
 import java.util.zip.CRC32;
 import java.util.zip.DataFormatException;
@@ -56,6 +57,10 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
 
     private boolean decideZlibOrNone;
     private boolean finished;
+    /**
+     * If this is true, part of the input buffer is still in use by the {@link #inflater}, so we shouldn't touch that
+     * buffer too much (e.g. compact it).
+     */
     private boolean inputBufferInInflater;
 
     JdkZlibDecompressor(Builder builder, ByteBufAllocator allocator) {
@@ -86,7 +91,7 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
 
     @Override
     public Status status() throws DecompressionException {
-        if (inflater == null || inflater.needsInput() || gzipState == GzipState.FOOTER_START) {
+        if (inflater == null || (inflater.needsInput() && !finished) || gzipState == GzipState.FOOTER_START) {
             return Status.NEED_INPUT;
         } else if (finished) {
             return Status.COMPLETE;
@@ -97,6 +102,15 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
 
     @Override
     public void endOfInput() throws DecompressionException {
+        if (finished) {
+            // make sure we return COMPLETE from status()
+            gzipState = GzipState.HEADER_START;
+            return;
+        }
+        if (gzipState != GzipState.HEADER_START) {
+            throw new DecompressionException("Incomplete gzip framing");
+        }
+        finished = true;
     }
 
     @Override
@@ -146,12 +160,10 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
         if (inflater.needsInput()) {
             if (buf.hasArray()) {
                 inflater.setInput(buf.array(), buf.arrayOffset() + buf.readerIndex(), readableBytes);
-                inputBufferInInflater = true;
             } else {
-                byte[] array = new byte[readableBytes];
-                buf.readBytes(array);
-                inflater.setInput(array);
+                inflater.setInput(ByteBufUtil.getBytes(buf));
             }
+            inputBufferInInflater = true;
         }
     }
 
@@ -186,7 +198,6 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
             if (crc != null) {
                 crc.update(outArray, outIndex, outputLength);
             }
-            return decompressed;
         }
         if (inflater.needsDictionary()) {
             if (dictionary == null) {
@@ -196,12 +207,14 @@ public final class JdkZlibDecompressor extends ZlibDecompressor {
             inflater.setDictionary(dictionary);
         }
         if (inflater.finished()) {
+            inputBufferInInflater = false;
             if (crc == null) {
                 finished = true; // Do not decode anymore.
             } else {
                 gzipState = GzipState.FOOTER_START;
+                // potentially consume footer
+                processInput(buf);
             }
-            inputBufferInInflater = false;
         }
         return decompressed;
     }

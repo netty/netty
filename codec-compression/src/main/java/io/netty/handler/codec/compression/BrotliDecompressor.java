@@ -33,6 +33,14 @@ public final class BrotliDecompressor implements Decompressor {
     private final DecoderJNI.Wrapper decoder;
     private ByteBuf unusedInput;
 
+    static {
+        try {
+            Brotli.ensureAvailability();
+        } catch (Throwable throwable) {
+            throw new ExceptionInInitializerError(throwable);
+        }
+    }
+
     BrotliDecompressor(Builder builder, ByteBufAllocator allocator) throws DecompressionException {
         this.allocator = allocator;
         try {

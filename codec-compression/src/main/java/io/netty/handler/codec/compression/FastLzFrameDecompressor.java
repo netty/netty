@@ -38,7 +38,8 @@ public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
     private enum State {
         INIT_BLOCK,
         INIT_BLOCK_PARAMS,
-        DECOMPRESS_DATA
+        DECOMPRESS_DATA,
+        COMPLETE
     }
 
     private State currentState = State.INIT_BLOCK;
@@ -127,6 +128,8 @@ public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
                 } else {
                     return Status.NEED_OUTPUT;
                 }
+            case COMPLETE:
+                return Status.COMPLETE;
             default:
                 throw new AssertionError("Unknown state: " + currentState);
         }
@@ -134,6 +137,10 @@ public final class FastLzFrameDecompressor extends InputBufferingDecompressor {
 
     @Override
     public void endOfInput() throws DecompressionException {
+        if (currentState != State.INIT_BLOCK) {
+            throw new DecompressionException("Unexpected end of input");
+        }
+        currentState = State.COMPLETE;
     }
 
     @Override

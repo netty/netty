@@ -50,6 +50,7 @@ public class SnappyFrameDecompressor extends InputBufferingDecompressor {
     private int numBytesToSkip;
 
     private ByteBuf pendingOutput;
+    private boolean eof;
 
     SnappyFrameDecompressor(Builder builder, ByteBufAllocator allocator) {
         super(allocator);
@@ -66,11 +67,18 @@ public class SnappyFrameDecompressor extends InputBufferingDecompressor {
 
     @Override
     public Status status() throws DecompressionException {
-        return pendingOutput == null ? Status.NEED_INPUT : Status.NEED_OUTPUT;
+        if (pendingOutput != null) {
+            return Status.NEED_OUTPUT;
+        }
+        if (eof) {
+            return Status.COMPLETE;
+        }
+        return Status.NEED_INPUT;
     }
 
     @Override
     public void endOfInput() throws DecompressionException {
+        eof = true;
     }
 
     @Override

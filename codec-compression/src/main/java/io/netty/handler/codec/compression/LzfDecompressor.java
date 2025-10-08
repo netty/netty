@@ -42,6 +42,7 @@ public class LzfDecompressor extends InputBufferingDecompressor {
         INIT_BLOCK,
         INIT_ORIGINAL_LENGTH,
         DECOMPRESS_DATA,
+        END,
     }
 
     private State currentState = State.INIT_BLOCK;
@@ -151,6 +152,8 @@ public class LzfDecompressor extends InputBufferingDecompressor {
                 return Status.NEED_INPUT;
             case DECOMPRESS_DATA:
                 return available() < chunkLength ? Status.NEED_INPUT : Status.NEED_OUTPUT;
+            case END:
+                return Status.COMPLETE;
             default:
                 throw new AssertionError("Unknown state: " + currentState);
         }
@@ -158,6 +161,10 @@ public class LzfDecompressor extends InputBufferingDecompressor {
 
     @Override
     public void endOfInput() throws DecompressionException {
+        if (currentState != State.INIT_BLOCK) {
+            throw new DecompressionException("Incomplete block");
+        }
+        currentState = State.END;
     }
 
     @Override

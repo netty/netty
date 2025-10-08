@@ -48,7 +48,13 @@ public final class ZstdDecompressor implements Decompressor {
     @Override
     public Status status() throws DecompressionException {
         try {
-            return output.available() == 0 ? Status.NEED_INPUT : Status.NEED_OUTPUT;
+            if (output.available() == 0) {
+                if (!output.getContinuous()) {
+                    return Status.COMPLETE;
+                }
+                return Status.NEED_INPUT;
+            }
+            return Status.NEED_OUTPUT;
         } catch (IOException e) {
             throw new DecompressionException(e);
         }
