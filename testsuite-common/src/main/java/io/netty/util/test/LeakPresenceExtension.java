@@ -59,7 +59,7 @@ public final class LeakPresenceExtension
         if (store.get(SCOPE_KEY) != null) {
             throw new IllegalStateException("Weird context lifecycle");
         }
-        LeakPresenceDetector.ResourceScope scope = new LeakPresenceDetector.ResourceScope(context.getDisplayName());
+        ScopeWrapper scope = new ScopeWrapper(new LeakPresenceDetector.ResourceScope(context.getDisplayName()));
         store.put(SCOPE_KEY, scope);
 
         WithTransferableScope.SCOPE.set(scope);
@@ -67,10 +67,10 @@ public final class LeakPresenceExtension
 
     @Override
     public void beforeEach(ExtensionContext context) {
-        LeakPresenceDetector.ResourceScope outerScope;
+        ScopeWrapper outerScope;
         ExtensionContext outerContext = context;
         while (true) {
-            outerScope = (LeakPresenceDetector.ResourceScope)
+            outerScope = (ScopeWrapper)
                     outerContext.getStore(ExtensionContext.Namespace.GLOBAL).get(SCOPE_KEY);
             if (outerScope != null) {
                 break;
@@ -79,7 +79,7 @@ public final class LeakPresenceExtension
                     .orElseThrow(() -> new IllegalStateException("No resource scope found"));
         }
 
-        LeakPresenceDetector.ResourceScope previousScope = WithTransferableScope.SCOPE.get();
+        ScopeWrapper previousScope = WithTransferableScope.SCOPE.get();
         WithTransferableScope.SCOPE.set(outerScope);
         if (previousScope != null) {
             context.getStore(ExtensionContext.Namespace.GLOBAL).put(PREVIOUS_SCOPE_KEY, previousScope);
@@ -88,7 +88,7 @@ public final class LeakPresenceExtension
 
     @Override
     public void afterEach(ExtensionContext context) {
-        LeakPresenceDetector.ResourceScope previousScope = (LeakPresenceDetector.ResourceScope)
+        ScopeWrapper previousScope = (ScopeWrapper)
                 context.getStore(ExtensionContext.Namespace.GLOBAL).get(PREVIOUS_SCOPE_KEY);
         if (previousScope != null) {
             WithTransferableScope.SCOPE.set(previousScope);
@@ -97,20 +97,20 @@ public final class LeakPresenceExtension
 
     @Override
     public void afterAll(ExtensionContext context) throws InterruptedException {
-        LeakPresenceDetector.ResourceScope scope =
-                (LeakPresenceDetector.ResourceScope) context.getStore(ExtensionContext.Namespace.GLOBAL).get(SCOPE_KEY);
+        ScopeWrapper scope =
+                (ScopeWrapper) context.getStore(ExtensionContext.Namespace.GLOBAL).get(SCOPE_KEY);
 
         // Wait some time for resources to close. Many tests do loop.shutdownGracefully without waiting, and that's ok.
         long start = System.nanoTime();
-        while (scope.hasOpenResources() && System.nanoTime() - start < TimeUnit.SECONDS.toNanos(5)) {
+        while (scope.scope.hasOpenResources() && System.nanoTime() - start < TimeUnit.SECONDS.toNanos(5)) {
             TimeUnit.MILLISECONDS.sleep(100);
         }
 
-        scope.close();
+        scope.scope.close();
     }
 
     public static final class WithTransferableScope<T> extends LeakPresenceDetector<T> {
-        static final InheritableThreadLocal<ResourceScope> SCOPE = new InheritableThreadLocal<>();
+        static final InheritableThreadLocal<ScopeWrapper> SCOPE = new InheritableThreadLocal<>();
 
         @SuppressWarnings("unused")
         public WithTransferableScope(Class<?> resourceType, int samplingInterval) {
@@ -124,7 +124,18 @@ public final class LeakPresenceExtension
 
         @Override
         protected ResourceScope currentScope() {
-            return Objects.requireNonNull(SCOPE.get(), "Resource created outside test?");
+            return Objects.requireNonNull(SCOPE.get(), "Resource created outside test?").scope;
+        }
+    }
+
+    /**
+     * Prevent junit from closing the ResourceScope automatically.
+     */
+    private static final class ScopeWrapper {
+        final LeakPresenceDetector.ResourceScope scope;
+
+        ScopeWrapper(LeakPresenceDetector.ResourceScope scope) {
+            this.scope = scope;
         }
     }
 }
