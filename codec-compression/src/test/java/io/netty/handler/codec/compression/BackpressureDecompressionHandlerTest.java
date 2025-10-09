@@ -65,6 +65,10 @@ class BackpressureDecompressionHandlerTest {
         assertEquals(3, channel.<Integer>readInbound());
         assertEquals(4, channel.<Integer>readInbound());
         assertEquals(READ_COMPLETE, channel.readInbound());
+        if (!autoRead) {
+            channel.read();
+        }
+        assertEquals(BackpressureDecompressionHandler.EndOfContentEvent.INSTANCE, channel.readInbound());
         assertNull(channel.readInbound());
 
         channel.finish();
