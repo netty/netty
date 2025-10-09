@@ -39,7 +39,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
     private static final String READ_COMPLETE = "readComplete";
     private static final String LAST = "last";
-    private static final DefaultHttpRequest REQUEST = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.POST, "/", new DefaultHttpHeaders()
+    private static final DefaultHttpRequest REQUEST = new DefaultHttpRequest(
+            HttpVersion.HTTP_1_1, HttpMethod.POST, "/", new DefaultHttpHeaders()
             .add(HttpHeaderNames.CONTENT_TRANSFER_ENCODING, "mock")
             .add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED));
 

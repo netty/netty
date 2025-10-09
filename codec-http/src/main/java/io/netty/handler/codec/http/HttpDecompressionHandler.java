@@ -152,7 +152,8 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
                 }
             }
 
-            Decompressor.AbstractDecompressorBuilder decompressorBuilder = decompressionDecider.newDecompressorBuilder(contentEncoding);
+            Decompressor.AbstractDecompressorBuilder decompressorBuilder =
+                    decompressionDecider.newDecompressorBuilder(contentEncoding);
             if (decompressorBuilder != null) {
                 messageCompressed = true;
                 decompressor = decompressorBuilder.build(ctx.alloc());
