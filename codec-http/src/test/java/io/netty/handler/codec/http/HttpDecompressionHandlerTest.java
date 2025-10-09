@@ -157,8 +157,7 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
 
         channel.writeInbound(REQUEST, new DefaultLastHttpContent(numberedBuffer(0)));
 
-        HttpRequest request = channel.readInbound();
-        assertEquals("/", request.uri());
+        assertEquals(REQUEST, channel.readInbound());
         assertEquals(1, channel.<Integer>readInbound());
         if (!autoRead) {
             assertEquals(READ_COMPLETE, channel.readInbound());
@@ -170,6 +169,42 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
         assertNull(channel.readInbound());
 
         channel.finish();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void pipelining(boolean autoRead) {
+        EmbeddedChannel channel = new EmbeddedChannel(
+                new MockDecompressor.Builder()
+                        .needInput()
+                        .needOutput(2)
+                        .complete()
+                        .makeHandler(2),
+                new HttpContentNumberDecoder()
+        );
+        channel.config().setAutoRead(autoRead);
+
+        int n = 3;
+        List<Object> in = new ArrayList<>();
+        for (int i = 0; i < n; i++) {
+            in.add(REQUEST);
+            in.add(new DefaultLastHttpContent(numberedBuffer(0)));
+        }
+
+        channel.writeInbound(in.toArray(new Object[0]));
+
+        for (int i = 0; i < n; i++) {
+            assertEquals(REQUEST, channel.readInbound());
+            assertEquals(1, channel.<Integer>readInbound());
+            if (!autoRead) {
+                assertEquals(READ_COMPLETE, channel.readInbound());
+                assertNull(channel.readInbound());
+                channel.read();
+            }
+            assertEquals(2, channel.<Integer>readInbound());
+            assertEquals(LAST, channel.readInbound());
+        }
+        assertEquals(READ_COMPLETE, channel.readInbound());
     }
 
     private static final class MockDecompressor implements Decompressor {
