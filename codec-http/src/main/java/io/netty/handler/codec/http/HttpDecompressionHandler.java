@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -77,6 +78,8 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
     private long downstreamMessageTarget;
     private long readStartMessageCount;
 
+    private boolean discardRemainingContent;
+
     HttpDecompressionHandler(Builder builder) {
         this.decompressionDecider = builder.decompressionDecider;
         this.messagesPerRead = builder.messagesPerRead;
@@ -88,6 +91,29 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
 
     public static Builder builder() {
         return new Builder();
+    }
+
+    private Decompressor.Status decompressorStatus(ChannelHandlerContext ctx) {
+        assert decompressor != null;
+        try {
+            return decompressor.status();
+        } catch (Exception e) {
+            handleDecompressorException(ctx, e);
+            return Decompressor.Status.COMPLETE;
+        }
+    }
+
+    private void handleDecompressorException(ChannelHandlerContext ctx, Exception e) {
+        try {
+            decompressor.close();
+        } catch (Exception f) {
+            e.addSuppressed(f);
+        }
+        decompressor = null;
+        if (messageCompressed) {
+            discardRemainingContent = true;
+        }
+        ctx.fireExceptionCaught(e);
     }
 
     @Override
@@ -132,6 +158,7 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
                 decompressor = decompressorBuilder.build(ctx.alloc());
                 downstreamMessageTarget = downstreamMessageCount + messagesPerRead;
                 lastHttpContent = null;
+                discardRemainingContent = false;
                 downstreamMessageCount++; // the HttpMessage
 
                 // Remove content-length header:
@@ -171,7 +198,7 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
         HttpContent content = (HttpContent) msg;
 
         if (decompressor == null) {
-            if (content.content().isReadable()) {
+            if (content.content().isReadable() && !discardRemainingContent) {
                 content.release();
                 throw new DecompressionException("Additional input after compressed data");
             }
@@ -179,8 +206,16 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
         } else {
             assert decompressor.status() == Decompressor.Status.NEED_INPUT : "heldBack should be set";
             if (content.content().isReadable()) {
-                decompressor.addInput(content.content());
-                forwardOutput(ctx);
+                boolean failed = false;
+                try {
+                    decompressor.addInput(content.content());
+                } catch (Exception e) {
+                    handleDecompressorException(ctx, e);
+                    failed = true;
+                }
+                if (!failed) {
+                    forwardOutput(ctx);
+                }
             } else {
                 content.release();
             }
@@ -192,7 +227,7 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
                 // done
                 messageCompressed = false;
                 ctx.fireChannelRead(last);
-            } else if (decompressor.status() == Decompressor.Status.NEED_INPUT) {
+            } else if (decompressorStatus(ctx) == Decompressor.Status.NEED_INPUT) {
                 decompressor.endOfInput();
                 messageCompressed = false;
                 lastHttpContent = last;
@@ -277,7 +312,7 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
         reading = true;
         readStartMessageCount = downstreamMessageCount;
         forwardOutput(ctx);
-        if (decompressor == null || decompressor.status() == Decompressor.Status.NEED_INPUT) {
+        if (decompressor == null || decompressorStatus(ctx) != Decompressor.Status.NEED_OUTPUT) {
             this.heldBack = null;
             if (heldBack.isEmpty() && readStartMessageCount == downstreamMessageCount) {
                 heldBack.recycle();
@@ -315,31 +350,43 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
     }
 
     private void forwardOutput(ChannelHandlerContext ctx) {
-        loop:
         while (true) {
-            Decompressor.Status status = decompressor.status();
+            Decompressor.Status status = decompressorStatus(ctx);
             switch (status) {
                 case NEED_OUTPUT:
                     if (downstreamMessageTarget <= downstreamMessageCount && !ctx.channel().config().isAutoRead()) {
                         if (heldBack == null) {
                             heldBack = RecyclableArrayList.newInstance();
                         }
-                        break loop;
+                        return;
                     }
                     downstreamMessageCount++;
-                    ctx.fireChannelRead(new DefaultHttpContent(decompressor.takeOutput()));
+                    ByteBuf output;
+                    try {
+                        output = decompressor.takeOutput();
+                    } catch (Exception e) {
+                        handleDecompressorException(ctx, e);
+                        return;
+                    }
+                    ctx.fireChannelRead(new DefaultHttpContent(output));
                     break;
                 case NEED_INPUT:
-                    break loop;
+                    return;
                 case COMPLETE:
-                    decompressor.close();
+                    if (decompressor != null) {
+                        try {
+                            decompressor.close();
+                        } catch (Exception e) {
+                            ctx.fireExceptionCaught(e);
+                        }
+                    }
                     decompressor = null;
                     downstreamMessageCount++;
                     if (lastHttpContent != null) {
                         ctx.fireChannelRead(lastHttpContent);
                         lastHttpContent = null;
                     }
-                    break loop;
+                    return;
                 default:
                     throw new AssertionError("Unknown status: " + status);
             }

@@ -33,6 +33,7 @@ import static io.netty.handler.codec.compression.Decompressor.Status.COMPLETE;
 import static io.netty.handler.codec.compression.Decompressor.Status.NEED_INPUT;
 import static io.netty.handler.codec.compression.Decompressor.Status.NEED_OUTPUT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
@@ -55,7 +56,10 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
                         .needInput()
                         .needOutput(4)
                         .complete()
-                        .makeHandler(2),
+
+                        .handlerBuilder()
+                        .messagesPerRead(2)
+                        .build(),
                 new HttpContentNumberDecoder()
         );
         channel.config().setAutoRead(autoRead);
@@ -106,7 +110,10 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
                         .needInput()
                         .needOutput(1)
                         .complete()
-                        .makeHandler(2),
+
+                        .handlerBuilder()
+                        .messagesPerRead(2)
+                        .build(),
                 new HttpContentNumberDecoder()
         );
         channel.config().setAutoRead(autoRead);
@@ -144,7 +151,10 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
                         .needInput()
                         .needOutput(1)
                         .complete()
-                        .makeHandler(2),
+
+                        .handlerBuilder()
+                        .messagesPerRead(2)
+                        .build(),
                 new HttpContentNumberDecoder(),
                 new ChannelInboundHandlerAdapter() {
                     @Override
@@ -179,7 +189,10 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
                         .needInput()
                         .needOutput(2)
                         .complete()
-                        .makeHandler(2),
+
+                        .handlerBuilder()
+                        .messagesPerRead(2)
+                        .build(),
                 new HttpContentNumberDecoder()
         );
         channel.config().setAutoRead(autoRead);
@@ -205,14 +218,86 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
             assertEquals(LAST, channel.readInbound());
         }
         assertEquals(READ_COMPLETE, channel.readInbound());
+
+        channel.finish();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void failInput(boolean autoRead) {
+        EmbeddedChannel channel = new EmbeddedChannel(
+                new MockDecompressor.Builder()
+                        .needInput().fail()
+
+                        .handlerBuilder()
+                        .messagesPerRead(2)
+                        .build(),
+                new HttpContentNumberDecoder(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        ctx.fireChannelRead(cause);
+                    }
+                }
+        );
+        channel.config().setAutoRead(autoRead);
+
+        for (int i = 0; i < 2; i++) {
+            channel.writeInbound(REQUEST, new DefaultLastHttpContent(numberedBuffer(0)));
+
+            assertEquals(REQUEST, channel.readInbound());
+            assertInstanceOf(MockDecompressionException.class, channel.readInbound());
+            assertEquals(LAST, channel.readInbound());
+            assertEquals(READ_COMPLETE, channel.readInbound());
+        }
+
+        channel.finish();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void failOutput(boolean autoRead) {
+        EmbeddedChannel channel = new EmbeddedChannel(
+                new MockDecompressor.Builder()
+                        .needInput()
+                        .needOutput(1).fail()
+
+                        .handlerBuilder()
+                        .messagesPerRead(2)
+                        .build(),
+                new HttpContentNumberDecoder(),
+                new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        ctx.fireChannelRead(cause);
+                    }
+                }
+        );
+        channel.config().setAutoRead(autoRead);
+
+        for (int i = 0; i < 2; i++) {
+            channel.writeInbound(REQUEST, new DefaultLastHttpContent(numberedBuffer(0)));
+
+            assertEquals(REQUEST, channel.readInbound());
+            assertInstanceOf(MockDecompressionException.class, channel.readInbound());
+            assertEquals(LAST, channel.readInbound());
+            assertEquals(READ_COMPLETE, channel.readInbound());
+        }
+
+        channel.finish();
+    }
+
+    private static final class MockDecompressionException extends DecompressionException {
     }
 
     private static final class MockDecompressor implements Decompressor {
         private final List<Status> events;
+        private final int failIndex;
         private int index;
 
-        MockDecompressor(List<Status> events) {
+        MockDecompressor(List<Status> events, int failIndex) {
             this.events = events;
+            this.failIndex = failIndex;
         }
 
         @Override
@@ -223,29 +308,42 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
         @Override
         public void addInput(ByteBuf buf) throws DecompressionException {
             assertEquals(NEED_INPUT, status());
-            assertEquals(index++, buf.readInt());
+            assertEquals(index, buf.readInt());
             buf.release();
+            if (index == failIndex) {
+                throw new MockDecompressionException();
+            }
+            index++;
         }
 
         @Override
         public void endOfInput() throws DecompressionException {
             assertEquals(NEED_INPUT, status());
+            if (index == failIndex) {
+                throw new MockDecompressionException();
+            }
             index++;
         }
 
         @Override
         public ByteBuf takeOutput() throws DecompressionException {
             assertEquals(NEED_OUTPUT, status());
+            if (index == failIndex) {
+                throw new MockDecompressionException();
+            }
             return numberedBuffer(index++);
         }
 
         @Override
         public void close() throws DecompressionException {
-            assertEquals(COMPLETE, status());
+            if (failIndex != index) {
+                assertEquals(COMPLETE, status());
+            }
         }
 
         static final class Builder extends AbstractDecompressorBuilder {
             private final List<Status> events = new ArrayList<>();
+            private int failIndex = -1;
 
             MockDecompressor.Builder needInput() {
                 events.add(NEED_INPUT);
@@ -264,16 +362,22 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
                 return this;
             }
 
-            @Override
-            public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
-                return new MockDecompressor(events);
+            /**
+             * Fail the previous operation.
+             */
+            MockDecompressor.Builder fail() {
+                failIndex = events.size() - 1;
+                return this;
             }
 
-            ChannelHandler makeHandler(int messagesPerRead) {
+            @Override
+            public Decompressor build(ByteBufAllocator allocator) throws DecompressionException {
+                return new MockDecompressor(events, failIndex);
+            }
+
+            HttpDecompressionHandler.Builder handlerBuilder() {
                 return HttpDecompressionHandler.builder()
-                        .messagesPerRead(messagesPerRead)
-                        .decompressionDecider(contentEncoding -> this)
-                        .build();
+                        .decompressionDecider(contentEncoding -> this);
             }
         }
     }
