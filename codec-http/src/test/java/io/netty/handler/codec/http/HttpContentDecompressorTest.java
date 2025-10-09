@@ -54,10 +54,21 @@ public class HttpContentDecompressorTest {
                 ctx.read();
             }
         }, createDecompressor(), new ChannelInboundHandlerAdapter() {
+            boolean hasChannelRead = false;
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                ctx.fireChannelRead(msg);
+                hasChannelRead = true;
+            }
+
             @Override
             public void channelReadComplete(ChannelHandlerContext ctx) {
                 ctx.fireChannelReadComplete();
-                ctx.read();
+                if (hasChannelRead) {
+                    hasChannelRead = false;
+                    ctx.read();
+                }
             }
         });
 
