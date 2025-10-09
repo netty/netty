@@ -187,18 +187,19 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
         }
 
         if (content instanceof LastHttpContent) {
+            LastHttpContent last = stripData((LastHttpContent) content);
             if (decompressor == null) {
                 // done
                 messageCompressed = false;
-                ctx.fireChannelRead(msg);
+                ctx.fireChannelRead(last);
             } else if (decompressor.status() == Decompressor.Status.NEED_INPUT) {
                 decompressor.endOfInput();
                 messageCompressed = false;
-                lastHttpContent = stripData((LastHttpContent) content);
+                lastHttpContent = last;
                 forwardOutput(ctx);
             } else {
                 assert heldBack != null : "should have been set by forwardOutput";
-                heldBack.add(stripData((LastHttpContent) content));
+                heldBack.add(last);
             }
         }
     }
@@ -260,12 +261,16 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
         if (decompressor == null) {
             return false;
         }
-        if (downstreamMessageTarget <= downstreamMessageCount && !ctx.channel().config().isAutoRead()) {
+        boolean autoRead = ctx.channel().config().isAutoRead();
+        if (downstreamMessageTarget <= downstreamMessageCount && !autoRead) {
             return false;
         }
 
         RecyclableArrayList heldBack = this.heldBack;
         if (heldBack == null) {
+            if (!autoRead) {
+                ctx.read();
+            }
             return false;
         }
 

@@ -55,8 +55,8 @@ public class HttpContentDecompressorTest {
             }
         }, createDecompressor(), new ChannelInboundHandlerAdapter() {
             @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                ctx.fireChannelRead(msg);
+            public void channelReadComplete(ChannelHandlerContext ctx) {
+                ctx.fireChannelReadComplete();
                 ctx.read();
             }
         });
