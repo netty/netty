@@ -476,13 +476,6 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.handler.codec.http.BackpressureHttpContentDecoder",
-    "condition": {
-      "typeReachable": "io.netty.handler.codec.http.BackpressureHttpContentDecoder"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.netty.handler.codec.http.HttpDecompressionHandler",
     "condition": {
       "typeReachable": "io.netty.handler.codec.http.HttpDecompressionHandler"
