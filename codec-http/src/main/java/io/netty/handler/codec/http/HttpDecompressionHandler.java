@@ -29,6 +29,7 @@ import io.netty.handler.codec.compression.ZlibCodecFactory;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.handler.codec.compression.Zstd;
 import io.netty.handler.codec.compression.ZstdDecompressor;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.RecyclableArrayList;
 
 import static io.netty.handler.codec.http.HttpHeaderValues.BR;
@@ -49,6 +50,8 @@ import static io.netty.handler.codec.http.HttpHeaderValues.ZSTD;
  * this data.
  */
 public class HttpDecompressionHandler extends ChannelDuplexHandler {
+    private final DecompressionDecider decompressionDecider;
+
     /**
      * Whether the current input, as seen by {@link #channelRead}, is part of a compressed message, i.e. hasn't been
      * finished by a {@link LastHttpContent} yet. Note that this is not exactly equal to the decompressed state.
@@ -74,48 +77,17 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
     private long downstreamMessageTarget;
     private long readStartMessageCount;
 
-    public HttpDecompressionHandler(int messagesPerRead) { // TODO
-        this.messagesPerRead = messagesPerRead;
+    HttpDecompressionHandler(Builder builder) {
+        this.decompressionDecider = builder.decompressionDecider;
+        this.messagesPerRead = builder.messagesPerRead;
     }
 
-    protected Decompressor.AbstractDecompressorBuilder newDecompressorBuilder(String contentEncoding) {
-        if (GZIP.contentEqualsIgnoreCase(contentEncoding) ||
-                X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
-            return ZlibCodecFactory.decompressorBuilder()
-                    .wrapper(ZlibWrapper.GZIP);
-        }
-        if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) ||
-                X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
-            return ZlibCodecFactory.decompressorBuilder()
-                    .wrapper(ZlibWrapper.ZLIB_OR_NONE);
-        }
-        if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
-            return BrotliDecompressor.builder();
-        }
-
-        if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
-            return SnappyFrameDecompressor.builder();
-        }
-
-        if (Zstd.isAvailable() && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
-            return ZstdDecompressor.builder();
-        }
-
-        // 'identity' or unsupported
-        return null;
+    public static HttpDecompressionHandler create() {
+        return builder().build();
     }
 
-    /**
-     * Returns the expected content encoding of the decoded content.
-     * This getMethod returns {@code "identity"} by default, which is the case for
-     * most decoders.
-     *
-     * @param contentEncoding the value of the {@code "Content-Encoding"} header
-     * @return the expected content encoding of the new content
-     */
-    protected String getTargetContentEncoding(
-            @SuppressWarnings("UnusedParameters") String contentEncoding) throws Exception {
-        return HttpContentDecoder.IDENTITY;
+    public static Builder builder() {
+        return new Builder();
     }
 
     @Override
@@ -154,7 +126,7 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
                 }
             }
 
-            Decompressor.AbstractDecompressorBuilder decompressorBuilder = newDecompressorBuilder(contentEncoding);
+            Decompressor.AbstractDecompressorBuilder decompressorBuilder = decompressionDecider.newDecompressorBuilder(contentEncoding);
             if (decompressorBuilder != null) {
                 messageCompressed = true;
                 decompressor = decompressorBuilder.build(ctx.alloc());
@@ -172,7 +144,7 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
                 }
 
                 // set new content encoding,
-                CharSequence targetContentEncoding = getTargetContentEncoding(contentEncoding);
+                CharSequence targetContentEncoding = decompressionDecider.getTargetContentEncoding(contentEncoding);
                 if (HttpHeaderValues.IDENTITY.contentEquals(targetContentEncoding)) {
                     // Do NOT set the 'Content-Encoding' header if the target encoding is 'identity'
                     // as per: https://tools.ietf.org/html/rfc2616#section-14.11
@@ -367,5 +339,67 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
                     throw new AssertionError("Unknown status: " + status);
             }
         }
+    }
+
+    public static final class Builder {
+        DecompressionDecider decompressionDecider = DecompressionDecider.DEFAULT;
+        int messagesPerRead = 64;
+
+        public Builder decompressionDecider(DecompressionDecider decompressionDecider) {
+            this.decompressionDecider = ObjectUtil.checkNotNull(decompressionDecider, "decompressionDecider");
+            return this;
+        }
+
+        public Builder messagesPerRead(int messagesPerRead) {
+            this.messagesPerRead = ObjectUtil.checkPositive(messagesPerRead, "messagesPerRead");
+            return this;
+        }
+
+        public HttpDecompressionHandler build() {
+            return new HttpDecompressionHandler(this);
+        }
+    }
+
+    public interface DecompressionDecider {
+        DecompressionDecider DEFAULT = contentEncoding -> {
+            if (GZIP.contentEqualsIgnoreCase(contentEncoding) ||
+                    X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
+                return ZlibCodecFactory.decompressorBuilder()
+                        .wrapper(ZlibWrapper.GZIP);
+            }
+            if (DEFLATE.contentEqualsIgnoreCase(contentEncoding) ||
+                    X_DEFLATE.contentEqualsIgnoreCase(contentEncoding)) {
+                return ZlibCodecFactory.decompressorBuilder()
+                        .wrapper(ZlibWrapper.ZLIB_OR_NONE);
+            }
+            if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
+                return BrotliDecompressor.builder();
+            }
+
+            if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
+                return SnappyFrameDecompressor.builder();
+            }
+
+            if (Zstd.isAvailable() && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
+                return ZstdDecompressor.builder();
+            }
+
+            // 'identity' or unsupported
+            return null;
+        };
+
+        /**
+         * Returns the expected content encoding of the decoded content.
+         * This getMethod returns {@code "identity"} by default, which is the case for
+         * most decoders.
+         *
+         * @param contentEncoding the value of the {@code "Content-Encoding"} header
+         * @return the expected content encoding of the new content
+         */
+        default String getTargetContentEncoding(String contentEncoding) throws Exception {
+            return HttpContentDecoder.IDENTITY;
+        }
+
+        Decompressor.AbstractDecompressorBuilder newDecompressorBuilder(String contentEncoding) throws Exception;
     }
 }

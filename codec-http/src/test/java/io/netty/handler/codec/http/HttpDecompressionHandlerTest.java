@@ -44,7 +44,7 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
 
     @Override
     protected ChannelHandler createDecompressor() {
-        return new HttpDecompressionHandler(64);
+        return HttpDecompressionHandler.create();
     }
 
     @ParameterizedTest
@@ -235,12 +235,10 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
             }
 
             ChannelHandler makeHandler(int messagesPerRead) {
-                return new HttpDecompressionHandler(messagesPerRead) {
-                    @Override
-                    protected AbstractDecompressorBuilder newDecompressorBuilder(String contentEncoding) {
-                        return Builder.this;
-                    }
-                };
+                return HttpDecompressionHandler.builder()
+                        .messagesPerRead(messagesPerRead)
+                        .decompressionDecider(contentEncoding -> this)
+                        .build();
             }
         }
     }
