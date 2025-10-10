@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.compression.BackpressureGauge;
 import io.netty.handler.codec.compression.DecompressionException;
 import io.netty.handler.codec.compression.Decompressor;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -59,7 +60,7 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
                         .complete()
 
                         .handlerBuilder()
-                        .messagesPerRead(2)
+                        .backpressureGaugeBuilder(BackpressureGauge.builder().messagesPerRead(2))
                         .build(),
                 new HttpContentNumberDecoder()
         );
@@ -105,7 +106,7 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
                         .complete()
 
                         .handlerBuilder()
-                        .bytesPerRead(5)
+                        .backpressureGaugeBuilder(BackpressureGauge.builder().bytesPerRead(5))
                         .build(),
                 new HttpContentNumberDecoder()
         );
@@ -159,7 +160,7 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
                         .complete()
 
                         .handlerBuilder()
-                        .messagesPerRead(2)
+                        .backpressureGaugeBuilder(BackpressureGauge.builder().messagesPerRead(2))
                         .build(),
                 new HttpContentNumberDecoder()
         );
@@ -200,7 +201,7 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
                         .complete()
 
                         .handlerBuilder()
-                        .messagesPerRead(2)
+                        .backpressureGaugeBuilder(BackpressureGauge.builder().messagesPerRead(2))
                         .build(),
                 new HttpContentNumberDecoder(),
                 new ChannelInboundHandlerAdapter() {
@@ -238,7 +239,7 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
                         .complete()
 
                         .handlerBuilder()
-                        .messagesPerRead(2)
+                        .backpressureGaugeBuilder(BackpressureGauge.builder().messagesPerRead(2))
                         .build(),
                 new HttpContentNumberDecoder()
         );
@@ -277,7 +278,7 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
                         .needInput().fail()
 
                         .handlerBuilder()
-                        .messagesPerRead(2)
+                        .backpressureGaugeBuilder(BackpressureGauge.builder().messagesPerRead(2))
                         .build(),
                 new HttpContentNumberDecoder(),
                 new ChannelInboundHandlerAdapter() {
@@ -310,7 +311,7 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
                         .needOutput(1).fail()
 
                         .handlerBuilder()
-                        .messagesPerRead(2)
+                        .backpressureGaugeBuilder(BackpressureGauge.builder().messagesPerRead(2))
                         .build(),
                 new HttpContentNumberDecoder(),
                 new ChannelInboundHandlerAdapter() {
