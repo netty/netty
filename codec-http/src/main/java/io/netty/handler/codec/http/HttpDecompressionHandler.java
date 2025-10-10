@@ -50,7 +50,7 @@ import static io.netty.handler.codec.http.HttpHeaderValues.ZSTD;
  * not produce unrestricted amounts of output data before downstream handlers signal that they are ready to receive
  * this data.
  */
-public class HttpDecompressionHandler extends ChannelDuplexHandler {
+public final class HttpDecompressionHandler extends ChannelDuplexHandler {
     private final DecompressionDecider decompressionDecider;
 
     /**
@@ -72,17 +72,22 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
     private RecyclableArrayList heldBack;
 
     private boolean reading;
+
     private final int messagesPerRead;
 
     private long downstreamMessageCount;
     private long downstreamMessageTarget;
     private long readStartMessageCount;
 
+    private final long bytesPerRead;
+    private long downstreamBytesBudget;
+
     private boolean discardRemainingContent;
 
     HttpDecompressionHandler(Builder builder) {
         this.decompressionDecider = builder.decompressionDecider;
         this.messagesPerRead = builder.messagesPerRead;
+        this.bytesPerRead = builder.bytesPerRead;
     }
 
     public static HttpDecompressionHandler create() {
@@ -157,10 +162,10 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
             if (decompressorBuilder != null) {
                 messageCompressed = true;
                 decompressor = decompressorBuilder.build(ctx.alloc());
-                downstreamMessageTarget = downstreamMessageCount + messagesPerRead;
+                topUpDownstreamMessageLimit();
                 lastHttpContent = null;
                 discardRemainingContent = false;
-                downstreamMessageCount++; // the HttpMessage
+                countDownstreamMessage(1); // the HttpMessage counts as one byte
 
                 // Remove content-length header:
                 // the correct value can be set only after all chunks are processed/decoded.
@@ -192,7 +197,7 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
 
         if (!messageCompressed) {
             ctx.fireChannelRead(msg);
-            downstreamMessageCount++;
+            countDownstreamMessage(1); // no need to estimate size
             return;
         }
 
@@ -272,7 +277,7 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
             if (readStartMessageCount == downstreamMessageCount) {
                 // we didn't forward any messages, so we need to ask upstream for more
                 reading = false;
-                if (!ctx.channel().config().isAutoRead()) {
+                if (!isAutoRead(ctx)) {
                     ctx.read();
                 }
                 return;
@@ -297,14 +302,13 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
         if (decompressor == null) {
             return false;
         }
-        boolean autoRead = ctx.channel().config().isAutoRead();
-        if (downstreamMessageTarget <= downstreamMessageCount && !autoRead) {
+        if (downstreamMessageLimitExceeded(ctx)) {
             return false;
         }
 
         RecyclableArrayList heldBack = this.heldBack;
         if (heldBack == null) {
-            if (!autoRead) {
+            if (!isAutoRead(ctx)) {
                 ctx.read();
             }
             return false;
@@ -335,6 +339,25 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
         }
     }
 
+    @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+    private static boolean isAutoRead(ChannelHandlerContext ctx) {
+        return ctx.channel().config().isAutoRead();
+    }
+
+    private boolean downstreamMessageLimitExceeded(ChannelHandlerContext ctx) {
+        return (downstreamMessageTarget <= downstreamMessageCount || downstreamBytesBudget <= 0) && !isAutoRead(ctx);
+    }
+
+    private void topUpDownstreamMessageLimit() {
+        downstreamMessageTarget = downstreamMessageCount + messagesPerRead;
+        downstreamBytesBudget = bytesPerRead;
+    }
+
+    private void countDownstreamMessage(long bytes) {
+        downstreamMessageCount++;
+        downstreamBytesBudget -= bytes;
+    }
+
     @Override
     public void read(ChannelHandlerContext ctx) throws Exception {
         if (decompressor == null && !messageCompressed) {
@@ -342,7 +365,7 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
             return;
         }
 
-        downstreamMessageTarget = downstreamMessageCount + messagesPerRead;
+        topUpDownstreamMessageLimit();
         if (!reading) {
             if (fulfillDemandOutsideRead(ctx)) {
                 channelReadComplete(ctx);
@@ -355,13 +378,12 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
             Decompressor.Status status = decompressorStatus(ctx);
             switch (status) {
                 case NEED_OUTPUT:
-                    if (downstreamMessageTarget <= downstreamMessageCount && !ctx.channel().config().isAutoRead()) {
+                    if (downstreamMessageLimitExceeded(ctx)) {
                         if (heldBack == null) {
                             heldBack = RecyclableArrayList.newInstance();
                         }
                         return;
                     }
-                    downstreamMessageCount++;
                     ByteBuf output;
                     try {
                         output = decompressor.takeOutput();
@@ -369,6 +391,7 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
                         handleDecompressorException(ctx, e);
                         return;
                     }
+                    countDownstreamMessage(output.readableBytes());
                     ctx.fireChannelRead(new DefaultHttpContent(output));
                     break;
                 case NEED_INPUT:
@@ -382,7 +405,7 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
                         }
                     }
                     decompressor = null;
-                    downstreamMessageCount++;
+                    countDownstreamMessage(1); // LastHttpContent counts as one byte
                     if (lastHttpContent != null) {
                         ctx.fireChannelRead(lastHttpContent);
                         lastHttpContent = null;
@@ -397,14 +420,39 @@ public class HttpDecompressionHandler extends ChannelDuplexHandler {
     public static final class Builder {
         DecompressionDecider decompressionDecider = DecompressionDecider.DEFAULT;
         int messagesPerRead = 64;
+        long bytesPerRead = 1024 * 1024;
 
         public Builder decompressionDecider(DecompressionDecider decompressionDecider) {
             this.decompressionDecider = ObjectUtil.checkNotNull(decompressionDecider, "decompressionDecider");
             return this;
         }
 
+        /**
+         * Configure the maximum message target per {@link ChannelHandlerContext#read() read operation}. Note that this
+         * is a rough guideline, and unlike {@link io.netty.handler.flow.FlowControlHandler}, this limit can sometimes
+         * be exceeded.
+         * <p>
+         * The default value is 64. The purpose of this limit is to prevent uncontrolled decompression ("zip bombs").
+         *
+         * @param messagesPerRead The maximum number of messages per read operation
+         * @return This builder
+         */
         public Builder messagesPerRead(int messagesPerRead) {
             this.messagesPerRead = ObjectUtil.checkPositive(messagesPerRead, "messagesPerRead");
+            return this;
+        }
+
+        /**
+         * Configure the maximum number of bytes per {@link ChannelHandlerContext#read() read operation}. Note that
+         * this is a rough guideline, and this limit can sometimes be exceeded.
+         * <p>
+         * The default value is 1MiB. The purpose of this limit is to prevent uncontrolled decompression ("zip bombs").
+         *
+         * @param bytesPerRead The maximum number of bytes per read operation
+         * @return This builder
+         */
+        public Builder bytesPerRead(long bytesPerRead) {
+            this.bytesPerRead = ObjectUtil.checkPositive(bytesPerRead, "bytesPerRead");
             return this;
         }
 

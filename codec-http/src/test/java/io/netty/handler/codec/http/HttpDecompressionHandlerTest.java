@@ -95,6 +95,52 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
         channel.finish();
     }
 
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void maxBytes(boolean autoRead) {
+        EmbeddedChannel channel = new EmbeddedChannel(
+                new MockDecompressor.Builder()
+                        .needInput()
+                        .needOutput(4)
+                        .complete()
+
+                        .handlerBuilder()
+                        .bytesPerRead(5)
+                        .build(),
+                new HttpContentNumberDecoder()
+        );
+        channel.config().setAutoRead(autoRead);
+
+        channel.writeInbound(REQUEST, new DefaultHttpContent(numberedBuffer(0)));
+
+        HttpRequest request = channel.readInbound();
+        assertEquals("/", request.uri());
+        assertEquals(1, channel.<Integer>readInbound());
+
+        if (!autoRead) {
+            assertEquals(READ_COMPLETE, channel.readInbound());
+
+            assertNull(channel.readInbound());
+            channel.read();
+        }
+
+        assertEquals(2, channel.<Integer>readInbound());
+        assertEquals(3, channel.<Integer>readInbound());
+
+        if (!autoRead) {
+            assertEquals(READ_COMPLETE, channel.readInbound());
+
+            assertNull(channel.readInbound());
+            channel.read();
+        }
+
+        assertEquals(4, channel.<Integer>readInbound());
+        assertEquals(READ_COMPLETE, channel.readInbound());
+        assertNull(channel.readInbound());
+
+        channel.finish();
+    }
+
     private static ByteBuf numberedBuffer(int index) {
         ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(4);
         buf.writeInt(index);
