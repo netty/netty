@@ -662,7 +662,7 @@ final class UnsafeByteBufUtil {
                 if (length == 0) {
                     return;
                 }
-                assert addr % 8 == 0;
+                assert is8BytesAligned(addr);
             }
             batchSetZero(addr, length);
         } else {
@@ -670,13 +670,22 @@ final class UnsafeByteBufUtil {
         }
     }
 
+    static long next8bytesAlignedAddr(long addr) {
+        return (addr + 7L) & ~7L;
+    }
+
+    static boolean is8BytesAligned(long addr) {
+        return (addr & 7L) == 0;
+    }
+
     private static int zeroTillAligned(long addr, int length) {
-        // write bytes until the address is aligned
-        int bytesToGetAligned = Math.min((int) (addr % 8), length);
-        for (int i = 0; i < bytesToGetAligned; i++) {
+        long alignedAddr = next8bytesAlignedAddr(addr);
+        int bytesToGetAligned = (int) (alignedAddr - addr);
+        int toZero = Math.min(bytesToGetAligned, length);
+        for (int i = 0; i < toZero; i++) {
             PlatformDependent.putByte(addr + i, ZERO);
         }
-        return bytesToGetAligned;
+        return toZero;
     }
 
     static UnpooledUnsafeDirectByteBuf newUnsafeDirectByteBuf(
