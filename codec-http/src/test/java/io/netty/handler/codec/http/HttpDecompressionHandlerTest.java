@@ -40,10 +40,19 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
     private static final String READ_COMPLETE = "readComplete";
     private static final String LAST = "last";
-    private static final DefaultHttpRequest REQUEST = new DefaultHttpRequest(
-            HttpVersion.HTTP_1_1, HttpMethod.POST, "/", new DefaultHttpHeaders()
-            .add(HttpHeaderNames.CONTENT_TRANSFER_ENCODING, "mock")
-            .add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED));
+
+    private static DefaultHttpRequest request() {
+        return new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.POST, "/", new DefaultHttpHeaders()
+                .add(HttpHeaderNames.CONTENT_ENCODING, "compressed")
+                .add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED));
+    }
+
+    private static DefaultHttpRequest requestUncompressed() {
+        return new DefaultHttpRequest(
+                HttpVersion.HTTP_1_1, HttpMethod.POST, "/", new DefaultHttpHeaders()
+                .add(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED));
+    }
 
     @Override
     protected ChannelHandler createDecompressor() {
@@ -66,7 +75,7 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
         );
         channel.config().setAutoRead(autoRead);
 
-        channel.writeInbound(REQUEST, new DefaultHttpContent(numberedBuffer(0)));
+        channel.writeInbound(request(), new DefaultHttpContent(numberedBuffer(0)));
 
         HttpRequest request = channel.readInbound();
         assertEquals("/", request.uri());
@@ -112,7 +121,7 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
         );
         channel.config().setAutoRead(autoRead);
 
-        channel.writeInbound(REQUEST, new DefaultHttpContent(numberedBuffer(0)));
+        channel.writeInbound(request(), new DefaultHttpContent(numberedBuffer(0)));
 
         HttpRequest request = channel.readInbound();
         assertEquals("/", request.uri());
@@ -166,7 +175,7 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
         );
         channel.config().setAutoRead(autoRead);
 
-        channel.writeInbound(REQUEST, new DefaultLastHttpContent(numberedBuffer(0)));
+        channel.writeInbound(request(), new DefaultLastHttpContent(numberedBuffer(0)));
 
         HttpRequest request = channel.readInbound();
         assertEquals("/", request.uri());
@@ -213,9 +222,9 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
         );
         channel.config().setAutoRead(autoRead);
 
-        channel.writeInbound(REQUEST, new DefaultLastHttpContent(numberedBuffer(0)));
+        channel.writeInbound(request(), new DefaultLastHttpContent(numberedBuffer(0)));
 
-        assertEquals(REQUEST, channel.readInbound());
+        assertEquals(requestUncompressed(), channel.readInbound());
         assertEquals(1, channel.<Integer>readInbound());
         if (!autoRead) {
             assertEquals(READ_COMPLETE, channel.readInbound());
@@ -248,14 +257,14 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
         int n = 3;
         List<Object> in = new ArrayList<>();
         for (int i = 0; i < n; i++) {
-            in.add(REQUEST);
+            in.add(request());
             in.add(new DefaultLastHttpContent(numberedBuffer(0)));
         }
 
         channel.writeInbound(in.toArray(new Object[0]));
 
         for (int i = 0; i < n; i++) {
-            assertEquals(REQUEST, channel.readInbound());
+            assertEquals(requestUncompressed(), channel.readInbound());
             assertEquals(1, channel.<Integer>readInbound());
             if (!autoRead) {
                 assertEquals(READ_COMPLETE, channel.readInbound());
@@ -291,9 +300,9 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
         channel.config().setAutoRead(autoRead);
 
         for (int i = 0; i < 2; i++) {
-            channel.writeInbound(REQUEST, new DefaultLastHttpContent(numberedBuffer(0)));
+            channel.writeInbound(request(), new DefaultLastHttpContent(numberedBuffer(0)));
 
-            assertEquals(REQUEST, channel.readInbound());
+            assertEquals(requestUncompressed(), channel.readInbound());
             assertInstanceOf(MockDecompressionException.class, channel.readInbound());
             assertEquals(LAST, channel.readInbound());
             assertEquals(READ_COMPLETE, channel.readInbound());
@@ -324,10 +333,57 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
         channel.config().setAutoRead(autoRead);
 
         for (int i = 0; i < 2; i++) {
-            channel.writeInbound(REQUEST, new DefaultLastHttpContent(numberedBuffer(0)));
+            channel.writeInbound(request(), new DefaultLastHttpContent(numberedBuffer(0)));
 
-            assertEquals(REQUEST, channel.readInbound());
+            assertEquals(requestUncompressed(), channel.readInbound());
             assertInstanceOf(MockDecompressionException.class, channel.readInbound());
+            assertEquals(LAST, channel.readInbound());
+            assertEquals(READ_COMPLETE, channel.readInbound());
+        }
+
+        channel.finish();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void mixedUncompressed(boolean autoRead) {
+        EmbeddedChannel channel = new EmbeddedChannel(
+                new MockDecompressor.Builder()
+                        .needInput()
+                        .needOutput(1)
+                        .needInput()
+                        .needOutput(1)
+                        .complete()
+
+                        .handlerBuilder()
+                        .backpressureGaugeBuilder(BackpressureGauge.builder().messagesPerRead(2))
+                        .build(),
+                new HttpContentNumberDecoder()
+        );
+        channel.config().setAutoRead(autoRead);
+
+        for (int i = 0; i < 4; i++) {
+            boolean compress = i % 2 == 0;
+            if (compress) {
+                channel.writeInbound(
+                        request(),
+                        new DefaultHttpContent(numberedBuffer(0)),
+                        new DefaultLastHttpContent(numberedBuffer(2)));
+            } else {
+                channel.writeInbound(
+                        requestUncompressed(),
+                        new DefaultHttpContent(numberedBuffer(1)),
+                        new DefaultLastHttpContent(numberedBuffer(3)));
+            }
+
+            assertEquals(requestUncompressed(), channel.readInbound());
+            assertEquals(1, channel.<Integer>readInbound());
+            if (!autoRead && compress) {
+                assertEquals(READ_COMPLETE, channel.readInbound());
+                assertNull(channel.readInbound());
+                channel.read();
+            }
+            assertEquals(3, channel.<Integer>readInbound());
             assertEquals(LAST, channel.readInbound());
             assertEquals(READ_COMPLETE, channel.readInbound());
         }
@@ -425,7 +481,8 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
 
             HttpDecompressionHandler.Builder handlerBuilder() {
                 return HttpDecompressionHandler.builder()
-                        .decompressionDecider(contentEncoding -> this);
+                        .decompressionDecider(
+                                contentEncoding -> contentEncoding.contentEquals("compressed") ? this : null);
             }
         }
     }

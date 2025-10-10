@@ -45,7 +45,7 @@ class BackpressureDecompressionHandlerTest {
                                 .needInput()
                                 .needOutput(4)
                                 .complete())
-                        .maxMessagesPerRead(2)
+                        .backpressureGaugeBuilder(BackpressureGauge.builder().messagesPerRead(2))
                         .build(),
                 new BufferToNumber()
         );
@@ -55,20 +55,18 @@ class BackpressureDecompressionHandlerTest {
 
         assertEquals(1, channel.<Integer>readInbound());
         assertEquals(2, channel.<Integer>readInbound());
-        assertEquals(READ_COMPLETE, channel.readInbound());
 
         if (!autoRead) {
+            assertEquals(READ_COMPLETE, channel.readInbound());
+
             assertNull(channel.readInbound());
             channel.read();
         }
 
         assertEquals(3, channel.<Integer>readInbound());
         assertEquals(4, channel.<Integer>readInbound());
-        assertEquals(READ_COMPLETE, channel.readInbound());
-        if (!autoRead) {
-            channel.read();
-        }
         assertEquals(BackpressureDecompressionHandler.EndOfContentEvent.INSTANCE, channel.readInbound());
+        assertEquals(READ_COMPLETE, channel.readInbound());
         assertNull(channel.readInbound());
 
         channel.finish();
@@ -84,7 +82,7 @@ class BackpressureDecompressionHandlerTest {
                                 .needInput()
                                 .needOutput(1)
                                 .complete())
-                        .maxMessagesPerRead(100)
+                        .backpressureGaugeBuilder(BackpressureGauge.builder().messagesPerRead(2))
                         .build(),
                 new BufferToNumber()
         );
