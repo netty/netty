@@ -272,7 +272,6 @@ class DecompressingFrameListenerTest {
             if (readable) {
                 events.add(data.readInt());
             }
-            data.release();
             if (endOfStream) {
                 events.add(EOF);
             }

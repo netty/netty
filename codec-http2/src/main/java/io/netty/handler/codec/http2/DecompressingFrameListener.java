@@ -219,10 +219,14 @@ public class DecompressingFrameListener extends Http2FrameListenerDecorator {
                                 return consumedInput;
                             }
                             ByteBuf output = decompressor.takeOutput();
-                            backpressureGauge.countMessage(output.readableBytes());
-                            int n = listener.onDataRead(ctx, stream.id(), output, 0, false);
-                            if (n > 0) {
-                                backpressureGauge.relieveBackpressure(n);
+                            try {
+                                backpressureGauge.countMessage(output.readableBytes());
+                                int n = listener.onDataRead(ctx, stream.id(), output, 0, false);
+                                if (n > 0) {
+                                    backpressureGauge.relieveBackpressure(n);
+                                }
+                            } finally {
+                                output.release();
                             }
                             break;
                         case COMPLETE:
@@ -239,7 +243,9 @@ public class DecompressingFrameListener extends Http2FrameListenerDecorator {
             decompressor.close();
             if (inboundQueue != null) {
                 for (Object o : inboundQueue) {
-                    ((ByteBuf) o).release();
+                    if (o != EOF) {
+                        ((ByteBuf) o).release();
+                    }
                 }
                 inboundQueue.recycle();
                 inboundQueue = null;
