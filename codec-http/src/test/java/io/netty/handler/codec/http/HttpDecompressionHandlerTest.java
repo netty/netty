@@ -482,7 +482,7 @@ public class HttpDecompressionHandlerTest extends HttpContentDecompressorTest {
             HttpDecompressionHandler.Builder handlerBuilder() {
                 return HttpDecompressionHandler.builder()
                         .decompressionDecider(
-                                contentEncoding -> contentEncoding.contentEquals("compressed") ? this : null);
+                                contentEncoding -> "compressed".contentEquals(contentEncoding) ? this : null);
             }
         }
     }

@@ -64,6 +64,14 @@ public final class BackpressureGauge {
     }
 
     /**
+     * Relieve backpressure by a specific number of bytes.
+     */
+    public void relieveBackpressure(long bytes) {
+        downstreamMessageBudget = messagesPerRead;
+        downstreamBytesBudget += bytes;
+    }
+
+    /**
      * Increase backpressure so that future {@link #backpressureLimitExceeded()} calls will return {@code true} until
      * backpressure is relieved again.
      */

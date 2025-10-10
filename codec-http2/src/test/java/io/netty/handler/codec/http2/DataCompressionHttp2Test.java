@@ -62,8 +62,8 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.anyShort;
-import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.verify;
 
 /**
@@ -467,7 +467,7 @@ public class DataCompressionHttp2Test {
                 Http2ConnectionDecoder decoder =
                         new DefaultHttp2ConnectionDecoder(serverConnection, encoder, new DefaultHttp2FrameReader());
                 Http2ConnectionHandler connectionHandler = new Http2ConnectionHandlerBuilder()
-                        .frameListener(new DelegatingDecompressorFrameListener(serverConnection, serverListener, 0))
+                        .frameListener(decompressorFrameListener(serverConnection, serverListener))
                         .codec(decoder, encoder).build();
                 p.addLast(connectionHandler);
                 serverChannelLatch.countDown();
@@ -492,7 +492,7 @@ public class DataCompressionHttp2Test {
                         new DefaultHttp2ConnectionDecoder(clientConnection, clientEncoder,
                                 new DefaultHttp2FrameReader());
                 clientHandler = new Http2ConnectionHandlerBuilder()
-                        .frameListener(new DelegatingDecompressorFrameListener(clientConnection, clientListener, 0))
+                        .frameListener(decompressorFrameListener(clientConnection, clientListener))
                         // By default tests don't wait for server to gracefully shutdown streams
                         .gracefulShutdownTimeoutMillis(0)
                         .codec(decoder, clientEncoder).build();
@@ -517,6 +517,10 @@ public class DataCompressionHttp2Test {
         clientChannel = ccf.channel();
         assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(5, SECONDS));
+    }
+
+    protected Http2FrameListener decompressorFrameListener(Http2Connection connection, Http2FrameListener listener) {
+        return new DelegatingDecompressorFrameListener(connection, listener, 0);
     }
 
     private void awaitServer() throws Exception {

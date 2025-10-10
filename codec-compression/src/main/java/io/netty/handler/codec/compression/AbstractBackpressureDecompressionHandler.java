@@ -320,6 +320,7 @@ public abstract class AbstractBackpressureDecompressionHandler extends ChannelDu
             for (Object o : heldBack) {
                 ReferenceCountUtil.release(o);
             }
+            heldBack.recycle();
             heldBack = null;
         }
     }

@@ -257,10 +257,10 @@ public final class HttpDecompressionHandler extends AbstractBackpressureDecompre
          * @param contentEncoding the value of the {@code "Content-Encoding"} header
          * @return the expected content encoding of the new content
          */
-        default String getTargetContentEncoding(String contentEncoding) throws Exception {
+        default CharSequence getTargetContentEncoding(CharSequence contentEncoding) throws Exception {
             return HttpContentDecoder.IDENTITY;
         }
 
-        Decompressor.AbstractDecompressorBuilder newDecompressorBuilder(String contentEncoding) throws Exception;
+        Decompressor.AbstractDecompressorBuilder newDecompressorBuilder(CharSequence contentEncoding) throws Exception;
     }
 }
