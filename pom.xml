@@ -1349,6 +1349,22 @@
                 </item>
                 <item>
                   <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <regex>true</regex>
+                  <package>jdk\.jfr\..*</package>
+                  <newArchive>io\.netty:netty-jfr-stub:.*</newArchive>
+                  <justification>Exposed classes that we use for stubs.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <regex>true</regex>
+                  <package>java\.lang\.invoke\..*</package>
+                  <newArchive>io\.netty:netty-varhandle-stub:.*</newArchive>
+                  <justification>Exposed classes that we use for stubs.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
                   <code>java.missing.oldClass</code> <!-- Missing in prior Netty versions -->
                   <old>missing-class org.slf4j.Logger</old>
                   <new>missing-class org.slf4j.Logger</new>
