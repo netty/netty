@@ -1839,11 +1839,22 @@
       <plugin>
         <groupId>org.sonatype.central</groupId>
         <artifactId>central-publishing-maven-plugin</artifactId>
-        <version>0.9.0</version>
+        <version>0.7.0</version>
         <configuration>
           <publishingServerId>central</publishingServerId>
           <skipPublishing>true</skipPublishing>
           <autoPublish>false</autoPublish>
+          <!-- Exclude testsuite modules -->
+          <excludeArtifacts>
+            <artifact>netty-testsuite-autobahn</artifact>
+            <artifact>netty-testsuite-http2</artifact>
+            <artifact>netty-testsuite-karaf</artifact>
+            <artifact>netty-testsuite-native-image</artifact>
+            <artifact>netty-testsuite-native-image-client</artifact>
+            <artifact>netty-testsuite-native-image-client-runtime-init</artifact>
+            <artifact>netty-testsuite-osgi</artifact>
+            <artifact>netty-testsuite-shading</artifact>
+          </excludeArtifacts>
         </configuration>
       </plugin>
       <plugin>
