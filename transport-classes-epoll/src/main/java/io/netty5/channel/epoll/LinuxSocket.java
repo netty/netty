@@ -23,7 +23,10 @@ import io.netty5.channel.unix.NativeInetAddress;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.Socket;
 import io.netty5.util.internal.SocketUtils;
+import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.UnstableApi;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -42,6 +45,15 @@ import static io.netty5.channel.unix.Errors.newIOException;
 @UnstableApi
 public final class LinuxSocket extends Socket {
     private static final long MAX_UINT32_T = 0xFFFFFFFFL;
+    private static final Logger logger = LoggerFactory.getLogger(LinuxSocket.class);
+    private static final boolean IP_MULTICAST_ALL =
+            SystemPropertyUtil.getBoolean("io.netty5.transport.ipMulticastAll", false);
+
+    static {
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty5.transport.ipMulticastAll: {}", IP_MULTICAST_ALL);
+        }
+    }
 
     LinuxSocket(int fd, SocketProtocolFamily family) {
         super(fd, family);
@@ -439,11 +451,30 @@ public final class LinuxSocket extends Socket {
     }
 
     public static LinuxSocket newSocketDgram(boolean ipv6) {
-        return new LinuxSocket(newSocketDgram0(ipv6), ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
+        final LinuxSocket socket = new LinuxSocket(
+                newSocketDgram0(ipv6), ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
+
+        // Configure IP_MULTICAST_ALL - disable by default to match the behavior of NIO.
+        try {
+            socket.setIpMulticastAll(IP_MULTICAST_ALL);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+
+        return socket;
     }
 
     public static LinuxSocket newSocketDgram(ProtocolFamily family) {
-        return new LinuxSocket(newSocketDgram0(family), SocketProtocolFamily.of(family));
+        final LinuxSocket socket = new LinuxSocket(newSocketDgram0(family), SocketProtocolFamily.of(family));
+
+        // Configure IP_MULTICAST_ALL - disable by default to match the behavior of NIO.
+        try {
+            socket.setIpMulticastAll(IP_MULTICAST_ALL);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+
+        return socket;
     }
 
     public static LinuxSocket newSocketDgram() {
