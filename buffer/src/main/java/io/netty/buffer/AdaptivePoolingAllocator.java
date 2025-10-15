@@ -93,6 +93,13 @@ final class AdaptivePoolingAllocator {
     private static final boolean IS_LOW_MEM = Runtime.getRuntime().maxMemory() <= LOW_MEM_THRESHOLD;
 
     /**
+     * Whether the IS_LOW_MEM setting should disable thread-local magazines.
+     * This can have fairly high performance overhead.
+     */
+    private static final boolean DISABLE_THREAD_LOCAL_MAGAZINES_ON_LOW_MEM = SystemPropertyUtil.getBoolean(
+            "io.netty.allocator.disableThreadLocalMagazinesOnLowMemory", true);
+
+    /**
      * The 128 KiB minimum chunk size is chosen to encourage the system allocator to delegate to mmap for chunk
      * allocations. For instance, glibc will do this.
      * This pushes any fragmentation from chunk size deviations off physical memory, onto virtual memory,
@@ -194,7 +201,8 @@ final class AdaptivePoolingAllocator {
         largeBufferMagazineGroup = new MagazineGroup(
                 this, chunkAllocator, new HistogramChunkControllerFactory(true), false);
 
-        threadLocalGroup = IS_LOW_MEM ? null : new FastThreadLocal<MagazineGroup[]>() {
+        boolean disableThreadLocalGroups = IS_LOW_MEM && DISABLE_THREAD_LOCAL_MAGAZINES_ON_LOW_MEM;
+        threadLocalGroup = disableThreadLocalGroups ? null : new FastThreadLocal<MagazineGroup[]>() {
             @Override
             protected MagazineGroup[] initialValue() {
                 if (useCacheForNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null) {
