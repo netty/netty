@@ -44,5 +44,6 @@ public class IOUringChannelOption<T> extends UnixChannelOption<T> {
 
     public static final ChannelOption<Integer> MAX_DATAGRAM_PAYLOAD_SIZE = valueOf("MAX_DATAGRAM_PAYLOAD_SIZE");
     public static final ChannelOption<Boolean> UDP_GRO = valueOf("UDP_GRO");
-    public static final ChannelOption<Boolean> IP_MULTICAST_ALL = valueOf(IOUringChannelOption.class, "IP_MULTICAST_ALL");
+    public static final ChannelOption<Boolean> IP_MULTICAST_ALL =
+            valueOf(IOUringChannelOption.class, "IP_MULTICAST_ALL");
 }

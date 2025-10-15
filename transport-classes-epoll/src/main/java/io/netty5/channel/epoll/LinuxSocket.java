@@ -47,11 +47,11 @@ public final class LinuxSocket extends Socket {
     private static final long MAX_UINT32_T = 0xFFFFFFFFL;
     private static final Logger LOG = LoggerFactory.getLogger(LinuxSocket.class);
     private static final boolean IP_MULTICAST_ALL =
-            SystemPropertyUtil.getBoolean("io.netty5.transport.ipMulticastAll", false);
+            SystemPropertyUtil.getBoolean("io.netty5.transport.linux.ipMulticastAll", false);
 
     static {
         if (LOG.isDebugEnabled()) {
-            LOG.debug("-Dio.netty5.transport.ipMulticastAll: {}", IP_MULTICAST_ALL);
+            LOG.debug("-Dio.netty5.transport.linux.ipMulticastAll: {}", IP_MULTICAST_ALL);
         }
     }
 
