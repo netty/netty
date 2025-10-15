@@ -92,6 +92,8 @@ import static java.util.Objects.requireNonNull;
  * </tr><tr>
  * <td>{@link EpollChannelOption#UDP_GRO}</td><td>X</td><td>X</td><td>-</td>
  * </tr>
+ * <td>{@link EpollChannelOption#IP_MULTICAST_ALL}</td><td>X</td><td>X</td><td>-</td>
+ * </tr><tr>
  * </table>
  */
 public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel> implements DatagramChannel {
@@ -834,6 +836,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
             if (option == EpollChannelOption.UDP_GRO) {
                 return (T) Boolean.valueOf(isUdpGro());
             }
+            if (option == EpollChannelOption.IP_MULTICAST_ALL) {
+                return (T) Boolean.valueOf(isIpMulticastAll());
+            }
         }
         return super.getExtendedOption(option);
     }
@@ -871,6 +876,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 setMaxDatagramPayloadSize((Integer) value);
             } else if (option == EpollChannelOption.UDP_GRO) {
                 setUdpGro((Boolean) value);
+            } else if (option == EpollChannelOption.IP_MULTICAST_ALL) {
+                setIpMulticastAll((Boolean) value);
             }
         } else {
             super.setExtendedOption(option, value);
@@ -885,7 +892,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
                 ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, UnixChannelOption.SO_REUSEPORT,
                 EpollChannelOption.IP_FREEBIND, EpollChannelOption.IP_TRANSPARENT,
                 EpollChannelOption.IP_RECVORIGDSTADDR, EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE,
-                EpollChannelOption.UDP_GRO);
+                EpollChannelOption.UDP_GRO, EpollChannelOption.IP_MULTICAST_ALL);
     }
 
     private static Set<ChannelOption<?>> supportedOptionsDomainSocket() {
@@ -1023,6 +1030,30 @@ public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel
     private void setTimeToLive(int ttl) {
         try {
             socket.setTimeToLive(ttl);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> (or
+     * IPV6_MULTICAST_ALL for IPV6) is enabled, {@code false} otherwise.
+     */
+    private boolean isIpMulticastAll() {
+        try {
+            return socket.isIpMulticastAll();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> is
+     * enabled (or IPV6_MULTICAST_ALL for IPV6), {@code false} for disable it. Default is enabled.
+     */
+    private void setIpMulticastAll(boolean ipMulticastAll) {
+        try {
+            socket.setIpMulticastAll(ipMulticastAll);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
