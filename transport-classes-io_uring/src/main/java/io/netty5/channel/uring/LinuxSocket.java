@@ -22,7 +22,10 @@ import io.netty5.channel.unix.NativeInetAddress;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.Socket;
 import io.netty5.util.internal.SocketUtils;
+import io.netty5.util.internal.SystemPropertyUtil;
 import org.jetbrains.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -40,6 +43,15 @@ final class LinuxSocket extends Socket {
     static final InetAddress INET6_ANY = unsafeInetAddrByName("::");
     private static final InetAddress INET_ANY = unsafeInetAddrByName("0.0.0.0");
     private static final long MAX_UINT32_T = 0xFFFFFFFFL;
+    private static final Logger LOG = LoggerFactory.getLogger(LinuxSocket.class);
+    private static final boolean IP_MULTICAST_ALL =
+            SystemPropertyUtil.getBoolean("io.netty5.transport.ipMulticastAll", false);
+
+    static {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("-Dio.netty5.transport.ipMulticastAll: {}", IP_MULTICAST_ALL);
+        }
+    }
 
     private LinuxSocket(int fd, SocketProtocolFamily family, boolean makeBlocking) {
         super(fd, family);
@@ -199,6 +211,10 @@ final class LinuxSocket extends Socket {
         setTcpUserTimeout(intValue(), milliseconds);
     }
 
+    void setIpMulticastAll(boolean enabled) throws IOException {
+        setIpMulticastAll(intValue(), ipv6, enabled ? 1 : 0);
+    }
+
     void setIpFreeBind(boolean enabled) throws IOException {
         setIpFreeBind(intValue(), enabled ? 1 : 0);
     }
@@ -258,6 +274,10 @@ final class LinuxSocket extends Socket {
 
     int getTcpUserTimeout() throws IOException {
         return getTcpUserTimeout(intValue());
+    }
+
+    boolean isIpMulticastAll() throws IOException {
+        return isIpMulticastAll(intValue(), ipv6) != 0;
     }
 
     boolean isIpFreeBind() throws IOException {
@@ -334,12 +354,21 @@ final class LinuxSocket extends Socket {
 
     public static LinuxSocket newSocketDgram(@Nullable ProtocolFamily protocolFamily) {
         SocketProtocolFamily family = toSocketProtocolFamily(protocolFamily);
-        switch (family) {
-            case INET: return wrap(newSocketDgram0(false), family);
-            case INET6: return wrap(newSocketDgram0(true), family);
-            case UNIX: return wrap(newSocketDomainDgram0(), family);
-            default: throw new IllegalArgumentException("Unsupported protocol family: " + family);
+        final LinuxSocket socket = switch (family) {
+            case INET -> wrap(newSocketDgram0(false), family);
+            case INET6 -> wrap(newSocketDgram0(true), family);
+            case UNIX -> wrap(newSocketDomainDgram0(), family);
+            default -> throw new IllegalArgumentException("Unsupported protocol family: " + family);
+        };
+
+        // Configure IP_MULTICAST_ALL - disable by default to match the behavior of NIO.
+        try {
+            socket.setIpMulticastAll(IP_MULTICAST_ALL);
+        } catch (IOException e) {
+            throw new ChannelException(e);
         }
+
+        return socket;
     }
 
     private static SocketProtocolFamily toSocketProtocolFamily(ProtocolFamily protocolFamily) {
@@ -358,7 +387,17 @@ final class LinuxSocket extends Socket {
     }
 
     public static LinuxSocket newSocketDgram(boolean ipv6) {
-        return wrap(newSocketDgram0(ipv6), ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
+        final LinuxSocket socket =
+                wrap(newSocketDgram0(ipv6), ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
+
+        // Configure IP_MULTICAST_ALL - disable by default to match the behavior of NIO.
+        try {
+            socket.setIpMulticastAll(IP_MULTICAST_ALL);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+
+        return socket;
     }
 
     public static LinuxSocket newSocketDgram() {
@@ -396,6 +435,7 @@ final class LinuxSocket extends Socket {
     private static native int getTcpKeepCnt(int fd) throws IOException;
     private static native int getTcpUserTimeout(int fd) throws IOException;
     private static native int getTimeToLive(int fd) throws IOException;
+    private static native int isIpMulticastAll(int fd, boolean ipv6) throws IOException;
     private static native int isIpFreeBind(int fd) throws IOException;
     private static native int isIpTransparent(int fd) throws IOException;
     private static native int isIpRecvOrigDestAddr(int fd) throws IOException;
@@ -414,6 +454,7 @@ final class LinuxSocket extends Socket {
     private static native void setTcpKeepIntvl(int fd, int seconds) throws IOException;
     private static native void setTcpKeepCnt(int fd, int probes) throws IOException;
     private static native void setTcpUserTimeout(int fd, int milliseconds)throws IOException;
+    private static native void setIpMulticastAll(int fd, boolean ipv6, int enabled) throws IOException;
     private static native void setIpFreeBind(int fd, int freeBind) throws IOException;
     private static native void setIpTransparent(int fd, int transparent) throws IOException;
     private static native void setIpRecvOrigDestAddr(int fd, int transparent) throws IOException;
