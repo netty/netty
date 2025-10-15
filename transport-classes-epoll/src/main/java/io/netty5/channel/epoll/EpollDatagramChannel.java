@@ -91,9 +91,9 @@ import static java.util.Objects.requireNonNull;
  * <td>{@link EpollChannelOption#MAX_DATAGRAM_PAYLOAD_SIZE}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
  * <td>{@link EpollChannelOption#UDP_GRO}</td><td>X</td><td>X</td><td>-</td>
- * </tr>
- * <td>{@link EpollChannelOption#IP_MULTICAST_ALL}</td><td>X</td><td>X</td><td>-</td>
  * </tr><tr>
+ * <td>{@link EpollChannelOption#IP_MULTICAST_ALL}</td><td>X</td><td>X</td><td>-</td>
+ * </tr>
  * </table>
  */
 public final class EpollDatagramChannel extends AbstractEpollChannel<UnixChannel> implements DatagramChannel {
