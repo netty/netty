@@ -250,24 +250,24 @@ static void netty_epoll_linuxsocket_setIpBindAddressNoPort(JNIEnv* env, jclass c
     netty_unix_socket_setOption(env, fd, SOL_IP, IP_BIND_ADDRESS_NO_PORT, &optval, sizeof(optval));
 }
 
-static void netty5_epoll_linuxsocket_setIpMulticastAll(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jint optval) {
+static void netty_epoll_linuxsocket_setIpMulticastAll(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6, jint optval) {
     if (ipv6 == JNI_TRUE) {
-        netty5_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_ALL, &optval, sizeof(optval));
+        netty_unix_socket_setOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_ALL, &optval, sizeof(optval));
     } else {
-        netty5_unix_socket_setOption(env, fd, IPPROTO_IP, IP_MULTICAST_ALL, &optval, sizeof(optval));
+        netty_unix_socket_setOption(env, fd, IPPROTO_IP, IP_MULTICAST_ALL, &optval, sizeof(optval));
     }
 }
 
-static jint netty5_epoll_linuxsocket_isIpMulticastAll(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6) {
+static jint netty_epoll_linuxsocket_isIpMulticastAll(JNIEnv* env, jclass clazz, jint fd, jboolean ipv6) {
     if (ipv6 == JNI_TRUE) {
         int optval;
-        if (netty5_unix_socket_getOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_ALL, &optval, sizeof(optval)) == -1) {
+        if (netty_unix_socket_getOption(env, fd, IPPROTO_IPV6, IPV6_MULTICAST_ALL, &optval, sizeof(optval)) == -1) {
             return -1;
         }
         return optval;
     } else {
         int optval;
-        if (netty5_unix_socket_getOption(env, fd, IPPROTO_IP, IP_MULTICAST_ALL, &optval, sizeof(optval)) == -1) {
+        if (netty_unix_socket_getOption(env, fd, IPPROTO_IP, IP_MULTICAST_ALL, &optval, sizeof(optval)) == -1) {
             return -1;
         }
         return optval;
@@ -841,7 +841,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "setTcpKeepCnt", "(II)V", (void *) netty_epoll_linuxsocket_setTcpKeepCnt },
   { "setTcpUserTimeout", "(II)V", (void *) netty_epoll_linuxsocket_setTcpUserTimeout },
   { "setIpBindAddressNoPort", "(II)V", (void *) netty_epoll_linuxsocket_setIpBindAddressNoPort },
-  { "setIpMulticastAll", "(IZI)V", (void *) netty5_epoll_linuxsocket_setIpMulticastAll },
+  { "setIpMulticastAll", "(IZI)V", (void *) netty_epoll_linuxsocket_setIpMulticastAll },
   { "setIpFreeBind", "(II)V", (void *) netty_epoll_linuxsocket_setIpFreeBind },
   { "setIpTransparent", "(II)V", (void *) netty_epoll_linuxsocket_setIpTransparent },
   { "setIpRecvOrigDestAddr", "(II)V", (void *) netty_epoll_linuxsocket_setIpRecvOrigDestAddr },
@@ -850,7 +850,7 @@ static const JNINativeMethod fixed_method_table[] = {
   { "getTcpKeepCnt", "(I)I", (void *) netty_epoll_linuxsocket_getTcpKeepCnt },
   { "getTcpUserTimeout", "(I)I", (void *) netty_epoll_linuxsocket_getTcpUserTimeout },
   { "isIpBindAddressNoPort", "(I)I", (void *) netty_epoll_linuxsocket_isIpBindAddressNoPort },
-  { "isIpMulticastAll", "(IZ)I", (void *) netty5_epoll_linuxsocket_isIpMulticastAll },
+  { "isIpMulticastAll", "(IZ)I", (void *) netty_epoll_linuxsocket_isIpMulticastAll },
   { "isIpFreeBind", "(I)I", (void *) netty_epoll_linuxsocket_isIpFreeBind },
   { "isIpTransparent", "(I)I", (void *) netty_epoll_linuxsocket_isIpTransparent },
   { "isIpRecvOrigDestAddr", "(I)I", (void *) netty_epoll_linuxsocket_isIpRecvOrigDestAddr },
