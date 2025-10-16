@@ -36,7 +36,11 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
     private static final long REFCNT_FIELD_OFFSET;
     private static final AtomicIntegerFieldUpdater<AbstractReferenceCounted> AIF_UPDATER;
     private static final Object REFCNT_FIELD_VH;
-    private static final ReferenceCountUpdater<AbstractReferenceCounted> updater;
+    /**
+     * <strong>Warning:</strong> Accessing the updater directly from a subclass is unsafe,
+     * and must be done with extreme care.
+     */
+    protected static final ReferenceCountUpdater<AbstractReferenceCounted> updater;
 
     static {
         UpdaterType updaterType = ReferenceCountUpdater.updaterTypeOf(AbstractReferenceCounted.class, "refCnt");
@@ -90,9 +94,9 @@ public abstract class AbstractReferenceCounted implements ReferenceCounted {
     }
 
     /**
-     * An unsafe operation intended for use by a subclass that sets the reference count of the buffer directly
+     * An unsafe operation intended for use by a subclass that sets the reference count of the object directly
      */
-    protected final void setRefCnt(int refCnt) {
+    protected void setRefCnt(int refCnt) {
         updater.setRefCnt(this, refCnt);
     }
 

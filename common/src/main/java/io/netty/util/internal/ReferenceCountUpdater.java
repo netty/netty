@@ -109,19 +109,23 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
         return release0(instance, checkPositive(decrement, "decrement") << 1);
     }
 
-    private boolean release0(T instance, int decrement) {
+    private boolean release0(final T instance, final int decrement) {
         int curr, next;
         do {
             curr = getRawRefCnt(instance);
             next = curr - decrement;
-            if ((curr & 1) == 1 || next < 0) {
-                throw new IllegalReferenceCountException(curr >>> 1, -(decrement >>> 1));
+            if (next < 0 || (curr & 1) == 1) {
+                throwIllegalRefCountOnRelease(decrement, curr);
             }
             if (next == 0) {
                 next |= 1;
             }
         } while (!casRawRefCnt(instance, curr, next));
         return (next & 1) == 1;
+    }
+
+    private static void throwIllegalRefCountOnRelease(int decrement, int curr) {
+        throw new IllegalReferenceCountException(curr >>> 1, -(decrement >>> 1));
     }
 
     public enum UpdaterType {

@@ -15,8 +15,8 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ByteProcessor;
-import io.netty.util.ReferenceCounted;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -245,7 +245,7 @@ import java.nio.charset.UnsupportedCharsetException;
  * Please refer to {@link ByteBufInputStream} and
  * {@link ByteBufOutputStream}.
  */
-public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, ByteBufConvertible {
+public abstract class ByteBuf extends AbstractReferenceCounted implements Comparable<ByteBuf>, ByteBufConvertible {
 
     /**
      * Returns the number of bytes (octets) this buffer can contain.
@@ -2487,13 +2487,19 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
     public abstract String toString();
 
     @Override
-    public abstract ByteBuf retain(int increment);
+    public ByteBuf retain(int increment) {
+        return (ByteBuf) super.retain(increment);
+    }
 
     @Override
-    public abstract ByteBuf retain();
+    public ByteBuf retain() {
+        return (ByteBuf) super.retain();
+    }
 
     @Override
-    public abstract ByteBuf touch();
+    public ByteBuf touch() {
+        return (ByteBuf) super.touch();
+    }
 
     @Override
     public abstract ByteBuf touch(Object hint);
@@ -2504,5 +2510,11 @@ public abstract class ByteBuf implements ReferenceCounted, Comparable<ByteBuf>, 
      */
     boolean isAccessible() {
         return refCnt() != 0;
+    }
+
+    @Override
+    protected void deallocate() {
+        // Do nothing by default.
+        // Will be re-abstracted in AbstractReferenceCountedByteBuf for impls that actually need it.
     }
 }
