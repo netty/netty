@@ -143,6 +143,32 @@ public class SingleThreadEventExecutorTest {
     }
 
     @Test
+    void testSuspensionWhenExecutorIsNotStarted() throws Exception {
+        TestThreadFactory threadFactory = new TestThreadFactory();
+        final SingleThreadEventExecutor executor = new SuspendingSingleThreadEventExecutor(threadFactory);
+        // suspend when executor is not started yet
+        assertTrue(executor.trySuspend());
+        assertTrue(executor.isSuspended());
+
+        // recover from suspension by executing a task
+        LatchTask task1 = new LatchTask();
+        executor.execute(task1);
+        Thread currentThread = threadFactory.threads.take();
+        assertFalse(executor.isSuspended());
+        task1.await();
+
+        executor.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS).syncUninterruptibly();
+        currentThread.join();
+        assertFalse(executor.isSuspended());
+        assertTrue(executor.isShutdown());
+
+        // Guarantee that al tasks were able to die...
+        while ((currentThread = threadFactory.threads.poll()) != null) {
+            currentThread.join();
+        }
+    }
+
+    @Test
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     void testNotSuspendedUntilScheduledTaskIsCancelled() throws Exception {
         TestThreadFactory threadFactory = new TestThreadFactory();
