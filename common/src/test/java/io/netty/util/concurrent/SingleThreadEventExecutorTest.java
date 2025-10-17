@@ -162,7 +162,7 @@ public class SingleThreadEventExecutorTest {
         assertFalse(executor.isSuspended());
         assertTrue(executor.isShutdown());
 
-        // Guarantee that al tasks were able to die...
+        // Guarantee that all threads were able to die...
         while ((currentThread = threadFactory.threads.poll()) != null) {
             currentThread.join();
         }
