@@ -65,6 +65,9 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
 
     public final boolean isLiveNonVolatile(T instance) {
         final int rawCnt = getRawRefCnt(instance);
+        if (rawCnt == 2) {
+            return true;
+        }
         return (rawCnt & 1) == 0;
     }
 
@@ -113,12 +116,13 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
         int curr, next;
         do {
             curr = getRawRefCnt(instance);
-            next = curr - decrement;
-            if (next < 0 || (curr & 1) == 1) {
-                throwIllegalRefCountOnRelease(decrement, curr);
-            }
-            if (next == 0) {
-                next |= 1;
+            if (curr == decrement) {
+                next = 1;
+            } else {
+                if (curr < decrement || (curr & 1) == 1) {
+                    throwIllegalRefCountOnRelease(decrement, curr);
+                }
+                next = curr - decrement;
             }
         } while (!casRawRefCnt(instance, curr, next));
         return (next & 1) == 1;
