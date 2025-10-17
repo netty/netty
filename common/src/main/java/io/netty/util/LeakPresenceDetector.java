@@ -173,7 +173,7 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
      *
      * @return The resource scope to use
      */
-    protected ResourceScope currentScope() {
+    protected ResourceScope currentScope() throws AllocationProhibitedException {
         return GLOBAL;
     }
 
@@ -275,7 +275,7 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
 
         void checkOpen() {
             if (closed) {
-                throw new IllegalStateException("Resource scope '" + name + "' already closed");
+                throw new AllocationProhibitedException("Resource scope '" + name + "' already closed");
             }
         }
 
@@ -339,11 +339,23 @@ public class LeakPresenceDetector<T> extends ResourceLeakDetector<T> {
                     message = "Resource created in static initializer. Please wrap the static initializer in " +
                             "LeakPresenceDetector.staticInitializer so that this resource is excluded.";
                 } else {
-                    message = "Resource created outside static initializer on thread '" + thread.getName() +
-                            "', likely leak.";
+                    message = "Resource created outside static initializer on thread '" + thread.getName() + "' (" +
+                            thread.getState() + "), likely leak.";
                 }
             }
             return message;
+        }
+    }
+
+    /**
+     * Special exception type to show that an allocation is prohibited at the moment, for example because the
+     * {@link ResourceScope} is closed, or because the current thread cannot be associated with a particular scope.
+     * <p>
+     * Some code in Netty will treat this exception specially to avoid allocation loops.
+     */
+    public static final class AllocationProhibitedException extends IllegalStateException {
+        public AllocationProhibitedException(String s) {
+            super(s);
         }
     }
 }
