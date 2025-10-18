@@ -154,6 +154,12 @@ public final class DefaultHttp3Headers
     }
 
     @Override
+    public Http3Headers protocol(CharSequence value) {
+        set(PseudoHeaderName.PROTOCOL.value(), value);
+        return this;
+    }
+
+    @Override
     public CharSequence method() {
         return get(PseudoHeaderName.METHOD.value());
     }
@@ -176,6 +182,11 @@ public final class DefaultHttp3Headers
     @Override
     public CharSequence status() {
         return get(PseudoHeaderName.STATUS.value());
+    }
+
+    @Override
+    public CharSequence protocol() {
+        return get(PseudoHeaderName.PROTOCOL.value());
     }
 
     @Override
