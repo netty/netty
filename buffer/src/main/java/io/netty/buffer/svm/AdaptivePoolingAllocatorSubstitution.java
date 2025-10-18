@@ -19,7 +19,7 @@ import com.oracle.svm.core.annotate.Alias;
 import com.oracle.svm.core.annotate.RecomputeFieldValue;
 import com.oracle.svm.core.annotate.TargetClass;
 
-@TargetClass(className = "io.netty.buffer.AdaptivePoolingAllocator$Chunk")
+@TargetClass(className = "io.netty.buffer.AdaptivePoolingAllocator$BumpChunk")
 final class AdaptivePoolingAllocatorSubstitution {
     private AdaptivePoolingAllocatorSubstitution() {
     }
@@ -27,7 +27,7 @@ final class AdaptivePoolingAllocatorSubstitution {
     @Alias
     @RecomputeFieldValue(
             kind = RecomputeFieldValue.Kind.FieldOffset,
-            declClassName = "io.netty.buffer.AdaptivePoolingAllocator$Chunk",
+            declClassName = "io.netty.buffer.AdaptivePoolingAllocator$BumpChunk",
             name = "refCnt"
     )
     public static long REFCNT_FIELD_OFFSET;
