@@ -25,7 +25,8 @@ interface CompletionCallback {
      * @param flags         the flags
      * @param udata         the user data that was provided as part of the submission
      * @param extraCqeData  the extra data for the CQE. This will only be non-null of the ring was setup with
-     *                      {@code IORING_SETUP_CQE32}.
+     *                      {@code IORING_SETUP_CQE32} or {@code IORING_SETUP_CQE_MIXED} and {@code IORING_CQE_F_32} is
+     *                      set in {@code flags}.
      * @return              {@code true} if we more data (in a loop) can be handled be this callback, {@code false}
      *                      otherwise.
      */
