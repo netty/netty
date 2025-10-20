@@ -36,7 +36,10 @@ import static com.ning.compress.lzf.LZFChunk.HEADER_LEN_NOT_COMPRESSED;
  *
  * See original <a href="http://oldhome.schmorp.de/marc/liblzf.html">LZF package</a>
  * and <a href="https://github.com/ning/compress/wiki/LZFFormat">LZF format</a> for full description.
+ *
+ * @deprecated Superseded by {@link LzfDecompressor} and {@link BackpressureDecompressionHandler}
  */
+@Deprecated
 public class LzfDecoder extends ByteToMessageDecoder {
     /**
      * Current state of decompression.
