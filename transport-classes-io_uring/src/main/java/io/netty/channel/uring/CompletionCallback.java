@@ -29,5 +29,5 @@ interface CompletionCallback {
      * @return              {@code true} if we more data (in a loop) can be handled be this callback, {@code false}
      *                      otherwise.
      */
-    boolean handle(int res, int flags, long udata, ByteBuffer extraCqeData);
+    void handle(int res, int flags, long udata, ByteBuffer extraCqeData);
 }
