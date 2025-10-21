@@ -559,7 +559,8 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel<UnixCha
     protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
         if (option == ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION ||
                 option == IOUringChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE ||
-                option == IOUringChannelOption.UDP_GRO) {
+                option == IOUringChannelOption.UDP_GRO ||
+                option == IOUringChannelOption.IP_MULTICAST_ALL) {
             return true;
         }
         return super.isExtendedOptionSupported(option);

@@ -541,7 +541,6 @@ static jint netty5_io_uring_linuxsocket_isIpMulticastAll(JNIEnv* env, jclass cla
     }
 }
 
-
 static jint netty5_io_uring_linuxsocket_isIpFreeBind(JNIEnv* env, jclass clazz, jint fd) {
      int optval;
      if (netty5_unix_socket_getOption(env, fd, IPPROTO_IP, IP_FREEBIND, &optval, sizeof(optval)) == -1) {
