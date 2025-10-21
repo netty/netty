@@ -1296,6 +1296,18 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
     }
 
     @Override
+    protected UnsafeBuffer moveOwnership(Drop<UnsafeBuffer> drop) {
+        UnsafeBuffer copy = new UnsafeBuffer(memory, baseOffset, rsize, control, drop);
+        copy.roff = roff;
+        copy.woff = woff;
+        copy.implicitCapacityLimit = implicitCapacityLimit;
+        if (readOnly) {
+            copy.makeReadOnly();
+        }
+        return copy;
+    }
+
+    @Override
     protected void makeInaccessible() {
         roff = 0;
         woff = 0;

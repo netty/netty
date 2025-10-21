@@ -232,6 +232,11 @@ public class BufferStub implements Buffer {
     }
 
     @Override
+    public Buffer moveAndClose() {
+        return new BufferStub(delegate.moveAndClose());
+    }
+
+    @Override
     public Buffer split() {
         return delegate.split();
     }

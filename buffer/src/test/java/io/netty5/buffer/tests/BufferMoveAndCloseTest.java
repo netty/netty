@@ -36,7 +36,95 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class BufferSendTest extends BufferTestSupport {
+public class BufferMoveAndCloseTest extends BufferTestSupport {
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void originalBufferMustBecomeClosed(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            Buffer buf1 = allocator.allocate(8);
+            Buffer buf2 = buf1.moveAndClose();
+            assertFalse(buf1.isAccessible());
+            assertTrue(buf2.isAccessible());
+            buf2.close();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void originalReadOnlyBufferMustBecomeClosed(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            Buffer buf1 = allocator.allocate(8).makeReadOnly();
+            Buffer buf2 = buf1.moveAndClose();
+            assertFalse(buf1.isAccessible());
+            assertTrue(buf2.isAccessible());
+            assertTrue(buf2.readOnly());
+            buf2.close();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void moveAndCloseMustWorkOnZeroSizedBuffers(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            Buffer buf1 = allocator.allocate(0);
+            Buffer buf2 = buf1.moveAndClose();
+            assertFalse(buf1.isAccessible());
+            assertTrue(buf2.isAccessible());
+            buf2.close();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void returnedBufferMustRetainContentsAndOffsets(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            Buffer buf1 = allocator.allocate(8);
+            buf1.writeInt(0x12131415);
+            assertEquals((byte) 0x12, buf1.readByte());
+            int readerOffset = buf1.readerOffset();
+            int writerOffset = buf1.writerOffset();
+            int capacity = buf1.capacity();
+            Buffer buf2 = buf1.moveAndClose();
+            assertFalse(buf1.isAccessible());
+            assertTrue(buf2.isAccessible());
+            assertEquals(readerOffset, buf2.readerOffset());
+            assertEquals(writerOffset, buf2.writerOffset());
+            assertEquals(capacity, buf2.capacity());
+            buf2.close();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void moveAndCloseMustThrowIfBufferIsAcquired(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            Buffer buf1 = allocator.allocate(8);
+            try (Buffer ignored = acquire((ResourceSupport<?, ?>) buf1)) {
+                assertFalse(isOwned((ResourceSupport<?, ?>) buf1));
+                assertThrows(IllegalStateException.class, buf1::moveAndClose);
+            }
+            Buffer buf2 = buf1.moveAndClose();
+            assertFalse(buf1.isAccessible());
+            assertTrue(buf2.isAccessible());
+            buf2.close();
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("allocators")
+    void moveAndCloseMustFailIfBufferIsAlreadyClosed(Fixture fixture) {
+        try (BufferAllocator allocator = fixture.createAllocator()) {
+            Buffer buf1 = allocator.allocate(8);
+            buf1.close();
+            assertThrows(IllegalStateException.class, buf1::moveAndClose);
+
+            buf1 = allocator.allocate(8);
+            Buffer buf2 = buf1.moveAndClose();
+            assertThrows(IllegalStateException.class, buf1::moveAndClose);
+            buf2.close();
+        }
+    }
+
     @ParameterizedTest
     @MethodSource("allocators")
     void allocateAndSendToThread(Fixture fixture) throws Exception {

@@ -23,6 +23,7 @@ import io.netty5.util.Resource;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.UnstableApi;
 
+import java.io.Serial;
 import java.util.ArrayDeque;
 import java.util.Collection;
 import java.util.Collections;
@@ -107,10 +108,19 @@ public abstract class LifecycleTracer {
      * This method is called on the originating, or "parent" tracer, while the newly allocated "child" is given as an
      * argument.
      *
-     * @param splitTracer The tracer for the life-cycle that was branched from the life-cycle represented by this
-     *                   tracer.
+     * @param tracer The tracer for the life-cycle that was branched from the life-cycle represented by this tracer.
      */
-    public abstract void splitTo(LifecycleTracer splitTracer);
+    public abstract void splitTo(LifecycleTracer tracer);
+
+    /**
+     * Attach a trace to both life-cycles, that the life-cycle of an underlying resource has moved from one trace to
+     * another.
+     * <p>
+     * Such events happen when {@link Buffer#moveAndClose()} is called on a buffer, and the life-cycle of its memory
+     * moves to the returned instance, while the given instance is closed.
+     * @param tracer The tracer for the life-cycle that the traced resources moved to.
+     */
+    public abstract void moveTo(LifecycleTracer tracer);
 
     /**
      * Attach a life cycle trace log to the given exception.
@@ -160,7 +170,11 @@ public abstract class LifecycleTracer {
         }
 
         @Override
-        public void splitTo(LifecycleTracer splitTracer) {
+        public void splitTo(LifecycleTracer tracer) {
+        }
+
+        @Override
+        public void moveTo(LifecycleTracer tracer) {
         }
 
         @Override
@@ -237,9 +251,22 @@ public abstract class LifecycleTracer {
             splitChild.attachmentType = AttachmentType.SPLIT_FROM;
             splitChild.attachment = splitParent;
             addTrace(walk(splitParent));
-            if (splitTracer instanceof StackTracer) {
-                StackTracer tracer = (StackTracer) splitTracer;
+            if (splitTracer instanceof StackTracer tracer) {
                 tracer.addTrace(walk(splitChild));
+            }
+        }
+
+        @Override
+        public void moveTo(LifecycleTracer moveTracer) {
+            Trace moveParent = new Trace(TraceType.MOVE);
+            Trace moveChild = new Trace(TraceType.MOVE);
+            moveParent.attachmentType = AttachmentType.MOVE_TO;
+            moveParent.attachment = moveChild;
+            moveChild.attachmentType = AttachmentType.MOVE_FROM;
+            moveChild.attachment = moveParent;
+            addTrace(walk(moveParent));
+            if (moveTracer instanceof StackTracer tracer) {
+                tracer.addTrace(walk(moveChild));
             }
         }
 
@@ -380,6 +407,12 @@ public abstract class LifecycleTracer {
             case SPLIT_FROM:
                 message += " (split from other object)";
                 break;
+            case MOVE_TO:
+                message += " (moved to)";
+                break;
+            case MOVE_FROM:
+                message += " (moved from)";
+                break;
             case HINT:
                 message += " (" + attachment + ')';
                 break;
@@ -405,6 +438,7 @@ public abstract class LifecycleTracer {
     }
 
     private static final class Traceback extends Throwable {
+        @Serial
         private static final long serialVersionUID = 941453986194634605L;
 
         Traceback(String message) {
@@ -426,6 +460,7 @@ public abstract class LifecycleTracer {
         RECEIVE,
         TOUCH,
         SPLIT,
+        MOVE,
     }
 
     private enum AttachmentType {
@@ -445,6 +480,14 @@ public abstract class LifecycleTracer {
          * Tracer of object split from this traced object.
          */
         SPLIT_TO,
+        /**
+         * Tracer of origin object of a move.
+         */
+        MOVE_FROM,
+        /**
+         * Tracer of object moved from this traced object.
+         */
+        MOVE_TO,
         /**
          * Object is a hint from a {@link Resource#touch(Object)} call.
          */

@@ -1227,6 +1227,18 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
     }
 
     @Override
+    protected MemSegBuffer moveOwnership(Drop<MemSegBuffer> drop) {
+        MemSegBuffer copy = new MemSegBuffer(base, seg, control, drop);
+        copy.roff = roff;
+        copy.woff = woff;
+        copy.implicitCapacityLimit = implicitCapacityLimit;
+        if (readOnly()) {
+            copy.makeReadOnly();
+        }
+        return copy;
+    }
+
+    @Override
     protected void makeInaccessible() {
         base = CLOSED_SEGMENT;
         seg = CLOSED_SEGMENT;

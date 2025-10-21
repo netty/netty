@@ -267,6 +267,9 @@ public interface CompositeBuffer extends Buffer {
     CompositeBuffer copy(int offset, int length, boolean readOnly);
 
     @Override
+    CompositeBuffer moveAndClose();
+
+    @Override
     default CompositeBuffer split() {
         return (CompositeBuffer) Buffer.super.split();
     }

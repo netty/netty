@@ -149,6 +149,25 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
         }
     }
 
+    @SuppressWarnings("unchecked")
+    public I moveAndClose() {
+        if (acquires < 0) {
+            throw attachTrace(createResourceClosedException());
+        }
+        if (!isOwned()) {
+            throw notMovableException();
+        }
+        try {
+            var owned = moveOwnership(drop);
+            tracer.moveTo(getTracer(owned));
+            drop.attach(owned);
+            return (I) owned;
+        } finally {
+            acquires = -2; // Close without dropping. This also ignore future double-free attempts.
+            makeInaccessible();
+        }
+    }
+
     /**
      * Attach a trace of the life-cycle of this object as suppressed exceptions to the given throwable.
      *
@@ -171,6 +190,16 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
     }
 
     /**
+     * Create an {@link IllegalStateException} with a custom message, tailored to this particular
+     * {@link Resource} instance, for when the object cannot be moved for some reason.
+     * @return An {@link IllegalStateException} to be thrown when this object cannot be moved.
+     */
+    protected IllegalStateException notMovableException() {
+        return new IllegalStateException(
+                "Cannot move a reference counted object with " + countBorrows() + " borrows: " + this + '.');
+    }
+
+    /**
      * Encapsulation bypass to call {@link #isOwned()} on the given object.
      *
      * @param obj The object to query the ownership state on.
@@ -183,7 +212,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
     /**
      * Query if this object is in an "owned" state, which means no other references have been
      * {@linkplain #acquire() acquired} to it.
-     *
+     * <p>
      * This would usually be the case, since there are no public methods for acquiring references to these objects.
      *
      * @return {@code true} if this object is in an owned state, otherwise {@code false}.
@@ -236,6 +265,16 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
      * @return This resource instance in a deactivated state.
      */
     protected abstract Owned<T> prepareSend();
+
+    /**
+     * Perform an ownership transfer of this instance into the returned instance in a single step.
+     * This method is called from {@link #moveAndClose()}.
+     * The given drop will be the drop instance used for the new instance.
+     * After this method returns, this instance will be moved to the closed state without calling the drop instance.
+     * @param drop The drop instance to use in the new instance.
+     * @return A new instance of this class that incorporates all the data owned by this instance.
+     */
+    protected abstract T moveOwnership(Drop<T> drop);
 
     /**
      * Called when this resource needs to be considered inaccessible.

@@ -351,6 +351,11 @@ public class PooledBufferAllocator implements BufferAllocator, BufferAllocatorMe
         arenaMetrics.clear();
     }
 
+    @Override
+    public boolean isClosed() {
+        return closed;
+    }
+
     /**
      * Default number of heap arenas - System Property: io.netty5.allocator.numHeapArenas - default 2 * cores
      */

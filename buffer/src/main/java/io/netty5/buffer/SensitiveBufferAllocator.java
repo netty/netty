@@ -109,6 +109,11 @@ public final class SensitiveBufferAllocator implements BufferAllocator {
     public void close() {
     }
 
+    @Override
+    public boolean isClosed() {
+        return false;
+    }
+
     private static final class ZeroingDrop implements Drop<Buffer> {
         private final MemoryManager manager;
         private final Drop<Buffer> base;
