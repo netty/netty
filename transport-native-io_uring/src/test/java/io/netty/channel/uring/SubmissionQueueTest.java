@@ -82,7 +82,6 @@ public class SubmissionQueueTest {
         assertFalse(completionQueue.hasCompletions());
         assertEquals(0, completionQueue.process((res, flags, data, cqeExtraData) -> {
             fail("Should not be called");
-            return false;
         }));
 
         // Ensure both return not null and also not segfault.
@@ -141,12 +140,12 @@ public class SubmissionQueueTest {
             assertNotEquals(0, ringBuffer.ioUringSubmissionQueue().flags() & Native.IORING_SQ_CQ_OVERFLOW);
 
             // The completion queue should have only had space for 2 events
-            int processed = completionQueue.process((res, flags, udata, extraCqeData) -> true);
+            int processed = completionQueue.process((res, flags, udata, extraCqeData) -> { });
             assertEquals(2, processed);
 
             // submit again to ensure we flush the event that did overflow
             submissionQueue.submitAndGetNow();
-            processed = completionQueue.process((res, flags, udata, extraCqeData) -> true);
+            processed = completionQueue.process((res, flags, udata, extraCqeData) -> { });
             assertEquals(1, processed);
 
             // Everything was processed and so the overflow flag should have been cleared
@@ -204,7 +203,6 @@ public class SubmissionQueueTest {
                 } else {
                     assertNull(extraCqeData);
                 }
-                return true;
             });
             assertEquals(1, processed);
             assertFalse(completionQueue.hasCompletions());

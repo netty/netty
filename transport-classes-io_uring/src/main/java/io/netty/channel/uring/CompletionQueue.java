@@ -135,10 +135,7 @@ final class CompletionQueue {
                 ringHead++;
 
                 i++;
-                if (!callback.handle(res, flags, udata, extraCqeData(cqeIdx))) {
-                    // Stop processing. as the callback can not handle any more completions for now,
-                    break;
-                }
+                callback.handle(res, flags, udata, extraCqeData(cqeIdx));
                 if (ringHead == tail) {
                     // Let's fetch the tail one more time as it might have changed because a completion might have
                     // triggered a submission (io_uring_enter). This can happen as we automatically submit once we

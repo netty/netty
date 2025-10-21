@@ -261,7 +261,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    private boolean handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
+    private void handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
         try {
             int id = UserData.decodeId(udata);
             byte op = UserData.decodeOp(udata);
@@ -273,25 +273,23 @@ public final class IoUringIoHandler implements IoHandler {
             }
             if (id == EVENTFD_ID) {
                 handleEventFdRead();
-                return true;
+                return;
             }
             if (id == RINGFD_ID) {
                 // Just return
-                return true;
+                return;
             }
             DefaultIoUringIoRegistration registration = registrations.get(id);
             if (registration == null) {
                 logger.debug("ignoring {} completion for unknown registration (id={}, res={})",
                         Native.opToStr(op), id, res);
-                return true;
+                return;
             }
             registration.handle(res, flags, op, data, extraCqeData);
-            return true;
         } catch (Error e) {
             throw e;
         } catch (Throwable throwable) {
             handleLoopException(throwable);
-            return true;
         }
     }
 
@@ -422,11 +420,11 @@ public final class IoUringIoHandler implements IoHandler {
                 boolean eventFdDrained;
 
                 @Override
-                public boolean handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
+                public void handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
                     if (UserData.decodeId(udata) == EVENTFD_ID) {
                         eventFdDrained = true;
                     }
-                    return IoUringIoHandler.this.handle(res, flags, udata, extraCqeData);
+                    IoUringIoHandler.this.handle(res, flags, udata, extraCqeData);
                 }
             }
             final DrainFdEventCallback handler = new DrainFdEventCallback();
