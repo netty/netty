@@ -393,7 +393,7 @@ final class PlatformDependent0 {
                         Class<?> bitsClass =
                                 Class.forName("java.nio.Bits", false, getSystemClassLoader());
                         int version = javaVersion();
-                        if (unsafeStaticFieldOffsetSupported() && version >= 9) {
+                        if (version >= 9) {
                             // Java9/10 use all lowercase and later versions all uppercase.
                             String fieldName = version >= 11? "MAX_MEMORY" : "maxMemory";
                             // On Java9 and later we try to directly access the field as we can do this without
@@ -605,10 +605,6 @@ final class PlatformDependent0 {
             }
             throw new Error(t);
         }
-    }
-
-    private static boolean unsafeStaticFieldOffsetSupported() {
-        return !RUNNING_IN_NATIVE_IMAGE;
     }
 
     static boolean isExplicitNoUnsafe() {
