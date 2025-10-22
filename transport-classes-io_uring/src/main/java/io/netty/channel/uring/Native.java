@@ -382,6 +382,11 @@ final class Native {
         if (IoUring.isIoringSetupNoSqarraySupported()) {
             flags  |= Native.IORING_SETUP_NO_SQARRAY;
         }
+
+        // Use IORING_SETUP_CQE_MIXED by default if supported so we can support any OP in the future.
+        if (IoUring.isSetupCqeMixedSupported()) {
+            flags |= Native.IORING_SETUP_CQE_MIXED;
+        }
         return flags;
     }
 
