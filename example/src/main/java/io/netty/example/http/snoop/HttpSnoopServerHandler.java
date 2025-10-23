@@ -127,7 +127,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
 
                 if (!writeResponse(trailer, ctx)) {
                     // If keep-alive is off, close the connection once the content is fully written.
-                    ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+                    ctx.writeAndFlush(Unpooled.emptyByteBuf()).addListener(ChannelFutureListener.CLOSE);
                 }
             }
         }
@@ -185,7 +185,7 @@ public class HttpSnoopServerHandler extends SimpleChannelInboundHandler<Object> 
     }
 
     private static void send100Continue(ChannelHandlerContext ctx) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER);
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.emptyByteBuf());
         ctx.write(response);
     }
 

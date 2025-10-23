@@ -434,7 +434,7 @@ public class SpdyFrameDecoder {
      */
     protected boolean decodeUnknownFrame(int frameType, byte flags, int length, ByteBuf buffer) {
         if (length == 0) {
-            delegate.readUnknownFrame(frameType, flags, Unpooled.EMPTY_BUFFER);
+            delegate.readUnknownFrame(frameType, flags, Unpooled.emptyByteBuf());
             return true;
         }
         if (buffer.readableBytes() < length) {

@@ -16,9 +16,10 @@
 package io.netty.channel.unix;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.buffer.UnpooledDirectByteBuf;
+import io.netty.buffer.UnpooledUnsafeDirectByteBuf;
 import io.netty.channel.ChannelOutboundBuffer.MessageProcessor;
-import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.PlatformDependent;
 
 import java.nio.ByteBuffer;
@@ -65,7 +66,6 @@ public final class IovArray implements MessageProcessor {
 
     private final long memoryAddress;
     private final ByteBuf memory;
-    private final CleanableDirectBuffer cleanable;
     private int count;
     private long size;
     private long maxBytes = SSIZE_MAX;
@@ -86,10 +86,13 @@ public final class IovArray implements MessageProcessor {
     @SuppressWarnings("deprecation")
     public IovArray(int numEntries) {
         int sizeBytes = Math.multiplyExact(checkPositive(numEntries, "numEntries"), IOV_SIZE);
-        cleanable = Buffer.allocateDirectBufferWithNativeOrder(sizeBytes);
-        ByteBuf bbuf = Unpooled.wrappedBuffer(cleanable.buffer()).setIndex(0, 0);
-        memory = PlatformDependent.hasUnsafe() ? bbuf : bbuf.order(
-                PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
+        if (PlatformDependent.hasUnsafe()) {
+            memory = new UnpooledUnsafeDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, sizeBytes, sizeBytes)
+                    .order(PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
+        } else {
+            memory = new UnpooledDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, sizeBytes, sizeBytes)
+                    .order(PlatformDependent.BIG_ENDIAN_NATIVE_ORDER ? ByteOrder.BIG_ENDIAN : ByteOrder.LITTLE_ENDIAN);
+        }
         if (memory.hasMemoryAddress()) {
             memoryAddress = memory.memoryAddress();
         } else {
@@ -125,7 +128,6 @@ public final class IovArray implements MessageProcessor {
             ByteBuffer byteBuffer = memory.internalNioBuffer(0, memory.capacity());
             memoryAddress = Buffer.memoryAddress(byteBuffer) + byteBuffer.position();
         }
-        cleanable = null;
         maxCount = IOV_MAX;
     }
 
@@ -293,10 +295,6 @@ public final class IovArray implements MessageProcessor {
      */
     public void release() {
         memory.release();
-        if (cleanable != null) {
-            // The 'cleanable' will be 'null' if the 'IovArray(ByteBuf)' constructor was used.
-            cleanable.clean();
-        }
     }
 
     @Override

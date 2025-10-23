@@ -248,7 +248,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testUpgradeTrailers() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
-        LastHttpContent trailers = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, true);
+        LastHttpContent trailers = new DefaultLastHttpContent(Unpooled.emptyByteBuf(), true);
         HttpHeaders headers = trailers.trailingHeaders();
         headers.set("key", "value");
         assertTrue(ch.writeOutbound(trailers));
@@ -458,7 +458,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
                     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
                         if (msg instanceof Http2StreamFrame) {
                             frames.add((Http2StreamFrame) msg);
-                            ctx.write(Unpooled.EMPTY_BUFFER, promise);
+                            ctx.write(Unpooled.emptyByteBuf(), promise);
                         } else {
                             ctx.write(msg, promise);
                         }
@@ -649,7 +649,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     @Test
     public void testEncodeTrailersAsClient() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
-        LastHttpContent trailers = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, true);
+        LastHttpContent trailers = new DefaultLastHttpContent(Unpooled.emptyByteBuf(), true);
         HttpHeaders headers = trailers.trailingHeaders();
         headers.set("key", "value");
         assertTrue(ch.writeOutbound(trailers));

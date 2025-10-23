@@ -58,7 +58,7 @@ public abstract class AbstractMemcacheObjectEncoder<M extends MemcacheMessage> e
             if (contentLength > 0) {
                 out.add(encodeAndRetain(msg));
             } else {
-                out.add(Unpooled.EMPTY_BUFFER);
+                out.add(Unpooled.emptyByteBuf());
             }
 
             expectingMoreContent = !(msg instanceof LastMemcacheContent);

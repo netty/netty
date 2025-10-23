@@ -31,7 +31,7 @@ public interface LastStompContentSubframe extends StompContentSubframe {
     LastStompContentSubframe EMPTY_LAST_CONTENT = new LastStompContentSubframe() {
         @Override
         public ByteBuf content() {
-            return Unpooled.EMPTY_BUFFER;
+            return Unpooled.emptyByteBuf();
         }
 
         @Override

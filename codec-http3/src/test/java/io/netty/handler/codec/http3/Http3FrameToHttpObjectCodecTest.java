@@ -556,7 +556,7 @@ public class Http3FrameToHttpObjectCodecTest {
     @Test
     public void testEncodeTrailersAsClient() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
-        LastHttpContent trailers = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, true);
+        LastHttpContent trailers = new DefaultLastHttpContent(Unpooled.emptyByteBuf(), true);
         HttpHeaders headers = trailers.trailingHeaders();
         headers.set("key", "value");
         assertTrue(ch.writeOutbound(trailers));
@@ -743,7 +743,7 @@ data.release();
             boolean hasTrailers,
             boolean voidPromise
     ) {
-        ByteBuf content = nonEmptyContent ? Unpooled.wrappedBuffer(new byte[1]) : Unpooled.EMPTY_BUFFER;
+        ByteBuf content = nonEmptyContent ? Unpooled.wrappedBuffer(new byte[1]) : Unpooled.emptyByteBuf();
         HttpHeaders trailers = new DefaultHttpHeaders();
         if (hasTrailers) {
             trailers.add("foo", "bar");

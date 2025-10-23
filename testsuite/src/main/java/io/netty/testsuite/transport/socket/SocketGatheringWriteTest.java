@@ -170,7 +170,7 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
             i += length;
         }
 
-        ChannelFuture cf = cc.writeAndFlush(Unpooled.EMPTY_BUFFER);
+        ChannelFuture cf = cc.writeAndFlush(Unpooled.emptyByteBuf());
         assertNotEquals(cc.voidPromise(), cf);
         try {
             assertTrue(cf.await(60000));

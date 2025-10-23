@@ -235,7 +235,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         final int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {
             ReferenceCountUtil.release(holder);
-            return Unpooled.EMPTY_BUFFER;
+            return Unpooled.emptyByteBuf();
         }
 
         final ByteBufAllocator alloc = alloc();

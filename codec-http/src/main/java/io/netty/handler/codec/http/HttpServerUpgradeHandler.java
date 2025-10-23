@@ -459,7 +459,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
      */
     private FullHttpResponse createUpgradeResponse(CharSequence upgradeProtocol) {
         DefaultFullHttpResponse res = new DefaultFullHttpResponse(
-                HTTP_1_1, SWITCHING_PROTOCOLS, Unpooled.EMPTY_BUFFER, headersFactory, trailersFactory);
+                HTTP_1_1, SWITCHING_PROTOCOLS, Unpooled.emptyByteBuf(), headersFactory, trailersFactory);
         res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
         res.headers().add(HttpHeaderNames.UPGRADE, upgradeProtocol);
         return res;

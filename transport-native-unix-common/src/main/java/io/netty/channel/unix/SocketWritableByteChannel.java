@@ -45,7 +45,7 @@ public abstract class SocketWritableByteChannel implements WritableByteChannel {
             io.netty.buffer.ByteBuf buffer = null;
             try {
                 if (readableBytes == 0) {
-                    buffer = io.netty.buffer.Unpooled.EMPTY_BUFFER;
+                    buffer = io.netty.buffer.Unpooled.emptyByteBuf();
                 } else {
                     final ByteBufAllocator alloc = alloc();
                     if (alloc.isDirectBufferPooled()) {

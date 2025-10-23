@@ -1004,7 +1004,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                                 if (finReceived && readFrames) {
                                     // If we read QuicStreamFrames we should fire an frame through the pipeline
                                     // with an empty buffer but the fin flag set to true.
-                                    byteBuf = Unpooled.EMPTY_BUFFER;
+                                    byteBuf = Unpooled.emptyByteBuf();
                                 } else {
                                     byteBuf = null;
                                     break;

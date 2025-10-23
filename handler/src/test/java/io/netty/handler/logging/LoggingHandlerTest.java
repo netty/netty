@@ -249,7 +249,7 @@ public class LoggingHandlerTest {
 
     @Test
     public void shouldLogEmptyByteBufDataRead() throws Exception {
-        ByteBuf msg = Unpooled.EMPTY_BUFFER;
+        ByteBuf msg = Unpooled.emptyByteBuf();
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.writeInbound(msg);
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ: 0B$", false)));
@@ -280,7 +280,7 @@ public class LoggingHandlerTest {
 
     @Test
     public void shouldLogChannelReadComplete() throws Exception {
-        ByteBuf msg = Unpooled.EMPTY_BUFFER;
+        ByteBuf msg = Unpooled.emptyByteBuf();
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         channel.writeInbound(msg);
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+READ COMPLETE$")));

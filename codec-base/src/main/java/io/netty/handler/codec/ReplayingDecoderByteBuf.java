@@ -44,13 +44,6 @@ final class ReplayingDecoderByteBuf extends ByteBuf {
     private boolean terminated;
     private SwappedByteBuf swapped;
 
-    @SuppressWarnings("checkstyle:StaticFinalBuffer")  // Unpooled.EMPTY_BUFFER is not writeable or readable.
-    static final ReplayingDecoderByteBuf EMPTY_BUFFER = new ReplayingDecoderByteBuf(Unpooled.EMPTY_BUFFER);
-
-    static {
-        EMPTY_BUFFER.terminate();
-    }
-
     ReplayingDecoderByteBuf() { }
 
     ReplayingDecoderByteBuf(ByteBuf buffer) {

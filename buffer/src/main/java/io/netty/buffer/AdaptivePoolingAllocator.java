@@ -281,7 +281,7 @@ final class AdaptivePoolingAllocator {
         // If we don't already have a buffer, obtain one from the most conveniently available magazine.
         Magazine magazine;
         if (buf != null) {
-            Chunk chunk = buf.chunk;
+            AbstractChunk chunk = buf.chunk;
             if (chunk == null || chunk == Magazine.MAGAZINE_FREED || (magazine = chunk.currentMagazine()) == null) {
                 magazine = getFallbackMagazine(currentThread);
             }
@@ -291,7 +291,7 @@ final class AdaptivePoolingAllocator {
         }
         // Create a one-off chunk for this allocation.
         AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
-        Chunk chunk = new Chunk(innerChunk, magazine, false, chunkSize -> true);
+        AbstractChunk chunk = new AbstractChunk(innerChunk, magazine, false, chunkSize -> true);
         chunkRegistry.add(chunk);
         try {
             chunk.readInitInto(buf, size, size, maxCapacity);
@@ -446,7 +446,7 @@ final class AdaptivePoolingAllocator {
             return true;
         }
 
-        boolean offerToQueue(Chunk buffer) {
+        boolean offerToQueue(AbstractChunk buffer) {
             if (freed) {
                 return false;
             }
@@ -504,9 +504,9 @@ final class AdaptivePoolingAllocator {
         void initializeSharedStateIn(ChunkController chunkController);
 
         /**
-         * Allocate a new {@link Chunk} for the given {@link Magazine}.
+         * Allocate a new {@link AbstractChunk} for the given {@link Magazine}.
          */
-        Chunk newChunkAllocation(int promptingSize, Magazine magazine);
+        AbstractChunk newChunkAllocation(int promptingSize, Magazine magazine);
     }
 
     private interface ChunkReleasePredicate {
@@ -566,7 +566,7 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public Chunk newChunkAllocation(int promptingSize, Magazine magazine) {
+        public AbstractChunk newChunkAllocation(int promptingSize, Magazine magazine) {
             AbstractByteBuf chunkBuffer = chunkAllocator.allocate(chunkSize, chunkSize);
             assert chunkBuffer.capacity() == chunkSize;
             SizeClassedChunk chunk = new SizeClassedChunk(chunkBuffer, magazine, true,
@@ -753,7 +753,7 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        public Chunk newChunkAllocation(int promptingSize, Magazine magazine) {
+        public AbstractChunk newChunkAllocation(int promptingSize, Magazine magazine) {
             int size = Math.max(promptingSize * BUFS_PER_CHUNK, preferredChunkSize());
             int minChunks = size / MIN_CHUNK_SIZE;
             if (MIN_CHUNK_SIZE * minChunks < size) {
@@ -773,7 +773,7 @@ final class AdaptivePoolingAllocator {
             }
 
             ChunkAllocator chunkAllocator = group.chunkAllocator;
-            Chunk chunk = new Chunk(chunkAllocator.allocate(size, size), magazine, true, this);
+            AbstractChunk chunk = new AbstractChunk(chunkAllocator.allocate(size, size), magazine, true, this);
             chunkRegistry.add(chunk);
             return chunk;
         }
@@ -796,7 +796,7 @@ final class AdaptivePoolingAllocator {
         static {
             NEXT_IN_LINE = AtomicReferenceFieldUpdater.newUpdater(Magazine.class, Chunk.class, "nextInLine");
         }
-        private static final Chunk MAGAZINE_FREED = new Chunk();
+        private static final Chunk MAGAZINE_FREED = new MagazineFreedChunk();
 
         private static final Recycler<AdaptiveByteBuf> EVENT_LOOP_LOCAL_BUFFER_POOL = new Recycler<AdaptiveByteBuf>() {
             @Override
@@ -1037,7 +1037,7 @@ final class AdaptivePoolingAllocator {
             chunk.releaseFromMagazine();
         }
 
-        boolean trySetNextInLine(Chunk chunk) {
+        boolean trySetNextInLine(AbstractChunk chunk) {
             return NEXT_IN_LINE.compareAndSet(this, null, chunk);
         }
 
@@ -1072,7 +1072,7 @@ final class AdaptivePoolingAllocator {
             return buf;
         }
 
-        boolean offerToQueue(Chunk chunk) {
+        boolean offerToQueue(AbstractChunk chunk) {
             return group.offerToQueue(chunk);
         }
 
@@ -1088,16 +1088,57 @@ final class AdaptivePoolingAllocator {
             return totalCapacity.sum();
         }
 
-        public void add(Chunk chunk) {
+        public void add(AbstractChunk chunk) {
             totalCapacity.add(chunk.capacity());
         }
 
-        public void remove(Chunk chunk) {
+        public void remove(AbstractChunk chunk) {
             totalCapacity.add(-chunk.capacity());
         }
     }
 
-    private static class Chunk extends AbstractReferenceCounted implements ChunkInfo {
+    interface Chunk {
+
+        void attachToMagazine(Magazine magazine);
+
+        boolean releaseFromMagazine();
+
+        void readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity);
+
+        int remainingCapacity();
+
+        boolean release();
+    }
+
+    private static final class MagazineFreedChunk implements Chunk {
+
+        @Override
+        public void attachToMagazine(Magazine magazine) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean releaseFromMagazine() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public int remainingCapacity() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public boolean release() {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private static class AbstractChunk extends AbstractReferenceCounted implements ChunkInfo, Chunk {
         protected final AbstractByteBuf delegate;
         protected Magazine magazine;
         private final AdaptivePoolingAllocator allocator;
@@ -1106,7 +1147,7 @@ final class AdaptivePoolingAllocator {
         private final boolean pooled;
         protected int allocatedBytes;
 
-        Chunk() {
+        AbstractChunk() {
             // Constructor only used by the MAGAZINE_FREED sentinel.
             delegate = null;
             magazine = null;
@@ -1116,8 +1157,8 @@ final class AdaptivePoolingAllocator {
             pooled = false;
         }
 
-        Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled,
-              ChunkReleasePredicate chunkReleasePredicate) {
+        AbstractChunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled,
+                      ChunkReleasePredicate chunkReleasePredicate) {
             this.delegate = delegate;
             this.pooled = pooled;
             capacity = delegate.capacity();
@@ -1149,25 +1190,27 @@ final class AdaptivePoolingAllocator {
             }
         }
 
-        void attachToMagazine(Magazine magazine) {
+        @Override
+        public void attachToMagazine(Magazine magazine) {
             assert this.magazine == null;
             this.magazine = magazine;
         }
 
         @Override
-        public Chunk touch(Object hint) {
+        public AbstractChunk touch(Object hint) {
             return this;
         }
 
         @Override
-        public Chunk touch() {
+        public AbstractChunk touch() {
             return this;
         }
 
         /**
          * Called when a magazine is done using this chunk, probably because it was emptied.
          */
-        boolean releaseFromMagazine() {
+        @Override
+        public boolean releaseFromMagazine() {
             return release();
         }
 
@@ -1235,10 +1278,11 @@ final class AdaptivePoolingAllocator {
             }
         }
 
+        @Override
         public void readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
             int startIndex = allocatedBytes;
             allocatedBytes = startIndex + startingCapacity;
-            Chunk chunk = this;
+            AbstractChunk chunk = this;
             chunk.retain();
             try {
                 buf.init(delegate, chunk, 0, 0, startIndex, size, startingCapacity, maxCapacity);
@@ -1254,6 +1298,7 @@ final class AdaptivePoolingAllocator {
             }
         }
 
+        @Override
         public int remainingCapacity() {
             return capacity - allocatedBytes;
         }
@@ -1274,7 +1319,7 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    private static final class SizeClassedChunk extends Chunk {
+    private static final class SizeClassedChunk extends AbstractChunk {
         private static final int FREE_LIST_EMPTY = -1;
         private final int segmentSize;
         private final MpscIntQueue freeList;
@@ -1303,7 +1348,7 @@ final class AdaptivePoolingAllocator {
                 throw new IllegalStateException("Free list is empty");
             }
             allocatedBytes += segmentSize;
-            Chunk chunk = this;
+            AbstractChunk chunk = this;
             chunk.retain();
             try {
                 buf.init(delegate, chunk, 0, 0, startIndex, size, startingCapacity, maxCapacity);
@@ -1335,7 +1380,7 @@ final class AdaptivePoolingAllocator {
         }
 
         @Override
-        boolean releaseFromMagazine() {
+        public boolean releaseFromMagazine() {
             // Size-classed chunks can be reused before they become empty.
             // We can therefor put them in the shared queue as soon as the magazine is done with this chunk.
             Magazine mag = magazine;
@@ -1362,7 +1407,7 @@ final class AdaptivePoolingAllocator {
         // this both act as adjustment and the start index for a free list segment allocation
         private int startIndex;
         private AbstractByteBuf rootParent;
-        Chunk chunk;
+        AbstractChunk chunk;
         private int length;
         private int maxFastCapacity;
         private ByteBuffer tmpNioBuf;
@@ -1374,7 +1419,7 @@ final class AdaptivePoolingAllocator {
             handle = ObjectUtil.checkNotNull(recyclerHandle, "recyclerHandle");
         }
 
-        void init(AbstractByteBuf unwrapped, Chunk wrapped, int readerIndex, int writerIndex,
+        void init(AbstractByteBuf unwrapped, AbstractChunk wrapped, int readerIndex, int writerIndex,
                   int startIndex, int size, int capacity, int maxCapacity) {
             this.startIndex = startIndex;
             chunk = wrapped;
@@ -1441,7 +1486,7 @@ final class AdaptivePoolingAllocator {
             }
 
             // Reallocation required.
-            Chunk chunk = this.chunk;
+            AbstractChunk chunk = this.chunk;
             AdaptivePoolingAllocator allocator = chunk.allocator;
             int readerIndex = this.readerIndex;
             int writerIndex = this.writerIndex;

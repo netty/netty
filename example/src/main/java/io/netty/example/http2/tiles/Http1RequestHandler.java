@@ -42,7 +42,7 @@ public final class Http1RequestHandler extends Http2RequestHandler {
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest request) throws Exception {
         if (HttpUtil.is100ContinueExpected(request)) {
-            ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER));
+            ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.emptyByteBuf()));
         }
         super.channelRead0(ctx, request);
     }

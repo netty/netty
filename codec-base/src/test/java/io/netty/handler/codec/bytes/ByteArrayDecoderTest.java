@@ -45,7 +45,7 @@ public class ByteArrayDecoderTest {
 
     @Test
     public void testDecodeEmpty() {
-        ch.writeInbound(EMPTY_BUFFER);
+        ch.writeInbound(emptyByteBuf());
         assertArrayEquals(EmptyArrays.EMPTY_BYTES, ch.readInbound());
     }
 

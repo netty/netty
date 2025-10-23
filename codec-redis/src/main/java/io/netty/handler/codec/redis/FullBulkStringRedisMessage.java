@@ -28,7 +28,7 @@ import io.netty.util.internal.UnstableApi;
 public class FullBulkStringRedisMessage extends DefaultByteBufHolder implements LastBulkStringRedisContent {
 
     private FullBulkStringRedisMessage() {
-        this(Unpooled.EMPTY_BUFFER);
+        this(Unpooled.emptyByteBuf());
     }
 
     /**
@@ -71,7 +71,7 @@ public class FullBulkStringRedisMessage extends DefaultByteBufHolder implements 
 
         @Override
         public ByteBuf content() {
-            return Unpooled.EMPTY_BUFFER;
+            return Unpooled.emptyByteBuf();
         }
 
         @Override
@@ -131,7 +131,7 @@ public class FullBulkStringRedisMessage extends DefaultByteBufHolder implements 
     public static final FullBulkStringRedisMessage EMPTY_INSTANCE = new FullBulkStringRedisMessage() {
         @Override
         public ByteBuf content() {
-            return Unpooled.EMPTY_BUFFER;
+            return Unpooled.emptyByteBuf();
         }
 
         @Override

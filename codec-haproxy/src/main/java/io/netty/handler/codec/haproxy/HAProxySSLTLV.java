@@ -42,7 +42,7 @@ public final class HAProxySSLTLV extends HAProxyTLV {
      * @param tlvs the encapsulated {@link HAProxyTLV}s
      */
     public HAProxySSLTLV(final int verify, final byte clientBitField, final List<HAProxyTLV> tlvs) {
-        this(verify, clientBitField, tlvs, Unpooled.EMPTY_BUFFER);
+        this(verify, clientBitField, tlvs, Unpooled.emptyByteBuf());
     }
 
     /**

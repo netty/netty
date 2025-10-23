@@ -765,7 +765,7 @@ public class Http2FrameCodecTest {
                               stream1HeaderPromise);
         channel.runPendingTasks();
 
-        frameInboundWriter.writeInboundGoAway(stream1.id(), 0L, Unpooled.EMPTY_BUFFER);
+        frameInboundWriter.writeInboundGoAway(stream1.id(), 0L, Unpooled.emptyByteBuf());
 
         channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2),
                               stream2HeaderPromise);

@@ -589,7 +589,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (closeData == null) {
             app = false;
             err = 0;
-            reason = Unpooled.EMPTY_BUFFER;
+            reason = Unpooled.emptyByteBuf();
         } else {
             app = closeData.applicationClose;
             err = closeData.err;
@@ -871,7 +871,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         QuicheQuicConnection conn = connection;
         try {
             // Just write an empty buffer and set fin to true.
-            int res = streamSend0(conn, streamId, Unpooled.EMPTY_BUFFER, true);
+            int res = streamSend0(conn, streamId, Unpooled.emptyByteBuf(), true);
             if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
                 throw Quiche.convertToException(res);
             }
@@ -1482,7 +1482,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             long streamId = idGenerator.nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
 
             try {
-                int res = streamSend0(connection, streamId, Unpooled.EMPTY_BUFFER, false);
+                int res = streamSend0(connection, streamId, Unpooled.emptyByteBuf(), false);
                 if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
                     throw Quiche.convertToException(res);
                 }

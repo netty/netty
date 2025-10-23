@@ -192,7 +192,7 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
                     if (channel.finish()) {
                         buf = nextReadableBuf(channel);
                     }
-                    return super.writeData(ctx, streamId, buf == null ? Unpooled.EMPTY_BUFFER : buf, padding,
+                    return super.writeData(ctx, streamId, buf == null ? Unpooled.emptyByteBuf() : buf, padding,
                             true, promise);
                 }
                 // END_STREAM is not set and the assumption is data is still forthcoming.

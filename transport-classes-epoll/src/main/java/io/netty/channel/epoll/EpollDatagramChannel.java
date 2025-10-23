@@ -679,7 +679,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         handle.lastBytesRead(Math.max(1, bytesRead)); // Avoid signalling end-of-data for zero-sized datagrams.
         handle.incMessagesRead(messagesRead);
         for (int i = 0; i < messagesRead; i++) {
-            pipeline.fireChannelRead(packetList.set(i, Unpooled.EMPTY_BUFFER));
+            pipeline.fireChannelRead(packetList.set(i, Unpooled.emptyByteBuf()));
         }
     }
 

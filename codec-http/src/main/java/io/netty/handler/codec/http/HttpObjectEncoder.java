@@ -157,8 +157,8 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     @SuppressWarnings("ConditionCoveredByFurtherCondition")
     protected void encode(ChannelHandlerContext ctx, Object msg, List<Object> out) throws Exception {
         // fast-path for common idiom that doesn't require class-checks
-        if (msg == Unpooled.EMPTY_BUFFER) {
-            out.add(Unpooled.EMPTY_BUFFER);
+        if (msg == Unpooled.emptyByteBuf()) {
+            out.add(Unpooled.emptyByteBuf());
             return;
         }
         // The reason why we perform instanceof checks in this order,
@@ -384,12 +384,12 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 case ST_CONTENT_ALWAYS_EMPTY:
                     // Need to produce some output otherwise an
                     // IllegalStateException will be thrown as we did not write anything
-                    // Its ok to just write an EMPTY_BUFFER as if there are reference count issues these will be
+                    // Its ok to just write an emptyByteBuf() as if there are reference count issues these will be
                     // propagated as the caller of the encode(...) method will release the original
                     // buffer.
                     // Writing an empty buffer will not actually write anything on the wire, so if there is a user
                     // error with msg it will not be visible externally
-                    out.add(Unpooled.EMPTY_BUFFER);
+                    out.add(Unpooled.emptyByteBuf());
                     break;
                 case ST_CONTENT_CHUNK:
                     encodedChunkedFileRegionContent(ctx, msg, out);
@@ -404,7 +404,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
     // Bypass the encoder in case of an empty buffer, so that the following idiom works:
     //
-    //     ch.write(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+    //     ch.write(Unpooled.emptyByteBuf()).addListener(ChannelFutureListener.CLOSE);
     //
     // See https://github.com/netty/netty/issues/2983 for more information.
     private static boolean bypassEncoderIfEmpty(ByteBuf msg, List<Object> out) {
@@ -433,7 +433,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         switch (state) {
             case ST_CONTENT_NON_CHUNK:
             case ST_CONTENT_ALWAYS_EMPTY:
-                out.add(Unpooled.EMPTY_BUFFER);
+                out.add(Unpooled.emptyByteBuf());
                 break;
             case ST_CONTENT_CHUNK:
                 out.add(ZERO_CRLF_CRLF_BUF.duplicate());
@@ -476,7 +476,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
                 }
                 // fall-through!
             case ST_CONTENT_ALWAYS_EMPTY:
-                out.add(Unpooled.EMPTY_BUFFER);
+                out.add(Unpooled.emptyByteBuf());
                 break;
             case ST_CONTENT_CHUNK:
                 encodeChunkedHttpContent(ctx, content, trailingHeaders, out);
@@ -589,13 +589,14 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     @Override
     @SuppressWarnings("ConditionCoveredByFurtherCondition")
     public boolean acceptOutboundMessage(Object msg) throws Exception {
-        return msg == Unpooled.EMPTY_BUFFER ||
+        return msg == Unpooled.emptyByteBuf() ||
                 msg == LastHttpContent.EMPTY_LAST_CONTENT ||
                 msg instanceof FullHttpMessage ||
                 msg instanceof HttpMessage ||
                 msg instanceof LastHttpContent ||
                 msg instanceof HttpContent ||
-                msg instanceof ByteBuf || msg instanceof FileRegion;
+                msg instanceof ByteBuf ||
+                msg instanceof FileRegion;
     }
 
     /**

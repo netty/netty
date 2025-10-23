@@ -170,7 +170,7 @@ public final class ZstdEncoder extends MessageToByteEncoder<ByteBuf> {
     @Override
     public void flush(final ChannelHandlerContext ctx) {
         if (buffer != null && buffer.isReadable()) {
-            final ByteBuf buf = allocateBuffer(ctx, Unpooled.EMPTY_BUFFER, isPreferDirect());
+            final ByteBuf buf = allocateBuffer(ctx, Unpooled.emptyByteBuf(), isPreferDirect());
             flushBufferedData(buf);
             ctx.write(buf);
         }

@@ -277,7 +277,7 @@ final class Http3CodecUtils {
             buffer = quicChannel.alloc().buffer();
             buffer.writeCharSequence(msg, CharsetUtil.US_ASCII);
         } else {
-            buffer = Unpooled.EMPTY_BUFFER;
+            buffer = Unpooled.emptyByteBuf();
         }
         quicChannel.close(true, errorCode.code, buffer);
     }

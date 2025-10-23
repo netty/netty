@@ -73,7 +73,7 @@ public class HttpContentDecompressorTest {
 
         assertTrue(channel.readInbound() instanceof HttpResponse);
 
-        assertFalse(channel.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
+        assertFalse(channel.writeInbound(new DefaultHttpContent(Unpooled.emptyByteBuf())));
 
         // read was triggered by the HttpContentDecompressor itself as it did not produce any message to the next
         // inbound handler.

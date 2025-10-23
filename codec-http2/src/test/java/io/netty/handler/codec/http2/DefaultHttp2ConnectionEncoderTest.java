@@ -42,7 +42,7 @@ import org.mockito.stubbing.Answer;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.emptyByteBuf;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -852,7 +852,7 @@ public class DefaultHttp2ConnectionEncoderTest {
     @Test
     public void canWriteDataFrameAfterGoAwaySent() throws Exception {
         Http2Stream stream = createStream(STREAM_ID, false);
-        connection.goAwaySent(0, 0, EMPTY_BUFFER);
+        connection.goAwaySent(0, 0, emptyByteBuf());
         ByteBuf data = mock(ByteBuf.class);
         encoder.writeData(ctx, STREAM_ID, data, 0, false, newPromise());
         verify(remoteFlow).addFlowControlled(eq(stream), any(FlowControlled.class));
@@ -934,11 +934,11 @@ public class DefaultHttp2ConnectionEncoderTest {
     }
 
     private void goAwayReceived(int lastStreamId) throws Http2Exception {
-        connection.goAwayReceived(lastStreamId, 0, EMPTY_BUFFER);
+        connection.goAwayReceived(lastStreamId, 0, emptyByteBuf());
     }
 
     private void goAwaySent(int lastStreamId) throws Http2Exception {
-        connection.goAwaySent(lastStreamId, 0, EMPTY_BUFFER);
+        connection.goAwaySent(lastStreamId, 0, emptyByteBuf());
     }
 
     private ChannelPromise newPromise() {

@@ -453,7 +453,7 @@ public class LocalTransportThreadModelTest {
                     ctx.write(actual);
                 }
             }
-            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER, promise);
+            ctx.writeAndFlush(Unpooled.emptyByteBuf(), promise);
             m.release();
         }
 

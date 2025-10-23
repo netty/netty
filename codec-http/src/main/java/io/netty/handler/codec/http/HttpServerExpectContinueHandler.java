@@ -47,10 +47,10 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 public class HttpServerExpectContinueHandler extends ChannelInboundHandlerAdapter {
 
     private static final FullHttpResponse EXPECTATION_FAILED = new DefaultFullHttpResponse(
-            HTTP_1_1, HttpResponseStatus.EXPECTATION_FAILED, Unpooled.EMPTY_BUFFER);
+            HTTP_1_1, HttpResponseStatus.EXPECTATION_FAILED, Unpooled.emptyByteBuf());
 
     private static final FullHttpResponse ACCEPT = new DefaultFullHttpResponse(
-            HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER);
+            HTTP_1_1, CONTINUE, Unpooled.emptyByteBuf());
 
     static {
         EXPECTATION_FAILED.headers().set(CONTENT_LENGTH, 0);

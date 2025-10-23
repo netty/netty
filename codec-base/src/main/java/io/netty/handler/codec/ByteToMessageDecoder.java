@@ -18,7 +18,6 @@ package io.netty.handler.codec;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -29,6 +28,7 @@ import io.netty.util.internal.StringUtil;
 
 import java.util.List;
 
+import static io.netty.buffer.Unpooled.emptyByteBuf;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static java.lang.Integer.MAX_VALUE;
 
@@ -246,7 +246,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         if (cumulation != null) {
             return cumulation;
         } else {
-            return Unpooled.EMPTY_BUFFER;
+            return emptyByteBuf();
         }
     }
 
@@ -286,7 +286,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             try {
                 first = cumulation == null;
                 cumulation = cumulator.cumulate(ctx.alloc(),
-                        first ? Unpooled.EMPTY_BUFFER : cumulation, (ByteBuf) msg);
+                        first ? emptyByteBuf() : cumulation, (ByteBuf) msg);
                 callDecode(ctx, cumulation, out);
             } catch (DecoderException e) {
                 throw e;
@@ -428,13 +428,13 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             // If callDecode(...) removed the handle from the pipeline we should not call decodeLast(...) as this would
             // be unexpected.
             if (!ctx.isRemoved()) {
-                // Use Unpooled.EMPTY_BUFFER if cumulation become null after calling callDecode(...).
+                // Use Unpooled.emptyByteBuf() if cumulation become null after calling callDecode(...).
                 // See https://github.com/netty/netty/issues/10802.
-                ByteBuf buffer = cumulation == null ? Unpooled.EMPTY_BUFFER : cumulation;
+                ByteBuf buffer = cumulation == null ? emptyByteBuf() : cumulation;
                 decodeLast(ctx, buffer, out);
             }
         } else {
-            decodeLast(ctx, Unpooled.EMPTY_BUFFER, out);
+            decodeLast(ctx, emptyByteBuf(), out);
         }
     }
 

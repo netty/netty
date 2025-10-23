@@ -61,10 +61,10 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
     @Param({ "64", "1024", "4096", "16384", "1048576", "4194304" })
     public int payloadSize;
 
-    @Param({ "0", "100", "255" })
+    @Param({ "0", /*"100", "255"*/ })
     public int padding;
 
-    @Param({ "true", "false" })
+    @Param({ "true", /*"false"*/ })
     public boolean pooled;
 
     private ByteBuf payload;

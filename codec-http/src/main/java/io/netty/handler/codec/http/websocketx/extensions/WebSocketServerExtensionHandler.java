@@ -160,7 +160,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
 
     @Override
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-        if (msg != Unpooled.EMPTY_BUFFER && !(msg instanceof ByteBuf)) {
+        if (msg != Unpooled.emptyByteBuf() && !(msg instanceof ByteBuf)) {
             if (msg instanceof DefaultHttpResponse) {
                 onHttpResponseWrite(ctx, (DefaultHttpResponse) msg, promise);
             } else if (msg instanceof HttpResponse) {

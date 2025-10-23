@@ -579,9 +579,9 @@ public class FlowControlHandlerTest {
         channel.register();
 
         // Reset read timeout by some message
-        assertTrue(channel.writeInbound(Unpooled.EMPTY_BUFFER));
+        assertTrue(channel.writeInbound(Unpooled.emptyByteBuf()));
         channel.flushInbound();
-        assertEquals(Unpooled.EMPTY_BUFFER, channel.readInbound());
+        assertEquals(Unpooled.emptyByteBuf(), channel.readInbound());
 
         // Emulate 'no more messages in NIO channel' on the next read attempt.
         channel.flushInbound();

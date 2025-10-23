@@ -835,7 +835,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // may want to add a ChannelFutureListener to the ChannelPromise later.
             //
             // See https://github.com/netty/netty/issues/3364
-            pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, ctx.newPromise());
+            pendingUnencryptedWrites.add(Unpooled.emptyByteBuf(), ctx.newPromise());
         }
         if (!handshakePromise.isDone()) {
             setState(STATE_FLUSHED_BEFORE_HANDSHAKE);
@@ -923,7 +923,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         ctx.write(b);
                     }
                 } else if (promise != null) {
-                    ctx.write(Unpooled.EMPTY_BUFFER, promise);
+                    ctx.write(Unpooled.emptyByteBuf(), promise);
                 }
                 // else out is not readable we can re-use it and so save an extra allocation
 
@@ -963,7 +963,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                             // was more added. Failing to do so may fail to produce an alert that can be
                             // consumed by the remote peer.
                             if (result.bytesProduced() > 0 && pendingUnencryptedWrites.isEmpty()) {
-                                pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER);
+                                pendingUnencryptedWrites.add(Unpooled.emptyByteBuf());
                             }
                             break;
                         case NEED_UNWRAP:
@@ -1006,7 +1006,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     // If this is not enough we will increase the buffer in wrap(...).
                     out = allocateOutNetBuf(ctx, 2048, 1);
                 }
-                SSLEngineResult result = wrap(alloc, engine, Unpooled.EMPTY_BUFFER, out);
+                SSLEngineResult result = wrap(alloc, engine, Unpooled.emptyByteBuf(), out);
                 if (result.bytesProduced() > 0) {
                     ctx.write(out).addListener(new ChannelFutureListener() {
                         @Override
@@ -1488,7 +1488,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * Calls {@link SSLEngine#unwrap(ByteBuffer, ByteBuffer)} with an empty buffer to handle handshakes, etc.
      */
     private int unwrapNonAppData(ChannelHandlerContext ctx) throws SSLException {
-        return unwrap(ctx, Unpooled.EMPTY_BUFFER, 0);
+        return unwrap(ctx, Unpooled.emptyByteBuf(), 0);
     }
 
     /**
@@ -1825,7 +1825,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         private void tryDecodeAgain() {
             try {
-                channelRead(ctx, Unpooled.EMPTY_BUFFER);
+                channelRead(ctx, Unpooled.emptyByteBuf());
             } catch (Throwable cause) {
                 safeExceptionCaught(cause);
             } finally {
@@ -2147,7 +2147,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
     private void flush(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
         if (pendingUnencryptedWrites != null) {
-            pendingUnencryptedWrites.add(Unpooled.EMPTY_BUFFER, promise);
+            pendingUnencryptedWrites.add(Unpooled.emptyByteBuf(), promise);
         } else {
             promise.setFailure(newPendingWritesNullException());
         }

@@ -96,7 +96,7 @@ public class HttpPostRequestDecoderTest {
 
             ByteBuf buf = Unpooled.copiedBuffer(body, CharsetUtil.UTF_8);
             decoder.offer(new DefaultHttpContent(buf));
-            decoder.offer(new DefaultHttpContent(Unpooled.EMPTY_BUFFER));
+            decoder.offer(new DefaultHttpContent(Unpooled.emptyByteBuf()));
 
             // Validate it's enough chunks to decode upload.
             assertTrue(decoder.hasNext());

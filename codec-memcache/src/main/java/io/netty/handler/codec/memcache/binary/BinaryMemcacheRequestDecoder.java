@@ -51,6 +51,6 @@ public class BinaryMemcacheRequestDecoder
 
     @Override
     protected BinaryMemcacheRequest buildInvalidMessage() {
-        return new DefaultBinaryMemcacheRequest(Unpooled.EMPTY_BUFFER, Unpooled.EMPTY_BUFFER);
+        return new DefaultBinaryMemcacheRequest(Unpooled.emptyByteBuf(), Unpooled.emptyByteBuf());
     }
 }

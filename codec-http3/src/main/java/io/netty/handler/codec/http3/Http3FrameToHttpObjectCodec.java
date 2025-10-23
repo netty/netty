@@ -94,7 +94,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
 
         if (headers.method() == null && status == null) {
             // Must be trailers!
-            LastHttpContent last = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
+            LastHttpContent last = new DefaultLastHttpContent(Unpooled.emptyByteBuf(), validateHeaders);
             HttpConversionUtil.addHttp3ToHttpHeaders(id, headers, last.trailingHeaders(),
                     HttpVersion.HTTP_1_1, true, true);
             inboundTranslationInProgress = false;

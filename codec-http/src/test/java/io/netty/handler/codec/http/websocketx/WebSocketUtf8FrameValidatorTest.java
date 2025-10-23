@@ -83,12 +83,12 @@ public class WebSocketUtf8FrameValidatorTest {
 
     @Test
     void testPingInTheMiddleOfFragmentAllowed() {
-        testControlFrameInTheMiddleOfFragmentAllowed(new PingWebSocketFrame(Unpooled.EMPTY_BUFFER));
+        testControlFrameInTheMiddleOfFragmentAllowed(new PingWebSocketFrame(Unpooled.emptyByteBuf()));
     }
 
     @Test
     void testPongInTheMiddleOfFragmentAllowed() {
-        testControlFrameInTheMiddleOfFragmentAllowed(new PongWebSocketFrame(Unpooled.EMPTY_BUFFER));
+        testControlFrameInTheMiddleOfFragmentAllowed(new PongWebSocketFrame(Unpooled.emptyByteBuf()));
     }
 
     private static void testControlFrameInTheMiddleOfFragmentAllowed(WebSocketFrame controlFrame) {

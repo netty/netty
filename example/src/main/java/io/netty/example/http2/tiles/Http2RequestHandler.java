@@ -16,7 +16,7 @@
 
 package io.netty.example.http2.tiles;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.emptyByteBuf;
 import static io.netty.example.http2.Http2ExampleUtil.firstValue;
 import static io.netty.example.http2.Http2ExampleUtil.toInt;
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_TYPE;
@@ -70,7 +70,7 @@ public class Http2RequestHandler extends SimpleChannelInboundHandler<FullHttpReq
     }
 
     private static void sendBadRequest(ChannelHandlerContext ctx, String streamId) {
-        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, EMPTY_BUFFER);
+        FullHttpResponse response = new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, emptyByteBuf());
         streamId(response, streamId);
         ctx.writeAndFlush(response);
     }

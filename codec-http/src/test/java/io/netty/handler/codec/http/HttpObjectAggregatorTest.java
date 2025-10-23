@@ -56,7 +56,7 @@ public class HttpObjectAggregatorTest {
         message.headers().set(of("X-Test"), true);
         HttpContent chunk1 = new DefaultHttpContent(Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII));
         HttpContent chunk2 = new DefaultHttpContent(Unpooled.copiedBuffer("test2", CharsetUtil.US_ASCII));
-        HttpContent chunk3 = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
+        HttpContent chunk3 = new DefaultLastHttpContent(Unpooled.emptyByteBuf());
         assertFalse(embedder.writeInbound(message));
         assertFalse(embedder.writeInbound(chunk1));
         assertFalse(embedder.writeInbound(chunk2));
@@ -226,7 +226,7 @@ public class HttpObjectAggregatorTest {
             assertThrows(ClosedChannelException.class, new Executable() {
                 @Override
                 public void execute() {
-                    embedder.writeInbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER));
+                    embedder.writeInbound(new DefaultHttpContent(Unpooled.emptyByteBuf()));
                 }
             });
 
@@ -600,7 +600,7 @@ public class HttpObjectAggregatorTest {
         assertTrue(embedder.writeInbound(req) && embedder.finish());
 
         FullHttpRequest aggregatedReq = embedder.readInbound();
-        FullHttpRequest replacedReq = aggregatedReq.replace(Unpooled.EMPTY_BUFFER);
+        FullHttpRequest replacedReq = aggregatedReq.replace(Unpooled.emptyByteBuf());
 
         assertEquals(replacedReq.decoderResult(), aggregatedReq.decoderResult());
         aggregatedReq.release();
@@ -618,7 +618,7 @@ public class HttpObjectAggregatorTest {
         assertTrue(embedder.writeInbound(rep) && embedder.finish());
 
         FullHttpResponse aggregatedRep = embedder.readInbound();
-        FullHttpResponse replacedRep = aggregatedRep.replace(Unpooled.EMPTY_BUFFER);
+        FullHttpResponse replacedRep = aggregatedRep.replace(Unpooled.emptyByteBuf());
 
         assertEquals(replacedRep.decoderResult(), aggregatedRep.decoderResult());
         aggregatedRep.release();

@@ -308,7 +308,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 return;
             }
 
-            ByteBuf payloadBuffer = Unpooled.EMPTY_BUFFER;
+            ByteBuf payloadBuffer = Unpooled.emptyByteBuf();
             try {
                 if (framePayloadLength > 0) {
                     payloadBuffer = readBytes(ctx.alloc(), in, toFrameLength(framePayloadLength));
@@ -442,7 +442,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
         if (ctx.channel().isActive() && config.closeOnProtocolViolation()) {
             Object closeMessage;
             if (receivedClosingHandshake) {
-                closeMessage = Unpooled.EMPTY_BUFFER;
+                closeMessage = Unpooled.emptyByteBuf();
             } else {
                 WebSocketCloseStatus closeStatus = ex.closeStatus();
                 String reasonText = ex.getMessage();

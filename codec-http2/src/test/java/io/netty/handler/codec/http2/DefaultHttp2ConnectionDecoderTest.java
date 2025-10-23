@@ -40,7 +40,7 @@ import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.emptyByteBuf;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
@@ -370,7 +370,7 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test
     public void emptyDataFrameShouldApplyFlowControl() throws Exception {
-        final ByteBuf data = EMPTY_BUFFER;
+        final ByteBuf data = emptyByteBuf();
         int padding = 0;
         mockFlowControl(0);
         try {
@@ -887,9 +887,9 @@ public class DefaultHttp2ConnectionDecoderTest {
 
     @Test
     public void goAwayShouldReadShouldUpdateConnectionState() throws Exception {
-        decode().onGoAwayRead(ctx, 1, 2L, EMPTY_BUFFER);
-        verify(connection).goAwayReceived(eq(1), eq(2L), eq(EMPTY_BUFFER));
-        verify(listener).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(EMPTY_BUFFER));
+        decode().onGoAwayRead(ctx, 1, 2L, emptyByteBuf());
+        verify(connection).goAwayReceived(eq(1), eq(2L), eq(emptyByteBuf()));
+        verify(listener).onGoAwayRead(eq(ctx), eq(1), eq(2L), eq(emptyByteBuf()));
     }
 
     @Test
@@ -1048,7 +1048,7 @@ public class DefaultHttp2ConnectionDecoderTest {
     private Http2FrameListener decode(Http2ConnectionDecoder decoder) throws Exception {
         ArgumentCaptor<Http2FrameListener> internalListener = ArgumentCaptor.forClass(Http2FrameListener.class);
         doNothing().when(reader).readFrame(eq(ctx), any(ByteBuf.class), internalListener.capture());
-        decoder.decodeFrame(ctx, EMPTY_BUFFER, Collections.emptyList());
+        decoder.decodeFrame(ctx, emptyByteBuf(), Collections.emptyList());
         return internalListener.getValue();
     }
 

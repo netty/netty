@@ -50,7 +50,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
     @Override
     public void channelRead0(ChannelHandlerContext ctx, FullHttpRequest req) throws Exception {
         if (HttpUtil.is100ContinueExpected(req)) {
-            ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.EMPTY_BUFFER));
+            ctx.write(new DefaultFullHttpResponse(HTTP_1_1, CONTINUE, Unpooled.emptyByteBuf()));
         }
 
         ByteBuf content = ctx.alloc().buffer();

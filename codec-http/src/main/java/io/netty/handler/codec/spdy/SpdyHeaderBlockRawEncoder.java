@@ -46,7 +46,7 @@ public class SpdyHeaderBlockRawEncoder extends SpdyHeaderBlockEncoder {
         Set<CharSequence> names = frame.headers().names();
         int numHeaders = names.size();
         if (numHeaders == 0) {
-            return Unpooled.EMPTY_BUFFER;
+            return Unpooled.emptyByteBuf();
         }
         if (numHeaders > SPDY_MAX_NV_LENGTH) {
             throw new IllegalArgumentException(

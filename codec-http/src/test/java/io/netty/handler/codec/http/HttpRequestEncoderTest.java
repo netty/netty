@@ -301,7 +301,7 @@ public class HttpRequestEncoderTest {
         HttpRequestEncoder encoder = new HttpRequestEncoder();
         EmbeddedChannel channel = new EmbeddedChannel(encoder);
         HttpRequest customMsg = new CustomFullHttpRequest(HttpVersion.HTTP_1_1,
-                HttpMethod.POST, "/", Unpooled.EMPTY_BUFFER);
+                HttpMethod.POST, "/", Unpooled.emptyByteBuf());
         assertTrue(channel.writeOutbound(customMsg));
         // Ensure we only produce ByteBuf instances.
         ByteBuf head = channel.readOutbound();

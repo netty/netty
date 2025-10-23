@@ -211,7 +211,7 @@ public abstract class HttpContentEncoder extends MessageToMessageCodec<HttpReque
                     state = State.AWAIT_HEADERS;
                 } else if (out.isEmpty()) {
                     // MessageToMessageCodec needs at least one output message
-                    out.add(new DefaultHttpContent(Unpooled.EMPTY_BUFFER));
+                    out.add(new DefaultHttpContent(Unpooled.emptyByteBuf()));
                 }
                 break;
             }

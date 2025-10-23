@@ -123,7 +123,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
     @Override
     protected ByteBuf allocateBuffer(ChannelHandlerContext ctx, ByteBuf msg, boolean preferDirect) throws Exception {
         if (!msg.isReadable()) {
-            return Unpooled.EMPTY_BUFFER;
+            return Unpooled.emptyByteBuf();
         }
 
         Writer writer;
@@ -135,7 +135,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
         // If Writer is 'null' then Writer is not open.
         if (writer == null) {
-            return Unpooled.EMPTY_BUFFER;
+            return Unpooled.emptyByteBuf();
         } else {
             writer.encode(msg, preferDirect);
             return writer.writableBuffer;

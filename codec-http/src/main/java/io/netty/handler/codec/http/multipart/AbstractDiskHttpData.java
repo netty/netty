@@ -31,7 +31,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.emptyByteBuf;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 
 /**
@@ -304,7 +304,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     @Override
     public ByteBuf getByteBuf() throws IOException {
         if (file == null) {
-            return EMPTY_BUFFER;
+            return emptyByteBuf();
         }
         byte[] array = readFrom(file);
         return wrappedBuffer(array);
@@ -313,7 +313,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
     @Override
     public ByteBuf getChunk(int length) throws IOException {
         if (file == null || length == 0) {
-            return EMPTY_BUFFER;
+            return emptyByteBuf();
         }
         if (fileChannel == null) {
             RandomAccessFile accessFile = new RandomAccessFile(file, "r");
@@ -337,7 +337,7 @@ public abstract class AbstractDiskHttpData extends AbstractHttpData {
             throw e;
         }
         if (read == 0) {
-            return EMPTY_BUFFER;
+            return emptyByteBuf();
         }
         byteBuffer.flip();
         ByteBuf buffer = wrappedBuffer(byteBuffer);

@@ -56,7 +56,7 @@ public class ByteArrayEncoderTest {
     @Test
     public void testEncodeEmpty() {
         ch.writeOutbound(EmptyArrays.EMPTY_BYTES);
-        assertSame(EMPTY_BUFFER, ch.readOutbound());
+        assertSame(emptyByteBuf(), ch.readOutbound());
     }
 
     @Test

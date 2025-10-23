@@ -213,7 +213,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         }
 
         if (allowEmptyReturn && targetBufSize < blockSize) {
-            return Unpooled.EMPTY_BUFFER;
+            return Unpooled.emptyByteBuf();
         }
 
         if (preferDirect) {
@@ -296,7 +296,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
     @Override
     public void flush(final ChannelHandlerContext ctx) throws Exception {
         if (buffer != null && buffer.isReadable()) {
-            final ByteBuf buf = allocateBuffer(ctx, Unpooled.EMPTY_BUFFER, isPreferDirect(), false);
+            final ByteBuf buf = allocateBuffer(ctx, Unpooled.emptyByteBuf(), isPreferDirect(), false);
             flushBufferedData(buf);
             ctx.write(buf);
         }

@@ -510,7 +510,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         final int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {
             ReferenceCountUtil.safeRelease(buf);
-            return Unpooled.EMPTY_BUFFER;
+            return Unpooled.emptyByteBuf();
         }
 
         final ByteBufAllocator alloc = alloc();
@@ -542,7 +542,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         final int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {
             ReferenceCountUtil.safeRelease(holder);
-            return Unpooled.EMPTY_BUFFER;
+            return Unpooled.emptyByteBuf();
         }
 
         final ByteBufAllocator alloc = alloc();

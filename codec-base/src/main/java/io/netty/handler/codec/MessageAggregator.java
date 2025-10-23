@@ -27,7 +27,7 @@ import io.netty.util.ReferenceCountUtil;
 
 import java.util.List;
 
-import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
+import static io.netty.buffer.Unpooled.emptyByteBuf;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
@@ -258,7 +258,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 if (m instanceof ByteBufHolder) {
                     aggregated = beginAggregation(m, ((ByteBufHolder) m).content().retain());
                 } else {
-                    aggregated = beginAggregation(m, EMPTY_BUFFER);
+                    aggregated = beginAggregation(m, emptyByteBuf());
                 }
                 finishAggregation0(aggregated);
                 out.add(aggregated);

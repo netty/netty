@@ -74,7 +74,7 @@ public interface LastSmtpContent extends SmtpContent {
 
         @Override
         public ByteBuf content() {
-            return Unpooled.EMPTY_BUFFER;
+            return Unpooled.emptyByteBuf();
         }
 
         @Override
