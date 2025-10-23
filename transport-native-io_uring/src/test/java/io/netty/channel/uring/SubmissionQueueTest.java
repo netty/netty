@@ -251,6 +251,55 @@ public class SubmissionQueueTest {
     }
 
     @Test
+    public void testMixedCqe() {
+        assumeTrue(Native.ioUringSetupSupportsFlags(CqeSize.MIXED.setupFlag()));
+
+        RingBuffer ringBuffer = Native.createRingBuffer(8, CqeSize.MIXED.setupFlag());
+        ringBuffer.enable();
+        try {
+            SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
+            final CompletionQueue completionQueue = ringBuffer.ioUringCompletionQueue();
+
+            assertNotNull(ringBuffer);
+            assertNotNull(submissionQueue);
+            assertNotNull(completionQueue);
+
+            // Loop a few times so that we will get into the situation that we will also receive
+            // completion events that are marked as "fillers".
+            for (int i = 0; i < 10; i++) {
+                int remaining = submissionQueue.remaining();
+                int added = 0;
+
+                while (--remaining > 0) {
+                    assertNotEquals(0, submissionQueue.addNop(
+                            (byte) 0, remaining % 2 != 0 ? Native.IORING_NOP_CQE32 : 0, remaining));
+                    added++;
+                }
+
+                assertEquals(added, submissionQueue.submitAndGet());
+                int processed = completionQueue.process((res, flags, udata, extraCqeData) -> {
+                    assertEquals(0, res);
+                    // If there is a filler we should not be notified.
+                    assertEquals(0, flags & Native.IORING_CQE_F_SKIP);
+                    if (udata % 2 != 0) {
+                        assertEquals(Native.IORING_CQE_F_32, flags);
+                        assertNotNull(extraCqeData);
+                        assertEquals(0, extraCqeData.position());
+                        assertEquals(16, extraCqeData.limit());
+                    } else {
+                        assertEquals(0, flags);
+                        assertNull(extraCqeData);
+                    }
+                });
+                assertEquals(7, processed);
+                assertFalse(completionQueue.hasCompletions());
+            }
+        } finally {
+            ringBuffer.close();
+        }
+    }
+
+    @Test
     public void testGetOp() {
         RingBuffer ringBuffer = Native.createRingBuffer(8, 0);
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
