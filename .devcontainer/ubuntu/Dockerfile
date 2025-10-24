@@ -1,5 +1,5 @@
 FROM mcr.microsoft.com/devcontainers/base:ubuntu
-RUN apt-get update && apt-get install -y \
+RUN apt update && apt install -y \
     autotools-dev \
     autoconf \
     automake \
@@ -13,18 +13,21 @@ RUN apt-get update && apt-get install -y \
     gcc \
     htop \
     strace \
-    openjdk-8-jdk-headless \
-    openjdk-8-source \
-    openjdk-11-jdk-headless \
-    openjdk-11-source \
-    openjdk-17-jdk-headless \
-    openjdk-17-source \
-    openjdk-21-jdk-headless \
-    openjdk-21-source \
     cmake \
     ninja-build \
     perl \
     golang
+
+USER vscode
+RUN curl -s "https://get.sdkman.io" | bash
+ARG java_version="25-tem"
+ENV JAVA_VERSION=$java_version
+RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
+    yes | sdk install java $JAVA_VERSION && \
+    rm -rf $HOME/.sdkman/archives/* && \
+    rm -rf $HOME/.sdkman/tmp/*"
+RUN echo 'export JAVA_HOME="$HOME/.sdkman/candidates/java/current"' >> ~/.bashrc
+RUN echo 'PATH=$JAVA_HOME/bin:$PATH' >> ~/.bashrc
 
 RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 RUN . "$HOME/.cargo/env"
