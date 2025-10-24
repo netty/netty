@@ -20,7 +20,7 @@ RUN apt update && apt install -y \
 
 USER vscode
 RUN curl -s "https://get.sdkman.io" | bash
-ARG java_version="25-tem"
+ARG java_version="25-zulu"
 ENV JAVA_VERSION=$java_version
 RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
     yes | sdk install java $JAVA_VERSION && \
