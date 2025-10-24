@@ -597,9 +597,10 @@ public final class Unpooled {
     private static ByteBuf copiedBufferUtf8(CharSequence string) {
         boolean release = true;
         // Mimic the same behavior as other copiedBuffer implementations.
-        ByteBuf buffer = UnpooledByteBufAllocator.DEFAULT.heapBuffer(ByteBufUtil.utf8Bytes(string));
+        int byteLength = ByteBufUtil.utf8Bytes(string);
+        ByteBuf buffer = UnpooledByteBufAllocator.DEFAULT.heapBuffer(byteLength);
         try {
-            ByteBufUtil.writeUtf8(buffer, string);
+            ByteBufUtil.reserveAndWriteUtf8(buffer, string, byteLength);
             release = false;
             return buffer;
         } finally {
