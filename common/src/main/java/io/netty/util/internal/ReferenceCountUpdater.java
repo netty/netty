@@ -97,7 +97,10 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
 
     private T retain0(T instance, int increment) {
         int oldRef = getAndAddRawRefCnt(instance, increment);
-        if ((oldRef & 1) != 0 || oldRef + increment < oldRef || oldRef < 0 && 0 <= oldRef + increment) {
+        // oldRef & 0x80000001 stands for oldRef < 0 || oldRef is odd
+        // NOTE: we're optimizing for inlined and constant folded increment here -> which will make
+        // Integer.MAX_VALUE - increment to be computed at compile time
+        if ((oldRef & 0x80000001) != 0 || oldRef > Integer.MAX_VALUE - increment) {
             getAndAddRawRefCnt(instance, -increment);
             throw new IllegalReferenceCountException(0, increment >>> 1);
         }
