@@ -62,13 +62,6 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
     private final ByteBuf[] adaptiveHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
     private final ByteBuf[] mimallocHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
 
-    private int[] releaseIndexes;
-    private int[] sizes;
-
-    private int nextReleaseIndex;
-    private int nextSizeIndex;
-    private int nextSizeIndexSetup;
-
     // Use event-loop threads.
     public ByteBufAllocatorAllocPatternBenchmark() {
         super(true, false);
