@@ -21,13 +21,12 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.MiByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.microbench.util.AbstractMicrobenchmark;
-import io.netty.util.internal.MathUtil;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.CompilerControl;
+import org.openjdk.jmh.annotations.Fork;
+import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
-import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
@@ -40,16 +39,18 @@ import java.util.List;
 import java.util.SplittableRandom;
 
 @State(Scope.Thread)
-@Warmup(iterations = 10, time = 1)
-@Measurement(iterations = 10, time = 1)
-@Threads(8)
+@Warmup(iterations = 5, time = 1)
+@Measurement(iterations = 5, time = 1)
+@Threads(1)
+@Fork(1)
 public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmark {
 
     private static final PooledByteBufAllocator pooledAlloc = PooledByteBufAllocator.DEFAULT;
     private static final ByteBufAllocator adaptiveAllocator = new AdaptiveByteBufAllocator();
     private static final MiByteBufAllocator miMallocAllocator = new MiByteBufAllocator();
 
-    private static final int SEED = 42;
+    private SplittableRandom randForRelease = new SplittableRandom(42);
+    private SplittableRandom randForSize = new SplittableRandom(42);
     // Allocation size array.
     private static final int[] flattendSizeArray;
 
@@ -66,19 +67,14 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
 
     private int nextReleaseIndex;
     private int nextSizeIndex;
-
-    @Param({
-            "false",
-            "true"
-    })
-    private boolean writeThenReadLong;
+    private int nextSizeIndexSetup;
 
     // Use event-loop threads.
     public ByteBufAllocatorAllocPatternBenchmark() {
         super(true, false);
     }
 
-    @TearDown
+    @TearDown(Level.Trial)
     public void releaseBuffers() {
         List<ByteBuf[]> bufferLists = Arrays.asList(
                 pooledDirectBuffers,
@@ -97,66 +93,15 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
         }
     }
 
-    @Setup
-    public void setup() {
-        releaseIndexes = new int[MAX_LIVE_BUFFERS];
-        sizes = new int[MathUtil.findNextPositivePowerOfTwo(flattendSizeArray.length)];
-        SplittableRandom rand = new SplittableRandom(SEED);
-        // Pre-generate the to be released index.
-        for (int i = 0; i < releaseIndexes.length; i++) {
-            releaseIndexes[i] = rand.nextInt(releaseIndexes.length);
-        }
-        // Shuffle the `flattendSizeArray` to `sizes`.
-        for (int i = 0; i < sizes.length; i++) {
-            int sizeIndex = rand.nextInt(flattendSizeArray.length);
-            sizes[i] = flattendSizeArray[sizeIndex];
-        }
-    }
-
-    private int getNextReleaseIndex() {
-        int index = nextReleaseIndex;
-        nextReleaseIndex = (nextReleaseIndex + 1) & (releaseIndexes.length - 1);
-        return releaseIndexes[index];
-    }
-
-    private int getNextSizeIndex() {
-        int index = nextSizeIndex;
-        nextSizeIndex = (nextSizeIndex + 1) & (sizes.length - 1);
-        return index;
-    }
-
     private void directAlloc(Blackhole blackhole, ByteBufAllocator alloc, ByteBuf[] buffers) {
-        int size = sizes[getNextSizeIndex()];
-        int releaseIndex = getNextReleaseIndex();
+        int sizeIndex = randForSize.nextInt(flattendSizeArray.length);
+        int size = flattendSizeArray[sizeIndex];
+        int releaseIndex = randForRelease.nextInt(MAX_LIVE_BUFFERS);
         ByteBuf oldBuf = buffers[releaseIndex];
         if (oldBuf != null) {
-            if (writeThenReadLong) {
-                blackhole.consume(oldBuf.readLong());
-            }
             oldBuf.release();
         }
         ByteBuf newBuf = alloc.directBuffer(size);
-        if (writeThenReadLong) {
-            newBuf.writeLong(size);
-        }
-        buffers[releaseIndex] = newBuf;
-        blackhole.consume(buffers);
-    }
-
-    private void heapAlloc(Blackhole blackhole, ByteBufAllocator alloc, ByteBuf[] buffers) {
-        int size = sizes[getNextSizeIndex()];
-        int releaseIndex = getNextReleaseIndex();
-        ByteBuf oldBuf = buffers[releaseIndex];
-        if (oldBuf != null) {
-            if (writeThenReadLong) {
-                blackhole.consume(oldBuf.readLong());
-            }
-            oldBuf.release();
-        }
-        ByteBuf newBuf = alloc.heapBuffer(size);
-        if (writeThenReadLong) {
-            newBuf.writeLong(size);
-        }
         buffers[releaseIndex] = newBuf;
         blackhole.consume(buffers);
     }
@@ -177,24 +122,6 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
     @Benchmark
     public void mimallocDirect(Blackhole blackhole) {
         directAlloc(blackhole, miMallocAllocator, mimallocDirectBuffers);
-    }
-
-    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
-    @Benchmark
-    public void pooledHeap(Blackhole blackhole) {
-        heapAlloc(blackhole, pooledAlloc, pooledHeapBuffers);
-    }
-
-    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
-    @Benchmark
-    public void adaptiveHeap(Blackhole blackhole) {
-        heapAlloc(blackhole, adaptiveAllocator, adaptiveHeapBuffers);
-    }
-
-    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
-    @Benchmark
-    public void mimallocHeap(Blackhole blackhole) {
-        heapAlloc(blackhole, miMallocAllocator, mimallocHeapBuffers);
     }
 
     /**
