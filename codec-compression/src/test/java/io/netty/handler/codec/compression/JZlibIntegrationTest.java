@@ -13,23 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.ssl;
+package io.netty.handler.codec.compression;
 
-interface OpenSslEngineMap {
+import io.netty.channel.embedded.EmbeddedChannel;
 
-    /**
-     * Remove the {@link OpenSslEngine} with the given {@code ssl} address and
-     * return it.
-     */
-    ReferenceCountedOpenSslEngine remove(long ssl);
+public class JZlibIntegrationTest extends AbstractIntegrationTest {
 
-    /**
-     * Add a {@link OpenSslEngine} to this {@link OpenSslEngineMap}.
-     */
-    void add(ReferenceCountedOpenSslEngine engine);
+    @Override
+    protected EmbeddedChannel createEncoder() {
+        return new EmbeddedChannel(new JZlibEncoder());
+    }
 
-    /**
-     * Get the {@link OpenSslEngine} for the given {@code ssl} address.
-     */
-    ReferenceCountedOpenSslEngine get(long ssl);
+    @Override
+    protected EmbeddedChannel createDecoder() {
+        return new EmbeddedChannel(new JZlibDecoder(0));
+    }
 }

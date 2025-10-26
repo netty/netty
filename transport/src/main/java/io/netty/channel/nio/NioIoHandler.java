@@ -349,6 +349,9 @@ public final class NioIoHandler implements IoHandler {
 
         @Override
         public long submit(IoOps ops) {
+            if (!isValid()) {
+                return -1;
+            }
             int v = cast(ops).value;
             key.interestOps(v);
             return v;
@@ -365,6 +368,7 @@ public final class NioIoHandler implements IoHandler {
                 cancelledKeys = 0;
                 needsToSelectAgain = true;
             }
+            handle.unregistered();
             return true;
         }
 
@@ -378,6 +382,9 @@ public final class NioIoHandler implements IoHandler {
         }
 
         void handle(int ready) {
+            if (!isValid()) {
+                return;
+            }
             handle.handle(this, NioIoOps.eventOf(ready));
         }
     }
@@ -390,7 +397,9 @@ public final class NioIoHandler implements IoHandler {
         boolean selected = false;
         for (;;) {
             try {
-                return new DefaultNioRegistration(executor, nioHandle, ops, unwrappedSelector());
+                IoRegistration registration = new DefaultNioRegistration(executor, nioHandle, ops, unwrappedSelector());
+                handle.registered();
+                return registration;
             } catch (CancelledKeyException e) {
                 if (!selected) {
                     // Force the Selector to select now as the "canceled" SelectionKey may still be
@@ -413,6 +422,9 @@ public final class NioIoHandler implements IoHandler {
             try {
                 switch (selectStrategy.calculateStrategy(selectNowSupplier, !context.canBlock())) {
                     case SelectStrategy.CONTINUE:
+                        if (context.shouldReportActiveIoTime()) {
+                            context.reportActiveIoTime(0); // Report zero as we did no I/O.
+                        }
                         return 0;
 
                     case SelectStrategy.BUSY_WAIT:
@@ -465,7 +477,16 @@ public final class NioIoHandler implements IoHandler {
 
             cancelledKeys = 0;
             needsToSelectAgain = false;
-            handled = processSelectedKeys();
+
+            if (context.shouldReportActiveIoTime()) {
+                // We start the timer after the blocking select() call has returned.
+                long activeIoStartTimeNanos = System.nanoTime();
+                handled = processSelectedKeys();
+                long activeIoEndTimeNanos = System.nanoTime();
+                context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
+            } else {
+                handled = processSelectedKeys();
+            }
         } catch (Error e) {
             throw e;
         } catch (Throwable t) {
@@ -754,6 +775,16 @@ public final class NioIoHandler implements IoHandler {
                                               final SelectStrategyFactory selectStrategyFactory) {
         ObjectUtil.checkNotNull(selectorProvider, "selectorProvider");
         ObjectUtil.checkNotNull(selectStrategyFactory, "selectStrategyFactory");
-        return context ->  new NioIoHandler(context, selectorProvider, selectStrategyFactory.newSelectStrategy());
+        return new IoHandlerFactory() {
+            @Override
+            public IoHandler newHandler(ThreadAwareExecutor executor) {
+                return new NioIoHandler(executor, selectorProvider, selectStrategyFactory.newSelectStrategy());
+            }
+
+            @Override
+            public boolean isChangingThreadSupported() {
+                return true;
+            }
+        };
     }
 }

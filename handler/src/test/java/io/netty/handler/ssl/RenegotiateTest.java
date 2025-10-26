@@ -49,12 +49,12 @@ public abstract class RenegotiateTest {
         final CountDownLatch latch = new CountDownLatch(2);
         SelfSignedCertificate cert = CachedSelfSignedCertificate.getCachedCertificate();
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
+        SslProvider sslProvider = serverSslProvider();
+        final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
+                .sslProvider(sslProvider)
+                .protocols(SslProtocols.TLS_v1_2)
+                .build();
         try {
-            final SslContext context = SslContextBuilder.forServer(cert.key(), cert.cert())
-                    .sslProvider(serverSslProvider())
-                    .protocols(SslProtocols.TLS_v1_2)
-                    .build();
-
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group).channel(LocalServerChannel.class)
                     .childHandler(new ChannelInitializer<Channel>() {
@@ -142,6 +142,7 @@ public abstract class RenegotiateTest {
             verifyResult(error);
         } finally  {
             group.shutdownGracefully();
+            ReferenceCountUtil.release(context);
         }
     }
 

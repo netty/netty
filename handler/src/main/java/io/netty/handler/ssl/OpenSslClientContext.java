@@ -195,11 +195,14 @@ public final class OpenSslClientContext extends OpenSslContext {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain, ClientAuth.NONE, protocols, false,
                 endpointIdentificationAlgorithm, enableOcsp, serverNames, resumptionController, options);
         boolean success = false;
+        boolean supportJdkSignatureFallback = isJdkSignatureFallbackEnabled(options);
         try {
-            OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
-            sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
+            OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword,
+                                                                    supportJdkSignatureFallback);
+            sessionContext = newSessionContext(this, ctx, engines, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
-                                               sessionCacheSize, sessionTimeout, resumptionController);
+                                               sessionCacheSize, sessionTimeout, resumptionController,
+                                               supportJdkSignatureFallback);
             success = true;
         } finally {
             if (!success) {

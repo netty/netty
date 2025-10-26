@@ -15,9 +15,9 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
+import io.netty.channel.IoHandlerContext;
 import io.netty.channel.IoHandlerFactory;
 import io.netty.channel.IoOps;
 import io.netty.channel.IoRegistration;
@@ -93,17 +93,15 @@ public final class IoUringIoHandler implements IoHandler {
         IoUring.ensureAvailability();
         this.executor = requireNonNull(executor, "executor");
         requireNonNull(config, "config");
-        int setupFlags = Native.setupFlags();
+        int setupFlags = Native.setupFlags(config.singleIssuer());
 
         //The default cq size is always twice the ringSize.
         // It only makes sense when the user actually specifies the cq ring size.
         int cqSize = 2 * config.getRingSize();
         if (config.needSetupCqeSize()) {
-            if (!IoUring.isSetupCqeSizeSupported()) {
-                throw new UnsupportedOperationException("IORING_SETUP_CQSIZE is not supported");
-            }
+            assert IoUring.isSetupCqeSizeSupported();
             setupFlags |= Native.IORING_SETUP_CQSIZE;
-            cqSize = config.checkCqSize(config.getCqSize());
+            cqSize = config.getCqSize();
         }
         this.ringBuffer = Native.createRingBuffer(config.getRingSize(), cqSize, setupFlags);
         if (IoUring.isRegisterIowqMaxWorkersSupported() && config.needRegisterIowqMaxWorker()) {
@@ -120,11 +118,6 @@ public final class IoUringIoHandler implements IoHandler {
         registeredIoUringBufferRing = new IntObjectHashMap<>();
         Collection<IoUringBufferRingConfig> bufferRingConfigs = config.getInternBufferRingConfigs();
         if (bufferRingConfigs != null && !bufferRingConfigs.isEmpty()) {
-            if (!IoUring.isRegisterBufferRingSupported()) {
-                // Close ringBuffer before throwing to ensure we release all memory on failure.
-                ringBuffer.close();
-                throw new UnsupportedOperationException("IORING_REGISTER_PBUF_RING is not supported");
-            }
             for (IoUringBufferRingConfig bufferRingConfig : bufferRingConfigs) {
                 try {
                     IoUringBufferRing ring = newBufferRing(ringBuffer.fd(), bufferRingConfig);
@@ -164,6 +157,9 @@ public final class IoUringIoHandler implements IoHandler {
     @Override
     public int run(IoHandlerContext context) {
         if (closeCompleted) {
+            if (context.shouldReportActiveIoTime()) {
+                context.reportActiveIoTime(0);
+            }
             return 0;
         }
         SubmissionQueue submissionQueue = ringBuffer.ioUringSubmissionQueue();
@@ -178,7 +174,18 @@ public final class IoUringIoHandler implements IoHandler {
             // Even if we have some completions already pending we can still try to even fetch more.
             submitAndClearNow(submissionQueue);
         }
-        return processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+
+        int processed;
+        if (context.shouldReportActiveIoTime()) {
+            // Timer starts after the blocking wait, around the processing of completions.
+            long activeIoStartTimeNanos = System.nanoTime();
+            processed = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+            long activeIoEndTimeNanos = System.nanoTime();
+            context.reportActiveIoTime(activeIoEndTimeNanos - activeIoStartTimeNanos);
+        } else {
+            processed = processCompletionsAndHandleOverflow(submissionQueue, completionQueue, this::handle);
+        }
+        return processed;
     }
 
     private int processCompletionsAndHandleOverflow(SubmissionQueue submissionQueue, CompletionQueue completionQueue,
@@ -193,12 +200,13 @@ public final class IoUringIoHandler implements IoHandler {
                         completionQueue.ringEntries);
                 submitAndClearNow(submissionQueue);
             } else if (p == 0 &&
+                    // Check if there are any more submissions pending, if not break the loop.
+                    (submissionQueue.count() == 0 ||
                     // Let's try to submit again and check if there are new completions to handle.
                     // Only break the loop if there was nothing submitted and there are no new completions.
-                    submitAndClearNow(submissionQueue) == 0 && !completionQueue.hasCompletions()) {
+                    (submitAndClearNow(submissionQueue) == 0 && !completionQueue.hasCompletions()))) {
                 break;
             }
-
             processed += p;
         }
         return processed;
@@ -253,7 +261,7 @@ public final class IoUringIoHandler implements IoHandler {
         }
     }
 
-    private boolean handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
+    private void handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
         try {
             int id = UserData.decodeId(udata);
             byte op = UserData.decodeOp(udata);
@@ -265,25 +273,23 @@ public final class IoUringIoHandler implements IoHandler {
             }
             if (id == EVENTFD_ID) {
                 handleEventFdRead();
-                return true;
+                return;
             }
             if (id == RINGFD_ID) {
                 // Just return
-                return true;
+                return;
             }
             DefaultIoUringIoRegistration registration = registrations.get(id);
             if (registration == null) {
                 logger.debug("ignoring {} completion for unknown registration (id={}, res={})",
                         Native.opToStr(op), id, res);
-                return true;
+                return;
             }
             registration.handle(res, flags, op, data, extraCqeData);
-            return true;
         } catch (Error e) {
             throw e;
         } catch (Throwable throwable) {
             handleLoopException(throwable);
-            return true;
         }
     }
 
@@ -414,11 +420,11 @@ public final class IoUringIoHandler implements IoHandler {
                 boolean eventFdDrained;
 
                 @Override
-                public boolean handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
+                public void handle(int res, int flags, long udata, ByteBuffer extraCqeData) {
                     if (UserData.decodeId(udata) == EVENTFD_ID) {
                         eventFdDrained = true;
                     }
-                    return IoUringIoHandler.this.handle(res, flags, udata, extraCqeData);
+                    IoUringIoHandler.this.handle(res, flags, udata, extraCqeData);
                 }
             }
             final DrainFdEventCallback handler = new DrainFdEventCallback();
@@ -472,6 +478,7 @@ public final class IoUringIoHandler implements IoHandler {
                 registrations.put(id, old);
             } else {
                 registration.setId(id);
+                ioHandle.registered();
                 break;
             }
         }
@@ -572,6 +579,7 @@ public final class IoUringIoHandler implements IoHandler {
         private void remove() {
             DefaultIoUringIoRegistration old = registrations.remove(id);
             assert old == this;
+            handle.unregistered();
         }
 
         void close() {
@@ -680,7 +688,17 @@ public final class IoUringIoHandler implements IoHandler {
      */
     public static IoHandlerFactory newFactory(IoUringIoHandlerConfig config) {
         IoUring.ensureAvailability();
-        ObjectUtil.checkNotNull(config, "config");
-        return eventLoop -> new IoUringIoHandler(eventLoop, config);
+        final IoUringIoHandlerConfig copy = ObjectUtil.checkNotNull(config, "config").verifyAndClone();
+        return new IoHandlerFactory() {
+            @Override
+            public IoHandler newHandler(ThreadAwareExecutor eventLoop) {
+                return new IoUringIoHandler(eventLoop, copy);
+            }
+
+            @Override
+            public boolean isChangingThreadSupported() {
+                return !copy.singleIssuer();
+            }
+        };
     }
 }

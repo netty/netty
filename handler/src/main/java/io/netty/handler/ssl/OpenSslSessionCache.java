@@ -49,7 +49,7 @@ class OpenSslSessionCache implements SSLSessionCache {
             DEFAULT_CACHE_SIZE = 20480;
         }
     }
-    private final OpenSslEngineMap engineMap;
+    private final Map<Long, ReferenceCountedOpenSslEngine> engines;
 
     private final Map<OpenSslSessionId, NativeSslSession> sessions =
             new LinkedHashMap<OpenSslSessionId, NativeSslSession>() {
@@ -74,8 +74,8 @@ class OpenSslSessionCache implements SSLSessionCache {
     private final AtomicInteger sessionTimeout = new AtomicInteger(300);
     private int sessionCounter;
 
-    OpenSslSessionCache(OpenSslEngineMap engineMap) {
-        this.engineMap = engineMap;
+    OpenSslSessionCache(Map<Long, ReferenceCountedOpenSslEngine> engines) {
+        this.engines = engines;
     }
 
     final void setSessionTimeout(int seconds) {
@@ -142,7 +142,7 @@ class OpenSslSessionCache implements SSLSessionCache {
 
     @Override
     public boolean sessionCreated(long ssl, long sslSession) {
-        ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
+        ReferenceCountedOpenSslEngine engine = engines.get(ssl);
         if (engine == null) {
             // We couldn't find the engine itself.
             return false;
@@ -208,7 +208,7 @@ class OpenSslSessionCache implements SSLSessionCache {
             }
         }
         session.setLastAccessedTime(System.currentTimeMillis());
-        ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
+        ReferenceCountedOpenSslEngine engine = engines.get(ssl);
         if (engine != null) {
             OpenSslInternalSession sslSession = (OpenSslInternalSession) engine.getSession();
             sslSession.setSessionDetails(session.getCreationTime(),

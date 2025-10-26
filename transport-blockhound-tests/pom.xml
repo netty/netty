@@ -20,7 +20,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.5.Final-SNAPSHOT</version>
+    <version>4.2.8.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-transport-blockhound-tests</artifactId>
@@ -144,6 +144,15 @@
       <id>java25</id>
       <activation>
         <jdk>25</jdk>
+      </activation>
+      <properties>
+        <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods -XX:+EnableDynamicAgentLoading</argLine.common>
+      </properties>
+    </profile>
+    <profile>
+      <id>java26</id>
+      <activation>
+        <jdk>26</jdk>
       </activation>
       <properties>
         <argLine.common>-XX:+AllowRedefinitionToAddDeleteMethods -XX:+EnableDynamicAgentLoading</argLine.common>

@@ -175,7 +175,7 @@ final class SubmissionQueue {
             sb.add("closed");
         } else {
             int pending = tail - head;
-            int idx = tail;
+            int idx = head;
             for (int i = 0; i < pending; i++) {
                 int sqe = sqeIndex(idx++, ringMask);
                 sb.add(Native.opToStr(submissionQueueArray.get(sqe + SQE_OP_CODE_FIELD)) +
@@ -190,9 +190,13 @@ final class SubmissionQueue {
     }
 
     long addNop(byte flags, long udata) {
+        return addNop(flags, 0, udata);
+    }
+
+    long addNop(byte flags, int nopFlags, long udata) {
         // Mimic what liburing does:
         // https://github.com/axboe/liburing/blob/liburing-2.8/src/include/liburing.h#L592
-        return enqueueSqe(Native.IORING_OP_NOP, flags, (short) 0, -1, 0, 0, 0, 0, udata,
+        return enqueueSqe(Native.IORING_OP_NOP, flags, (short) 0, -1, 0, 0, 0, nopFlags, udata,
                 (short) 0, (short) 0, 0, 0);
     }
 

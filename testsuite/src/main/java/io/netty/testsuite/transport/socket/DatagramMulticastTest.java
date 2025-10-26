@@ -18,6 +18,7 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -71,6 +72,11 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
             @Override
             public void channelRead0(ChannelHandlerContext ctx, Object msg) throws Exception {
                 // Nothing will be sent.
+            }
+
+            @Override
+            public boolean isSharable() {
+                return true;
             }
         });
 
@@ -152,6 +158,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         fail();
     }
 
+    @ChannelHandler.Sharable
     private static final class MulticastTestHandler extends SimpleChannelInboundHandler<DatagramPacket> {
         private final CountDownLatch latch = new CountDownLatch(1);
 

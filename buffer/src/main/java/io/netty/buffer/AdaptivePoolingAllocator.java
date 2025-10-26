@@ -50,13 +50,11 @@ import java.nio.channels.ScatteringByteChannel;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Queue;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.IntSupplier;
 
@@ -91,6 +89,16 @@ import static java.util.concurrent.atomic.AtomicIntegerFieldUpdater.newUpdater;
  */
 @UnstableApi
 final class AdaptivePoolingAllocator {
+    private static final int LOW_MEM_THRESHOLD = 512 * 1024 * 1024;
+    private static final boolean IS_LOW_MEM = Runtime.getRuntime().maxMemory() <= LOW_MEM_THRESHOLD;
+
+    /**
+     * Whether the IS_LOW_MEM setting should disable thread-local magazines.
+     * This can have fairly high performance overhead.
+     */
+    private static final boolean DISABLE_THREAD_LOCAL_MAGAZINES_ON_LOW_MEM = SystemPropertyUtil.getBoolean(
+            "io.netty.allocator.disableThreadLocalMagazinesOnLowMemory", true);
+
     /**
      * The 128 KiB minimum chunk size is chosen to encourage the system allocator to delegate to mmap for chunk
      * allocations. For instance, glibc will do this.
@@ -102,7 +110,7 @@ final class AdaptivePoolingAllocator {
     private static final int EXPANSION_ATTEMPTS = 3;
     private static final int INITIAL_MAGAZINES = 1;
     private static final int RETIRE_CAPACITY = 256;
-    private static final int MAX_STRIPES = NettyRuntime.availableProcessors() * 2;
+    private static final int MAX_STRIPES = IS_LOW_MEM ? 1 : NettyRuntime.availableProcessors() * 2;
     private static final int BUFS_PER_CHUNK = 8; // For large buffers, aim to have about this many buffers per chunk.
 
     /**
@@ -110,7 +118,9 @@ final class AdaptivePoolingAllocator {
      * <p>
      * This number is 8 MiB, and is derived from the limitations of internal histograms.
      */
-    private static final int MAX_CHUNK_SIZE = 8 * 1024 * 1024; // 8 MiB.
+    private static final int MAX_CHUNK_SIZE = IS_LOW_MEM ?
+            2 * 1024 * 1024 : // 2 MiB for systems with small heaps.
+            8 * 1024 * 1024; // 8 MiB.
     private static final int MAX_POOLED_BUF_SIZE = MAX_CHUNK_SIZE / BUFS_PER_CHUNK;
 
     /**
@@ -179,19 +189,20 @@ final class AdaptivePoolingAllocator {
     }
 
     private final ChunkAllocator chunkAllocator;
-    private final Set<Chunk> chunkRegistry;
+    private final ChunkRegistry chunkRegistry;
     private final MagazineGroup[] sizeClassedMagazineGroups;
     private final MagazineGroup largeBufferMagazineGroup;
     private final FastThreadLocal<MagazineGroup[]> threadLocalGroup;
 
     AdaptivePoolingAllocator(ChunkAllocator chunkAllocator, boolean useCacheForNonEventLoopThreads) {
         this.chunkAllocator = ObjectUtil.checkNotNull(chunkAllocator, "chunkAllocator");
-        chunkRegistry = ConcurrentHashMap.newKeySet();
+        chunkRegistry = new ChunkRegistry();
         sizeClassedMagazineGroups = createMagazineGroupSizeClasses(this, false);
         largeBufferMagazineGroup = new MagazineGroup(
                 this, chunkAllocator, new HistogramChunkControllerFactory(true), false);
 
-        threadLocalGroup = new FastThreadLocal<MagazineGroup[]>() {
+        boolean disableThreadLocalGroups = IS_LOW_MEM && DISABLE_THREAD_LOCAL_MAGAZINES_ON_LOW_MEM;
+        threadLocalGroup = disableThreadLocalGroups ? null : new FastThreadLocal<MagazineGroup[]>() {
             @Override
             protected MagazineGroup[] initialValue() {
                 if (useCacheForNonEventLoopThreads || ThreadExecutorMap.currentExecutor() != null) {
@@ -256,12 +267,13 @@ final class AdaptivePoolingAllocator {
             final int index = sizeClassIndexOf(size);
             MagazineGroup[] magazineGroups;
             if (!FastThreadLocalThread.currentThreadWillCleanupFastThreadLocals() ||
+                    IS_LOW_MEM ||
                     (magazineGroups = threadLocalGroup.get()) == null) {
                 magazineGroups =  sizeClassedMagazineGroups;
             }
             if (index < magazineGroups.length) {
                 allocated = magazineGroups[index].allocate(size, maxCapacity, currentThread, buf);
-            } else {
+            } else if (!IS_LOW_MEM) {
                 allocated = largeBufferMagazineGroup.allocate(size, maxCapacity, currentThread, buf);
             }
         }
@@ -304,6 +316,7 @@ final class AdaptivePoolingAllocator {
         // Create a one-off chunk for this allocation.
         AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
         Chunk chunk = new Chunk(innerChunk, magazine, false, chunkSize -> true);
+        chunkRegistry.add(chunk);
         try {
             chunk.readInitInto(buf, size, size, maxCapacity);
         } finally {
@@ -329,11 +342,7 @@ final class AdaptivePoolingAllocator {
     }
 
     long usedMemory() {
-        long sum = 0;
-        for (Chunk chunk : chunkRegistry) {
-            sum += chunk.capacity();
-        }
-        return sum;
+        return chunkRegistry.totalCapacity();
     }
 
     // Ensure that we release all previous pooled resources when this object is finalized. This is needed as otherwise
@@ -539,9 +548,9 @@ final class AdaptivePoolingAllocator {
 
         private SizeClassChunkControllerFactory(int segmentSize) {
             this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
-            this.chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
+            chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
             int segmentsCount = chunkSize / segmentSize;
-            this.segmentOffsets = new int[segmentsCount];
+            segmentOffsets = new int[segmentsCount];
             for (int i = 0; i < segmentsCount; i++) {
                 segmentOffsets[i] = i * segmentSize;
             }
@@ -558,7 +567,7 @@ final class AdaptivePoolingAllocator {
         private final ChunkAllocator chunkAllocator;
         private final int segmentSize;
         private final int chunkSize;
-        private final Set<Chunk> chunkRegistry;
+        private final ChunkRegistry chunkRegistry;
         private final int[] segmentOffsets;
 
         private SizeClassChunkController(MagazineGroup group, int segmentSize, int chunkSize, int[] segmentOffsets) {
@@ -634,7 +643,7 @@ final class AdaptivePoolingAllocator {
                 new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
                 new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
         };
-        private final Set<Chunk> chunkRegistry;
+        private final ChunkRegistry chunkRegistry;
         private short[] histo = histos[0];
         private final int[] sums = new int[HISTO_BUCKET_COUNT];
 
@@ -825,7 +834,6 @@ final class AdaptivePoolingAllocator {
         private volatile Chunk nextInLine;
         private final MagazineGroup group;
         private final ChunkController chunkController;
-        private final AtomicLong usedMemory;
         private final StampedLock allocationLock;
         private final Queue<AdaptiveByteBuf> bufferQueue;
         private final ObjectPool.Handle<AdaptiveByteBuf> handle;
@@ -851,7 +859,6 @@ final class AdaptivePoolingAllocator {
                 bufferQueue = null;
                 handle = null;
             }
-            usedMemory = new AtomicLong();
             this.sharedChunkQueue = sharedChunkQueue;
         }
 
@@ -1098,6 +1105,22 @@ final class AdaptivePoolingAllocator {
         }
     }
 
+    private static final class ChunkRegistry {
+        private final LongAdder totalCapacity = new LongAdder();
+
+        public long totalCapacity() {
+            return totalCapacity.sum();
+        }
+
+        public void add(Chunk chunk) {
+            totalCapacity.add(chunk.capacity());
+        }
+
+        public void remove(Chunk chunk) {
+            totalCapacity.add(-chunk.capacity());
+        }
+    }
+
     private static class Chunk implements ReferenceCounted, ChunkInfo {
         private static final long REFCNT_FIELD_OFFSET;
         private static final AtomicIntegerFieldUpdater<Chunk> AIF_UPDATER;
@@ -1105,7 +1128,8 @@ final class AdaptivePoolingAllocator {
         private static final ReferenceCountUpdater<Chunk> updater;
 
         static {
-            switch (ReferenceCountUpdater.updaterTypeOf(Chunk.class, "refCnt")) {
+            ReferenceCountUpdater.UpdaterType updaterType = ReferenceCountUpdater.updaterTypeOf(Chunk.class, "refCnt");
+            switch (updaterType) {
                 case Atomic:
                     AIF_UPDATER = newUpdater(Chunk.class, "refCnt");
                     REFCNT_FIELD_OFFSET = -1;
@@ -1141,7 +1165,7 @@ final class AdaptivePoolingAllocator {
                     };
                     break;
                 default:
-                    throw new Error("Unknown updater type for Chunk");
+                    throw new Error("Unexpected updater type for Chunk: " + updaterType);
             }
         }
 
@@ -1197,7 +1221,6 @@ final class AdaptivePoolingAllocator {
 
         void detachFromMagazine() {
             if (magazine != null) {
-                magazine.usedMemory.getAndAdd(-capacity);
                 magazine = null;
             }
         }
@@ -1205,7 +1228,6 @@ final class AdaptivePoolingAllocator {
         void attachToMagazine(Magazine magazine) {
             assert this.magazine == null;
             this.magazine = magazine;
-            magazine.usedMemory.getAndAdd(capacity);
         }
 
         @Override
@@ -1813,7 +1835,7 @@ final class AdaptivePoolingAllocator {
         public int setBytes(int index, ScatteringByteChannel in, int length)
                 throws IOException {
             try {
-                return in.read(internalNioBuffer(index, length).duplicate());
+                return in.read(internalNioBuffer(index, length));
             } catch (ClosedChannelException ignored) {
                 return -1;
             }
@@ -1823,7 +1845,7 @@ final class AdaptivePoolingAllocator {
         public int setBytes(int index, FileChannel in, long position, int length)
                 throws IOException {
             try {
-                return in.read(internalNioBuffer(index, length).duplicate(), position);
+                return in.read(internalNioBuffer(index, length), position);
             } catch (ClosedChannelException ignored) {
                 return -1;
             }
@@ -1843,8 +1865,7 @@ final class AdaptivePoolingAllocator {
                 } else {
                     checkIndex(index, length);
                 }
-                // Directly pass in the rootParent() with the adjusted index
-                return ByteBufUtil.writeUtf8(rootParent(), idx(index), length, sequence, sequence.length());
+                return ByteBufUtil.writeUtf8(this, index, length, sequence, sequence.length());
             }
             if (charset.equals(CharsetUtil.US_ASCII) || charset.equals(CharsetUtil.ISO_8859_1)) {
                 int length = sequence.length();
@@ -1854,8 +1875,7 @@ final class AdaptivePoolingAllocator {
                 } else {
                     checkIndex(index, length);
                 }
-                // Directly pass in the rootParent() with the adjusted index
-                return ByteBufUtil.writeAscii(rootParent(), idx(index), sequence, length);
+                return ByteBufUtil.writeAscii(this, index, sequence, length);
             }
             byte[] bytes = sequence.toString().getBytes(charset);
             if (expand) {

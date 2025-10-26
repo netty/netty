@@ -317,7 +317,7 @@ public abstract class SSLEngineTest {
                 return ThreadLocalRandom.current().nextBoolean() ?
                         ByteBuffer.allocateDirect(len) : ByteBuffer.allocate(len);
             default:
-                throw new Error();
+                throw new Error("Unexpected buffer type: " + type);
         }
     }
 
@@ -342,7 +342,7 @@ public abstract class SSLEngineTest {
                     return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer() : allocator.heapBuffer();
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -357,7 +357,7 @@ public abstract class SSLEngineTest {
                     return ThreadLocalRandom.current().nextBoolean() ?
                             allocator.directBuffer(initialCapacity) : allocator.heapBuffer(initialCapacity);
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -373,7 +373,7 @@ public abstract class SSLEngineTest {
                             allocator.directBuffer(initialCapacity, maxCapacity) :
                             allocator.heapBuffer(initialCapacity, maxCapacity);
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -434,7 +434,7 @@ public abstract class SSLEngineTest {
                             allocator.compositeDirectBuffer() :
                             allocator.compositeHeapBuffer();
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -450,7 +450,7 @@ public abstract class SSLEngineTest {
                             allocator.compositeDirectBuffer(maxNumComponents) :
                             allocator.compositeHeapBuffer(maxNumComponents);
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected buffer type: " + type);
             }
         }
 
@@ -955,7 +955,7 @@ public abstract class SSLEngineTest {
 
     protected static void rethrowIfNotNull(Throwable error) {
         if (error != null) {
-            throw new AssertionFailedError("Expected no error", error);
+            fail("Expected no error", error);
         }
     }
 
@@ -1832,24 +1832,35 @@ public abstract class SSLEngineTest {
      * Called from the test cleanup code and can be used to release the {@code ctx} if it must be done manually.
      */
     protected void cleanupClientSslContext(SslContext ctx) {
+        ReferenceCountUtil.release(ctx);
     }
 
     /**
      * Called from the test cleanup code and can be used to release the {@code ctx} if it must be done manually.
      */
     protected void cleanupServerSslContext(SslContext ctx) {
+        ReferenceCountUtil.release(ctx);
     }
 
     /**
      * Called when ever an SSLEngine is not wrapped by a {@link SslHandler} and inserted into a pipeline.
      */
     protected void cleanupClientSslEngine(SSLEngine engine) {
+        ReferenceCountUtil.release(unwrapEngine(engine));
     }
 
     /**
      * Called when ever an SSLEngine is not wrapped by a {@link SslHandler} and inserted into a pipeline.
      */
     protected void cleanupServerSslEngine(SSLEngine engine) {
+        ReferenceCountUtil.release(unwrapEngine(engine));
+    }
+
+    private static SSLEngine unwrapEngine(SSLEngine engine) {
+        if (engine instanceof JdkSslEngine) {
+            return ((JdkSslEngine) engine).getWrappedEngine();
+        }
+        return engine;
     }
 
     protected void setupHandlers(SSLEngineTestParam param, ApplicationProtocolConfig apn)

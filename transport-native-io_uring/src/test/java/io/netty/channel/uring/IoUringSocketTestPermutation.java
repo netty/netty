@@ -138,8 +138,7 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
         return toReturn;
     }
 
-    @Override
-    public List<BootstrapFactory<Bootstrap>> clientSocket() {
+    List<BootstrapFactory<Bootstrap>> clientSocketIoUringOnly() {
         List<BootstrapFactory<Bootstrap>> toReturn = new ArrayList<>();
         toReturn.add(
                 new BootstrapFactory<Bootstrap>() {
@@ -158,6 +157,12 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
                         }
                     });
         }
+        return toReturn;
+    }
+
+    @Override
+    public List<BootstrapFactory<Bootstrap>> clientSocket() {
+        List<BootstrapFactory<Bootstrap>> toReturn = clientSocketIoUringOnly();
         toReturn.add(
                 new BootstrapFactory<Bootstrap>() {
                     @Override

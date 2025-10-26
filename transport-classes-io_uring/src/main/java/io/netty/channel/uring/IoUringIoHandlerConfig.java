@@ -20,7 +20,6 @@ import io.netty.util.internal.ObjectUtil;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -92,6 +91,12 @@ import java.util.Set;
  *         It will be used to register the buffer ring for the io_uring instance.
  *       </td>
  *     </tr>
+ *     <tr>
+ *       <td>{@link IoUringIoHandlerConfig#setSingleIssuer}</td>
+ *       <td>
+ *         Enable or disable the use of {@code IORING_SETUP_SINGLE_ISSUER}.
+ *       </td>
+ *     </tr>
  *   </tbody>
  * </table>
  */
@@ -100,13 +105,21 @@ public final class IoUringIoHandlerConfig {
 
     private int ringSize = IoUring.DEFAULT_RING_SIZE;
     private int cqSize = IoUring.DEFAULT_CQ_SIZE;
-
     private int maxBoundedWorker;
-
     private int maxUnboundedWorker;
-
     private Set<IoUringBufferRingConfig> bufferRingConfigs;
+    private boolean singleIssuer = true;
 
+    public IoUringIoHandlerConfig() { }
+
+    private IoUringIoHandlerConfig(IoUringIoHandlerConfig config) {
+        this.ringSize = config.ringSize;
+        this.cqSize = config.cqSize;
+        this.maxBoundedWorker = config.maxBoundedWorker;
+        this.maxUnboundedWorker = config.maxUnboundedWorker;
+        this.bufferRingConfigs = config.bufferRingConfigs == null ? null : new HashSet<>(config.bufferRingConfigs);
+        this.singleIssuer = config.singleIssuer;
+    }
     /**
      * Return the ring size of the io_uring instance.
      * @return the ring size of the io_uring instance.
@@ -161,7 +174,7 @@ public final class IoUringIoHandlerConfig {
         return this;
     }
 
-    int checkCqSize(int cqSize) {
+    private int checkCqSize(int cqSize) {
         if (cqSize < ringSize) {
             throw new IllegalArgumentException("cqSize must be greater than or equal to ringSize");
         }
@@ -214,6 +227,22 @@ public final class IoUringIoHandlerConfig {
     }
 
     /**
+     * Set if {@code IORING_SETUP_SINGLE_ISSUER} should be used when setup the ring. This is {@code true} by default
+     * for performance reasons but also means that the {@link Thread} that is used to drive the
+     * {@link io.netty.channel.IoHandler} can never change. If you want the flexibility to change the {@link Thread},
+     * to for example make use of the {@link io.netty.util.concurrent.AutoScalingEventExecutorChooserFactory} it's
+     * possible to not use {@code IORING_SETUP_SINGLE_ISSUER}. This will trade scalibility / flexibility
+     * and performance.
+     *
+     * @param singleIssuer  {@code true} if {@code IORING_SETUP_SINGLE_ISSUER} should be used, {@code false} otherwise
+     * @return reference to this, so the API can be used fluently
+     */
+    public IoUringIoHandlerConfig setSingleIssuer(boolean singleIssuer) {
+        this.singleIssuer = singleIssuer;
+        return this;
+    }
+
+    /**
      * Get the list of buffer ring configurations.
      * @return the copy of buffer ring configurations.
      */
@@ -231,5 +260,28 @@ public final class IoUringIoHandlerConfig {
 
     Set<IoUringBufferRingConfig> getInternBufferRingConfigs() {
         return bufferRingConfigs;
+    }
+
+    boolean singleIssuer() {
+        return singleIssuer;
+    }
+
+    IoUringIoHandlerConfig verifyAndClone() {
+        // Ensure that we load all native bits as otherwise it may fail when try to use native methods in IovArray
+        IoUring.ensureAvailability();
+
+        if (needSetupCqeSize()) {
+            if (!IoUring.isSetupCqeSizeSupported()) {
+                throw new UnsupportedOperationException("IORING_SETUP_CQSIZE is not supported");
+            }
+            checkCqSize(getCqSize());
+        }
+
+        Set<IoUringBufferRingConfig> bufferRingConfigs = getInternBufferRingConfigs();
+        if (bufferRingConfigs != null && !bufferRingConfigs.isEmpty() && !IoUring.isRegisterBufferRingSupported()) {
+            throw new UnsupportedOperationException("IORING_REGISTER_PBUF_RING is not supported");
+        }
+
+        return new IoUringIoHandlerConfig(this);
     }
 }

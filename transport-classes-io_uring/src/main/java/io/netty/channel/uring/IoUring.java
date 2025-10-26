@@ -40,6 +40,7 @@ public final class IoUring {
     private static final boolean IORING_POLL_ADD_MULTISHOT_SUPPORTED;
     private static final boolean IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
     private static final boolean IORING_SETUP_SUBMIT_ALL_SUPPORTED;
+    private static final boolean IORING_SETUP_CQE_MIXED_SUPPORTED;
     private static final boolean IORING_SETUP_CQ_SIZE_SUPPORTED;
     private static final boolean IORING_SETUP_SINGLE_ISSUER_SUPPORTED;
     private static final boolean IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
@@ -71,6 +72,7 @@ public final class IoUring {
         boolean pollAddMultishotSupported = false;
         boolean registerIowqWorkersSupported = false;
         boolean submitAllSupported = false;
+        boolean cqeMixedSupported = false;
         boolean setUpCqSizeSupported = false;
         boolean singleIssuerSupported = false;
         boolean deferTaskrunSupported = false;
@@ -114,6 +116,7 @@ public final class IoUring {
                         pollAddMultishotSupported = Native.isPollAddMultiShotSupported(ioUringProbe);
                         registerIowqWorkersSupported = Native.isRegisterIoWqWorkerSupported(ringBuffer.fd());
                         submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
+                        cqeMixedSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_CQE_MIXED);
                         setUpCqSizeSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_CQSIZE);
                         singleIssuerSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
                         // IORING_SETUP_DEFER_TASKRUN requires to also set IORING_SETUP_SINGLE_ISSUER.
@@ -158,16 +161,17 @@ public final class IoUring {
                         "IORING_RECVSEND_BUNDLE_SUPPORTED={}, " +
                         "REGISTER_IOWQ_MAX_WORKERS_SUPPORTED={}, " +
                         "SETUP_SUBMIT_ALL_SUPPORTED={}, " +
+                        "SETUP_CQE_MIXED_SUPPORTED={}, " +
                         "SETUP_SINGLE_ISSUER_SUPPORTED={}, " +
                         "SETUP_DEFER_TASKRUN_SUPPORTED={}, " +
                         "REGISTER_BUFFER_RING_SUPPORTED={}, " +
-                        "REGISTER_BUFFER_RING_INC_SUPPORTED={}," +
-                        "SEND_ZC_SUPPORTED={},",
+                        "REGISTER_BUFFER_RING_INC_SUPPORTED={}, " +
+                        "SEND_ZC_SUPPORTED={}, " +
                         "SENDMSG_ZC_SUPPORTED={}" +
                         ")", kernelVersion, socketNonEmptySupported, spliceSupported, acceptSupportNoWait,
                         acceptMultishotSupported, pollAddMultishotSupported, recvMultishotSupported,
                         recvsendBundleSupported, registerIowqWorkersSupported, submitAllSupported,
-                        singleIssuerSupported, deferTaskrunSupported,
+                        cqeMixedSupported, singleIssuerSupported, deferTaskrunSupported,
                         registerBufferRingSupported, registerBufferRingIncSupported,
                         sendZcSupported, sendmsgZcSupported
                 );
@@ -185,6 +189,7 @@ public final class IoUring {
         IORING_POLL_ADD_MULTISHOT_SUPPORTED = pollAddMultishotSupported;
         IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED = registerIowqWorkersSupported;
         IORING_SETUP_SUBMIT_ALL_SUPPORTED = submitAllSupported;
+        IORING_SETUP_CQE_MIXED_SUPPORTED = cqeMixedSupported;
         IORING_SETUP_CQ_SIZE_SUPPORTED = setUpCqSizeSupported;
         IORING_SETUP_SINGLE_ISSUER_SUPPORTED = singleIssuerSupported;
         IORING_SETUP_DEFER_TASKRUN_SUPPORTED = deferTaskrunSupported;
@@ -300,6 +305,10 @@ public final class IoUring {
 
     static boolean isSetupSubmitAllSupported() {
         return IORING_SETUP_SUBMIT_ALL_SUPPORTED;
+    }
+
+    static boolean isSetupCqeMixedSupported() {
+        return IORING_SETUP_CQE_MIXED_SUPPORTED;
     }
 
     static boolean isSetupSingleIssuerSupported() {

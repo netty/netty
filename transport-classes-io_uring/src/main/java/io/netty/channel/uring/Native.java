@@ -214,12 +214,13 @@ final class Native {
     static final byte IORING_OP_FIXED_FD_INSTALL = 54;
     static final byte IORING_OP_FTRUNCATE = 55;
     static final byte IORING_OP_BIND = 56;
-    static final byte IORING_CQE_F_BUFFER = 1 << 0;
-    static final byte IORING_CQE_F_MORE = 1 << 1;
-    static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
-    static final byte IORING_CQE_F_NOTIF = 1 << 3;
-    static final byte IORING_CQE_F_BUF_MORE = 1 << 4;
-
+    static final int IORING_CQE_F_BUFFER = 1 << 0;
+    static final int IORING_CQE_F_MORE = 1 << 1;
+    static final int IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
+    static final int IORING_CQE_F_NOTIF = 1 << 3;
+    static final int IORING_CQE_F_BUF_MORE = 1 << 4;
+    static final int IORING_CQE_F_SKIP = 1 << 5;
+    static final int IORING_CQE_F_32 = 1 << 15;
     static final int IORING_SETUP_CQSIZE = 1 << 3;
     static final int IORING_SETUP_CLAMP = 1 << 4;
 
@@ -230,6 +231,7 @@ final class Native {
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
     static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
     static final int IORING_SETUP_NO_SQARRAY = 1 << 16;
+    static final int IORING_SETUP_CQE_MIXED = 1 << 18;
     static final int IORING_CQE_BUFFER_SHIFT = 16;
 
     static final short IORING_POLL_ADD_MULTI = 1 << 0;
@@ -244,6 +246,8 @@ final class Native {
     static final short IORING_ACCEPT_MULTISHOT = 1 << 0;
     static final short IORING_ACCEPT_DONTWAIT = 1 << 1;
     static final short IORING_ACCEPT_POLL_FIRST = 1 << 2;
+
+    static final short IORING_NOP_CQE32 = 1 << 5;
 
     static final int IORING_FEAT_NODROP = 1 << 1;
     static final int IORING_FEAT_SUBMIT_STABLE = 1 << 2;
@@ -303,6 +307,8 @@ final class Native {
             case IORING_OP_MKDIRAT: return "MKDIRAT";
             case IORING_OP_SYMLINKAT: return "SYMLINKAT";
             case IORING_OP_LINKAT: return "LINKAT";
+            case IORING_OP_SEND_ZC: return "SEND_ZC";
+            case IORING_OP_SENDMSG_ZC: return "SENDMSG_ZC";
             default: return "[OP CODE " + op + ']';
         }
     }
@@ -355,23 +361,31 @@ final class Native {
             IORING_OP_SEND
     };
 
-    static int setupFlags() {
+    static int setupFlags(boolean useSingleIssuer) {
         int flags = Native.IORING_SETUP_R_DISABLED | Native.IORING_SETUP_CLAMP;
         if (IoUring.isSetupSubmitAllSupported()) {
             flags |= Native.IORING_SETUP_SUBMIT_ALL;
         }
 
-        // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#task-work
-        if (IoUring.isSetupSingleIssuerSupported()) {
-            flags |= Native.IORING_SETUP_SINGLE_ISSUER;
-        }
-        if (IoUring.isSetupDeferTaskrunSupported()) {
-            flags |= Native.IORING_SETUP_DEFER_TASKRUN;
+        if (useSingleIssuer) {
+            // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#task-work
+            if (IoUring.isSetupSingleIssuerSupported()) {
+                flags |= Native.IORING_SETUP_SINGLE_ISSUER;
+            }
+            // IORING_SETUP_DEFER_TASKRUN also requires IORING_SETUP_SINGLE_ISSUER.
+            if (IoUring.isSetupDeferTaskrunSupported()) {
+                flags |= Native.IORING_SETUP_DEFER_TASKRUN;
+            }
         }
         // liburing uses IORING_SETUP_NO_SQARRAY by default these days, we should do the same by default if possible.
         // See https://github.com/axboe/liburing/releases/tag/liburing-2.6
         if (IoUring.isIoringSetupNoSqarraySupported()) {
             flags  |= Native.IORING_SETUP_NO_SQARRAY;
+        }
+
+        // Use IORING_SETUP_CQE_MIXED by default if supported so we can support any OP in the future.
+        if (IoUring.isSetupCqeMixedSupported()) {
+            flags |= Native.IORING_SETUP_CQE_MIXED;
         }
         return flags;
     }
@@ -396,6 +410,7 @@ final class Native {
         int cqringFd = (int) values[8];
         int cqringCapacity = (int) values[9];
         int cqeLength = (setupFlags & IORING_SETUP_CQE32) == 0 ? CQE_SIZE : CQE32_SIZE;
+        boolean extraCqeDataNeeded = (setupFlags & (IORING_SETUP_CQE32 | IORING_SETUP_CQE_MIXED)) != 0;
         CompletionQueue completionQueue = new CompletionQueue(
                 Buffer.wrapMemoryAddressWithNativeOrder(cqkhead, Integer.BYTES),
                 Buffer.wrapMemoryAddressWithNativeOrder(cqktail, Integer.BYTES),
@@ -406,7 +421,7 @@ final class Native {
                 cqringSize,
                 cqringAddress,
                 cqringFd,
-                cqringCapacity, cqeLength);
+                cqringCapacity, cqeLength, extraCqeDataNeeded);
 
         long sqkhead = values[10];
         long sqktail = values[11];
@@ -583,7 +598,7 @@ final class Native {
         return true;
     }
 
-    static native boolean ioUringSetupSupportsFlags(int setupFlags);;
+    static native boolean ioUringSetupSupportsFlags(int setupFlags);
     private static native long[] ioUringSetup(int entries, int cqeSize, int setupFlags);
 
     static IoUringProbe ioUringProbe(int ringfd) {

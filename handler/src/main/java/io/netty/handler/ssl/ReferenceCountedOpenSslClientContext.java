@@ -68,9 +68,10 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 serverNames, resumptionController, options);
         boolean success = false;
         try {
-            sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
+            sessionContext = newSessionContext(this, ctx, engines, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
-                                               sessionCacheSize, sessionTimeout, resumptionController);
+                                               sessionCacheSize, sessionTimeout, resumptionController,
+                                               isJdkSignatureFallbackEnabled(options));
             success = true;
         } finally {
             if (!success) {
@@ -85,13 +86,14 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
     }
 
     static OpenSslSessionContext newSessionContext(ReferenceCountedOpenSslContext thiz, long ctx,
-                                                   OpenSslEngineMap engineMap,
+                                                   Map<Long, ReferenceCountedOpenSslEngine> engines,
                                                    X509Certificate[] trustCertCollection,
                                                    TrustManagerFactory trustManagerFactory,
                                                    X509Certificate[] keyCertChain, PrivateKey key,
                                                    String keyPassword, KeyManagerFactory keyManagerFactory,
                                                    String keyStore, long sessionCacheSize, long sessionTimeout,
-                                                   ResumptionController resumptionController)
+                                                   ResumptionController resumptionController,
+                                                   boolean fallbackToJdkProviders)
             throws SSLException {
         if (key == null && keyCertChain != null || key != null && keyCertChain == null) {
             throw new IllegalArgumentException(
@@ -100,7 +102,18 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
         OpenSslKeyMaterialProvider keyMaterialProvider = null;
         try {
             try {
-                if (!OpenSsl.useKeyManagerFactory()) {
+                // Check if we have an alternative key that requires special handling
+                // Only detect alternative keys when we have an actual key object that can't be accessed directly
+                if (keyManagerFactory == null && key != null && key.getEncoded() == null) {
+                    if (!fallbackToJdkProviders) {
+                        throw new SSLException("Private key requiring alternative signature provider detected " +
+                                "(such as hardware security key, smart card, or remote signing service) but " +
+                                "alternative key fallback is disabled.");
+                    }
+                    keyMaterialProvider = setupSecurityProviderSignatureSource(thiz, ctx, keyCertChain, key,
+                            materialManager -> new OpenSslClientCertificateCallback(
+                                    engines, materialManager));
+                } else if (!OpenSsl.useKeyManagerFactory()) {
                     if (keyManagerFactory != null) {
                         throw new IllegalArgumentException(
                                 "KeyManagerFactory not supported");
@@ -111,17 +124,9 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 } else {
                     // javadocs state that keyManagerFactory has precedent over keyCertChain
                     if (keyManagerFactory == null && keyCertChain != null) {
-                        char[] keyPasswordChars = keyStorePassword(keyPassword);
-                        KeyStore ks = buildKeyStore(keyCertChain, key, keyPasswordChars, keyStore);
-                        if (ks.aliases().hasMoreElements()) {
-                            keyManagerFactory = new OpenSslX509KeyManagerFactory();
-                        } else {
-                            keyManagerFactory = new OpenSslCachingX509KeyManagerFactory(
-                                    KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm()));
-                        }
-                        keyManagerFactory.init(ks, keyPasswordChars);
-                        keyMaterialProvider = providerFor(keyManagerFactory, keyPassword);
-                    } else if (keyManagerFactory != null) {
+                        keyManagerFactory = certChainToKeyManagerFactory(keyCertChain, key, keyPassword, keyStore);
+                    }
+                    if (keyManagerFactory != null) {
                         keyMaterialProvider = providerFor(keyManagerFactory, keyPassword);
                     }
 
@@ -129,7 +134,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                         OpenSslKeyMaterialManager materialManager =
                                 new OpenSslKeyMaterialManager(keyMaterialProvider, thiz.hasTmpDhKeys);
                         SSLContext.setCertificateCallback(ctx, new OpenSslClientCertificateCallback(
-                                engineMap, materialManager));
+                                engines, materialManager));
                     }
                 }
             } catch (Exception e) {
@@ -161,7 +166,7 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
                 //
                 //            See https://github.com/netty/netty/issues/5372
 
-                setVerifyCallback(ctx, engineMap, manager);
+                setVerifyCallback(ctx, engines, manager);
             } catch (Exception e) {
                 if (keyMaterialProvider != null) {
                     keyMaterialProvider.destroy();
@@ -190,27 +195,29 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
         }
     }
 
-    private static void setVerifyCallback(long ctx, OpenSslEngineMap engineMap, X509TrustManager manager) {
+    private static void setVerifyCallback(long ctx,
+                                          Map<Long, ReferenceCountedOpenSslEngine> engines,
+                                          X509TrustManager manager) {
         // Use this to prevent an error when running on java < 7
         if (useExtendedTrustManager(manager)) {
             SSLContext.setCertVerifyCallback(ctx,
-                    new ExtendedTrustManagerVerifyCallback(engineMap, (X509ExtendedTrustManager) manager));
+                    new ExtendedTrustManagerVerifyCallback(engines, (X509ExtendedTrustManager) manager));
         } else {
-            SSLContext.setCertVerifyCallback(ctx, new TrustManagerVerifyCallback(engineMap, manager));
+            SSLContext.setCertVerifyCallback(ctx, new TrustManagerVerifyCallback(engines, manager));
         }
     }
 
     static final class OpenSslClientSessionContext extends OpenSslSessionContext {
         OpenSslClientSessionContext(ReferenceCountedOpenSslContext context, OpenSslKeyMaterialProvider provider) {
-            super(context, provider, SSL.SSL_SESS_CACHE_CLIENT, new OpenSslClientSessionCache(context.engineMap));
+            super(context, provider, SSL.SSL_SESS_CACHE_CLIENT, new OpenSslClientSessionCache(context.engines));
         }
     }
 
     private static final class TrustManagerVerifyCallback extends AbstractCertificateVerifier {
         private final X509TrustManager manager;
 
-        TrustManagerVerifyCallback(OpenSslEngineMap engineMap, X509TrustManager manager) {
-            super(engineMap);
+        TrustManagerVerifyCallback(Map<Long, ReferenceCountedOpenSslEngine> engines, X509TrustManager manager) {
+            super(engines);
             this.manager = manager;
         }
 
@@ -224,8 +231,9 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
     private static final class ExtendedTrustManagerVerifyCallback extends AbstractCertificateVerifier {
         private final X509ExtendedTrustManager manager;
 
-        ExtendedTrustManagerVerifyCallback(OpenSslEngineMap engineMap, X509ExtendedTrustManager manager) {
-            super(engineMap);
+        ExtendedTrustManagerVerifyCallback(Map<Long, ReferenceCountedOpenSslEngine> engines,
+                                           X509ExtendedTrustManager manager) {
+            super(engines);
             this.manager = manager;
         }
 
@@ -237,17 +245,18 @@ public final class ReferenceCountedOpenSslClientContext extends ReferenceCounted
     }
 
     private static final class OpenSslClientCertificateCallback implements CertificateCallback {
-        private final OpenSslEngineMap engineMap;
+        private final Map<Long, ReferenceCountedOpenSslEngine> engines;
         private final OpenSslKeyMaterialManager keyManagerHolder;
 
-        OpenSslClientCertificateCallback(OpenSslEngineMap engineMap, OpenSslKeyMaterialManager keyManagerHolder) {
-            this.engineMap = engineMap;
+        OpenSslClientCertificateCallback(Map<Long, ReferenceCountedOpenSslEngine> engines,
+                                         OpenSslKeyMaterialManager keyManagerHolder) {
+            this.engines = engines;
             this.keyManagerHolder = keyManagerHolder;
         }
 
         @Override
         public void handle(long ssl, byte[] keyTypeBytes, byte[][] asn1DerEncodedPrincipals) throws Exception {
-            final ReferenceCountedOpenSslEngine engine = engineMap.get(ssl);
+            final ReferenceCountedOpenSslEngine engine = engines.get(ssl);
             // May be null if it was destroyed in the meantime.
             if (engine == null) {
                 return;

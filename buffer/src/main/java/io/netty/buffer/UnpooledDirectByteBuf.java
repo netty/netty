@@ -22,7 +22,6 @@ import io.netty.util.internal.PlatformDependent;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
@@ -46,6 +45,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     private ByteBuffer tmpNioBuf;
     private int capacity;
     private boolean doNotFree;
+    private final boolean allowSectionedInternalNioBufferAccess;
 
     /**
      * Creates a new direct buffer.
@@ -54,6 +54,20 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
      * @param maxCapacity     the maximum capacity of the underlying direct buffer
      */
     public UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        this(alloc, initialCapacity, maxCapacity, true);
+    }
+
+    /**
+     * Creates a new direct buffer.
+     *
+     * @param initialCapacity the initial capacity of the underlying direct buffer
+     * @param maxCapacity     the maximum capacity of the underlying direct buffer
+     * @param allowSectionedInternalNioBufferAccess
+     * {@code true} if {@link #internalNioBuffer(int, int)} is allowed to be called,
+     * or {@code false} if it should throw an exception.
+     */
+    UnpooledDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity,
+                          boolean allowSectionedInternalNioBufferAccess) {
         super(maxCapacity);
         ObjectUtil.checkNotNull(alloc, "alloc");
         checkPositiveOrZero(initialCapacity, "initialCapacity");
@@ -65,6 +79,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
         this.alloc = alloc;
         setByteBuffer(allocateDirectBuffer(initialCapacity), false);
+        this.allowSectionedInternalNioBufferAccess = allowSectionedInternalNioBufferAccess;
     }
 
     /**
@@ -98,6 +113,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
         doNotFree = !doFree;
         setByteBuffer((slice ? initialBuffer.slice() : initialBuffer).order(ByteOrder.BIG_ENDIAN), false);
         writerIndex(initialCapacity);
+        allowSectionedInternalNioBufferAccess = true;
     }
 
     /**
@@ -260,18 +276,16 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected short _getShort(int index) {
-        VarHandle varHandle = PlatformDependent.shortBeByteBufferView();
-        if (varHandle != null) {
-            return (short) varHandle.get(buffer, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getShortBE(buffer, index);
         }
         return buffer.getShort(index);
     }
 
     @Override
     protected short _getShortLE(int index) {
-        VarHandle varHandle = PlatformDependent.shortLeByteBufferView();
-        if (varHandle != null) {
-            return (short) varHandle.get(buffer, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getShortLE(buffer, index);
         }
         return ByteBufUtil.swapShort(buffer.getShort(index));
     }
@@ -310,18 +324,16 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected int _getInt(int index) {
-        VarHandle varHandle = PlatformDependent.intBeByteBufferView();
-        if (varHandle != null) {
-            return (int) varHandle.get(buffer, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getIntBE(buffer, index);
         }
         return buffer.getInt(index);
     }
 
     @Override
     protected int _getIntLE(int index) {
-        VarHandle varHandle = PlatformDependent.intLeByteBufferView();
-        if (varHandle != null) {
-            return (int) varHandle.get(buffer, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getIntLE(buffer, index);
         }
         return ByteBufUtil.swapInt(buffer.getInt(index));
     }
@@ -340,18 +352,16 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected long _getLong(int index) {
-        VarHandle varHandle = PlatformDependent.longBeByteBufferView();
-        if (varHandle != null) {
-            return (long) varHandle.get(buffer, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getLongBE(buffer, index);
         }
         return buffer.getLong(index);
     }
 
     @Override
     protected long _getLongLE(int index) {
-        VarHandle varHandle = PlatformDependent.longLeByteBufferView();
-        if (varHandle != null) {
-            return (long) varHandle.get(buffer, index);
+        if (PlatformDependent.hasVarHandle()) {
+            return VarHandleByteBufferAccess.getLongLE(buffer, index);
         }
         return ByteBufUtil.swapLong(buffer.getLong(index));
     }
@@ -384,11 +394,10 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
         ByteBuffer tmpBuf;
         if (internal) {
-            tmpBuf = internalNioBuffer();
+            tmpBuf = internalNioBuffer(index, length);
         } else {
-            tmpBuf = buffer.duplicate();
+            tmpBuf = (ByteBuffer) buffer.duplicate().clear().position(index).limit(index + length);
         }
-        tmpBuf.clear().position(index).limit(index + length);
         tmpBuf.get(dst, dstIndex, length);
     }
 
@@ -411,11 +420,10 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
         ByteBuffer tmpBuf;
         if (internal) {
-            tmpBuf = internalNioBuffer();
+            tmpBuf = internalNioBuffer(index, dst.remaining());
         } else {
-            tmpBuf = buffer.duplicate();
+            tmpBuf = (ByteBuffer) buffer.duplicate().clear().position(index).limit(index + dst.remaining());
         }
-        tmpBuf.clear().position(index).limit(index + dst.remaining());
         dst.put(tmpBuf);
     }
 
@@ -437,7 +445,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setByte(int index, int value) {
-        buffer.put(index, (byte) value);
+        buffer.put(index, (byte) (value & 0xFF));
     }
 
     @Override
@@ -456,19 +464,17 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setShort(int index, int value) {
-        VarHandle varHandle = PlatformDependent.shortBeByteBufferView();
-        if (varHandle != null) {
-            varHandle.set(buffer, index, (short) value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setShortBE(buffer, index, value);
             return;
         }
-        buffer.putShort(index, (short) value);
+        buffer.putShort(index, (short) (value & 0xFFFF));
     }
 
     @Override
     protected void _setShortLE(int index, int value) {
-        VarHandle varHandle = PlatformDependent.shortLeByteBufferView();
-        if (varHandle != null) {
-            varHandle.set(buffer, index, (short) value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setShortLE(buffer, index, value);
             return;
         }
         buffer.putShort(index, ByteBufUtil.swapShort((short) value));
@@ -518,9 +524,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setInt(int index, int value) {
-        VarHandle varHandle = PlatformDependent.intBeByteBufferView();
-        if (varHandle != null) {
-            varHandle.set(buffer, index, value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setIntBE(buffer, index, value);
             return;
         }
         buffer.putInt(index, value);
@@ -528,9 +533,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setIntLE(int index, int value) {
-        VarHandle varHandle = PlatformDependent.intLeByteBufferView();
-        if (varHandle != null) {
-            varHandle.set(buffer, index, value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setIntLE(buffer, index, value);
             return;
         }
         buffer.putInt(index, ByteBufUtil.swapInt(value));
@@ -552,9 +556,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setLong(int index, long value) {
-        VarHandle varHandle = PlatformDependent.longBeByteBufferView();
-        if (varHandle != null) {
-            varHandle.set(buffer, index, value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setLongBE(buffer, index, value);
             return;
         }
         buffer.putLong(index, value);
@@ -562,9 +565,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
     @Override
     protected void _setLongLE(int index, long value) {
-        VarHandle varHandle = PlatformDependent.longLeByteBufferView();
-        if (varHandle != null) {
-            varHandle.set(buffer, index, value);
+        if (PlatformDependent.hasVarHandle()) {
+            VarHandleByteBufferAccess.setLongLE(buffer, index, value);
             return;
         }
         buffer.putLong(index, ByteBufUtil.swapLong(value));
@@ -588,8 +590,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
         checkSrcIndex(index, length, srcIndex, src.length);
-        ByteBuffer tmpBuf = internalNioBuffer();
-        tmpBuf.clear().position(index).limit(index + length);
+        ByteBuffer tmpBuf = internalNioBuffer(index, length);
         tmpBuf.put(src, srcIndex, length);
         return this;
     }
@@ -597,12 +598,10 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuf setBytes(int index, ByteBuffer src) {
         ensureAccessible();
-        ByteBuffer tmpBuf = internalNioBuffer();
-        if (src == tmpBuf) {
+        if (src == tmpNioBuf) {
             src = src.duplicate();
         }
-
-        tmpBuf.clear().position(index).limit(index + src.remaining());
+        ByteBuffer tmpBuf = internalNioBuffer(index, src.remaining());
         tmpBuf.put(src);
         return this;
     }
@@ -642,11 +641,10 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
 
         ByteBuffer tmpBuf;
         if (internal) {
-            tmpBuf = internalNioBuffer();
+            tmpBuf = internalNioBuffer(index, length);
         } else {
-            tmpBuf = buffer.duplicate();
+            tmpBuf = (ByteBuffer) buffer.duplicate().clear().position(index).limit(index + length);
         }
-        tmpBuf.clear().position(index).limit(index + length);
         return out.write(tmpBuf);
     }
 
@@ -661,8 +659,8 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
             return 0;
         }
 
-        ByteBuffer tmpBuf = internal ? internalNioBuffer() : buffer.duplicate();
-        tmpBuf.clear().position(index).limit(index + length);
+        ByteBuffer tmpBuf = internal ? internalNioBuffer(index, length) :
+                (ByteBuffer) buffer.duplicate().clear().position(index).limit(index + length);
         return out.write(tmpBuf, position);
     }
 
@@ -693,8 +691,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
             if (readBytes <= 0) {
                 return readBytes;
             }
-            ByteBuffer tmpBuf = internalNioBuffer();
-            tmpBuf.clear().position(index);
+            ByteBuffer tmpBuf = internalNioBuffer(index, readBytes);
             tmpBuf.put(tmp, 0, readBytes);
             return readBytes;
         }
@@ -703,8 +700,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int setBytes(int index, ScatteringByteChannel in, int length) throws IOException {
         ensureAccessible();
-        ByteBuffer tmpBuf = internalNioBuffer();
-        tmpBuf.clear().position(index).limit(index + length);
+        ByteBuffer tmpBuf = internalNioBuffer(index, length);
         try {
             return in.read(tmpBuf);
         } catch (ClosedChannelException ignored) {
@@ -715,8 +711,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public int setBytes(int index, FileChannel in, long position, int length) throws IOException {
         ensureAccessible();
-        ByteBuffer tmpBuf = internalNioBuffer();
-        tmpBuf.clear().position(index).limit(index + length);
+        ByteBuffer tmpBuf = internalNioBuffer(index, length);
         try {
             return in.read(tmpBuf, position);
         } catch (ClosedChannelException ignored) {
@@ -755,6 +750,9 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuffer internalNioBuffer(int index, int length) {
         checkIndex(index, length);
+        if (!allowSectionedInternalNioBufferAccess) {
+            throw new UnsupportedOperationException("Bug: unsafe access to shared internal chunk buffer");
+        }
         return (ByteBuffer) internalNioBuffer().clear().position(index).limit(index + length);
     }
 
@@ -769,7 +767,7 @@ public class UnpooledDirectByteBuf extends AbstractReferenceCountedByteBuf {
     @Override
     public ByteBuffer nioBuffer(int index, int length) {
         checkIndex(index, length);
-        return ((ByteBuffer) buffer.duplicate().position(index).limit(index + length)).slice();
+        return PlatformDependent.offsetSlice(buffer, index, length);
     }
 
     @Override

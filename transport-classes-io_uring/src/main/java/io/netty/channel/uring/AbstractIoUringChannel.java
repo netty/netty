@@ -66,6 +66,7 @@ import static io.netty.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERROR_EALREADY_NEGATIVE;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.StringUtil.className;
 
 
 abstract class AbstractIoUringChannel extends AbstractChannel implements UnixChannel {
@@ -307,7 +308,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         } else {
             // This one was never registered just use a syscall to close.
             socket.close();
-            ioUringUnsafe().freeResourcesNowIfNeeded(null);
+            ioUringUnsafe().unregistered();
         }
     }
 
@@ -430,7 +431,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     protected abstract class AbstractUringUnsafe extends AbstractUnsafe implements IoUringIoHandle {
         private IoUringRecvByteAllocatorHandle allocHandle;
         private boolean closed;
-        private boolean freed;
         private boolean socketIsEmpty;
 
         /**
@@ -498,28 +498,15 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             handleDelayedClosed();
 
             if (ioState == 0 && closed) {
-                freeResourcesNowIfNeeded(registration);
+                // Cancel the registration now.
+                registration.cancel();
             }
         }
 
-        private void freeResourcesNowIfNeeded(IoRegistration reg) {
-            if (!freed) {
-                freed = true;
-                freeResourcesNow(reg);
-            }
-        }
-
-        /**
-         * Free all resources now. No new IO will be submitted for this channel via io_uring
-         *
-         * @param reg   the {@link IoRegistration} or {@code null} if it was never registered
-         */
-        protected void freeResourcesNow(IoRegistration reg) {
+        @Override
+        public void unregistered() {
             freeMsgHdrArray();
             freeRemoteAddressMemory();
-            if (reg != null) {
-                reg.cancel();
-            }
         }
 
         private void handleDelayedClosed() {
@@ -1134,7 +1121,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) remoteAddress;
                     submitConnect(unixDomainSocketAddress);
                 } else {
-                    throw new Error("Unexpected SocketAddress implementation " + remoteAddress);
+                    throw new Error("Unexpected SocketAddress implementation " + className(remoteAddress));
                 }
 
                 if (connectId != 0) {

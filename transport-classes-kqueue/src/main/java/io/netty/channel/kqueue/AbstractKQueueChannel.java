@@ -59,6 +59,7 @@ import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChannel {
+
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -72,15 +73,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private IoRegistration registration;
     private boolean readFilterEnabled;
     private boolean writeFilterEnabled;
-
-    private static final KQueueIoOps READ_ENABLED_OPS =
-            KQueueIoOps.newOps(Native.EVFILT_READ, Native.EV_ADD_ENABLE, 0);
-    private static final KQueueIoOps WRITE_ENABLED_OPS =
-            KQueueIoOps.newOps(Native.EVFILT_WRITE, Native.EV_ADD_ENABLE, 0);
-    private static final KQueueIoOps READ_DISABLED_OPS =
-            KQueueIoOps.newOps(Native.EVFILT_READ, Native.EV_DELETE_DISABLE, 0);
-    private static final KQueueIoOps WRITE_DISABLED_OPS =
-            KQueueIoOps.newOps(Native.EVFILT_WRITE, Native.EV_DELETE_DISABLE, 0);
 
     boolean readReadyRunnablePending;
     boolean inputClosedSeenErrorOnRead;
@@ -220,10 +212,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
                 // Add the write event first so we get notified of connection refused on the client side!
                 if (writeFilterEnabled) {
-                    submit(WRITE_ENABLED_OPS);
+                    submit(Native.WRITE_ENABLED_OPS);
                 }
                 if (readFilterEnabled) {
-                    submit(READ_ENABLED_OPS);
+                    submit(Native.READ_ENABLED_OPS);
                 }
                 promise.setSuccess();
             } else {
@@ -366,14 +358,14 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     void readFilter(boolean readFilterEnabled) throws IOException {
         if (this.readFilterEnabled != readFilterEnabled) {
             this.readFilterEnabled = readFilterEnabled;
-            submit(readFilterEnabled ? READ_ENABLED_OPS : READ_DISABLED_OPS);
+            submit(readFilterEnabled ? Native.READ_ENABLED_OPS : Native.READ_DISABLED_OPS);
         }
     }
 
     void writeFilter(boolean writeFilterEnabled) throws IOException {
         if (this.writeFilterEnabled != writeFilterEnabled) {
             this.writeFilterEnabled = writeFilterEnabled;
-            submit(writeFilterEnabled ? WRITE_ENABLED_OPS : WRITE_DISABLED_OPS);
+            submit(writeFilterEnabled ? Native.WRITE_ENABLED_OPS : Native.WRITE_DISABLED_OPS);
         }
     }
 

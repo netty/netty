@@ -16,10 +16,17 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelException;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
+import io.netty.channel.unix.IntegerUnixChannelOption;
+import io.netty.channel.unix.RawUnixChannelOption;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
 
 abstract class IoUringChannelConfig extends DefaultChannelConfig {
     IoUringChannelConfig(AbstractIoUringChannel channel) {
@@ -28,6 +35,46 @@ abstract class IoUringChannelConfig extends DefaultChannelConfig {
 
     IoUringChannelConfig(AbstractIoUringChannel channel, RecvByteBufAllocator allocator) {
         super(channel, allocator);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public <T> T getOption(ChannelOption<T> option) {
+        try {
+            if (option instanceof IntegerUnixChannelOption) {
+                IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
+                return (T) Integer.valueOf(((AbstractIoUringChannel) channel).socket.getIntOpt(
+                        opt.level(), opt.optname()));
+            }
+            if (option instanceof RawUnixChannelOption) {
+                RawUnixChannelOption opt = (RawUnixChannelOption) option;
+                ByteBuffer out = ByteBuffer.allocate(opt.length());
+                ((AbstractIoUringChannel) channel).socket.getRawOpt(opt.level(), opt.optname(), out);
+                return (T) out.flip();
+            }
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+        return super.getOption(option);
+    }
+
+    @Override
+    public <T> boolean setOption(ChannelOption<T> option, T value) {
+        validate(option, value);
+        try {
+            if (option instanceof IntegerUnixChannelOption) {
+                IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
+                ((AbstractIoUringChannel) channel).socket.setIntOpt(opt.level(), opt.optname(), (Integer) value);
+                return true;
+            } else if (option instanceof RawUnixChannelOption) {
+                RawUnixChannelOption opt = (RawUnixChannelOption) option;
+                ((AbstractIoUringChannel) channel).socket.setRawOpt(opt.level(), opt.optname(), (ByteBuffer) value);
+                return true;
+            }
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+        return super.setOption(option, value);
     }
 
     @Override

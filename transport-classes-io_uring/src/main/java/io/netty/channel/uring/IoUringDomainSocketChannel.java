@@ -167,7 +167,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 case BYTES:
                     return super.scheduleRead0(first, socketIsEmpty);
                 default:
-                    throw new Error();
+                    throw new Error("Unexpected read mode: " + readMode);
             }
         }
 
@@ -239,8 +239,8 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         }
 
         @Override
-        protected void freeResourcesNow(IoRegistration reg) {
-            super.freeResourcesNow(reg);
+        public void unregistered() {
+            super.unregistered();
             if (readMsgHdrMemory != null) {
                 readMsgHdrMemory.release();
                 readMsgHdrMemory = null;
@@ -261,7 +261,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
             case FILE_DESCRIPTORS:
                 return false;
             default:
-                throw new Error();
+                throw new Error("Unexpected read mode: " + readMode);
         }
     }
 }

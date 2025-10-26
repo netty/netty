@@ -15,6 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -119,6 +120,11 @@ public class Http2FrameCodecTest {
     }
 
     private void setUp(Http2FrameCodecBuilder frameCodecBuilder, Http2Settings initialRemoteSettings) throws Exception {
+        setUp(frameCodecBuilder, initialRemoteSettings, true);
+    }
+
+    private void setUp(Http2FrameCodecBuilder frameCodecBuilder, Http2Settings initialRemoteSettings, boolean preface)
+            throws Exception {
         /*
          * Some tests call this method twice. Once with JUnit's @Before and once directly to pass special settings.
          * This call ensures that in case of two consecutive calls to setUp(), the previous channel is shutdown and
@@ -142,18 +148,21 @@ public class Http2FrameCodecTest {
         // Handshake
         verify(frameWriter).writeSettings(eqFrameCodecCtx(), anyHttp2Settings(), anyChannelPromise());
         verifyNoMoreInteractions(frameWriter);
-        channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
 
-        frameInboundWriter.writeInboundSettings(initialRemoteSettings);
+        if (preface) {
+            channel.writeInbound(Http2CodecUtil.connectionPrefaceBuf());
 
-        verify(frameWriter).writeSettingsAck(eqFrameCodecCtx(), anyChannelPromise());
+            frameInboundWriter.writeInboundSettings(initialRemoteSettings);
 
-        frameInboundWriter.writeInboundSettingsAck();
+            verify(frameWriter).writeSettingsAck(eqFrameCodecCtx(), anyChannelPromise());
 
-        Http2SettingsFrame settingsFrame = inboundHandler.readInbound();
-        assertNotNull(settingsFrame);
-        Http2SettingsAckFrame settingsAckFrame = inboundHandler.readInbound();
-        assertNotNull(settingsAckFrame);
+            frameInboundWriter.writeInboundSettingsAck();
+
+            Http2SettingsFrame settingsFrame = inboundHandler.readInbound();
+            assertNotNull(settingsFrame);
+            Http2SettingsAckFrame settingsAckFrame = inboundHandler.readInbound();
+            assertNotNull(settingsAckFrame);
+        }
     }
 
     @Test
@@ -400,6 +409,53 @@ public class Http2FrameCodecTest {
         ByteBuf debugData = bb("debug");
         frameInboundWriter.writeInboundFrame((byte) 0xb, 0, new Http2Flags(), debugData);
         channel.flush();
+
+        assertEquals(0, debugData.refCnt());
+        assertTrue(channel.isActive());
+    }
+
+    @Test
+    public void unknownFrameOnMissingStream() throws Exception {
+        ByteBuf debugData = bb("debug");
+        frameInboundWriter.writeInboundFrame((byte) 0xb, 101, new Http2Flags(), debugData);
+        channel.flush();
+
+        assertEquals(0, debugData.refCnt());
+        assertTrue(channel.isActive());
+    }
+
+    @Test
+    public void unknownFrameOnMissingStreamFirstPacket() throws Exception {
+        setUp(Http2FrameCodecBuilder.forClient(), new Http2Settings(), false);
+
+        // SETTINGS and UNKNOWN must come in on the same packet to trigger the bug
+        channel.pipeline().addFirst("combine", new ChannelInboundHandlerAdapter() {
+            CompositeByteBuf accumulate;
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                if (accumulate == null) {
+                    accumulate = ctx.alloc().compositeBuffer();
+                }
+                accumulate.addComponent(true, (ByteBuf) msg);
+            }
+
+            @Override
+            public void handlerRemoved(ChannelHandlerContext ctx) {
+                if (accumulate != null) {
+                    ctx.fireChannelRead(accumulate);
+                    ctx.fireChannelReadComplete();
+                }
+            }
+        });
+
+        frameInboundWriter.writeInboundSettings(new Http2Settings());
+
+        ByteBuf debugData = bb("debug");
+        frameInboundWriter.writeInboundFrame((byte) 0xb, 101, new Http2Flags(), debugData);
+
+        channel.pipeline().remove("combine");
+        channel.flushInbound();
 
         assertEquals(0, debugData.refCnt());
         assertTrue(channel.isActive());

@@ -26,7 +26,7 @@
   <groupId>io.netty</groupId>
   <artifactId>netty-parent</artifactId>
   <packaging>pom</packaging>
-  <version>4.2.5.Final-SNAPSHOT</version>
+  <version>4.2.8.Final-SNAPSHOT</version>
 
   <name>Netty</name>
   <url>https://netty.io/</url>
@@ -99,11 +99,11 @@
             <configuration>
               <legacyMode>true</legacyMode>
               <skippedModules>
-                netty-all,netty-bom,netty-testsuite,netty-testsuite-autobahn,netty-testsuite-http2,
+                netty-all,netty-bom,netty-testsuite,netty-testsuite-autobahn,testsuite-common,netty-testsuite-http2,
                 netty-testsuite-native,netty-testsuite-native-image,netty-testsuite-native-image-client,
                 netty-testsuite-native-image-client-runtime-init,netty-testsuite-osgi,netty-testsuite-shading,
                 netty-transport-blockhound-tests,netty-transport-native-unix-common-tests,netty-microbench,
-                netty-dev-tools,netty-example,testsuite-jpms
+                netty-dev-tools,netty-example,testsuite-jpms,netty-jfr-stub,netty-varhandle-stub
               </skippedModules>
               <sourceFileExcludes>
                 <exclude>**/com/sun/**/*.java</exclude>
@@ -198,6 +198,26 @@
         <skipNativeImageTestsuite>false</skipNativeImageTestsuite>
         <forbiddenapis.skip>true</forbiddenapis.skip>
         <testJvm />
+      </properties>
+    </profile>
+    <profile>
+      <id>java26</id>
+      <activation>
+        <jdk>26</jdk>
+      </activation>
+      <properties>
+        <argLine.java9.extras />
+        <argLine.java9>${argLine.java9.extras}</argLine.java9>
+        <forbiddenapis.skip>true</forbiddenapis.skip>
+        <!-- We need to use 1.8 as otherwise default methods are not picked up and so result in compile errors for
+             our EventExecutorGroup implementations
+        -->
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.compiler.release>8</maven.compiler.release>
+        <!-- pax-exam does not work on latest Java12 EA 22 build -->
+        <skipOsgiTestsuite>true</skipOsgiTestsuite>
+        <revapi.skip>true</revapi.skip>
       </properties>
     </profile>
     <profile>
@@ -578,7 +598,7 @@
       <id>boringssl-snapshot</id>
       <properties>
         <tcnative.artifactId>netty-tcnative-boringssl-static</tcnative.artifactId>
-        <tcnative.version>2.0.73.Final-SNAPSHOT</tcnative.version>
+        <tcnative.version>2.0.75.Final-SNAPSHOT</tcnative.version>
         <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
       </properties>
 
@@ -702,7 +722,8 @@
       -XX:+HeapDumpOnOutOfMemoryError
     </argLine.common>
     <argLine.jni>-D_</argLine.jni>
-    <argLine.leak>-D_</argLine.leak> <!-- Overridden when 'leak' profile is active -->
+    <!-- This default enables leak presence detection. The leak profile replaces this with normal paranoid leak detection. -->
+    <argLine.leak>-Djunit.jupiter.extensions.autodetection.enabled=true</argLine.leak>
     <argLine.noUnsafe>-D_</argLine.noUnsafe> <!-- Overridden when 'noUnsafe' profile is active -->
     <argLine.coverage>-D_</argLine.coverage> <!-- Overridden when 'coverage' profile is active -->
     <jacoco.argLine />
@@ -716,7 +737,7 @@
     <os.detection.classifierWithLikes>fedora,suse,arch</os.detection.classifierWithLikes>
     <tcnative.artifactId>netty-tcnative</tcnative.artifactId>
     <!-- Keep in sync with bom/pom.xml -->
-    <tcnative.version>2.0.72.Final</tcnative.version>
+    <tcnative.version>2.0.74.Final</tcnative.version>
     <tcnative.classifier>${os.detected.classifier}</tcnative.classifier>
     <conscrypt.groupId>org.conscrypt</conscrypt.groupId>
     <conscrypt.artifactId>conscrypt-openjdk-uber</conscrypt.artifactId>
@@ -743,6 +764,8 @@
     <skipHttp2Testsuite>false</skipHttp2Testsuite>
     <graalvm.version>19.3.6</graalvm.version>
     <brotli4j.version>1.16.0</brotli4j.version>
+    <aalto.version>1.3.3</aalto.version>
+    <rxtx.version>2.1.7</rxtx.version>
     <!-- By default skip native testsuite as it requires a custom environment with graalvm installed -->
     <skipNativeImageTestsuite>true</skipNativeImageTestsuite>
     <skipShadingTestsuite>false</skipShadingTestsuite>
@@ -798,8 +821,10 @@
     <module>testsuite</module>
     <module>pkitesting</module>
     <module>testsuite-autobahn</module>
+    <module>testsuite-common</module>
     <module>testsuite-http2</module>
     <module>testsuite-jpms</module>
+    <module>testsuite-karaf</module>
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
     <module>testsuite-native</module>
@@ -818,7 +843,7 @@
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-jni-util</artifactId>
-        <version>0.0.9.Final</version>
+        <version>0.0.10.Final</version>
         <classifier>sources</classifier>
         <optional>true</optional>
       </dependency>
@@ -953,7 +978,7 @@
       <dependency>
         <groupId>com.fasterxml</groupId>
         <artifactId>aalto-xml</artifactId>
-        <version>1.3.3</version>
+        <version>${aalto.version}</version>
       </dependency>
 
       <dependency>
@@ -1059,7 +1084,7 @@
       <dependency>
         <groupId>org.rxtx</groupId>
         <artifactId>rxtx</artifactId>
-        <version>2.1.7</version>
+        <version>${rxtx.version}</version>
       </dependency>
 
       <dependency>
@@ -1227,7 +1252,7 @@
       <dependency>
         <groupId>org.apache.directory.server</groupId>
         <artifactId>apacheds-protocol-dns</artifactId>
-        <version>1.5.7</version>
+        <version>2.0.0.AM27</version>
         <scope>test</scope>
       </dependency>
 
@@ -1243,7 +1268,7 @@
       <dependency>
         <groupId>io.projectreactor.tools</groupId>
         <artifactId>blockhound</artifactId>
-        <version>1.0.13.RELEASE</version>
+        <version>1.0.14.RELEASE</version>
       </dependency>
 
       <dependency>
@@ -1364,6 +1389,13 @@
                   <oldValue>6</oldValue>
                   <newValue>7</newValue>
                   <justification>SETTINGS_ENABLE_CONNECT_PROTOCOL was added to the standard HTTP/2 settings.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.visibilityIncreased</code>
+                  <old>method void io.netty.handler.codec.http2.Http2ServerUpgradeCodec::<![CDATA[<init>]]>(java.lang.String, io.netty.handler.codec.http2.Http2ConnectionHandler, io.netty.channel.ChannelHandler[])</old>
+                  <new>method void io.netty.handler.codec.http2.Http2ServerUpgradeCodec::<![CDATA[<init>]]>(java.lang.String, io.netty.handler.codec.http2.Http2ConnectionHandler, io.netty.channel.ChannelHandler[])</new>
+                  <justification>Be able to directly construct class</justification>
                 </item>
                 <item>
                   <ignore>true</ignore>
@@ -1812,6 +1844,17 @@
           <publishingServerId>central</publishingServerId>
           <skipPublishing>true</skipPublishing>
           <autoPublish>false</autoPublish>
+          <!-- Exclude testsuite modules -->
+          <excludeArtifacts>
+            <artifact>netty-testsuite-autobahn</artifact>
+            <artifact>netty-testsuite-http2</artifact>
+            <artifact>netty-testsuite-karaf</artifact>
+            <artifact>netty-testsuite-native-image</artifact>
+            <artifact>netty-testsuite-native-image-client</artifact>
+            <artifact>netty-testsuite-native-image-client-runtime-init</artifact>
+            <artifact>netty-testsuite-osgi</artifact>
+            <artifact>netty-testsuite-shading</artifact>
+          </excludeArtifacts>
         </configuration>
       </plugin>
       <plugin>

@@ -426,10 +426,8 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
         case 3:
             return additionals;
         default:
-            break;
+            throw new Error("Unexpected section number: " + section);
         }
-
-        throw new Error(); // Should never reach here.
     }
 
     private void setSection(int section, Object value) {
@@ -447,10 +445,8 @@ public abstract class AbstractDnsMessage extends AbstractReferenceCounted implem
             additionals = value;
             return;
         default:
-            break;
+            throw new Error("Unexpected section number: " + section);
         }
-
-        throw new Error(); // Should never reach here.
     }
 
     private static int sectionOrdinal(DnsSection section) {

@@ -236,7 +236,7 @@ public final class NioDatagramChannel
 
     @Override
     protected void doFinishConnect() throws Exception {
-        throw new Error();
+        throw new UnsupportedOperationException("finishConnect is not supported for " + getClass().getName());
     }
 
     @Override

@@ -155,9 +155,6 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
 
         private boolean handleWriteCompleteZeroCopy(byte op, ChannelOutboundBuffer channelOutboundBuffer,
                                                     int res, int flags) {
-            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                return true;
-            }
             if ((flags & Native.IORING_CQE_F_NOTIF) == 0) {
                 // We only want to reset these if IORING_CQE_F_NOTIF is not set.
                 // If it's set we know this is only an extra notification for a write but we already handled
@@ -167,15 +164,17 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 writeOpCode = 0;
 
                 boolean more = (flags & Native.IORING_CQE_F_MORE) != 0;
+                if (more) {
+                    // This is the result of send_sz or sendmsg_sc but there will also be another notification
+                    // which will let us know that we can release the buffer(s). In this case let's retain the
+                    // buffer(s) once and store it in an internal queue. Once we receive the notification we will
+                    // call release() on the buffer(s) as it's not used by the kernel anymore.
+                    if (zcWriteQueue == null) {
+                        zcWriteQueue = new ArrayDeque<>(8);
+                    }
+                }
                 if (res >= 0) {
                     if (more) {
-                        // This is the result of send_sz or sendmsg_sc but there will also be another notification
-                        // which will let us know that we can release the buffer(s). In this case let's retain the
-                        // buffer(s) once and store it in an internal queue. Once we receive the notification we will
-                        // call release() on the buffer(s) as it's not used by the kernel anymore.
-                        if (zcWriteQueue == null) {
-                            zcWriteQueue = new ArrayDeque<>(8);
-                        }
 
                         // Loop through all the buffers that were part of the operation so we can add them to our
                         // internal queue to release later.
@@ -202,12 +201,43 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                     }
                     return true;
                 } else {
+                    if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                        if (more) {
+                            // The send was cancelled but we expect another notification. Just add the marker to the
+                            // queue so we don't get into trouble once the final notification for this operation is
+                            // received.
+                            zcWriteQueue.add(ZC_BATCH_MARKER);
+                        }
+                        return true;
+                    }
                     try {
                         String msg = op == Native.IORING_OP_SEND_ZC ? "io_uring sendzc" : "io_uring sendmsg_zc";
-                        if (ioResult(msg, res) == 0) {
+                        int result = ioResult(msg, res);
+                        if (more) {
+                            try {
+                                // We expect another notification so we need to ensure we retain these buffers
+                                // so we can release these once we see IORING_CQE_F_NOTIF set.
+                                addFlushedToZcWriteQueue(channelOutboundBuffer);
+                            } catch (Exception e) {
+                                // should never happen but let's handle it anyway.
+                                handleWriteError(e);
+                            }
+                        }
+                        if (result == 0) {
                             return false;
                         }
                     } catch (Throwable cause) {
+                        if (more) {
+                            try {
+                                // We expect another notification as handleWriteError(...) will fail all flushed writes
+                                // and also release any buffers we need to ensure we retain these buffers
+                                // so we can release these once we see IORING_CQE_F_NOTIF set.
+                                addFlushedToZcWriteQueue(channelOutboundBuffer);
+                            } catch (Exception e) {
+                                // should never happen but let's handle it anyway.
+                                cause.addSuppressed(e);
+                            }
+                        }
                         handleWriteError(cause);
                     }
                 }
@@ -228,9 +258,22 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
             return true;
         }
 
-        @Override
-        protected boolean canCloseNow0() {
-            return (zcWriteQueue == null || zcWriteQueue.isEmpty()) && super.canCloseNow0();
+        private void addFlushedToZcWriteQueue(ChannelOutboundBuffer channelOutboundBuffer) throws Exception {
+            // We expect another notification as handleWriteError(...) will fail all flushed writes
+            // and also release any buffers we need to ensure we retain these buffers
+            // so we can release these once we see IORING_CQE_F_NOTIF set.
+            try {
+                channelOutboundBuffer.forEachFlushedMessage(m -> {
+                    if (!(m instanceof ByteBuf)) {
+                        return false;
+                    }
+                    zcWriteQueue.add(m);
+                    ((ByteBuf) m).retain();
+                    return true;
+                });
+            } finally {
+                zcWriteQueue.add(ZC_BATCH_MARKER);
+            }
         }
     }
 }

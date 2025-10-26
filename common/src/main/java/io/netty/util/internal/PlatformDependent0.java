@@ -48,6 +48,7 @@ final class PlatformDependent0 {
     private static final MethodHandle DIRECT_BUFFER_CONSTRUCTOR;
     private static final MethodHandle ALLOCATE_ARRAY_METHOD;
     private static final MethodHandle ALIGN_SLICE;
+    private static final MethodHandle OFFSET_SLICE;
     private static final boolean IS_ANDROID = isAndroid0();
     private static final int JAVA_VERSION = javaVersion0();
     private static final Throwable EXPLICIT_NO_UNSAFE_CAUSE = explicitNoUnsafeCause0();
@@ -341,7 +342,7 @@ final class PlatformDependent0 {
                         Class<?> bitsClass =
                                 Class.forName("java.nio.Bits", false, getSystemClassLoader());
                         int version = javaVersion();
-                        if (!isNativeImage() && version >= 9) {
+                        if (version >= 9) {
                             // Java9/10 use all lowercase and later versions all uppercase.
                             String fieldName = version >= 11? "MAX_MEMORY" : "maxMemory";
                             // On Java9 and later we try to directly access the field as we can do this without
@@ -477,6 +478,22 @@ final class PlatformDependent0 {
             });
         } else {
             ALIGN_SLICE = null;
+        }
+
+        if (javaVersion() >= 13) {
+            OFFSET_SLICE = (MethodHandle) AccessController.doPrivileged(new PrivilegedAction<Object>() {
+                @Override
+                public Object run() {
+                    try {
+                        return MethodHandles.publicLookup().findVirtual(
+                                ByteBuffer.class, "slice", methodType(ByteBuffer.class, int.class, int.class));
+                    } catch (Throwable e) {
+                        return null;
+                    }
+                }
+            });
+        } else {
+            OFFSET_SLICE = null;
         }
 
         logger.debug("java.nio.DirectByteBuffer.<init>(long, {int,long}): {}",
@@ -627,6 +644,19 @@ final class PlatformDependent0 {
         } catch (Throwable e) {
             rethrowIfPossible(e);
             throw new LinkageError("ByteBuffer.alignedSlice not available", e);
+        }
+    }
+
+    static boolean hasOffsetSliceMethod() {
+        return OFFSET_SLICE != null;
+    }
+
+    static ByteBuffer offsetSlice(ByteBuffer buffer, int index, int length) {
+        try {
+            return (ByteBuffer) OFFSET_SLICE.invokeExact(buffer, index, length);
+        } catch (Throwable e) {
+            rethrowIfPossible(e);
+            throw new LinkageError("ByteBuffer.slice(int, int) not available", e);
         }
     }
 

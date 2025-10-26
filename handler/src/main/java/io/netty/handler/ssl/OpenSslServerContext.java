@@ -354,11 +354,14 @@ public final class OpenSslServerContext extends OpenSslContext {
 
         // Create a new SSL_CTX and configure it.
         boolean success = false;
+        boolean fallbackToJdkSignatureProviders = isJdkSignatureFallbackEnabled(options);
         try {
-            OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword);
-            sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
+            OpenSslKeyMaterialProvider.validateKeyMaterialSupported(keyCertChain, key, keyPassword,
+                                                                    fallbackToJdkSignatureProviders);
+            sessionContext = newSessionContext(this, ctx, engines, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
-                                               sessionCacheSize, sessionTimeout, resumptionController);
+                                               sessionCacheSize, sessionTimeout, resumptionController,
+                                               fallbackToJdkSignatureProviders);
             success = true;
         } finally {
             if (!success) {

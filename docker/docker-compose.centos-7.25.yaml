@@ -6,7 +6,7 @@ services:
     image: netty:centos-7-25
     build:
       args:
-        java_version : "25.ea.35-open"
+        java_version : "25-zulu"
 
   build:
     image: netty:centos-7-25

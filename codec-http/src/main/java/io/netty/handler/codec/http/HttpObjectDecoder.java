@@ -26,6 +26,7 @@ import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.AsciiString;
 import io.netty.util.ByteProcessor;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -151,6 +152,23 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     public static final boolean DEFAULT_VALIDATE_HEADERS = true;
     public static final int DEFAULT_INITIAL_BUFFER_SIZE = 128;
     public static final boolean DEFAULT_ALLOW_DUPLICATE_CONTENT_LENGTHS = false;
+    public static final boolean DEFAULT_STRICT_LINE_PARSING =
+            SystemPropertyUtil.getBoolean("io.netty.handler.codec.http.defaultStrictLineParsing", true);
+
+    private static final Runnable THROW_INVALID_CHUNK_EXTENSION = new Runnable() {
+        @Override
+        public void run() {
+            throw new InvalidChunkExtensionException();
+        }
+    };
+
+    private static final Runnable THROW_INVALID_LINE_SEPARATOR = new Runnable() {
+        @Override
+        public void run() {
+            throw new InvalidLineSeparatorException();
+        }
+    };
+
     private final int maxChunkSize;
     private final boolean chunkedSupported;
     private final boolean allowPartialChunks;
@@ -163,6 +181,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
     protected final HttpHeadersFactory trailersFactory;
     private final boolean allowDuplicateContentLengths;
     private final ByteBuf parserScratchBuffer;
+    private final Runnable defaultStrictCRLFCheck;
     private final HeaderParser headerParser;
     private final LineParser lineParser;
 
@@ -315,6 +334,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         checkNotNull(config, "config");
 
         parserScratchBuffer = Unpooled.buffer(config.getInitialBufferSize());
+        defaultStrictCRLFCheck = config.isStrictLineParsing() ? THROW_INVALID_LINE_SEPARATOR : null;
         lineParser = new LineParser(parserScratchBuffer, config.getMaxInitialLineLength());
         headerParser = new HeaderParser(parserScratchBuffer, config.getMaxHeaderSize());
         maxChunkSize = config.getMaxChunkSize();
@@ -344,7 +364,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         case SKIP_CONTROL_CHARS:
             // Fall-through
         case READ_INITIAL: try {
-            ByteBuf line = lineParser.parse(buffer);
+            ByteBuf line = lineParser.parse(buffer, defaultStrictCRLFCheck);
             if (line == null) {
                 return;
             }
@@ -449,11 +469,11 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             return;
         }
         /*
-         * everything else after this point takes care of reading chunked content. basically, read chunk size,
+         * Everything else after this point takes care of reading chunked content. Basically, read chunk size,
          * read chunk, read and ignore the CRLF and repeat until 0
          */
         case READ_CHUNK_SIZE: try {
-            ByteBuf line = lineParser.parse(buffer);
+            ByteBuf line = lineParser.parse(buffer, THROW_INVALID_CHUNK_EXTENSION);
             if (line == null) {
                 return;
             }
@@ -491,16 +511,16 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             // fall-through
         }
         case READ_CHUNK_DELIMITER: {
-            final int wIdx = buffer.writerIndex();
-            int rIdx = buffer.readerIndex();
-            while (wIdx > rIdx) {
-                byte next = buffer.getByte(rIdx++);
-                if (next == HttpConstants.LF) {
+            if (buffer.readableBytes() >= 2) {
+                int rIdx = buffer.readerIndex();
+                if (buffer.getByte(rIdx) == HttpConstants.CR &&
+                        buffer.getByte(rIdx + 1) == HttpConstants.LF) {
+                    buffer.skipBytes(2);
                     currentState = State.READ_CHUNK_SIZE;
-                    break;
+                } else {
+                    out.add(invalidChunk(buffer, new InvalidChunkTerminationException()));
                 }
             }
-            buffer.readerIndex(rIdx);
             return;
         }
         case READ_CHUNK_FOOTER: try {
@@ -723,7 +743,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         final HeaderParser headerParser = this.headerParser;
 
-        ByteBuf line = headerParser.parse(buffer);
+        ByteBuf line = headerParser.parse(buffer, defaultStrictCRLFCheck);
         if (line == null) {
             return null;
         }
@@ -745,7 +765,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 splitHeader(lineContent, startLine, lineLength);
             }
 
-            line = headerParser.parse(buffer);
+            line = headerParser.parse(buffer, defaultStrictCRLFCheck);
             if (line == null) {
                 return null;
             }
@@ -835,7 +855,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
     private LastHttpContent readTrailingHeaders(ByteBuf buffer) {
         final HeaderParser headerParser = this.headerParser;
-        ByteBuf line = headerParser.parse(buffer);
+        ByteBuf line = headerParser.parse(buffer, defaultStrictCRLFCheck);
         if (line == null) {
             return null;
         }
@@ -878,7 +898,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 name = null;
                 value = null;
             }
-            line = headerParser.parse(buffer);
+            line = headerParser.parse(buffer, defaultStrictCRLFCheck);
             if (line == null) {
                 return null;
             }
@@ -1147,7 +1167,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             this.maxLength = maxLength;
         }
 
-        public ByteBuf parse(ByteBuf buffer) {
+        public ByteBuf parse(ByteBuf buffer, Runnable strictCRLFCheck) {
             final int readableBytes = buffer.readableBytes();
             final int readerIndex = buffer.readerIndex();
             final int maxBodySize = maxLength - size;
@@ -1174,6 +1194,9 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
                 // Drop CR if we had a CRLF pair
                 endOfSeqIncluded = indexOfLf - 1;
             } else {
+                if (strictCRLFCheck != null) {
+                    strictCRLFCheck.run();
+                }
                 endOfSeqIncluded = indexOfLf;
             }
             final int newSize = endOfSeqIncluded - readerIndex;
@@ -1209,18 +1232,18 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         }
 
         @Override
-        public ByteBuf parse(ByteBuf buffer) {
+        public ByteBuf parse(ByteBuf buffer, Runnable strictCRLFCheck) {
             // Suppress a warning because HeaderParser.reset() is supposed to be called
             reset();
             final int readableBytes = buffer.readableBytes();
             if (readableBytes == 0) {
                 return null;
             }
-            final int readerIndex = buffer.readerIndex();
-            if (currentState == State.SKIP_CONTROL_CHARS && skipControlChars(buffer, readableBytes, readerIndex)) {
+            if (currentState == State.SKIP_CONTROL_CHARS &&
+                    skipControlChars(buffer, readableBytes, buffer.readerIndex())) {
                 return null;
             }
-            return super.parse(buffer);
+            return super.parse(buffer, strictCRLFCheck);
         }
 
         private boolean skipControlChars(ByteBuf buffer, int readableBytes, int readerIndex) {
