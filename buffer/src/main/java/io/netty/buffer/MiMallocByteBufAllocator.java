@@ -2409,7 +2409,7 @@ final class MiMallocByteBufAllocator {
         public int setBytes(int index, ScatteringByteChannel in, int length)
                 throws IOException {
             try {
-                return in.read(internalNioBuffer(index, length).duplicate());
+                return in.read(internalNioBuffer(index, length));
             } catch (ClosedChannelException ignored) {
                 return -1;
             }
@@ -2419,7 +2419,7 @@ final class MiMallocByteBufAllocator {
         public int setBytes(int index, FileChannel in, long position, int length)
                 throws IOException {
             try {
-                return in.read(internalNioBuffer(index, length).duplicate(), position);
+                return in.read(internalNioBuffer(index, length), position);
             } catch (ClosedChannelException ignored) {
                 return -1;
             }
@@ -2439,8 +2439,7 @@ final class MiMallocByteBufAllocator {
                 } else {
                     checkIndex(index, length);
                 }
-                // Directly pass in the rootParent() with the adjusted index
-                return ByteBufUtil.writeUtf8(rootParent(), idx(index), length, sequence, sequence.length());
+                return ByteBufUtil.writeUtf8(this, index, length, sequence, sequence.length());
             }
             if (charset.equals(CharsetUtil.US_ASCII) || charset.equals(CharsetUtil.ISO_8859_1)) {
                 int length = sequence.length();
@@ -2450,8 +2449,7 @@ final class MiMallocByteBufAllocator {
                 } else {
                     checkIndex(index, length);
                 }
-                // Directly pass in the rootParent() with the adjusted index
-                return ByteBufUtil.writeAscii(rootParent(), idx(index), sequence, length);
+                return ByteBufUtil.writeAscii(this, index, sequence, length);
             }
             byte[] bytes = sequence.toString().getBytes(charset);
             if (expand) {
