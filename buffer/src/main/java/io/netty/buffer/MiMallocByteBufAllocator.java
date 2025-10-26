@@ -498,7 +498,8 @@ final class MiMallocByteBufAllocator {
                             // Prefer to reuse fuller pages (in the hope the less used page gets freed).
                             pageCandidate = page;
                         }
-                        // If we find a non-expandable candidate, or searched for N pages, return with the best candidate.
+                        // If we find a non-expandable candidate, or searched for N pages,
+                        // return with the best candidate.
                         if (immediateAvailable || candidateCount > MAX_PAGE_CANDIDATE_SEARCH) {
                             break;
                         }
@@ -511,7 +512,7 @@ final class MiMallocByteBufAllocator {
                     }
                     // If the page is completely full, move it to the full
                     // queue so we don't visit long-lived pages too often.
-                    assert (!page.isInFull && !page.immediateAvailable());
+                    assert !page.isInFull && !page.immediateAvailable();
                     pageToFull(page, pq);
                 }
                 page = next;
