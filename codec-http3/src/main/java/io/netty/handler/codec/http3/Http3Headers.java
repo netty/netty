@@ -51,8 +51,13 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
         /**
          * {@code :status}.
          */
-        STATUS(":status", false, 0x10);
+        STATUS(":status", false, 0x10),
 
+        /**
+         * {@code :protocol}.
+         */
+        PROTOCOL(":protocol", true, 0x20);
+        
         private static final char PSEUDO_HEADER_PREFIX = ':';
         private static final byte PSEUDO_HEADER_PREFIX_BYTE = (byte) PSEUDO_HEADER_PREFIX;
 
@@ -185,6 +190,10 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
     Http3Headers status(CharSequence value);
 
     /**
+     * Sets the {@link PseudoHeaderName#PROTOCOL} header
+     */
+    Http3Headers protocol(CharSequence value);
+    /**
      * Gets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header
      *
      * @return the value of the header.
@@ -223,6 +232,12 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
      */
     @Nullable
     CharSequence status();
+
+    /**
+     * Gets the {@link PseudoHeaderName#PROTOCOL} header or {@code null} if not present
+     */
+    @Nullable
+    CharSequence protocol();
 
     /**
      * Returns {@code true} if a header with the {@code name} and {@code value} exists, {@code false} otherwise.
