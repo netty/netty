@@ -202,9 +202,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                 // chooser that contains all executors as a safe temporary choice.
                 tryScaleUpBy(1);
                 EventExecutor executor = allExecutorsChooser.next();
-                if (this.state.get().pausedExecutors.contains(executor)) {
-                    this.state.get().pausedExecutors.remove(executor);
-                }
+                this.state.get().pausedExecutors.remove(executor);
                 if (executor instanceof SingleThreadEventExecutor) {
                     SingleThreadEventExecutor stee = (SingleThreadEventExecutor) executor;
                     stee.resetIdleCycles();
