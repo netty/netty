@@ -1016,4 +1016,23 @@ public class Http2FrameCodecTest {
     private ChannelHandlerContext eqFrameCodecCtx() {
         return eq(frameCodec.ctx);
     }
+
+    @Test
+    public void invalidPayloadLength() throws Exception {
+        frameInboundWriter.writeInboundSettings(new Http2Settings());
+        channel.writeInbound(Unpooled.wrappedBuffer(new byte[]{
+                0, 0, 4, // length
+                0, // type: DATA
+                9, // flags: PADDED, END_STREAM
+                1, 0, 0, 0, // stream id
+                4, // pad length
+                0, 0, 0 // not enough space for padding
+        }));
+        assertThrows(Http2Exception.class, new Executable() {
+            @Override
+            public void execute() throws Throwable {
+                inboundHandler.checkException();
+            }
+        });
+    }
 }

@@ -23,7 +23,6 @@ import org.junit.jupiter.api.extension.BeforeAllCallback;
 import org.junit.jupiter.api.extension.BeforeEachCallback;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -123,8 +122,12 @@ public final class LeakPresenceExtension
         }
 
         @Override
-        protected ResourceScope currentScope() {
-            return Objects.requireNonNull(SCOPE.get(), "Resource created outside test?");
+        protected ResourceScope currentScope() throws AllocationProhibitedException {
+            ResourceScope scope = SCOPE.get();
+            if (scope == null) {
+                throw new AllocationProhibitedException("Resource created outside test?");
+            }
+            return scope;
         }
     }
 }

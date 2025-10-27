@@ -30,6 +30,7 @@ import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.util.LeakPresenceDetector;
 import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
@@ -128,7 +129,10 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
             // If oom will close the read event, release connection.
             // See https://github.com/netty/netty/issues/10434
-            if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
+            if (close ||
+                    cause instanceof OutOfMemoryError ||
+                    cause instanceof LeakPresenceDetector.AllocationProhibitedException ||
+                    cause instanceof IOException) {
                 closeOnRead(pipeline);
             }
         }
