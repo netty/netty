@@ -245,10 +245,9 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                         if (stee.isSuspended()) {
                             stee.execute(NO_OOP_TASK);
                             wokenUp.add(stee);
-                        } else if (oldState.pausedExecutors.contains(stee)) {
+                        } else if (oldState.pausedExecutors.remove(stee)) {
                             // Remove from the paused list so that it can accept connections once again
                             wokenUp.add(stee);
-                            oldState.pausedExecutors.remove(stee);
                         }
                     }
                 }
