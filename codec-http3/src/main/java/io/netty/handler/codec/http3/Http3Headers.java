@@ -205,7 +205,10 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
      * @return      this instance itself.
      * @see <a href="https://www.rfc-editor.org/rfc/rfc9220.html">RFC 9220: Bootstrapping WebSockets with HTTP/3</a>
      */
-    Http3Headers protocol(CharSequence value);
+    default Http3Headers protocol(CharSequence value) {
+        set(PseudoHeaderName.PROTOCOL.value(), value);
+        return this;
+    }
 
     /**
      * Gets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header
@@ -256,7 +259,9 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
      * @see <a href="https://www.rfc-editor.org/rfc/rfc9220.html">RFC 9220: Bootstrapping WebSockets with HTTP/3</a>
      */
     @Nullable
-    CharSequence protocol();
+    default CharSequence protocol() {
+        return get(PseudoHeaderName.PROTOCOL.value());
+    }
 
     /**
      * Returns {@code true} if a header with the {@code name} and {@code value} exists, {@code false} otherwise.
