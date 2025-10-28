@@ -20,6 +20,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReference;
@@ -111,24 +114,29 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @Test
     void adaptiveChunkMustDeallocateOrReuseWthBufferRelease() throws Exception {
         AdaptiveByteBufAllocator allocator = newAllocator(false);
-        ByteBuf a = allocator.heapBuffer(28 * 1024);
-        assertEquals(262144, allocator.usedHeapMemory());
-        ByteBuf b = allocator.heapBuffer(100 * 1024);
-        assertEquals(262144, allocator.usedHeapMemory());
-        b.release();
-        a.release();
-        assertEquals(262144, allocator.usedHeapMemory());
-        a = allocator.heapBuffer(28 * 1024);
-        assertEquals(262144, allocator.usedHeapMemory());
-        b = allocator.heapBuffer(100 * 1024);
-        assertEquals(262144, allocator.usedHeapMemory());
-        a.release();
-        ByteBuf c = allocator.heapBuffer(28 * 1024);
-        assertEquals(2 * 262144, allocator.usedHeapMemory());
-        c.release();
-        assertEquals(2 * 262144, allocator.usedHeapMemory());
-        b.release();
-        assertEquals(2 * 262144, allocator.usedHeapMemory());
+        Deque<ByteBuf> bufs = new ArrayDeque<ByteBuf>();
+        assertEquals(0, allocator.usedHeapMemory());
+        assertEquals(0, allocator.usedHeapMemory());
+        bufs.add(allocator.heapBuffer(256));
+        long usedHeapMemory = allocator.usedHeapMemory();
+        int buffersPerChunk = Math.toIntExact(usedHeapMemory / 256);
+        for (int i = 0; i < buffersPerChunk; i++) {
+            bufs.add(allocator.heapBuffer(256));
+        }
+        assertEquals(2 * usedHeapMemory, allocator.usedHeapMemory());
+        bufs.pop().release();
+        assertEquals(2 * usedHeapMemory, allocator.usedHeapMemory());
+        while (!bufs.isEmpty()) {
+            bufs.pop().release();
+        }
+        assertEquals(2 * usedHeapMemory, allocator.usedHeapMemory());
+        for (int i = 0; i < 2 * buffersPerChunk; i++) {
+            bufs.add(allocator.heapBuffer(256));
+        }
+        assertEquals(2 * usedHeapMemory, allocator.usedHeapMemory());
+        while (!bufs.isEmpty()) {
+            bufs.pop().release();
+        }
     }
 
     @ParameterizedTest
