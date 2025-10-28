@@ -25,8 +25,11 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -41,6 +44,7 @@ public class AutoScalingEventExecutorChooserFactoryTest {
 
     private static final class TestEventExecutor extends SingleThreadEventExecutor {
         private final AtomicBoolean highLoad = new AtomicBoolean(false);
+        private final AtomicInteger registeredChannels = new AtomicInteger(0);
 
         TestEventExecutor(EventExecutorGroup parent, Executor executor) {
             super(parent, executor, true, true, DEFAULT_MAX_PENDING_EXECUTOR_TASKS,
@@ -49,6 +53,19 @@ public class AutoScalingEventExecutorChooserFactoryTest {
 
         void setHighLoad(boolean highLoad) {
             this.highLoad.set(highLoad);
+        }
+
+        @Override
+        protected int getNumOfRegisteredChannels() {
+            return registeredChannels.get();
+        }
+
+        int getAndIncrementRegisteredChannels() {
+            return registeredChannels.incrementAndGet();
+        }
+
+        int getAndDecrementRegisteredChannels() {
+            return registeredChannels.decrementAndGet();
         }
 
         @Override
@@ -333,6 +350,70 @@ public class AutoScalingEventExecutorChooserFactoryTest {
                                   assertEquals(0.0, metric.utilization(),
                                                "Suspended executor should have 0.0 utilization.");
                               });
+        } finally {
+            group.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    @Test
+    @Timeout(30)
+    void testIdleExecutorsWithActiveConnectionsAreNotSuspended() throws InterruptedException {
+        int maxThreads = 2;
+        int minThreads = 1;
+        int timeWindowMs = 50;
+        TestEventExecutorGroup group = new TestEventExecutorGroup(minThreads, maxThreads,
+                timeWindowMs, TimeUnit.MILLISECONDS);
+        try {
+            startAllExecutors(group);
+            // Simulate active connections happening in the executor
+            for (EventExecutor executor: group) {
+                TestEventExecutor tee = (TestEventExecutor) executor;
+                tee.getAndIncrementRegisteredChannels();
+            }
+
+            // With the idle cycles, the active executor count should be the minimum threads
+            final long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+            while (group.activeExecutorCount() > minThreads && System.nanoTime() < deadline) {
+                Thread.sleep(timeWindowMs);
+            }
+            assertEquals(minThreads, group.activeExecutorCount(),
+                         "Group should scale down to 1 active executor");
+
+            // Ensure that even if there is only one active executor, that all of them are NOT suspended
+            boolean executorSuspended = false;
+            for (EventExecutor executor: group) {
+                SingleThreadEventExecutor stee = (SingleThreadEventExecutor) executor;
+                executorSuspended |= stee.isSuspended();
+            }
+            assertFalse(executorSuspended,
+                    "At least one executor was found to be suspended when all should be active.");
+
+            // Ensure the calling group.next() gives always the same executor
+            EventExecutor activeExecutor = group.next();
+            boolean foundDifferentExecutor = false;
+            for (int i = 0; i < 5 && !foundDifferentExecutor; i++) {
+                foundDifferentExecutor = !group.next().equals(activeExecutor);
+            }
+            assertFalse(foundDifferentExecutor,
+                    "There should only be one active executor but group.next() returned a different one.");
+
+            // Decrement active channels on the executor which is not active
+            TestEventExecutor pausedExecutor = null;
+            for (EventExecutor executor: group) {
+                if (!executor.equals(activeExecutor)) {
+                    TestEventExecutor tee = (TestEventExecutor) executor;
+                    tee.getAndDecrementRegisteredChannels();
+                    pausedExecutor = tee;
+                    break;
+                }
+            }
+            assertNotNull(pausedExecutor, "Did not find an executor which should have been paused.");
+
+            // Wait a few cycles and ensure that the executor is now suspended
+            while (!pausedExecutor.isSuspended() && System.nanoTime() < deadline) {
+                Thread.sleep(timeWindowMs);
+            }
+            assertTrue(pausedExecutor.isSuspended(), "Executor that was paused after idle cycles was not suspended.");
         } finally {
             group.shutdownGracefully().syncUninterruptibly();
         }
