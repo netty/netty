@@ -1333,7 +1333,7 @@
       <dependency>
         <groupId>io.projectreactor.tools</groupId>
         <artifactId>blockhound</artifactId>
-        <version>1.0.14.RELEASE</version>
+        <version>1.0.15.RELEASE</version>
       </dependency>
     </dependencies>
   </dependencyManagement>
