@@ -1169,6 +1169,18 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     }
 
     @Override
+    protected NioBuffer moveOwnership(Drop<NioBuffer> drop) {
+        NioBuffer copy = new NioBuffer(base, rmem, control, drop);
+        copy.roff = roff;
+        copy.woff = woff;
+        copy.implicitCapacityLimit = implicitCapacityLimit;
+        if (readOnly()) {
+            copy.makeReadOnly();
+        }
+        return copy;
+    }
+
+    @Override
     protected void makeInaccessible() {
         base = CLOSED_BUFFER;
         rmem = CLOSED_BUFFER;

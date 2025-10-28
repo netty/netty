@@ -281,4 +281,10 @@ public interface BufferAllocator extends SafeCloseable {
      */
     @Override
     void close();
+
+    /**
+     * Discern if this allocator has been closed.
+     * @return {@code true} if this allocator has been {@link #close()}.
+     */
+    boolean isClosed();
 }

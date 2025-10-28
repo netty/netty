@@ -656,5 +656,10 @@ public class JdkZlibTest {
         public void close() {
             wrapped.close();
         }
+
+        @Override
+        public boolean isClosed() {
+            return wrapped.isClosed();
+        }
     }
 }

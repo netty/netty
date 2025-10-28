@@ -96,6 +96,11 @@ class ManagedBufferAllocator implements BufferAllocator, AllocatorControl {
     }
 
     @Override
+    public boolean isClosed() {
+        return closed;
+    }
+
+    @Override
     public BufferAllocator getAllocator() {
         return this;
     }

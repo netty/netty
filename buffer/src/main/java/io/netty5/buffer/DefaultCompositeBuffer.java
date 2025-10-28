@@ -155,6 +155,10 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
      * @see CompositeBuffer#compose(BufferAllocator)
      */
     public static CompositeBuffer compose(BufferAllocator allocator) {
+        Objects.requireNonNull(allocator, "BufferAllocator cannot be null.");
+        if (allocator.isClosed()) {
+            throw new IllegalStateException("Allocator is closed: " + allocator);
+        }
         return new DefaultCompositeBuffer(allocator, EMPTY_BUFFER_ARRAY, COMPOSITE_DROP);
     }
 
@@ -469,6 +473,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         }
 
         return new DefaultCompositeBuffer(allocator, copies, COMPOSITE_DROP);
+    }
+
+    @Override
+    public CompositeBuffer moveAndClose() {
+        return (CompositeBuffer) super.moveAndClose();
     }
 
     @Override
@@ -1360,6 +1369,14 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
             composite.implicitCapacityLimit = implicitCapacityLimit;
             return composite;
         };
+    }
+
+    @Override
+    protected DefaultCompositeBuffer moveOwnership(Drop<DefaultCompositeBuffer> drop) {
+        var composite = new DefaultCompositeBuffer(allocator, bufs, drop);
+        composite.readOnly = readOnly;
+        composite.implicitCapacityLimit = implicitCapacityLimit;
+        return composite;
     }
 
     @Override

@@ -838,6 +838,16 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
     Buffer copy(int offset, int length, boolean readOnly);
 
     /**
+     * Create and return a new {@link Buffer} instance that is an exact copy of this buffer,
+     * including contents and offsets, and close this buffer.
+     * <p>
+     * The effect of this is that ownership of the buffer contents transfers to the caller in the returned buffer,
+     * preventing access to the buffer contents through any references to this buffer.
+     * @return A new buffer instance with the same offsets, and the same underlying memory.
+     */
+    Buffer moveAndClose();
+
+    /**
      * Splits the buffer into two, at {@code length} number of bytes from the current
      * {@linkplain #readerOffset() reader offset} position.
      * <p>

@@ -377,6 +377,11 @@ public abstract class SSLEngineTest {
         public void close() {
             delegate.close();
         }
+
+        @Override
+        public boolean isClosed() {
+            return delegate.isClosed();
+        }
     }
 
     @BeforeEach
