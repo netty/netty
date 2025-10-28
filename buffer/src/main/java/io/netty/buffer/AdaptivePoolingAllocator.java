@@ -149,6 +149,8 @@ final class AdaptivePoolingAllocator implements AdaptiveByteBufAllocator.Adaptiv
             8704, // 8192 + 512
             16384,
             16896, // 16384 + 512
+            32768,
+            65536,
     };
     private static final ChunkReleasePredicate CHUNK_RELEASE_ALWAYS = new ChunkReleasePredicate() {
         @Override
