@@ -540,7 +540,11 @@ public class HashedWheelTimer implements Timer {
                 int stopIndex = (int) (ticks & mask);
 
                 HashedWheelBucket bucket = wheel[stopIndex];
-                bucket.addTimeout(timeout);
+                if (calculated < tick) {
+                    bucket.addTimeoutFirst(timeout);
+                } else {
+                    bucket.addTimeout(timeout);
+                }
             }
         }
 
@@ -774,6 +778,21 @@ public class HashedWheelTimer implements Timer {
                 tail.next = timeout;
                 timeout.prev = tail;
                 tail = timeout;
+            }
+        }
+
+        /**
+         * Add {@link HashedWheelTimeout} to the head of this bucket.
+         */
+        public void addTimeoutFirst(HashedWheelTimeout timeout) {
+            assert timeout.bucket == null;
+            timeout.bucket = this;
+            if (head == null) {
+                head = tail = timeout;
+            } else {
+                head.prev = timeout;
+                timeout.next = head;
+                head = timeout;
             }
         }
 
