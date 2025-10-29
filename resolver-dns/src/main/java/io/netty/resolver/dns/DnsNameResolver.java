@@ -1276,17 +1276,6 @@ public class DnsNameResolver extends InetNameResolver {
                                        final boolean completeEarlyIfPossible) {
 
         assert executor().inEventLoop();
-        resolveNow(channel, hostname, additionals, originalPromise, promise,
-                resolveCache, completeEarlyIfPossible);
-    }
-
-    private void resolveNow(final Channel channel,
-                            final String hostname,
-                            final DnsRecord[] additionals,
-                            final Promise<?> originalPromise,
-                            final Promise<List<InetAddress>> promise,
-                            final DnsCache resolveCache,
-                            final boolean completeEarlyIfPossible) {
         final DnsServerAddressStream nameServerAddrs =
                 dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
         DnsAddressResolveContext ctx = new DnsAddressResolveContext(this, channel,
