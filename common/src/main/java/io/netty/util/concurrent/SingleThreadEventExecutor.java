@@ -1174,6 +1174,15 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             // changed the state in between, so this can't spin.
             currentState = state;
         }
+        if (currentState == ST_SUSPENDING) {
+            while (state == ST_SUSPENDING) {
+                if (!STATE_UPDATER.compareAndSet(this, currentState, ST_STARTED)) {
+                    continue;
+                    // CAS did not work, try again if the state is still in suspending
+                }
+                break;
+            }
+        }
     }
 
     private boolean ensureThreadStarted(int oldState) {
