@@ -33,7 +33,6 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.handler.codec.CorruptedFrameException;
@@ -237,6 +236,15 @@ public class DnsNameResolver extends InetNameResolver {
     };
     private static final DatagramDnsQueryEncoder DATAGRAM_ENCODER = new DatagramDnsQueryEncoder();
 
+    private static final GenericFutureListener<Future<? super AddressedEnvelope<? extends DnsResponse,
+            InetSocketAddress>>> RELEASE_LISTENER = future -> {
+        if (future.isSuccess()) {
+            AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
+                    (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) future.getNow();
+            ReferenceCountUtil.release(result);
+        }
+    };
+
     // Comparator that ensures we will try first to use the nameservers that use our preferred address type.
     private final Comparator<InetSocketAddress> nameServerComparator;
     /**
@@ -275,7 +283,8 @@ public class DnsNameResolver extends InetNameResolver {
     private final boolean retryWithTcpOnTimeout;
 
     private final int maxNumConsolidation;
-    private final Map<String, Future<List<InetAddress>>> inflightLookups;
+    private final Map<DnsQuestion, Promise<AddressedEnvelope<? extends DnsResponse,
+            InetSocketAddress>>> inflightLookups;
 
     /**
      * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
@@ -484,7 +493,7 @@ public class DnsNameResolver extends InetNameResolver {
         nameServerComparator = new NameServerComparator(addressType(preferredAddressType));
         this.maxNumConsolidation = maxNumConsolidation;
         if (maxNumConsolidation > 0) {
-            inflightLookups = new HashMap<String, Future<List<InetAddress>>>();
+            inflightLookups = new HashMap<>();
         } else {
             inflightLookups = null;
         }
@@ -1267,43 +1276,6 @@ public class DnsNameResolver extends InetNameResolver {
                                        final boolean completeEarlyIfPossible) {
 
         assert executor().inEventLoop();
-
-        if (inflightLookups != null && (additionals == null || additionals.length == 0)) {
-            Future<List<InetAddress>> inflightFuture = inflightLookups.get(hostname);
-            if (inflightFuture != null) {
-                inflightFuture.addListener(new GenericFutureListener<Future<? super List<InetAddress>>>() {
-                    @SuppressWarnings("unchecked")
-                    @Override
-                    public void operationComplete(Future<? super List<InetAddress>> future) {
-                        if (future.isSuccess()) {
-                            promise.setSuccess((List<InetAddress>) future.getNow());
-                        } else {
-                            Throwable cause = future.cause();
-                            if (isTimeoutError(cause)) {
-                                // The failure was caused by a timeout. This might be happening as a result of
-                                // the remote server be overloaded for some short amount of time or because
-                                // UDP packets were dropped on the floor. In this case lets try to just do the
-                                // query explicit and don't cascade this possible temporary failure.
-                                resolveNow(channel, hostname, additionals, originalPromise, promise,
-                                        resolveCache, completeEarlyIfPossible);
-                            } else {
-                                promise.setFailure(cause);
-                            }
-                        }
-                    }
-                });
-                return;
-            // Check if we have space left in the map.
-            } else if (inflightLookups.size() < maxNumConsolidation) {
-                inflightLookups.put(hostname, promise);
-                promise.addListener(new GenericFutureListener<Future<? super List<InetAddress>>>() {
-                    @Override
-                    public void operationComplete(Future<? super List<InetAddress>> future) {
-                        inflightLookups.remove(hostname);
-                    }
-                });
-            }
-        }
         resolveNow(channel, hostname, additionals, originalPromise, promise,
                 resolveCache, completeEarlyIfPossible);
     }
@@ -1450,10 +1422,78 @@ public class DnsNameResolver extends InetNameResolver {
             final DnsQueryLifecycleObserver queryLifecycleObserver,
             DnsRecord[] additionals, boolean flush,
             Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
-
         final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> castPromise = cast(
                 checkNotNull(promise, "promise"));
         final int payloadSize = isOptResourceEnabled() ? maxPayloadSize() : 0;
+
+        if (inflightLookups != null && (additionals == null || additionals.length == 0)) {
+            Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> inflight =
+                    inflightLookups.get(question);
+            if (inflight != null) {
+                inflight.addListener(f -> {
+                    if (f.isSuccess()) {
+                        // Notify the observer and after that the promise
+                        queryLifecycleObserver.querySucceed();
+                        AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
+                                (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) f.getNow();
+
+                        // Retain the result as the listener on the promise is responsible to release it.
+                        ReferenceCountUtil.retain(result);
+                        promise.setSuccess(result);
+                    } else {
+                        Throwable cause = f.cause();
+                        if (isTimeoutError(cause)) {
+                            doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
+                                    additionals, flush, payloadSize, castPromise);
+                        } else {
+                            // Notify the observer and after that the promise
+                            queryLifecycleObserver.queryFailed(cause);
+                            promise.setFailure(cause);
+                        }
+                    }
+                });
+            } else if (inflightLookups.size() < maxNumConsolidation) {
+                // Create a new promise as we need to ensure we are the first that will add a listener to it to retain
+                // the result before anyone can release it.
+                Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> newPromise =
+                        executor().newPromise();
+                Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> old =
+                        inflightLookups.put(question, newPromise);
+                assert old == null;
+
+                newPromise.addListener(f -> {
+                    if (f.isSuccess()) {
+                        // On success we need to retain the result so listeners that are added after this one
+                        // will still be able to use the result.
+                        AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
+                                (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) f.getNow();
+                        ReferenceCountUtil.retain(result);
+                    }
+                    // Remove the promise and add another listener to it that will call release() on the result.
+                    // As the execution of the listeners is guaranteed to be in the same order as how these were added
+                    // we know that all previous added listeners had a chance to handle the result already.
+                    Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> p =
+                            inflightLookups.remove(question);
+                    assert p != null;
+                    p.addListener(RELEASE_LISTENER);
+                });
+
+                return doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
+                        additionals, flush, payloadSize, cast(newPromise));
+            }
+        }
+        return doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
+                additionals, flush, payloadSize, castPromise);
+    }
+
+    private Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> doQueryNow(
+            Channel channel,
+            InetSocketAddress nameServerAddr, DnsQuestion question,
+            final DnsQueryLifecycleObserver queryLifecycleObserver,
+            DnsRecord[] additionals, boolean flush,
+            int payloadSize,
+            Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> castPromise) {
+
         try {
             DnsQueryContext queryContext = new DatagramDnsQueryContext(channel, nameServerAddr,
                     queryContextManager, payloadSize, isRecursionDesired(), queryTimeoutMillis(), question, additionals,
