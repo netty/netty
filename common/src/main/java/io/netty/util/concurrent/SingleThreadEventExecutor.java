@@ -1154,6 +1154,14 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     }
                 }
             }
+        } else if (currentState == ST_SUSPENDING) {
+            while (state == ST_SUSPENDING) {
+                if (!STATE_UPDATER.compareAndSet(this, currentState, ST_STARTED)) {
+                    continue;
+                    // CAS did not work, try again if the state is still in suspending
+                }
+                break;
+            }
         }
     }
 
