@@ -494,11 +494,11 @@ public class HashedWheelTimer implements Timer {
                 final long deadline = waitForNextTick();
                 if (deadline > 0) {
                     int idx = (int) (tick & mask);
-                    processCancelledTasks();
                     HashedWheelBucket bucket =
                             wheel[idx];
                     transferTimeoutsToBuckets();
                     bucket.expireTimeouts(deadline);
+                    processCancelledTasks();
                     tick++;
                 }
             } while (WORKER_STATE_UPDATER.get(HashedWheelTimer.this) == WORKER_STATE_STARTED);
