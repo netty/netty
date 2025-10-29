@@ -23,7 +23,10 @@ import io.netty5.channel.unix.NativeInetAddress;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.Socket;
 import io.netty5.util.internal.SocketUtils;
+import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.UnstableApi;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.Inet6Address;
@@ -42,6 +45,15 @@ import static io.netty5.channel.unix.Errors.newIOException;
 @UnstableApi
 public final class LinuxSocket extends Socket {
     private static final long MAX_UINT32_T = 0xFFFFFFFFL;
+    private static final Logger LOG = LoggerFactory.getLogger(LinuxSocket.class);
+    private static final boolean IP_MULTICAST_ALL =
+            SystemPropertyUtil.getBoolean("io.netty5.transport.linux.ipMulticastAll", false);
+
+    static {
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("-Dio.netty5.transport.linux.ipMulticastAll: {}", IP_MULTICAST_ALL);
+        }
+    }
 
     LinuxSocket(int fd, SocketProtocolFamily family) {
         super(fd, family);
@@ -205,6 +217,10 @@ public final class LinuxSocket extends Socket {
         setIpBindAddressNoPort(intValue(), enabled ? 1 : 0);
     }
 
+    void setIpMulticastAll(boolean enabled) throws IOException {
+        setIpMulticastAll(intValue(), ipv6, enabled ? 1 : 0);
+    }
+
     void setIpFreeBind(boolean enabled) throws IOException {
         setIpFreeBind(intValue(), enabled ? 1 : 0);
     }
@@ -268,6 +284,10 @@ public final class LinuxSocket extends Socket {
 
     boolean isIpBindAddressNoPort() throws IOException {
         return isIpBindAddressNoPort(intValue()) != 0;
+    }
+
+    boolean isIpMulticastAll() throws IOException {
+        return isIpMulticastAll(intValue(), ipv6) != 0;
     }
 
     boolean isIpFreeBind() throws IOException {
@@ -431,11 +451,30 @@ public final class LinuxSocket extends Socket {
     }
 
     public static LinuxSocket newSocketDgram(boolean ipv6) {
-        return new LinuxSocket(newSocketDgram0(ipv6), ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
+        final LinuxSocket socket = new LinuxSocket(
+                newSocketDgram0(ipv6), ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
+
+        // Configure IP_MULTICAST_ALL - disable by default to match the behavior of NIO.
+        try {
+            socket.setIpMulticastAll(IP_MULTICAST_ALL);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+
+        return socket;
     }
 
     public static LinuxSocket newSocketDgram(ProtocolFamily family) {
-        return new LinuxSocket(newSocketDgram0(family), SocketProtocolFamily.of(family));
+        final LinuxSocket socket = new LinuxSocket(newSocketDgram0(family), SocketProtocolFamily.of(family));
+
+        // Configure IP_MULTICAST_ALL - disable by default to match the behavior of NIO.
+        try {
+            socket.setIpMulticastAll(IP_MULTICAST_ALL);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+
+        return socket;
     }
 
     public static LinuxSocket newSocketDgram() {
@@ -478,6 +517,7 @@ public final class LinuxSocket extends Socket {
     private static native int getTcpUserTimeout(int fd) throws IOException;
     private static native int getTimeToLive(int fd) throws IOException;
     private static native int isIpBindAddressNoPort(int fd) throws IOException;
+    private static native int isIpMulticastAll(int fd, boolean ipv6) throws IOException;
     private static native int isIpFreeBind(int fd) throws IOException;
     private static native int isIpTransparent(int fd) throws IOException;
     private static native int isIpRecvOrigDestAddr(int fd) throws IOException;
@@ -495,6 +535,7 @@ public final class LinuxSocket extends Socket {
     private static native void setTcpKeepCnt(int fd, int probes) throws IOException;
     private static native void setTcpUserTimeout(int fd, int milliseconds)throws IOException;
     private static native void setIpBindAddressNoPort(int fd, int ipBindAddressNoPort) throws IOException;
+    private static native void setIpMulticastAll(int fd, boolean ipv6, int enabled) throws IOException;
     private static native void setIpFreeBind(int fd, int freeBind) throws IOException;
     private static native void setIpTransparent(int fd, int transparent) throws IOException;
     private static native void setIpRecvOrigDestAddr(int fd, int transparent) throws IOException;

@@ -534,6 +534,9 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel<UnixCha
         if (option == IOUringChannelOption.UDP_GRO) {
             return (T) Boolean.valueOf(isUdpGro());
         }
+        if (option == IOUringChannelOption.IP_MULTICAST_ALL) {
+            return (T) Boolean.valueOf(isIpMulticastAll());
+        }
         return super.getExtendedOption(option);
     }
 
@@ -545,6 +548,8 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel<UnixCha
             setMaxDatagramSize((Integer) value);
         } else if (option == IOUringChannelOption.UDP_GRO) {
             setUdpGro((Boolean) value);
+        } else if (option == IOUringChannelOption.IP_MULTICAST_ALL) {
+            setIpMulticastAll((Boolean) value);
         } else {
             super.setExtendedOption(option, value);
         }
@@ -554,7 +559,8 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel<UnixCha
     protected boolean isExtendedOptionSupported(ChannelOption<?> option) {
         if (option == ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION ||
                 option == IOUringChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE ||
-                option == IOUringChannelOption.UDP_GRO) {
+                option == IOUringChannelOption.UDP_GRO ||
+                option == IOUringChannelOption.IP_MULTICAST_ALL) {
             return true;
         }
         return super.isExtendedOptionSupported(option);
@@ -600,6 +606,30 @@ public final class IOUringDatagramChannel extends AbstractIOUringChannel<UnixCha
         // We don't do a syscall here but just return the cached value due a kernel bug:
         // https://lore.kernel.org/netdev/20210325195614.800687-1-norman_maurer@apple.com/T/#u
         return gro;
+    }
+
+    /**
+     * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> (or
+     * IPV6_MULTICAST_ALL for IPV6) is enabled, {@code false} otherwise.
+     */
+    private boolean isIpMulticastAll() {
+        try {
+            return socket.isIpMulticastAll();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> is
+     * enabled (or IPV6_MULTICAST_ALL for IPV6), {@code false} for disable it. Default is enabled.
+     */
+    private void setIpMulticastAll(boolean ipMulticastAll) {
+        try {
+            socket.setIpMulticastAll(ipMulticastAll);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     private static final class CachedMsgHdrMemory extends MsgHdrMemory

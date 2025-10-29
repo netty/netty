@@ -34,6 +34,7 @@ public final class EpollChannelOption<T> extends UnixChannelOption<T> {
     public static final ChannelOption<Boolean> IP_BIND_ADDRESS_NO_PORT = valueOf("IP_BIND_ADDRESS_NO_PORT");
     public static final ChannelOption<Boolean> IP_TRANSPARENT = valueOf("IP_TRANSPARENT");
     public static final ChannelOption<Boolean> IP_RECVORIGDSTADDR = valueOf("IP_RECVORIGDSTADDR");
+    public static final ChannelOption<Boolean> IP_MULTICAST_ALL = valueOf("IP_MULTICAST_ALL");
     /**
      * @deprecated Use {@link ChannelOption#TCP_FASTOPEN} instead.
      */
