@@ -1462,19 +1462,24 @@ public class DnsNameResolver extends InetNameResolver {
                 assert old == null;
 
                 newPromise.addListener(f -> {
-                    if (f.isSuccess()) {
-                        // On success we need to retain the result so listeners that are added after this one
-                        // will still be able to use the result.
-                        AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
-                                (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) f.getNow();
-                        ReferenceCountUtil.retain(result);
-                    }
                     // Remove the promise and add another listener to it that will call release() on the result.
                     // As the execution of the listeners is guaranteed to be in the same order as how these were added
                     // we know that all previous added listeners had a chance to handle the result already.
                     Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> p =
                             inflightLookups.remove(question);
                     assert p != null;
+
+                    if (f.isSuccess()) {
+                        // On success we need to retain the result so listeners that are added after this one
+                        // will still be able to use the result.
+                        AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
+                                (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) f.getNow();
+                        ReferenceCountUtil.retain(result);
+                        promise.setSuccess(result);
+                    } else {
+                        promise.setFailure(f.cause());
+                    }
+
                     p.addListener(RELEASE_LISTENER);
                 });
 
