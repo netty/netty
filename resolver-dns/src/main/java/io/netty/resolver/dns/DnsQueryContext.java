@@ -64,6 +64,7 @@ abstract class DnsQueryContext {
     private final Channel channel;
     private final InetSocketAddress nameServerAddr;
     private final DnsQueryContextManager queryContextManager;
+    private final DnsQueryLifecycleObserver queryLifecycleObserver;
     private final Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise;
 
     private final DnsQuestion question;
@@ -84,6 +85,7 @@ abstract class DnsQueryContext {
     DnsQueryContext(Channel channel,
                     InetSocketAddress nameServerAddr,
                     DnsQueryContextManager queryContextManager,
+                    DnsQueryLifecycleObserver queryLifecycleObserver,
                     int maxPayLoadSize,
                     boolean recursionDesired,
                     long queryTimeoutMillis,
@@ -94,6 +96,7 @@ abstract class DnsQueryContext {
                     boolean retryWithTcpOnTimeout) {
         this.channel = checkNotNull(channel, "channel");
         this.queryContextManager = checkNotNull(queryContextManager, "queryContextManager");
+        this.queryLifecycleObserver = checkNotNull(queryLifecycleObserver, "queryLifecycleObserver");
         this.nameServerAddr = checkNotNull(nameServerAddr, "nameServerAddr");
         this.question = checkNotNull(question, "question");
         this.additionals = checkNotNull(additionals, "additionals");
@@ -165,9 +168,8 @@ abstract class DnsQueryContext {
      * Write the query and return the {@link ChannelFuture} that is completed once the write completes.
      *
      * @param flush                 {@code true} if {@link Channel#flush()} should be called as well.
-     * @return                      the {@link ChannelFuture} that is notified once once the write completes.
      */
-    final ChannelFuture writeQuery(boolean flush) {
+    final void writeQuery(boolean flush) {
         assert id == Integer.MIN_VALUE : this.getClass().getSimpleName() +
                 ".writeQuery(...) can only be executed once.";
 
@@ -175,7 +177,7 @@ abstract class DnsQueryContext {
             // We did exhaust the id space, fail the query
             IllegalStateException e = new IllegalStateException("query ID space exhausted: " + question());
             finishFailure("failed to send a query via " + protocol(), e, false);
-            return channel.newFailedFuture(e);
+            queryLifecycleObserver.queryWritten(nameServerAddr, channel.newFailedFuture(e));
         }
 
         // Ensure we remove the id from the QueryContextManager once the query completes.
@@ -227,7 +229,8 @@ abstract class DnsQueryContext {
                     channel, protocol(), id, nameServerAddr, question);
         }
 
-        return sendQuery(query, flush);
+        ChannelFuture f = sendQuery(query, flush);
+        queryLifecycleObserver.queryWritten(nameServerAddr, f);
     }
 
     private void removeFromContextManager(InetSocketAddress nameServerAddr) {
@@ -370,7 +373,7 @@ abstract class DnsQueryContext {
                 Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise =
                         tcpCh.eventLoop().newPromise();
                 final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(tcpCh,
-                        (InetSocketAddress) tcpCh.remoteAddress(), queryContextManager, 0,
+                        (InetSocketAddress) tcpCh.remoteAddress(), queryContextManager, queryLifecycleObserver, 0,
                         recursionDesired, queryTimeoutMillis, question(), additionals, promise);
                 tcpCh.pipeline().addLast(TCP_ENCODER);
                 tcpCh.pipeline().addLast(new TcpDnsResponseDecoder());
