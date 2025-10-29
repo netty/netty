@@ -35,7 +35,7 @@ import static org.junit.jupiter.api.Assertions.fail;
 public class DefaultPriorityQueueTest {
     @Test
     public void testPoll() {
-        PriorityQueue<TestElement> queue = new DefaultPriorityQueue<TestElement>(TestElementComparator.INSTANCE, 0);
+        PriorityQueue<TestElement> queue = new DefaultPriorityQueue<>(TestElementComparator.INSTANCE, 0);
         assertEmptyQueue(queue);
 
         TestElement a = new TestElement(5);
@@ -77,7 +77,7 @@ public class DefaultPriorityQueueTest {
 
     @Test
     public void testClear() {
-        PriorityQueue<TestElement> queue = new DefaultPriorityQueue<TestElement>(TestElementComparator.INSTANCE, 0);
+        PriorityQueue<TestElement> queue = new DefaultPriorityQueue<>(TestElementComparator.INSTANCE, 0);
         assertEmptyQueue(queue);
 
         TestElement a = new TestElement(5);
@@ -109,7 +109,7 @@ public class DefaultPriorityQueueTest {
 
     @Test
     public void testClearIgnoringIndexes() {
-        PriorityQueue<TestElement> queue = new DefaultPriorityQueue<TestElement>(TestElementComparator.INSTANCE, 0);
+        PriorityQueue<TestElement> queue = new DefaultPriorityQueue<>(TestElementComparator.INSTANCE, 0);
         assertEmptyQueue(queue);
 
         TestElement a = new TestElement(5);

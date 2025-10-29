@@ -15,6 +15,10 @@
  */
 package io.netty.handler.codec.xml;
 
+import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.hash;
+
 /**
  * DTD (Document Type Definition)
  */
@@ -40,17 +44,12 @@ public class XmlDTD {
         }
 
         XmlDTD xmlDTD = (XmlDTD) o;
-
-        if (text != null ? !text.equals(xmlDTD.text) : xmlDTD.text != null) {
-            return false;
-        }
-
-        return true;
+        return Objects.equals(text, xmlDTD.text);
     }
 
     @Override
     public int hashCode() {
-        return text != null ? text.hashCode() : 0;
+        return hash(text);
     }
 
     @Override

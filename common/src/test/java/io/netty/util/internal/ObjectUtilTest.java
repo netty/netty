@@ -17,6 +17,7 @@ package io.netty.util.internal;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -72,6 +73,10 @@ public class ObjectUtilTest {
     private static final String NUM_POS_NAME = "NUMBER_POSITIVE";
     private static final String NUM_ZERO_NAME = "NUMBER_ZERO";
     private static final String NUM_NEG_NAME = "NUMBER_NEGATIVE";
+    private static final int p1 = 31;
+    private static final int p2 = p1 * p1;
+    private static final int p3 = p1 * p1 * p1;
+    private static final int p4 = p1 * p1 * p1 * p1;
 
     @Test
     public void testCheckNotNull() {
@@ -610,5 +615,47 @@ public class ObjectUtilTest {
         assertThrows(IllegalArgumentException.class, () -> {
             ObjectUtil.checkInRange(1.1, 0.0, 1.0, "above range");
         });
+    }
+
+    @Test
+    void hash_forSingleObject() {
+        assertEquals(5, ObjectUtil.hash(5));
+        assertEquals(0, ObjectUtil.hash(null));
+    }
+
+    @Test
+    void hash_forBoolean() {
+        assertEquals(1231, ObjectUtil.hash(true));
+        assertEquals(1237, ObjectUtil.hash(false));
+    }
+
+    @Test
+    void hash_forTwoObjects() {
+        assertEquals(p1 * 100 + 200, ObjectUtil.hash(100, 200));
+        assertEquals(p1 * 100, ObjectUtil.hash(100, null));
+        assertEquals(200, ObjectUtil.hash(null, 200));
+        assertEquals(0, ObjectUtil.hash(null, null));
+    }
+
+    @Test
+    void hash_forThreeObjects() {
+        assertEquals(p2 * 100 + p1 * 200 + 300, ObjectUtil.hash(100, 200, 300));
+        assertEquals(p2 * 100 + p1 * 200, ObjectUtil.hash(100, 200, null));
+        assertEquals(p2 * 100 + 300, ObjectUtil.hash(100, null, 300));
+        assertEquals(p1 * 200 + 300, ObjectUtil.hash(null, 200, 300));
+        assertEquals(p2 * 100, ObjectUtil.hash(100, null, null));
+        assertEquals(0, ObjectUtil.hash(null, null, null));
+    }
+
+    @Test
+    void hash_forFourObjects() {
+        assertEquals(p3 * 100 + p2 * 200 + p1 * 300 + 400, ObjectUtil.hash(100, 200, 300, 400));
+        assertEquals(0, ObjectUtil.hash(null, null, null, null));
+    }
+
+    @Test
+    void hash_forFiveObjects() {
+        assertEquals(p4 * 100 + p3 * 200 + p2 * 300 + p1 * 400 + 500, ObjectUtil.hash(100, 200, 300, 400, 500));
+        assertEquals(0, ObjectUtil.hash(null, null, null, null, null));
     }
 }
