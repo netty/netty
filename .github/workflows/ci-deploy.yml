@@ -105,11 +105,6 @@ jobs:
             cache-maven-${{ hashFiles('**/pom.xml') }}
             cache-maven-
 
-      # Setup some env to re-use later.
-      - name: Prepare enviroment variables
-        run: |
-          echo "LOCAL_STAGING_DIR=$HOME/local-staging" >> $GITHUB_ENV
-
       # Hardcode the staging artifacts that need to be downloaded.
       # These must match the matrix setups. There is currently no way to pull this out of the config.
       - name: Download linux-aarch64 staging directory
@@ -127,19 +122,19 @@ jobs:
       - name: Merge staging repositories
         run: |
           mkdir -p ~/local-staging/deferred
-          cat ~/linux-aarch64-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cat ~/linux-aarch64-local-staging/deferred/.index >> ~/local-staging/deferred/.index
           cp -r ~/linux-aarch64-local-staging/deferred/* ~/local-staging/deferred/
-          cat ~/linux-x86_64-java25-local-staging/deferred/.index >>  ~/local-staging/deferred/.index
+          cat ~/linux-x86_64-java25-local-staging/deferred/.index >> ~/local-staging/deferred/.index
           cp -r ~/linux-x86_64-java25-local-staging/deferred/* ~/local-staging/deferred/
 
       - uses: s4u/maven-settings-action@v3.0.0
         with:
           servers: |
             [{
-              "id": "sonatype-nexus-snapshots",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+              "id": "central-portal-snapshots",
+              "username": "${{ secrets.MAVEN_CENTRAL_USERNAME }}",
+              "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
             }]
 
       - name: Deploy local staged artifacts
-        run: ./mvnw -B --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DaltStagingDirectory=$LOCAL_STAGING_DIR
+        run: ./mvnw -B -ntp --file pom.xml org.sonatype.central:central-publishing-maven-plugin:publish -DaltStagingDirectory=$HOME/local-staging -DserverId=central-portal-snapshots

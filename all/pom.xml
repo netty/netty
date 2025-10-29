@@ -47,20 +47,6 @@
   </dependencyManagement>
 
   <profiles>
-    <!--
-      This profile should be used during the release process together with the "native-dependencies" profile.
-      There is no need to do this by hand tho, use the ./scripts/finish_release.sh script.
-     -->
-    <profile>
-      <id>staging</id>
-      <repositories>
-        <repository>
-          <id>staged-releases</id>
-          <name>Staged Releases</name>
-          <url>https://oss.sonatype.org/service/local/repositories/${stagingRepositoryId}/content/</url>
-        </repository>
-      </repositories>
-    </profile>
     <profile>
       <id>native-dependencies</id>
       <dependencies>

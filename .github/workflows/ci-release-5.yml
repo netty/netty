@@ -128,9 +128,9 @@ jobs:
         with:
           servers: |
             [{
-              "id": "sonatype-nexus-staging",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+              "id": "central",
+              "username": "${{ secrets.MAVEN_CENTRAL_USERNAME }}",
+              "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
             }]
 
       # Cache .m2/repository
@@ -228,9 +228,9 @@ jobs:
         with:
           servers: |
             [{
-              "id": "sonatype-nexus-staging",
-              "username": "${{ secrets.SONATYPE_USERNAME }}",
-              "password": "${{ secrets.SONATYPE_PASSWORD }}"
+              "id": "central",
+              "username": "${{ secrets.MAVEN_CENTRAL_USERNAME }}",
+              "password": "${{ secrets.MAVEN_CENTRAL_PASSWORD }}"
             }]
 
       # Cache .m2/repository
@@ -244,10 +244,13 @@ jobs:
             cache-maven-${{ hashFiles('**/pom.xml') }}
             cache-maven-
 
-      - name: Deploy local staged artifacts
+      - name: Create bundle
         working-directory: ./prepare-release-workspace/
-        # If we don't want to close the repository we can add -DskipStagingRepositoryClose=true
-        run: ./mvnw -B -ntp --file pom.xml org.sonatype.plugins:nexus-staging-maven-plugin:deploy-staged -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/home/runner/local-staging -DskipStagingRepositoryClose=true
+        run: bash ./.github/scripts/bundle_create.sh ~/central-bundle.zip ~/local-staging/
+
+      - name: Upload bundle to maven central
+        working-directory: ./prepare-release-workspace/
+        run: bash ./.github/scripts/bundle_upload.sh ~/central-bundle.zip ${{ secrets.MAVEN_CENTRAL_USERNAME }} ${{ secrets.MAVEN_CENTRAL_PASSWORD }}
 
       - name: Rollback release on failure
         working-directory: ./prepare-release-workspace/
