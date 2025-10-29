@@ -1409,6 +1409,18 @@
                   <new>interface org.jboss.marshalling.UnmarshallingObjectInputFilter</new>
                   <justification>We need to build with upgraded JBoss Marshalling version. Otherwise, testsuite-jpms won't compile.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class java.lang.invoke.MethodHandle</new>
+                  <justification>Exposed supplementary class used in a public capacity for varhandle-stub.</justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.class.externalClassExposedInAPI</code>
+                  <new>class java.lang.invoke.VarHandle</new>
+                  <justification>Exposed supplementary class used in a public capacity for varhandle-stub.</justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
