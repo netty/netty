@@ -51,7 +51,18 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
         /**
          * {@code :status}.
          */
-        STATUS(":status", false, 0x10);
+        STATUS(":status", false, 0x10),
+
+        /**
+         * {@code :protocol}.
+         * <p>
+         * Used for Extended CONNECT requests as defined in RFC 9220.
+         * This pseudo-header is only valid for CONNECT requests and indicates
+         * the desired protocol for the connection (e.g., "webtransport", "websocket").
+         *
+         * @see <a href="https://www.rfc-editor.org/rfc/rfc9220.html">RFC 9220: Bootstrapping WebSockets with HTTP/3</a>
+         */
+        PROTOCOL(":protocol", true, 0x20);
 
         private static final char PSEUDO_HEADER_PREFIX = ':';
         private static final byte PSEUDO_HEADER_PREFIX_BYTE = (byte) PSEUDO_HEADER_PREFIX;
@@ -185,6 +196,21 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
     Http3Headers status(CharSequence value);
 
     /**
+     * Sets the {@link PseudoHeaderName#PROTOCOL} header
+     * <p>
+     * This pseudo-header is used for Extended CONNECT requests as defined in RFC 9220.
+     * Common values include "webtransport" and "websocket".
+     *
+     * @param value the value for the header.
+     * @return      this instance itself.
+     * @see <a href="https://www.rfc-editor.org/rfc/rfc9220.html">RFC 9220: Bootstrapping WebSockets with HTTP/3</a>
+     */
+    default Http3Headers protocol(CharSequence value) {
+        set(PseudoHeaderName.PROTOCOL.value(), value);
+        return this;
+    }
+
+    /**
      * Gets the {@link PseudoHeaderName#METHOD} header or {@code null} if there is no such header
      *
      * @return the value of the header.
@@ -223,6 +249,19 @@ public interface Http3Headers extends Headers<CharSequence, CharSequence, Http3H
      */
     @Nullable
     CharSequence status();
+
+    /**
+     * Gets the {@link PseudoHeaderName#PROTOCOL} header or {@code null} if there is no such header
+     * <p>
+     * This pseudo-header is used for Extended CONNECT requests as defined in RFC 9220.
+     *
+     * @return the value of the header.
+     * @see <a href="https://www.rfc-editor.org/rfc/rfc9220.html">RFC 9220: Bootstrapping WebSockets with HTTP/3</a>
+     */
+    @Nullable
+    default CharSequence protocol() {
+        return get(PseudoHeaderName.PROTOCOL.value());
+    }
 
     /**
      * Returns {@code true} if a header with the {@code name} and {@code value} exists, {@code false} otherwise.
