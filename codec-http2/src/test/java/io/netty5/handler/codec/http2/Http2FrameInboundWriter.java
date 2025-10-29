@@ -102,7 +102,7 @@ final class Http2FrameInboundWriter implements Closeable {
     }
 
     void writeInboundFrame(
-            byte frameType, int streamId, Http2Flags flags, Buffer payload) throws Exception {
+            short frameType, int streamId, Http2Flags flags, Buffer payload) throws Exception {
         writer.writeFrame(ctx, frameType, streamId, flags, payload).asStage().sync();
     }
 
