@@ -14,6 +14,8 @@
  */
 package io.netty5.util.collection;
 
+import org.jetbrains.annotations.Nullable;
+
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -50,16 +52,19 @@ public final class @K@Collections {
      * An empty map. All operations that attempt to modify the map are unsupported.
      */
     private static final class EmptyMap implements @K@ObjectMap<Object> {
+
+        @Nullable
         @Override
         public Object get(@k@ key) {
             return null;
         }
 
         @Override
-        public Object put(@k@ key, Object value) {
+        public Object put(@k@ key, @Nullable Object value) {
             throw new UnsupportedOperationException("put");
         }
 
+        @Nullable
         @Override
         public Object remove(@k@ key) {
             return null;
@@ -96,7 +101,7 @@ public final class @K@Collections {
         }
 
         @Override
-        public boolean containsValue(Object value) {
+        public boolean containsValue(@Nullable Object value) {
             return false;
         }
 
@@ -105,16 +110,18 @@ public final class @K@Collections {
             return Collections.emptySet();
         }
 
+        @Nullable
         @Override
         public Object get(Object key) {
             return null;
         }
 
         @Override
-        public Object put(@O@ key, Object value) {
+        public Object put(@O@ key, @Nullable Object value) {
             throw new UnsupportedOperationException();
         }
 
+        @Nullable
         @Override
         public Object remove(Object key) {
             return null;
@@ -152,13 +159,14 @@ public final class @K@Collections {
             this.map = map;
         }
 
+        @Nullable
         @Override
         public V get(@k@ key) {
             return map.get(key);
         }
 
         @Override
-        public V put(@k@ key, V value) {
+        public V put(@k@ key, @Nullable V value) {
             throw new UnsupportedOperationException("put");
         }
 
@@ -188,7 +196,7 @@ public final class @K@Collections {
         }
 
         @Override
-        public boolean containsValue(Object value) {
+        public boolean containsValue(@Nullable Object value) {
             return map.containsValue(value);
         }
 
@@ -197,13 +205,14 @@ public final class @K@Collections {
             return map.containsKey(key);
         }
 
+        @Nullable
         @Override
         public V get(Object key) {
             return map.get(key);
         }
 
         @Override
-        public V put(@O@ key, V value) {
+        public V put(@O@ key, @Nullable V value) {
             throw new UnsupportedOperationException("put");
         }
 
@@ -300,12 +309,12 @@ public final class @K@Collections {
             }
 
             @Override
-            public V value() {
+            public @Nullable V value() {
                 return entry.value();
             }
 
             @Override
-            public void setValue(V value) {
+            public void setValue(@Nullable V value) {
                 throw new UnsupportedOperationException("setValue");
             }
         }
