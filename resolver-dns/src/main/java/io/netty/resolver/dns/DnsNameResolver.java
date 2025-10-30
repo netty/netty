@@ -1405,6 +1405,7 @@ public class DnsNameResolver extends InetNameResolver {
         return cause != null && cause.getCause() instanceof DnsNameResolverTimeoutException;
     }
 
+    @SuppressWarnings("unchecked")
     final Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> doQuery(
             Channel channel,
             InetSocketAddress nameServerAddr, DnsQuestion question,
@@ -1472,32 +1473,32 @@ public class DnsNameResolver extends InetNameResolver {
                     p.addListener(RELEASE_LISTENER);
                 });
 
-                return doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
+                doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
                         additionals, flush, payloadSize, cast(newPromise));
+
+                // Return the original castPromise which will be notified by the newPromise that we used above.
+                // This was it's impossible for the user to add any extra listeners to the newPromise itself, which
+                // is needed to guarantee the correct life-cycle of the reference counted response.
+                return castPromise;
             }
         }
-        return doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
+        doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
                 additionals, flush, payloadSize, castPromise);
+        return castPromise;
     }
 
-    private Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> doQueryNow(
+    private void doQueryNow(
             Channel channel,
             InetSocketAddress nameServerAddr, DnsQuestion question,
             final DnsQueryLifecycleObserver queryLifecycleObserver,
             DnsRecord[] additionals, boolean flush,
             int payloadSize,
-            Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> castPromise) {
-
-        try {
-            DnsQueryContext queryContext = new DatagramDnsQueryContext(channel, nameServerAddr,
-                    queryContextManager, payloadSize, isRecursionDesired(), queryTimeoutMillis(), question, additionals,
-                    castPromise, socketBootstrap, retryWithTcpOnTimeout);
-            ChannelFuture future = queryContext.writeQuery(flush);
-            queryLifecycleObserver.queryWritten(nameServerAddr, future);
-            return castPromise;
-        } catch (Exception e) {
-            return castPromise.setFailure(e);
-        }
+            Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
+        DnsQueryContext queryContext = new DatagramDnsQueryContext(channel, nameServerAddr,
+                queryContextManager, queryLifecycleObserver, payloadSize,
+                isRecursionDesired(), queryTimeoutMillis(), question, additionals,
+                promise, socketBootstrap, retryWithTcpOnTimeout);
+        queryContext.writeQuery(flush);
     }
 
     @SuppressWarnings("unchecked")
