@@ -82,7 +82,7 @@ public final class SpdyClient {
 
             // Create a GET request.
             HttpRequest request = new DefaultFullHttpRequest(
-                    HttpVersion.HTTP_1_1, HttpMethod.GET, "", Unpooled.emptyByteBuf());
+                    HttpVersion.HTTP_1_1, HttpMethod.GET, "", Unpooled.EMPTY_BUFFER);
             request.headers().set(HttpHeaderNames.HOST, HOST);
             request.headers().set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
 

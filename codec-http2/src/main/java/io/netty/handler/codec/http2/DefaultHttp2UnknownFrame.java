@@ -26,7 +26,7 @@ public final class DefaultHttp2UnknownFrame extends DefaultByteBufHolder impleme
     private Http2FrameStream stream;
 
     public DefaultHttp2UnknownFrame(byte frameType, Http2Flags flags) {
-        this(frameType, flags, Unpooled.emptyByteBuf());
+        this(frameType, flags, Unpooled.EMPTY_BUFFER);
     }
 
     public DefaultHttp2UnknownFrame(byte frameType, Http2Flags flags, ByteBuf data) {

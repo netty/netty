@@ -86,7 +86,7 @@ public class BinaryMemcacheEncoderTest {
         ByteBuf extras = Unpooled.copiedBuffer(extrasContent, CharsetUtil.UTF_8);
         int extrasLength = extras.readableBytes();
 
-        BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest(Unpooled.emptyByteBuf(), extras);
+        BinaryMemcacheRequest request = new DefaultBinaryMemcacheRequest(Unpooled.EMPTY_BUFFER, extras);
 
         boolean result = channel.writeOutbound(request);
         assertTrue(result);
@@ -154,7 +154,7 @@ public class BinaryMemcacheEncoderTest {
 
     @Test
     public void shouldFailWithoutLastContent() {
-        channel.writeOutbound(new DefaultMemcacheContent(Unpooled.emptyByteBuf()));
+        channel.writeOutbound(new DefaultMemcacheContent(Unpooled.EMPTY_BUFFER));
         assertThrows(EncoderException.class, new Executable() {
             @Override
             public void execute() {

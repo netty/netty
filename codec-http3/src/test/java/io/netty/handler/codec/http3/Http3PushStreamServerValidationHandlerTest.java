@@ -36,7 +36,7 @@ public class Http3PushStreamServerValidationHandlerTest extends
 
     @Override
     protected List<Http3PushStreamFrame> newValidFrames() {
-        return Arrays.asList(new DefaultHttp3HeadersFrame(), new DefaultHttp3DataFrame(Unpooled.emptyByteBuf()));
+        return Arrays.asList(new DefaultHttp3HeadersFrame(), new DefaultHttp3DataFrame(Unpooled.EMPTY_BUFFER));
     }
 
     @Override

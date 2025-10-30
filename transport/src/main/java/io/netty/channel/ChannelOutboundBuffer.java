@@ -863,7 +863,7 @@ public final class ChannelOutboundBuffer {
 
                 // release message and replace with an empty buffer
                 ReferenceCountUtil.safeRelease(msg);
-                msg = Unpooled.emptyByteBuf();
+                msg = Unpooled.EMPTY_BUFFER;
 
                 pendingSize = 0;
                 total = 0;

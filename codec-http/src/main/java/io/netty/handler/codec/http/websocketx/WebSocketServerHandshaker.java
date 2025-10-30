@@ -371,7 +371,7 @@ public abstract class WebSocketServerHandshaker {
                 if (httpObject instanceof HttpRequest) {
                     HttpRequest httpRequest = (HttpRequest) httpObject;
                     fullHttpRequest = new DefaultFullHttpRequest(httpRequest.protocolVersion(), httpRequest.method(),
-                        httpRequest.uri(), Unpooled.emptyByteBuf(), httpRequest.headers(), EmptyHttpHeaders.INSTANCE);
+                        httpRequest.uri(), Unpooled.EMPTY_BUFFER, httpRequest.headers(), EmptyHttpHeaders.INSTANCE);
                     if (httpRequest.decoderResult().isFailure()) {
                         fullHttpRequest.setDecoderResult(httpRequest.decoderResult());
                     }

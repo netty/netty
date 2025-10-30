@@ -706,7 +706,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         private void resume() {
             unsetState(STATE_SUSPENDED);
             try {
-                codec.channelRead(ctx, Unpooled.emptyByteBuf());
+                codec.channelRead(ctx, Unpooled.EMPTY_BUFFER);
                 if (hasState(STATE_READ_COMPLETE_PENDING)) {
                     unsetState(STATE_READ_COMPLETE_PENDING);
                     codec.channelReadComplete(ctx);

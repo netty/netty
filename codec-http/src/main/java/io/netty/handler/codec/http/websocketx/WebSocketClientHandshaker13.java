@@ -256,7 +256,7 @@ public class WebSocketClientHandshaker13 extends WebSocketClientHandshaker {
 
         // Format request
         FullHttpRequest request = new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, upgradeUrl(wsURL),
-                Unpooled.emptyByteBuf());
+                Unpooled.EMPTY_BUFFER);
         HttpHeaders headers = request.headers();
 
         if (customHeaders != null) {

@@ -194,7 +194,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                 willPropertiesBuf = encodePropertiesIfNeeded(mqttVersion, ctx.alloc(), payload.willProperties());
                 payloadBufferSize += willPropertiesBuf.readableBytes();
             } else {
-                willPropertiesBuf = Unpooled.emptyByteBuf();
+                willPropertiesBuf = Unpooled.EMPTY_BUFFER;
             }
             try {
                 int variableHeaderBufferSize = 2 + protocolNameBytes.length + 4 + propertiesBuf.readableBytes();
@@ -505,7 +505,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                 includeReasonCode = true;
                 variableHeaderBufferSize = 3 + propertiesBuf.readableBytes();
             } else {
-                propertiesBuf = Unpooled.emptyByteBuf();
+                propertiesBuf = Unpooled.EMPTY_BUFFER;
                 includeReasonCode = false;
                 variableHeaderBufferSize = 2;
             }
@@ -566,7 +566,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
                 includeReasonCode = true;
                 variableHeaderBufferSize = 1 + propertiesBuf.readableBytes();
             } else {
-                propertiesBuf = Unpooled.emptyByteBuf();
+                propertiesBuf = Unpooled.EMPTY_BUFFER;
                 includeReasonCode = false;
                 variableHeaderBufferSize = 0;
             }
@@ -607,7 +607,7 @@ public final class MqttEncoder extends MessageToMessageEncoder<MqttMessage> {
         if (mqttVersion == MqttVersion.MQTT_5) {
             return encodeProperties(byteBufAllocator, mqttProperties);
         }
-        return Unpooled.emptyByteBuf();
+        return Unpooled.EMPTY_BUFFER;
     }
 
     private static ByteBuf encodeProperties(ByteBufAllocator byteBufAllocator,

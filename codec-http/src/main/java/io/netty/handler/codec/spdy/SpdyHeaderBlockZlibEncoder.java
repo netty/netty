@@ -86,13 +86,13 @@ class SpdyHeaderBlockZlibEncoder extends SpdyHeaderBlockRawEncoder {
         checkNotNullWithIAE(frame, "frame");
 
         if (finished) {
-            return Unpooled.emptyByteBuf();
+            return Unpooled.EMPTY_BUFFER;
         }
 
         ByteBuf decompressed = super.encode(alloc, frame);
         try {
             if (!decompressed.isReadable()) {
-                return Unpooled.emptyByteBuf();
+                return Unpooled.EMPTY_BUFFER;
             }
 
             int len = setInput(decompressed);

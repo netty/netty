@@ -101,7 +101,7 @@ public class Http2StreamFrameToHttpObjectCodec extends MessageToMessageCodec<Htt
 
             if (headersFrame.isEndStream()) {
                 if (headers.method() == null && status == null) {
-                    LastHttpContent last = new DefaultLastHttpContent(Unpooled.emptyByteBuf(), validateHeaders);
+                    LastHttpContent last = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, validateHeaders);
                     HttpConversionUtil.addHttp2ToHttpHeaders(id, headers, last.trailingHeaders(),
                                                              HttpVersion.HTTP_1_1, true, true);
                     out.add(last);

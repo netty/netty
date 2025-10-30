@@ -198,7 +198,7 @@ public class QuicWritableTest extends AbstractQuicTest {
                                 assertEquals(before, newBefore + size);
                                 before = newBefore;
                             }
-                            ctx.writeAndFlush(Unpooled.emptyByteBuf()).addListener(new PromiseNotifier<>(writePromise));
+                            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(new PromiseNotifier<>(writePromise));
                         }
                     }
 

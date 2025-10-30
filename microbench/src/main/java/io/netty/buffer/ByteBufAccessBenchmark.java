@@ -46,7 +46,7 @@ public class ByteBufAccessBenchmark extends AbstractMicrobenchmark {
         private final CleanableDirectBuffer cleanable;
 
         NioFacade(CleanableDirectBuffer buffer) {
-            super(Unpooled.emptyByteBuf());
+            super(Unpooled.EMPTY_BUFFER);
             byteBuffer = buffer.buffer();
             cleanable = buffer;
         }

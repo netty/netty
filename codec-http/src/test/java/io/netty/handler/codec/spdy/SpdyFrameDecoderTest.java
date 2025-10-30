@@ -91,7 +91,7 @@ public class SpdyFrameDecoderTest {
         encodeDataFrameHeader(buf, streamId, flags, length);
 
         decoder.decode(buf);
-        verify(delegate).readDataFrame(streamId, false, Unpooled.emptyByteBuf());
+        verify(delegate).readDataFrame(streamId, false, Unpooled.EMPTY_BUFFER);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -106,7 +106,7 @@ public class SpdyFrameDecoderTest {
         encodeDataFrameHeader(buf, streamId, flags, length);
 
         decoder.decode(buf);
-        verify(delegate).readDataFrame(streamId, true, Unpooled.emptyByteBuf());
+        verify(delegate).readDataFrame(streamId, true, Unpooled.EMPTY_BUFFER);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -121,7 +121,7 @@ public class SpdyFrameDecoderTest {
         encodeDataFrameHeader(buf, streamId, flags, length);
 
         decoder.decode(buf);
-        verify(delegate).readDataFrame(streamId, false, Unpooled.emptyByteBuf());
+        verify(delegate).readDataFrame(streamId, false, Unpooled.EMPTY_BUFFER);
         assertFalse(buf.isReadable());
         buf.release();
     }
@@ -153,8 +153,8 @@ public class SpdyFrameDecoderTest {
         encodeDataFrameHeader(buf, streamId2, flags, length);
 
         decoder.decode(buf);
-        verify(delegate).readDataFrame(streamId1, false, Unpooled.emptyByteBuf());
-        verify(delegate).readDataFrame(streamId2, false, Unpooled.emptyByteBuf());
+        verify(delegate).readDataFrame(streamId1, false, Unpooled.EMPTY_BUFFER);
+        verify(delegate).readDataFrame(streamId2, false, Unpooled.EMPTY_BUFFER);
         assertFalse(buf.isReadable());
         buf.release();
     }

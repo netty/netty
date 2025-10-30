@@ -62,7 +62,7 @@ public class AbstractCoalescingBufferQueueTest {
 
             @Override
             protected ByteBuf removeEmptyValue() {
-                return Unpooled.emptyByteBuf();
+                return Unpooled.EMPTY_BUFFER;
             }
         };
 
@@ -112,7 +112,7 @@ public class AbstractCoalescingBufferQueueTest {
 
             @Override
             protected ByteBuf removeEmptyValue() {
-                return Unpooled.emptyByteBuf();
+                return Unpooled.EMPTY_BUFFER;
             }
         };
 

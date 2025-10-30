@@ -31,7 +31,7 @@ public final class RelayHandler extends ChannelInboundHandlerAdapter {
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
-        ctx.writeAndFlush(Unpooled.emptyByteBuf());
+        ctx.writeAndFlush(Unpooled.EMPTY_BUFFER);
     }
 
     @Override

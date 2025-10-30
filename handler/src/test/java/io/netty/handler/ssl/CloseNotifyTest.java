@@ -35,7 +35,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static io.netty.buffer.ByteBufUtil.writeAscii;
-import static io.netty.buffer.Unpooled.emptyByteBuf;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.ByteToMessageDecoder.MERGE_CUMULATOR;
 import static java.nio.charset.StandardCharsets.US_ASCII;
 import static java.util.Arrays.asList;
@@ -191,7 +191,7 @@ public class CloseNotifyTest {
     }
 
     private static void forwardAllWithCloseNotify(EmbeddedChannel from, EmbeddedChannel to) {
-        ByteBuf cumulation = emptyByteBuf();
+        ByteBuf cumulation = EMPTY_BUFFER;
         ByteBuf in, closeNotify = null;
         while ((in = from.readOutbound()) != null) {
             if (closeNotify != null) {

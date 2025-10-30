@@ -56,7 +56,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static io.netty.buffer.Unpooled.emptyByteBuf;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.http2.Http2CodecUtil.CONNECTION_STREAM_ID;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
@@ -899,7 +899,7 @@ public class Http2ConnectionRoundtripTest {
         runInChannel(serverChannel, new Http2Runnable() {
             @Override
             public void run() throws Http2Exception {
-                http2Server.encoder().writeGoAway(serverCtx(), 3, NO_ERROR.code(), emptyByteBuf(), serverNewPromise());
+                http2Server.encoder().writeGoAway(serverCtx(), 3, NO_ERROR.code(), EMPTY_BUFFER, serverNewPromise());
                 http2Server.flush(serverCtx());
             }
         });
@@ -986,7 +986,7 @@ public class Http2ConnectionRoundtripTest {
         runInChannel(serverChannel, new Http2Runnable() {
             @Override
             public void run() throws Http2Exception {
-                http2Server.encoder().writeGoAway(serverCtx(), 1, NO_ERROR.code(), emptyByteBuf(), serverNewPromise());
+                http2Server.encoder().writeGoAway(serverCtx(), 1, NO_ERROR.code(), EMPTY_BUFFER, serverNewPromise());
                 http2Server.flush(serverCtx());
             }
         });

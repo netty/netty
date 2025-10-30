@@ -51,7 +51,7 @@ public class SpdyHeaderBlockRawDecoderTest {
 
     @Test
     public void testEmptyHeaderBlock() throws Exception {
-        ByteBuf headerBlock = Unpooled.emptyByteBuf();
+        ByteBuf headerBlock = Unpooled.EMPTY_BUFFER;
         decoder.decode(ByteBufAllocator.DEFAULT, headerBlock, frame);
         decoder.endHeaderBlock(frame);
 

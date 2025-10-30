@@ -472,7 +472,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void goAwayReceivedShouldDisallowLocalCreation() throws Http2Exception {
-        server.goAwayReceived(0, 1L, Unpooled.emptyByteBuf());
+        server.goAwayReceived(0, 1L, Unpooled.EMPTY_BUFFER);
         assertThrows(Http2Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -483,13 +483,13 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void goAwayReceivedShouldAllowRemoteCreation() throws Http2Exception {
-        server.goAwayReceived(0, 1L, Unpooled.emptyByteBuf());
+        server.goAwayReceived(0, 1L, Unpooled.EMPTY_BUFFER);
         server.remote().createStream(3, true);
     }
 
     @Test
     public void goAwaySentShouldDisallowRemoteCreation() throws Http2Exception {
-        server.goAwaySent(0, 1L, Unpooled.emptyByteBuf());
+        server.goAwaySent(0, 1L, Unpooled.EMPTY_BUFFER);
 
         assertThrows(Http2Exception.class, new Executable() {
             @Override
@@ -501,7 +501,7 @@ public class DefaultHttp2ConnectionTest {
 
     @Test
     public void goAwaySentShouldAllowLocalCreation() throws Http2Exception {
-        server.goAwaySent(0, 1L, Unpooled.emptyByteBuf());
+        server.goAwaySent(0, 1L, Unpooled.EMPTY_BUFFER);
         server.local().createStream(2, true);
     }
 
@@ -641,13 +641,12 @@ public class DefaultHttp2ConnectionTest {
             verify(clientListener).onStreamRemoved(any(Http2Stream.class));
             verify(clientListener2).onStreamRemoved(any(Http2Stream.class));
 
-            client.goAwaySent(client.connectionStream().id(), Http2Error.INTERNAL_ERROR.code(),
-                    Unpooled.emptyByteBuf());
+            client.goAwaySent(client.connectionStream().id(), Http2Error.INTERNAL_ERROR.code(), Unpooled.EMPTY_BUFFER);
             verify(clientListener).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
             verify(clientListener2).onGoAwaySent(anyInt(), anyLong(), any(ByteBuf.class));
 
             client.goAwayReceived(client.connectionStream().id(),
-                    Http2Error.INTERNAL_ERROR.code(), Unpooled.emptyByteBuf());
+                    Http2Error.INTERNAL_ERROR.code(), Unpooled.EMPTY_BUFFER);
             verify(clientListener).onGoAwayReceived(anyInt(), anyLong(), any(ByteBuf.class));
             verify(clientListener2).onGoAwayReceived(anyInt(), anyLong(), any(ByteBuf.class));
         } finally {

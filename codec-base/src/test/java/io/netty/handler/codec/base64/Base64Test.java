@@ -60,8 +60,8 @@ public class Base64Test {
 
     @Test
     public void testEncodeEmpty() {
-        ByteBuf src = Unpooled.emptyByteBuf();
-        ByteBuf expectedEncoded = Unpooled.emptyByteBuf();
+        ByteBuf src = Unpooled.EMPTY_BUFFER;
+        ByteBuf expectedEncoded = Unpooled.EMPTY_BUFFER;
         testEncode(src, expectedEncoded);
     }
 

@@ -242,7 +242,7 @@ public class WebSocketServerProtocolHandler extends WebSocketProtocolHandler {
                 closeSent(promise);
                 handshaker.close(ctx, (CloseWebSocketFrame) frame, promise);
             } else {
-                ctx.writeAndFlush(Unpooled.emptyByteBuf()).addListener(ChannelFutureListener.CLOSE);
+                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
             }
             return;
         }

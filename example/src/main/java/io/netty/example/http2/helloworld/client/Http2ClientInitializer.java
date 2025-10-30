@@ -141,7 +141,7 @@ public class Http2ClientInitializer extends ChannelInitializer<SocketChannel> {
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             DefaultFullHttpRequest upgradeRequest =
-                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/", Unpooled.emptyByteBuf());
+                    new DefaultFullHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "/", Unpooled.EMPTY_BUFFER);
 
             // Set HOST header as the remote peer may require it.
             InetSocketAddress remote = (InetSocketAddress) ctx.channel().remoteAddress();

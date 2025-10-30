@@ -49,7 +49,7 @@ public class SctpMessageCompletionHandler extends MessageToMessageDecoder<SctpMe
 
         ByteBuf frag = fragments.remove(streamIdentifier);
         if (frag == null) {
-            frag = Unpooled.emptyByteBuf();
+            frag = Unpooled.EMPTY_BUFFER;
         }
 
         if (isComplete && !frag.isReadable()) {

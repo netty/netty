@@ -40,7 +40,7 @@ final class ComposedLastHttpContent implements LastHttpContent {
 
     @Override
     public LastHttpContent copy() {
-        LastHttpContent content = new DefaultLastHttpContent(Unpooled.emptyByteBuf());
+        LastHttpContent content = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
         content.trailingHeaders().set(trailingHeaders());
         return content;
     }
@@ -84,7 +84,7 @@ final class ComposedLastHttpContent implements LastHttpContent {
 
     @Override
     public ByteBuf content() {
-        return Unpooled.emptyByteBuf();
+        return Unpooled.EMPTY_BUFFER;
     }
 
     @Override

@@ -203,8 +203,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         LastInboundHandler handler = new LastInboundHandler();
 
         Http2StreamChannel channel = newInboundStream(3, true, handler);
-        frameInboundWriter.writeInboundFrame((byte) 99, channel.stream().id(), new Http2Flags(),
-                Unpooled.emptyByteBuf());
+        frameInboundWriter.writeInboundFrame((byte) 99, channel.stream().id(), new Http2Flags(), Unpooled.EMPTY_BUFFER);
 
         // header frame and unknown frame
         verifyFramesMultiplexedToCorrectChannel(channel, handler, 2);

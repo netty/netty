@@ -24,7 +24,7 @@ import org.openjdk.jmh.annotations.Warmup;
 
 import io.netty.microbench.util.AbstractMicrobenchmark;
 
-import static io.netty.buffer.Unpooled.emptyByteBuf;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.buffer.Unpooled.wrappedBuffer;
 
 import java.util.ArrayList;
@@ -93,10 +93,10 @@ public class CompositeByteBufRandomAccessBenchmark extends AbstractMicrobenchmar
         List<ByteBuf> buffers = new ArrayList<ByteBuf>(((length + 1) / 45) * 19);
         for (int i = 0; i < length + 45; i += 45) {
             for (int j = 1; j <= 9; j++) {
-                buffers.add(emptyByteBuf());
+                buffers.add(EMPTY_BUFFER);
                 buffers.add(wrappedBuffer(new byte[j]));
             }
-            buffers.add(emptyByteBuf());
+            buffers.add(EMPTY_BUFFER);
         }
 
         ByteBuf buffer = wrappedBuffer(Integer.MAX_VALUE, buffers.toArray(new ByteBuf[0]));
@@ -110,7 +110,7 @@ public class CompositeByteBufRandomAccessBenchmark extends AbstractMicrobenchmar
         List<ByteBuf> buffers = new ArrayList<ByteBuf>((length + 1) / 512);
         for (int i = 0; i < length + 1536; i += 1536) {
             buffers.add(wrappedBuffer(new byte[512]));
-            buffers.add(emptyByteBuf());
+            buffers.add(EMPTY_BUFFER);
             buffers.add(wrappedBuffer(new byte[1024]));
         }
 

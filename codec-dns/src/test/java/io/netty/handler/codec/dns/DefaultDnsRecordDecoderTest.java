@@ -54,7 +54,7 @@ public class DefaultDnsRecordDecoderTest {
 
     @Test
     public void testDecodeEmptyNameFromEmptyBuffer() {
-        testDecodeName(".", Unpooled.emptyByteBuf());
+        testDecodeName(".", Unpooled.EMPTY_BUFFER);
     }
 
     @Test

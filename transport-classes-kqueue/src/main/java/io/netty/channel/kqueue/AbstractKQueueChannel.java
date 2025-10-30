@@ -246,7 +246,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         final int readableBytes = buf.readableBytes();
         if (readableBytes == 0) {
             ReferenceCountUtil.release(holder);
-            return Unpooled.emptyByteBuf();
+            return Unpooled.EMPTY_BUFFER;
         }
 
         final ByteBufAllocator alloc = alloc();

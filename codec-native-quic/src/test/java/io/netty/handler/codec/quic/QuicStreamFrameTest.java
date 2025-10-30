@@ -118,7 +118,7 @@ public class QuicStreamFrameTest extends AbstractQuicTest {
                 queue.add(2);
                 if (((QuicStreamChannel) ctx.channel()).type() == QuicStreamType.BIDIRECTIONAL) {
                     // Let's write back a fin which will also close the channel and so call channelInactive(...)
-                    ctx.writeAndFlush(new DefaultQuicStreamFrame(Unpooled.emptyByteBuf(), true));
+                    ctx.writeAndFlush(new DefaultQuicStreamFrame(Unpooled.EMPTY_BUFFER, true));
                 }
                 ctx.channel().parent().close();
             }

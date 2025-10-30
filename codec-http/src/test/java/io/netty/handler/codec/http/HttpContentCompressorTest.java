@@ -552,7 +552,7 @@ public class HttpContentCompressorTest {
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.emptyByteBuf());
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
         ch.writeOutbound(res);
 
         Object o = ch.readOutbound();
@@ -576,7 +576,7 @@ public class HttpContentCompressorTest {
         ch.writeInbound(newRequest());
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.emptyByteBuf());
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
         res.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(res);
 
@@ -604,12 +604,12 @@ public class HttpContentCompressorTest {
         ch.writeInbound(request);
 
         FullHttpResponse continueResponse = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, Unpooled.emptyByteBuf());
+                HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, Unpooled.EMPTY_BUFFER);
 
         ch.writeOutbound(continueResponse);
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.emptyByteBuf());
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
         res.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(res);
 
@@ -644,16 +644,16 @@ public class HttpContentCompressorTest {
         ch.writeInbound(request);
 
         FullHttpResponse continueResponse = new DefaultFullHttpResponse(
-            HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, Unpooled.emptyByteBuf());
+            HttpVersion.HTTP_1_1, HttpResponseStatus.CONTINUE, Unpooled.EMPTY_BUFFER);
         ch.writeOutbound(continueResponse);
 
         FullHttpResponse earlyHintsResponse = new DefaultFullHttpResponse(
-            HttpVersion.HTTP_1_1, HttpResponseStatus.EARLY_HINTS, Unpooled.emptyByteBuf());
+            HttpVersion.HTTP_1_1, HttpResponseStatus.EARLY_HINTS, Unpooled.EMPTY_BUFFER);
         earlyHintsResponse.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(earlyHintsResponse);
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-            HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.emptyByteBuf());
+            HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
         res.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(res);
 
@@ -696,12 +696,12 @@ public class HttpContentCompressorTest {
         ch.writeInbound(request);
 
         FullHttpResponse earlyHintsResponse = new DefaultFullHttpResponse(
-            HttpVersion.HTTP_1_1, HttpResponseStatus.EARLY_HINTS, Unpooled.emptyByteBuf());
+            HttpVersion.HTTP_1_1, HttpResponseStatus.EARLY_HINTS, Unpooled.EMPTY_BUFFER);
         earlyHintsResponse.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(earlyHintsResponse);
 
         FullHttpResponse res = new DefaultFullHttpResponse(
-            HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.emptyByteBuf());
+            HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER);
         res.trailingHeaders().set(of("X-Test"), of("Netty"));
         ch.writeOutbound(res);
 
@@ -736,11 +736,11 @@ public class HttpContentCompressorTest {
         ch.writeInbound(request);
 
         ch.writeOutbound(new DefaultFullHttpResponse(
-                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.emptyByteBuf()));
+                HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER));
 
         try {
             ch.writeOutbound(new DefaultFullHttpResponse(
-                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.emptyByteBuf()));
+                    HttpVersion.HTTP_1_1, HttpResponseStatus.OK, Unpooled.EMPTY_BUFFER));
             fail();
         } catch (EncoderException e) {
             assertTrue(e.getCause() instanceof IllegalStateException);
@@ -978,7 +978,7 @@ public class HttpContentCompressorTest {
         DefaultHttpResponse response = new DefaultHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK);
         response.headers().add(HttpHeaderNames.CONTENT_LENGTH, 0);
         assertTrue(ch.writeOutbound(response));
-        assertTrue(ch.writeOutbound(new DefaultHttpContent(Unpooled.emptyByteBuf())));
+        assertTrue(ch.writeOutbound(new DefaultHttpContent(Unpooled.EMPTY_BUFFER)));
         assertTrue(ch.writeOutbound(DefaultLastHttpContent.EMPTY_LAST_CONTENT));
 
         ch.checkException();

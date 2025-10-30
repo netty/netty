@@ -187,7 +187,7 @@ public abstract class AbstractBinaryMemcacheDecoder<M extends BinaryMemcacheMess
      */
     private MemcacheContent invalidChunk(Exception cause) {
         state = State.BAD_MESSAGE;
-        MemcacheContent chunk = new DefaultLastMemcacheContent(Unpooled.emptyByteBuf());
+        MemcacheContent chunk = new DefaultLastMemcacheContent(Unpooled.EMPTY_BUFFER);
         chunk.setDecoderResult(DecoderResult.failure(cause));
         return chunk;
     }

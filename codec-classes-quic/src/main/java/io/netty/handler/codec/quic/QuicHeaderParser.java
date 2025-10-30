@@ -101,8 +101,8 @@ public final class QuicHeaderParser implements AutoCloseable {
             version = 0;
             type = QuicPacketType.SHORT;
             // Short packets have no source connection id and no token.
-            scid = Unpooled.emptyByteBuf();
-            token = Unpooled.emptyByteBuf();
+            scid = Unpooled.EMPTY_BUFFER;
+            token = Unpooled.EMPTY_BUFFER;
             dcid = sliceCid(packet, offset, localConnectionIdLength);
         } else {
             // See https://www.rfc-editor.org/rfc/rfc9000.html#section-17.2
@@ -171,7 +171,7 @@ public final class QuicHeaderParser implements AutoCloseable {
                 return packet.slice(offset, tokenLen);
             default:
                 // No token included.
-                return Unpooled.emptyByteBuf();
+                return Unpooled.EMPTY_BUFFER;
         }
     }
     private static QuicException newProtocolViolationException(String message) {

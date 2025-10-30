@@ -72,6 +72,8 @@ import java.util.Arrays;
  */
 public final class Unpooled {
 
+    private static final ByteBufAllocator ALLOC = UnpooledByteBufAllocator.DEFAULT;
+
     /**
      * Big endian byte order.
      */
@@ -84,12 +86,9 @@ public final class Unpooled {
 
     /**
      * A buffer whose capacity is {@code 0}.
-     *
-     * @deprecated Prefer to use {@link #emptyByteBuf()} instead, for better native image support.
      */
-    @Deprecated
     @SuppressWarnings("checkstyle:StaticFinalBuffer")  // EmptyByteBuf is not writeable or readable.
-    public static final ByteBuf EMPTY_BUFFER = UnpooledByteBufAllocator.DEFAULT.buffer(0, 0);
+    public static final ByteBuf EMPTY_BUFFER = ALLOC.buffer(0, 0);
 
     static {
         assert EMPTY_BUFFER instanceof EmptyByteBuf: "EMPTY_BUFFER must be an EmptyByteBuf.";
@@ -100,7 +99,7 @@ public final class Unpooled {
      * expands its capacity boundlessly on demand.
      */
     public static ByteBuf buffer() {
-        return UnpooledByteBufAllocator.DEFAULT.heapBuffer();
+        return ALLOC.heapBuffer();
     }
 
     /**
@@ -108,7 +107,7 @@ public final class Unpooled {
      * expands its capacity boundlessly on demand.
      */
     public static ByteBuf directBuffer() {
-        return UnpooledByteBufAllocator.DEFAULT.directBuffer();
+        return ALLOC.directBuffer();
     }
 
     /**
@@ -117,7 +116,7 @@ public final class Unpooled {
      * {@code writerIndex} are {@code 0}.
      */
     public static ByteBuf buffer(int initialCapacity) {
-        return UnpooledByteBufAllocator.DEFAULT.heapBuffer(initialCapacity);
+        return ALLOC.heapBuffer(initialCapacity);
     }
 
     /**
@@ -126,7 +125,7 @@ public final class Unpooled {
      * {@code writerIndex} are {@code 0}.
      */
     public static ByteBuf directBuffer(int initialCapacity) {
-        return UnpooledByteBufAllocator.DEFAULT.directBuffer(initialCapacity);
+        return ALLOC.directBuffer(initialCapacity);
     }
 
     /**
@@ -136,7 +135,7 @@ public final class Unpooled {
      * {@code 0}.
      */
     public static ByteBuf buffer(int initialCapacity, int maxCapacity) {
-        return UnpooledByteBufAllocator.DEFAULT.heapBuffer(initialCapacity, maxCapacity);
+        return ALLOC.heapBuffer(initialCapacity, maxCapacity);
     }
 
     /**
@@ -146,7 +145,7 @@ public final class Unpooled {
      * {@code 0}.
      */
     public static ByteBuf directBuffer(int initialCapacity, int maxCapacity) {
-        return UnpooledByteBufAllocator.DEFAULT.directBuffer(initialCapacity, maxCapacity);
+        return ALLOC.directBuffer(initialCapacity, maxCapacity);
     }
 
     /**
@@ -158,7 +157,7 @@ public final class Unpooled {
         if (array.length == 0) {
             return EMPTY_BUFFER;
         }
-        return new UnpooledHeapByteBuf(UnpooledByteBufAllocator.DEFAULT, array, array.length);
+        return new UnpooledHeapByteBuf(ALLOC, array, array.length);
     }
 
     /**
@@ -195,18 +194,18 @@ public final class Unpooled {
         } else if (PlatformDependent.hasUnsafe()) {
             if (buffer.isReadOnly()) {
                 if (buffer.isDirect()) {
-                    return new ReadOnlyUnsafeDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, buffer);
+                    return new ReadOnlyUnsafeDirectByteBuf(ALLOC, buffer);
                 } else {
-                    return new ReadOnlyByteBufferBuf(UnpooledByteBufAllocator.DEFAULT, buffer);
+                    return new ReadOnlyByteBufferBuf(ALLOC, buffer);
                 }
             } else {
-                return new UnpooledUnsafeDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, buffer, buffer.remaining());
+                return new UnpooledUnsafeDirectByteBuf(ALLOC, buffer, buffer.remaining());
             }
         } else {
             if (buffer.isReadOnly()) {
-                return new ReadOnlyByteBufferBuf(UnpooledByteBufAllocator.DEFAULT, buffer);
+                return new ReadOnlyByteBufferBuf(ALLOC, buffer);
             }  else {
-                return new UnpooledDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, buffer, buffer.remaining());
+                return new UnpooledDirectByteBuf(ALLOC, buffer, buffer.remaining());
             }
         }
     }
@@ -216,7 +215,7 @@ public final class Unpooled {
      * memoryAddress will automatically be freed once the reference count of the {@link ByteBuf} reaches {@code 0}.
      */
     public static ByteBuf wrappedBuffer(long memoryAddress, int size, boolean doFree) {
-        return new WrappedUnpooledUnsafeDirectByteBuf(UnpooledByteBufAllocator.DEFAULT, memoryAddress, size, doFree);
+        return new WrappedUnpooledUnsafeDirectByteBuf(ALLOC, memoryAddress, size, doFree);
     }
 
     /**
@@ -281,8 +280,7 @@ public final class Unpooled {
                     return EMPTY_BUFFER;
                 }
                 if (!wrapper.isEmpty(bytes)) {
-                    return new CompositeByteBuf(
-                            UnpooledByteBufAllocator.DEFAULT, false, maxNumComponents, wrapper, array, i);
+                    return new CompositeByteBuf(ALLOC, false, maxNumComponents, wrapper, array, i);
                 }
             }
         }
@@ -324,7 +322,7 @@ public final class Unpooled {
             for (int i = 0; i < buffers.length; i++) {
                 ByteBuf buf = buffers[i];
                 if (buf.isReadable()) {
-                    return new CompositeByteBuf(UnpooledByteBufAllocator.DEFAULT, false, maxNumComponents, buffers, i);
+                    return new CompositeByteBuf(ALLOC, false, maxNumComponents, buffers, i);
                 }
                 buf.release();
             }
@@ -353,7 +351,7 @@ public final class Unpooled {
      * Returns a new big-endian composite buffer with no components.
      */
     public static CompositeByteBuf compositeBuffer(int maxNumComponents) {
-        return new CompositeByteBuf(UnpooledByteBufAllocator.DEFAULT, false, maxNumComponents);
+        return new CompositeByteBuf(ALLOC, false, maxNumComponents);
     }
 
     /**
@@ -598,7 +596,7 @@ public final class Unpooled {
         boolean release = true;
         // Mimic the same behavior as other copiedBuffer implementations.
         int byteLength = ByteBufUtil.utf8Bytes(string);
-        ByteBuf buffer = UnpooledByteBufAllocator.DEFAULT.heapBuffer(byteLength);
+        ByteBuf buffer = ALLOC.heapBuffer(byteLength);
         try {
             ByteBufUtil.reserveAndWriteUtf8(buffer, string, byteLength);
             release = false;
@@ -613,7 +611,7 @@ public final class Unpooled {
     private static ByteBuf copiedBufferAscii(CharSequence string) {
         boolean release = true;
         // Mimic the same behavior as other copiedBuffer implementations.
-        ByteBuf buffer = UnpooledByteBufAllocator.DEFAULT.heapBuffer(string.length());
+        ByteBuf buffer = ALLOC.heapBuffer(string.length());
         try {
             ByteBufUtil.writeAscii(buffer, string);
             release = false;
@@ -682,7 +680,7 @@ public final class Unpooled {
     }
 
     private static ByteBuf copiedBuffer(CharBuffer buffer, Charset charset) {
-        return ByteBufUtil.encodeString0(UnpooledByteBufAllocator.DEFAULT, true, buffer, charset, 0);
+        return ByteBufUtil.encodeString0(ALLOC, true, buffer, charset, 0);
     }
 
     /**
@@ -892,14 +890,6 @@ public final class Unpooled {
     }
 
     /**
-     * Return a reference to a constant, immutable, shared, empty {@link ByteBuf} instance.
-     * @return An immutable empty {@link ByteBuf} instance.
-     */
-    public static ByteBuf emptyByteBuf() {
-        return EMPTY_BUFFER;
-    }
-
-    /**
      * Wrap the given {@link ByteBuf}s in an unmodifiable {@link ByteBuf}. Be aware the returned {@link ByteBuf} will
      * not try to slice the given {@link ByteBuf}s to reduce GC-Pressure.
      *
@@ -930,7 +920,7 @@ public final class Unpooled {
             if (copy) {
                 buffers = Arrays.copyOf(buffers, buffers.length, ByteBuf[].class);
             }
-            return new FixedCompositeByteBuf(UnpooledByteBufAllocator.DEFAULT, buffers);
+            return new FixedCompositeByteBuf(ALLOC, buffers);
         }
     }
 

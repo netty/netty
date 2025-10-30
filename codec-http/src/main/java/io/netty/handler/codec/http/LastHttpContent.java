@@ -31,7 +31,7 @@ public interface LastHttpContent extends HttpContent {
 
         @Override
         public ByteBuf content() {
-            return Unpooled.emptyByteBuf();
+            return Unpooled.EMPTY_BUFFER;
         }
 
         @Override

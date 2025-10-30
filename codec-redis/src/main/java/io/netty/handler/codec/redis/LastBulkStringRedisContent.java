@@ -32,7 +32,7 @@ public interface LastBulkStringRedisContent extends BulkStringRedisContent {
 
         @Override
         public ByteBuf content() {
-            return Unpooled.emptyByteBuf();
+            return Unpooled.EMPTY_BUFFER;
         }
 
         @Override

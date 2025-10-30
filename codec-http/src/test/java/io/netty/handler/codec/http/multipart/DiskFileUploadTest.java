@@ -49,7 +49,7 @@ public class DiskFileUploadTest {
                 new DiskFileUpload("d1", "d1", "application/json", null, null, 100,
                         baseDir.getAbsolutePath(), false);
 
-        f.setContent(Unpooled.emptyByteBuf());
+        f.setContent(Unpooled.EMPTY_BUFFER);
 
         assertTrue(f.getFile().getAbsolutePath().startsWith(baseDir.getAbsolutePath()));
         assertTrue(f.getFile().exists());
@@ -70,11 +70,11 @@ public class DiskFileUploadTest {
          DiskFileUpload f =
                  new DiskFileUpload("d1", "d1", "application/json", null, null, 100);
 
-         f.setContent(Unpooled.emptyByteBuf());
+         f.setContent(Unpooled.EMPTY_BUFFER);
 
          assertTrue(f.getFile().exists());
          assertEquals(0, f.getFile().length());
-         f.setContent(Unpooled.emptyByteBuf());
+         f.setContent(Unpooled.EMPTY_BUFFER);
          assertTrue(f.getFile().exists());
          assertEquals(0, f.getFile().length());
          f.delete();
@@ -89,7 +89,7 @@ public class DiskFileUploadTest {
 
         assertTrue(f.getFile().exists());
         assertEquals(4, f.getFile().length());
-        f.setContent(Unpooled.emptyByteBuf());
+        f.setContent(Unpooled.EMPTY_BUFFER);
         assertTrue(f.getFile().exists());
         assertEquals(0, f.getFile().length());
         f.delete();

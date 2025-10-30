@@ -568,7 +568,7 @@ public abstract class WebSocketClientHandshaker {
                     if (response instanceof HttpResponse) {
                         HttpResponse httpResponse = (HttpResponse) response;
                         fullHttpResponse = new DefaultFullHttpResponse(httpResponse.protocolVersion(),
-                            httpResponse.status(), Unpooled.emptyByteBuf(), httpResponse.headers(),
+                            httpResponse.status(), Unpooled.EMPTY_BUFFER, httpResponse.headers(),
                             EmptyHttpHeaders.INSTANCE);
                         if (httpResponse.decoderResult().isFailure()) {
                             fullHttpResponse.setDecoderResult(httpResponse.decoderResult());

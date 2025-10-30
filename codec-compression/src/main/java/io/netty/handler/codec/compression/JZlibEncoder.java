@@ -382,7 +382,7 @@ public class JZlibEncoder extends ZlibEncoder {
                 // even if z.next_out_index seems to be always 0 here
                 footer = Unpooled.wrappedBuffer(out, 0, z.next_out_index);
             } else {
-                footer = Unpooled.emptyByteBuf();
+                footer = Unpooled.EMPTY_BUFFER;
             }
         } finally {
             z.deflateEnd();

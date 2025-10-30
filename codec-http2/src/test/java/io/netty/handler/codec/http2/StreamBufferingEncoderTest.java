@@ -45,7 +45,7 @@ import org.mockito.verification.VerificationMode;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty.buffer.Unpooled.emptyByteBuf;
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_PRIORITY_WEIGHT;
 import static io.netty.handler.codec.http2.Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS;
@@ -224,9 +224,9 @@ public class StreamBufferingEncoderTest {
         assertEquals(1, connection.numActiveStreams());
         assertEquals(1, encoder.numBufferedStreams());
 
-        encoder.writeData(ctx, 3, emptyByteBuf(), 0, false, newPromise());
+        encoder.writeData(ctx, 3, EMPTY_BUFFER, 0, false, newPromise());
         writeVerifyWriteHeaders(times(1), 3);
-        encoder.writeData(ctx, 5, emptyByteBuf(), 0, false, newPromise());
+        encoder.writeData(ctx, 5, EMPTY_BUFFER, 0, false, newPromise());
         verify(writer, never())
                 .writeData(eq(ctx), eq(5), any(ByteBuf.class), eq(0), eq(false), eq(newPromise()));
     }
@@ -234,7 +234,7 @@ public class StreamBufferingEncoderTest {
     @Test
     public void bufferingNewStreamFailsAfterGoAwayReceived() throws Http2Exception {
         setMaxConcurrentStreams(0);
-        connection.goAwayReceived(1, 8, emptyByteBuf());
+        connection.goAwayReceived(1, 8, EMPTY_BUFFER);
 
         ChannelPromise promise = newPromise();
         encoderWriteHeaders(3, promise);
@@ -256,7 +256,7 @@ public class StreamBufferingEncoderTest {
         assertEquals(5, connection.numActiveStreams());
         assertEquals(4, encoder.numBufferedStreams());
 
-        connection.goAwayReceived(11, 8, emptyByteBuf());
+        connection.goAwayReceived(11, 8, EMPTY_BUFFER);
 
         assertEquals(5, connection.numActiveStreams());
         assertEquals(0, encoder.numBufferedStreams());
@@ -274,7 +274,7 @@ public class StreamBufferingEncoderTest {
     public void receivingGoAwayFailsNewStreamIfMaxConcurrentStreamsReached() throws Http2Exception {
         setMaxConcurrentStreams(1);
         encoderWriteHeaders(3, newPromise());
-        connection.goAwayReceived(11, 8, emptyByteBuf());
+        connection.goAwayReceived(11, 8, EMPTY_BUFFER);
         ChannelFuture f = encoderWriteHeaders(5, newPromise());
 
         assertInstanceOf(Http2GoAwayException.class, f.cause());
@@ -315,7 +315,7 @@ public class StreamBufferingEncoderTest {
         encoderWriteHeaders(3, newPromise());
         assertEquals(1, encoder.numBufferedStreams());
 
-        encoder.writeData(ctx, 3, emptyByteBuf(), 0, true, newPromise());
+        encoder.writeData(ctx, 3, EMPTY_BUFFER, 0, true, newPromise());
 
         assertEquals(0, connection.numActiveStreams());
         assertEquals(1, encoder.numBufferedStreams());
@@ -516,7 +516,7 @@ public class StreamBufferingEncoderTest {
 
     private void testStreamId(int nextStreamId) throws Http2Exception {
         connection.local().createStream(nextStreamId, false);
-        ChannelFuture channelFuture = encoder.writeData(ctx, nextStreamId, emptyByteBuf(), 0, false, newPromise());
+        ChannelFuture channelFuture = encoder.writeData(ctx, nextStreamId, EMPTY_BUFFER, 0, false, newPromise());
         assertNull(channelFuture.cause());
     }
 

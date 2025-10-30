@@ -396,7 +396,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
 
                 @Override
                 public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                    listener.onDataRead(targetCtx, stream.id(), Unpooled.emptyByteBuf(), padding, true);
+                    listener.onDataRead(targetCtx, stream.id(), Unpooled.EMPTY_BUFFER, padding, true);
                 }
             });
         }

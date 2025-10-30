@@ -74,7 +74,7 @@ public class DefaultHttp2FrameWriterTest {
 
         outbound = Unpooled.buffer();
 
-        expectedOutbound = Unpooled.emptyByteBuf();
+        expectedOutbound = Unpooled.EMPTY_BUFFER;
 
         promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
 
@@ -296,7 +296,7 @@ public class DefaultHttp2FrameWriterTest {
 
     @Test
     public void writeFrameZeroPayload() throws Exception {
-        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), Unpooled.emptyByteBuf(), promise);
+        frameWriter.writeFrame(ctx, (byte) 0xf, 0, new Http2Flags(), Unpooled.EMPTY_BUFFER, promise);
 
         byte[] expectedFrameBytes = {
                 (byte) 0x00, (byte) 0x00, (byte) 0x00, // payload length

@@ -74,7 +74,7 @@ public interface LastMemcacheContent extends MemcacheContent {
 
         @Override
         public ByteBuf content() {
-            return Unpooled.emptyByteBuf();
+            return Unpooled.EMPTY_BUFFER;
         }
 
         @Override

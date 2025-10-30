@@ -25,6 +25,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.TypeParameterMatcher;
 
+
 /**
  * {@link ChannelOutboundHandlerAdapter} which encodes message in a stream-like fashion from one message to an
  * {@link ByteBuf}.
@@ -112,7 +113,7 @@ public abstract class MessageToByteEncoder<I> extends ChannelOutboundHandlerAdap
                     ctx.write(buf, promise);
                 } else {
                     buf.release();
-                    ctx.write(Unpooled.emptyByteBuf(), promise);
+                    ctx.write(Unpooled.EMPTY_BUFFER, promise);
                 }
                 buf = null;
             } else {

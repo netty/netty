@@ -578,7 +578,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
             case READ_HEADER:
                 // If we are still in the state of reading headers we need to create a new invalid message that
                 // signals that the connection was closed before we received the headers.
-                out.add(invalidMessage(message, Unpooled.emptyByteBuf(),
+                out.add(invalidMessage(message, Unpooled.EMPTY_BUFFER,
                         new PrematureChannelClosureException("Connection closed before received headers")));
                 resetNow();
                 return;
@@ -732,7 +732,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
         // when we produced an invalid message without consuming anything.
         in.skipBytes(in.readableBytes());
 
-        HttpContent chunk = new DefaultLastHttpContent(Unpooled.emptyByteBuf());
+        HttpContent chunk = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER);
         chunk.setDecoderResult(DecoderResult.failure(cause));
         return chunk;
     }
@@ -869,7 +869,7 @@ public abstract class HttpObjectDecoder extends ByteToMessageDecoder {
 
         CharSequence lastHeader = null;
         if (trailer == null) {
-            trailer = this.trailer = new DefaultLastHttpContent(Unpooled.emptyByteBuf(), trailersFactory);
+            trailer = this.trailer = new DefaultLastHttpContent(Unpooled.EMPTY_BUFFER, trailersFactory);
         }
         while (lineLength > 0) {
             final byte[] lineContent = line.array();

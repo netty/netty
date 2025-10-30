@@ -191,7 +191,7 @@ public final class Http2CodecUtil {
      */
     public static ByteBuf toByteBuf(ChannelHandlerContext ctx, Throwable cause) {
         if (cause == null || cause.getMessage() == null) {
-            return Unpooled.emptyByteBuf();
+            return Unpooled.EMPTY_BUFFER;
         }
 
         return ByteBufUtil.writeUtf8(ctx.alloc(), cause.getMessage());

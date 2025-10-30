@@ -453,7 +453,7 @@ public class SslHandlerTest {
             assertTrue(readIssued);
             readIssued = false;
 
-            assertTrue(ch.writeOutbound(Unpooled.emptyByteBuf()));
+            assertTrue(ch.writeOutbound(Unpooled.EMPTY_BUFFER));
             assertTrue(readIssued);
             assertTrue(ch.finishAndReleaseAll());
        }

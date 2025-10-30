@@ -81,6 +81,6 @@ public final class CoalescingBufferQueue extends AbstractCoalescingBufferQueue {
 
     @Override
     protected ByteBuf removeEmptyValue() {
-        return Unpooled.emptyByteBuf();
+        return Unpooled.EMPTY_BUFFER;
     }
 }

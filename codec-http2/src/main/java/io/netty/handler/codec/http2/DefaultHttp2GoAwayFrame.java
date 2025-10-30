@@ -46,7 +46,7 @@ public final class DefaultHttp2GoAwayFrame extends DefaultByteBufHolder implemen
      * @param errorCode reason for the go away
      */
     public DefaultHttp2GoAwayFrame(long errorCode) {
-        this(errorCode, Unpooled.emptyByteBuf());
+        this(errorCode, Unpooled.EMPTY_BUFFER);
     }
 
     /**

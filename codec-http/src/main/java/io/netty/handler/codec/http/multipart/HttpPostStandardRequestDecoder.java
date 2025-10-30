@@ -535,7 +535,7 @@ public class HttpPostStandardRequestDecoder implements InterfaceHttpPostRequestD
                 if (ampersandpos > firstpos) {
                     setFinalBuffer(undecodedChunk.retainedSlice(firstpos, ampersandpos - firstpos));
                 } else if (!currentAttribute.isCompleted()) {
-                    setFinalBuffer(Unpooled.emptyByteBuf());
+                    setFinalBuffer(Unpooled.EMPTY_BUFFER);
                 }
                 firstpos = currentpos;
                 currentStatus = MultiPartStatus.EPILOGUE;

@@ -313,7 +313,7 @@ public class ReplayingDecoderTest {
     }
 
     private static void assertCumulationReleased(ByteBuf byteBuf) {
-        assertTrue(byteBuf == null || byteBuf == Unpooled.emptyByteBuf() || byteBuf.refCnt() == 0,
+        assertTrue(byteBuf == null || byteBuf == Unpooled.EMPTY_BUFFER || byteBuf.refCnt() == 0,
                 "unexpected value: " + byteBuf);
     }
 }
