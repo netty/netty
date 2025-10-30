@@ -16,12 +16,78 @@
 
 package io.netty.buffer;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+
+import io.netty.util.internal.AtomicReferenceCountUpdater;
+import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.ReferenceCountUpdater;
+import io.netty.util.internal.ReferenceCountUpdater.UpdaterType;
+import io.netty.util.internal.UnsafeReferenceCountUpdater;
+import io.netty.util.internal.VarHandleReferenceCountUpdater;
+
+import static io.netty.util.internal.ReferenceCountUpdater.getUnsafeOffset;
+import static java.util.concurrent.atomic.AtomicIntegerFieldUpdater.newUpdater;
+
 /**
  * Abstract base class for {@link ByteBuf} implementations that count references.
  */
 public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
+    private static final long REFCNT_FIELD_OFFSET;
+    private static final AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> AIF_UPDATER;
+    private static final Object REFCNT_FIELD_VH;
+    private static final ReferenceCountUpdater<AbstractReferenceCountedByteBuf> updater;
+
+    static {
+        UpdaterType updaterType = ReferenceCountUpdater.updaterTypeOf(AbstractReferenceCountedByteBuf.class, "refCnt");
+        switch (updaterType) {
+            case Atomic:
+                AIF_UPDATER = newUpdater(AbstractReferenceCountedByteBuf.class, "refCnt");
+                REFCNT_FIELD_OFFSET = -1;
+                REFCNT_FIELD_VH = null;
+                updater = new AtomicReferenceCountUpdater<AbstractReferenceCountedByteBuf>() {
+                    @Override
+                    protected AtomicIntegerFieldUpdater<AbstractReferenceCountedByteBuf> updater() {
+                        return AIF_UPDATER;
+                    }
+                };
+                break;
+            case Unsafe:
+                AIF_UPDATER = null;
+                REFCNT_FIELD_OFFSET = getUnsafeOffset(AbstractReferenceCountedByteBuf.class, "refCnt");
+                REFCNT_FIELD_VH = null;
+                updater = new UnsafeReferenceCountUpdater<AbstractReferenceCountedByteBuf>() {
+                    @Override
+                    protected long refCntFieldOffset() {
+                        return REFCNT_FIELD_OFFSET;
+                    }
+                };
+                break;
+            case VarHandle:
+                AIF_UPDATER = null;
+                REFCNT_FIELD_OFFSET = -1;
+                REFCNT_FIELD_VH = PlatformDependent.findVarHandleOfIntField(MethodHandles.lookup(),
+                        AbstractReferenceCountedByteBuf.class, "refCnt");
+                updater = new VarHandleReferenceCountUpdater<AbstractReferenceCountedByteBuf>() {
+                    @Override
+                    protected VarHandle varHandle() {
+                        return (VarHandle) REFCNT_FIELD_VH;
+                    }
+                };
+                break;
+            default:
+                throw new Error("Unexpected updater type for AbstractReferenceCountedByteBuf: " + updaterType);
+        }
+    }
+
+    // Value might not equal "real" reference count, all access should be via the updater
+    @SuppressWarnings({"unused", "FieldMayBeFinal"})
+    private volatile int refCnt;
+
     protected AbstractReferenceCountedByteBuf(int maxCapacity) {
         super(maxCapacity);
+        updater.setInitialValue(this);
     }
 
     @Override
@@ -31,12 +97,16 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
         return updater.isLiveNonVolatile(this);
     }
 
+    @Override
+    public int refCnt() {
+        return updater.refCnt(this);
+    }
+
     /**
      * An unsafe operation intended for use by a subclass that sets the reference count of the buffer directly
      */
-    @Override
     protected final void setRefCnt(int refCnt) {
-        super.setRefCnt(refCnt);
+        updater.setRefCnt(this, refCnt);
     }
 
     /**
@@ -47,13 +117,44 @@ public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
     }
 
     @Override
+    public ByteBuf retain() {
+        return updater.retain(this);
+    }
+
+    @Override
+    public ByteBuf retain(int increment) {
+        return updater.retain(this, increment);
+    }
+
+    @Override
+    public ByteBuf touch() {
+        return this;
+    }
+
+    @Override
     public ByteBuf touch(Object hint) {
         return this;
+    }
+
+    @Override
+    public boolean release() {
+        return handleRelease(updater.release(this));
+    }
+
+    @Override
+    public boolean release(int decrement) {
+        return handleRelease(updater.release(this, decrement));
+    }
+
+    private boolean handleRelease(boolean result) {
+        if (result) {
+            deallocate();
+        }
+        return result;
     }
 
     /**
      * Called once {@link #refCnt()} is equals 0.
      */
-    @Override
-    protected abstract void deallocate(); // Re-abstract the empty method in ByteBuf.
+    protected abstract void deallocate();
 }

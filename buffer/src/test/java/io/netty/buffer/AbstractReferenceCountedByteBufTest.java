@@ -74,18 +74,6 @@ public class AbstractReferenceCountedByteBufTest {
     }
 
     @Test
-    public void testReleaseOverflow2() {
-        final AbstractReferenceCountedByteBuf referenceCounted = newReferenceCounted();
-        assertEquals(1, referenceCounted.refCnt());
-        assertThrows(IllegalReferenceCountException.class, new Executable() {
-            @Override
-            public void execute() {
-                referenceCounted.release(2);
-            }
-        });
-    }
-
-    @Test
     public void testReleaseErrorMessage() {
         AbstractReferenceCountedByteBuf referenceCounted = newReferenceCounted();
         assertTrue(referenceCounted.release());
