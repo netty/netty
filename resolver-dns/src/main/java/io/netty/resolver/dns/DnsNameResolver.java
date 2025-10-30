@@ -1457,7 +1457,7 @@ public class DnsNameResolver extends InetNameResolver {
                     // we know that all previous added listeners had a chance to handle the result already.
                     Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> p =
                             inflightLookups.remove(question);
-                    assert p != null;
+                    assert p == newPromise;
 
                     if (f.isSuccess()) {
                         // On success we need to retain the result so listeners that are added after this one
