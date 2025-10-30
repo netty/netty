@@ -15,14 +15,12 @@
  */
 package io.netty.buffer;
 
-import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.EnhancedHandle;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.MpscIntQueue;
@@ -1113,11 +1111,12 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    private static class Chunk extends AbstractReferenceCounted implements ChunkInfo {
+    private static class Chunk implements ChunkInfo {
         protected final AbstractByteBuf delegate;
         protected Magazine magazine;
         private final AdaptivePoolingAllocator allocator;
         private final ChunkReleasePredicate chunkReleasePredicate;
+        private final RefCnt refCnt;
         private final int capacity;
         private final boolean pooled;
         protected int allocatedBytes;
@@ -1128,6 +1127,7 @@ final class AdaptivePoolingAllocator {
             magazine = null;
             allocator = null;
             chunkReleasePredicate = null;
+            refCnt = null;
             capacity = 0;
             pooled = false;
         }
@@ -1136,6 +1136,7 @@ final class AdaptivePoolingAllocator {
               ChunkReleasePredicate chunkReleasePredicate) {
             this.delegate = delegate;
             this.pooled = pooled;
+            refCnt = new RefCnt();
             capacity = delegate.capacity();
             attachToMagazine(magazine);
 
@@ -1170,11 +1171,6 @@ final class AdaptivePoolingAllocator {
             this.magazine = magazine;
         }
 
-        @Override
-        public ReferenceCounted touch(Object hint) {
-            return this;
-        }
-
         /**
          * Called when a magazine is done using this chunk, probably because it was emptied.
          */
@@ -1189,7 +1185,18 @@ final class AdaptivePoolingAllocator {
             return release();
         }
 
-        @Override
+        private void retain() {
+            RefCnt.retain(refCnt);
+        }
+
+        protected boolean release() {
+            boolean deallocate = RefCnt.release(refCnt);
+            if (deallocate) {
+                deallocate();
+            }
+            return deallocate;
+        }
+
         protected void deallocate() {
             Magazine mag = magazine;
             int chunkSize = delegate.capacity();
@@ -1201,7 +1208,7 @@ final class AdaptivePoolingAllocator {
                 allocator.chunkRegistry.remove(this);
                 delegate.release();
             } else {
-                RefCnt.resetRefCnt(this);
+                RefCnt.resetRefCnt(refCnt);
                 delegate.setIndex(0, 0);
                 allocatedBytes = 0;
                 if (!mag.trySetNextInLine(this)) {
@@ -1210,7 +1217,7 @@ final class AdaptivePoolingAllocator {
                     if (!mag.offerToQueue(this)) {
                         // The central queue is full. Ensure we release again as we previously did use resetRefCnt()
                         // which did increase the reference count by 1.
-                        boolean released = RefCnt.release(this);
+                        boolean released = RefCnt.release(refCnt);
                         onRelease();
                         allocator.chunkRegistry.remove(this);
                         delegate.release();

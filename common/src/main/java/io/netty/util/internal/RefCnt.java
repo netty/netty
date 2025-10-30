@@ -51,7 +51,7 @@ public class RefCnt {
      *   Even => "real" refcount is (refCnt >>> 1)
      *   Odd  => "real" refcount is 0
      */
-    private volatile int value;
+    volatile int value;
 
     public RefCnt() {
         switch (REF_CNT_IMPL) {
@@ -242,6 +242,10 @@ public class RefCnt {
         }
     }
 
+    static void throwIllegalRefCountOnRelease(int decrement, int curr) {
+        throw new IllegalReferenceCountException(curr >>> 1, -(decrement >>> 1));
+    }
+
     private static final class AtomicRefCnt {
         private static final AtomicIntegerFieldUpdater<RefCnt> UPDATER =
                 AtomicIntegerFieldUpdater.newUpdater(RefCnt.class, "value");
@@ -286,7 +290,7 @@ public class RefCnt {
                     next = 1;
                 } else {
                     if (curr < decrement || (curr & 1) == 1) {
-                        throw new IllegalReferenceCountException(curr >>> 1, -(decrement >>> 1));
+                        throwIllegalRefCountOnRelease(decrement, curr);
                     }
                     next = curr - decrement;
                 }
@@ -361,7 +365,7 @@ public class RefCnt {
                     next = 1;
                 } else {
                     if (curr < decrement || (curr & 1) == 1) {
-                        throw new IllegalReferenceCountException(curr >>> 1, -(decrement >>> 1));
+                        throwIllegalRefCountOnRelease(decrement, curr);
                     }
                     next = curr - decrement;
                 }
@@ -431,7 +435,7 @@ public class RefCnt {
                     next = 1;
                 } else {
                     if (curr < decrement || (curr & 1) == 1) {
-                        throw new IllegalReferenceCountException(curr >>> 1, -(decrement >>> 1));
+                        throwIllegalRefCountOnRelease(decrement, curr);
                     }
                     next = curr - decrement;
                 }
