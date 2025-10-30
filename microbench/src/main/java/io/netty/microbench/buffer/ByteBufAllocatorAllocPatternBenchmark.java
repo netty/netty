@@ -22,17 +22,12 @@ import io.netty.buffer.MiByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.internal.MathUtil;
-import org.openjdk.jmh.annotations.Benchmark;
-import org.openjdk.jmh.annotations.CompilerControl;
-import org.openjdk.jmh.annotations.Level;
-import org.openjdk.jmh.annotations.Measurement;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
-import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
-import org.openjdk.jmh.annotations.Threads;
-import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.annotations.*;
+import org.openjdk.jmh.infra.BenchmarkParams;
 import org.openjdk.jmh.infra.Blackhole;
+
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -42,6 +37,7 @@ import java.util.SplittableRandom;
 @Warmup(iterations = 10, time = 1)
 @Measurement(iterations = 10, time = 1)
 @Threads(1)
+@Fork(1)
 public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmark {
 
     private static final PooledByteBufAllocator pooledAlloc = PooledByteBufAllocator.DEFAULT;
@@ -62,6 +58,10 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
 
     private final int[] sizes = new int[MathUtil.findNextPositivePowerOfTwo(flattendSizeArray.length)];
     private final int[] randomIndexes = new int[MathUtil.findNextPositivePowerOfTwo(flattendSizeArray.length)];
+
+    private final long[] memoryUsage = new long[20];
+    private int iterationIndex = 0;
+    private final MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
 
     // Use event-loop threads.
     public ByteBufAllocatorAllocPatternBenchmark() {
@@ -96,6 +96,20 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
         }
     }
 
+    private void heapAlloc(Blackhole blackhole, ByteBufAllocator alloc, ByteBuf[] buffers) {
+        for (int i = 0; i < sizes.length; i++) {
+            int size = sizes[i];
+            int releaseIndex = getNextReleaseIndex(randomIndexes[i]);
+            ByteBuf oldBuf = buffers[releaseIndex];
+            if (oldBuf != null) {
+                oldBuf.release();
+            }
+            ByteBuf newBuf = alloc.heapBuffer(size);
+            buffers[releaseIndex] = newBuf;
+            blackhole.consume(buffers);
+        }
+    }
+
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
     public void pooledDirect(Blackhole blackhole) {
@@ -114,8 +128,39 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
         directAlloc(blackhole, miMallocAllocator, mimallocDirectBuffers);
     }
 
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+    @Benchmark
+    public void pooledHeap(Blackhole blackhole) {
+        heapAlloc(blackhole, pooledAlloc, mimallocDirectBuffers);
+    }
+
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+    @Benchmark
+    public void adaptiveHeap(Blackhole blackhole) {
+        heapAlloc(blackhole, adaptiveAllocator, adaptiveDirectBuffers);
+    }
+
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+    @Benchmark
+    public void mimallocHeap(Blackhole blackhole) {
+        heapAlloc(blackhole, miMallocAllocator, mimallocDirectBuffers);
+    }
+
+    @TearDown(Level.Iteration)
+    public void recordMemoryUsage(BenchmarkParams benchmarkParams) {
+        if (iterationIndex < memoryUsage.length) {
+            if (benchmarkParams.getBenchmark().contains("Heap")) {
+                memoryUsage[iterationIndex] = memoryMXBean.getHeapMemoryUsage().getUsed();
+            } else {
+                memoryUsage[iterationIndex] = memoryMXBean.getNonHeapMemoryUsage().getUsed();
+            }
+        }
+        iterationIndex++;
+    }
+
     @TearDown
-    public void releaseBuffers() {
+    public void releaseBuffers(BenchmarkParams benchmarkParams) {
+        System.out.println();
         List<ByteBuf[]> bufferLists = Arrays.asList(
                 pooledDirectBuffers,
                 adaptiveDirectBuffers,
@@ -130,6 +175,12 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
                 }
             }
             Arrays.fill(bufList, null);
+        }
+        System.out.println("Memory usage per-iteration:");
+        for (long usage : memoryUsage) {
+            if (usage > 0) {
+                System.out.println(usage);
+            }
         }
     }
 
