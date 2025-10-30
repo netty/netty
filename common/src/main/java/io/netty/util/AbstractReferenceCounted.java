@@ -20,29 +20,31 @@ import io.netty.util.internal.RefCnt;
 /**
  * Abstract base class for classes wants to implement {@link ReferenceCounted}.
  */
-public abstract class AbstractReferenceCounted extends RefCnt implements ReferenceCounted {
+public abstract class AbstractReferenceCounted implements ReferenceCounted {
+
+    private final RefCnt refCnt = new RefCnt();
 
     @Override
     public int refCnt() {
-        return RefCnt.refCnt(this);
+        return RefCnt.refCnt(refCnt);
     }
 
     /**
      * An unsafe operation intended for use by a subclass that sets the reference count of the object directly
      */
     protected void setRefCnt(int refCnt) {
-        RefCnt.setRefCnt(this, refCnt);
+        RefCnt.setRefCnt(this.refCnt, refCnt);
     }
 
     @Override
     public ReferenceCounted retain() {
-        RefCnt.retain(this);
+        RefCnt.retain(refCnt);
         return this;
     }
 
     @Override
     public ReferenceCounted retain(int increment) {
-        RefCnt.retain(this, increment);
+        RefCnt.retain(refCnt, increment);
         return this;
     }
 
@@ -53,12 +55,12 @@ public abstract class AbstractReferenceCounted extends RefCnt implements Referen
 
     @Override
     public boolean release() {
-        return handleRelease(RefCnt.release(this));
+        return handleRelease(RefCnt.release(refCnt));
     }
 
     @Override
     public boolean release(int decrement) {
-        return handleRelease(RefCnt.release(this, decrement));
+        return handleRelease(RefCnt.release(refCnt, decrement));
     }
 
     private boolean handleRelease(boolean result) {
