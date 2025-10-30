@@ -22,7 +22,10 @@ import io.netty.util.ReferenceCounted;
 
 /**
  * Common logic for {@link ReferenceCounted} implementations
+ * @deprecated Instead of extending this class, prefer instead to include a {@link RefCnt} field and delegate to that.
+ * This approach has better compatibility with Graal Native Image.
  */
+@Deprecated
 public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
     /*
      * Implementation notes:
