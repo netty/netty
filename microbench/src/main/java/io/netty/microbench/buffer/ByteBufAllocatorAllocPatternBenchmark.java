@@ -70,7 +70,7 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
     private final int[] randomIndexes = new int[MathUtil.findNextPositivePowerOfTwo(flattendSizeArray.length)];
 
     private final long[] memoryUsage = new long[20];
-    private int iterationIndex = 0;
+    private int iterationIndex;
     private final MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
 
     // Use event-loop threads.
