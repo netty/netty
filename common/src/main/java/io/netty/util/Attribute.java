@@ -15,6 +15,8 @@
  */
 package io.netty.util;
 
+import java.util.function.Supplier;
+
 /**
  * An attribute which allows to store a value reference. It may be updated atomically and so is thread-safe.
  *
@@ -47,6 +49,15 @@ public interface Attribute<T> {
      *  If it was not possible to set the value as it contains a value it will just return the current value.
      */
     T setIfAbsent(T value);
+
+    /**
+     *  Atomically sets to the value from the given supplier if this {@link Attribute}'s value is {@code null}.
+     *  If it was not possible to set the value as it contains a value it will just return the current value.
+     */
+    default T setIfAbsent(Supplier<? extends T> supplier) {
+        T old = get();
+        return old != null ? old : setIfAbsent(supplier.get());
+    }
 
     /**
      * Removes this attribute from the {@link AttributeMap} and returns the old value. Subsequent {@link #get()}
