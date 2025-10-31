@@ -24,9 +24,11 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
- * Concrete class for reference counting implementations.
- * Provides a factory method to create instances using the most efficient available atomic updater.
+ * Monomorphic reference counter implementation that always use the most efficient available atomic updater.
+ * This implementation is easier for the JIT compiler to optimize,
+ * compared to when {@link ReferenceCountUpdater} is used.
  */
+@SuppressWarnings("deprecation")
 public class RefCnt {
 
     private static final int UNSAFE = 0;
@@ -66,17 +68,6 @@ public class RefCnt {
             AtomicRefCnt.init(this);
             break;
         }
-    }
-
-    private static long getUnsafeOffset(Class<?> clz, String fieldName) {
-        try {
-            if (PlatformDependent.hasUnsafe()) {
-                return PlatformDependent.objectFieldOffset(clz.getDeclaredField(fieldName));
-            }
-        } catch (Throwable ignore) {
-            // fall-back
-        }
-        return -1;
     }
 
     /**
@@ -267,6 +258,9 @@ public class RefCnt {
         }
 
         private static void retain0(RefCnt instance, int increment) {
+            // oldRef & 0x80000001 stands for oldRef < 0 || oldRef is odd
+            // NOTE: we're optimizing for inlined and constant folded increment here -> which will make
+            // Integer.MAX_VALUE - increment to be computed at compile time
             int oldRef = UPDATER.getAndAdd(instance, increment);
             if ((oldRef & 0x80000001) != 0 || oldRef > Integer.MAX_VALUE - increment) {
                 UPDATER.getAndAdd(instance, -increment);
@@ -285,7 +279,7 @@ public class RefCnt {
         private static boolean release0(RefCnt instance, int decrement) {
             int curr, next;
             do {
-                curr = UPDATER.get(instance);
+                curr = instance.value;
                 if (curr == decrement) {
                     next = 1;
                 } else {
@@ -342,6 +336,9 @@ public class RefCnt {
         }
 
         private static void retain0(RefCnt instance, int increment) {
+            // oldRef & 0x80000001 stands for oldRef < 0 || oldRef is odd
+            // NOTE: we're optimizing for inlined and constant folded increment here -> which will make
+            // Integer.MAX_VALUE - increment to be computed at compile time
             int oldRef = (int) VH.getAndAdd(instance, increment);
             if ((oldRef & 0x80000001) != 0 || oldRef > Integer.MAX_VALUE - increment) {
                 VH.getAndAdd(instance, -increment);
@@ -395,6 +392,17 @@ public class RefCnt {
 
         private static final long VALUE_OFFSET = getUnsafeOffset(RefCnt.class, "value");
 
+        private static long getUnsafeOffset(Class<?> clz, String fieldName) {
+            try {
+                if (PlatformDependent.hasUnsafe()) {
+                    return PlatformDependent.objectFieldOffset(clz.getDeclaredField(fieldName));
+                }
+            } catch (Throwable ignore) {
+                // fall-back
+            }
+            return -1;
+        }
+
         static void init(RefCnt instance) {
             PlatformDependent.safeConstructPutInt(instance, VALUE_OFFSET, 2);
         }
@@ -412,6 +420,9 @@ public class RefCnt {
         }
 
         private static void retain0(RefCnt instance, int increment) {
+            // oldRef & 0x80000001 stands for oldRef < 0 || oldRef is odd
+            // NOTE: we're optimizing for inlined and constant folded increment here -> which will make
+            // Integer.MAX_VALUE - increment to be computed at compile time
             int oldRef = PlatformDependent.getAndAddInt(instance, VALUE_OFFSET, increment);
             if ((oldRef & 0x80000001) != 0 || oldRef > Integer.MAX_VALUE - increment) {
                 PlatformDependent.getAndAddInt(instance, VALUE_OFFSET, -increment);
