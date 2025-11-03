@@ -26,7 +26,6 @@ import io.netty.handler.codec.PrematureChannelClosureException;
 import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mockito;
@@ -757,5 +756,16 @@ public class HttpObjectAggregatorTest {
                 ch.finish();
             }
         });
+    }
+
+    @Test
+    public void invalidContinueLength() {
+        EmbeddedChannel channel = new EmbeddedChannel(new HttpServerCodec(), new HttpObjectAggregator(1024));
+
+        channel.writeInbound(Unpooled.copiedBuffer("POST / HTTP/1.1\r\n" +
+                "Expect: 100-continue\r\n" +
+                "Content-Length:\r\n" +
+                "\r\n\r\n", CharsetUtil.US_ASCII));
+        assertTrue(channel.finishAndReleaseAll());
     }
 }

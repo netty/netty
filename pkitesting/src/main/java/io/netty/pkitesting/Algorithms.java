@@ -91,9 +91,13 @@ final class Algorithms {
         }
     }
 
+    private static final class DefaultProvider {
+        private static final Provider INSTANCE = new BouncyCastleProvider();
+    }
+
     private static synchronized Provider bouncyCastle() {
         if (bouncyCastle == null) {
-            bouncyCastle = new BouncyCastleProvider();
+            bouncyCastle = DefaultProvider.INSTANCE;
         }
         return bouncyCastle;
     }
