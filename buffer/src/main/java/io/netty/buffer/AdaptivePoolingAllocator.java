@@ -1118,7 +1118,9 @@ final class AdaptivePoolingAllocator {
         protected Magazine magazine;
         private final AdaptivePoolingAllocator allocator;
         private final ChunkReleasePredicate chunkReleasePredicate;
-        private final RefCnt refCnt;
+        // Always populate the refCnt field, so HotSpot doesn't emit `null` checks.
+        // This is safe to do even on native-image.
+        private final RefCnt refCnt = new RefCnt();
         private final int capacity;
         private final boolean pooled;
         protected int allocatedBytes;
@@ -1129,7 +1131,6 @@ final class AdaptivePoolingAllocator {
             magazine = null;
             allocator = null;
             chunkReleasePredicate = null;
-            refCnt = null;
             capacity = 0;
             pooled = false;
         }
@@ -1138,7 +1139,6 @@ final class AdaptivePoolingAllocator {
               ChunkReleasePredicate chunkReleasePredicate) {
             this.delegate = delegate;
             this.pooled = pooled;
-            refCnt = new RefCnt();
             capacity = delegate.capacity();
             attachToMagazine(magazine);
 

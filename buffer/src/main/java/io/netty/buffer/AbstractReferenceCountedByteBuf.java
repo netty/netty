@@ -23,12 +23,11 @@ import io.netty.util.internal.RefCnt;
  */
 public abstract class AbstractReferenceCountedByteBuf extends AbstractByteBuf {
 
-    private final RefCnt refCnt;
+    // this is setting the ref cnt to the initial value
+    private final RefCnt refCnt = new RefCnt();
 
     protected AbstractReferenceCountedByteBuf(int maxCapacity) {
         super(maxCapacity);
-        // this is setting the ref cnt to the initial value
-        refCnt = new RefCnt();
     }
 
     @Override

@@ -52,6 +52,8 @@ public class RefCnt {
      * For the updated int field:
      *   Even => "real" refcount is (refCnt >>> 1)
      *   Odd  => "real" refcount is 0
+     *
+     * This field is package-private so that the AtomicRefCnt implementation can reach it, even on native-image.
      */
     volatile int value;
 
