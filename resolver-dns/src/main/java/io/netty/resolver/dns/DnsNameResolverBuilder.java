@@ -77,7 +77,7 @@ public final class DnsNameResolverBuilder {
     private int ndots = -1;
     private boolean decodeIdn = true;
 
-    private int maxNumConsolidation;
+    private DnsQueryInflightHandler inflightHandler;
     private DnsNameResolverChannelStrategy datagramChannelStrategy = DnsNameResolverChannelStrategy.ChannelPerResolver;
 
     /**
@@ -633,16 +633,35 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
-     * Set the maximum size of the cache that is used to consolidate lookups for different hostnames when in-flight.
-     * This means if multiple lookups are done for the same hostname and still in-flight only one actual query will
+     * Set the maximum size of the cache that is used to consolidate queries when in-flight.
+     * This means if multiple queries are done for the same question and still in-flight only one actual query will
      * be made and the result will be cascaded to the others.
      *
      * @param maxNumConsolidation the maximum lookups to consolidate (different hostnames), or {@code 0} if
      *                            no consolidation should be performed.
      * @return {@code this}
+     *
+     * @deprecated use {@link #inflightHandler(DnsQueryInflightHandler)}
      */
+    @Deprecated
     public DnsNameResolverBuilder consolidateCacheSize(int maxNumConsolidation) {
-        this.maxNumConsolidation = ObjectUtil.checkPositiveOrZero(maxNumConsolidation, "maxNumConsolidation");
+        ObjectUtil.checkPositiveOrZero(maxNumConsolidation, "maxNumConsolidation");
+        return inflightHandler(maxNumConsolidation == 0 ?
+                null : new DefaultDnsQueryInflightHandler(maxNumConsolidation));
+    }
+
+    /**
+     * Set the {@link DnsQueryInflightHandler} that is used to consider if consolidation for different queries should
+     * be done when in-flight.
+     * This means if multiple queries are done for the same question and still in-flight only one actual query will
+     * be made and the result will be cascaded to the others.
+     *
+     * @param inflightHandler       the {@link DnsQueryInflightHandler} to use to decide if consolidation should be used
+     *                              or {@code null} if no consolidation should be performed.
+     * @return {@code this}
+     */
+    public DnsNameResolverBuilder inflightHandler(DnsQueryInflightHandler inflightHandler) {
+        this.inflightHandler = inflightHandler;
         return this;
     }
 
@@ -712,7 +731,7 @@ public final class DnsNameResolverBuilder {
                 ndots,
                 decodeIdn,
                 completeOncePreferredResolved,
-                maxNumConsolidation,
+                inflightHandler,
                 datagramChannelStrategy);
     }
 
@@ -782,7 +801,7 @@ public final class DnsNameResolverBuilder {
         copiedBuilder.decodeIdn(decodeIdn);
         copiedBuilder.completeOncePreferredResolved(completeOncePreferredResolved);
         copiedBuilder.localAddress(localAddress);
-        copiedBuilder.consolidateCacheSize(maxNumConsolidation);
+        copiedBuilder.inflightHandler(inflightHandler);
         copiedBuilder.datagramChannelStrategy(datagramChannelStrategy);
         return copiedBuilder;
     }

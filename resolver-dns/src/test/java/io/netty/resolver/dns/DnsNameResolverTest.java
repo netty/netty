@@ -1103,7 +1103,7 @@ public class DnsNameResolverTest {
                     ipv4Preferred ? ResolvedAddressTypes.IPV4_ONLY : ResolvedAddressTypes.IPV6_ONLY, true,
                     10, true, 4096, false, HostsFileEntriesResolver.DEFAULT,
                     provider, new ThreadLocalNameServerAddressStream(provider),
-                    DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true, false, 0, strategy) {
+                    DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true, false, null, strategy) {
                 @Override
                 InetSocketAddress newRedirectServerAddress(InetAddress server) {
                     int port = hitServer2.get() ? dnsServer3.localAddress().getPort() :
@@ -1487,7 +1487,7 @@ public class DnsNameResolverTest {
                 lifecycleObserverFactory, 3000, ResolvedAddressTypes.IPV4_ONLY, true,
                 10, true, 4096, false, HostsFileEntriesResolver.DEFAULT,
                 provider, new ThreadLocalNameServerAddressStream(provider), DnsNameResolver.DEFAULT_SEARCH_DOMAINS,
-                0, true, false, 0, strategy) {
+                0, true, false, null, strategy) {
             @Override
             InetSocketAddress newRedirectServerAddress(InetAddress server) {
                 if (server.equals(dnsServerAuthority.localAddress().getAddress())) {
@@ -1657,7 +1657,7 @@ public class DnsNameResolverTest {
                 NoopDnsQueryLifecycleObserverFactory.INSTANCE, 2000, ResolvedAddressTypes.IPV4_ONLY, true,
                 10, true, 4096, false, HostsFileEntriesResolver.DEFAULT,
                 provider, new ThreadLocalNameServerAddressStream(provider), DnsNameResolver.DEFAULT_SEARCH_DOMAINS,
-                0, true, false, 0, strategy) {
+                0, true, false, null, strategy) {
 
             @Override
             InetSocketAddress newRedirectServerAddress(InetAddress server) {
@@ -1825,7 +1825,7 @@ public class DnsNameResolverTest {
                 true, 10, true, 4096,
                 false, HostsFileEntriesResolver.DEFAULT,
                 provider, new ThreadLocalNameServerAddressStream(provider), DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0,
-                true, false, 0, strategy) {
+                true, false, null, strategy) {
 
             @Override
             protected DnsServerAddressStream newRedirectDnsServerStream(
@@ -1965,7 +1965,7 @@ public class DnsNameResolverTest {
                 true, 10, true, 4096,
                 false, HostsFileEntriesResolver.DEFAULT,
                 provider, new ThreadLocalNameServerAddressStream(provider),
-                DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true, false, 0, strategy) {
+                DnsNameResolver.DEFAULT_SEARCH_DOMAINS, 0, true, false, null, strategy) {
 
             @Override
             protected DnsServerAddressStream newRedirectDnsServerStream(
@@ -4384,7 +4384,7 @@ public class DnsNameResolverTest {
                 false, HostsFileEntriesResolver.DEFAULT,
                 provider, new ThreadLocalNameServerAddressStream(provider),
                 new String [] { "k8se-apps.svc.cluster.local, svc.cluster.local, cluster.local" }, 1,
-                true, false, 0, strategy);
+                true, false, null, strategy);
         try {
             InetAddress address = resolver.resolve(hostname).sync().getNow();
             assertArrayEquals(new byte[] { 10, 0, 0, 2 }, address.getAddress());

@@ -282,9 +282,24 @@ public class DnsNameResolver extends InetNameResolver {
     private final Bootstrap socketBootstrap;
     private final boolean retryWithTcpOnTimeout;
 
-    private final int maxNumConsolidation;
-    private final Map<DnsQuestion, Promise<AddressedEnvelope<? extends DnsResponse,
-            InetSocketAddress>>> inflightLookups;
+    private final DnsQueryInflightHandler inflightHandler;
+    private final Map<DnsQuestion, InflightQuery> inflightQueries;
+
+    private static final class InflightQuery {
+        final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise;
+        final long queryStartStamp;
+
+        InflightQuery(Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
+            this.promise = promise;
+            long nanoTime;
+
+            // As we use 0 for a new query we need to loop until we have a value other then 0.
+            do {
+                nanoTime = System.nanoTime();
+            } while (nanoTime == 0);
+            this.queryStartStamp = System.nanoTime();
+        }
+    }
 
     /**
      * Creates a new DNS-based name resolver that communicates with the specified list of DNS servers.
@@ -390,7 +405,7 @@ public class DnsNameResolver extends InetNameResolver {
              dnsQueryLifecycleObserverFactory, queryTimeoutMillis, resolvedAddressTypes, recursionDesired,
              maxQueriesPerResolve, traceEnabled, maxPayloadSize, optResourceEnabled, hostsFileEntriesResolver,
              dnsServerAddressStreamProvider, new ThreadLocalNameServerAddressStream(dnsServerAddressStreamProvider),
-             searchDomains, ndots, decodeIdn, false, 0, DnsNameResolverChannelStrategy.ChannelPerResolver);
+             searchDomains, ndots, decodeIdn, false, null, DnsNameResolverChannelStrategy.ChannelPerResolver);
     }
 
     @SuppressWarnings("deprecation")
@@ -418,7 +433,8 @@ public class DnsNameResolver extends InetNameResolver {
             int ndots,
             boolean decodeIdn,
             boolean completeOncePreferredResolved,
-            int maxNumConsolidation, DnsNameResolverChannelStrategy datagramChannelStrategy) {
+            DnsQueryInflightHandler inflightHandler,
+            DnsNameResolverChannelStrategy datagramChannelStrategy) {
         super(eventLoop);
         this.queryTimeoutMillis = queryTimeoutMillis >= 0
             ? queryTimeoutMillis
@@ -491,11 +507,12 @@ public class DnsNameResolver extends InetNameResolver {
         preferredAddressType = preferredAddressType(this.resolvedAddressTypes);
         this.authoritativeDnsServerCache = checkNotNull(authoritativeDnsServerCache, "authoritativeDnsServerCache");
         nameServerComparator = new NameServerComparator(addressType(preferredAddressType));
-        this.maxNumConsolidation = maxNumConsolidation;
-        if (maxNumConsolidation > 0) {
-            inflightLookups = new HashMap<>();
+        if (inflightHandler != null) {
+            inflightQueries = new HashMap<>();
+            this.inflightHandler = inflightHandler;
         } else {
-            inflightLookups = null;
+            inflightQueries = null;
+            this.inflightHandler = null;
         }
 
         final DnsResponseHandler responseHandler = new DnsResponseHandler(queryContextManager);
@@ -1416,72 +1433,84 @@ public class DnsNameResolver extends InetNameResolver {
                 checkNotNull(promise, "promise"));
         final int payloadSize = isOptResourceEnabled() ? maxPayloadSize() : 0;
 
-        if (inflightLookups != null && (additionals == null || additionals.length == 0)) {
-            Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> inflight =
-                    inflightLookups.get(question);
+        if (inflightQueries != null && (additionals == null || additionals.length == 0)) {
+            InflightQuery inflight = inflightQueries.get(question);
             if (inflight != null) {
-                // We have a query / response inflight, let's just cascade on it to reduce the network traffic.
-                inflight.addListener(f -> {
-                    if (f.isSuccess()) {
-                        // Notify the observer and after that the promise
-                        queryLifecycleObserver.querySucceed();
-                        AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
-                                (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) f.getNow();
+                Runnable task = inflightHandler.handle(question, inflight.queryStartStamp);
+                if (task != null) {
+                    // We have a query / response inflight, let's just cascade on it to reduce the network traffic.
+                    inflight.promise.addListener(f -> {
+                        try {
+                            if (f.isSuccess()) {
+                                // Notify the observer and after that the promise
+                                queryLifecycleObserver.querySucceed();
+                                AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
+                                        (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) f.getNow();
 
-                        // Retain the result as the listener on the promise is responsible to release it.
-                        ReferenceCountUtil.retain(result);
-                        promise.setSuccess(result);
-                    } else {
-                        Throwable cause = f.cause();
-                        if (isTimeoutError(cause)) {
-                            doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
-                                    additionals, flush, payloadSize, castPromise);
-                        } else {
-                            // Notify the observer and after that the promise
-                            queryLifecycleObserver.queryFailed(cause);
-                            promise.setFailure(cause);
+                                // Retain the result as the listener on the promise is responsible to release it.
+                                ReferenceCountUtil.retain(result);
+                                promise.setSuccess(result);
+                            } else {
+                                Throwable cause = f.cause();
+                                if (isTimeoutError(cause)) {
+                                    doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
+                                            additionals, flush, payloadSize, castPromise);
+                                } else {
+                                    // Notify the observer and after that the promise
+                                    queryLifecycleObserver.queryFailed(cause);
+                                    promise.setFailure(cause);
+                                }
+                            }
+                        } finally {
+                            task.run();
                         }
-                    }
-                });
-                return castPromise;
-            } else if (inflightLookups.size() < maxNumConsolidation) {
-                // Create a new promise as we need to ensure we are the first that will add a listener to it to retain
-                // the result before anyone can release it.
-                Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> newPromise =
-                        executor().newPromise();
-                Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> old =
-                        inflightLookups.put(question, newPromise);
-                assert old == null;
+                    });
+                    return castPromise;
+                }
+            } else {
+                Runnable task = inflightHandler.handle(question, 0);
+                if (task != null) {
+                    // Create a new promise as we need to ensure we are the first that will add a listener to it to
+                    // retain the result before anyone can release it.
+                    InflightQuery inflightQuery = new InflightQuery(executor().newPromise());
+                    InflightQuery old =
+                            inflightQueries.put(question, inflightQuery);
+                    assert old == null;
 
-                newPromise.addListener(f -> {
-                    // Remove the promise and add another listener to it that will call release() on the result.
-                    // As the execution of the listeners is guaranteed to be in the same order as how these were added
-                    // we know that all previous added listeners had a chance to handle the result already.
-                    Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> p =
-                            inflightLookups.remove(question);
-                    assert p == newPromise;
+                    inflightQuery.promise.addListener(f -> {
+                        try {
+                            // Remove the promise and add another listener to it that will call release() on the result.
+                            // As the execution of the listeners is guaranteed to be in the same order as how these were
+                            // added we know that all previous added listeners had a chance to handle the result
+                            // already.
+                            InflightQuery query = inflightQueries.remove(question);
+                            assert query == inflightQuery;
 
-                    if (f.isSuccess()) {
-                        // On success we need to retain the result so listeners that are added after this one
-                        // will still be able to use the result.
-                        AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
-                                (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) f.getNow();
-                        ReferenceCountUtil.retain(result);
-                        promise.setSuccess(result);
-                    } else {
-                        promise.setFailure(f.cause());
-                    }
+                            if (f.isSuccess()) {
+                                // On success we need to retain the result so listeners that are added after this one
+                                // will still be able to use the result.
+                                AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
+                                        (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) f.getNow();
+                                ReferenceCountUtil.retain(result);
+                                promise.setSuccess(result);
+                            } else {
+                                promise.setFailure(f.cause());
+                            }
 
-                    p.addListener(RELEASE_LISTENER);
-                });
+                            query.promise.addListener(RELEASE_LISTENER);
+                        } finally {
+                            task.run();
+                        }
+                    });
 
-                doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
-                        additionals, flush, payloadSize, cast(newPromise));
+                    doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
+                            additionals, flush, payloadSize, cast(inflightQuery.promise));
 
-                // Return the original castPromise which will be notified by the newPromise that we used above.
-                // This was it's impossible for the user to add any extra listeners to the newPromise itself, which
-                // is needed to guarantee the correct life-cycle of the reference counted response.
-                return castPromise;
+                    // Return the original castPromise which will be notified by the newPromise that we used above.
+                    // This was it's impossible for the user to add any extra listeners to the newPromise itself, which
+                    // is needed to guarantee the correct life-cycle of the reference counted response.
+                    return castPromise;
+                }
             }
         }
         doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
