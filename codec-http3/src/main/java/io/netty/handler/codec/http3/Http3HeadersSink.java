@@ -23,6 +23,7 @@ import java.util.function.BiConsumer;
 import static io.netty.handler.codec.http3.Http3Headers.PseudoHeaderName.AUTHORITY;
 import static io.netty.handler.codec.http3.Http3Headers.PseudoHeaderName.METHOD;
 import static io.netty.handler.codec.http3.Http3Headers.PseudoHeaderName.PATH;
+import static io.netty.handler.codec.http3.Http3Headers.PseudoHeaderName.PROTOCOL;
 import static io.netty.handler.codec.http3.Http3Headers.PseudoHeaderName.SCHEME;
 import static io.netty.handler.codec.http3.Http3Headers.PseudoHeaderName.STATUS;
 import static io.netty.handler.codec.http3.Http3Headers.PseudoHeaderName.getPseudoHeader;
@@ -76,12 +77,29 @@ final class Http3HeadersSink implements BiConsumer<CharSequence, CharSequence> {
                 CharSequence method = headers.method();
                 // fast-path
                 if (HttpMethod.CONNECT.asciiName().contentEqualsIgnoreCase(method)) {
-                    // For CONNECT we must only include:
-                    // - :method
-                    // - :authority
-                    final int requiredPseudoHeaders = METHOD.getFlag() | AUTHORITY.getFlag();
-                    if (receivedPseudoHeaders != requiredPseudoHeaders) {
-                        throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
+                    // Check if this is an Extended CONNECT request (RFC 9220)
+                    // Extended CONNECT includes the :protocol pseudo-header
+                    if ((receivedPseudoHeaders & PROTOCOL.getFlag()) != 0) {
+                        // Extended CONNECT (RFC 9220) requires:
+                        // - :method
+                        // - :scheme
+                        // - :authority
+                        // - :path
+                        // - :protocol
+                        final int requiredPseudoHeaders = METHOD.getFlag() | SCHEME.getFlag() |
+                                                         AUTHORITY.getFlag() | PATH.getFlag() | PROTOCOL.getFlag();
+                        if (receivedPseudoHeaders != requiredPseudoHeaders) {
+                            throw new Http3HeadersValidationException(
+                                    "Not all mandatory pseudo-headers included for Extended CONNECT.");
+                        }
+                    } else {
+                        // Regular CONNECT (RFC 9114) requires:
+                        // - :method
+                        // - :authority
+                        final int requiredPseudoHeaders = METHOD.getFlag() | AUTHORITY.getFlag();
+                        if (receivedPseudoHeaders != requiredPseudoHeaders) {
+                            throw new Http3HeadersValidationException("Not all mandatory pseudo-headers included.");
+                        }
                     }
                 } else if (HttpMethod.OPTIONS.asciiName().contentEqualsIgnoreCase(method)) {
                     // See:
