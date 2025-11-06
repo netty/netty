@@ -33,11 +33,12 @@ final class TcpDnsQueryContext extends DnsQueryContext {
     TcpDnsQueryContext(Channel channel,
                        InetSocketAddress nameServerAddr,
                        DnsQueryContextManager queryContextManager,
+                       DnsQueryLifecycleObserver lifecycleObserver,
                        int maxPayLoadSize, boolean recursionDesired,
                        long queryTimeoutMillis,
                        DnsQuestion question, DnsRecord[] additionals,
                        Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise) {
-        super(channel, nameServerAddr, queryContextManager, maxPayLoadSize, recursionDesired,
+        super(channel, nameServerAddr, queryContextManager, lifecycleObserver, maxPayLoadSize, recursionDesired,
                 // No retry via TCP.
                 queryTimeoutMillis, question, additionals, promise, null, false);
     }

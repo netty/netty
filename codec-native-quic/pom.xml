@@ -19,7 +19,7 @@
   <parent>
     <groupId>io.netty</groupId>
     <artifactId>netty-parent</artifactId>
-    <version>4.2.7.Final-SNAPSHOT</version>
+    <version>4.2.8.Final-SNAPSHOT</version>
   </parent>
 
   <artifactId>netty-codec-native-quic</artifactId>
@@ -1022,23 +1022,10 @@
               </target>
             </configuration>
           </execution>
-          <!-- Copy the manifest file that we populated so far so we can use it as a starting point when generating the jars and adding more things to it. -->
-          <execution>
-            <id>copy-manifest</id>
-            <phase>prepare-package</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <copy file="${project.build.outputDirectory}/META-INF/MANIFEST.MF" tofile="${project.build.directory}/manifests/MANIFEST-native.MF" />
-                <copy file="${project.build.outputDirectory}/META-INF/MANIFEST.MF" tofile="${project.build.directory}/manifests/MANIFEST.MF" />
-              </target>
-            </configuration>
-          </execution>
         </executions>
       </plugin>
-      <!-- always produce osgi bundles -->
+
+      <!-- always produce osgi bundles: the first execution is for main artifact, the second for native library -->
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
@@ -1061,6 +1048,35 @@
                 <Quiche-Revision>${quicheCommitSha}</Quiche-Revision>
                 <Quiche-Branch>${quicheBranch}</Quiche-Branch>
               </instructions>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.felix</groupId>
+        <artifactId>maven-bundle-plugin</artifactId>
+        <executions>
+          <execution>
+            <id>native-manifest</id>
+            <phase>process-classes</phase>
+            <goals>
+              <goal>manifest</goal>
+            </goals>
+            <configuration>
+              <supportedProjectTypes>
+                <supportedProjectType>jar</supportedProjectType>
+                <supportedProjectType>bundle</supportedProjectType>
+              </supportedProjectTypes>
+              <instructions>
+                <Fragment-Host>${fragmentHost}</Fragment-Host>
+                <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
+                <Bundle-SymbolicName>${maven-symbolicname}.${jni.classifier}</Bundle-SymbolicName>
+                <BoringSSL-Revision>${boringsslCommitSha}</BoringSSL-Revision>
+                <BoringSSL-Branch>${boringsslBranch}</BoringSSL-Branch>
+                <Quiche-Revision>${quicheCommitSha}</Quiche-Revision>
+                <Quiche-Branch>${quicheBranch}</Quiche-Branch>
+              </instructions>
+              <manifestLocation>${project.build.directory}/${jni.classifier}</manifestLocation>
             </configuration>
           </execution>
         </executions>
@@ -1167,7 +1183,7 @@
                   <Multi-Release>true</Multi-Release>
                 </manifestEntries>
                 <index>true</index>
-                <manifestFile>${project.build.directory}/manifests/MANIFEST.MF</manifestFile>
+                <manifestFile>${project.build.outputDirectory}/META-INF/MANIFEST.MF</manifestFile>
               </archive>
             </configuration>
           </execution>
@@ -1197,11 +1213,9 @@
                 </manifest>
                 <manifestEntries>
                   <Multi-Release>true</Multi-Release>
-                  <Fragment-Host>${fragmentHost}</Fragment-Host>
-                  <Bundle-NativeCode>${bundleNativeCode}</Bundle-NativeCode>
                 </manifestEntries>
                 <index>true</index>
-                <manifestFile>${project.build.directory}/manifests/MANIFEST-native.MF</manifestFile>
+                <manifestFile>${project.build.directory}/${jni.classifier}/MANIFEST.MF</manifestFile>
               </archive>
               <classifier>${jni.classifier}</classifier>
             </configuration>

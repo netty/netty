@@ -43,6 +43,7 @@ public final class DefaultSmtpRequest implements SmtpRequest {
      */
     public DefaultSmtpRequest(SmtpCommand command, CharSequence... parameters) {
         this.command = ObjectUtil.checkNotNull(command, "command");
+        SmtpUtils.validateSMTPParameters(parameters);
         this.parameters = SmtpUtils.toUnmodifiableList(parameters);
     }
 
@@ -55,6 +56,7 @@ public final class DefaultSmtpRequest implements SmtpRequest {
 
     DefaultSmtpRequest(SmtpCommand command, List<CharSequence> parameters) {
         this.command = ObjectUtil.checkNotNull(command, "command");
+        SmtpUtils.validateSMTPParameters(parameters);
         this.parameters = parameters != null ?
                 Collections.unmodifiableList(parameters) : Collections.<CharSequence>emptyList();
     }

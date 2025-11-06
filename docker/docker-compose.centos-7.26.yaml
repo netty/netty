@@ -6,7 +6,7 @@ services:
     image: netty:centos-7-26
     build:
       args:
-        java_version : "26.ea.17-open"
+        java_version : "26.ea.22-open"
 
   build:
     image: netty:centos-7-26

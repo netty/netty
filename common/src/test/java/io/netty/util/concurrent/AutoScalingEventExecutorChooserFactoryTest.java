@@ -170,6 +170,19 @@ public class AutoScalingEventExecutorChooserFactoryTest {
 
     @Test
     @Timeout(30)
+    void testScaleDownWhenExecutorIsNotStarted() throws InterruptedException {
+        TestEventExecutorGroup group = new TestEventExecutorGroup(2, 4, 50, TimeUnit.MILLISECONDS);
+        try {
+            // Do not start executors
+            Thread.sleep(200);
+            assertEquals(2, group.activeExecutorCount(), "Should not scale below minThreads");
+        } finally {
+            group.shutdownGracefully().syncUninterruptibly();
+        }
+    }
+
+    @Test
+    @Timeout(30)
     void testScaleDownDoesNotGoBelowMinThreads() throws InterruptedException {
         TestEventExecutorGroup group = new TestEventExecutorGroup(2, 4, 50, TimeUnit.MILLISECONDS);
         try {

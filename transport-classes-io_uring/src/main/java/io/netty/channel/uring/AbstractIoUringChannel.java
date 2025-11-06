@@ -47,6 +47,7 @@ import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.CleanableDirectBuffer;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -1203,7 +1204,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             ByteBuf buf = (ByteBuf) msg;
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
-        throw new UnsupportedOperationException("unsupported message type");
+        throw new UnsupportedOperationException("unsupported message type: " + StringUtil.simpleClassName(msg));
     }
 
     @Override
