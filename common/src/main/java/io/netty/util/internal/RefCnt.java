@@ -29,7 +29,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
  * compared to when {@link ReferenceCountUpdater} is used.
  */
 @SuppressWarnings("deprecation")
-public class RefCnt {
+public final class RefCnt {
 
     private static final int UNSAFE = 0;
     private static final int VAR_HANDLE = 1;
