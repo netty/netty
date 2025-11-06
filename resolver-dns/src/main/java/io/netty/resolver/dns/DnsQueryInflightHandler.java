@@ -24,14 +24,35 @@ import io.netty.handler.codec.dns.DnsQuestion;
 public interface DnsQueryInflightHandler {
 
     /**
-     * Returns a {@link Runnable} that will be called once the query completes or {@code null} if no consolidation
-     * should be used at all.
+     * Returns a {@link DnsQueryInflightHandle} that will be called everytime we might want to consolidate or
+     * {@code null} if no consolidation should be used at all.
      *
      * @param question          the {@link DnsQuestion}
-     * @param queryStartStamp   the timestamp {@link System#nanoTime()} of when the original query was be performed or
-     *                          {@code 0} if no other query for this {@link DnsQuestion} is inflight.
-     * @return                  a {@link Runnable} that will be executed once the original query was completed or
      *                          {@code null} if no consolidation should take place.
+     * @return                  the {@link DnsQueryInflightHandle}.
      */
-    Runnable handle(DnsQuestion question, long queryStartStamp);
+    DnsQueryInflightHandle handle(DnsQuestion question);
+
+    /**
+     * A handle for a current consolidation.
+     */
+    interface DnsQueryInflightHandle {
+        /**
+         * Returns {@code true} if consolidation should take place, {@code false} otherwise
+         * @param question          the {@link DnsQuestion} for which the consolidation might be done.
+         * @param queryStartStamp   the {@link System#nanoTime()} when the original query was done.
+         * @return                  {@code true} if consildation should be done, {@code false} otherwise and so a
+         *                          extra query will be performed.
+         */
+        boolean consolidate(DnsQuestion question, long queryStartStamp);
+
+        /**
+         * Called once the original inflight query was completed and there will be no more consolidations for it.
+         *
+         * @param question          the {@link DnsQuestion} for which the consolidation was done.
+         */
+        default void complete(DnsQuestion question) {
+            // NOOP.
+        }
+    }
 }

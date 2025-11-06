@@ -286,17 +286,14 @@ public class DnsNameResolver extends InetNameResolver {
     private final Map<DnsQuestion, InflightQuery> inflightQueries;
 
     private static final class InflightQuery {
+        final DnsQueryInflightHandler.DnsQueryInflightHandle handle;
         final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise;
         final long queryStartStamp;
 
-        InflightQuery(Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
+        InflightQuery(DnsQueryInflightHandler.DnsQueryInflightHandle handle,
+                      Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
+            this.handle = handle;
             this.promise = promise;
-            long nanoTime;
-
-            // As we use 0 for a new query we need to loop until we have a value other then 0.
-            do {
-                nanoTime = System.nanoTime();
-            } while (nanoTime == 0);
             this.queryStartStamp = System.nanoTime();
         }
     }
@@ -1436,56 +1433,50 @@ public class DnsNameResolver extends InetNameResolver {
         if (inflightQueries != null && (additionals == null || additionals.length == 0)) {
             InflightQuery inflight = inflightQueries.get(question);
             if (inflight != null) {
-                Runnable task = inflightHandler.handle(question, inflight.queryStartStamp);
-                if (task != null) {
+                if (inflight.handle.consolidate(question, inflight.queryStartStamp)) {
                     // We have a query / response inflight, let's just cascade on it to reduce the network traffic.
                     inflight.promise.addListener(f -> {
-                        try {
-                            if (f.isSuccess()) {
-                                // Notify the observer and after that the promise
-                                queryLifecycleObserver.querySucceed();
-                                AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
-                                        (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) f.getNow();
+                        if (f.isSuccess()) {
+                            // Notify the observer and after that the promise
+                            queryLifecycleObserver.querySucceed();
+                            AddressedEnvelope<? extends DnsResponse, InetSocketAddress> result =
+                                    (AddressedEnvelope<? extends DnsResponse, InetSocketAddress>) f.getNow();
 
-                                // Retain the result as the listener on the promise is responsible to release it.
-                                ReferenceCountUtil.retain(result);
-                                promise.setSuccess(result);
+                            // Retain the result as the listener on the promise is responsible to release it.
+                            ReferenceCountUtil.retain(result);
+                            promise.setSuccess(result);
+                        } else {
+                            Throwable cause = f.cause();
+                            if (isTimeoutError(cause)) {
+                                doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
+                                        additionals, flush, payloadSize, castPromise);
                             } else {
-                                Throwable cause = f.cause();
-                                if (isTimeoutError(cause)) {
-                                    doQueryNow(channel, nameServerAddr, question, queryLifecycleObserver,
-                                            additionals, flush, payloadSize, castPromise);
-                                } else {
-                                    // Notify the observer and after that the promise
-                                    queryLifecycleObserver.queryFailed(cause);
-                                    promise.setFailure(cause);
-                                }
+                                // Notify the observer and after that the promise
+                                queryLifecycleObserver.queryFailed(cause);
+                                promise.setFailure(cause);
                             }
-                        } finally {
-                            task.run();
                         }
                     });
                     return castPromise;
                 }
             } else {
-                Runnable task = inflightHandler.handle(question, 0);
-                if (task != null) {
+                DnsQueryInflightHandler.DnsQueryInflightHandle handle = inflightHandler.handle(question);
+                if (handle != null) {
                     // Create a new promise as we need to ensure we are the first that will add a listener to it to
                     // retain the result before anyone can release it.
-                    InflightQuery inflightQuery = new InflightQuery(executor().newPromise());
+                    InflightQuery inflightQuery = new InflightQuery(handle, executor().newPromise());
                     InflightQuery old =
                             inflightQueries.put(question, inflightQuery);
                     assert old == null;
 
                     inflightQuery.promise.addListener(f -> {
+                        // Remove the promise and add another listener to it that will call release() on the result.
+                        // As the execution of the listeners is guaranteed to be in the same order as how these were
+                        // added we know that all previous added listeners had a chance to handle the result
+                        // already.
+                        InflightQuery query = inflightQueries.remove(question);
                         try {
-                            // Remove the promise and add another listener to it that will call release() on the result.
-                            // As the execution of the listeners is guaranteed to be in the same order as how these were
-                            // added we know that all previous added listeners had a chance to handle the result
-                            // already.
-                            InflightQuery query = inflightQueries.remove(question);
                             assert query == inflightQuery;
-
                             if (f.isSuccess()) {
                                 // On success we need to retain the result so listeners that are added after this one
                                 // will still be able to use the result.
@@ -1499,7 +1490,7 @@ public class DnsNameResolver extends InetNameResolver {
 
                             query.promise.addListener(RELEASE_LISTENER);
                         } finally {
-                            task.run();
+                            query.handle.complete(question);
                         }
                     });
 

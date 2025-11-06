@@ -29,16 +29,21 @@ public final class DefaultDnsQueryInflightHandler implements DnsQueryInflightHan
     }
 
     @Override
-    public Runnable handle(DnsQuestion question, long queryStartStamp) {
-        if (queryStartStamp == 0) {
-            // A new query let's see how many we have already inflight that are considered for consolidation.
-            if (inflight < maxConsolidated) {
-                inflight++;
-                return decrementer;
-            }
+    public DnsQueryInflightHandle handle(DnsQuestion question) {
+        if (inflight >= maxConsolidated) {
             return null;
         }
-        // Use consolidation if possible.
-        return NOOP;
+        inflight++;
+        return new DnsQueryInflightHandle() {
+            @Override
+            public boolean consolidate(DnsQuestion question, long queryStartStamp) {
+                return true;
+            }
+
+            @Override
+            public void complete(DnsQuestion question) {
+                inflight--;
+            }
+        };
     }
 }
