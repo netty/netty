@@ -13,23 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer.svm;
+package io.netty.util.internal.svm;
 
 import com.oracle.svm.core.annotate.Alias;
 import com.oracle.svm.core.annotate.RecomputeFieldValue;
 import com.oracle.svm.core.annotate.TargetClass;
 
-@TargetClass(className = "io.netty.buffer.AdaptivePoolingAllocator$Chunk")
-final class AdaptivePoolingAllocatorSubstitution {
-    private AdaptivePoolingAllocatorSubstitution() {
+@TargetClass(className = "io.netty.util.internal.RefCnt$UnsafeRefCnt")
+final class RefCntSubstitution {
+    private RefCntSubstitution() {
     }
 
     @Alias
     @RecomputeFieldValue(
             kind = RecomputeFieldValue.Kind.FieldOffset,
-            declClassName = "io.netty.buffer.AdaptivePoolingAllocator$Chunk",
-            name = "refCnt"
+            declClassName = "io.netty.util.internal.RefCnt",
+            name = "value"
     )
-    public static long REFCNT_FIELD_OFFSET;
+    public static long VALUE_OFFSET;
 
 }

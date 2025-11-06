@@ -21,26 +21,20 @@ import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.NettyRuntime;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.EnhancedHandle;
-import io.netty.util.ReferenceCounted;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.MpscIntQueue;
-import io.netty.util.internal.AtomicReferenceCountUpdater;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
-import io.netty.util.internal.ReferenceCountUpdater;
+import io.netty.util.internal.RefCnt;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.ThreadExecutorMap;
-import io.netty.util.internal.UnsafeReferenceCountUpdater;
 import io.netty.util.internal.UnstableApi;
-import io.netty.util.internal.VarHandleReferenceCountUpdater;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.invoke.MethodHandles;
-import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.ClosedChannelException;
@@ -52,14 +46,10 @@ import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
 import java.util.function.IntSupplier;
-
-import static io.netty.util.internal.ReferenceCountUpdater.getUnsafeOffset;
-import static java.util.concurrent.atomic.AtomicIntegerFieldUpdater.newUpdater;
 
 /**
  * An auto-tuning pooling allocator, that follows an anti-generational hypothesis.
@@ -1123,65 +1113,17 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    private static class Chunk implements ReferenceCounted, ChunkInfo {
-        private static final long REFCNT_FIELD_OFFSET;
-        private static final AtomicIntegerFieldUpdater<Chunk> AIF_UPDATER;
-        private static final Object REFCNT_FIELD_VH;
-        private static final ReferenceCountUpdater<Chunk> updater;
-
-        static {
-            ReferenceCountUpdater.UpdaterType updaterType = ReferenceCountUpdater.updaterTypeOf(Chunk.class, "refCnt");
-            switch (updaterType) {
-                case Atomic:
-                    AIF_UPDATER = newUpdater(Chunk.class, "refCnt");
-                    REFCNT_FIELD_OFFSET = -1;
-                    REFCNT_FIELD_VH = null;
-                    updater = new AtomicReferenceCountUpdater<Chunk>() {
-                        @Override
-                        protected AtomicIntegerFieldUpdater<Chunk> updater() {
-                            return AIF_UPDATER;
-                        }
-                    };
-                    break;
-                case Unsafe:
-                    AIF_UPDATER = null;
-                    REFCNT_FIELD_OFFSET = getUnsafeOffset(Chunk.class, "refCnt");
-                    REFCNT_FIELD_VH = null;
-                    updater = new UnsafeReferenceCountUpdater<Chunk>() {
-                        @Override
-                        protected long refCntFieldOffset() {
-                            return REFCNT_FIELD_OFFSET;
-                        }
-                    };
-                    break;
-                case VarHandle:
-                    AIF_UPDATER = null;
-                    REFCNT_FIELD_OFFSET = -1;
-                    REFCNT_FIELD_VH = PlatformDependent.findVarHandleOfIntField(MethodHandles.lookup(),
-                            Chunk.class, "refCnt");
-                    updater = new VarHandleReferenceCountUpdater<Chunk>() {
-                        @Override
-                        protected VarHandle varHandle() {
-                            return (VarHandle) REFCNT_FIELD_VH;
-                        }
-                    };
-                    break;
-                default:
-                    throw new Error("Unexpected updater type for Chunk: " + updaterType);
-            }
-        }
-
+    private static class Chunk implements ChunkInfo {
         protected final AbstractByteBuf delegate;
         protected Magazine magazine;
         private final AdaptivePoolingAllocator allocator;
         private final ChunkReleasePredicate chunkReleasePredicate;
+        // Always populate the refCnt field, so HotSpot doesn't emit `null` checks.
+        // This is safe to do even on native-image.
+        private final RefCnt refCnt = new RefCnt();
         private final int capacity;
         private final boolean pooled;
         protected int allocatedBytes;
-
-        // Value might not equal "real" reference count, all access should be via the updater
-        @SuppressWarnings({"unused", "FieldMayBeFinal"})
-        private volatile int refCnt;
 
         Chunk() {
             // Constructor only used by the MAGAZINE_FREED sentinel.
@@ -1198,7 +1140,6 @@ final class AdaptivePoolingAllocator {
             this.delegate = delegate;
             this.pooled = pooled;
             capacity = delegate.capacity();
-            updater.setInitialValue(this);
             attachToMagazine(magazine);
 
             // We need the top-level allocator so ByteBuf.capacity(int) can call reallocate()
@@ -1232,49 +1173,6 @@ final class AdaptivePoolingAllocator {
             this.magazine = magazine;
         }
 
-        @Override
-        public Chunk touch(Object hint) {
-            return this;
-        }
-
-        @Override
-        public int refCnt() {
-            return updater.refCnt(this);
-        }
-
-        @Override
-        public Chunk retain() {
-            return updater.retain(this);
-        }
-
-        @Override
-        public Chunk retain(int increment) {
-            return updater.retain(this, increment);
-        }
-
-        @Override
-        public Chunk touch() {
-            return this;
-        }
-
-        @Override
-        public boolean release() {
-            if (updater.release(this)) {
-                deallocate();
-                return true;
-            }
-            return false;
-        }
-
-        @Override
-        public boolean release(int decrement) {
-            if (updater.release(this, decrement)) {
-                deallocate();
-                return true;
-            }
-            return false;
-        }
-
         /**
          * Called when a magazine is done using this chunk, probably because it was emptied.
          */
@@ -1289,7 +1187,19 @@ final class AdaptivePoolingAllocator {
             return release();
         }
 
-        private void deallocate() {
+        private void retain() {
+            RefCnt.retain(refCnt);
+        }
+
+        protected boolean release() {
+            boolean deallocate = RefCnt.release(refCnt);
+            if (deallocate) {
+                deallocate();
+            }
+            return deallocate;
+        }
+
+        protected void deallocate() {
             Magazine mag = magazine;
             int chunkSize = delegate.capacity();
             if (!pooled || chunkReleasePredicate.shouldReleaseChunk(chunkSize) || mag == null) {
@@ -1300,7 +1210,7 @@ final class AdaptivePoolingAllocator {
                 allocator.chunkRegistry.remove(this);
                 delegate.release();
             } else {
-                updater.resetRefCnt(this);
+                RefCnt.resetRefCnt(refCnt);
                 delegate.setIndex(0, 0);
                 allocatedBytes = 0;
                 if (!mag.trySetNextInLine(this)) {
@@ -1309,7 +1219,7 @@ final class AdaptivePoolingAllocator {
                     if (!mag.offerToQueue(this)) {
                         // The central queue is full. Ensure we release again as we previously did use resetRefCnt()
                         // which did increase the reference count by 1.
-                        boolean released = updater.release(this);
+                        boolean released = RefCnt.release(refCnt);
                         onRelease();
                         allocator.chunkRegistry.remove(this);
                         delegate.release();
