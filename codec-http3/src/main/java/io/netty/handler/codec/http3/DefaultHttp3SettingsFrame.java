@@ -17,6 +17,7 @@ package io.netty.handler.codec.http3;
 
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.Iterator;
@@ -24,24 +25,25 @@ import java.util.Map;
 
 public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
 
-    private final LongObjectMap<Long> settings = new LongObjectHashMap<>(4);
+    private final Http3Settings settings;
 
-    @Override
-    public Long get(long key) {
-        return settings.get(key);
+    public DefaultHttp3SettingsFrame(){
+        this(Http3Settings.defaultSettings());
+    }
+
+    public DefaultHttp3SettingsFrame(Http3Settings settings) {
+        this.settings = ObjectUtil.checkNotNull(settings, "settings");
     }
 
     @Override
-    public Long put(long key, Long value) {
-        if (Http3CodecUtils.isReservedHttp2Setting(key)) {
-            throw new IllegalArgumentException("Setting is reserved for HTTP/2: " + key);
-        }
-        return settings.put(key, value);
+    public Http3Settings settings() {
+        return settings;
     }
 
+
     @Override
-    public Iterator<Map.Entry<Long, Long>> iterator() {
-        return settings.entrySet().iterator();
+    public long type() {
+        return Http3CodecUtils.HTTP3_SETTINGS_FRAME_TYPE;
     }
 
     @Override
@@ -66,21 +68,5 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
         return StringUtil.simpleClassName(this) + "(settings=" + settings + ')';
     }
 
-    /**
-     * Creates a new {@link DefaultHttp3SettingsFrame} which is a copy of the given settings.
-     *
-     * @param settingsFrame the frame to copy.
-     * @return              the newly created copy.
-     */
-    public static DefaultHttp3SettingsFrame copyOf(Http3SettingsFrame settingsFrame) {
-        DefaultHttp3SettingsFrame copy = new DefaultHttp3SettingsFrame();
-        if (settingsFrame instanceof DefaultHttp3SettingsFrame) {
-            copy.settings.putAll(((DefaultHttp3SettingsFrame) settingsFrame).settings);
-        } else {
-            for (Map.Entry<Long, Long> entry: settingsFrame) {
-                copy.put(entry.getKey(), entry.getValue());
-            }
-        }
-        return copy;
-    }
+
 }

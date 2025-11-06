@@ -52,7 +52,7 @@ public class Http3ControlStreamOutboundHandlerTest extends
 
     @Override
     protected List<Http3ControlStreamFrame> newValidFrames() {
-        return Arrays.asList(new DefaultHttp3SettingsFrame(), new DefaultHttp3GoAwayFrame(0),
+        return Arrays.asList(new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings()), new DefaultHttp3GoAwayFrame(0),
                 new DefaultHttp3MaxPushIdFrame(0), new DefaultHttp3CancelPushFrame(0));
     }
 

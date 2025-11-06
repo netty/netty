@@ -31,8 +31,6 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static io.netty.buffer.UnpooledByteBufAllocator.DEFAULT;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.handler.codec.quic.QuicStreamType.UNIDIRECTIONAL;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
@@ -461,9 +459,9 @@ public class QpackEncoderDecoderTest {
         attributes = new QpackAttributes(parent, false);
         Http3.setQpackAttributes(parent, attributes);
         maxEntries = Math.toIntExact(QpackUtil.maxEntries(maxTableCapacity));
-        DefaultHttp3SettingsFrame localSettings = new DefaultHttp3SettingsFrame();
-        localSettings.put(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, maxTableCapacity);
-        localSettings.put(HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, (long) maxBlockedStreams);
+        DefaultHttp3SettingsFrame localSettingsFrame = new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings());
+        localSettingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, Long.valueOf(maxTableCapacity));
+        localSettingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, Long.valueOf(maxBlockedStreams));
         if (maxBlockedStreams > 0) {
             // section acknowledgment will implicitly ack insert count.
             stateSyncStrategyAckNextInsert = false;

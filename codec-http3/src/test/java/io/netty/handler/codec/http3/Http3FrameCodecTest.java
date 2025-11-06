@@ -97,10 +97,13 @@ public class Http3FrameCodecTest {
         parent = new EmbeddedQuicChannel(true);
         qpackAttributes = new QpackAttributes(parent, false);
         Http3.setQpackAttributes(parent, qpackAttributes);
-        final Http3SettingsFrame settings = new DefaultHttp3SettingsFrame();
         maxTableCapacity = 1024L;
-        settings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, maxTableCapacity);
-        settings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, (long) maxBlockedStreams);
+
+        final Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings());
+
+
+        settingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, Long.valueOf(maxTableCapacity));
+        settingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, Long.valueOf(maxBlockedStreams));
         decoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams);
         decoder.setDynamicTableCapacity(maxTableCapacity);
         qpackEncoderHandler = new QpackEncoderHandler(maxTableCapacity, decoder);
@@ -268,14 +271,14 @@ public class Http3FrameCodecTest {
             boolean fragmented, int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
         setUp(maxBlockedStreams, delayQpackStreams);
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
-        settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 100L);
-        settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 1L);
-        settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE, 128L);
+        settingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, Long.valueOf(100L));
+        settingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, Long.valueOf(1L));
+        settingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE, Long.valueOf(128L));
         // Ensure we can encode and decode all sizes correctly.
-        settingsFrame.put(63, 63L);
-        settingsFrame.put(16383, 16383L);
-        settingsFrame.put(1073741823, 1073741823L);
-        settingsFrame.put(4611686018427387903L, 4611686018427387903L);
+        settingsFrame.settings().put(63, 63L);
+        settingsFrame.settings().put(16383, 16383L);
+        settingsFrame.settings().put(1073741823, 1073741823L);
+        settingsFrame.settings().put(4611686018427387903L, Long.valueOf(4611686018427387903L));
         testFrameEncodedAndDecoded(
                 fragmented, maxBlockedStreams, delayQpackStreams, settingsFrame);
     }
@@ -523,9 +526,9 @@ public class Http3FrameCodecTest {
         Http3CodecUtils.writeVariableLengthInteger(buffer, Http3CodecUtils.HTTP3_SETTINGS_FRAME_TYPE);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 4);
         // Write the key and some random value... Both should be only 1 byte long each.
-        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3Settings.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 1);
-        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3Settings.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 1);
 
         testDecodeInvalidSettings(delayQpackStreams, buffer);
@@ -576,7 +579,7 @@ public class Http3FrameCodecTest {
 
     private void testEncodeReservedSettingsKey(boolean delayQpackStreams, long key) {
         Http3SettingsFrame frame = mock(Http3SettingsFrame.class);
-        when(frame.iterator()).thenReturn(Collections.singletonMap(key, 0L).entrySet().iterator());
+        when(frame.settings().entrySet().iterator()).thenReturn(Collections.singletonMap(key, 0L).entrySet().iterator());
         try {
             assertFalse(codecChannel.writeOutbound(frame));
             if (delayQpackStreams) {

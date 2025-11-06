@@ -22,62 +22,10 @@ import java.util.Map;
 /**
  * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4">SETTINGS</a>.
  */
-public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Map.Entry<Long, Long>> {
+public interface Http3SettingsFrame extends Http3ControlStreamFrame {
 
-    /**
-     * See <a href="https://tools.ietf.org/html/draft-ietf-quic-qpack-19#section-5">
-     *     SETTINGS_QPACK_MAX_TABLE_CAPACITY</a>.
-     */
-    long HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY = 0x1;
-    /**
-     * See <a href="https://tools.ietf.org/html/draft-ietf-quic-qpack-19#section-5">
-     *     SETTINGS_QPACK_BLOCKED_STREAMS</a>.
-     */
-    long HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS = 0x7;
-    /**
-     * See <a href="https://www.rfc-editor.org/rfc/rfc9220.html#section-5">
-     *     SETTINGS_ENABLE_CONNECT_PROTOCOL</a>.
-     */
-    long HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL = 0x8;
-    /**
-     * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4.1">
-     *     SETTINGS_MAX_FIELD_SECTION_SIZE</a>.
-     */
-    long HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE = 0x6;
+    Http3Settings settings();
 
     @Override
-    default long type() {
-        return Http3CodecUtils.HTTP3_SETTINGS_FRAME_TYPE;
-    }
-
-    /**
-     * Get a setting from the frame.
-     *
-     * @param key   the key of the setting.
-     * @return      the value of the setting or {@code null} if none was found with the given key.
-     */
-    @Nullable
-    Long get(long key);
-
-    /**
-     * Get a setting from the frame.
-     *
-     * @param key   the key of the setting.
-     * @param defaultValue If the setting does not exist.
-     * @return the value of the setting or {@code defaultValue} if none was found with the given key.
-     */
-    default Long getOrDefault(long key, long defaultValue) {
-        final Long val = get(key);
-        return val == null ? defaultValue : val;
-    }
-
-    /**
-     * Put a setting in the frame.
-     *
-     * @param key       the key of the setting
-     * @param value     the value of the setting.
-     * @return          the previous stored valued for the given key or {@code null} if none was stored before.
-     */
-    @Nullable
-    Long put(long key, Long value);
+    long type();
 }

@@ -24,7 +24,6 @@ import java.util.function.Consumer;
 
 import static io.netty.handler.codec.http3.Http3.setQpackAttributes;
 import static io.netty.handler.codec.http3.Http3ErrorCode.QPACK_DECODER_STREAM_ERROR;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.handler.codec.http3.QpackUtil.encodePrefixedInteger;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
@@ -323,8 +322,8 @@ public class QpackDecoderHandlerTest {
         parent = new EmbeddedQuicChannel(true);
         attributes = new QpackAttributes(parent, false);
         setQpackAttributes(parent, attributes);
-        Http3SettingsFrame settings = new DefaultHttp3SettingsFrame();
-        settings.put(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, maxTableCapacity);
+        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings());
+        settingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, Long.valueOf(maxTableCapacity));
         QpackDecoder decoder = new QpackDecoder(maxTableCapacity, 0);
         encoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
                 new QpackEncoderHandler(maxTableCapacity, decoder)).get();

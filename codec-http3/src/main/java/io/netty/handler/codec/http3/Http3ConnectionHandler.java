@@ -27,8 +27,6 @@ import org.jetbrains.annotations.Nullable;
 import java.util.function.LongFunction;
 
 import static io.netty.handler.codec.http3.Http3RequestStreamCodecState.NO_STATE;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static java.lang.Math.toIntExact;
 
 /**
@@ -55,31 +53,31 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
      * @param unknownInboundStreamHandlerFactory    the {@link LongFunction} that will provide a custom
      *                                              {@link ChannelHandler} for unknown inbound stream types or
      *                                              {@code null} if no special handling should be done.
-     * @param localSettings                         the local {@link Http3SettingsFrame} that should be sent to the
+     * @param localSettingsFrame                         the local {@link Http3SettingsFrame} that should be sent to the
      *                                              remote peer or {@code null} if the default settings should be used.
      * @param disableQpackDynamicTable              If QPACK dynamic table should be disabled.
      */
     Http3ConnectionHandler(boolean server, @Nullable ChannelHandler inboundControlStreamHandler,
                            @Nullable LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory,
-                           @Nullable Http3SettingsFrame localSettings, boolean disableQpackDynamicTable) {
+                           @Nullable Http3SettingsFrame localSettingsFrame, boolean disableQpackDynamicTable) {
         this.unknownInboundStreamHandlerFactory = unknownInboundStreamHandlerFactory;
         this.disableQpackDynamicTable = disableQpackDynamicTable;
-        if (localSettings == null) {
-            localSettings = new DefaultHttp3SettingsFrame();
+        if (localSettingsFrame == null) {
+            localSettingsFrame = new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings());
         } else {
-            localSettings = DefaultHttp3SettingsFrame.copyOf(localSettings);
+            localSettingsFrame = new DefaultHttp3SettingsFrame(localSettingsFrame.settings());
         }
-        Long maxFieldSectionSize = localSettings.get(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
+        Long maxFieldSectionSize = localSettingsFrame.settings().maxFieldSectionSize();
         if (maxFieldSectionSize == null) {
             // Just use the maximum value we can represent via a Long.
             maxFieldSectionSize = Long.MAX_VALUE;
         }
-        this.maxTableCapacity = localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0);
-        int maxBlockedStreams = toIntExact(localSettings.getOrDefault(HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 0));
+        this.maxTableCapacity = localSettingsFrame.settings().qpackMaxTableCapacity() == null ? 0 : maxFieldSectionSize;
+        int maxBlockedStreams = toIntExact(localSettingsFrame.settings().qpackBlockedStreams() == null ? 0 : localSettingsFrame.settings().qpackBlockedStreams());
         qpackDecoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams);
         qpackEncoder = new QpackEncoder();
         codecFactory = Http3FrameCodec.newFactory(qpackDecoder, maxFieldSectionSize, qpackEncoder);
-        remoteControlStreamHandler =  new Http3ControlStreamOutboundHandler(server, localSettings,
+        remoteControlStreamHandler =  new Http3ControlStreamOutboundHandler(server, localSettingsFrame,
                 codecFactory.newCodec(Http3FrameTypeValidator.NO_VALIDATION, NO_STATE, NO_STATE));
         localControlStreamHandler = new Http3ControlStreamInboundHandler(server, inboundControlStreamHandler,
                 qpackEncoder, remoteControlStreamHandler);

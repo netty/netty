@@ -352,7 +352,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
 
     @Nullable
     private Http3SettingsFrame decodeSettings(ChannelHandlerContext ctx, ByteBuf in, int payLoadLength) {
-        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
+        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings());
         while (payLoadLength > 0) {
             int keyLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
             long key = readVariableLengthInteger(in, keyLen);
@@ -367,8 +367,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             int valueLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
             long value = readVariableLengthInteger(in, valueLen);
             payLoadLength -= valueLen;
-
-            if (settingsFrame.put(key, value) != null) {
+            if (settingsFrame.settings().put(key, Long.valueOf(value)) != null) {
                 // This must be treated as a connection error
                 // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4
                 connectionError(ctx, Http3ErrorCode.H3_SETTINGS_ERROR,
@@ -490,7 +489,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     private static void writeSettingsFrame(
             ChannelHandlerContext ctx, Http3SettingsFrame frame, ChannelPromise promise) {
         writeDynamicFrame(ctx, frame.type(), frame, (f, out) -> {
-            for (Map.Entry<Long, Long> e : f) {
+            for (Map.Entry<Long, Long> e : f.settings().entrySet()) {
                 Long key = e.getKey();
                 if (Http3CodecUtils.isReservedHttp2Setting(key)) {
                     Http3Exception exception = new Http3Exception(Http3ErrorCode.H3_SETTINGS_ERROR,

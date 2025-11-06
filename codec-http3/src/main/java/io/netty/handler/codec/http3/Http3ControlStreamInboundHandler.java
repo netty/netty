@@ -37,8 +37,6 @@ import static io.netty.handler.codec.http3.Http3ErrorCode.H3_FRAME_UNEXPECTED;
 import static io.netty.handler.codec.http3.Http3ErrorCode.H3_ID_ERROR;
 import static io.netty.handler.codec.http3.Http3ErrorCode.H3_MISSING_SETTINGS;
 import static io.netty.handler.codec.http3.Http3ErrorCode.QPACK_ENCODER_STREAM_ERROR;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.handler.codec.http3.QpackUtil.toIntOrThrow;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
@@ -150,8 +148,8 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
         }
         quicChannel.createStream(QuicStreamType.UNIDIRECTIONAL,
                 new QPackEncoderStreamInitializer(qpackEncoder, qpackAttributes,
-                        settingsFrame.getOrDefault(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 0),
-                        settingsFrame.getOrDefault(HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 0)))
+                        settingsFrame.settings().qpackMaxTableCapacity() == null ? 0 : settingsFrame.settings().qpackMaxTableCapacity(),
+                        settingsFrame.settings().qpackBlockedStreams() == null ? 0 : settingsFrame.settings().qpackBlockedStreams()))
                 .addListener(closeOnFailure);
         quicChannel.createStream(QuicStreamType.UNIDIRECTIONAL, new QPackDecoderStreamInitializer(qpackAttributes))
                 .addListener(closeOnFailure);

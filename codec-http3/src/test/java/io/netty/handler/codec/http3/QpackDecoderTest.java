@@ -23,7 +23,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
 
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.handler.codec.http3.QpackDecoderStateSyncStrategy.ackEachInsert;
 import static io.netty.handler.codec.http3.QpackUtil.MAX_UNSIGNED_INT;
 import static java.lang.Math.toIntExact;
@@ -118,8 +117,8 @@ public class QpackDecoderTest {
         long maxTableCapacity = MAX_UNSIGNED_INT;
         inserted = 0;
         this.maxEntries = toIntExact(QpackUtil.maxEntries(maxTableCapacity));
-        final DefaultHttp3SettingsFrame settings = new DefaultHttp3SettingsFrame();
-        settings.put(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, maxTableCapacity);
+        final DefaultHttp3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings());
+        settingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, Long.valueOf(maxTableCapacity));
         table = new QpackDecoderDynamicTable();
         EmbeddedQuicChannel parent = new EmbeddedQuicChannel(true);
         attributes = new QpackAttributes(parent, false);
