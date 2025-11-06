@@ -459,7 +459,7 @@ public class QpackEncoderDecoderTest {
         attributes = new QpackAttributes(parent, false);
         Http3.setQpackAttributes(parent, attributes);
         maxEntries = Math.toIntExact(QpackUtil.maxEntries(maxTableCapacity));
-        DefaultHttp3SettingsFrame localSettingsFrame = new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings());
+        DefaultHttp3SettingsFrame localSettingsFrame = new DefaultHttp3SettingsFrame();
         localSettingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, Long.valueOf(maxTableCapacity));
         localSettingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, Long.valueOf(maxBlockedStreams));
         if (maxBlockedStreams > 0) {

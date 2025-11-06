@@ -352,7 +352,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
 
     @Nullable
     private Http3SettingsFrame decodeSettings(ChannelHandlerContext ctx, ByteBuf in, int payLoadLength) {
-        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings());
+        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
         while (payLoadLength > 0) {
             int keyLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
             long key = readVariableLengthInteger(in, keyLen);

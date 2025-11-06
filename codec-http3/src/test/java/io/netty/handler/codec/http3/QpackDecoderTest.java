@@ -117,7 +117,7 @@ public class QpackDecoderTest {
         long maxTableCapacity = MAX_UNSIGNED_INT;
         inserted = 0;
         this.maxEntries = toIntExact(QpackUtil.maxEntries(maxTableCapacity));
-        final DefaultHttp3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings());
+        final DefaultHttp3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
         settingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, Long.valueOf(maxTableCapacity));
         table = new QpackDecoderDynamicTable();
         EmbeddedQuicChannel parent = new EmbeddedQuicChannel(true);

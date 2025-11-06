@@ -134,6 +134,7 @@ public final class Http3Settings extends LongObjectHashMap<Long> {
                 if (value < 0) {
                     throw new IllegalArgumentException("Non-standard setting 0x" + toHexString(key) + " invalid: " + value);
                 }
+
                 break;
         }
     }

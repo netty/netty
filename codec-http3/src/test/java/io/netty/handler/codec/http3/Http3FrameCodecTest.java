@@ -99,7 +99,7 @@ public class Http3FrameCodecTest {
         Http3.setQpackAttributes(parent, qpackAttributes);
         maxTableCapacity = 1024L;
 
-        final Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings());
+        final Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
 
 
         settingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, Long.valueOf(maxTableCapacity));
@@ -579,7 +579,17 @@ public class Http3FrameCodecTest {
 
     private void testEncodeReservedSettingsKey(boolean delayQpackStreams, long key) {
         Http3SettingsFrame frame = mock(Http3SettingsFrame.class);
-        when(frame.settings().entrySet().iterator()).thenReturn(Collections.singletonMap(key, 0L).entrySet().iterator());
+
+// Return a real Http3Settings (not mocked, since it's final)
+        Http3Settings settings = new Http3Settings();
+
+        settings.put(key, Long.valueOf(0L));
+
+// Stub the frame methods
+        when(frame.settings()).thenReturn(settings);
+        when(frame.type()).thenReturn((long) HTTP3_SETTINGS_FRAME_TYPE);
+
+
         try {
             assertFalse(codecChannel.writeOutbound(frame));
             if (delayQpackStreams) {

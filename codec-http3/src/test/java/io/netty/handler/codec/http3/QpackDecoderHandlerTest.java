@@ -322,7 +322,7 @@ public class QpackDecoderHandlerTest {
         parent = new EmbeddedQuicChannel(true);
         attributes = new QpackAttributes(parent, false);
         setQpackAttributes(parent, attributes);
-        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings());
+        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
         settingsFrame.settings().put(Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, Long.valueOf(maxTableCapacity));
         QpackDecoder decoder = new QpackDecoder(maxTableCapacity, 0);
         encoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,

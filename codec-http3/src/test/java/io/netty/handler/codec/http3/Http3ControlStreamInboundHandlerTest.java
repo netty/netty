@@ -62,7 +62,7 @@ public class Http3ControlStreamInboundHandlerTest extends
     protected void setUp(boolean server) {
         super.setUp(server);
         qpackEncoder = new QpackEncoder();
-        remoteControlStreamHandler = new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings()),
+        remoteControlStreamHandler = new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(),
                 new ChannelInboundHandlerAdapter());
     }
 
@@ -83,7 +83,7 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     @Override
     protected List<Http3ControlStreamFrame> newValidFrames() {
-        return Arrays.asList(new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings()), new DefaultHttp3GoAwayFrame(0),
+        return Arrays.asList(new DefaultHttp3SettingsFrame(), new DefaultHttp3GoAwayFrame(0),
                 new DefaultHttp3MaxPushIdFrame(0), new DefaultHttp3CancelPushFrame(0));
     }
 
@@ -206,7 +206,7 @@ public class Http3ControlStreamInboundHandlerTest extends
                                 qpackEncoder, remoteControlStreamHandler));
 
         // We always need to start with a settings frame.
-        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings());
+        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
         assertEquals(forwardControlFrames, channel.writeInbound(settingsFrame));
         if (forwardControlFrames) {
             assertFrameSame(settingsFrame, channel.readInbound());
@@ -250,7 +250,7 @@ public class Http3ControlStreamInboundHandlerTest extends
         setUp(server);
         EmbeddedChannel channel = newStream(server, forwardControlFrames);
         writeInvalidFrame(forwardControlFrames, Http3ErrorCode.H3_FRAME_UNEXPECTED, channel,
-                new DefaultHttp3SettingsFrame(Http3Settings.defaultSettings()));
+                new DefaultHttp3SettingsFrame());
         verifyClose(Http3ErrorCode.H3_FRAME_UNEXPECTED, parent);
         assertFalse(channel.finish());
     }

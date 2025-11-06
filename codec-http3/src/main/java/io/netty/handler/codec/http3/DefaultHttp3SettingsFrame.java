@@ -28,7 +28,7 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
     private final Http3Settings settings;
 
     public DefaultHttp3SettingsFrame(){
-        this(Http3Settings.defaultSettings());
+        this(new Http3Settings(4));
     }
 
     public DefaultHttp3SettingsFrame(Http3Settings settings) {
