@@ -19,7 +19,13 @@ import io.netty.buffer.AbstractByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.*;
+import io.netty.channel.AddressedEnvelope;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.InternetProtocolFamily;
@@ -55,7 +61,7 @@ import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
 public final class EpollDatagramChannel extends AbstractEpollChannel implements DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractByteBuf.class);
     private static final boolean IP_MULTICAST_ALL =
-            SystemPropertyUtil.getBoolean("io.netty5.transport.linux.ipMulticastAll", false);
+            SystemPropertyUtil.getBoolean("io.netty.transport.linux.ipMulticastAll", false);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
@@ -126,7 +132,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         try {
             fd.setIpMulticastAll(IP_MULTICAST_ALL);
         } catch (IOException e) {
-            throw new ChannelException(e);
+            logger.warn("Failed to set IP_MULTICAST_ALL to {}", IP_MULTICAST_ALL, e);
         }
 
         config = new EpollDatagramChannelConfig(this);
