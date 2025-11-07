@@ -192,13 +192,16 @@ public abstract class AbstractScheduledEventExecutor extends AbstractEventExecut
         }
         long nanoTime = getCurrentTimeNanos();
         for (;;) {
-            Runnable scheduledTask = pollScheduledTask(nanoTime);
+            ScheduledFutureTask scheduledTask = (ScheduledFutureTask) pollScheduledTask(nanoTime);
             if (scheduledTask == null) {
                 return true;
             }
+            if (scheduledTask.isCancelled()) {
+                continue;
+            }
             if (!taskQueue.offer(scheduledTask)) {
                 // No space left in the task queue add it back to the scheduledTaskQueue so we pick it up again.
-                scheduledTaskQueue.add((ScheduledFutureTask<?>) scheduledTask);
+                scheduledTaskQueue.add(scheduledTask);
                 return false;
             }
         }
