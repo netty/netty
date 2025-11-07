@@ -27,8 +27,7 @@ public interface DnsQueryInflightHandler {
      * Returns a {@link DnsQueryInflightHandle} that will be called everytime we might want to consolidate or
      * {@code null} if no consolidation should be used at all.
      *
-     * @param question          the {@link DnsQuestion}
-     *                          {@code null} if no consolidation should take place.
+     * @param question          the {@link DnsQuestion} or {@code null} if no consolidation should take place.
      * @return                  the {@link DnsQueryInflightHandle}.
      */
     DnsQueryInflightHandle handle(DnsQuestion question);
@@ -38,20 +37,19 @@ public interface DnsQueryInflightHandler {
      */
     interface DnsQueryInflightHandle {
         /**
-         * Returns {@code true} if consolidation should take place, {@code false} otherwise
-         * @param question          the {@link DnsQuestion} for which the consolidation might be done.
+         * Returns {@code true} if consolidation should take place, {@code false} otherwise.
+         *
          * @param queryStartStamp   the {@link System#nanoTime()} when the original query was done.
-         * @return                  {@code true} if consildation should be done, {@code false} otherwise and so a
+         * @return                  {@code true} if consolidation should be done, {@code false} otherwise and so an
          *                          extra query will be performed.
          */
-        boolean consolidate(DnsQuestion question, long queryStartStamp);
+        boolean consolidate(long queryStartStamp);
 
         /**
-         * Called once the original inflight query was completed and there will be no more consolidations for it.
-         *
-         * @param question          the {@link DnsQuestion} for which the consolidation was done.
+         * Called once the original inflight query was completed and there will be no more consolidations for the
+         * original {@link DnsQuestion}.
          */
-        default void complete(DnsQuestion question) {
+        default void complete() {
             // NOOP.
         }
     }

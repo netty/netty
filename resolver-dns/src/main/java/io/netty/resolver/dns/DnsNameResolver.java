@@ -1433,7 +1433,7 @@ public class DnsNameResolver extends InetNameResolver {
         if (inflightQueries != null && (additionals == null || additionals.length == 0)) {
             InflightQuery inflight = inflightQueries.get(question);
             if (inflight != null) {
-                if (inflight.handle.consolidate(question, inflight.queryStartStamp)) {
+                if (inflight.handle.consolidate(inflight.queryStartStamp)) {
                     // We have a query / response inflight, let's just cascade on it to reduce the network traffic.
                     inflight.promise.addListener(f -> {
                         if (f.isSuccess()) {
@@ -1490,7 +1490,7 @@ public class DnsNameResolver extends InetNameResolver {
 
                             query.promise.addListener(RELEASE_LISTENER);
                         } finally {
-                            query.handle.complete(question);
+                            query.handle.complete();
                         }
                     });
 

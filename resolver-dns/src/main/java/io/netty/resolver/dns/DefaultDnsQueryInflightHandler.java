@@ -21,8 +21,6 @@ import io.netty.util.internal.ObjectUtil;
 public final class DefaultDnsQueryInflightHandler implements DnsQueryInflightHandler {
     private final int maxConsolidated;
     private int inflight;
-    private final Runnable decrementer = () -> inflight--;
-    private static final Runnable NOOP = () -> { };
 
     public DefaultDnsQueryInflightHandler(int maxConsolidated) {
         this.maxConsolidated = ObjectUtil.checkPositive(maxConsolidated, "maxConsolidated");
@@ -36,12 +34,12 @@ public final class DefaultDnsQueryInflightHandler implements DnsQueryInflightHan
         inflight++;
         return new DnsQueryInflightHandle() {
             @Override
-            public boolean consolidate(DnsQuestion question, long queryStartStamp) {
+            public boolean consolidate(long queryStartStamp) {
                 return true;
             }
 
             @Override
-            public void complete(DnsQuestion question) {
+            public void complete() {
                 inflight--;
             }
         };
