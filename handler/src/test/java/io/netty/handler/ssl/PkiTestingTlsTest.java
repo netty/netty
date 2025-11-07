@@ -136,7 +136,6 @@ public class PkiTestingTlsTest {
      * The ephemeral session key is used for the symmetric encryption algorithm.
      * To make that quantum safe, we just need to double the bit-width, from AES-128 to AES-256.
      */
-    @EnabledForJreRange(min = JRE.JAVA_24)
     @EnabledIf("isBoringSSLAvailable")
     @ParameterizedTest
     @ValueSource(booleans = { true, false })
