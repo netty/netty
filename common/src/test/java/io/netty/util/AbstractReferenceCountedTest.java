@@ -17,6 +17,7 @@ package io.netty.util;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -40,7 +41,7 @@ public class AbstractReferenceCountedTest {
         final AbstractReferenceCounted referenceCounted = newReferenceCounted();
         referenceCounted.setRefCnt(Integer.MAX_VALUE);
         assertEquals(Integer.MAX_VALUE, referenceCounted.refCnt());
-        assertThrows(IllegalReferenceCountException.class, () -> referenceCounted.retain());
+        assertThrows(IllegalReferenceCountException.class, referenceCounted::retain);
     }
 
     @Test

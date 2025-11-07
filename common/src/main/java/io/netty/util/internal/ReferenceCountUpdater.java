@@ -22,10 +22,7 @@ import io.netty.util.ReferenceCounted;
 
 /**
  * Common logic for {@link ReferenceCounted} implementations
- * @deprecated Instead of extending this class, prefer instead to include a {@link RefCnt} field and delegate to that.
- * This approach has better compatibility with Graal Native Image.
  */
-@Deprecated
 public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
     /*
      * Implementation notes:
@@ -33,6 +30,10 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
      * For the updated int field:
      *   Even => "real" refcount is (refCnt >>> 1)
      *   Odd  => "real" refcount is 0
+     *
+     * (x & y) appears to be surprisingly expensive relative to (x == y). Thus this class uses
+     * a fast-path in some places for most common low values when checking for live (even) refcounts,
+     * for example: if (rawCnt == 2 || rawCnt == 4 || (rawCnt & 1) == 0) { ...
      */
 
     protected ReferenceCountUpdater() {
@@ -59,7 +60,18 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
     }
 
     private static int realRefCnt(int rawCnt) {
-        return rawCnt >>> 1;
+        return rawCnt != 2 && rawCnt != 4 && (rawCnt & 1) != 0 ? 0 : rawCnt >>> 1;
+    }
+
+    /**
+     * Like {@link #realRefCnt(int)} but throws if refCnt == 0
+     */
+    private static int toLiveRealRefCnt(int rawCnt, int decrement) {
+        if (rawCnt == 2 || rawCnt == 4 || (rawCnt & 1) == 0) {
+            return rawCnt >>> 1;
+        }
+        // odd rawCnt => already deallocated
+        throw new IllegalReferenceCountException(0, -decrement);
     }
 
     public final int refCnt(T instance) {
@@ -68,10 +80,8 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
 
     public final boolean isLiveNonVolatile(T instance) {
         final int rawCnt = getRawRefCnt(instance);
-        if (rawCnt == 2) {
-            return true;
-        }
-        return (rawCnt & 1) == 0;
+        // The "real" ref count is > 0 if the rawCnt is even.
+        return rawCnt == 2 || rawCnt == 4 || rawCnt == 6 || rawCnt == 8 || (rawCnt & 1) == 0;
     }
 
     /**
@@ -91,51 +101,74 @@ public abstract class ReferenceCountUpdater<T extends ReferenceCounted> {
     }
 
     public final T retain(T instance) {
-        return retain0(instance, 2);
+        return retain0(instance, 1, 2);
     }
 
     public final T retain(T instance, int increment) {
-        return retain0(instance, checkPositive(increment, "increment") << 1);
+        // all changes to the raw count are 2x the "real" change - overflow is OK
+        int rawIncrement = checkPositive(increment, "increment") << 1;
+        return retain0(instance, increment, rawIncrement);
     }
 
-    private T retain0(T instance, int increment) {
-        int oldRef = getAndAddRawRefCnt(instance, increment);
-        // oldRef & 0x80000001 stands for oldRef < 0 || oldRef is odd
-        // NOTE: we're optimizing for inlined and constant folded increment here -> which will make
-        // Integer.MAX_VALUE - increment to be computed at compile time
-        if ((oldRef & 0x80000001) != 0 || oldRef > Integer.MAX_VALUE - increment) {
-            getAndAddRawRefCnt(instance, -increment);
-            throw new IllegalReferenceCountException(0, increment >>> 1);
+    // rawIncrement == increment << 1
+    private T retain0(T instance, final int increment, final int rawIncrement) {
+        int oldRef = getAndAddRawRefCnt(instance, rawIncrement);
+        if (oldRef != 2 && oldRef != 4 && (oldRef & 1) != 0) {
+            throw new IllegalReferenceCountException(0, increment);
+        }
+        // don't pass 0!
+        if ((oldRef <= 0 && oldRef + rawIncrement >= 0)
+                || (oldRef >= 0 && oldRef + rawIncrement < oldRef)) {
+            // overflow case
+            getAndAddRawRefCnt(instance, -rawIncrement);
+            throw new IllegalReferenceCountException(realRefCnt(oldRef), increment);
         }
         return instance;
     }
 
     public final boolean release(T instance) {
-        return release0(instance, 2);
+        int rawCnt = getRawRefCnt(instance);
+        return rawCnt == 2 ? tryFinalRelease0(instance, 2) || retryRelease0(instance, 1)
+                : nonFinalRelease0(instance, 1, rawCnt, toLiveRealRefCnt(rawCnt, 1));
     }
 
     public final boolean release(T instance, int decrement) {
-        return release0(instance, checkPositive(decrement, "decrement") << 1);
+        int rawCnt = getRawRefCnt(instance);
+        int realCnt = toLiveRealRefCnt(rawCnt, checkPositive(decrement, "decrement"));
+        return decrement == realCnt ? tryFinalRelease0(instance, rawCnt) || retryRelease0(instance, decrement)
+                : nonFinalRelease0(instance, decrement, rawCnt, realCnt);
     }
 
-    private boolean release0(final T instance, final int decrement) {
-        int curr, next;
-        do {
-            curr = getRawRefCnt(instance);
-            if (curr == decrement) {
-                next = 1;
-            } else {
-                if (curr < decrement || (curr & 1) == 1) {
-                    throwIllegalRefCountOnRelease(decrement, curr);
+    private boolean tryFinalRelease0(T instance, int expectRawCnt) {
+        return casRawRefCnt(instance, expectRawCnt, 1); // any odd number will work
+    }
+
+    private boolean nonFinalRelease0(T instance, int decrement, int rawCnt, int realCnt) {
+        if (decrement < realCnt
+                // all changes to the raw count are 2x the "real" change - overflow is OK
+                && casRawRefCnt(instance, rawCnt, rawCnt - (decrement << 1))) {
+            return false;
+        }
+        return retryRelease0(instance, decrement);
+    }
+
+    private boolean retryRelease0(T instance, int decrement) {
+        for (;;) {
+            int rawCnt = getRawRefCnt(instance), realCnt = toLiveRealRefCnt(rawCnt, decrement);
+            if (decrement == realCnt) {
+                if (tryFinalRelease0(instance, rawCnt)) {
+                    return true;
                 }
-                next = curr - decrement;
+            } else if (decrement < realCnt) {
+                // all changes to the raw count are 2x the "real" change
+                if (casRawRefCnt(instance, rawCnt, rawCnt - (decrement << 1))) {
+                    return false;
+                }
+            } else {
+                throw new IllegalReferenceCountException(realCnt, -decrement);
             }
-        } while (!casRawRefCnt(instance, curr, next));
-        return (next & 1) == 1;
-    }
-
-    private static void throwIllegalRefCountOnRelease(int decrement, int curr) {
-        throw new IllegalReferenceCountException(curr >>> 1, -(decrement >>> 1));
+            Thread.yield(); // this benefits throughput under high contention
+        }
     }
 
     public enum UpdaterType {
