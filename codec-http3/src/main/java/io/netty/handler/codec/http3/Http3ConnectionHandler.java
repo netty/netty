@@ -72,7 +72,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
             // Just use the maximum value we can represent via a Long.
             maxFieldSectionSize = Long.MAX_VALUE;
         }
-        this.maxTableCapacity = localSettingsFrame.settings().qpackMaxTableCapacity() == null ? 0 : maxFieldSectionSize;
+        this.maxTableCapacity = localSettingsFrame.settings().qpackMaxTableCapacity() == null ? 0 : localSettingsFrame.settings().qpackMaxTableCapacity();
         int maxBlockedStreams = toIntExact(localSettingsFrame.settings().qpackBlockedStreams() == null ? 0 : localSettingsFrame.settings().qpackBlockedStreams());
         qpackDecoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams);
         qpackEncoder = new QpackEncoder();
@@ -81,6 +81,8 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
                 codecFactory.newCodec(Http3FrameTypeValidator.NO_VALIDATION, NO_STATE, NO_STATE));
         localControlStreamHandler = new Http3ControlStreamInboundHandler(server, inboundControlStreamHandler,
                 qpackEncoder, remoteControlStreamHandler);
+
+
     }
 
     private void createControlStreamIfNeeded(ChannelHandlerContext ctx) {

@@ -26,11 +26,14 @@ import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamFrame;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.collection.LongObjectHashMap;
+import io.netty.util.collection.LongObjectMap;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.SocketAddress;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
@@ -367,7 +370,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
             int valueLen = numBytesForVariableLengthInteger(in.getByte(in.readerIndex()));
             long value = readVariableLengthInteger(in, valueLen);
             payLoadLength -= valueLen;
-            if (settingsFrame.settings().put(key, Long.valueOf(value)) != null) {
+            if (settingsFrame.settings().put(key, value) != null) {
                 // This must be treated as a connection error
                 // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4
                 connectionError(ctx, Http3ErrorCode.H3_SETTINGS_ERROR,
@@ -489,8 +492,9 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     private static void writeSettingsFrame(
             ChannelHandlerContext ctx, Http3SettingsFrame frame, ChannelPromise promise) {
         writeDynamicFrame(ctx, frame.type(), frame, (f, out) -> {
-            for (Map.Entry<Long, Long> e : f.settings().entrySet()) {
-                Long key = e.getKey();
+            for (Iterator<LongObjectMap.PrimitiveEntry<Long>> it = f.settings().iterator(); it.hasNext(); ) {
+                LongObjectMap.PrimitiveEntry<Long> e = it.next();
+                long key = e.key();
                 if (Http3CodecUtils.isReservedHttp2Setting(key)) {
                     Http3Exception exception = new Http3Exception(Http3ErrorCode.H3_SETTINGS_ERROR,
                             "Received a settings key that is reserved for HTTP/2.");
@@ -499,7 +503,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     Http3CodecUtils.connectionError(ctx, exception, false);
                     return false;
                 }
-                Long value = e.getValue();
+                Long value = e.value();
                 int keyLen = numBytesForVariableLengthInteger(key);
                 int valueLen = numBytesForVariableLengthInteger(value);
                 writeVariableLengthInteger(out, key, keyLen);

@@ -17,7 +17,9 @@ package io.netty.handler.codec.http3;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4">SETTINGS</a>.
@@ -28,4 +30,14 @@ public interface Http3SettingsFrame extends Http3ControlStreamFrame {
 
     @Override
     long type();
+
+    @Nullable
+    default Long get(long key) {
+        return settings().get(key);
+    }
+
+    @Nullable
+    default Long put(long key, Long value) {
+        return settings().put(key, value);
+    }
 }
