@@ -51,7 +51,8 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
                 ChannelOption.IP_MULTICAST_ADDR, ChannelOption.IP_MULTICAST_IF, ChannelOption.IP_MULTICAST_TTL,
                 ChannelOption.IP_TOS, ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION,
                 IoUringChannelOption.SO_REUSEPORT, IoUringChannelOption.IP_FREEBIND,
-                IoUringChannelOption.IP_TRANSPARENT, IoUringChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE);
+                IoUringChannelOption.IP_TRANSPARENT, IoUringChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE,
+                IoUringChannelOption.IP_MULTICAST_ALL);
     }
 
     @SuppressWarnings({ "unchecked", "deprecation" })

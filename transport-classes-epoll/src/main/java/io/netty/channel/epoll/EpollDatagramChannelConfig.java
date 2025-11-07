@@ -50,7 +50,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
                 ChannelOption.IP_TOS, ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION,
                 EpollChannelOption.SO_REUSEPORT, EpollChannelOption.IP_FREEBIND, EpollChannelOption.IP_TRANSPARENT,
                 EpollChannelOption.IP_RECVORIGDSTADDR, EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE,
-                EpollChannelOption.UDP_GRO);
+                EpollChannelOption.UDP_GRO, EpollChannelOption.IP_MULTICAST_ALL);
     }
 
     @SuppressWarnings({ "unchecked", "deprecation" })
