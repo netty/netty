@@ -24,7 +24,6 @@ import java.util.Map;
  */
 public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Map.Entry<Long, Long>> {
 
-    Http3Settings settings();
 
     @Override
     default long type() {
@@ -38,9 +37,7 @@ public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Ma
      * @return      the value of the setting or {@code null} if none was found with the given key.
      */
     @Nullable
-    default Long get(long key){
-        return this.settings().get(key);
-    }
+    Long get(long key);
 
     /**
      * Get a setting from the frame.
@@ -62,7 +59,5 @@ public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Ma
      * @return          the previous stored valued for the given key or {@code null} if none was stored before.
      */
     @Nullable
-    default Long put(long key, Long value){
-        return this.settings().put(key, value);
-    }
+    Long put(long key, Long value);
 }

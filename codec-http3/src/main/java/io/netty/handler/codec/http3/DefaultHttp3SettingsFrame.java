@@ -15,13 +15,13 @@
  */
 package io.netty.handler.codec.http3;
 
+import io.netty.util.collection.LongObjectMap;
 import io.netty.util.internal.StringUtil;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Spliterator;
-import java.util.function.Consumer;
+import java.util.NoSuchElementException;
 
 /**
  * Default implementation of {@link Http3SettingsFrame}.
@@ -34,21 +34,12 @@ import java.util.function.Consumer;
  */
 public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
 
-    private final Http3Settings settings;
-
-    public DefaultHttp3SettingsFrame() {
-        this.settings = new Http3Settings(4);
-    }
-
-    @Override
-    public Http3Settings settings() {
-        return this.settings;
-    }
+    private final Http3Settings settings = new Http3Settings();
 
     @Override
     @Nullable
     public Long get(long key) {
-        return this.settings.get(key);
+        return settings.get(key);
     }
 
     @Override
@@ -57,7 +48,7 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
         if (Http3CodecUtils.isReservedHttp2Setting(key)) {
             throw new IllegalArgumentException("Setting is reserved for HTTP/2: " + key);
         }
-        return this.settings.put(key, value);
+        return settings.put(key, value);
     }
 
 
