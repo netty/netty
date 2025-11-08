@@ -24,7 +24,7 @@ import java.util.function.Consumer;
 
 import static io.netty.handler.codec.http3.Http3.setQpackAttributes;
 import static io.netty.handler.codec.http3.Http3ErrorCode.QPACK_DECODER_STREAM_ERROR;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
+import static io.netty.handler.codec.http3.Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.handler.codec.http3.QpackUtil.encodePrefixedInteger;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;

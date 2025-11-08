@@ -15,23 +15,35 @@
  */
 package io.netty.handler.codec.http3;
 
-import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
 import io.netty.util.internal.StringUtil;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
+/**
+ * Default implementation of {@link Http3SettingsFrame}.
+ *
+ * <p>
+ * Internally backed by {@link Http3Settings}.
+ * The legacy {@link Iterable} and {@link #get(long)} / {@link #put(long, Long)} methods
+ * are preserved for backward compatibility.
+ * </p>
+ */
 public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
 
-    private final LongObjectMap<Long> settings = new LongObjectHashMap<>(4);
+    private final Http3Settings settings = new Http3Settings();
 
     @Override
+    @Nullable
     public Long get(long key) {
         return settings.get(key);
     }
 
     @Override
+    @Nullable
     public Long put(long key, Long value) {
         if (Http3CodecUtils.isReservedHttp2Setting(key)) {
             throw new IllegalArgumentException("Setting is reserved for HTTP/2: " + key);
@@ -39,9 +51,10 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
         return settings.put(key, value);
     }
 
+
     @Override
     public Iterator<Map.Entry<Long, Long>> iterator() {
-        return settings.entrySet().iterator();
+       return this.settings.iterator();
     }
 
     @Override
@@ -75,10 +88,10 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
     public static DefaultHttp3SettingsFrame copyOf(Http3SettingsFrame settingsFrame) {
         DefaultHttp3SettingsFrame copy = new DefaultHttp3SettingsFrame();
         if (settingsFrame instanceof DefaultHttp3SettingsFrame) {
-            copy.settings.putAll(((DefaultHttp3SettingsFrame) settingsFrame).settings);
+            copy.settings.copyFrom(((DefaultHttp3SettingsFrame) settingsFrame).settings);
         } else {
-            for (Map.Entry<Long, Long> entry: settingsFrame) {
-                copy.put(entry.getKey(), entry.getValue());
+            for (Map.Entry<Long, Long> entry : settingsFrame) { 
+                copy.settings.put(entry.getKey(), entry.getValue());
             }
         }
         return copy;

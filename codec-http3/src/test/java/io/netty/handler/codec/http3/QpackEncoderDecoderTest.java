@@ -31,8 +31,8 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import static io.netty.buffer.UnpooledByteBufAllocator.DEFAULT;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
+import static io.netty.handler.codec.http3.Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
+import static io.netty.handler.codec.http3.Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.handler.codec.quic.QuicStreamType.UNIDIRECTIONAL;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;

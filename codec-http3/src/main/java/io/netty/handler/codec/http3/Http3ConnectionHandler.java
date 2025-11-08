@@ -27,8 +27,8 @@ import org.jetbrains.annotations.Nullable;
 import java.util.function.LongFunction;
 
 import static io.netty.handler.codec.http3.Http3RequestStreamCodecState.NO_STATE;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
-import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
+import static io.netty.handler.codec.http3.Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
+import static io.netty.handler.codec.http3.Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static java.lang.Math.toIntExact;
 
 /**
@@ -69,7 +69,7 @@ public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapte
         } else {
             localSettings = DefaultHttp3SettingsFrame.copyOf(localSettings);
         }
-        Long maxFieldSectionSize = localSettings.get(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
+        Long maxFieldSectionSize = localSettings.get(Http3Settings.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
         if (maxFieldSectionSize == null) {
             // Just use the maximum value we can represent via a Long.
             maxFieldSectionSize = Long.MAX_VALUE;
