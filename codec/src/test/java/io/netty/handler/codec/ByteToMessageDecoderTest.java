@@ -684,4 +684,35 @@ public class ByteToMessageDecoderTest {
         assertEquals(0, buffer.refCnt(), "Buffer should be released");
         assertFalse(channel.finish());
     }
+
+    @Test
+    void reentrantReadSafety() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
+            int reentrancy;
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                reentrancy++;
+                if (reentrancy == 1) {
+                    ByteBuf buf2 = channel.alloc().buffer();
+                    buf2.writeLong(42); // Adding 8 bytes.
+                    channel.writeInbound(buf2); // Reentrant call back into ByteToMessageDecoder
+                    ctx.read(); // With LocalChannel this would be a reentrant call. For EmbeddedChannel it's harmless.
+                }
+                int bytes = in.readableBytes();
+                out.add(bytes);
+                in.skipBytes(bytes);
+            }
+        };
+        channel.pipeline().addLast(decoder);
+        ByteBuf buf1 = channel.alloc().buffer();
+        buf1.writeInt(42); // Adding 4 bytes.
+        channel.writeInbound(buf1);
+        Integer first = channel.readInbound();
+        Integer second = channel.readInbound();
+        assertEquals(4, first);
+        assertEquals(8, second);
+        channel.finishAndReleaseAll();
+    }
 }
