@@ -31,6 +31,7 @@ import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
 
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static java.lang.Integer.MAX_VALUE;
 
@@ -286,7 +287,49 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     public void channelRead(ChannelHandlerContext ctx, Object input) throws Exception {
         if (decodeState == STATE_INIT) {
             do {
-                channelReadOne(ctx, input);
+                if (input instanceof ByteBuf) {
+                    selfFiredChannelRead = true;
+                    CodecOutputList out = CodecOutputList.newInstance();
+                    try {
+                        first = cumulation == null;
+                        cumulation = cumulator.cumulate(ctx.alloc(),
+                                first ? EMPTY_BUFFER : cumulation, (ByteBuf) input);
+                        callDecode(ctx, cumulation, out);
+                    } catch (DecoderException e) {
+                        throw e;
+                    } catch (Exception e) {
+                        throw new DecoderException(e);
+                    } finally {
+                        try {
+                            if (cumulation != null && !cumulation.isReadable()) {
+                                numReads = 0;
+                                try {
+                                    cumulation.release();
+                                } catch (IllegalReferenceCountException e) {
+                                    //noinspection ThrowFromFinallyBlock
+                                    throw new IllegalReferenceCountException(
+                                            getClass().getSimpleName() + "#decode() might have released its input buffer, " +
+                                                    "or passed it down the pipeline without a retain() call, " +
+                                                    "which is not allowed.", e);
+                                }
+                                cumulation = null;
+                            } else if (++numReads >= discardAfterReads) {
+                                // We did enough reads already try to discard some bytes, so we not risk to see a OOME.
+                                // See https://github.com/netty/netty/issues/4275
+                                numReads = 0;
+                                discardSomeReadBytes();
+                            }
+
+                            int size = out.size();
+                            firedChannelRead |= out.insertSinceRecycled();
+                            fireChannelRead(ctx, out, size);
+                        } finally {
+                            out.recycle();
+                        }
+                    }
+                } else {
+                    ctx.fireChannelRead(input);
+                }
             } while (inputMessages != null && (input = inputMessages.pollFirst()) != null);
         } else {
             // Reentrant call. Bail out here and let original call process our message.
@@ -294,52 +337,6 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 inputMessages = new ArrayDeque<Object>();
             }
             inputMessages.offerLast(input);
-        }
-    }
-
-    private void channelReadOne(ChannelHandlerContext ctx, Object msg) {
-        if (msg instanceof ByteBuf) {
-            selfFiredChannelRead = true;
-            CodecOutputList out = CodecOutputList.newInstance();
-            try {
-                first = cumulation == null;
-                cumulation = cumulator.cumulate(ctx.alloc(),
-                        first ? Unpooled.EMPTY_BUFFER : cumulation, (ByteBuf) msg);
-                callDecode(ctx, cumulation, out);
-            } catch (DecoderException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new DecoderException(e);
-            } finally {
-                try {
-                    if (cumulation != null && !cumulation.isReadable()) {
-                        numReads = 0;
-                        try {
-                            cumulation.release();
-                        } catch (IllegalReferenceCountException e) {
-                            //noinspection ThrowFromFinallyBlock
-                            throw new IllegalReferenceCountException(
-                                    getClass().getSimpleName() + "#decode() might have released its input buffer, " +
-                                            "or passed it down the pipeline without a retain() call, " +
-                                            "which is not allowed.", e);
-                        }
-                        cumulation = null;
-                    } else if (++numReads >= discardAfterReads) {
-                        // We did enough reads already try to discard some bytes, so we not risk to see a OOME.
-                        // See https://github.com/netty/netty/issues/4275
-                        numReads = 0;
-                        discardSomeReadBytes();
-                    }
-
-                    int size = out.size();
-                    firedChannelRead |= out.insertSinceRecycled();
-                    fireChannelRead(ctx, out, size);
-                } finally {
-                    out.recycle();
-                }
-            }
-        } else {
-            ctx.fireChannelRead(msg);
         }
     }
 
