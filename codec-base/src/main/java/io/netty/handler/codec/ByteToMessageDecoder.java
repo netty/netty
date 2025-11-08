@@ -308,7 +308,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                                 } catch (IllegalReferenceCountException e) {
                                     //noinspection ThrowFromFinallyBlock
                                     throw new IllegalReferenceCountException(
-                                            getClass().getSimpleName() + "#decode() might have released its input buffer, " +
+                                            getClass().getSimpleName() +
+                                                    "#decode() might have released its input buffer, " +
                                                     "or passed it down the pipeline without a retain() call, " +
                                                     "which is not allowed.", e);
                                 }
