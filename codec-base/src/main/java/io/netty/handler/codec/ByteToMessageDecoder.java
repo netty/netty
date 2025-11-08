@@ -27,15 +27,17 @@ import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 import static java.lang.Integer.MAX_VALUE;
 
 /**
- * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
- * other Message type.
- *
+ * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to
+ * another Message type.
+ * <p>
  * For example here is an implementation which reads all readable bytes from
  * the input {@link ByteBuf} and create a new {@link ByteBuf}.
  *
@@ -66,7 +68,7 @@ import static java.lang.Integer.MAX_VALUE;
  * is not always the case. Use <tt>in.getInt(in.readerIndex())</tt> instead.
  * <h3>Pitfalls</h3>
  * <p>
- * Be aware that sub-classes of {@link ByteToMessageDecoder} <strong>MUST NOT</strong>
+ * Be aware that subclasses of {@link ByteToMessageDecoder} <strong>MUST NOT</strong>
  * annotated with {@link @Sharable}.
  * <p>
  * Some methods such as {@link ByteBuf#readBytes(int)} will cause a memory leak if the returned buffer
@@ -162,6 +164,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private static final byte STATE_CALLING_CHILD_DECODE = 1;
     private static final byte STATE_HANDLER_REMOVED_PENDING = 2;
 
+    // Used to guard the inputs for reentrant channelRead calls
+    private final Deque<Object> inputMessages = new ArrayDeque<>();
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
@@ -279,7 +283,18 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception { }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+    public void channelRead(ChannelHandlerContext ctx, Object input) throws Exception {
+        if (decodeState == STATE_INIT) {
+            do {
+                channelReadOne(ctx, input);
+            } while (!inputMessages.isEmpty() && (input = inputMessages.pollFirst()) != null);
+        } else {
+            // Reentrant call. Bail out here and let original call process our message.
+            inputMessages.offerLast(input);
+        }
+    }
+
+    private void channelReadOne(ChannelHandlerContext ctx, Object msg) {
         if (msg instanceof ByteBuf) {
             selfFiredChannelRead = true;
             CodecOutputList out = CodecOutputList.newInstance();
