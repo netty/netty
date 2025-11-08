@@ -20,6 +20,7 @@ import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.ResourceLeakTracker;
 import io.netty.util.internal.ObjectUtil;
+import io.netty.util.internal.ThrowableUtil;
 
 import java.nio.ByteOrder;
 
@@ -50,22 +51,42 @@ class SimpleLeakAwareByteBuf extends WrappedByteBuf {
 
     @Override
     public ByteBuf retainedSlice() {
-        return unwrappedDerived(super.retainedSlice());
+        try {
+            return unwrappedDerived(super.retainedSlice());
+        } catch (IllegalReferenceCountException irce) {
+            ThrowableUtil.addSuppressed(irce, leak.getCloseStackTraceIfAny());
+            throw irce;
+        }
     }
 
     @Override
     public ByteBuf retainedSlice(int index, int length) {
-        return unwrappedDerived(super.retainedSlice(index, length));
+        try {
+            return unwrappedDerived(super.retainedSlice(index, length));
+        } catch (IllegalReferenceCountException irce) {
+            ThrowableUtil.addSuppressed(irce, leak.getCloseStackTraceIfAny());
+            throw irce;
+        }
     }
 
     @Override
     public ByteBuf retainedDuplicate() {
-        return unwrappedDerived(super.retainedDuplicate());
+        try {
+            return unwrappedDerived(super.retainedDuplicate());
+        } catch (IllegalReferenceCountException irce) {
+            ThrowableUtil.addSuppressed(irce, leak.getCloseStackTraceIfAny());
+            throw irce;
+        }
     }
 
     @Override
     public ByteBuf readRetainedSlice(int length) {
-        return unwrappedDerived(super.readRetainedSlice(length));
+        try {
+            return unwrappedDerived(super.readRetainedSlice(length));
+        } catch (IllegalReferenceCountException irce) {
+            ThrowableUtil.addSuppressed(irce, leak.getCloseStackTraceIfAny());
+            throw irce;
+        }
     }
 
     @Override
@@ -99,6 +120,26 @@ class SimpleLeakAwareByteBuf extends WrappedByteBuf {
     }
 
     @Override
+    public ByteBuf retain() {
+        try {
+            return super.retain();
+        } catch (IllegalReferenceCountException irce) {
+            ThrowableUtil.addSuppressed(irce, leak.getCloseStackTraceIfAny());
+            throw irce;
+        }
+    }
+
+    @Override
+    public ByteBuf retain(int increment) {
+        try {
+            return super.retain(increment);
+        } catch (IllegalReferenceCountException irce) {
+            ThrowableUtil.addSuppressed(irce, leak.getCloseStackTraceIfAny());
+            throw irce;
+        }
+    }
+
+    @Override
     public boolean release() {
         try {
             if (super.release()) {
@@ -107,10 +148,7 @@ class SimpleLeakAwareByteBuf extends WrappedByteBuf {
             }
             return false;
         } catch (IllegalReferenceCountException irce) {
-            Throwable trace = leak.getCloseStackTraceIfAny();
-            if (trace != null) {
-                irce.addSuppressed(trace);
-            }
+            ThrowableUtil.addSuppressed(irce, leak.getCloseStackTraceIfAny());
             throw irce;
         }
     }
@@ -124,10 +162,7 @@ class SimpleLeakAwareByteBuf extends WrappedByteBuf {
             }
             return false;
         } catch (IllegalReferenceCountException irce) {
-            Throwable trace = leak.getCloseStackTraceIfAny();
-            if (trace != null) {
-                irce.addSuppressed(trace);
-            }
+            ThrowableUtil.addSuppressed(irce, leak.getCloseStackTraceIfAny());
             throw irce;
         }
     }
