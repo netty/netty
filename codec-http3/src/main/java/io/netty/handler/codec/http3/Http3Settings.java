@@ -18,14 +18,14 @@ package io.netty.handler.codec.http3;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.Iterator;
 import java.util.Map;
 
 import static java.lang.Long.toHexString;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-public final class Http3Settings {
+public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
 
     private final LongObjectMap<Long> settings;
 
@@ -61,8 +61,6 @@ public final class Http3Settings {
     public Long get(long key) {
         return settings.get(key);
     }
-
-
 
 
     @Nullable
@@ -108,8 +106,8 @@ public final class Http3Settings {
 
     public Http3Settings copyFrom(Http3Settings http3Settings) {
         checkNotNull(http3Settings, "http3Settings");
-        settings.clear();
-        settings.putAll(http3Settings.settings);
+        this.settings.clear();
+        this.settings.putAll(http3Settings.settings);
         return this;
     }
 
