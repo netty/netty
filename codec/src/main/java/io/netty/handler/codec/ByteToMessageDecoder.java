@@ -165,7 +165,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private static final byte STATE_HANDLER_REMOVED_PENDING = 2;
 
     // Used to guard the inputs for reentrant channelRead calls
-    private final Deque<Object> inputMessages = new ArrayDeque<>();
+    private final Deque<Object> inputMessages = new ArrayDeque<Object>();
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;

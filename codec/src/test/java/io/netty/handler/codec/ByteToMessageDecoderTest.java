@@ -687,7 +687,7 @@ public class ByteToMessageDecoderTest {
 
     @Test
     void reentrantReadSafety() throws Exception {
-        EmbeddedChannel channel = new EmbeddedChannel();
+        final EmbeddedChannel channel = new EmbeddedChannel();
         ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
             int reentrancy;
 
