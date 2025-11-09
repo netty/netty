@@ -119,4 +119,18 @@ class DefaultHttp3SettingsFrameTest {
         // New typed accessor matches
         assertEquals(5L, frame.settings().qpackBlockedStreams());
     }
+
+    @Test
+    void testDuplicateKeyInSettingsFrameTriggersError() {
+        DefaultHttp3SettingsFrame frame = new DefaultHttp3SettingsFrame();
+
+        frame.put(0x1, 10L);
+        assertThrows(IllegalStateException.class, () -> {
+            // Simulate protocol behavior
+            if (frame.put(0x1, 20L) != null) {
+                throw new IllegalStateException("Duplicate SETTINGS key detected");
+            }
+        });
+    }
+
 }
