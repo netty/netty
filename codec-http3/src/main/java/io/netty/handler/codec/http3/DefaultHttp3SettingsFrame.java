@@ -101,7 +101,7 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
         if (settingsFrame instanceof DefaultHttp3SettingsFrame) {
             copy.settings.putAll(((DefaultHttp3SettingsFrame) settingsFrame).settings);
         } else {
-            for (Map.Entry<Long, Long> entry : settingsFrame) {
+            for (Map.Entry<Long, Long> entry: settingsFrame) {
                 copy.put(entry.getKey(), entry.getValue());
             }
         }
