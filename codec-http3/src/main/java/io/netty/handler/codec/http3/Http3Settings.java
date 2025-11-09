@@ -141,14 +141,28 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
         return new Http3Settings()
                 .qpackMaxTableCapacity(0)
                 .qpackBlockedStreams(0)
-                .maxFieldSectionSize(Long.MAX_VALUE)
+             //   .maxFieldSectionSize(Long.MAX_VALUE) //optional and unlimited
                 .enableConnectProtocol(false);
     }
 
     @Override
-    public Iterator<Map.Entry<Long,Long>> iterator() {
-        return this.settings.entrySet().iterator();
+    public Iterator<Map.Entry<Long, Long>> iterator() {
+        Iterator<LongObjectMap.PrimitiveEntry<Long>> it = settings.entries().iterator();
+        return new Iterator<Map.Entry<Long, Long>>() {
+            @Override
+            public boolean hasNext() {
+                return it.hasNext();
+            }
+
+            @Override
+            public Map.Entry<Long, Long> next() {
+                LongObjectMap.PrimitiveEntry<Long> entry = it.next();
+                return new java.util.AbstractMap.SimpleImmutableEntry<>(entry.key(), entry.value());
+            }
+        };
     }
+
+
 
     // --- Equality and Debugging ---
 
