@@ -15,13 +15,11 @@
  */
 package io.netty.handler.codec.http3;
 
-import io.netty.util.collection.LongObjectMap;
 import io.netty.util.internal.StringUtil;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Iterator;
 import java.util.Map;
-import java.util.NoSuchElementException;
 
 /**
  * Default implementation of {@link Http3SettingsFrame}.
@@ -101,7 +99,7 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
     public static DefaultHttp3SettingsFrame copyOf(Http3SettingsFrame settingsFrame) {
         DefaultHttp3SettingsFrame copy = new DefaultHttp3SettingsFrame();
         if (settingsFrame instanceof DefaultHttp3SettingsFrame) {
-            copy.settings.copyFrom(((DefaultHttp3SettingsFrame) settingsFrame).settings);
+            copy.settings.putAll(((DefaultHttp3SettingsFrame) settingsFrame).settings);
         } else {
             for (Map.Entry<Long, Long> entry : settingsFrame) {
                 copy.settings.put(entry.getKey(), entry.getValue());

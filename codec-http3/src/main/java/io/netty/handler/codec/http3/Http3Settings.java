@@ -25,7 +25,7 @@ import java.util.Map;
 import static java.lang.Long.toHexString;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-public final class Http3Settings {
+public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
 
     private final LongObjectMap<Long> settings;
 
@@ -103,7 +103,7 @@ public final class Http3Settings {
         return this;
     }
 
-    public Http3Settings copyFrom(Http3Settings http3Settings) {
+    public Http3Settings putAll(Http3Settings http3Settings) {
         checkNotNull(http3Settings, "http3Settings");
         settings.clear();
         settings.putAll(http3Settings.settings);
@@ -139,9 +139,9 @@ public final class Http3Settings {
                 .enableConnectProtocol(false);
     }
 
-
+    @Override
     public Iterator<Map.Entry<Long,Long>> iterator() {
-        return settings.entrySet().iterator();
+        return this.settings.entrySet().iterator();
     }
 
     // --- Equality and Debugging ---
