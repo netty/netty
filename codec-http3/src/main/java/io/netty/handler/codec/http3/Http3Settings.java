@@ -112,7 +112,9 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
 
     private static void verifyStandardSetting(long key, Long value) {
         checkNotNull(value, "value");
-
+        if (Http3CodecUtils.isReservedHttp2Setting(key)) {
+            throw new IllegalArgumentException("Setting is reserved for HTTP/2: " + key);
+        }
         switch ((int) key) {
             case (int) HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY:
             case (int) HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS:

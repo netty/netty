@@ -47,13 +47,40 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
         return this.settings;
     }
 
+    /**
+     * Get a setting by its key.
+     *
+     * <p><strong>Deprecated:</strong> Use the typed accessors on {@link #settings()} instead, e.g.:
+     * <pre>{@code
+     * frame.settings().qpackMaxTableCapacity();
+     * }</pre>
+     *
+     * @param key the HTTP/3 setting key
+     * @return the value, or {@code null} if not set
+     */
     @Override
+    @Deprecated
     @Nullable
     public Long get(long key) {
+        // Legacy behavior: direct map access.
         return settings.get(key);
     }
 
+    /**
+     * Set a setting value by key.
+     *
+     * <p><strong>Deprecated:</strong> Use the typed mutators on {@link #settings()} instead, e.g.:
+     * <pre>{@code
+     * frame.settings().qpackMaxTableCapacity(1024);
+     * }</pre>
+     *
+     * @param key the HTTP/3 setting key
+     * @param value the value to set
+     * @return the previous value, or {@code null} if none
+     * @throws IllegalArgumentException if the key is reserved for HTTP/2
+     */
     @Override
+    @Deprecated
     @Nullable
     public Long put(long key, Long value) {
         if (Http3CodecUtils.isReservedHttp2Setting(key)) {
@@ -61,6 +88,7 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
         }
         return settings.put(key, value);
     }
+
 
 
     @Override
