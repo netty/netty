@@ -62,9 +62,6 @@ public final class Http3Settings {
         return settings.get(key);
     }
 
-
-
-
     @Nullable
     public Long qpackMaxTableCapacity() {
         return get(HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY);
@@ -131,9 +128,6 @@ public final class Http3Settings {
                             + " (expected 0 or 1)");
                 }
                 break;
-            default:
-                throw new IllegalArgumentException("Non-standard/not implemented setting 0x"
-                        + toHexString(key) + " invalid: " + value);
 
         }
     }

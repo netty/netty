@@ -24,6 +24,10 @@ import java.util.Map;
  */
 public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Map.Entry<Long, Long>> {
 
+    default Http3Settings settings() {
+        throw new UnsupportedOperationException(
+                "Http3SettingsFrame.settings() not implemented in this version");
+    }
 
     @Override
     default long type() {
@@ -37,7 +41,9 @@ public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Ma
      * @return      the value of the setting or {@code null} if none was found with the given key.
      */
     @Nullable
-    Long get(long key);
+    default Long get(long key){
+        return this.settings().get(key);
+    }
 
     /**
      * Get a setting from the frame.
@@ -59,5 +65,7 @@ public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Ma
      * @return          the previous stored valued for the given key or {@code null} if none was stored before.
      */
     @Nullable
-    Long put(long key, Long value);
+    default Long put(long key, Long value){
+        return this.settings().put(key, value);
+    }
 }

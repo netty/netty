@@ -34,7 +34,20 @@ import java.util.NoSuchElementException;
  */
 public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
 
-    private final Http3Settings settings = new Http3Settings();
+    private final Http3Settings settings;
+
+    public DefaultHttp3SettingsFrame(Http3Settings settings) {
+        this.settings = settings;
+    }
+
+    public DefaultHttp3SettingsFrame(){
+        this.settings = new Http3Settings();
+    }
+
+    @Override
+    public Http3Settings settings() {
+        return this.settings;
+    }
 
     @Override
     @Nullable
@@ -90,7 +103,7 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
         if (settingsFrame instanceof DefaultHttp3SettingsFrame) {
             copy.settings.copyFrom(((DefaultHttp3SettingsFrame) settingsFrame).settings);
         } else {
-            for (Map.Entry<Long, Long> entry : settingsFrame) { 
+            for (Map.Entry<Long, Long> entry : settingsFrame) {
                 copy.settings.put(entry.getKey(), entry.getValue());
             }
         }
