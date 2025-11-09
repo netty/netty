@@ -128,6 +128,11 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
                             + " (expected 0 or 1)");
                 }
                 break;
+                default:
+                    //non-standard allowed as per spec but no negative value
+                    if(value < 0) {
+                        throw new IllegalArgumentException("Setting 0x" + toHexString(key) + " invalid: " + value);
+                    }
 
         }
     }
@@ -136,6 +141,7 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
         return new Http3Settings()
                 .qpackMaxTableCapacity(0)
                 .qpackBlockedStreams(0)
+                .maxFieldSectionSize(Long.MAX_VALUE)
                 .enableConnectProtocol(false);
     }
 
