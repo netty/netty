@@ -99,8 +99,8 @@ public class Http3FrameCodecTest {
         Http3.setQpackAttributes(parent, qpackAttributes);
         final Http3SettingsFrame settings = new DefaultHttp3SettingsFrame();
         maxTableCapacity = 1024L;
-        settings.put(Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, maxTableCapacity);
-        settings.put(Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, (long) maxBlockedStreams);
+        settings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, maxTableCapacity);
+        settings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, (long) maxBlockedStreams);
         decoder = new QpackDecoder(maxTableCapacity, maxBlockedStreams);
         decoder.setDynamicTableCapacity(maxTableCapacity);
         qpackEncoderHandler = new QpackEncoderHandler(maxTableCapacity, decoder);
@@ -268,9 +268,9 @@ public class Http3FrameCodecTest {
             boolean fragmented, int maxBlockedStreams, boolean delayQpackStreams) throws Exception {
         setUp(maxBlockedStreams, delayQpackStreams);
         Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
-        settingsFrame.put(Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 100L);
-        settingsFrame.put(Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 1L);
-        settingsFrame.put(Http3Settings.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE, 128L);
+        settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 100L);
+        settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 1L);
+        settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE, 128L);
         // Ensure we can encode and decode all sizes correctly.
         settingsFrame.put(63, 63L);
         settingsFrame.put(16383, 16383L);
@@ -523,9 +523,9 @@ public class Http3FrameCodecTest {
         Http3CodecUtils.writeVariableLengthInteger(buffer, Http3CodecUtils.HTTP3_SETTINGS_FRAME_TYPE);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 4);
         // Write the key and some random value... Both should be only 1 byte long each.
-        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3Settings.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 1);
-        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3Settings.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
+        Http3CodecUtils.writeVariableLengthInteger(buffer, Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE);
         Http3CodecUtils.writeVariableLengthInteger(buffer, 1);
 
         testDecodeInvalidSettings(delayQpackStreams, buffer);

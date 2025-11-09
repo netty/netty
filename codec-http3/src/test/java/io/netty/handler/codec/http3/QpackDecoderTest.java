@@ -23,7 +23,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.Collection;
 
-import static io.netty.handler.codec.http3.Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
+import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.handler.codec.http3.QpackDecoderStateSyncStrategy.ackEachInsert;
 import static io.netty.handler.codec.http3.QpackUtil.MAX_UNSIGNED_INT;
 import static java.lang.Math.toIntExact;

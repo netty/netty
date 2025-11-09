@@ -69,7 +69,7 @@ final class QpackEncoderDynamicTable {
     /**
      * <a href="https://www.rfc-editor.org/rfc/rfc9204.html#name-maximum-dynamic-table-capac">
      *     Maximum capacity of the table</a>. This is set once based on the
-     *     {@link Http3Settings#HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY} received by the remote peer.
+     *     {@link Http3SettingsFrame#HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY} received by the remote peer.
      */
     private long maxTableCapacity = -1;
 

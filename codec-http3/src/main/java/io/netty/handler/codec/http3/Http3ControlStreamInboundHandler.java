@@ -37,8 +37,8 @@ import static io.netty.handler.codec.http3.Http3ErrorCode.H3_FRAME_UNEXPECTED;
 import static io.netty.handler.codec.http3.Http3ErrorCode.H3_ID_ERROR;
 import static io.netty.handler.codec.http3.Http3ErrorCode.H3_MISSING_SETTINGS;
 import static io.netty.handler.codec.http3.Http3ErrorCode.QPACK_ENCODER_STREAM_ERROR;
-import static io.netty.handler.codec.http3.Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
-import static io.netty.handler.codec.http3.Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
+import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
+import static io.netty.handler.codec.http3.Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
 import static io.netty.handler.codec.http3.QpackUtil.toIntOrThrow;
 import static io.netty.util.internal.ThrowableUtil.unknownStackTrace;
 
