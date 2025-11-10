@@ -28,8 +28,8 @@ import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
 import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.List;
+import java.util.Queue;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
@@ -166,7 +166,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private static final byte STATE_HANDLER_REMOVED_PENDING = 2;
 
     // Used to guard the inputs for reentrant channelRead calls
-    private Deque<Object> inputMessages;
+    private Queue<Object> inputMessages;
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
@@ -331,13 +331,13 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
                 } else {
                     ctx.fireChannelRead(input);
                 }
-            } while (inputMessages != null && (input = inputMessages.pollFirst()) != null);
+            } while (inputMessages != null && (input = inputMessages.poll()) != null);
         } else {
             // Reentrant call. Bail out here and let original call process our message.
             if (inputMessages == null) {
-                inputMessages = new ArrayDeque<>();
+                inputMessages = new ArrayDeque<>(2);
             }
-            inputMessages.offerLast(input);
+            inputMessages.offer(input);
         }
     }
 
