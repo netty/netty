@@ -33,7 +33,6 @@ import java.util.Queue;
 
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static java.lang.Integer.MAX_VALUE;
 
 /**
  * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to
@@ -545,12 +544,14 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         try {
             decode(ctx, in, out);
         } finally {
-            boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
-            decodeState = STATE_INIT;
-            if (removePending) {
-                fireChannelRead(ctx, out, out.size());
-                out.clear();
-                handlerRemoved(ctx);
+            if (inputMessages == null || inputMessages.isEmpty()) {
+                boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
+                decodeState = STATE_INIT;
+                if (removePending) {
+                    fireChannelRead(ctx, out, out.size());
+                    out.clear();
+                    handlerRemoved(ctx);
+                }
             }
         }
     }
@@ -574,7 +575,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         int oldBytes = oldCumulation.readableBytes();
         int newBytes = in.readableBytes();
         int totalBytes = oldBytes + newBytes;
-        ByteBuf newCumulation = alloc.buffer(alloc.calculateNewCapacity(totalBytes, MAX_VALUE));
+        ByteBuf newCumulation = alloc.buffer(alloc.calculateNewCapacity(totalBytes, Integer.MAX_VALUE));
         ByteBuf toRelease = newCumulation;
         try {
             // This avoids redundant checks and stack depth compared to calling writeBytes(...)
