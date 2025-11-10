@@ -288,13 +288,11 @@ public class DnsNameResolver extends InetNameResolver {
     private static final class InflightQuery {
         final DnsQueryInflightHandler.DnsQueryInflightHandle handle;
         final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise;
-        final long queryStartStamp;
 
         InflightQuery(DnsQueryInflightHandler.DnsQueryInflightHandle handle,
                       Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> promise) {
             this.handle = handle;
             this.promise = promise;
-            this.queryStartStamp = System.nanoTime();
         }
     }
 
@@ -1433,7 +1431,7 @@ public class DnsNameResolver extends InetNameResolver {
         if (inflightQueries != null && (additionals == null || additionals.length == 0)) {
             InflightQuery inflight = inflightQueries.get(question);
             if (inflight != null) {
-                if (inflight.handle.consolidate(inflight.queryStartStamp)) {
+                if (inflight.handle.consolidate()) {
                     // We have a query / response inflight, let's just cascade on it to reduce the network traffic.
                     inflight.promise.addListener(f -> {
                         if (f.isSuccess()) {
@@ -1475,6 +1473,7 @@ public class DnsNameResolver extends InetNameResolver {
                         // added we know that all previous added listeners had a chance to handle the result
                         // already.
                         InflightQuery query = inflightQueries.remove(question);
+                        Throwable cause = f.cause();
                         try {
                             assert query == inflightQuery;
                             if (f.isSuccess()) {
@@ -1485,12 +1484,12 @@ public class DnsNameResolver extends InetNameResolver {
                                 ReferenceCountUtil.retain(result);
                                 promise.setSuccess(result);
                             } else {
-                                promise.setFailure(f.cause());
+                                promise.setFailure(cause);
                             }
 
                             query.promise.addListener(RELEASE_LISTENER);
                         } finally {
-                            query.handle.complete();
+                            query.handle.complete(cause);
                         }
                     });
 

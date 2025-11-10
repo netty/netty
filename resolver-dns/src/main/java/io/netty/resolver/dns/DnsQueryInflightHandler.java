@@ -39,17 +39,18 @@ public interface DnsQueryInflightHandler {
         /**
          * Returns {@code true} if consolidation should take place, {@code false} otherwise.
          *
-         * @param queryStartStamp   the {@link System#nanoTime()} when the original query was done.
          * @return                  {@code true} if consolidation should be done, {@code false} otherwise and so an
          *                          extra query will be performed.
          */
-        boolean consolidate(long queryStartStamp);
+        boolean consolidate();
 
         /**
          * Called once the original inflight query was completed and there will be no more consolidations for the
          * original {@link DnsQuestion}.
+         *
+         * @param cause     {@code null} if completed successfully, otherwise the {@link Throwable} is given.
          */
-        default void complete() {
+        default void complete(Throwable cause) {
             // NOOP.
         }
     }

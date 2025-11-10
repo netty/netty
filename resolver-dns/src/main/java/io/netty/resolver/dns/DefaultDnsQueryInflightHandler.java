@@ -22,12 +22,12 @@ public final class DefaultDnsQueryInflightHandler implements DnsQueryInflightHan
     private final int maxConsolidated;
     private final DnsQueryInflightHandle handle = new DnsQueryInflightHandle() {
         @Override
-        public boolean consolidate(long queryStartStamp) {
+        public boolean consolidate() {
             return true;
         }
 
         @Override
-        public void complete() {
+        public void complete(Throwable cause) {
             inflight--;
         }
     };
