@@ -132,7 +132,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         try {
             fd.setIpMulticastAll(IP_MULTICAST_ALL);
         } catch (IOException e) {
-            logger.warn("Failed to set IP_MULTICAST_ALL to {}", IP_MULTICAST_ALL, e);
+            logger.debug("Failed to set IP_MULTICAST_ALL to {}", IP_MULTICAST_ALL, e);
         }
 
         config = new EpollDatagramChannelConfig(this);
