@@ -206,7 +206,6 @@ public class Http3SettingsTest {
         assertTrue(out.contains("0x8"));
     }
 
-
     @Test
     void testEmptySettingsEquality() {
         Http3Settings s1 = new Http3Settings();

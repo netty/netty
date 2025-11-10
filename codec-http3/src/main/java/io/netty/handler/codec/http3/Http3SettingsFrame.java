@@ -56,7 +56,6 @@ public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Ma
     @Deprecated
     long HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE = Http3Settings.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE;
 
-
     default Http3Settings settings() {
         throw new UnsupportedOperationException(
                 "Http3SettingsFrame.settings() not implemented in this version");
