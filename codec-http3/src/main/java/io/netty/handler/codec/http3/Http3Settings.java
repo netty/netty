@@ -101,7 +101,7 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
     private static final Long FALSE = 0L;
 
     /**
-     * Creates a new instance with an initial capacity of 4 entries.
+     * Creates a new instance
      */
     public Http3Settings() {
         this.settings = new LongObjectHashMap<>(4);
@@ -112,7 +112,7 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
      *
      * @param initialCapacity initial capacity of the underlying map
      */
-    public Http3Settings(int initialCapacity) {
+    Http3Settings(int initialCapacity) {
         this.settings = new LongObjectHashMap<>(initialCapacity);
     }
 
@@ -122,7 +122,7 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
      * @param initialCapacity initial capacity of the underlying map
      * @param loadFactor load factor for the underlying map
      */
-    public Http3Settings(int initialCapacity, float loadFactor) {
+    Http3Settings(int initialCapacity, float loadFactor) {
         this.settings = new LongObjectHashMap<>(initialCapacity, loadFactor);
     }
 

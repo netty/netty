@@ -25,11 +25,6 @@ import java.util.Map;
 /**
  * Default implementation of {@link Http3SettingsFrame}.
  *
- * <p>
- * Internally backed by {@link Http3Settings}.
- * The legacy {@link Iterable} and {@link #get(long)} / {@link #put(long, Long)} methods
- * are preserved for backward compatibility.
- * </p>
  */
 public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
 
@@ -51,13 +46,9 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
     /**
      * Get a setting by its key.
      *
-     * <p><strong>Deprecated:</strong> Use the typed accessors on {@link #settings()} instead, e.g.:
-     * <pre>{@code
-     * frame.settings().qpackMaxTableCapacity();
-     * }</pre>
-     *
      * @param key the HTTP/3 setting key
      * @return the value, or {@code null} if not set
+     * @deprecated  use {@link #settings()}  and manipulate the {@link Http3Settings} directly
      */
     @Override
     @Deprecated
@@ -70,15 +61,11 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
     /**
      * Set a setting value by key.
      *
-     * <p><strong>Deprecated:</strong> Use the typed mutators on {@link #settings()} instead, e.g.:
-     * <pre>{@code
-     * frame.settings().qpackMaxTableCapacity(1024);
-     * }</pre>
-     *
      * @param key the HTTP/3 setting key
      * @param value the value to set
      * @return the previous value, or {@code null} if none
      * @throws IllegalArgumentException if the key is reserved for HTTP/2
+     * @deprecated  use {@link #settings()}  and manipulate the {@link Http3Settings} directly
      */
     @Override
     @Deprecated
