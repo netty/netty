@@ -15,6 +15,7 @@
  */
 package io.netty.handler.codec.http3;
 
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,7 +36,7 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
     private final Http3Settings settings;
 
     public DefaultHttp3SettingsFrame(Http3Settings settings) {
-        this.settings = settings;
+        this.settings = ObjectUtil.checkNotNull(settings, "settings");
     }
 
     public DefaultHttp3SettingsFrame(){
@@ -44,7 +45,7 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
 
     @Override
     public Http3Settings settings() {
-        return this.settings;
+        return settings;
     }
 
     /**
@@ -83,9 +84,6 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
     @Deprecated
     @Nullable
     public Long put(long key, Long value) {
-        if (Http3CodecUtils.isReservedHttp2Setting(key)) {
-            throw new IllegalArgumentException("Setting is reserved for HTTP/2: " + key);
-        }
         return settings.put(key, value);
     }
 
@@ -93,7 +91,7 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
 
     @Override
     public Iterator<Map.Entry<Long, Long>> iterator() {
-       return this.settings.iterator();
+       return settings.iterator();
     }
 
     @Override
