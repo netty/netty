@@ -34,7 +34,7 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
         this.settings = ObjectUtil.checkNotNull(settings, "settings");
     }
 
-    public DefaultHttp3SettingsFrame(){
+    public DefaultHttp3SettingsFrame() {
         this.settings = new Http3Settings();
     }
 
@@ -73,8 +73,6 @@ public final class DefaultHttp3SettingsFrame implements Http3SettingsFrame {
     public Long put(long key, Long value) {
         return settings.put(key, value);
     }
-
-
 
     @Override
     public Iterator<Map.Entry<Long, Long>> iterator() {

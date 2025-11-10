@@ -76,7 +76,7 @@ public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Ma
      */
     @Deprecated
     @Nullable
-    default Long get(long key){
+    default Long get(long key) {
         return settings().get(key);
     }
 
@@ -105,7 +105,7 @@ public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Ma
      * * For example, {@code frame.settings().enableConnectProtocol(true)}.
      */
     @Nullable
-    default Long put(long key, Long value){
+    default Long put(long key, Long value) {
         return settings().put(key, value);
     }
 }

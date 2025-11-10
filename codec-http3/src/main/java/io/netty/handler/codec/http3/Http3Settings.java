@@ -302,8 +302,12 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
      */
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (!(o instanceof Http3Settings)) return false;
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof Http3Settings)) {
+            return false;
+        }
         Http3Settings that = (Http3Settings) o;
         return settings.equals(that.settings);
     }
@@ -331,7 +335,9 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
         StringBuilder sb = new StringBuilder("Http3Settings{");
         boolean first = true;
         for (LongObjectMap.PrimitiveEntry<Long> e : settings.entries()) {
-            if (!first) sb.append(", ");
+            if (!first) {
+                sb.append(", ");
+            }
             first = false;
             sb.append("0x").append(toHexString(e.key())).append('=').append(e.value());
         }
