@@ -715,4 +715,49 @@ public class ByteToMessageDecoderTest {
         assertEquals(8, second);
         assertFalse(channel.finishAndReleaseAll());
     }
+
+    @Test
+    void reentrantReadThenRemoveSafety() throws Exception {
+        EmbeddedChannel channel = new EmbeddedChannel();
+        ByteToMessageDecoder decoder = new ByteToMessageDecoder() {
+            boolean removed;
+            int reentrancy;
+
+            @Override
+            protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
+                assertFalse(removed);
+                reentrancy++;
+                if (reentrancy == 1) {
+                    ByteBuf buf2 = channel.alloc().buffer();
+                    buf2.writeLong(42); // Adding 8 bytes.
+                    assertFalse(channel.writeInbound(buf2)); // Reentrant call back into ByteToMessageDecoder
+                    ByteBuf buf3 = channel.alloc().buffer();
+                    buf3.writeShort(42); // Adding 2 bytes.
+                    assertFalse(channel.writeInbound(buf3)); // Reentrant call back into ByteToMessageDecoder
+                    ctx.read(); // With LocalChannel this would be a reentrant call. For EmbeddedChannel it's harmless.
+                } else if (reentrancy == 2) {
+                    ctx.pipeline().remove(this);
+                }
+                int bytes = in.readableBytes();
+                out.add(bytes);
+                in.skipBytes(bytes);
+            }
+
+            @Override
+            protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception {
+                removed = true;
+            }
+        };
+        channel.pipeline().addLast(decoder);
+        ByteBuf buf1 = channel.alloc().buffer();
+        buf1.writeInt(42); // Adding 4 bytes.
+        assertTrue(channel.writeInbound(buf1));
+        Integer first = channel.readInbound();
+        Integer second = channel.readInbound();
+        Integer third = channel.readInbound();
+        assertEquals(4, first);
+        assertEquals(8, second);
+        assertEquals(2, third);
+        assertFalse(channel.finishAndReleaseAll());
+    }
 }
