@@ -46,8 +46,7 @@ public class Http3SettingsTest {
         assertEquals(0L, settings.qpackMaxTableCapacity());
         assertEquals(0L, settings.qpackBlockedStreams());
         assertEquals(Boolean.FALSE, settings.connectProtocolEnabled());
-        System.out.println(settings.qpackMaxTableCapacity());
-        assertNull(settings.maxFieldSectionSize());
+        assertEquals(Long.MAX_VALUE, settings.maxFieldSectionSize());
     }
 
     @Test
