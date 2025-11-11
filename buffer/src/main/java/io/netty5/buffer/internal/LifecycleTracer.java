@@ -18,7 +18,6 @@ package io.netty5.buffer.internal;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.LeakInfo;
 import io.netty5.buffer.LeakInfo.TracePoint;
-import io.netty5.buffer.Owned;
 import io.netty5.util.Resource;
 import io.netty5.util.internal.SystemPropertyUtil;
 import io.netty5.util.internal.UnstableApi;
@@ -89,16 +88,6 @@ public abstract class LifecycleTracer {
     public abstract void touch(Object hint);
 
     /**
-     * Add to the trace log that the object is being sent.
-     *
-     * @param <I> The resource interface for the object.
-     * @param <T> The concrete type of the object.
-     * @param instance The owned instance being sent.
-     * @return An {@link Owned} instance that may trace the reception of the object.
-     */
-    public abstract <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> instance);
-
-    /**
      * Attach a trace to both life-cycles, that a single life-cycle has been split into two.
      * <p>
      * Such branches happen when two views are created to share a single underlying resource.
@@ -165,11 +154,6 @@ public abstract class LifecycleTracer {
         }
 
         @Override
-        public <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> instance) {
-            return instance;
-        }
-
-        @Override
         public void splitTo(LifecycleTracer tracer) {
         }
 
@@ -229,17 +213,6 @@ public abstract class LifecycleTracer {
             trace.attachmentType = AttachmentType.HINT;
             trace.attachment = hint;
             addTrace(walk(trace));
-        }
-
-        @Override
-        public <I extends Resource<I>, T extends ResourceSupport<I, T>> Owned<T> send(Owned<T> instance) {
-            Trace sendTrace = new Trace(TraceType.SEND);
-            sendTrace.attachmentType = AttachmentType.RECEIVED_AT;
-            addTrace(walk(sendTrace));
-            return drop -> {
-                sendTrace.attachment = walk(new Trace(TraceType.RECEIVE));
-                return instance.transferOwnership(drop);
-            };
         }
 
         @Override

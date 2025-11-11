@@ -15,7 +15,7 @@
  */
 package io.netty5.buffer;
 
-import io.netty5.util.Send;
+import io.netty5.util.Resource;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -28,14 +28,14 @@ import java.nio.charset.Charset;
  * A composite buffer is constructed using one of the {@code compose} methods:
  * <ul>
  *     <li>
- *         {@link BufferAllocator#compose(Iterable)} creates a composite buffer from the buffers that are sent to it via
- *         the passed in send objects. Since {@link Send#receive()} transfers ownership, the resulting composite buffer
- *         will have ownership, because it is guaranteed that there are no other references to its constituent buffers.
+ *         {@link BufferAllocator#compose(Iterable)} creates a composite buffer from the buffers that are passed to it.
+ *         The resulting composite buffer will take ownership of the given buffers because it will call
+ *         {@link Resource#moveAndClose()} on them.
  *     </li>
  *     <li>
  *         {@link BufferAllocator#compose(Buffer)} creates a composite buffer with a single component.
- *         Since {@link Send#receive()} transfers ownership, the resulting composite buffer
- *         will have ownership, because it is guaranteed that there are no other references to its constituent buffer.
+ *         The resulting composite buffer will take ownership of the given buffer because it will call
+ *         {@link Resource#moveAndClose()} on it.
  *     </li>
  *     <li>
  *         {@link BufferAllocator#compose()} creates an empty, zero capacity, composite buffer. Such empty buffers may
