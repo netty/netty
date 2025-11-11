@@ -328,6 +328,11 @@ public class AdaptivePoolingAllocator implements BufferAllocator {
         drainCloseCentralQueue();
     }
 
+    @Override
+    public boolean isClosed() {
+        return closed;
+    }
+
     private void drainCloseCentralQueue() {
         Buffer curr;
         while ((curr = centralQueue.poll()) != null) {

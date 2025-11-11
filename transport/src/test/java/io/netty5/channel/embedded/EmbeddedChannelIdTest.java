@@ -38,7 +38,7 @@ public class EmbeddedChannelIdTest {
             outStream.writeObject(normalInstance);
         }
 
-        ObjectInputStream inStream = new ObjectInputStream(new BufferInputStream(buf.send()));
+        ObjectInputStream inStream = new ObjectInputStream(new BufferInputStream(buf));
         final ChannelId deserializedInstance;
         try {
             deserializedInstance = (ChannelId) inStream.readObject();

@@ -69,7 +69,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             // We need to `send` the binary data to the pong frame, because the MessageToMessageDecoder
             // is going to close the ping frame, which would otherwise cause the data to be freed.
             try (frame) {
-                ctx.writeAndFlush(new PongWebSocketFrame(frame.binaryData().send()));
+                ctx.writeAndFlush(new PongWebSocketFrame(frame.binaryData()));
             }
             readIfNeeded(ctx);
             return;

@@ -29,8 +29,8 @@ class BufferHolderTest {
     @Test
     public void testEqualsAndHashCode() {
         byte[] bytes = "data".getBytes(UTF_8);
-        try (BufferRef first = new BufferRef(onHeapUnpooled().copyOf(bytes).send());
-             BufferRef secnd = new BufferRef(offHeapUnpooled().copyOf(bytes).send())) {
+        try (BufferRef first = new BufferRef(onHeapUnpooled().copyOf(bytes));
+             BufferRef secnd = new BufferRef(offHeapUnpooled().copyOf(bytes))) {
             assertEquals(first, secnd);
             assertEquals(first.hashCode(), secnd.hashCode());
         }
@@ -39,9 +39,8 @@ class BufferHolderTest {
     @Test
     public void bufferHolderInterface() {
         Buffer buf = onHeapUnpooled().allocate(0);
-        try (Example first = new DefaultExample(buf)) {
-            Example second = first.send().receive();
-            second.close();
+        try (Example ignore = new DefaultExample(buf)) {
+            assertFalse(buf.isAccessible());
         }
     }
 
@@ -54,8 +53,8 @@ class BufferHolderTest {
         }
 
         @Override
-        protected Example receive(Buffer buf) {
-            return new DefaultExample(buf);
+        public Example move() {
+            return new DefaultExample(getBuffer());
         }
     }
 
@@ -64,17 +63,17 @@ class BufferHolderTest {
     public void testDifferentClassesAreNotEqual() {
         // all objects here have EMPTY_BUFFER data but are instances of different classes
         // so we want to check that none of them are equal to another.
-        BufferRef dflt = new BufferRef(onHeapUnpooled().allocate(0).send());
+        BufferRef dflt = new BufferRef(onHeapUnpooled().allocate(0));
         BufferRef2 other = new BufferRef2(onHeapUnpooled().allocate(0));
         BufferHolder<?> constant1 = new BufferHolder(onHeapUnpooled().allocate(0)) {
             @Override
-            protected BufferHolder receive(Buffer buf) {
+            public BufferHolder<?> move() {
                 return null;
             }
         };
         BufferHolder<?> constant2 = new BufferHolder(onHeapUnpooled().allocate(0)) {
             @Override
-            protected BufferHolder receive(Buffer buf) {
+            public Resource move() {
                 return null;
             }
         };
@@ -99,8 +98,8 @@ class BufferHolderTest {
         }
 
         @Override
-        protected BufferRef2 receive(Buffer buf) {
-            return new BufferRef2(buf);
+        public BufferRef2 move() {
+            return new BufferRef2(getBuffer());
         }
     }
 }

@@ -16,7 +16,6 @@
 package io.netty5.channel.nio;
 
 import io.netty5.channel.Channel;
-import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.ReadHandleFactory;
 import io.netty5.channel.WriteHandleFactory;

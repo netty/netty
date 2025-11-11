@@ -25,7 +25,6 @@ import java.security.cert.X509Certificate;
  * A PEM encoded value.
  *
  * @see PemEncoded
- * @see #toPEM(java.security.PrivateKey)
  * @see PemX509Certificate#toPEM(BufferAllocator, X509Certificate...)
  */
 class PemValue extends BufferHolder<PemValue> implements PemEncoded {
@@ -50,7 +49,7 @@ class PemValue extends BufferHolder<PemValue> implements PemEncoded {
     }
 
     @Override
-    protected PemValue receive(Buffer buf) {
-        return new PemValue(buf);
+    public PemValue move() {
+        return new PemValue(getBuffer());
     }
 }

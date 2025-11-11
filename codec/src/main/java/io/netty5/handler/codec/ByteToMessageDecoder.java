@@ -26,7 +26,6 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ChannelShutdownDirection;
 import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.internal.DelegatingChannelHandlerContext;
-import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.Arrays;
@@ -473,12 +472,12 @@ public abstract class ByteToMessageDecoder extends ChannelHandlerAdapter {
                     composite.extendWith(prepareInForCompose(in));
                     return composite;
                 }
-                return alloc.compose(Arrays.asList(cumulation.send(), prepareInForCompose(in)));
+                return alloc.compose(Arrays.asList(cumulation, prepareInForCompose(in)));
             }
         }
 
-        private static Send<Buffer> prepareInForCompose(Buffer in) {
-            return in.readOnly() ? in.copy().send() : in.send();
+        private static Buffer prepareInForCompose(Buffer in) {
+            return in.readOnly() ? in.copy() : in;
         }
 
         @Override

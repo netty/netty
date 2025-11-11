@@ -107,7 +107,7 @@ public abstract class BufferTestSupport {
         Instant today = Instant.now().truncatedTo(ChronoUnit.DAYS); // New seed every day.
         SplittableRandom rng = new SplittableRandom(today.hashCode());
         AtomicInteger counter = new AtomicInteger();
-        return fixture -> counter.getAndIncrement() < 1 || rng.nextInt(0, 100) < percentage;
+        return ignoreFixture -> counter.getAndIncrement() < 1 || rng.nextInt(0, 100) < percentage;
     }
 
     static Fixture[] allocators() {
@@ -238,6 +238,11 @@ public abstract class BufferTestSupport {
         public void close() {
             delegate.close();
         }
+
+        @Override
+        public boolean isClosed() {
+            return delegate.isClosed();
+        }
     }
 
     static Stream<Fixture> fixtureCombinations(List<Fixture> initFixtures) {
@@ -262,7 +267,7 @@ public abstract class BufferTestSupport {
                             int half = size / 2;
                             try (Buffer firstHalf = a.allocate(half);
                                  Buffer secondHalf = b.allocate(size - half)) {
-                                return a.compose(asList(firstHalf.send(), secondHalf.send()));
+                                return a.compose(asList(firstHalf, secondHalf));
                             }
                         }
 
@@ -281,6 +286,11 @@ public abstract class BufferTestSupport {
                             a.close();
                             b.close();
                         }
+
+                        @Override
+                        public boolean isClosed() {
+                            return a.isClosed();
+                        }
                     };
                 }, properties));
             }
@@ -296,7 +306,7 @@ public abstract class BufferTestSupport {
                     try (Buffer a = allocator.allocate(part);
                          Buffer b = allocator.allocate(part);
                          Buffer c = allocator.allocate(size - part * 2)) {
-                        return allocator.compose(asList(a.send(), b.send(), c.send()));
+                        return allocator.compose(asList(a, b, c));
                     }
                 }
 
@@ -313,6 +323,11 @@ public abstract class BufferTestSupport {
                 @Override
                 public void close() {
                     allocator.close();
+                }
+
+                @Override
+                public boolean isClosed() {
+                    return allocator.isClosed();
                 }
             };
         }, COMPOSITE));
@@ -346,6 +361,11 @@ public abstract class BufferTestSupport {
                     public void close() {
                         allocator.close();
                     }
+
+                    @Override
+                    public boolean isClosed() {
+                        return allocator.isClosed();
+                    }
                 };
             }, fixture.getProperties()));
             builder.add(new Fixture(fixture + ".compose.ensureWritable", () -> {
@@ -375,6 +395,76 @@ public abstract class BufferTestSupport {
                     @Override
                     public void close() {
                         allocator.close();
+                    }
+
+                    @Override
+                    public boolean isClosed() {
+                        return allocator.isClosed();
+                    }
+                };
+            }, fixture.isUncloseable() ? new Properties[] { UNCLOSEABLE, COMPOSITE } : new Properties[] { COMPOSITE }));
+        }
+
+        for (Fixture fixture : initFixtures) {
+            builder.add(new Fixture(fixture + ".moveAndClose", () -> {
+                return new TestAllocator() {
+                    final BufferAllocator allocator = fixture.createAllocator();
+
+                    @Override
+                    public Buffer allocate(int size) {
+                        return allocator.allocate(size).move();
+                    }
+
+                    @Override
+                    public boolean isPooling() {
+                        return allocator.isPooling();
+                    }
+
+                    @Override
+                    public AllocationType getAllocationType() {
+                        return allocator.getAllocationType();
+                    }
+
+                    @Override
+                    public void close() {
+                        allocator.close();
+                    }
+
+                    @Override
+                    public boolean isClosed() {
+                        return allocator.isClosed();
+                    }
+                };
+            }, fixture.getProperties()));
+            builder.add(new Fixture(fixture + ".compose.ensureWritable.moveAndClose", () -> {
+                return new TestAllocator() {
+                    final BufferAllocator allocator = fixture.createAllocator();
+
+                    @Override
+                    public Buffer allocate(int size) {
+                        var buf = allocator.compose();
+                        buf.ensureWritable(size);
+                        return buf.move();
+                    }
+
+                    @Override
+                    public boolean isPooling() {
+                        return allocator.isPooling();
+                    }
+
+                    @Override
+                    public AllocationType getAllocationType() {
+                        return allocator.getAllocationType();
+                    }
+
+                    @Override
+                    public void close() {
+                        allocator.close();
+                    }
+
+                    @Override
+                    public boolean isClosed() {
+                        return allocator.isClosed();
                     }
                 };
             }, fixture.isUncloseable() ? new Properties[] { UNCLOSEABLE, COMPOSITE } : new Properties[] { COMPOSITE }));
@@ -413,6 +503,11 @@ public abstract class BufferTestSupport {
                 public void close() {
                     allocatorBase.close();
                 }
+
+                @Override
+                public boolean isClosed() {
+                    return allocatorBase.isClosed();
+                }
             };
         }, f.getProperties()));
         return builder.build();
@@ -438,12 +533,12 @@ public abstract class BufferTestSupport {
             assertThrows(BufferClosedException.class, () -> buf.copyInto(0, ByteBuffer.allocate(1), 0, 1));
             assertThrows(BufferClosedException.class, () -> buf.copyInto(0, ByteBuffer.allocate(1), 0, 0));
             if (CompositeBuffer.isComposite(buf)) {
-                assertThrows(BufferClosedException.class, () -> ((CompositeBuffer) buf).extendWith(target.send()));
+                assertThrows(BufferClosedException.class, () -> ((CompositeBuffer) buf).extendWith(target));
             }
         }
 
         assertThrows(BufferClosedException.class, () -> buf.split());
-        assertThrows(BufferClosedException.class, () -> buf.send());
+        assertThrows(BufferClosedException.class, () -> buf.move());
         assertThrows(BufferClosedException.class, () -> acquire((ResourceSupport<?, ?>) buf));
         assertThrows(BufferClosedException.class, () -> buf.copy());
         assertThrows(BufferClosedException.class, () -> buf.openCursor());

@@ -72,7 +72,7 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
 
     @Override
     protected Buffer decompress(Buffer compressed, int originalLength) throws Exception {
-        InputStream is = new BufferInputStream(compressed.send());
+        InputStream is = new BufferInputStream(compressed);
         ZstdInputStream zstdIs = null;
         byte[] decompressed = new byte[originalLength];
         try {

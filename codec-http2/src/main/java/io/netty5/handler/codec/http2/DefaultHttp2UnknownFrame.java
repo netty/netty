@@ -73,18 +73,13 @@ public final class DefaultHttp2UnknownFrame extends BufferHolder<Http2UnknownFra
 
     @Override
     public DefaultHttp2UnknownFrame copy() {
-        return receive(getBuffer().copy());
+        return new DefaultHttp2UnknownFrame(frameType, flags, getBuffer().copy()).stream(stream);
     }
 
     @Override
     public String toString() {
         return StringUtil.simpleClassName(this) + "(frameType=" + frameType + ", stream=" + stream +
                ", flags=" + flags + ", content=" + getBuffer().toString(StandardCharsets.UTF_8) + ')';
-    }
-
-    @Override
-    protected DefaultHttp2UnknownFrame receive(Buffer buf) {
-        return new DefaultHttp2UnknownFrame(frameType, flags, buf).stream(stream);
     }
 
     @Override
@@ -110,5 +105,10 @@ public final class DefaultHttp2UnknownFrame extends BufferHolder<Http2UnknownFra
         }
 
         return hash;
+    }
+
+    @Override
+    public Http2UnknownFrame move() {
+        return new DefaultHttp2UnknownFrame(frameType, flags, getBuffer()).stream(stream);
     }
 }

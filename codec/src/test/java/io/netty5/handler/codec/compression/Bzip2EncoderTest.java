@@ -34,7 +34,7 @@ public class Bzip2EncoderTest extends AbstractEncoderTest {
 
     @Override
     protected Buffer decompress(Buffer compressed, int originalLength) throws Exception {
-        InputStream is = new BufferInputStream(compressed.send());
+        InputStream is = new BufferInputStream(compressed);
         BZip2CompressorInputStream bzip2Is = null;
         byte[] decompressed = new byte[originalLength];
         try {

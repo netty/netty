@@ -96,11 +96,11 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
     public void testSimpleSendCompositeDirectBuffer(Bootstrap sb, Bootstrap cb) throws Throwable {
         BufferAllocator alloc = DefaultBufferAllocators.offHeapAllocator();
         try (Buffer data = alloc.copyOf(BYTES)) {
-            CompositeBuffer buf = alloc.compose(asList(data.readSplit(2).send(), data.readSplit(2).send()));
+            CompositeBuffer buf = alloc.compose(asList(data.readSplit(2), data.readSplit(2)));
             testSimpleSend(sb, cb, buf, true, BYTES, 1);
         }
         try (Buffer data = alloc.copyOf(BYTES)) {
-            CompositeBuffer buf = alloc.compose(asList(data.readSplit(2).send(), data.readSplit(2).send()));
+            CompositeBuffer buf = alloc.compose(asList(data.readSplit(2), data.readSplit(2)));
             testSimpleSend(sb, cb, buf, true, BYTES, 4);
         }
     }
@@ -113,11 +113,11 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
     public void testSimpleSendCompositeHeapBuffer(Bootstrap sb, Bootstrap cb) throws Throwable {
         BufferAllocator alloc = DefaultBufferAllocators.onHeapAllocator();
         try (Buffer data = alloc.copyOf(BYTES)) {
-            CompositeBuffer buf = alloc.compose(asList(data.readSplit(2).send(), data.readSplit(2).send()));
+            CompositeBuffer buf = alloc.compose(asList(data.readSplit(2), data.readSplit(2)));
             testSimpleSend(sb, cb, buf, true, BYTES, 1);
         }
         try (Buffer data = alloc.copyOf(BYTES)) {
-            CompositeBuffer buf = alloc.compose(asList(data.readSplit(2).send(), data.readSplit(2).send()));
+            CompositeBuffer buf = alloc.compose(asList(data.readSplit(2), data.readSplit(2)));
             testSimpleSend(sb, cb, buf, true, BYTES, 4);
         }
     }
@@ -131,13 +131,13 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         BufferAllocator offHeap = DefaultBufferAllocators.offHeapAllocator();
         BufferAllocator onHeap = DefaultBufferAllocators.onHeapAllocator();
         CompositeBuffer buf = offHeap.compose(asList(
-                offHeap.allocate(2).writeBytes(BYTES, 0, 2).send(),
-                onHeap.allocate(2).writeBytes(BYTES, 0, 2).send()));
+                offHeap.allocate(2).writeBytes(BYTES, 0, 2),
+                onHeap.allocate(2).writeBytes(BYTES, 0, 2)));
         testSimpleSend(sb, cb, buf, true, BYTES, 1);
 
         CompositeBuffer buf2 = offHeap.compose(asList(
-                offHeap.allocate(2).writeBytes(BYTES, 0, 2).send(),
-                onHeap.allocate(2).writeBytes(BYTES, 0, 2).send()));
+                offHeap.allocate(2).writeBytes(BYTES, 0, 2),
+                onHeap.allocate(2).writeBytes(BYTES, 0, 2)));
         testSimpleSend(sb, cb, buf2, true, BYTES, 4);
     }
 

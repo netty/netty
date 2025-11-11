@@ -450,7 +450,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             // valid stream ID for the current peer.
             onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(connection.isServer() ? Integer.MAX_VALUE :
                     Integer.MAX_VALUE - 1, NO_ERROR.code(),
-                    ctx.bufferAllocator().copyOf("Stream IDs exhausted on local stream creation", US_ASCII).send()));
+                    ctx.bufferAllocator().copyOf("Stream IDs exhausted on local stream creation", US_ASCII)));
 
             return f;
         }
@@ -641,7 +641,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
             Http2FrameStream stream = requireStream(streamId);
             final Http2DataFrame dataframe;
             try {
-                dataframe = new DefaultHttp2DataFrame(data.send(), endOfStream, padding);
+                dataframe = new DefaultHttp2DataFrame(data, endOfStream, padding);
             } catch (IllegalArgumentException e) {
                 // Might be thrown in case of invalid padding / length.
                 data.close();
@@ -655,7 +655,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onGoAwayRead(ChannelHandlerContext ctx, int lastStreamId, long errorCode, Buffer debugData) {
-            onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, debugData.send()));
+            onHttp2Frame(ctx, new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, debugData));
         }
 
         @Override

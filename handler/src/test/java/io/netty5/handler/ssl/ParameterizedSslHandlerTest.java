@@ -40,7 +40,6 @@ import io.netty5.handler.ssl.util.SimpleTrustManagerFactory;
 import io.netty5.pkitesting.CertificateBuilder;
 import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.Resource;
-import io.netty5.util.Send;
 import io.netty5.util.concurrent.Promise;
 import io.netty5.util.internal.EmptyArrays;
 import io.netty5.util.internal.ResourcesUtil;
@@ -183,11 +182,11 @@ public class ParameterizedSslHandlerTest {
                                     if (evt instanceof SslHandshakeCompletionEvent) {
                                         SslHandshakeCompletionEvent sslEvt = (SslHandshakeCompletionEvent) evt;
                                         if (sslEvt.isSuccess()) {
-                                            List<Send<Buffer>> components = new ArrayList<>(numComponents);
+                                            List<Buffer> components = new ArrayList<>(numComponents);
                                             for (int i = 0; i < numComponents; ++i) {
                                                 Buffer buf = ctx.bufferAllocator().allocate(singleComponentSize);
                                                 buf.skipWritableBytes(singleComponentSize);
-                                                components.add(buf.send());
+                                                components.add(buf);
                                             }
                                             CompositeBuffer content = ctx.bufferAllocator().compose(components);
                                             ctx.writeAndFlush(content).addListener(future -> {

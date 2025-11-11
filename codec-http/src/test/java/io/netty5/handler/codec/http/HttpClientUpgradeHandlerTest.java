@@ -18,7 +18,6 @@ package io.netty5.handler.codec.http;
 import io.netty5.channel.ChannelHandler;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.Send;
 import io.netty5.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
@@ -56,7 +55,7 @@ public class HttpClientUpgradeHandlerTest {
         }
 
         @Override
-        public void upgradeTo(ChannelHandlerContext ctx, Send<FullHttpResponse> upgradeResponse) throws Exception {
+        public void upgradeTo(ChannelHandlerContext ctx, FullHttpResponse upgradeResponse) throws Exception {
             upgradeResponse.close();
         }
     }

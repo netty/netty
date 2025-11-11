@@ -18,7 +18,6 @@ package io.netty5.handler.codec.compression;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.CompositeBuffer;
-import io.netty5.util.Send;
 import io.netty5.channel.embedded.EmbeddedChannel;
 
 import java.util.ArrayList;
@@ -58,13 +57,13 @@ final class CompressionTestUtils {
     }
 
     static CompositeBuffer compose(BufferAllocator allocator, Supplier<Buffer> supplier) {
-        List<Send<Buffer>> bufferList = new ArrayList<>();
+        List<Buffer> bufferList = new ArrayList<>();
         for (;;) {
             try (Buffer msg = supplier.get()) {
                 if (msg == null) {
                     break;
                 }
-                bufferList.add(msg.send());
+                bufferList.add(msg.move());
             }
         }
         return allocator.compose(bufferList);

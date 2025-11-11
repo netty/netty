@@ -18,7 +18,6 @@ package io.netty5.channel.unix;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.CompositeBuffer;
-import io.netty5.util.Send;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -67,17 +66,16 @@ public class UnixChannelUtilTest {
         assertCompositeBufferIsBufferCopyNeededForWrite(offHeap, 1, onHeap, 1, true);
     }
 
-    @SuppressWarnings("unchecked")
     private static void assertCompositeBufferIsBufferCopyNeededForWrite(
             BufferAllocator offHeap, int numDirect, BufferAllocator onHeap, int numHeap, boolean expected) {
-        List<Send<Buffer>> buffers = new ArrayList<>(numHeap + numDirect);
+        List<Buffer> buffers = new ArrayList<>(numHeap + numDirect);
 
         while (numDirect > 0) {
-            buffers.add(offHeap.allocate(1).writeByte((byte) 1).send());
+            buffers.add(offHeap.allocate(1).writeByte((byte) 1));
             numDirect--;
         }
         while (numHeap > 0) {
-            buffers.add(onHeap.allocate(1).writeByte((byte) 1).send());
+            buffers.add(onHeap.allocate(1).writeByte((byte) 1));
             numHeap--;
         }
 

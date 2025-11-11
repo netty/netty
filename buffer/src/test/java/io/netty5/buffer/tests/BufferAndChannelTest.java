@@ -869,8 +869,8 @@ public class BufferAndChannelTest extends BufferTestSupport {
         Path path = parentDir.resolve("transferTo");
         try (FileChannel channel = FileChannel.open(path, READ, WRITE, CREATE);
              Buffer buf = allocator.compose(asList(
-                        allocator.allocate(4).writeInt(0x01020304).send(),
-                        allocator.allocate(4).writeInt(0x05060708).send()))) {
+                        allocator.allocate(4).writeInt(0x01020304),
+                        allocator.allocate(4).writeInt(0x05060708)))) {
             WritableByteChannel channelWrapper = new WritableByteChannel() {
                 private boolean pastFirstCall;
 
@@ -912,8 +912,8 @@ public class BufferAndChannelTest extends BufferTestSupport {
         Path path = parentDir.resolve("transferFrom");
         try (FileChannel channel = FileChannel.open(path, READ, WRITE, CREATE);
              Buffer buf = allocator.compose(asList(
-                allocator.allocate(4).send(),
-                allocator.allocate(4).send()))) {
+                allocator.allocate(4),
+                allocator.allocate(4)))) {
             ByteBuffer byteBuffer = ByteBuffer.allocate(8).putLong(0x0102030405060708L).flip();
             assertThat(channel.write(byteBuffer)).isEqualTo(8);
             channel.position(0);

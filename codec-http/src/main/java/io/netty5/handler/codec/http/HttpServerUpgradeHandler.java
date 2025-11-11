@@ -20,7 +20,6 @@ import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
 import io.netty5.util.Resource;
-import io.netty5.util.Send;
 import io.netty5.channel.ChannelFutureListeners;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.concurrent.Future;
@@ -127,11 +126,6 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
             return upgradeRequest;
         }
 
-        @Override
-        public Send<UpgradeEvent> send() {
-            return upgradeRequest.send().map(UpgradeEvent.class, req -> new UpgradeEvent(protocol, req));
-        }
-
         public UpgradeEvent copy() {
             return new UpgradeEvent(protocol, upgradeRequest.copy());
         }
@@ -139,6 +133,11 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
         @Override
         public void close() {
             upgradeRequest.close();
+        }
+
+        @Override
+        public UpgradeEvent move() {
+            return new UpgradeEvent(protocol, upgradeRequest.move());
         }
 
         @Override

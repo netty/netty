@@ -47,7 +47,6 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.MembershipKey;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.UnresolvedAddressException;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;

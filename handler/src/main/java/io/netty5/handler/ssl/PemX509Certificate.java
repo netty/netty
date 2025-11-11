@@ -20,7 +20,6 @@ import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.buffer.internal.ResourceSupport;
 import io.netty5.util.Resource;
-import io.netty5.util.Send;
 
 import java.math.BigInteger;
 import java.security.Principal;
@@ -41,7 +40,7 @@ import static java.util.Objects.requireNonNull;
  * This is a special purpose implementation of a {@link X509Certificate} which allows
  * the user to pass PEM/PKCS#8 encoded data straight into {@link OpenSslContext} without
  * having to parse and re-encode bytes in Java land.
- *
+ * <p>
  * All methods other than what's implemented in {@link PemEncoded}'s throw
  * {@link UnsupportedOperationException}s.
  *
@@ -150,7 +149,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
 
     /**
      * Creates a {@link PemX509Certificate} from raw {@code byte[]}.
-     *
+     * <p>
      * ATTENTION: It's assumed that the given argument is a PEM/PKCS#8 encoded value.
      * No input validation is performed to validate it.
      */
@@ -160,12 +159,12 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
 
     /**
      * Creates a {@link PemX509Certificate} from raw {@code Buffer}.
-     *
+     * <p>
      * ATTENTION: It's assumed that the given argument is a PEM/PKCS#8 encoded value.
      * No input validation is performed to validate it.
      */
     public static PemX509Certificate valueOf(Buffer key) {
-        return new PemX509Certificate(key);
+        return new PemX509Certificate(key.move());
     }
 
     private final Buffer content;
@@ -190,13 +189,13 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     }
 
     @Override
-    public PemX509Certificate copy() {
-        return new PemX509Certificate(content.copy(true));
+    public PemX509Certificate move() {
+        return new PemX509Certificate(content.move());
     }
 
     @Override
-    public Send<PemX509Certificate> send() {
-        return content.send().map(PemX509Certificate.class, PemX509Certificate::new);
+    public PemX509Certificate copy() {
+        return new PemX509Certificate(content.copy(true));
     }
 
     @Override

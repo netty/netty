@@ -19,7 +19,6 @@ import io.netty5.buffer.Buffer;
 import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
-import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
 
 import java.util.Map.Entry;
@@ -85,12 +84,6 @@ public class DefaultLastHttpContent extends DefaultHttpObject implements LastHtt
     }
 
     @Override
-    public Send<DefaultLastHttpContent> send() {
-        return payload.send().map(DefaultLastHttpContent.class,
-                payload -> new DefaultLastHttpContent(payload, trailingHeaders));
-    }
-
-    @Override
     public DefaultLastHttpContent copy() {
         return new DefaultLastHttpContent(payload.copy(), trailingHeaders.copy());
     }
@@ -98,6 +91,11 @@ public class DefaultLastHttpContent extends DefaultHttpObject implements LastHtt
     @Override
     public void close() {
         payload.close();
+    }
+
+    @Override
+    public DefaultLastHttpContent move() {
+        return new DefaultLastHttpContent(payload.move(), trailingHeaders);
     }
 
     @Override

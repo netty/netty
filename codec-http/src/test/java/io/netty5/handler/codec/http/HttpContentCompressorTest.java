@@ -24,7 +24,6 @@ import io.netty5.handler.codec.compression.CompressionOptions;
 import io.netty5.handler.codec.compression.ZlibWrapper;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.util.Resource;
-import io.netty5.util.Send;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -829,12 +828,6 @@ public class HttpContentCompressorTest {
         }
 
         @Override
-        public Send<AssembledHttpResponse> send() {
-            return payload.send().map(AssembledHttpResponse.class,
-                    p -> new AssembledHttpResponse(protocolVersion(), status(), headers(), p));
-        }
-
-        @Override
         public AssembledHttpResponse copy() {
             return new AssembledHttpResponse(protocolVersion(), status(), headers().copy(), payload.copy());
         }
@@ -842,6 +835,11 @@ public class HttpContentCompressorTest {
         @Override
         public void close() {
             payload.close();
+        }
+
+        @Override
+        public AssembledHttpResponse move() {
+            return new AssembledHttpResponse(protocolVersion(), status(), headers(), payload.move());
         }
 
         @Override

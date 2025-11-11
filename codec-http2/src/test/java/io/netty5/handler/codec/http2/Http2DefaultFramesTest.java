@@ -30,7 +30,7 @@ public class Http2DefaultFramesTest {
         // so we want to check that 'dflt' will not consider them equal.
         try (DefaultHttp2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(1);
              DefaultHttp2UnknownFrame unknownFrame = new DefaultHttp2UnknownFrame((byte) 1, new Http2Flags((short) 1));
-             BufferRef dflt = new BufferRef(onHeapAllocator().allocate(0).send())) {
+             BufferRef dflt = new BufferRef(onHeapAllocator().allocate(0))) {
             // not using 'assertNotEquals' to be explicit about which object we are calling .equals() on
             assertFalse(dflt.equals(goAwayFrame));
             assertFalse(dflt.equals(unknownFrame));

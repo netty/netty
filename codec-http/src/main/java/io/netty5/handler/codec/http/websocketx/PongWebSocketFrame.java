@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.http.websocketx;
 
 import io.netty5.buffer.Buffer;
-import io.netty5.util.Send;
 
 /**
  * Web Socket frame containing binary data.
@@ -28,15 +27,6 @@ public class PongWebSocketFrame extends WebSocketFrame {
      * @param binaryData the content of the frame.
      */
     public PongWebSocketFrame(Buffer binaryData) {
-        super(binaryData);
-    }
-
-    /**
-     * Creates a new pong frame with the specified binary data.
-     *
-     * @param binaryData the content of the frame.
-     */
-    public PongWebSocketFrame(Send<Buffer> binaryData) {
         super(binaryData);
     }
 
@@ -56,7 +46,7 @@ public class PongWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
-    protected WebSocketFrame receive(Buffer buf) {
-        return new PongWebSocketFrame(this, buf);
+    public WebSocketFrame move() {
+        return new PongWebSocketFrame(this, getBuffer());
     }
 }

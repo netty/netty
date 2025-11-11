@@ -20,7 +20,6 @@ import io.netty5.buffer.BufferClosedException;
 import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
-import io.netty5.util.Send;
 
 import static io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory.headersFactory;
 import static io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory.trailersFactory;
@@ -75,6 +74,12 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     }
 
     @Override
+    public FullHttpRequest move() {
+        return new DefaultFullHttpRequest(
+                protocolVersion(), method(), uri(), payload.move(), headers(), trailingHeader);
+    }
+
+    @Override
     public boolean isAccessible() {
         return payload.isAccessible();
     }
@@ -88,13 +93,6 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     @Override
     public Buffer payload() {
         return payload;
-    }
-
-    @Override
-    public Send<FullHttpRequest> send() {
-        return payload.send().map(FullHttpRequest.class,
-                payload -> new DefaultFullHttpRequest(
-                        protocolVersion(), method(), uri(), payload, headers(), trailingHeader));
     }
 
     @Override

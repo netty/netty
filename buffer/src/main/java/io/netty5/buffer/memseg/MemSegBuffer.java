@@ -23,7 +23,6 @@ import io.netty5.buffer.BufferReadOnlyException;
 import io.netty5.buffer.ByteCursor;
 import io.netty5.buffer.ComponentIterator;
 import io.netty5.buffer.Drop;
-import io.netty5.buffer.Owned;
 import io.netty5.buffer.internal.AdaptableBuffer;
 import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.util.internal.SWARUtil;
@@ -1204,26 +1203,15 @@ class MemSegBuffer extends AdaptableBuffer<MemSegBuffer>
     // </editor-fold>
 
     @Override
-    protected Owned<MemSegBuffer> prepareSend() {
-        var roff = this.roff;
-        var woff = this.woff;
-        var readOnly = readOnly();
-        int implicitCapacityLimit = this.implicitCapacityLimit;
-        MemorySegment transferSegment = seg;
-        MemorySegment base = this.base;
-        return new Owned<MemSegBuffer>() {
-            @Override
-            public MemSegBuffer transferOwnership(Drop<MemSegBuffer> drop) {
-                MemSegBuffer copy = new MemSegBuffer(base, transferSegment, control, drop);
-                copy.roff = roff;
-                copy.woff = woff;
-                copy.implicitCapacityLimit = implicitCapacityLimit;
-                if (readOnly) {
-                    copy.makeReadOnly();
-                }
-                return copy;
-            }
-        };
+    protected MemSegBuffer moveOwnership(Drop<MemSegBuffer> drop) {
+        MemSegBuffer copy = new MemSegBuffer(base, seg, control, drop);
+        copy.roff = roff;
+        copy.woff = woff;
+        copy.implicitCapacityLimit = implicitCapacityLimit;
+        if (readOnly()) {
+            copy.makeReadOnly();
+        }
+        return copy;
     }
 
     @Override

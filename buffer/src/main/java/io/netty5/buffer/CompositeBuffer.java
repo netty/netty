@@ -16,7 +16,6 @@
 package io.netty5.buffer;
 
 import io.netty5.util.Resource;
-import io.netty5.util.Send;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -29,14 +28,14 @@ import java.nio.charset.Charset;
  * A composite buffer is constructed using one of the {@code compose} methods:
  * <ul>
  *     <li>
- *         {@link BufferAllocator#compose(Iterable)} creates a composite buffer from the buffers that are sent to it via
- *         the passed in send objects. Since {@link Send#receive()} transfers ownership, the resulting composite buffer
- *         will have ownership, because it is guaranteed that there are no other references to its constituent buffers.
+ *         {@link BufferAllocator#compose(Iterable)} creates a composite buffer from the buffers that are passed to it.
+ *         The resulting composite buffer will take ownership of the given buffers because it will call
+ *         {@link Resource#move()} on them.
  *     </li>
  *     <li>
- *         {@link BufferAllocator#compose(Send)} creates a composite buffer with a single component.
- *         Since {@link Send#receive()} transfers ownership, the resulting composite buffer
- *         will have ownership, because it is guaranteed that there are no other references to its constituent buffer.
+ *         {@link BufferAllocator#compose(Buffer)} creates a composite buffer with a single component.
+ *         The resulting composite buffer will take ownership of the given buffer because it will call
+ *         {@link Resource#move()} on it.
  *     </li>
  *     <li>
  *         {@link BufferAllocator#compose()} creates an empty, zero capacity, composite buffer. Such empty buffers may
@@ -44,7 +43,7 @@ import java.nio.charset.Charset;
  *     </li>
  * </ul>
  * Composite buffers can later be extended with internally allocated components, with {@link #ensureWritable(int)},
- * or with externally allocated buffers, using {@link #extendWith(Send)}.
+ * or with externally allocated buffers, using {@link #extendWith(Buffer)}.
  *
  * <h3>How buffers compose</h3>
  *
@@ -96,18 +95,18 @@ import java.nio.charset.Charset;
  * {@link Buffer#ensureWritable(int)} is called on the composed buffer, and the composed buffer needs to be
  * expanded, then this allocator instance will be used for allocation the extra memory.
  *
- * <h3>Ownership and Send</h3>
+ * <h3>Ownership and Moving</h3>
  *
- * {@linkplain Resource#send() Sending} a composite buffer implies sending all of its constituent buffers.
- * For sending to be possible, both the composite buffer itself, and all of its constituent buffers, must be in a
- * state that permits them being sent. This should be the case by default, as it shouldn't be possible to create
- * composite buffers that can't be sent.
+ * {@linkplain #move() Moving} a composite buffer implies moving all of its constituent buffers.
+ * For moving to be possible, both the composite buffer itself, and all of its constituent buffers, must be in a
+ * state that permits them being moved. This should be the case by default, as it shouldn't be possible to create
+ * composite buffers that can't be moved.
  */
 public interface CompositeBuffer extends Buffer {
 
     /**
      * Create an empty composite buffer, that has no components. The buffer can be extended with components using either
-     * {@link #ensureWritable(int)} or {@link #extendWith(Send)}.
+     * {@link #ensureWritable(int)} or {@link #extendWith(Buffer)}.
      *
      * @param allocator The allocator for the composite buffer. This allocator will be used e.g. to service
      * {@link #ensureWritable(int)} calls.
@@ -121,7 +120,7 @@ public interface CompositeBuffer extends Buffer {
      * Check if the given buffer is a composite buffer or not.
      * @param composite The buffer to check.
      * @return {@code true} if the given buffer was created with {@link BufferAllocator#compose()},
-     * {@link BufferAllocator#compose(Send)} or {@link BufferAllocator#compose(Iterable)}, {@code false} otherwise.
+     * {@link BufferAllocator#compose(Buffer)} or {@link BufferAllocator#compose(Iterable)}, {@code false} otherwise.
      */
     static boolean isComposite(Buffer composite) {
         return composite instanceof CompositeBuffer;
@@ -132,12 +131,13 @@ public interface CompositeBuffer extends Buffer {
      * This works as if the extension had originally been included at the end of the list of constituent buffers when
      * the composite buffer was created.
      * The extension buffer is added to the end of this composite buffer, which is modified in-place.
+     * The ownership of the extension buffer moves into the composite buffer.
      *
-     * @see BufferAllocator#compose(Send)
+     * @see BufferAllocator#compose(Buffer)
      * @param extension The buffer to extend the composite buffer with.
      * @return This composite buffer instance.
      */
-    CompositeBuffer extendWith(Send<Buffer> extension);
+    CompositeBuffer extendWith(Buffer extension);
 
     /**
      * Split this buffer at a component boundary that is less than or equal to the given offset.
@@ -265,6 +265,9 @@ public interface CompositeBuffer extends Buffer {
 
     @Override
     CompositeBuffer copy(int offset, int length, boolean readOnly);
+
+    @Override
+    CompositeBuffer move();
 
     @Override
     default CompositeBuffer split() {

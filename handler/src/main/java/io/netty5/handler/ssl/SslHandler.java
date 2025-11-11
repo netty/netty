@@ -2263,14 +2263,13 @@ public class SslHandler extends ByteToMessageDecoder {
                 next.close();
                 return cumulation;
             }
-            if (cumulation instanceof CompositeBuffer) {
-                CompositeBuffer composite = (CompositeBuffer) cumulation;
+            if (cumulation instanceof CompositeBuffer composite) {
                 if (next.readableBytes() < wrapDataSize / 2) {
                     composite.ensureWritable(wrapDataSize);
                     composite.writeBytes(next);
                     next.close();
                 } else {
-                    composite.extendWith(next.send());
+                    composite.extendWith(next);
                 }
                 return composite;
             }
@@ -2281,8 +2280,7 @@ public class SslHandler extends ByteToMessageDecoder {
 
         @Override
         protected Buffer composeFirst(BufferAllocator allocator, Buffer first) {
-            if (first instanceof CompositeBuffer) {
-                CompositeBuffer composite = (CompositeBuffer) first;
+            if (first instanceof CompositeBuffer composite) {
                 if (engineType.wantsDirectBuffer && !allocator.getAllocationType().isDirect()) {
                     first = DefaultBufferAllocators.offHeapAllocator().allocate(composite.readableBytes());
                 } else {

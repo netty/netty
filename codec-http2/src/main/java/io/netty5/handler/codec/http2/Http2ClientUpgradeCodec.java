@@ -21,7 +21,6 @@ import io.netty5.handler.codec.base64.Base64;
 import io.netty5.handler.codec.http.FullHttpResponse;
 import io.netty5.handler.codec.http.HttpClientUpgradeHandler;
 import io.netty5.handler.codec.http.HttpRequest;
-import io.netty5.util.Send;
 import io.netty5.util.collection.CharObjectMap;
 import io.netty5.util.internal.UnstableApi;
 
@@ -124,7 +123,7 @@ public class Http2ClientUpgradeCodec implements HttpClientUpgradeHandler.Upgrade
     }
 
     @Override
-    public void upgradeTo(ChannelHandlerContext ctx, Send<FullHttpResponse> upgradeResponse)
+    public void upgradeTo(ChannelHandlerContext ctx, FullHttpResponse upgradeResponse)
         throws Exception {
         upgradeResponse.close();
         try {

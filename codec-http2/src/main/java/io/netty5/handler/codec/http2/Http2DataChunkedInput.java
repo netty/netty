@@ -90,7 +90,7 @@ public final class Http2DataChunkedInput implements ChunkedInput<Http2DataFrame>
             return null;
         }
 
-        final Http2DataFrame dataFrame = new DefaultHttp2DataFrame(buf.send(), input.isEndOfInput()).stream(stream);
+        final Http2DataFrame dataFrame = new DefaultHttp2DataFrame(buf, input.isEndOfInput()).stream(stream);
         if (dataFrame.isEndStream()) {
             endStreamSent = true;
         }

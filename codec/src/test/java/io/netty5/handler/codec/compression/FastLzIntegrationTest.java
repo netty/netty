@@ -18,7 +18,6 @@ package io.netty5.handler.codec.compression;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
-import io.netty5.util.Send;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -89,10 +88,10 @@ public class FastLzIntegrationTest extends AbstractIntegrationTest {
             encoder.writeOutbound(in);
             encoder.finish();
 
-            List<Send<Buffer>> outbounds = new ArrayList<>();
+            List<Buffer> outbounds = new ArrayList<>();
             Buffer msg;
             while ((msg = encoder.readOutbound()) != null) {
-                outbounds.add(msg.send());
+                outbounds.add(msg);
             }
             try (Buffer compressed = allocator.compose(outbounds)) {
                 assertThat(compressed, is(notNullValue()));
@@ -116,9 +115,9 @@ public class FastLzIntegrationTest extends AbstractIntegrationTest {
                 assertFalse(compressed.readableBytes() > 0);
             }
 
-            List<Send<Buffer>> inbounds = new ArrayList<>();
+            List<Buffer> inbounds = new ArrayList<>();
             while ((msg = decoder.readInbound()) != null) {
-                inbounds.add(msg.send());
+                inbounds.add(msg);
             }
             try (Buffer decompressed = allocator.compose(inbounds)) {
                 assertEquals(original, decompressed);

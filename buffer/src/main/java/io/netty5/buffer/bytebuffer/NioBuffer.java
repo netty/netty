@@ -24,7 +24,6 @@ import io.netty5.buffer.BufferReadOnlyException;
 import io.netty5.buffer.ByteCursor;
 import io.netty5.buffer.ComponentIterator;
 import io.netty5.buffer.Drop;
-import io.netty5.buffer.Owned;
 import io.netty5.buffer.internal.AdaptableBuffer;
 import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.buffer.internal.NotReadOnlyReadableComponent;
@@ -510,7 +509,7 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     }
 
     private void disconnectDrop(Drop<NioBuffer> newDrop) {
-        var drop = (Drop<NioBuffer>) unsafeGetDrop();
+        var drop = unsafeGetDrop();
         int roff = this.roff;
         int woff = this.woff;
         drop.drop(this);
@@ -1149,23 +1148,15 @@ final class NioBuffer extends AdaptableBuffer<NioBuffer>
     // </editor-fold>
 
     @Override
-    protected Owned<NioBuffer> prepareSend() {
-        int roff = this.roff;
-        int woff = this.woff;
-        boolean readOnly = readOnly();
-        int implicitCapacityLimit = this.implicitCapacityLimit;
-        ByteBuffer base = this.base;
-        ByteBuffer rmem = this.rmem;
-        return drop -> {
-            NioBuffer copy = new NioBuffer(base, rmem, control, drop);
-            copy.roff = roff;
-            copy.woff = woff;
-            copy.implicitCapacityLimit = implicitCapacityLimit;
-            if (readOnly) {
-                copy.makeReadOnly();
-            }
-            return copy;
-        };
+    protected NioBuffer moveOwnership(Drop<NioBuffer> drop) {
+        NioBuffer copy = new NioBuffer(base, rmem, control, drop);
+        copy.roff = roff;
+        copy.woff = woff;
+        copy.implicitCapacityLimit = implicitCapacityLimit;
+        if (readOnly()) {
+            copy.makeReadOnly();
+        }
+        return copy;
     }
 
     @Override

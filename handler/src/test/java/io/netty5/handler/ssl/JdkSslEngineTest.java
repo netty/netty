@@ -20,8 +20,6 @@ import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectedListenerFailureBe
 import io.netty5.handler.ssl.ApplicationProtocolConfig.SelectorFailureBehavior;
 import io.netty5.handler.ssl.JdkApplicationProtocolNegotiator.ProtocolSelector;
 import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.pkitesting.CertificateBuilder;
-import io.netty5.pkitesting.X509Bundle;
 import io.netty5.util.internal.EmptyArrays;
 
 import org.junit.jupiter.api.Disabled;

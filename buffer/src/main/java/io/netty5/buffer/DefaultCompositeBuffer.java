@@ -19,7 +19,6 @@ import io.netty5.buffer.ComponentIterator.Next;
 import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.buffer.internal.ResourceSupport;
 import io.netty5.util.SafeCloseable;
-import io.netty5.util.Send;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -113,15 +112,15 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     /**
      * @see BufferAllocator#compose(Iterable)
      */
-    public static CompositeBuffer compose(BufferAllocator allocator, Iterable<Send<Buffer>> sends) {
+    public static CompositeBuffer compose(BufferAllocator allocator, Iterable<Buffer> buffers) {
         final List<Buffer> bufs;
-        if (sends instanceof Collection) {
-            bufs = new ArrayList<>(((Collection<?>) sends).size());
+        if (buffers instanceof Collection) {
+            bufs = new ArrayList<>(((Collection<?>) buffers).size());
         } else {
             bufs = new ArrayList<>(4);
         }
         RuntimeException receiveException = null;
-        for (Send<Buffer> buf: sends) {
+        for (Buffer buf: buffers) {
             if (receiveException != null) {
                 try {
                     buf.close();
@@ -130,7 +129,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                 }
             } else {
                 try {
-                    bufs.add(buf.receive());
+                    bufs.add(buf.move());
                 } catch (RuntimeException e) {
                     // We catch RuntimeException instead of IllegalStateException to ensure cleanup always happens
                     // regardless of the exception thrown.
@@ -155,6 +154,10 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
      * @see CompositeBuffer#compose(BufferAllocator)
      */
     public static CompositeBuffer compose(BufferAllocator allocator) {
+        Objects.requireNonNull(allocator, "BufferAllocator cannot be null.");
+        if (allocator.isClosed()) {
+            throw new IllegalStateException("Allocator is closed: " + allocator);
+        }
         return new DefaultCompositeBuffer(allocator, EMPTY_BUFFER_ARRAY, COMPOSITE_DROP);
     }
 
@@ -469,6 +472,11 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
         }
 
         return new DefaultCompositeBuffer(allocator, copies, COMPOSITE_DROP);
+    }
+
+    @Override
+    public CompositeBuffer move() {
+        return (CompositeBuffer) super.move();
     }
 
     @Override
@@ -848,8 +856,8 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
-    public CompositeBuffer extendWith(Send<Buffer> extension) {
-        Buffer buffer = Objects.requireNonNull(extension, "Extension buffer cannot be null.").receive();
+    public CompositeBuffer extendWith(Buffer extension) {
+        Buffer buffer = Objects.requireNonNull(extension, "Extension buffer cannot be null.").move();
         if (!isAccessible() || !isOwned()) {
             buffer.close();
             if (!isAccessible()) {
@@ -1328,38 +1336,15 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     // </editor-fold>
 
     @Override
-    protected Owned<DefaultCompositeBuffer> prepareSend() {
-        @SuppressWarnings("unchecked")
-        Send<Buffer>[] sends = new Send[bufs.length];
-        try {
-            for (int i = 0; i < bufs.length; i++) {
-                sends[i] = bufs[i].send();
-            }
-        } catch (Throwable throwable) {
-            // Repair our bufs array.
-            for (int i = 0; i < sends.length; i++) {
-                if (sends[i] != null) {
-                    try {
-                        bufs[i] = sends[i].receive();
-                    } catch (Exception e) {
-                        throwable.addSuppressed(e);
-                    }
-                }
-            }
-            throw throwable;
+    protected DefaultCompositeBuffer moveOwnership(Drop<DefaultCompositeBuffer> drop) {
+        Buffer[] moved = new Buffer[bufs.length];
+        for (int i = 0; i < bufs.length; i++) {
+            moved[i] = bufs[i].move();
         }
-        boolean readOnly = this.readOnly;
-        int implicitCapacityLimit = this.implicitCapacityLimit;
-        return drop -> {
-            Buffer[] received = new Buffer[sends.length];
-            for (int i = 0; i < sends.length; i++) {
-                received[i] = sends[i].receive();
-            }
-            var composite = new DefaultCompositeBuffer(allocator, received, drop);
-            composite.readOnly = readOnly;
-            composite.implicitCapacityLimit = implicitCapacityLimit;
-            return composite;
-        };
+        var composite = new DefaultCompositeBuffer(allocator, moved, drop);
+        composite.readOnly = readOnly;
+        composite.implicitCapacityLimit = implicitCapacityLimit;
+        return composite;
     }
 
     @Override

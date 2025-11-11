@@ -39,7 +39,7 @@ public class Http2StreamChannelIdTest {
         }
 
         final ChannelId deserializedInstance;
-        try (ObjectInputStream inStream = new ObjectInputStream(new BufferInputStream(buf.send()))) {
+        try (ObjectInputStream inStream = new ObjectInputStream(new BufferInputStream(buf))) {
             deserializedInstance = (ChannelId) inStream.readObject();
         }
 

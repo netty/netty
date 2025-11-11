@@ -18,7 +18,6 @@ package io.netty5.handler.codec.http.websocketx;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferHolder;
 import io.netty5.util.Resource;
-import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
 
 import static java.nio.charset.Charset.defaultCharset;
@@ -43,12 +42,6 @@ public abstract class WebSocketFrame extends BufferHolder<WebSocketFrame> {
         this(true, 0, binaryData);
     }
 
-    protected WebSocketFrame(Send<Buffer> binaryData) {
-        super(binaryData);
-        finalFragment = true;
-        rsv = 0;
-    }
-
     protected WebSocketFrame(boolean finalFragment, int rsv, Buffer binaryData) {
         super(binaryData);
         this.finalFragment = finalFragment;
@@ -56,7 +49,7 @@ public abstract class WebSocketFrame extends BufferHolder<WebSocketFrame> {
     }
 
     /**
-     * This is a copy-constructor, used by sub-classes to implement {@link Resource#send()}.
+     * This is a copy-constructor, used by sub-classes to implement {@link Resource#move()}.
      * The life cycle of the {@code binaryData} buffer is not manipulated by this constructor, but instead stored as-is.
      *
      * @param copyFrom The original frame instance to copy from.

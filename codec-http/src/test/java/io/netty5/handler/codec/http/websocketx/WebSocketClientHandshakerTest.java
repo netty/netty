@@ -211,13 +211,13 @@ public abstract class WebSocketClientHandshakerTest {
         byte[] bytes = "HTTP/1.1 101 Switching Protocols\r\n\r\n".getBytes(StandardCharsets.US_ASCII);
 
         CompositeBuffer compositeBuffer = websocketChannel.bufferAllocator().compose();
-        compositeBuffer.extendWith(websocketChannel.bufferAllocator().allocate(bytes.length).writeBytes(bytes).send());
+        compositeBuffer.extendWith(websocketChannel.bufferAllocator().allocate(bytes.length).writeBytes(bytes));
         for (;;) {
             final Buffer buffer = websocketChannel.readOutbound();
             if (buffer == null) {
                 break;
             }
-            compositeBuffer.extendWith(buffer.send());
+            compositeBuffer.extendWith(buffer);
         }
 
         EmbeddedChannel ch = new EmbeddedChannel(new HttpObjectAggregator<DefaultHttpContent>(Integer.MAX_VALUE),

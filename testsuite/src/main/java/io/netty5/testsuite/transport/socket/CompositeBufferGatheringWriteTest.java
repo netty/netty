@@ -180,8 +180,8 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
 
                               // Build and write CompositeBuffer
                               CompositeBuffer compositeBuffer = ctx.bufferAllocator().compose(asList(
-                                      contents.readSplit(50).send(),
-                                      contents.readSplit(200).send()));
+                                      contents.readSplit(50),
+                                      contents.readSplit(200)));
                               ctx.write(compositeBuffer);
 
                               // Write a single buffer that is smaller than the second component of the
@@ -288,9 +288,9 @@ public class CompositeBufferGatheringWriteTest extends AbstractSocketTest {
 
     private static Buffer newCompositeBuffer(BufferAllocator alloc) {
         CompositeBuffer compositeBuffer = alloc.compose(asList(
-                alloc.allocate(4).writeInt(100).send(),
-                alloc.allocate(8).writeLong(123).send(),
-                alloc.allocate(8).writeLong(456).send()));
+                alloc.allocate(4).writeInt(100),
+                alloc.allocate(8).writeLong(123),
+                alloc.allocate(8).writeLong(456)));
         assertEquals(EXPECTED_BYTES, compositeBuffer.readableBytes());
         return compositeBuffer;
     }

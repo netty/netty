@@ -19,7 +19,6 @@ import io.netty5.channel.AbstractEventLoopTest;
 import io.netty5.channel.Channel;
 import io.netty5.channel.EventLoop;
 import io.netty5.channel.EventLoopGroup;
-import io.netty5.channel.IoRegistration;
 import io.netty5.channel.MultithreadEventLoopGroup;
 import io.netty5.channel.SelectStrategy;
 import io.netty5.channel.SelectStrategyFactory;

@@ -138,5 +138,10 @@ public final class DefaultBufferAllocators {
         public void close() {
             throw new UnsupportedOperationException("Global default buffer allocator can not be closed explicitly.");
         }
+
+        @Override
+        public boolean isClosed() {
+            return delegate.isClosed();
+        }
     }
 }

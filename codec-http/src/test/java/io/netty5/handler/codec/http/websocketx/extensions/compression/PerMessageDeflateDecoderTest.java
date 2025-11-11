@@ -225,7 +225,7 @@ public class PerMessageDeflateDecoderTest {
         WebSocketFrame inboundFrame = decoderChannel.readInbound();
 
         assertEquals(RSV1, inboundFrame.rsv());
-        assertEquals(compressedPayload, inboundFrame.binaryData());
+        assertEquals(compressedBinaryFrame.binaryData(), inboundFrame.binaryData());
         assertTrue(inboundFrame.isAccessible());
         inboundFrame.close();
 
@@ -261,7 +261,7 @@ public class PerMessageDeflateDecoderTest {
         BinaryWebSocketFrame inboundBinaryFrame = decoderChannel.readInbound();
 
         assertEquals(RSV1, inboundTextFrame.rsv());
-        assertEquals(compressedTextPayload, inboundTextFrame.binaryData());
+        assertEquals(compressedTextFrame.binaryData(), inboundTextFrame.binaryData());
         assertTrue(inboundTextFrame.isAccessible());
         inboundTextFrame.close();
 

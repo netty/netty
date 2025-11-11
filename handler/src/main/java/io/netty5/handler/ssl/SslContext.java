@@ -1297,7 +1297,7 @@ public abstract class SslContext {
         X509Certificate[] x509Certs = new X509Certificate[certs.length];
 
         for (int i = 0; i < certs.length; i++) {
-            try (InputStream is = new BufferInputStream(certs[i].send())) {
+            try (InputStream is = new BufferInputStream(certs[i])) {
                 x509Certs[i] = (X509Certificate) cf.generateCertificate(is);
             } catch (IOException e) {
                 // This is thrown from is.close(). It's not expected to happen, but re-throw in case it does.

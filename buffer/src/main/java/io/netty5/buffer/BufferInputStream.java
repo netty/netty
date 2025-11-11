@@ -15,7 +15,6 @@
  */
 package io.netty5.buffer;
 
-import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
 import org.jetbrains.annotations.TestOnly;
 
@@ -53,12 +52,13 @@ public final class BufferInputStream extends InputStream implements DataInput {
      * Creates a new stream which reads data from the specified {@code buffer} starting at the current
      * {@code readerOffset} and ending at the current {@code writerOffset}.
      * <p>
-     * When this {@link BufferInputStream} is {@linkplain #close() closed, then the sent buffer will also be closed.
-     *
+     * Ownership of the given buffer moves into the {@link BufferInputStream}.
+     * <p>
+     * When this {@link BufferInputStream} is {@linkplain #close() closed, then the buffer will also be closed.
      * @param buffer The buffer which provides the content for this {@link InputStream}.
      */
-    public BufferInputStream(Send<Buffer> buffer) {
-        this.buffer = requireNonNull(buffer, "buffer").receive();
+    public BufferInputStream(Buffer buffer) {
+        this.buffer = requireNonNull(buffer, "buffer").move();
         int readableBytes = this.buffer.readableBytes();
         startIndex = this.buffer.readerOffset();
         endIndex = startIndex + readableBytes;

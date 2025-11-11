@@ -33,7 +33,6 @@ package io.netty5.handler.codec.http2;
 
 import io.netty5.util.AsciiString;
 import io.netty5.util.internal.ConstantTimeUtils;
-import io.netty5.util.internal.PlatformDependent;
 
 final class HpackUtil {
     /**

@@ -67,7 +67,7 @@ public class DefaultChannelIdTest {
             out.flush();
         }
 
-        try (ObjectInputStream in = new ObjectInputStream(new BufferInputStream(buf.send()))) {
+        try (ObjectInputStream in = new ObjectInputStream(new BufferInputStream(buf))) {
             b = (ChannelId) in.readObject();
         }
 

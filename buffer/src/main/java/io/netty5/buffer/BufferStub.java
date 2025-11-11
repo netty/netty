@@ -16,7 +16,6 @@
 package io.netty5.buffer;
 
 import io.netty5.buffer.ComponentIterator.Next;
-import io.netty5.util.Send;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -229,6 +228,11 @@ public class BufferStub implements Buffer {
     @Override
     public Buffer copy(int offset, int length, boolean readOnly) {
         return delegate.copy(offset, length, readOnly);
+    }
+
+    @Override
+    public Buffer move() {
+        return new BufferStub(delegate.move());
     }
 
     @Override
@@ -606,11 +610,6 @@ public class BufferStub implements Buffer {
     @Override
     public Buffer copy(boolean readOnly) {
         return delegate.copy(readOnly);
-    }
-
-    @Override
-    public Send<Buffer> send() {
-        return delegate.send();
     }
 
     @Override

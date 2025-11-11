@@ -18,7 +18,6 @@ package io.netty5.buffer;
 import io.netty5.buffer.internal.ResourceSupport;
 import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.util.Resource;
-import io.netty5.util.Send;
 
 import java.lang.invoke.VarHandle;
 import java.util.Objects;
@@ -48,44 +47,19 @@ public abstract class BufferHolder<T extends Resource<T>> implements Resource<T>
 
     /**
      * Create a new {@link BufferHolder} to hold the given {@linkplain Buffer buffer}.
+     * <p>
+     * The given buffer is {@linkplain Resource#move() moved} into the holder.
      *
      * @param buf The {@linkplain Buffer buffer} to be held by this holder.
      */
     protected BufferHolder(Buffer buf) {
-        this.buf = Objects.requireNonNull(buf, "The buffer cannot be null.");
-    }
-
-    /**
-     * Create a new {@link BufferHolder} to hold the {@linkplain Buffer buffer} received from the given {@link Send}.
-     * <p>
-     * The {@link BufferHolder} will then be holding exclusive ownership of the buffer.
-     *
-     * @param send The {@linkplain Buffer buffer} to be held by this holder.
-     */
-    protected BufferHolder(Send<Buffer> send) {
-        buf = Objects.requireNonNull(send, "The Send-object cannot be null.").receive();
+        this.buf = Objects.requireNonNull(buf, "The buffer cannot be null.").move();
     }
 
     @Override
     public void close() {
         buf.close();
     }
-
-    @SuppressWarnings("unchecked")
-    @Override
-    public Send<T> send() {
-        return buf.send().map((Class<T>) getClass(), this::receive);
-    }
-
-    /**
-     * Called when a {@linkplain #send() sent} {@link BufferHolder} is received by the recipient.
-     * The {@link BufferHolder} should return a new concrete instance, that wraps the given {@link Buffer} object.
-     *
-     * @param buf The {@link Buffer} that is {@linkplain Send#receive() received} by the recipient,
-     *           and needs to be wrapped in a new {@link BufferHolder} instance.
-     * @return A new {@linkplain T buffer holder} instance, containing the given {@linkplain Buffer buffer}.
-     */
-    protected abstract T receive(Buffer buf);
 
     /**
      * Replace the underlying referenced buffer with the given buffer.
@@ -97,10 +71,10 @@ public abstract class BufferHolder<T extends Resource<T>> implements Resource<T>
      * <p>
      * The buffer assignment is performed using a plain store.
      *
-     * @param send The new {@link Buffer} instance that is replacing the currently held buffer.
+     * @param buffer The new {@link Buffer} instance that is replacing the currently held buffer.
      */
-    protected final void replaceBuffer(Send<Buffer> send) {
-        Buffer received = send.receive();
+    protected final void replaceBuffer(Buffer buffer) {
+        Buffer received = buffer.move();
         buf.close();
         buf = received;
     }
@@ -115,11 +89,10 @@ public abstract class BufferHolder<T extends Resource<T>> implements Resource<T>
      * <p>
      * The buffer assignment is performed using a volatile store.
      *
-     * @param send The {@link Send} with the new {@link Buffer} instance that is replacing the currently held buffer.
+     * @param buffer The new {@link Buffer} instance that is replacing the currently held buffer.
      */
-    protected final void replaceBufferVolatile(Send<Buffer> send) {
-        Buffer received = send.receive();
-        var prev = (Buffer) BUF.getAndSet(this, received);
+    protected final void replaceBufferVolatile(Buffer buffer) {
+        var prev = (Buffer) BUF.getAndSet(this, buffer.move());
         prev.close();
     }
 

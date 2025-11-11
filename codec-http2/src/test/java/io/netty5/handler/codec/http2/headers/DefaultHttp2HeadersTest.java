@@ -18,7 +18,6 @@ package io.netty5.handler.codec.http2.headers;
 import io.netty5.handler.codec.http.headers.AbstractHttpHeadersTest;
 import io.netty5.handler.codec.http.headers.HeaderValidationException;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
-import io.netty5.handler.codec.http2.Http2Exception;
 import io.netty5.handler.codec.http2.headers.Http2Headers.PseudoHeaderName;
 import io.netty5.util.AsciiString;
 import org.junit.jupiter.api.RepeatedTest;

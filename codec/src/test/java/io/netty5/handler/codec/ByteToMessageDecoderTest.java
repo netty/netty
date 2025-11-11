@@ -466,7 +466,7 @@ public class ByteToMessageDecoderTest {
     public void releaseWhenCompositeCumulateThrows(BufferAllocator allocator) {
         this.allocator = allocator;
         Buffer buffer = newBufferWithRandomBytes(allocator);
-        try (CompositeBuffer cumulation = allocator.compose(buffer.send())) {
+        try (CompositeBuffer cumulation = allocator.compose(buffer)) {
             Buffer in = allocator.allocate(0);
             in.close(); // Cause the cumulator to throw.
 

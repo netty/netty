@@ -271,7 +271,7 @@ public class Http2FrameCodecTest {
         Buffer hello = bb("hello");
         frameInboundWriter.writeInboundData(1, hello, 31, true);
         Http2DataFrame inboundData = inboundHandler.readInbound();
-        Http2DataFrame expected = new DefaultHttp2DataFrame(bb("hello").send(), true, 31).stream(stream2);
+        Http2DataFrame expected = new DefaultHttp2DataFrame(bb("hello"), true, 31).stream(stream2);
         assertEqualsAndRelease(expected, inboundData);
 
         assertNull(inboundHandler.readInbound());
@@ -280,7 +280,7 @@ public class Http2FrameCodecTest {
         verify(frameWriter).writeHeaders(any(ChannelHandlerContext.class), eq(1), eq(response), eq(0),
                 eq(false));
 
-        channel.writeOutbound(new DefaultHttp2DataFrame(bb("world").send(), true, 27).stream(stream2));
+        channel.writeOutbound(new DefaultHttp2DataFrame(bb("world"), true, 27).stream(stream2));
         ArgumentCaptor<Buffer> outboundData = ArgumentCaptor.forClass(Buffer.class);
         verify(frameWriter).writeData(any(ChannelHandlerContext.class), eq(1), outboundData.capture(), eq(27),
                                       eq(true));
@@ -354,7 +354,7 @@ public class Http2FrameCodecTest {
         Buffer expected = debugData.copy();
 
         Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(NO_ERROR.code(),
-                debugData.send());
+                debugData);
         goAwayFrame.setExtraStreamIds(2);
 
         channel.writeOutbound(goAwayFrame);
@@ -370,7 +370,7 @@ public class Http2FrameCodecTest {
         setUp();
         Buffer debugData = bb("foo");
         frameInboundWriter.writeInboundGoAway(2, NO_ERROR.code(), debugData);
-        Http2GoAwayFrame expectedFrame = new DefaultHttp2GoAwayFrame(2, NO_ERROR.code(), bb("foo").send());
+        Http2GoAwayFrame expectedFrame = new DefaultHttp2GoAwayFrame(2, NO_ERROR.code(), bb("foo"));
         Http2GoAwayFrame actualFrame = inboundHandler.readInbound();
 
         assertEqualsAndRelease(expectedFrame, actualFrame);
@@ -443,7 +443,7 @@ public class Http2FrameCodecTest {
 
         Buffer debugData = bb("debug");
         Http2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(NO_ERROR.code(),
-                debugData.copy().send());
+                debugData.copy());
         goAwayFrame.setExtraStreamIds(Integer.MAX_VALUE);
 
         channel.writeOutbound(goAwayFrame);
@@ -624,13 +624,15 @@ public class Http2FrameCodecTest {
         final Http2FrameStream stream = frameCodec.newStream();
 
         Buffer buffer = onHeapAllocator().allocate(1).writeByte((byte) 1);
+        Buffer expectedBuffer = buffer.copy();
         DefaultHttp2UnknownFrame unknownFrame = new DefaultHttp2UnknownFrame(
                 (byte) 20, new Http2Flags().ack(true), buffer);
         unknownFrame.stream(stream);
         channel.write(unknownFrame);
 
         verify(frameWriter).writeFrame(any(ChannelHandlerContext.class), eq(unknownFrame.frameType()),
-                eq(unknownFrame.stream().id()), eq(unknownFrame.flags()), eq(buffer));
+                eq(unknownFrame.stream().id()), eq(unknownFrame.flags()), eq(expectedBuffer));
+        expectedBuffer.close();
     }
 
     @Test
@@ -660,7 +662,7 @@ public class Http2FrameCodecTest {
                    listenerExecuted.setSuccess(null);
                }
                );
-        Future<Void> f = channel.writeAndFlush(new DefaultHttp2DataFrame(bb(100).send()).stream(stream));
+        Future<Void> f = channel.writeAndFlush(new DefaultHttp2DataFrame(bb(100)).stream(stream));
         assertTrue(f.isSuccess());
 
         listenerExecuted.asFuture().asStage().sync();
@@ -1008,6 +1010,7 @@ public class Http2FrameCodecTest {
 
     @Test
     public void invalidPayloadLength() throws Exception {
+        setUp();
         frameInboundWriter.writeInboundSettings(new Http2Settings());
         channel.writeInbound(preferredAllocator().copyOf(new byte[]{
                 0, 0, 4, // length

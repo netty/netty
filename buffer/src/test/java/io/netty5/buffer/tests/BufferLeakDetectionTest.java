@@ -21,7 +21,6 @@ import io.netty5.buffer.LeakInfo;
 import io.netty5.buffer.MemoryManager;
 import io.netty5.buffer.internal.LeakDetection;
 import io.netty5.util.SafeCloseable;
-import io.netty5.util.Send;
 import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -120,11 +119,10 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void bufferMustNotLeakWhenClosedAfterSend(Fixture fixture, TestInfo testInfo) throws Exception {
+    public void bufferMustNotLeakWhenClosedAfterMove(Fixture fixture, TestInfo testInfo) throws Exception {
         Object hint = makeHint(testInfo);
         Consumer<Buffer> sendThenClose = buffer -> {
-            Send<Buffer> send = buffer.send();
-            send.receive().close();
+            buffer.move().close();
         };
         AtomicInteger counter = new AtomicInteger();
         Semaphore gcEvents = new Semaphore(0);
@@ -144,11 +142,12 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void bufferLeakMustBeDetectedWhenNotClosedAfterSend(Fixture fixture, TestInfo testInfo) throws Exception {
+    public void bufferLeakMustBeDetectedWhenNotClosedAfterMove(Fixture fixture, TestInfo testInfo)
+            throws Exception {
         Object leakingHint = makeHint(testInfo);
         Object nonLeakingHint = new String(leakingHint + " (non-leaking hint)");
         Consumer<Buffer> sendThenLeakBuffer = buffer -> {
-            buffer.send().receive().touch(leakingHint); // Buffer is received from send, but then leaks.
+            buffer.move().touch(leakingHint); // Buffer is moved, but then leaks.
         };
         LinkedBlockingQueue<LeakInfo> leakQueue = new LinkedBlockingQueue<>();
         AtomicReference<LeakInfo> nonLeakAsserts = new AtomicReference<>();
@@ -175,30 +174,6 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
             info.forEach(tracePoint -> error.addSuppressed(tracePoint.traceback()));
             throw error;
         }
-    }
-
-    @ParameterizedTest
-    @MethodSource("allocators")
-    public void bufferLeakMustBeDetectedWhenSendObjectLeaks(Fixture fixture, TestInfo testInfo) throws Exception {
-        Object hint = makeHint(testInfo);
-        Consumer<Buffer> sendThenLeakBuffer = buffer -> {
-            buffer.send(); // Send object itself leaks.
-        };
-        LinkedBlockingQueue<LeakInfo> leakQueue = new LinkedBlockingQueue<>();
-        Consumer<LeakInfo> callback = forHint(hint, leak -> leakQueue.offer(leak), true);
-        CreateAndUseBuffers runnable;
-        Thread thread;
-        LeakInfo leakInfo;
-        try (var ignore1 = MemoryManager.onLeakDetected(callback);
-             BufferAllocator allocator = fixture.createAllocator()) {
-            runnable = new CreateAndUseBuffers(allocator, hint, sendThenLeakBuffer);
-            thread = new Thread(runnable);
-            thread.start();
-            leakInfo = poll(leakQueue);
-            thread.interrupt();
-            thread.join();
-        }
-        assertThat(leakInfo).isNotNull();
     }
 
     private static String makeHint(TestInfo testInfo) {

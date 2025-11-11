@@ -94,6 +94,6 @@ public class HelloWorldHttp2Handler implements ChannelHandler {
         // Send a frame for the response status
         Http2Headers headers = Http2Headers.newHeaders().status(OK.codeAsText());
         ctx.write(new DefaultHttp2HeadersFrame(headers));
-        ctx.write(new DefaultHttp2DataFrame(payload.send(), true));
+        ctx.write(new DefaultHttp2DataFrame(payload, true));
     }
 }

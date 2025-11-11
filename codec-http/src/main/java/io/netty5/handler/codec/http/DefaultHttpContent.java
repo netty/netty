@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.http;
 
 import io.netty5.buffer.Buffer;
-import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
 
 import static java.util.Objects.requireNonNull;
@@ -42,11 +41,6 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     }
 
     @Override
-    public Send<DefaultHttpContent> send() {
-        return payload.send().map(DefaultHttpContent.class, DefaultHttpContent::new);
-    }
-
-    @Override
     public DefaultHttpContent copy() {
         return new DefaultHttpContent(payload.copy());
     }
@@ -54,6 +48,11 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     @Override
     public void close() {
         payload.close();
+    }
+
+    @Override
+    public DefaultHttpContent move() {
+        return new DefaultHttpContent(payload.move());
     }
 
     @Override

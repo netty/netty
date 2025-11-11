@@ -19,8 +19,6 @@ import io.netty5.bootstrap.Bootstrap;
 import io.netty5.testsuite.transport.TestsuitePermutation;
 import io.netty5.testsuite.transport.socket.SocketShutdownOutputBySelfTest;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 
 import java.util.List;
 

@@ -368,7 +368,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     public void testDowngradeData() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         Buffer hello = bb("hello world");
-        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello.send())));
+        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello)));
 
         try (HttpContent<?> content = ch.readInbound()) {
             assertThat(content.payload().toString(UTF_8), is("hello world"));
@@ -383,7 +383,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     public void testDowngradeEndData() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(true));
         Buffer hello = bb("hello world");
-        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello.send(), true)));
+        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello, true)));
 
         try (LastHttpContent<?> content = ch.readInbound()) {
             assertThat(content.payload().toString(UTF_8), is("hello world"));
@@ -832,7 +832,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     public void testDecodeDataAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Buffer hello = bb("hello world");
-        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello.send())));
+        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello)));
 
         try (HttpContent<?> content = ch.readInbound()) {
             assertThat(content.payload().toString(UTF_8), is("hello world"));
@@ -847,7 +847,7 @@ public class Http2StreamFrameToHttpObjectCodecTest {
     public void testDecodeEndDataAsClient() {
         EmbeddedChannel ch = new EmbeddedChannel(new Http2StreamFrameToHttpObjectCodec(false));
         Buffer hello = bb("hello world");
-        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello.send(), true)));
+        assertTrue(ch.writeInbound(new DefaultHttp2DataFrame(hello, true)));
 
         try (LastHttpContent<?> content = ch.readInbound()) {
             assertThat(content.payload().toString(UTF_8), is("hello world"));

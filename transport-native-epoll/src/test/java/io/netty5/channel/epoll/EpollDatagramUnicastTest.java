@@ -35,10 +35,9 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import java.util.stream.Collectors;
 
 import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
-import static java.util.Arrays.stream;
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -167,7 +166,7 @@ public class EpollDatagramUnicastTest extends DatagramUnicastInetTest {
                     components[i].fill((byte) 0);
                     components[i].skipWritableBytes(segmentSize);
                 }
-                buffer = offHeapAllocator().compose(stream(components).map(Buffer::send).collect(Collectors.toList()));
+                buffer = offHeapAllocator().compose(asList(components));
             } else {
                 buffer = offHeapAllocator().allocate(bufferCapacity);
                 buffer.fill((byte) 0);

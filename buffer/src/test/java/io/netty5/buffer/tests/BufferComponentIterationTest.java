@@ -74,8 +74,8 @@ public class BufferComponentIterationTest extends BufferTestSupport {
             try (Buffer a = allocator.allocate(8);
                  Buffer b = allocator.allocate(8);
                  Buffer c = allocator.allocate(8);
-                 Buffer x = allocator.compose(asList(b.send(), c.send()));
-                 Buffer buf = allocator.compose(asList(a.send(), x.send()))) {
+                 Buffer x = allocator.compose(asList(b, c));
+                 Buffer buf = allocator.compose(asList(a, x))) {
                 assertThat(buf.countComponents()).isEqualTo(3);
                 assertThat(buf.countReadableComponents()).isZero();
                 assertThat(buf.countWritableComponents()).isEqualTo(3);
@@ -119,7 +119,7 @@ public class BufferComponentIterationTest extends BufferTestSupport {
              Buffer a = allocator.allocate(4).writeInt(1);
              Buffer b = allocator.allocate(4).writeInt(2);
              Buffer c = allocator.allocate(4).writeInt(3);
-             Buffer composite = allocator.compose(asList(a.send(), b.send(), c.send()))) {
+             Buffer composite = allocator.compose(asList(a, b, c))) {
             var list = new LinkedList<Integer>(List.of(1, 2, 3));
             int index = 0;
             try (var iterator = composite.forEachComponent()) {
@@ -167,9 +167,9 @@ public class BufferComponentIterationTest extends BufferTestSupport {
     public void forEachComponentMustAllowCollectingBuffersInArray(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             try (Buffer composite = allocator.compose(asList(
-                    allocator.allocate(4).send(),
-                    allocator.allocate(4).send(),
-                    allocator.allocate(4).send()))) {
+                    allocator.allocate(4),
+                    allocator.allocate(4),
+                    allocator.allocate(4)))) {
                 int i = 1;
                 while (composite.writableBytes() > 0) {
                     composite.writeByte((byte) i++);
@@ -317,7 +317,7 @@ public class BufferComponentIterationTest extends BufferTestSupport {
             try (Buffer a = allocator.allocate(8);
                  Buffer b = allocator.allocate(8);
                  Buffer c = allocator.allocate(8);
-                 Buffer buf = allocator.compose(asList(a.send(), b.send(), c.send()))) {
+                 Buffer buf = allocator.compose(asList(a, b, c))) {
                 try (var iterator = buf.forEachComponent()) {
                     int index = 0;
                     for (var component = iterator.first(); component != null; component = component.next()) {

@@ -16,9 +16,7 @@
 package io.netty5.buffer.internal;
 
 import io.netty5.buffer.Drop;
-import io.netty5.buffer.Owned;
 import io.netty5.util.Resource;
-import io.netty5.util.Send;
 import io.netty5.util.internal.UnstableApi;
 
 import java.lang.ref.Reference;
@@ -121,28 +119,20 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
         }
     }
 
-    /**
-     * Send this Resource instance to another Thread, transferring the ownership to the recipient.
-     * This method can be used when the receiving thread is not known up front.
-     * <p>
-     * This instance immediately becomes inaccessible, and all attempts at accessing this resource will throw.
-     * Calling {@link #close()} will have no effect, so this method is safe to call within a try-with-resources
-     * statement.
-     *
-     * @throws IllegalStateException if this object has any outstanding acquires; that is, if this object has been
-     * {@link #acquire() acquired} more times than it has been {@link #close() closed}.
-     */
     @Override
-    public final Send<I> send() {
+    @SuppressWarnings("unchecked")
+    public I move() {
         if (acquires < 0) {
             throw attachTrace(createResourceClosedException());
         }
         if (!isOwned()) {
-            throw notSendableException();
+            throw notMovableException();
         }
         try {
-            var owned = tracer.send(prepareSend());
-            return new SendFromOwned<>(owned, drop, getClass());
+            var owned = moveOwnership(drop);
+            tracer.moveTo(getTracer(owned));
+            drop.attach(owned);
+            return (I) owned;
         } finally {
             acquires = -2; // Close without dropping. This also ignore future double-free attempts.
             makeInaccessible();
@@ -162,12 +152,12 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
 
     /**
      * Create an {@link IllegalStateException} with a custom message, tailored to this particular
-     * {@link Resource} instance, for when the object cannot be sent for some reason.
-     * @return An {@link IllegalStateException} to be thrown when this object cannot be sent.
+     * {@link Resource} instance, for when the object cannot be moved for some reason.
+     * @return An {@link IllegalStateException} to be thrown when this object cannot be moved.
      */
-    protected IllegalStateException notSendableException() {
+    protected IllegalStateException notMovableException() {
         return new IllegalStateException(
-                "Cannot send() a reference counted object with " + countBorrows() + " borrows: " + this + '.');
+                "Cannot move a reference counted object with " + countBorrows() + " borrows: " + this + '.');
     }
 
     /**
@@ -183,7 +173,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
     /**
      * Query if this object is in an "owned" state, which means no other references have been
      * {@linkplain #acquire() acquired} to it.
-     *
+     * <p>
      * This would usually be the case, since there are no public methods for acquiring references to these objects.
      *
      * @return {@code true} if this object is in an owned state, otherwise {@code false}.
@@ -227,15 +217,14 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
     }
 
     /**
-     * Prepare this instance for ownership transfer. This method is called from {@link #send()} in the sending thread.
-     * This method should put this resource in a deactivated state where it is no longer accessible from the currently
-     * owning thread.
-     * In this state, the resource instance should only allow a call to {@link Owned#transferOwnership(Drop)} in the
-     * recipient thread.
-     *
-     * @return This resource instance in a deactivated state.
+     * Perform an ownership transfer of this instance into the returned instance in a single step.
+     * This method is called from {@link #move()}.
+     * The given drop will be the drop instance used for the new instance.
+     * After this method returns, this instance will be moved to the closed state without calling the drop instance.
+     * @param drop The drop instance to use in the new instance.
+     * @return A new instance of this class that incorporates all the data owned by this instance.
      */
-    protected abstract Owned<T> prepareSend();
+    protected abstract T moveOwnership(Drop<T> drop);
 
     /**
      * Called when this resource needs to be considered inaccessible.

@@ -17,7 +17,6 @@ package io.netty5.handler.codec.http.websocketx.extensions.compression;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.CompositeBuffer;
-import io.netty5.util.Send;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import io.netty5.handler.codec.CodecException;
@@ -134,7 +133,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
 
         encoder.writeOutbound(msg.binaryData());
 
-        List<Send<Buffer>> bufferList = new ArrayList<>();
+        List<Buffer> bufferList = new ArrayList<>();
         for (;;) {
             Buffer partCompressedContent = encoder.readOutbound();
             if (partCompressedContent == null) {
@@ -144,7 +143,7 @@ abstract class DeflateEncoder extends WebSocketExtensionEncoder {
                 partCompressedContent.close();
                 continue;
             }
-            bufferList.add(partCompressedContent.send());
+            bufferList.add(partCompressedContent);
         }
 
         if (bufferList.isEmpty()) {

@@ -361,7 +361,7 @@ public class LocalChannel extends AbstractChannel<LocalServerChannel, LocalAddre
             if (msg instanceof ReferenceCounted) {
                 peer.inboundBuffer.add(ReferenceCountUtil.retain(msg));
             } else if (msg instanceof Resource) {
-                peer.inboundBuffer.add(((Resource<?>) msg).send().receive());
+                peer.inboundBuffer.add(((Resource<?>) msg).move());
             } else {
                 peer.inboundBuffer.add(msg);
             }

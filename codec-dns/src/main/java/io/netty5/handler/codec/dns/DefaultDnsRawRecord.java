@@ -16,7 +16,6 @@
 package io.netty5.handler.codec.dns;
 
 import io.netty5.buffer.Buffer;
-import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
 
@@ -63,12 +62,6 @@ public class DefaultDnsRawRecord extends AbstractDnsRecord implements DnsRawReco
         this.content = requireNonNull(content, "content").makeReadOnly();
     }
 
-    public DefaultDnsRawRecord(
-            String name, DnsRecordType type, int dnsClass, long timeToLive, Send<Buffer> content) {
-        super(name, type, dnsClass, timeToLive);
-        this.content = requireNonNull(content, "content").receive().makeReadOnly();
-    }
-
     @Override
     public Buffer content() {
         return content;
@@ -79,13 +72,13 @@ public class DefaultDnsRawRecord extends AbstractDnsRecord implements DnsRawReco
     }
 
     @Override
-    public Send<DnsRawRecord> send() {
-        return content.send().map(DnsRawRecord.class, this::replace);
+    public void close() {
+        content.close();
     }
 
     @Override
-    public void close() {
-        content.close();
+    public DnsRawRecord move() {
+        return new DefaultDnsRawRecord(name(), type(), dnsClass(), timeToLive(), content.move());
     }
 
     @Override
