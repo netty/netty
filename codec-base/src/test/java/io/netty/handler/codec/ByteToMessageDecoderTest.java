@@ -698,7 +698,7 @@ public class ByteToMessageDecoderTest {
                     ByteBuf buf2 = channel.alloc().buffer();
                     buf2.writeLong(42); // Adding 8 bytes.
                     assertFalse(channel.writeInbound(buf2)); // Reentrant call back into ByteToMessageDecoder
-                    ctx.read(); // With LocalChannel this would be a reentrant call. For EmbeddedChannel it's harmless.
+                    ctx.read();
                 }
                 int bytes = in.readableBytes();
                 out.add(bytes);
@@ -734,7 +734,7 @@ public class ByteToMessageDecoderTest {
                     ByteBuf buf3 = channel.alloc().buffer();
                     buf3.writeShort(42); // Adding 2 bytes.
                     assertFalse(channel.writeInbound(buf3)); // Reentrant call back into ByteToMessageDecoder
-                    ctx.read(); // With LocalChannel this would be a reentrant call. For EmbeddedChannel it's harmless.
+                    ctx.read();
                 } else if (reentrancy == 2) {
                     ctx.pipeline().remove(this);
                 }
