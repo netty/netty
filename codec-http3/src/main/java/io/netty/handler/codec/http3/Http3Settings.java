@@ -38,7 +38,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  *   <li>{@code ENABLE_CONNECT_PROTOCOL} (0x8)</li>
  * </ul>
  *
- * <p>It is backed by a {@link LongObjectMap}.
  * Non-standard settings are permitted as long as they use positive values.
  * Reserved HTTP/2 setting identifiers are rejected.
  *
