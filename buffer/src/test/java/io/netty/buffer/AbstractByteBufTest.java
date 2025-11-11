@@ -2992,7 +2992,7 @@ public abstract class AbstractByteBufTest {
                     }
                     throw ex; // Propagate interrupted exceptions immediately.
                 } catch (ExecutionException ex) {
-                    if (e != null) {
+                    if (e == null) {
                         e = ex;
                     } else {
                         e.addSuppressed(ex);
