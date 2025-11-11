@@ -1010,6 +1010,7 @@ public class Http2FrameCodecTest {
 
     @Test
     public void invalidPayloadLength() throws Exception {
+        setUp();
         frameInboundWriter.writeInboundSettings(new Http2Settings());
         channel.writeInbound(preferredAllocator().copyOf(new byte[]{
                 0, 0, 4, // length
