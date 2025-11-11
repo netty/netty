@@ -45,7 +45,7 @@ public final class ThrowableUtil {
         cause.printStackTrace(pout);
         pout.flush();
         try {
-            return new String(out.toByteArray());
+            return out.toString();
         } finally {
             try {
                 out.close();
@@ -61,7 +61,9 @@ public final class ThrowableUtil {
     }
 
     public static void addSuppressed(Throwable target, Throwable suppressed) {
-        target.addSuppressed(suppressed);
+        if (suppressed != null) {
+            target.addSuppressed(suppressed);
+        }
     }
 
     public static void addSuppressedAndClear(Throwable target, List<Throwable> suppressed) {

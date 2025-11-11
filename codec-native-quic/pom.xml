@@ -1050,12 +1050,6 @@
               </instructions>
             </configuration>
           </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.felix</groupId>
-        <artifactId>maven-bundle-plugin</artifactId>
-        <executions>
           <execution>
             <id>native-manifest</id>
             <phase>process-classes</phase>
