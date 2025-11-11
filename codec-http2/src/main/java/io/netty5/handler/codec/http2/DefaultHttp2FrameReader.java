@@ -405,7 +405,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
     private void readDataFrame(ChannelHandlerContext ctx, Buffer payload, Http2FrameListener listener)
             throws Http2Exception {
         int padding = readPadding(payload);
-        verifyPadding(padding);
 
         // Determine how much data there is to read by removing the trailing
         // padding.
@@ -421,7 +420,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         final int headersStreamId = streamId;
         final Http2Flags headersFlags = flags;
         final int padding = readPadding(payload);
-        verifyPadding(padding);
 
         // The callback that is invoked is different depending on whether priority information
         // is present in the headers frame.
@@ -543,7 +541,6 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
             Http2FrameListener listener) throws Http2Exception {
         final int pushPromiseStreamId = streamId;
         final int padding = readPadding(payload);
-        verifyPadding(padding);
         final int promisedStreamId = readUnsignedInt(payload);
 
         // Create a handler that invokes the listener when the header block is complete.
@@ -631,21 +628,19 @@ public class DefaultHttp2FrameReader implements Http2FrameReader, Http2FrameSize
         return payload.readUnsignedByte() + 1;
     }
 
-    private void verifyPadding(int padding) throws Http2Exception {
-        int len = lengthWithoutTrailingPadding(payloadLength, padding);
-        if (len < 0) {
-            throw connectionError(PROTOCOL_ERROR, "Frame payload too small for padding.");
-        }
-    }
-
     /**
      * The padding parameter consists of the 1 byte pad length field and the trailing padding bytes. This method
      * returns the number of readable bytes without the trailing padding.
      */
-    private static int lengthWithoutTrailingPadding(int readableBytes, int padding) {
-        return padding == 0
-                ? readableBytes
-                : readableBytes - (padding - 1);
+    private static int lengthWithoutTrailingPadding(int readableBytes, int padding) throws Http2Exception {
+        if (padding == 0) {
+            return readableBytes;
+        }
+        int n = readableBytes - (padding - 1);
+        if (n < 0) {
+            throw connectionError(PROTOCOL_ERROR, "Frame payload too small for padding.");
+        }
+        return n;
     }
 
     /**

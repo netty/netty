@@ -798,26 +798,22 @@ public class HashedWheelTimer implements Timer {
         }
 
         public HashedWheelTimeout remove(HashedWheelTimeout timeout) {
+            HashedWheelTimeout prev = timeout.prev;
             HashedWheelTimeout next = timeout.next;
+
             // remove timeout that was either processed or cancelled by updating the linked-list
-            if (timeout.prev != null) {
-                timeout.prev.next = next;
+            if (prev != null) {
+                prev.next = next;
             }
-            if (timeout.next != null) {
-                timeout.next.prev = timeout.prev;
+            if (next != null) {
+                next.prev = prev;
             }
 
             if (timeout == head) {
-                // if timeout is also the tail we need to adjust the entry too
-                if (timeout == tail) {
-                    tail = null;
-                    head = null;
-                } else {
-                    head = next;
-                }
-            } else if (timeout == tail) {
-                // if the timeout is the tail modify the tail to be the prev node.
-                tail = timeout.prev;
+                head = next;
+            }
+            if (timeout == tail) {
+                tail = prev;
             }
             // null out prev, next and bucket to allow for GC.
             timeout.prev = null;

@@ -1007,4 +1007,18 @@ public class Http2FrameCodecTest {
         assertEquals(expectedId, stream2.id());
         assertEquals(inboundFrame, streamFrame.stream(stream2));
     }
+
+    @Test
+    public void invalidPayloadLength() throws Exception {
+        frameInboundWriter.writeInboundSettings(new Http2Settings());
+        channel.writeInbound(preferredAllocator().copyOf(new byte[]{
+                0, 0, 4, // length
+                0, // type: DATA
+                9, // flags: PADDED, END_STREAM
+                1, 0, 0, 0, // stream id
+                4, // pad length
+                0, 0, 0 // not enough space for padding
+        }));
+        assertThrows(Http2Exception.class, () ->  inboundHandler.checkException());
+    }
 }
