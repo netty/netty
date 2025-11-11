@@ -215,7 +215,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     private boolean firstFrameWritten;
     private boolean readCompletePending;
 
-    AbstractHttp2StreamChannel(DefaultHttp2FrameStream stream, int id, ChannelHandler inboundHandler) {
+    AbstractHttp2StreamChannel(DefaultHttp2FrameStream stream, ChannelHandler inboundHandler) {
         this.stream = stream;
         stream.attachment = this;
         pipeline = new DefaultChannelPipeline(this) {
@@ -247,7 +247,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         };
 
         closePromise = pipeline.newPromise();
-        channelId = new Http2StreamChannelId(parent().id(), id);
+        channelId = new Http2StreamChannelId(parent().id(), stream.id());
 
         if (inboundHandler != null) {
             // Add the handler to the pipeline now that we are registered.

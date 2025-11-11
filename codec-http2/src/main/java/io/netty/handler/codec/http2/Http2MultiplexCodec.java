@@ -96,7 +96,6 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                     Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS);
 
     private boolean parentReadInProgress;
-    private int idCount;
 
     // Need to be volatile as accessed from within the Http2MultiplexCodecStreamChannel in a multi-threaded fashion.
     volatile ChannelHandlerContext ctx;
@@ -307,7 +306,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
     private final class Http2MultiplexCodecStreamChannel extends AbstractHttp2StreamChannel {
 
         Http2MultiplexCodecStreamChannel(DefaultHttp2FrameStream stream, ChannelHandler inboundHandler) {
-            super(stream, ++idCount, inboundHandler);
+            super(stream, inboundHandler);
         }
 
         @Override
