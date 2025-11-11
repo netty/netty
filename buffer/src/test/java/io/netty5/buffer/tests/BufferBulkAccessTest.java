@@ -87,7 +87,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return a.compose(asList(bufFirst.send(), bufSecond.send()));
+                    return a.compose(asList(bufFirst, bufSecond));
                 }
             });
         }
@@ -103,7 +103,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return a.compose(asList(bufFirst.send(), bufSecond.send()));
+                    return a.compose(asList(bufFirst, bufSecond));
                 }
             });
         }
@@ -119,7 +119,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return a.compose(asList(bufFirst.send(), bufSecond.send()));
+                    return a.compose(asList(bufFirst, bufSecond));
                 }
             });
         }
@@ -135,7 +135,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return a.compose(asList(bufFirst.send(), bufSecond.send()));
+                    return a.compose(asList(bufFirst, bufSecond));
                 }
             });
         }
@@ -151,7 +151,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size);
+                    return a.compose(asList(bufFirst, bufSecond)).writerOffset(size);
                 }
             });
         }
@@ -167,7 +167,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size);
+                    return a.compose(asList(bufFirst, bufSecond)).writerOffset(size);
                 }
             });
         }
@@ -183,7 +183,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size);
+                    return a.compose(asList(bufFirst, bufSecond)).writerOffset(size);
                 }
             });
         }
@@ -199,7 +199,7 @@ public class BufferBulkAccessTest extends BufferTestSupport {
                 int second = size - first;
                 try (var bufFirst = a.allocate(first);
                      var bufSecond = b.allocate(second)) {
-                    return a.compose(asList(bufFirst.send(), bufSecond.send())).writerOffset(size);
+                    return a.compose(asList(bufFirst, bufSecond)).writerOffset(size);
                 }
             });
         }

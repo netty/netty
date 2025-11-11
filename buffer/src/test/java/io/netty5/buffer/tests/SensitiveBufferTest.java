@@ -22,7 +22,6 @@ import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.Drop;
 import io.netty5.buffer.MemoryManager;
 import io.netty5.buffer.internal.InternalBufferUtils;
-import io.netty5.util.Send;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.atomic.AtomicInteger;
@@ -98,13 +97,13 @@ public class SensitiveBufferTest {
                 assertTrue(split.readOnly());
                 split.copy(true).close();
             }
-            final Send<Buffer> send;
+            final Buffer moved;
             try (Buffer copy = buffer.copy(true)) {
-                send = buffer.send();
+                moved = buffer.moveAndClose();
                 copy.readSplit(2).close();
             }
             assertEquals(0, stubManager.getBytesCleared());
-            send.close();
+            moved.close();
             assertEquals(8, stubManager.getBytesCleared());
         }
     }

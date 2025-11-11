@@ -72,7 +72,7 @@ public class Http2ClientUpgradeCodecTest {
 
             channel.executor().submit(() -> {
                 codec.upgradeTo(ctx,
-                        new DefaultFullHttpResponse(HTTP_1_1, OK, channel.bufferAllocator().allocate(0)).send());
+                        new DefaultFullHttpResponse(HTTP_1_1, OK, channel.bufferAllocator().allocate(0)));
                 return null;
             }).asStage().sync();
             assertNotNull(channel.pipeline().get("connectionHandler"));

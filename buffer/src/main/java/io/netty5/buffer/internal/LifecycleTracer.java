@@ -37,7 +37,7 @@ import java.util.stream.Stream;
 @UnstableApi
 public abstract class LifecycleTracer {
     static final boolean lifecycleTracingEnabled =
-            SystemPropertyUtil.getBoolean("io.netty5.buffer.lifecycleTracingEnabled", false);
+            SystemPropertyUtil.getBoolean("io.netty5.buffer.lifecycleTracingEnabled", true);
 
     /**
      * Get a tracer for a newly allocated resource.
@@ -260,9 +260,9 @@ public abstract class LifecycleTracer {
         public void moveTo(LifecycleTracer moveTracer) {
             Trace moveParent = new Trace(TraceType.MOVE);
             Trace moveChild = new Trace(TraceType.MOVE);
-            moveParent.attachmentType = AttachmentType.MOVE_TO;
+            moveParent.attachmentType = AttachmentType.MOVE_FROM;
             moveParent.attachment = moveChild;
-            moveChild.attachmentType = AttachmentType.MOVE_FROM;
+            moveChild.attachmentType = AttachmentType.MOVE_TO;
             moveChild.attachment = moveParent;
             addTrace(walk(moveParent));
             if (moveTracer instanceof StackTracer tracer) {

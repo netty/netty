@@ -967,7 +967,7 @@ public class EmbeddedChannel extends AbstractChannel<Channel, SocketAddress, Soc
             // Resource life-cycle otherwise normally ends in ChannelOutboundBuffer.remove(), but using send()
             // here allows the close() in remove() to become a no-op.
             // Since message isn't a subclass of ResourceSupport, we can't rely on its internal reference counting.
-            handleOutboundMessage(((Resource<?>) msg).send().receive());
+            handleOutboundMessage(((Resource<?>) msg).moveAndClose());
         } else {
             handleOutboundMessage(ReferenceCountUtil.retain(msg));
         }

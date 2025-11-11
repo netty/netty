@@ -149,7 +149,7 @@ public class BrotliDecoderTest {
                 if (msg == null) {
                     break;
                 }
-                decompressed.extendWith(msg.readSplit(msg.readableBytes()).send());
+                decompressed.extendWith(msg.readSplit(msg.readableBytes()));
             }
         }
         return decompressed;

@@ -335,7 +335,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 int length = Math.min(random.nextInt(1024 * 64), data.length - clientSendCounterVal);
                 Buffer buf = dataBuffer.readSplit(length);
                 if (useCompositeBuffer) {
-                    buf = bufferAllocator.compose(buf.send());
+                    buf = bufferAllocator.compose(buf);
                 }
 
                 Future<Void> future = clientChannel.writeAndFlush(buf);
@@ -573,7 +573,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
 
             Buffer buf = bufferAllocator.copyOf(actual);
             if (useCompositeBuffer) {
-                buf = bufferAllocator.compose(buf.send());
+                buf = bufferAllocator.compose(buf);
             }
             ctx.writeAndFlush(buf);
 

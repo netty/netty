@@ -18,7 +18,6 @@ package io.netty5.buffer.tests;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.buffer.BufferReadOnlyException;
-import io.netty5.util.Send;
 import io.netty5.buffer.internal.ResourceSupport;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -76,12 +75,11 @@ public class BufferReadOnlyTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void readOnlyBufferMustRemainReadOnlyAfterSend(Fixture fixture) {
+    public void readOnlyBufferMustRemainReadOnlyAfterMoveAndCLose(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             buf.makeReadOnly();
-            var send = buf.send();
-            try (Buffer receive = send.receive()) {
+            try (Buffer receive = buf.moveAndClose()) {
                 assertTrue(receive.readOnly());
                 verifyWriteInaccessible(receive, BufferReadOnlyException.class);
             }
@@ -89,12 +87,11 @@ public class BufferReadOnlyTest extends BufferTestSupport {
     }
 
     @Test
-    public void readOnlyBufferMustRemainReadOnlyAfterSendForEmptyCompositeBuffer() {
+    public void readOnlyBufferMustRemainReadOnlyAfterMoveAndCloseForEmptyCompositeBuffer() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer buf = allocator.compose()) {
             buf.makeReadOnly();
-            var send = buf.send();
-            try (Buffer receive = send.receive()) {
+            try (Buffer receive = buf.moveAndClose()) {
                 assertTrue(receive.readOnly());
             }
         }
@@ -273,17 +270,13 @@ public class BufferReadOnlyTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("initialCombinations")
-    public void constBuffersMustBeSendable(Fixture fixture) throws Exception {
+    public void constBuffersMustBeMoveable(Fixture fixture) throws Exception {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             Supplier<Buffer> supplier = allocator.constBufferSupplier(new byte[] {1, 2, 3, 4});
             try (Buffer buffer = supplier.get()) {
-                Send<Buffer> send = buffer.send();
-                var future = executor.submit(() -> {
-                    try (Buffer receive = send.receive()) {
-                        return receive.readInt();
-                    }
-                });
-                assertEquals(0x01020304, future.get());
+                try (Buffer moved = buffer.moveAndClose()) {
+                    assertEquals(0x01020304, moved.readInt());
+                }
             }
         }
     }

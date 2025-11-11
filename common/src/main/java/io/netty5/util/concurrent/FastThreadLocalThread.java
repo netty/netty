@@ -15,7 +15,6 @@
 */
 package io.netty5.util.concurrent;
 
-import io.netty5.util.internal.UnstableApi;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -136,7 +136,7 @@ public class DefaultHttp2PushPromiseFrameTest {
 
                     // Write Data of actual request
                     channelFuture.addListener(fut -> {
-                        Http2DataFrame dataFrame = new DefaultHttp2DataFrame(bb("Meow").send(), true);
+                        Http2DataFrame dataFrame = new DefaultHttp2DataFrame(bb("Meow"), true);
                         dataFrame.stream(receivedFrame.stream());
                         ctx.writeAndFlush(dataFrame);
                     });
@@ -158,7 +158,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                 ctx.writeAndFlush(headersFrame);
 
                 // Write Data of Priority request
-                Http2DataFrame dataFrame = new DefaultHttp2DataFrame(bb(content).send(), true);
+                Http2DataFrame dataFrame = new DefaultHttp2DataFrame(bb(content), true);
                 dataFrame.stream(priorityFrame.stream());
                 ctx.writeAndFlush(dataFrame);
             }

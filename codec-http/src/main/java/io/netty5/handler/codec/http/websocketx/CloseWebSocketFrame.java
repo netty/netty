@@ -153,11 +153,6 @@ public class CloseWebSocketFrame extends WebSocketFrame {
         }
     }
 
-    @Override
-    protected WebSocketFrame receive(Buffer buf) {
-        return new CloseWebSocketFrame(this, buf);
-    }
-
     static short requireValidStatusCode(int statusCode) {
         if (WebSocketCloseStatus.isValidStatusCode(statusCode)) {
             return (short) statusCode;
@@ -165,5 +160,10 @@ public class CloseWebSocketFrame extends WebSocketFrame {
             throw new IllegalArgumentException(
                     "WebSocket close status code does NOT comply with RFC-6455: " + statusCode);
         }
+    }
+
+    @Override
+    public WebSocketFrame moveAndClose() {
+        return new CloseWebSocketFrame(this, getBuffer());
     }
 }

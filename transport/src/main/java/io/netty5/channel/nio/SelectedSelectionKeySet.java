@@ -20,7 +20,6 @@ import java.util.AbstractSet;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-import java.util.Objects;
 
 final class SelectedSelectionKeySet extends AbstractSet<SelectionKey> {
 

@@ -229,7 +229,7 @@ public final class LzmaCompressor implements Compressor {
                 final int length = in.readableBytes();
                 Buffer out = allocateBuffer(in, allocator);
                 try {
-                    try (InputStream bbIn = new BufferInputStream(in.send());
+                    try (InputStream bbIn = new BufferInputStream(in);
                          BufferOutputStream bbOut = new BufferOutputStream(out)) {
                         bbOut.writeByte(properties);
                         bbOut.writeInt(littleEndianDictionarySize);

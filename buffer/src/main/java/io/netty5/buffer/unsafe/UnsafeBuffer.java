@@ -24,7 +24,6 @@ import io.netty5.buffer.BufferReadOnlyException;
 import io.netty5.buffer.ByteCursor;
 import io.netty5.buffer.ComponentIterator;
 import io.netty5.buffer.Drop;
-import io.netty5.buffer.Owned;
 import io.netty5.buffer.internal.AdaptableBuffer;
 import io.netty5.buffer.internal.InternalBufferUtils;
 import io.netty5.buffer.internal.NotReadOnlyReadableComponent;
@@ -1272,28 +1271,6 @@ final class UnsafeBuffer extends AdaptableBuffer<UnsafeBuffer>
         return this;
     }
     // </editor-fold>
-
-    @Override
-    protected Owned<UnsafeBuffer> prepareSend() {
-        int roff = this.roff;
-        int woff = this.woff;
-        boolean readOnly = readOnly();
-        int implicitCapacityLimit = this.implicitCapacityLimit;
-        UnsafeMemory memory = this.memory;
-        AllocatorControl control = this.control;
-        long baseOffset = this.baseOffset;
-        int rsize = this.rsize;
-        return drop -> {
-            UnsafeBuffer copy = new UnsafeBuffer(memory, baseOffset, rsize, control, drop);
-            copy.roff = roff;
-            copy.woff = woff;
-            copy.implicitCapacityLimit = implicitCapacityLimit;
-            if (readOnly) {
-                copy.makeReadOnly();
-            }
-            return copy;
-        };
-    }
 
     @Override
     protected UnsafeBuffer moveOwnership(Drop<UnsafeBuffer> drop) {

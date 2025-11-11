@@ -49,10 +49,10 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  *
  * The buffer has a life cycle, where it is allocated, used, and deallocated.
  * When the buffer is initially allocated, a pairing {@link #close()} call will deallocate it.
- * If a buffer is {@linkplain #send() sent} elsewhere, the {@linkplain #close() close} method on the given instance
- * will become a no-op.
- * The buffer can be thought of as a view onto memory, and calling {@link #send()} on the buffer will effectively close
- * that view, and recreate it upon reception at its destination.
+ * If a buffer is {@linkplain #moveAndClose() moved} elsewhere, the {@linkplain #close() close} method on
+ * the given instance will become a no-op.
+ * The buffer can be thought of as a view onto memory, and calling {@link #moveAndClose()} on the buffer will
+ * effectively close that view, and recreate it in the returned instance.
  *
  * <h3>Thread-safety</h3>
  *
@@ -104,7 +104,7 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  * perhaps unknown, piece of code, and relinquish your ownership of that buffer region in the process.
  * Examples include aggregating messages into an accumulator buffer, and sending messages down the pipeline for
  * further processing, as split buffer regions, once their data has been received in its entirety.
- *
+ * <p>
  * If you instead wish to temporarily share a region of a buffer, you will have to pass offset and length along with the
  * buffer, or you will have to make a copy of the region.
  *
@@ -251,7 +251,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * <p>
      * The default limit is the maximum buffer size.
      * <p>
-     * The limit is carried through {@link #send()} calls, but the buffer instances returned from the various
+     * The limit is carried through {@link #moveAndClose()} calls, but the buffer instances returned from the various
      * {@code split} and {@code copy} methods will have the default limit set.
      * <p>
      * The limit is not impacted by calls to {@code split} methods on this buffer. In other words, even though
@@ -845,6 +845,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * preventing access to the buffer contents through any references to this buffer.
      * @return A new buffer instance with the same offsets, and the same underlying memory.
      */
+    @Override
     Buffer moveAndClose();
 
     /**
@@ -854,7 +855,6 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * The region of this buffer that contain the previously read and readable bytes till the
      * {@code readerOffset() + length} position, will be captured and returned in a new buffer,
      * that will hold its own ownership of that region.
-     * This allows the returned buffer to be independently {@linkplain #send() sent} to other threads.
      * <p>
      * The returned buffer will change its {@link #readerOffset()} to {@code readerOffset() + length}, and have its
      * {@link #writerOffset()} and {@link #capacity()} both set to the {@code readerOffset() + length} position.
@@ -906,7 +906,6 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * The region of this buffer that contain the previously read and readable bytes till the
      * {@code writerOffset() + length} position, will be captured and returned in a new buffer,
      * that will hold its own ownership of that region.
-     * This allows the returned buffer to be independently {@linkplain #send() sent} to other threads.
      * <p>
      * The returned buffer will change its {@link #writerOffset()} to {@code writerOffset() + length}, and have its
      * {@link #writerOffset()} and {@link #capacity()} both set to the {@code writerOffset() + length}.
@@ -955,8 +954,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * Splits the buffer into two, at the {@linkplain #writerOffset() write offset} position.
      * <p>
      * The region of this buffer that contain the previously read and readable bytes, will be captured and returned in
-     * a new buffer, that will hold its own ownership of that region. This allows the returned buffer to be
-     * independently {@linkplain #send() sent} to other threads.
+     * a new buffer, that will hold its own ownership of that region.
      * <p>
      * The returned buffer will adopt the {@link #readerOffset()} of this buffer, and have its {@link #writerOffset()}
      * and {@link #capacity()} both set to the equal to the write-offset of this buffer.
@@ -1004,8 +1002,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * Splits the buffer into two, at the given {@code splitOffset}.
      * <p>
      * The region of this buffer that precede the {@code splitOffset}, will be captured and returned in a new
-     * buffer, that will hold its own ownership of that region. This allows the returned buffer to be independently
-     * {@linkplain #send() sent} to other threads.
+     * buffer, that will hold its own ownership of that region.
      * <p>
      * The returned buffer will adopt the {@link #readerOffset()} and {@link #writerOffset()} of this buffer,
      * but truncated to fit within the capacity dictated by the {@code splitOffset}.
@@ -1120,7 +1117,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * This means they can be accessed as long as the internal memory store remain unchanged. Methods that may cause
      * such changes are {@link #split(int)}, {@link #split()}, {@link #readSplit(int)}, {@link #writeSplit(int)},
      * {@link #compact()}, {@link #ensureWritable(int)}, {@link #ensureWritable(int, int, boolean)},
-     * and {@link #send()}.
+     * and {@link #moveAndClose()}.
      * <p>
      * The best way to ensure this doesn't cause any trouble, is to use the buffers directly as part of the iteration.
      * <p>

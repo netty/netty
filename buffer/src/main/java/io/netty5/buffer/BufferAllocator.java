@@ -17,7 +17,6 @@ package io.netty5.buffer;
 
 import io.netty5.buffer.pool.PooledBufferAllocator;
 import io.netty5.util.SafeCloseable;
-import io.netty5.util.Send;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -130,42 +129,44 @@ public interface BufferAllocator extends SafeCloseable {
     Buffer allocate(int size);
 
     /**
-     * Compose the Send of a buffer and present them as a single buffer.
+     * Create a composite buffer around the given buffer.
+     * The ownership of the given constituent buffer moves into the composite buffer.
      * <p>
      * When a composite buffer is closed, all of its constituent component buffers are closed as well.
      * <p>
      * See the class documentation for more information on how buffers compose, and what is required of the given
      * buffers for composition to be allowed.
      *
-     * @param send The sent buffer to compose into a single buffer view.
+     * @param buffer The sent buffer to compose into a single buffer view.
      * @return A buffer composed of, and backed by, the given buffers.
      * @throws IllegalStateException if one of the sends have already been received. The remaining buffers and sends
      * will be closed and discarded, respectively.
      */
-    default CompositeBuffer compose(Send<Buffer> send) {
-        return DefaultCompositeBuffer.compose(this, Collections.singleton(send));
+    default CompositeBuffer compose(Buffer buffer) {
+        return DefaultCompositeBuffer.compose(this, Collections.singleton(buffer));
     }
 
     /**
-     * Compose the given sequence of Sends of buffers and present them as a single buffer.
+     * Compose the given sequence of buffers and present them as a single buffer.
+     * The ownership of all the buffers moves into the composite buffer.
      * <p>
      * When a composite buffer is closed, all of its constituent component buffers are closed as well.
      * <p>
      * See the class documentation for more information on how buffers compose, and what is required of the given
      * buffers for composition to be allowed.
      *
-     * @param sends The sent buffers to compose into a single buffer view.
+     * @param buffers The buffers to compose into a single buffer view.
      * @return A buffer composed of, and backed by, the given buffers.
-     * @throws IllegalStateException if one of the sends have already been received. The remaining buffers and sends
-     * will be closed and discarded, respectively.
+     * @throws IllegalStateException if one of the buffers cannot be moved. The remaining buffers
+     * will be closed and discarded.
      */
-    default CompositeBuffer compose(Iterable<Send<Buffer>> sends) {
-        return DefaultCompositeBuffer.compose(this, sends);
+    default CompositeBuffer compose(Iterable<Buffer> buffers) {
+        return DefaultCompositeBuffer.compose(this, buffers);
     }
 
     /**
      * Create an empty composite buffer, that has no components. The buffer can be extended with components using either
-     * {@link CompositeBuffer#ensureWritable(int)} or {@link CompositeBuffer#extendWith(Send)}.
+     * {@link CompositeBuffer#ensureWritable(int)} or {@link CompositeBuffer#extendWith(Buffer)}.
      * @return A composite buffer that has no components, and has a capacity of zero.
      */
     default CompositeBuffer compose() {

@@ -132,8 +132,8 @@ public class SocketGatheringWriteTest extends AbstractSocketTest {
                     int firstBufLength = length / 2;
                     CompositeBuffer comp =
                             alloc.compose(asList(
-                            src.readSplit(firstBufLength).send(),
-                            src.readSplit(length - firstBufLength).send()));
+                            src.readSplit(firstBufLength),
+                            src.readSplit(length - firstBufLength)));
                     cc.write(comp);
                 } else {
                     cc.write(src.readSplit(length));

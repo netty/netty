@@ -17,16 +17,14 @@ package io.netty5.channel;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.util.Resource;
-import io.netty5.util.Send;
 
 import java.net.SocketAddress;
-import java.util.function.Supplier;
 
 /**
  * Base class for addressed envelopes that have {@link Buffer} instances as messages.
  *
  * @param <A> The type of socket address used for recipient and sender.
- * @param <T> The concrete sub-type of this class, used for implementing {@link #send()}.
+ * @param <T> The concrete sub-type of this class.
  */
 public abstract class BufferAddressedEnvelope<A extends SocketAddress, T extends BufferAddressedEnvelope<A, T>>
         extends DefaultAddressedEnvelope<Buffer, A>
@@ -40,12 +38,8 @@ public abstract class BufferAddressedEnvelope<A extends SocketAddress, T extends
     }
 
     @Override
-    public Send<T> send() {
-        Send<Buffer> contentSend = content().send();
-        @SuppressWarnings("unchecked")
-        Class<T> type = (Class<T>) getClass();
-        Supplier<T> supplier = () -> replace(contentSend.receive());
-        return Send.sending(type, supplier);
+    public T moveAndClose() {
+        return replace(content().moveAndClose());
     }
 
     /**

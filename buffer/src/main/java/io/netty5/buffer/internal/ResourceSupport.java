@@ -16,9 +16,7 @@
 package io.netty5.buffer.internal;
 
 import io.netty5.buffer.Drop;
-import io.netty5.buffer.Owned;
 import io.netty5.util.Resource;
-import io.netty5.util.Send;
 import io.netty5.util.internal.UnstableApi;
 
 import java.lang.ref.Reference;
@@ -121,34 +119,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
         }
     }
 
-    /**
-     * Send this Resource instance to another Thread, transferring the ownership to the recipient.
-     * This method can be used when the receiving thread is not known up front.
-     * <p>
-     * This instance immediately becomes inaccessible, and all attempts at accessing this resource will throw.
-     * Calling {@link #close()} will have no effect, so this method is safe to call within a try-with-resources
-     * statement.
-     *
-     * @throws IllegalStateException if this object has any outstanding acquires; that is, if this object has been
-     * {@link #acquire() acquired} more times than it has been {@link #close() closed}.
-     */
     @Override
-    public final Send<I> send() {
-        if (acquires < 0) {
-            throw attachTrace(createResourceClosedException());
-        }
-        if (!isOwned()) {
-            throw notSendableException();
-        }
-        try {
-            var owned = tracer.send(prepareSend());
-            return new SendFromOwned<>(owned, drop, getClass());
-        } finally {
-            acquires = -2; // Close without dropping. This also ignore future double-free attempts.
-            makeInaccessible();
-        }
-    }
-
     @SuppressWarnings("unchecked")
     public I moveAndClose() {
         if (acquires < 0) {
@@ -177,16 +148,6 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
      */
     protected <E extends Throwable> E attachTrace(E throwable) {
         return tracer.attachTrace(throwable);
-    }
-
-    /**
-     * Create an {@link IllegalStateException} with a custom message, tailored to this particular
-     * {@link Resource} instance, for when the object cannot be sent for some reason.
-     * @return An {@link IllegalStateException} to be thrown when this object cannot be sent.
-     */
-    protected IllegalStateException notSendableException() {
-        return new IllegalStateException(
-                "Cannot send() a reference counted object with " + countBorrows() + " borrows: " + this + '.');
     }
 
     /**
@@ -254,17 +215,6 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
         }
         return self();
     }
-
-    /**
-     * Prepare this instance for ownership transfer. This method is called from {@link #send()} in the sending thread.
-     * This method should put this resource in a deactivated state where it is no longer accessible from the currently
-     * owning thread.
-     * In this state, the resource instance should only allow a call to {@link Owned#transferOwnership(Drop)} in the
-     * recipient thread.
-     *
-     * @return This resource instance in a deactivated state.
-     */
-    protected abstract Owned<T> prepareSend();
 
     /**
      * Perform an ownership transfer of this instance into the returned instance in a single step.

@@ -277,7 +277,7 @@ public class Http2StaticFileServerHandler implements ChannelHandler {
         headers.add(HttpHeaderNames.CONTENT_TYPE, "text/html; charset=UTF-8");
 
         ctx.write(new DefaultHttp2HeadersFrame(headers).stream(stream));
-        ctx.writeAndFlush(new DefaultHttp2DataFrame(buffer.send(), true).stream(stream));
+        ctx.writeAndFlush(new DefaultHttp2DataFrame(buffer, true).stream(stream));
     }
 
     private void sendRedirect(ChannelHandlerContext ctx, String newUri) {
@@ -297,7 +297,7 @@ public class Http2StaticFileServerHandler implements ChannelHandler {
         headersFrame.stream(stream);
 
         Http2DataFrame dataFrame = new DefaultHttp2DataFrame(
-                ctx.bufferAllocator().copyOf(("Failure: " + status + "\r\n").getBytes(UTF_8)).send(), true);
+                ctx.bufferAllocator().copyOf(("Failure: " + status + "\r\n").getBytes(UTF_8)), true);
         dataFrame.stream(stream);
 
         ctx.write(headersFrame);

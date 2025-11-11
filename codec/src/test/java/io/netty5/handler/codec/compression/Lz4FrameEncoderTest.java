@@ -48,7 +48,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
 
     @Override
     protected Buffer decompress(Buffer compressed, int originalLength) throws Exception {
-        InputStream is = new BufferInputStream(compressed.send());
+        InputStream is = new BufferInputStream(compressed);
         LZ4BlockInputStream lz4Is = null;
         byte[] decompressed = new byte[originalLength];
         try {

@@ -82,7 +82,7 @@ public class BufferStreamTest extends BufferTestSupport {
                 // Expected
             }
 
-            try (BufferInputStream in = new BufferInputStream(buf.send())) {
+            try (BufferInputStream in = new BufferInputStream(buf)) {
                 assertTrue(in.markSupported());
                 in.mark(Integer.MAX_VALUE);
 
@@ -170,7 +170,7 @@ public class BufferStreamTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             Charset utf8 = StandardCharsets.UTF_8;
             Buffer buf = allocator.allocate(256);
-            BufferInputStream in = new BufferInputStream(buf.send());
+            BufferInputStream in = new BufferInputStream(buf);
 
             String s = in.readLine();
             assertNull(s);
@@ -181,7 +181,7 @@ public class BufferStreamTest extends BufferTestSupport {
             byte[] abc = "\na\n\nb\r\nc\nd\ne".getBytes(utf8);
             buf2.writeBytes(abc);
 
-            BufferInputStream in2 = new BufferInputStream(buf2.send());
+            BufferInputStream in2 = new BufferInputStream(buf2);
             in2.mark(charCount);
             Assertions.assertEquals("", in2.readLine());
             Assertions.assertEquals("a", in2.readLine());
@@ -212,7 +212,7 @@ public class BufferStreamTest extends BufferTestSupport {
             Buffer buf = allocator.allocate(16);
             buf.writeBytes(new byte[]{1, 2, 3, 4, 5, 6});
 
-            try (BufferInputStream in = new BufferInputStream(buf.send())) {
+            try (BufferInputStream in = new BufferInputStream(buf)) {
                 assertEquals(1, in.read());
                 assertEquals(2, in.read());
                 assertEquals(3, in.read());
@@ -231,7 +231,7 @@ public class BufferStreamTest extends BufferTestSupport {
             Buffer buf = allocator.allocate(16);
             buf.writeBytes(new byte[] { 'A', 'B', '\n', 'C', 'E', 'F'});
 
-            try (BufferInputStream in2 = new BufferInputStream(buf.send())) {
+            try (BufferInputStream in2 = new BufferInputStream(buf)) {
                 Assertions.assertEquals("AB", in2.readLine());
                 Assertions.assertEquals("CEF", in2.readLine());
                 assertNull(in2.readLine());
@@ -245,7 +245,7 @@ public class BufferStreamTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             Buffer buf = allocator.allocate(16);
 
-            try (BufferInputStream in = new BufferInputStream(buf.send())) {
+            try (BufferInputStream in = new BufferInputStream(buf)) {
                 assertThrows(EOFException.class, in::readByte);
             }
         }
@@ -286,7 +286,7 @@ public class BufferStreamTest extends BufferTestSupport {
     public void readsToClosedStreamMustThrow(Fixture fixture) throws IOException {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             Buffer buf = allocator.allocate(16);
-            BufferInputStream stream = new BufferInputStream(buf.send());
+            BufferInputStream stream = new BufferInputStream(buf);
             stream.close();
             assertThrows(IOException.class, () -> stream.read());
             assertThrows(IOException.class, () -> stream.read(new byte[1]));

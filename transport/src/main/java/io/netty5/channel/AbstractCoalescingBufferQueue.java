@@ -308,7 +308,7 @@ public abstract class AbstractCoalescingBufferQueue {
     protected final Buffer composeIntoComposite(BufferAllocator alloc, Buffer cumulation, Buffer next) {
         // Create a composite buffer to accumulate this pair and potentially all the buffers
         // in the queue. Using +2 as we have already dequeued current and next.
-        return alloc.compose(List.of(cumulation.send(), next.send()));
+        return alloc.compose(List.of(cumulation, next));
     }
 
     /**

@@ -18,8 +18,6 @@ package io.netty5.microbench.http;
 import io.netty5.handler.codec.http.headers.DefaultHttpSetCookie;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.State;
 
 import java.util.concurrent.TimeUnit;
 

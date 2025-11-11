@@ -20,7 +20,6 @@ import io.netty5.buffer.BufferClosedException;
 import io.netty5.handler.codec.http.headers.DefaultHttpHeadersFactory;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
 import io.netty5.handler.codec.http.headers.HttpHeadersFactory;
-import io.netty5.util.Send;
 
 import static java.util.Objects.requireNonNull;
 
@@ -91,10 +90,9 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     @Override
-    public Send<FullHttpResponse> send() {
-        return payload.send().map(FullHttpResponse.class,
-                payload -> new DefaultFullHttpResponse(protocolVersion(), status(), payload, headers(),
-                        trailingHeaders));
+    public FullHttpResponse moveAndClose() {
+        return new DefaultFullHttpResponse(protocolVersion(), status(), payload.moveAndClose(), headers(),
+                trailingHeaders);
     }
 
     @Override

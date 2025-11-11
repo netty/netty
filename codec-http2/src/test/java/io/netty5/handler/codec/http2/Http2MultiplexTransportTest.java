@@ -140,7 +140,7 @@ public class Http2MultiplexTransportTest {
         public void channelRead(final ChannelHandlerContext ctx, Object msg) {
             if (msg instanceof Http2HeadersFrame && ((Http2HeadersFrame) msg).isEndStream()) {
                 Buffer response = ctx.bufferAllocator().copyOf(LARGE_STRING, StandardCharsets.US_ASCII);
-                responseFuture = ctx.writeAndFlush(new DefaultHttp2DataFrame(response.send(), true));
+                responseFuture = ctx.writeAndFlush(new DefaultHttp2DataFrame(response, true));
             }
             Resource.dispose(msg);
         }
@@ -286,7 +286,7 @@ public class Http2MultiplexTransportTest {
                                     ctx.writeAndFlush(new DefaultHttp2HeadersFrame(
                                             Http2Headers.newHeaders(), false)).addListener(future -> {
                                         ctx.write(new DefaultHttp2DataFrame(
-                                                bb("Hello World").send(), true));
+                                                bb("Hello World"), true));
                                         ctx.channel().executor().execute(ctx::flush);
                                     });
                                 }, 500, MILLISECONDS);
@@ -558,7 +558,7 @@ public class Http2MultiplexTransportTest {
                                                     Http2Headers.newHeaders(), false))
                                             .addListener(future -> {
                                                 ctx.writeAndFlush(new DefaultHttp2DataFrame(
-                                                        bb("Hello World").send(),
+                                                        bb("Hello World"),
                                                         true));
                                             });
                                 }

@@ -143,7 +143,7 @@ public class PerFrameDeflateDecoderTest {
 
         assertNotNull(inboundBinaryFrame);
         assertNotNull(inboundBinaryFrame.binaryData());
-        assertEquals(compressedPayload, inboundBinaryFrame.binaryData());
+        assertEquals(compressedBinaryFrame.binaryData(), inboundBinaryFrame.binaryData());
         assertEquals(5, inboundBinaryFrame.rsv());
 
         assertTrue(inboundBinaryFrame.isAccessible());

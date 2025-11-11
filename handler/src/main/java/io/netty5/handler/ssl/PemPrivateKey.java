@@ -21,6 +21,7 @@ import io.netty5.buffer.BufferHolder;
 import io.netty5.buffer.SensitiveBufferAllocator;
 
 import javax.security.auth.Destroyable;
+import java.io.Serial;
 import java.security.PrivateKey;
 
 import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
@@ -40,6 +41,7 @@ import static java.nio.charset.StandardCharsets.US_ASCII;
  * @see #valueOf(Buffer)
  */
 public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements PrivateKey, PemEncoded {
+    @Serial
     private static final long serialVersionUID = 7978017465645018936L;
 
     private static final byte[] BEGIN_PRIVATE_KEY = "-----BEGIN PRIVATE KEY-----\n".getBytes(US_ASCII);
@@ -94,7 +96,7 @@ public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements 
 
     /**
      * Creates a {@link PemPrivateKey} from raw {@code byte[]}.
-     *
+     * <p>
      * ATTENTION: It's assumed that the given argument is a PEM/PKCS#8 encoded value.
      * No input validation is performed to validate it.
      */
@@ -104,7 +106,7 @@ public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements 
 
     /**
      * Creates a {@link PemPrivateKey} from raw {@link Buffer}.
-     *
+     * <p>
      * ATTENTION: It's assumed that the given argument is a PEM/PKCS#8 encoded value.
      * No input validation is performed to validate it.
      */
@@ -132,11 +134,6 @@ public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements 
     }
 
     @Override
-    protected PemPrivateKey receive(Buffer buf) {
-        return new PemPrivateKey(buf);
-    }
-
-    @Override
     public byte[] getEncoded() {
         throw new UnsupportedOperationException();
     }
@@ -159,5 +156,10 @@ public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements 
     @Override
     public boolean isDestroyed() {
         return !isAccessible();
+    }
+
+    @Override
+    public PemPrivateKey moveAndClose() {
+        return new PemPrivateKey(getBuffer());
     }
 }

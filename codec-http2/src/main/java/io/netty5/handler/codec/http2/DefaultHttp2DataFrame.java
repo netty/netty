@@ -18,7 +18,6 @@ package io.netty5.handler.codec.http2;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferClosedException;
 import io.netty5.buffer.DefaultBufferAllocators;
-import io.netty5.util.Send;
 import io.netty5.util.internal.StringUtil;
 import io.netty5.util.internal.UnstableApi;
 
@@ -37,10 +36,12 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
 
     /**
      * Equivalent to {@code new DefaultHttp2DataFrame(content, false)}.
+     * <p>
+     * Ownership of the payload buffer moves into the {@link DefaultHttp2DataFrame} instance.
      *
      * @param content non-{@code null} payload
      */
-    public DefaultHttp2DataFrame(Send<Buffer> content) {
+    public DefaultHttp2DataFrame(Buffer content) {
         this(content, false);
     }
 
@@ -55,28 +56,28 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
 
     /**
      * Equivalent to {@code new DefaultHttp2DataFrame(content, endStream, 0)}.
+     * <p>
+     * Ownership of the payload buffer moves into the {@link DefaultHttp2DataFrame} instance.
      *
      * @param content non-{@code null} payload
      * @param endStream whether this data should terminate the stream
      */
-    public DefaultHttp2DataFrame(Send<Buffer> content, boolean endStream) {
+    public DefaultHttp2DataFrame(Buffer content, boolean endStream) {
         this(content, endStream, 0);
     }
 
     /**
      * Construct a new data message.
+     * <p>
+     * Ownership of the payload buffer moves into the {@link DefaultHttp2DataFrame} instance.
      *
      * @param content non-{@code null} payload
      * @param endStream whether this data should terminate the stream
      * @param padding additional bytes that should be added to obscure the true content size. Must be between 0 and
      *                256 (inclusive).
      */
-    public DefaultHttp2DataFrame(Send<Buffer> content, boolean endStream, int padding) {
-        this(content.receive(), endStream, padding);
-    }
-
-    private DefaultHttp2DataFrame(Buffer content, boolean endStream, int padding) {
-        this.content = requireNonNull(content, "content");
+    public DefaultHttp2DataFrame(Buffer content, boolean endStream, int padding) {
+        this.content = requireNonNull(content, "content").moveAndClose();
         this.endStream = endStream;
         verifyPadding(padding);
         this.padding = padding;
@@ -132,14 +133,13 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
     }
 
     @Override
-    public Send<Http2DataFrame> send() {
-        return content.send().map(Http2DataFrame.class,
-                                  content -> new DefaultHttp2DataFrame(content, endStream, padding));
+    public void close() {
+        content.close();
     }
 
     @Override
-    public void close() {
-        content.close();
+    public Http2DataFrame moveAndClose() {
+        return new DefaultHttp2DataFrame(content, endStream, padding);
     }
 
     @Override

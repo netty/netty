@@ -73,8 +73,8 @@ public class SimpleUserEventChannelHandlerTest {
         }
 
         @Override
-        protected FooEvent receive(Buffer buf) {
-            return new FooEvent(buf);
+        public FooEvent moveAndClose() {
+            return new FooEvent(getBuffer());
         }
     }
 
@@ -88,8 +88,8 @@ public class SimpleUserEventChannelHandlerTest {
         }
 
         @Override
-        protected BarEvent receive(Buffer buf) {
-            return new BarEvent(buf);
+        public BarEvent moveAndClose() {
+            return new BarEvent(getBuffer());
         }
     }
 

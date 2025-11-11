@@ -21,21 +21,6 @@ package io.netty5.util;
  */
 public interface Resource<T extends Resource<T>> extends AutoCloseable {
     /**
-     * Send this object instance to another Thread, transferring the ownership to the recipient.
-     * <p>
-     * The object must be in a state where it can be sent, which includes at least being
-     * {@linkplain #isAccessible() accessible}.
-     * <p>
-     * When sent, this instance will immediately become inaccessible, as if by {@linkplain #close() closing} it.
-     * All attempts at accessing an object that has been sent, even if that object has not yet been received, should
-     * cause an exception to be thrown.
-     * <p>
-     * Calling {@link #close()} on an object that has been sent will have no effect, so this method is safe to call
-     * within a try-with-resources statement.
-     */
-    Send<T> send();
-
-    /**
      * Close the resource, making it inaccessible.
      * <p>
      * Note, this method is not thread-safe unless otherwise specified.
@@ -46,11 +31,19 @@ public interface Resource<T extends Resource<T>> extends AutoCloseable {
     void close();
 
     /**
+     * Create and return a new {@link Resource} instance that is an exact copy of this resource instance.
+     * <p>
+     * The effect of this is that ownership of the resource transfers to the caller in the returned instance,
+     * preventing access to the resource through any references to this instance.
+     * @return A new resource instance.
+     */
+    T moveAndClose();
+
+    /**
      * Check if this object is accessible.
      *
      * @return {@code true} if this object is still valid and can be accessed,
-     * otherwise {@code false} if, for instance, this object has been dropped/deallocated,
-     * or been {@linkplain #send() sent} elsewhere.
+     * otherwise {@code false} if, for instance, this object has been dropped/deallocated.
      */
     boolean isAccessible();
 

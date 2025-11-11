@@ -109,7 +109,7 @@ public class MemoryManagerTest {
     @MethodSource("managers")
     public void wrappingBuffersMustStayReadOnlyAfterSend(MemoryManager manager) {
         try (Buffer buffer = wrap(manager, new byte[] { 1, 2, 3, 4 })) {
-            try (Buffer received = buffer.send().receive()) {
+            try (Buffer received = buffer.moveAndClose()) {
                 assertTrue(received.readOnly());
                 verifyWriteInaccessible(received, BufferReadOnlyException.class);
             }

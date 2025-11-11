@@ -83,7 +83,7 @@ public class ContinuationWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
-    protected WebSocketFrame receive(Buffer buf) {
-        return new ContinuationWebSocketFrame(this, buf);
+    public WebSocketFrame moveAndClose() {
+        return new ContinuationWebSocketFrame(this, getBuffer());
     }
 }

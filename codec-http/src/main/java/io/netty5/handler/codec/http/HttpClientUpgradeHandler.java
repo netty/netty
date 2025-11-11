@@ -16,7 +16,6 @@ package io.netty5.handler.codec.http;
 
 import io.netty5.channel.internal.DelegatingChannelHandlerContext;
 import io.netty5.util.Resource;
-import io.netty5.util.Send;
 import io.netty5.channel.ChannelHandlerContext;
 import io.netty5.util.AsciiString;
 import io.netty5.util.concurrent.Future;
@@ -98,7 +97,7 @@ public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObje
          * @param upgradeResponse the 101 Switching Protocols response that indicates that the server
          *            has switched to this protocol.
          */
-        void upgradeTo(ChannelHandlerContext ctx, Send<FullHttpResponse> upgradeResponse) throws Exception;
+        void upgradeTo(ChannelHandlerContext ctx, FullHttpResponse upgradeResponse) throws Exception;
     }
 
     private final SourceCodec sourceCodec;
@@ -204,7 +203,7 @@ public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObje
 
             // Upgrade to the new protocol.
             sourceCodec.prepareUpgradeFrom(ctx);
-            upgradeCodec.upgradeTo(ctx, response.send());
+            upgradeCodec.upgradeTo(ctx, response.moveAndClose());
 
             // Let's set currentUpgradeEvent to UPGRADE_SUCCESSFUL as we will notify the pipeline about the successful
             // upgrade now, which might results in a write that needs to be passed through.

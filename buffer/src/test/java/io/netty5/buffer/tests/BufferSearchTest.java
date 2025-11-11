@@ -34,9 +34,8 @@ public class BufferSearchTest extends BufferTestSupport {
             Buffer buffer = allocator.allocate(8);
             buffer.writeLong(0x0102030405060708L);
             assertThat(buffer.bytesBefore((byte) 0x03)).isEqualTo(2);
-            var send = buffer.send();
+            Buffer received = buffer.moveAndClose();
             assertThrows(IllegalStateException.class, () -> buffer.bytesBefore((byte) 0));
-            Buffer received = send.receive();
             assertThat(received.bytesBefore((byte) 0x03)).isEqualTo(2);
             received.close();
             assertThrows(IllegalStateException.class, () -> received.bytesBefore((byte) 0));
@@ -51,9 +50,8 @@ public class BufferSearchTest extends BufferTestSupport {
             Buffer buffer = allocator.allocate(8);
             buffer.writeLong(0x0102030405060708L);
             assertThat(buffer.bytesBefore(needle)).isEqualTo(2);
-            var send = buffer.send();
+            Buffer received = buffer.moveAndClose();
             assertThrows(IllegalStateException.class, () -> buffer.bytesBefore((byte) 0));
-            Buffer received = send.receive();
             assertThat(received.bytesBefore(needle)).isEqualTo(2);
             received.close();
             assertThrows(IllegalStateException.class, () -> received.bytesBefore((byte) 0));

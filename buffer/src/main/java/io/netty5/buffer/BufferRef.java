@@ -15,8 +15,6 @@
  */
 package io.netty5.buffer;
 
-import io.netty5.util.Send;
-
 import java.lang.invoke.VarHandle;
 
 /**
@@ -25,29 +23,14 @@ import java.lang.invoke.VarHandle;
 public final class BufferRef extends BufferHolder<BufferRef> {
     /**
      * Create a reference to the given {@linkplain Buffer buffer}.
+     * Ownership of the buffer moves to this reference object.
      *
      * @param buf The buffer to reference.
      */
-    private BufferRef(Buffer buf) {
-        super(buf);
+    public BufferRef(Buffer buf) {
+        super(buf); // super calls moveAndClose
         // BufferRef is meant to be atomic, so we need to add a fence to get the semantics of a volatile store.
         VarHandle.fullFence();
-    }
-
-    /**
-     * Create a reference that holds the exclusive ownership of the sent buffer.
-     *
-     * @param send The {@linkplain Send sent} buffer to take ownership of.
-     */
-    public BufferRef(Send<Buffer> send) {
-        super(send);
-        // BufferRef is meant to be atomic, so we need to add a fence to get the semantics of a volatile store.
-        VarHandle.fullFence();
-    }
-
-    @Override
-    protected BufferRef receive(Buffer buf) {
-        return new BufferRef(buf);
     }
 
     /**
@@ -58,10 +41,10 @@ public final class BufferRef extends BufferHolder<BufferRef> {
      * <p>
      * The buffer assignment is performed using a volatile store.
      *
-     * @param send The {@link Send} with the new {@link Buffer} instance that is replacing the currently held buffer.
+     * @param buffer The new {@link Buffer} instance that is replacing the currently held buffer.
      */
-    public void replace(Send<Buffer> send) {
-        replaceBufferVolatile(send);
+    public void replace(Buffer buffer) {
+        replaceBufferVolatile(buffer.moveAndClose());
     }
 
     /**
@@ -71,5 +54,10 @@ public final class BufferRef extends BufferHolder<BufferRef> {
      */
     public Buffer content() {
         return getBufferVolatile();
+    }
+
+    @Override
+    public BufferRef moveAndClose() {
+        return new BufferRef(getBuffer());
     }
 }

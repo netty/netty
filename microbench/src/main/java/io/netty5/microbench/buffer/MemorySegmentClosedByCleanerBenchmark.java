@@ -132,23 +132,23 @@ public class MemorySegmentClosedByCleanerBenchmark {
         // Simulate some async network server thingy, processing the buffer.
         var tlr = ThreadLocalRandom.current();
         if (isHeavy) {
-            return completedFuture(buffer.send()).thenApplyAsync(send -> {
-                try (Buffer buf = send.receive()) {
+            return completedFuture(buffer).thenApplyAsync(send -> {
+                try (Buffer buf = send.moveAndClose()) {
                     while (buf.writableBytes() > 0) {
                         buf.writeByte((byte) tlr.nextInt());
                     }
-                    return buf.send();
+                    return buf.moveAndClose();
                 }
             }).thenApplyAsync(send -> {
-                try (Buffer buf = send.receive()) {
+                try (Buffer buf = send.moveAndClose()) {
                     byte b = 0;
                     while (buf.readableBytes() > 0) {
                         b += buf.readByte();
                     }
                     buf.fill(b);
-                    return buf.send();
+                    return buf.moveAndClose();
                 }
-            }).get().receive();
+            }).get().moveAndClose();
         } else {
             while (buffer.writableBytes() > 0) {
                 buffer.writeByte((byte) tlr.nextInt());

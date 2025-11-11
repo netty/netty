@@ -26,7 +26,6 @@ import io.netty5.util.internal.StringUtil;
 
 import java.net.SocketAddress;
 import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
 
 /**
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.

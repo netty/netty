@@ -116,21 +116,21 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
         // Check for closing frame
         try (frame) {
             if (frame instanceof CloseWebSocketFrame) {
-                handshaker.close(ctx, (CloseWebSocketFrame) frame.send().receive());
+                handshaker.close(ctx, (CloseWebSocketFrame) frame.moveAndClose());
                 return;
             }
             if (frame instanceof PingWebSocketFrame) {
-                ctx.write(new PongWebSocketFrame(frame.binaryData().send()));
+                ctx.write(new PongWebSocketFrame(frame.binaryData()));
                 return;
             }
             if (frame instanceof TextWebSocketFrame) {
                 // Echo the frame
-                ctx.write(frame.send().receive());
+                ctx.write(frame.moveAndClose());
                 return;
             }
             if (frame instanceof BinaryWebSocketFrame) {
                 // Echo the frame
-                ctx.write(frame.send().receive());
+                ctx.write(frame.moveAndClose());
             }
         }
     }

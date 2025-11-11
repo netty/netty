@@ -397,7 +397,7 @@ public class JdkZlibTest {
         Buffer encoded = CompressionTestUtils.compose(chEncoder.bufferAllocator(), chEncoder::readOutbound);
 
         try (Buffer decoded = chEncoder.bufferAllocator().allocate(256)) {
-            try (GZIPInputStream stream = new GZIPInputStream(new BufferInputStream(encoded.send()))) {
+            try (GZIPInputStream stream = new GZIPInputStream(new BufferInputStream(encoded))) {
                 byte[] buf = new byte[8192];
                 for (;;) {
                     int readBytes = stream.read(buf);
@@ -595,7 +595,7 @@ public class JdkZlibTest {
         Supplier<Buffer> smallBuffer = wrapped.constBufferSupplier(new byte[1024 * 1024]);
         Buffer bigBuffer = wrapped.compose(
                 IntStream.range(0, 128)
-                        .mapToObj(i -> smallBuffer.get().send())
+                        .mapToObj(i -> smallBuffer.get())
                         .collect(Collectors.toList())
         );
 

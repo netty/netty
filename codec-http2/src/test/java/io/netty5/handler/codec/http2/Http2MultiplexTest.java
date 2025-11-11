@@ -233,7 +233,7 @@ public class Http2MultiplexTest {
         assertFalse(channel.isShutdown(ChannelShutdownDirection.Outbound));
         assertFalse(handler.isOutboundShutdown());
 
-        channel.write(new DefaultHttp2DataFrame(onHeapAllocator().allocate(0).send(), true));
+        channel.write(new DefaultHttp2DataFrame(onHeapAllocator().allocate(0), true));
 
         assertTrue(channel.isShutdown(ChannelShutdownDirection.Outbound));
         assertTrue(handler.isOutboundShutdown());
@@ -245,8 +245,8 @@ public class Http2MultiplexTest {
 
         Http2StreamChannel channel = newInboundStream(3, false, inboundHandler);
         Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(request).stream(channel.stream());
-        Http2DataFrame dataFrame1 = new DefaultHttp2DataFrame(bb("hello").send()).stream(channel.stream());
-        Http2DataFrame dataFrame2 = new DefaultHttp2DataFrame(bb("world").send()).stream(channel.stream());
+        Http2DataFrame dataFrame1 = new DefaultHttp2DataFrame(bb("hello")).stream(channel.stream());
+        Http2DataFrame dataFrame2 = new DefaultHttp2DataFrame(bb("world")).stream(channel.stream());
 
         assertTrue(inboundHandler.isChannelActive());
         frameInboundWriter.writeInboundData(channel.stream().id(), bb("hello"), 0, false);
@@ -554,7 +554,7 @@ public class Http2MultiplexTest {
         assertEquals(parentChannel.readInbound(), pingFrame);
 
         DefaultHttp2GoAwayFrame goAwayFrame = new DefaultHttp2GoAwayFrame(1,
-                parentChannel.bufferAllocator().allocate(8).writeLong(8).send());
+                parentChannel.bufferAllocator().allocate(8).writeLong(8));
         frameInboundWriter.writeInboundGoAway(0, goAwayFrame.errorCode(), goAwayFrame.content().copy());
 
         Http2GoAwayFrame frame = parentChannel.readInbound();
@@ -644,8 +644,8 @@ public class Http2MultiplexTest {
         assertFalse(inboundHandler.isChannelActive());
         childChannel.closeFuture().asStage().sync();
 
-        Http2ResetFrame resetFrame = useUserEventForResetFrame() ? inboundHandler.<Http2ResetFrame>readUserEvent() :
-                inboundHandler.<Http2ResetFrame>readInbound();
+        Http2ResetFrame resetFrame = useUserEventForResetFrame() ? inboundHandler.readUserEvent() :
+                inboundHandler.readInbound();
 
         assertEquals(childChannel.stream(), resetFrame.stream());
         assertEquals(Http2Error.NO_ERROR.code(), resetFrame.errorCode());
@@ -1088,7 +1088,7 @@ public class Http2MultiplexTest {
         assertTrue(childChannel.isWritable());
         int size = 16 * 1024 * 1024;
         childChannel.write(new DefaultHttp2DataFrame(
-                onHeapAllocator().allocate(size).fill((byte) 0).writerOffset(size).send()));
+                onHeapAllocator().allocate(size).fill((byte) 0).writerOffset(size)));
         assertEquals(0, childChannel.writableBytes());
         assertFalse(childChannel.isWritable());
     }
@@ -1105,9 +1105,9 @@ public class Http2MultiplexTest {
         parentChannel.flush();
 
         assertTrue(childChannel.isWritable());
-        childChannel.write(new DefaultHttp2DataFrame(bb(256).send()));
+        childChannel.write(new DefaultHttp2DataFrame(bb(256)));
         assertTrue(childChannel.isWritable());
-        childChannel.writeAndFlush(new DefaultHttp2DataFrame(bb(512).send()));
+        childChannel.writeAndFlush(new DefaultHttp2DataFrame(bb(512)));
 
         long writableBytes = childChannel.writableBytes();
         assertNotEquals(0, writableBytes);
@@ -1128,7 +1128,7 @@ public class Http2MultiplexTest {
         assertEquals(writableBytes, childChannel.writableBytes());
 
         Future<Void> future = childChannel.writeAndFlush(new DefaultHttp2DataFrame(
-                bb((int) writableBytes).send()));
+                bb((int) writableBytes)));
         assertFalse(childChannel.isWritable());
         assertTrue(parentChannel.isWritable());
 
@@ -1227,10 +1227,10 @@ public class Http2MultiplexTest {
         Http2StreamChannel childChannel = newInboundStream(3, false, numReads, inboundHandler);
         childChannel.setOption(ChannelOption.AUTO_READ, false);
 
-        Http2DataFrame dataFrame1 = new DefaultHttp2DataFrame(bb("1").send()).stream(childChannel.stream());
-        Http2DataFrame dataFrame2 = new DefaultHttp2DataFrame(bb("2").send()).stream(childChannel.stream());
-        Http2DataFrame dataFrame3 = new DefaultHttp2DataFrame(bb("3").send()).stream(childChannel.stream());
-        Http2DataFrame dataFrame4 = new DefaultHttp2DataFrame(bb("4").send()).stream(childChannel.stream());
+        Http2DataFrame dataFrame1 = new DefaultHttp2DataFrame(bb("1")).stream(childChannel.stream());
+        Http2DataFrame dataFrame2 = new DefaultHttp2DataFrame(bb("2")).stream(childChannel.stream());
+        Http2DataFrame dataFrame3 = new DefaultHttp2DataFrame(bb("3")).stream(childChannel.stream());
+        Http2DataFrame dataFrame4 = new DefaultHttp2DataFrame(bb("4")).stream(childChannel.stream());
 
         assertEquals(new DefaultHttp2HeadersFrame(request).stream(childChannel.stream()), inboundHandler.readInbound());
 
@@ -1345,10 +1345,10 @@ public class Http2MultiplexTest {
         Http2StreamChannel childChannel = newInboundStream(3, false, numReads, inboundHandler);
         childChannel.setOption(ChannelOption.AUTO_READ, false);
 
-        Http2DataFrame dataFrame1 = new DefaultHttp2DataFrame(bb("1").send()).stream(childChannel.stream());
-        Http2DataFrame dataFrame2 = new DefaultHttp2DataFrame(bb("2").send()).stream(childChannel.stream());
-        Http2DataFrame dataFrame3 = new DefaultHttp2DataFrame(bb("3").send()).stream(childChannel.stream());
-        Http2DataFrame dataFrame4 = new DefaultHttp2DataFrame(bb("4").send()).stream(childChannel.stream());
+        Http2DataFrame dataFrame1 = new DefaultHttp2DataFrame(bb("1")).stream(childChannel.stream());
+        Http2DataFrame dataFrame2 = new DefaultHttp2DataFrame(bb("2")).stream(childChannel.stream());
+        Http2DataFrame dataFrame3 = new DefaultHttp2DataFrame(bb("3")).stream(childChannel.stream());
+        Http2DataFrame dataFrame4 = new DefaultHttp2DataFrame(bb("4")).stream(childChannel.stream());
 
         assertEquals(new DefaultHttp2HeadersFrame(request).stream(childChannel.stream()), inboundHandler.readInbound());
 
@@ -1405,10 +1405,10 @@ public class Http2MultiplexTest {
         Http2StreamChannel childChannel = newInboundStream(3, false, numReads, inboundHandler);
         childChannel.setOption(ChannelOption.AUTO_READ, false);
 
-        Http2DataFrame dataFrame1 = new DefaultHttp2DataFrame(bb("1").send()).stream(childChannel.stream());
-        Http2DataFrame dataFrame2 = new DefaultHttp2DataFrame(bb("2").send()).stream(childChannel.stream());
-        Http2DataFrame dataFrame3 = new DefaultHttp2DataFrame(bb("3").send()).stream(childChannel.stream());
-        Http2DataFrame dataFrame4 = new DefaultHttp2DataFrame(bb("4").send()).stream(childChannel.stream());
+        Http2DataFrame dataFrame1 = new DefaultHttp2DataFrame(bb("1")).stream(childChannel.stream());
+        Http2DataFrame dataFrame2 = new DefaultHttp2DataFrame(bb("2")).stream(childChannel.stream());
+        Http2DataFrame dataFrame3 = new DefaultHttp2DataFrame(bb("3")).stream(childChannel.stream());
+        Http2DataFrame dataFrame4 = new DefaultHttp2DataFrame(bb("4")).stream(childChannel.stream());
 
         assertEquals(new DefaultHttp2HeadersFrame(request).stream(childChannel.stream()), inboundHandler.readInbound());
 

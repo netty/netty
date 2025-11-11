@@ -120,7 +120,7 @@ public class ByteBufferCollectorTest {
 
         try (Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1", StandardCharsets.US_ASCII);
              buffer) {
-            var sends = Stream.generate(() -> buf.copy().send()).limit(65).collect(Collectors.toList());
+            var sends = Stream.generate(() -> buf.copy()).limit(65).collect(Collectors.toList());
             CompositeBuffer comp = BufferAllocator.offHeapUnpooled().compose(sends);
             buffer.add(comp);
             collector.prepare(Integer.MAX_VALUE, Long.MAX_VALUE);
@@ -151,7 +151,7 @@ public class ByteBufferCollectorTest {
         try (Buffer buf = BufferAllocator.offHeapUnpooled().copyOf("buf1", StandardCharsets.US_ASCII);
              buffer) {
             assertEquals(4, buf.readableBytes());
-            var sends = Stream.generate(() -> buf.copy().send()).limit(65).collect(Collectors.toList());
+            var sends = Stream.generate(() -> buf.copy()).limit(65).collect(Collectors.toList());
             CompositeBuffer comp = BufferAllocator.offHeapUnpooled().compose(sends);
 
             assertEquals(65, comp.countComponents());

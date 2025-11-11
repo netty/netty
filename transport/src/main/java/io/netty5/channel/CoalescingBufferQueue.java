@@ -67,9 +67,8 @@ public final class CoalescingBufferQueue extends AbstractCoalescingBufferQueue {
 
     @Override
     protected Buffer compose(BufferAllocator alloc, Buffer cumulation, Buffer next) {
-        if (cumulation instanceof CompositeBuffer) {
-            CompositeBuffer composite = (CompositeBuffer) cumulation;
-            composite.extendWith(next.send());
+        if (cumulation instanceof CompositeBuffer composite) {
+            composite.extendWith(next);
             return composite;
         }
         return composeIntoComposite(alloc, cumulation, next);

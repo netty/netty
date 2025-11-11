@@ -24,7 +24,6 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.handler.codec.DecoderResult;
 import io.netty5.handler.codec.MessageAggregator;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
-import io.netty5.util.Send;
 import io.netty5.util.concurrent.Future;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -228,7 +227,7 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
     protected void aggregate(BufferAllocator allocator, FullHttpMessage<?> aggregated,
                              HttpContent<C> content) throws Exception {
         final CompositeBuffer payload = (CompositeBuffer) aggregated.payload();
-        payload.extendWith(content.payload().send());
+        payload.extendWith(content.payload());
         if (content instanceof LastHttpContent) {
             // Merge trailing headers into the message.
             ((AggregatedFullHttpMessage<?>) aggregated).setTrailingHeaders(((LastHttpContent<?>) content)
@@ -390,14 +389,13 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
         }
 
         @Override
-        public Send<FullHttpRequest> send() {
-            return payload().send().map(FullHttpRequest.class,
-                    p -> new AggregatedFullHttpRequest(this, p, trailingHeaders()));
+        public AggregatedFullHttpRequest copy() {
+            return new AggregatedFullHttpRequest(this, payload().copy(), trailingHeaders().copy());
         }
 
         @Override
-        public AggregatedFullHttpRequest copy() {
-            return new AggregatedFullHttpRequest(this, payload().copy(), trailingHeaders().copy());
+        public FullHttpRequest moveAndClose() {
+            return new AggregatedFullHttpRequest(this, payload().moveAndClose(), trailingHeaders());
         }
 
         @Override
@@ -448,14 +446,13 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
         }
 
         @Override
-        public Send<FullHttpResponse> send() {
-            return payload().send().map(FullHttpResponse.class,
-                    p -> new AggregatedFullHttpResponse(this, p, trailingHeaders()));
+        public AggregatedFullHttpResponse copy() {
+            return new AggregatedFullHttpResponse(this, payload().copy(), trailingHeaders().copy());
         }
 
         @Override
-        public AggregatedFullHttpResponse copy() {
-            return new AggregatedFullHttpResponse(this, payload().copy(), trailingHeaders().copy());
+        public FullHttpResponse moveAndClose() {
+            return new AggregatedFullHttpResponse(this, payload().moveAndClose(), trailingHeaders());
         }
 
         @Override

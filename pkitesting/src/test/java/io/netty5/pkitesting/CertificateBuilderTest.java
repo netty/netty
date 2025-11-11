@@ -17,7 +17,6 @@ package io.netty5.pkitesting;
 
 import io.netty5.pkitesting.CertificateBuilder.Algorithm;
 import io.netty5.pkitesting.CertificateBuilder.KeyUsage;
-import io.netty5.util.internal.PlatformDependent;
 
 import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.junit.jupiter.api.Test;

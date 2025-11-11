@@ -17,7 +17,6 @@ package io.netty5.handler.codec.http;
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
 import io.netty5.handler.codec.http.headers.HttpHeaders;
-import io.netty5.util.Send;
 import io.netty5.handler.codec.DecoderResult;
 
 import java.util.Objects;
@@ -42,13 +41,13 @@ public final class EmptyLastHttpContent implements LastHttpContent<EmptyLastHttp
     }
 
     @Override
-    public Send<EmptyLastHttpContent> send() {
-        return Send.sending(EmptyLastHttpContent.class, () -> new EmptyLastHttpContent(allocator));
+    public void close() {
+        payload.close();
     }
 
     @Override
-    public void close() {
-        payload.close();
+    public EmptyLastHttpContent moveAndClose() {
+        return new EmptyLastHttpContent(allocator);
     }
 
     @Override

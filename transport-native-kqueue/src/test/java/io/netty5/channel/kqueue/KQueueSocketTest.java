@@ -19,7 +19,6 @@ import io.netty5.channel.socket.DomainSocketAddress;
 import io.netty5.channel.socket.SocketProtocolFamily;
 import io.netty5.channel.unix.PeerCredentials;
 import io.netty5.channel.unix.tests.SocketTest;
-import io.netty5.channel.unix.tests.UnixTestUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 

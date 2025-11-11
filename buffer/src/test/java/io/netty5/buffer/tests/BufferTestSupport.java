@@ -267,7 +267,7 @@ public abstract class BufferTestSupport {
                             int half = size / 2;
                             try (Buffer firstHalf = a.allocate(half);
                                  Buffer secondHalf = b.allocate(size - half)) {
-                                return a.compose(asList(firstHalf.send(), secondHalf.send()));
+                                return a.compose(asList(firstHalf, secondHalf));
                             }
                         }
 
@@ -306,7 +306,7 @@ public abstract class BufferTestSupport {
                     try (Buffer a = allocator.allocate(part);
                          Buffer b = allocator.allocate(part);
                          Buffer c = allocator.allocate(size - part * 2)) {
-                        return allocator.compose(asList(a.send(), b.send(), c.send()));
+                        return allocator.compose(asList(a, b, c));
                     }
                 }
 
@@ -533,12 +533,12 @@ public abstract class BufferTestSupport {
             assertThrows(BufferClosedException.class, () -> buf.copyInto(0, ByteBuffer.allocate(1), 0, 1));
             assertThrows(BufferClosedException.class, () -> buf.copyInto(0, ByteBuffer.allocate(1), 0, 0));
             if (CompositeBuffer.isComposite(buf)) {
-                assertThrows(BufferClosedException.class, () -> ((CompositeBuffer) buf).extendWith(target.send()));
+                assertThrows(BufferClosedException.class, () -> ((CompositeBuffer) buf).extendWith(target));
             }
         }
 
         assertThrows(BufferClosedException.class, () -> buf.split());
-        assertThrows(BufferClosedException.class, () -> buf.send());
+        assertThrows(BufferClosedException.class, () -> buf.moveAndClose());
         assertThrows(BufferClosedException.class, () -> acquire((ResourceSupport<?, ?>) buf));
         assertThrows(BufferClosedException.class, () -> buf.copy());
         assertThrows(BufferClosedException.class, () -> buf.openCursor());

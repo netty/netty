@@ -23,7 +23,7 @@ import io.netty5.handler.codec.TooLongFrameException;
 
 /**
  * Handler that aggregate fragmented WebSocketFrame's.
- *
+ * <p>
  * Be aware if PING/PONG/CLOSE frames are send in the middle of a fragmented {@link WebSocketFrame} they will
  * just get forwarded to the next handler in the pipeline.
  */
@@ -101,12 +101,12 @@ public class WebSocketFrameAggregator
     @Override
     protected WebSocketFrame beginAggregation(BufferAllocator allocator, WebSocketFrame start) {
         if (start instanceof TextWebSocketFrame) {
-            final CompositeBuffer content = allocator.compose(start.binaryData().send());
+            final CompositeBuffer content = allocator.compose(start.binaryData());
             return new TextWebSocketFrame(true, start.rsv(), content);
         }
 
         if (start instanceof BinaryWebSocketFrame) {
-            final CompositeBuffer content = allocator.compose(start.binaryData().send());
+            final CompositeBuffer content = allocator.compose(start.binaryData());
             return new BinaryWebSocketFrame(true, start.rsv(), content);
         }
 
@@ -118,7 +118,7 @@ public class WebSocketFrameAggregator
     protected void aggregate(BufferAllocator allocator, WebSocketFrame aggregated, ContinuationWebSocketFrame content)
             throws Exception {
         final CompositeBuffer payload = (CompositeBuffer) aggregated.binaryData();
-        payload.extendWith(content.binaryData().send());
+        payload.extendWith(content.binaryData());
     }
 
     private static boolean isStartMessage(Object msg) {

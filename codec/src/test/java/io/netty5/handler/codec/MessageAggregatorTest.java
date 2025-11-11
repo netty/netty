@@ -17,7 +17,6 @@ package io.netty5.handler.codec;
 
 import io.netty5.buffer.Buffer;
 import io.netty5.buffer.BufferAllocator;
-import io.netty5.buffer.BufferHolder;
 import io.netty5.buffer.BufferStub;
 import io.netty5.buffer.CompositeBuffer;
 import io.netty5.channel.ChannelHandler;
@@ -27,7 +26,6 @@ import io.netty5.channel.ChannelPipeline;
 import io.netty5.channel.ReadBufferAllocator;
 import io.netty5.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.nio.charset.StandardCharsets;
 
@@ -36,8 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.when;
 
 public class MessageAggregatorTest {
     private static final class ReadCounter implements ChannelHandler {
@@ -113,12 +109,12 @@ public class MessageAggregatorTest {
 
         @Override
         protected CompositeBuffer beginAggregation(BufferAllocator allocator, Buffer start) {
-            return allocator.compose(start.copy().send());
+            return allocator.compose(start.copy());
         }
 
         @Override
         protected void aggregate(BufferAllocator allocator, CompositeBuffer aggregated, Buffer content) {
-            aggregated.extendWith(content.copy().send());
+            aggregated.extendWith(content.copy());
         }
 
         @Override
@@ -151,8 +147,8 @@ public class MessageAggregatorTest {
             assertEquals(3, counter.value); // 2 reads issued from MockMessageAggregator
             // 1 read issued from EmbeddedChannel constructor
 
-            try (CompositeBuffer all = allocator.compose(asList(first.copy().send(), chunk.copy().send(),
-                    last.copy().send()));
+            try (CompositeBuffer all = allocator.compose(asList(first.copy(), chunk.copy(),
+                    last.copy()));
                  CompositeBuffer out = embedded.readInbound()) {
                 assertEquals(all, out);
                 assertTrue(all.isAccessible());
