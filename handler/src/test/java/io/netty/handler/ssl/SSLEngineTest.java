@@ -1383,9 +1383,9 @@ public abstract class SSLEngineTest {
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
             SSLSession session = serverEngine.getSession();
-            assertTrue(session.isValid(), () -> "session should be valid: " + session);
+            assertTrue(session.isValid(), "session should be valid: " + session);
             session.invalidate();
-            assertFalse(session.isValid(), () -> "session should be invalid: " + session);
+            assertFalse(session.isValid(), "session should be invalid: " + session);
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);
