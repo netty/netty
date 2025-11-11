@@ -58,7 +58,7 @@ public final class BufferInputStream extends InputStream implements DataInput {
      * @param buffer The buffer which provides the content for this {@link InputStream}.
      */
     public BufferInputStream(Buffer buffer) {
-        this.buffer = requireNonNull(buffer, "buffer").moveAndClose();
+        this.buffer = requireNonNull(buffer, "buffer").move();
         int readableBytes = this.buffer.readableBytes();
         startIndex = this.buffer.readerOffset();
         endIndex = startIndex + readableBytes;

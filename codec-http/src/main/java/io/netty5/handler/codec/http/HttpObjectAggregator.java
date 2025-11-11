@@ -394,8 +394,8 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
         }
 
         @Override
-        public FullHttpRequest moveAndClose() {
-            return new AggregatedFullHttpRequest(this, payload().moveAndClose(), trailingHeaders());
+        public FullHttpRequest move() {
+            return new AggregatedFullHttpRequest(this, payload().move(), trailingHeaders());
         }
 
         @Override
@@ -451,8 +451,8 @@ public class HttpObjectAggregator<C extends HttpContent<C>>
         }
 
         @Override
-        public FullHttpResponse moveAndClose() {
-            return new AggregatedFullHttpResponse(this, payload().moveAndClose(), trailingHeaders());
+        public FullHttpResponse move() {
+            return new AggregatedFullHttpResponse(this, payload().move(), trailingHeaders());
         }
 
         @Override

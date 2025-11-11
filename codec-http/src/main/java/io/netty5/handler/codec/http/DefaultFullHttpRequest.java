@@ -74,9 +74,9 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
     }
 
     @Override
-    public FullHttpRequest moveAndClose() {
+    public FullHttpRequest move() {
         return new DefaultFullHttpRequest(
-                protocolVersion(), method(), uri(), payload.moveAndClose(), headers(), trailingHeader);
+                protocolVersion(), method(), uri(), payload.move(), headers(), trailingHeader);
     }
 
     @Override

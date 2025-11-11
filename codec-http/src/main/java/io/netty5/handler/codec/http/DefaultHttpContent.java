@@ -51,8 +51,8 @@ public class DefaultHttpContent extends DefaultHttpObject implements HttpContent
     }
 
     @Override
-    public DefaultHttpContent moveAndClose() {
-        return new DefaultHttpContent(payload.moveAndClose());
+    public DefaultHttpContent move() {
+        return new DefaultHttpContent(payload.move());
     }
 
     @Override

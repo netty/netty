@@ -30,12 +30,12 @@ import java.nio.charset.Charset;
  *     <li>
  *         {@link BufferAllocator#compose(Iterable)} creates a composite buffer from the buffers that are passed to it.
  *         The resulting composite buffer will take ownership of the given buffers because it will call
- *         {@link Resource#moveAndClose()} on them.
+ *         {@link Resource#move()} on them.
  *     </li>
  *     <li>
  *         {@link BufferAllocator#compose(Buffer)} creates a composite buffer with a single component.
  *         The resulting composite buffer will take ownership of the given buffer because it will call
- *         {@link Resource#moveAndClose()} on it.
+ *         {@link Resource#move()} on it.
  *     </li>
  *     <li>
  *         {@link BufferAllocator#compose()} creates an empty, zero capacity, composite buffer. Such empty buffers may
@@ -97,7 +97,7 @@ import java.nio.charset.Charset;
  *
  * <h3>Ownership and Moving</h3>
  *
- * {@linkplain #moveAndClose() Moving} a composite buffer implies moving all of its constituent buffers.
+ * {@linkplain #move() Moving} a composite buffer implies moving all of its constituent buffers.
  * For moving to be possible, both the composite buffer itself, and all of its constituent buffers, must be in a
  * state that permits them being moved. This should be the case by default, as it shouldn't be possible to create
  * composite buffers that can't be moved.
@@ -267,7 +267,7 @@ public interface CompositeBuffer extends Buffer {
     CompositeBuffer copy(int offset, int length, boolean readOnly);
 
     @Override
-    CompositeBuffer moveAndClose();
+    CompositeBuffer move();
 
     @Override
     default CompositeBuffer split() {

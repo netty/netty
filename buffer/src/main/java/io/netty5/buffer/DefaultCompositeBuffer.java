@@ -129,7 +129,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
                 }
             } else {
                 try {
-                    bufs.add(buf.moveAndClose());
+                    bufs.add(buf.move());
                 } catch (RuntimeException e) {
                     // We catch RuntimeException instead of IllegalStateException to ensure cleanup always happens
                     // regardless of the exception thrown.
@@ -475,8 +475,8 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     }
 
     @Override
-    public CompositeBuffer moveAndClose() {
-        return (CompositeBuffer) super.moveAndClose();
+    public CompositeBuffer move() {
+        return (CompositeBuffer) super.move();
     }
 
     @Override
@@ -857,7 +857,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
 
     @Override
     public CompositeBuffer extendWith(Buffer extension) {
-        Buffer buffer = Objects.requireNonNull(extension, "Extension buffer cannot be null.").moveAndClose();
+        Buffer buffer = Objects.requireNonNull(extension, "Extension buffer cannot be null.").move();
         if (!isAccessible() || !isOwned()) {
             buffer.close();
             if (!isAccessible()) {
@@ -1339,7 +1339,7 @@ final class DefaultCompositeBuffer extends ResourceSupport<Buffer, DefaultCompos
     protected DefaultCompositeBuffer moveOwnership(Drop<DefaultCompositeBuffer> drop) {
         Buffer[] moved = new Buffer[bufs.length];
         for (int i = 0; i < bufs.length; i++) {
-            moved[i] = bufs[i].moveAndClose();
+            moved[i] = bufs[i].move();
         }
         var composite = new DefaultCompositeBuffer(allocator, moved, drop);
         composite.readOnly = readOnly;

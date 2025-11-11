@@ -90,8 +90,8 @@ public class DefaultFullHttpResponse extends DefaultHttpResponse implements Full
     }
 
     @Override
-    public FullHttpResponse moveAndClose() {
-        return new DefaultFullHttpResponse(protocolVersion(), status(), payload.moveAndClose(), headers(),
+    public FullHttpResponse move() {
+        return new DefaultFullHttpResponse(protocolVersion(), status(), payload.move(), headers(),
                 trailingHeaders);
     }
 

@@ -49,7 +49,7 @@ public abstract class WebSocketFrame extends BufferHolder<WebSocketFrame> {
     }
 
     /**
-     * This is a copy-constructor, used by sub-classes to implement {@link Resource#moveAndClose()}.
+     * This is a copy-constructor, used by sub-classes to implement {@link Resource#move()}.
      * The life cycle of the {@code binaryData} buffer is not manipulated by this constructor, but instead stored as-is.
      *
      * @param copyFrom The original frame instance to copy from.

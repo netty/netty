@@ -46,7 +46,7 @@ public class PongWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
-    public WebSocketFrame moveAndClose() {
+    public WebSocketFrame move() {
         return new PongWebSocketFrame(this, getBuffer());
     }
 }

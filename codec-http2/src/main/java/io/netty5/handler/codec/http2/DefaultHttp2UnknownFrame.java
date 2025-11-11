@@ -108,7 +108,7 @@ public final class DefaultHttp2UnknownFrame extends BufferHolder<Http2UnknownFra
     }
 
     @Override
-    public Http2UnknownFrame moveAndClose() {
+    public Http2UnknownFrame move() {
         return new DefaultHttp2UnknownFrame(frameType, flags, getBuffer()).stream(stream);
     }
 }

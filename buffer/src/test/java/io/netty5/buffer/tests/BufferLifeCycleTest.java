@@ -295,10 +295,10 @@ public class BufferLifeCycleTest extends BufferTestSupport {
             try (Buffer copy = buf.copy()) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
                 assertTrue(isOwned((ResourceSupport<?, ?>) copy));
-                copy.moveAndClose().close();
+                copy.move().close();
             }
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
-            buf.moveAndClose().close();
+            buf.move().close();
         }
     }
 
@@ -310,10 +310,10 @@ public class BufferLifeCycleTest extends BufferTestSupport {
             try (Buffer copy = buf.copy(0, 8)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
                 assertTrue(isOwned((ResourceSupport<?, ?>) copy));
-                copy.moveAndClose().close();
+                copy.move().close();
             }
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
-            buf.moveAndClose().close();
+            buf.move().close();
         }
     }
 
@@ -325,10 +325,10 @@ public class BufferLifeCycleTest extends BufferTestSupport {
             try (Buffer copy = buf.copy(true)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
                 assertTrue(isOwned((ResourceSupport<?, ?>) copy));
-                copy.moveAndClose().close();
+                copy.move().close();
             }
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
-            buf.moveAndClose().close();
+            buf.move().close();
         }
     }
 
@@ -340,10 +340,10 @@ public class BufferLifeCycleTest extends BufferTestSupport {
             try (Buffer copy = buf.copy(0, 8, true)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
                 assertTrue(isOwned((ResourceSupport<?, ?>) copy));
-                copy.moveAndClose().close();
+                copy.move().close();
             }
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
-            buf.moveAndClose().close();
+            buf.move().close();
         }
     }
 
@@ -355,10 +355,10 @@ public class BufferLifeCycleTest extends BufferTestSupport {
             try (Buffer copy = buf.copy(true)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
                 assertTrue(isOwned((ResourceSupport<?, ?>) copy));
-                copy.moveAndClose().close();
+                copy.move().close();
             }
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
-            buf.moveAndClose().close();
+            buf.move().close();
         }
     }
 
@@ -370,10 +370,10 @@ public class BufferLifeCycleTest extends BufferTestSupport {
             try (Buffer copy = buf.copy(0, 8, true)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
                 assertTrue(isOwned((ResourceSupport<?, ?>) copy));
-                copy.moveAndClose().close();
+                copy.move().close();
             }
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
-            buf.moveAndClose().close();
+            buf.move().close();
         }
     }
 
@@ -408,11 +408,11 @@ public class BufferLifeCycleTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(8)) {
             try (Buffer copy = buf.copy()) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
-                copy.moveAndClose().close();
+                copy.move().close();
             }
             // Verify that the copy is closed properly afterwards.
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
-            buf.moveAndClose().close();
+            buf.move().close();
         }
     }
 
@@ -423,7 +423,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(8)) {
             try (Buffer copy = buf.copy(0, 8)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
-                copy.moveAndClose().close();
+                copy.move().close();
             }
             // Verify that the copy is closed properly afterwards.
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
@@ -437,7 +437,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(8)) {
             try (Buffer copy = buf.copy(true)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
-                copy.moveAndClose().close();
+                copy.move().close();
             }
             // Verify that the copy is closed properly afterwards.
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
@@ -451,7 +451,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(8).makeReadOnly()) {
             try (Buffer copy = buf.copy(true)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
-                copy.moveAndClose().close();
+                copy.move().close();
             }
             // Verify that the copy is closed properly afterwards.
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
@@ -465,7 +465,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(8)) {
             try (Buffer copy = buf.copy(0, 8, true)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
-                copy.moveAndClose().close();
+                copy.move().close();
             }
             // Verify that the copy is closed properly afterwards.
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
@@ -479,7 +479,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(8).makeReadOnly()) {
             try (Buffer copy = buf.copy(0, 8, true)) {
                 assertTrue(isOwned((ResourceSupport<?, ?>) buf));
-                copy.moveAndClose().close();
+                copy.move().close();
             }
             // Verify that the copy is closed properly afterwards.
             assertTrue(isOwned((ResourceSupport<?, ?>) buf));
@@ -551,7 +551,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
                 buf.close();
                 assertFalse(buf.isAccessible());
                 assertTrue(isOwned((ResourceSupport<?, ?>) copy));
-                try (Buffer receive = copy.moveAndClose()) {
+                try (Buffer receive = copy.move()) {
                     assertTrue(isOwned((ResourceSupport<?, ?>) receive));
                     assertFalse(copy.isAccessible());
                 }
@@ -720,8 +720,8 @@ public class BufferLifeCycleTest extends BufferTestSupport {
              Buffer buf = allocator.allocate(16)) {
             buf.writeLong(0x0102030405060708L);
             assertThat(buf.readByte()).isEqualTo((byte) 0x01);
-            try (Buffer sentSplit = buf.split().moveAndClose()) {
-                try (Buffer sentBuf = buf.moveAndClose()) {
+            try (Buffer sentSplit = buf.split().move()) {
+                try (Buffer sentBuf = buf.move()) {
                     assertThat(sentBuf.capacity()).isEqualTo(8);
                     assertThat(sentBuf.readerOffset()).isZero();
                     assertThat(sentBuf.writerOffset()).isZero();
@@ -848,7 +848,7 @@ public class BufferLifeCycleTest extends BufferTestSupport {
             buf.writeInt(42);
             var split = buf.split();
             var fut = executor.submit(() -> {
-                try (Buffer receive = split.moveAndClose()) {
+                try (Buffer receive = split.move()) {
                     assertEquals(42, receive.readInt());
                     receive.readerOffset(0).writerOffset(0).writeInt(24);
                     assertEquals(24, receive.readInt());

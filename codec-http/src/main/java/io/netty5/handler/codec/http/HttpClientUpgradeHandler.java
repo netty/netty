@@ -203,7 +203,7 @@ public class HttpClientUpgradeHandler<C extends HttpContent<C>> extends HttpObje
 
             // Upgrade to the new protocol.
             sourceCodec.prepareUpgradeFrom(ctx);
-            upgradeCodec.upgradeTo(ctx, response.moveAndClose());
+            upgradeCodec.upgradeTo(ctx, response.move());
 
             // Let's set currentUpgradeEvent to UPGRADE_SUCCESSFUL as we will notify the pipeline about the successful
             // upgrade now, which might results in a write that needs to be passed through.

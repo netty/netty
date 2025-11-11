@@ -46,7 +46,7 @@ public class PingWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
-    public WebSocketFrame moveAndClose() {
+    public WebSocketFrame move() {
         return new PingWebSocketFrame(this, getBuffer());
     }
 }

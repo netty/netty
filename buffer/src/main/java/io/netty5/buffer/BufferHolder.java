@@ -48,12 +48,12 @@ public abstract class BufferHolder<T extends Resource<T>> implements Resource<T>
     /**
      * Create a new {@link BufferHolder} to hold the given {@linkplain Buffer buffer}.
      * <p>
-     * The given buffer is {@linkplain Resource#moveAndClose() moved} into the holder.
+     * The given buffer is {@linkplain Resource#move() moved} into the holder.
      *
      * @param buf The {@linkplain Buffer buffer} to be held by this holder.
      */
     protected BufferHolder(Buffer buf) {
-        this.buf = Objects.requireNonNull(buf, "The buffer cannot be null.").moveAndClose();
+        this.buf = Objects.requireNonNull(buf, "The buffer cannot be null.").move();
     }
 
     @Override
@@ -74,7 +74,7 @@ public abstract class BufferHolder<T extends Resource<T>> implements Resource<T>
      * @param buffer The new {@link Buffer} instance that is replacing the currently held buffer.
      */
     protected final void replaceBuffer(Buffer buffer) {
-        Buffer received = buffer.moveAndClose();
+        Buffer received = buffer.move();
         buf.close();
         buf = received;
     }
@@ -92,7 +92,7 @@ public abstract class BufferHolder<T extends Resource<T>> implements Resource<T>
      * @param buffer The new {@link Buffer} instance that is replacing the currently held buffer.
      */
     protected final void replaceBufferVolatile(Buffer buffer) {
-        var prev = (Buffer) BUF.getAndSet(this, buffer.moveAndClose());
+        var prev = (Buffer) BUF.getAndSet(this, buffer.move());
         prev.close();
     }
 

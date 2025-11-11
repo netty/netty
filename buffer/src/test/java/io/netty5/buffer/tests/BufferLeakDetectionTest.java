@@ -119,10 +119,10 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void bufferMustNotLeakWhenClosedAfterMoveAndClose(Fixture fixture, TestInfo testInfo) throws Exception {
+    public void bufferMustNotLeakWhenClosedAfterMove(Fixture fixture, TestInfo testInfo) throws Exception {
         Object hint = makeHint(testInfo);
         Consumer<Buffer> sendThenClose = buffer -> {
-            buffer.moveAndClose().close();
+            buffer.move().close();
         };
         AtomicInteger counter = new AtomicInteger();
         Semaphore gcEvents = new Semaphore(0);
@@ -142,12 +142,12 @@ public class BufferLeakDetectionTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void bufferLeakMustBeDetectedWhenNotClosedAfterMoveAndClose(Fixture fixture, TestInfo testInfo)
+    public void bufferLeakMustBeDetectedWhenNotClosedAfterMove(Fixture fixture, TestInfo testInfo)
             throws Exception {
         Object leakingHint = makeHint(testInfo);
         Object nonLeakingHint = new String(leakingHint + " (non-leaking hint)");
         Consumer<Buffer> sendThenLeakBuffer = buffer -> {
-            buffer.moveAndClose().touch(leakingHint); // Buffer is moved, but then leaks.
+            buffer.move().touch(leakingHint); // Buffer is moved, but then leaks.
         };
         LinkedBlockingQueue<LeakInfo> leakQueue = new LinkedBlockingQueue<>();
         AtomicReference<LeakInfo> nonLeakAsserts = new AtomicReference<>();

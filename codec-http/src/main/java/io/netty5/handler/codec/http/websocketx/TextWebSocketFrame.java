@@ -89,7 +89,7 @@ public class TextWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
-    public WebSocketFrame moveAndClose() {
+    public WebSocketFrame move() {
         return new TextWebSocketFrame(this, getBuffer());
     }
 }

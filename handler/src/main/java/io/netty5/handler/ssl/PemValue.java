@@ -49,7 +49,7 @@ class PemValue extends BufferHolder<PemValue> implements PemEncoded {
     }
 
     @Override
-    public PemValue moveAndClose() {
+    public PemValue move() {
         return new PemValue(getBuffer());
     }
 }

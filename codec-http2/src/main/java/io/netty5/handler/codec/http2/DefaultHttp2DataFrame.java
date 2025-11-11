@@ -77,7 +77,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
      *                256 (inclusive).
      */
     public DefaultHttp2DataFrame(Buffer content, boolean endStream, int padding) {
-        this.content = requireNonNull(content, "content").moveAndClose();
+        this.content = requireNonNull(content, "content").move();
         this.endStream = endStream;
         verifyPadding(padding);
         this.padding = padding;
@@ -138,7 +138,7 @@ public final class DefaultHttp2DataFrame extends AbstractHttp2StreamFrame implem
     }
 
     @Override
-    public Http2DataFrame moveAndClose() {
+    public Http2DataFrame move() {
         return new DefaultHttp2DataFrame(content, endStream, padding);
     }
 

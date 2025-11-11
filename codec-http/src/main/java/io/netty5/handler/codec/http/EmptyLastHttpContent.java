@@ -46,7 +46,7 @@ public final class EmptyLastHttpContent implements LastHttpContent<EmptyLastHttp
     }
 
     @Override
-    public EmptyLastHttpContent moveAndClose() {
+    public EmptyLastHttpContent move() {
         return new EmptyLastHttpContent(allocator);
     }
 

@@ -838,8 +838,8 @@ public class HttpContentCompressorTest {
         }
 
         @Override
-        public AssembledHttpResponse moveAndClose() {
-            return new AssembledHttpResponse(protocolVersion(), status(), headers(), payload.moveAndClose());
+        public AssembledHttpResponse move() {
+            return new AssembledHttpResponse(protocolVersion(), status(), headers(), payload.move());
         }
 
         @Override

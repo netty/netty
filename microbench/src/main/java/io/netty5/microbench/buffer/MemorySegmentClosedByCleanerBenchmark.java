@@ -133,22 +133,22 @@ public class MemorySegmentClosedByCleanerBenchmark {
         var tlr = ThreadLocalRandom.current();
         if (isHeavy) {
             return completedFuture(buffer).thenApplyAsync(send -> {
-                try (Buffer buf = send.moveAndClose()) {
+                try (Buffer buf = send.move()) {
                     while (buf.writableBytes() > 0) {
                         buf.writeByte((byte) tlr.nextInt());
                     }
-                    return buf.moveAndClose();
+                    return buf.move();
                 }
             }).thenApplyAsync(send -> {
-                try (Buffer buf = send.moveAndClose()) {
+                try (Buffer buf = send.move()) {
                     byte b = 0;
                     while (buf.readableBytes() > 0) {
                         b += buf.readByte();
                     }
                     buf.fill(b);
-                    return buf.moveAndClose();
+                    return buf.move();
                 }
-            }).get().moveAndClose();
+            }).get().move();
         } else {
             while (buffer.writableBytes() > 0) {
                 buffer.writeByte((byte) tlr.nextInt());

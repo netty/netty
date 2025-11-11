@@ -120,7 +120,7 @@ public final class DefaultHttp2GoAwayFrame extends BufferHolder<Http2GoAwayFrame
     }
 
     @Override
-    public Http2GoAwayFrame moveAndClose() {
+    public Http2GoAwayFrame move() {
         return new DefaultHttp2GoAwayFrame(lastStreamId, errorCode, getBuffer());
     }
 

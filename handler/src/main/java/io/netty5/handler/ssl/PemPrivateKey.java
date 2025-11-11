@@ -159,7 +159,7 @@ public final class PemPrivateKey extends BufferHolder<PemPrivateKey> implements 
     }
 
     @Override
-    public PemPrivateKey moveAndClose() {
+    public PemPrivateKey move() {
         return new PemPrivateKey(getBuffer());
     }
 }

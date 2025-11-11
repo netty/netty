@@ -44,7 +44,7 @@ public final class BufferRef extends BufferHolder<BufferRef> {
      * @param buffer The new {@link Buffer} instance that is replacing the currently held buffer.
      */
     public void replace(Buffer buffer) {
-        replaceBufferVolatile(buffer.moveAndClose());
+        replaceBufferVolatile(buffer.move());
     }
 
     /**
@@ -57,7 +57,7 @@ public final class BufferRef extends BufferHolder<BufferRef> {
     }
 
     @Override
-    public BufferRef moveAndClose() {
+    public BufferRef move() {
         return new BufferRef(getBuffer());
     }
 }

@@ -63,7 +63,7 @@ final class CompressionTestUtils {
                 if (msg == null) {
                     break;
                 }
-                bufferList.add(msg.moveAndClose());
+                bufferList.add(msg.move());
             }
         }
         return allocator.compose(bufferList);

@@ -412,7 +412,7 @@ public abstract class BufferTestSupport {
 
                     @Override
                     public Buffer allocate(int size) {
-                        return allocator.allocate(size).moveAndClose();
+                        return allocator.allocate(size).move();
                     }
 
                     @Override
@@ -444,7 +444,7 @@ public abstract class BufferTestSupport {
                     public Buffer allocate(int size) {
                         var buf = allocator.compose();
                         buf.ensureWritable(size);
-                        return buf.moveAndClose();
+                        return buf.move();
                     }
 
                     @Override
@@ -538,7 +538,7 @@ public abstract class BufferTestSupport {
         }
 
         assertThrows(BufferClosedException.class, () -> buf.split());
-        assertThrows(BufferClosedException.class, () -> buf.moveAndClose());
+        assertThrows(BufferClosedException.class, () -> buf.move());
         assertThrows(BufferClosedException.class, () -> acquire((ResourceSupport<?, ?>) buf));
         assertThrows(BufferClosedException.class, () -> buf.copy());
         assertThrows(BufferClosedException.class, () -> buf.openCursor());

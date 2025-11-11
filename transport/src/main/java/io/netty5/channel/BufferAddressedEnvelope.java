@@ -38,8 +38,8 @@ public abstract class BufferAddressedEnvelope<A extends SocketAddress, T extends
     }
 
     @Override
-    public T moveAndClose() {
-        return replace(content().moveAndClose());
+    public T move() {
+        return replace(content().move());
     }
 
     /**

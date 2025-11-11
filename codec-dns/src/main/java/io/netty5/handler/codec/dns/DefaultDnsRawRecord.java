@@ -77,8 +77,8 @@ public class DefaultDnsRawRecord extends AbstractDnsRecord implements DnsRawReco
     }
 
     @Override
-    public DnsRawRecord moveAndClose() {
-        return new DefaultDnsRawRecord(name(), type(), dnsClass(), timeToLive(), content.moveAndClose());
+    public DnsRawRecord move() {
+        return new DefaultDnsRawRecord(name(), type(), dnsClass(), timeToLive(), content.move());
     }
 
     @Override

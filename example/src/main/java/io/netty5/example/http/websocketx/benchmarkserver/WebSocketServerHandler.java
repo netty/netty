@@ -116,7 +116,7 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
         // Check for closing frame
         try (frame) {
             if (frame instanceof CloseWebSocketFrame) {
-                handshaker.close(ctx, (CloseWebSocketFrame) frame.moveAndClose());
+                handshaker.close(ctx, (CloseWebSocketFrame) frame.move());
                 return;
             }
             if (frame instanceof PingWebSocketFrame) {
@@ -125,12 +125,12 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
             }
             if (frame instanceof TextWebSocketFrame) {
                 // Echo the frame
-                ctx.write(frame.moveAndClose());
+                ctx.write(frame.move());
                 return;
             }
             if (frame instanceof BinaryWebSocketFrame) {
                 // Echo the frame
-                ctx.write(frame.moveAndClose());
+                ctx.write(frame.move());
             }
         }
     }

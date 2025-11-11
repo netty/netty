@@ -105,7 +105,7 @@ public abstract class LifecycleTracer {
      * Attach a trace to both life-cycles, that the life-cycle of an underlying resource has moved from one trace to
      * another.
      * <p>
-     * Such events happen when {@link Buffer#moveAndClose()} is called on a buffer, and the life-cycle of its memory
+     * Such events happen when {@link Buffer#move()} is called on a buffer, and the life-cycle of its memory
      * moves to the returned instance, while the given instance is closed.
      * @param tracer The tracer for the life-cycle that the traced resources moved to.
      */

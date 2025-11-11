@@ -46,7 +46,7 @@ public class BinaryWebSocketFrame extends WebSocketFrame {
     }
 
     @Override
-    public WebSocketFrame moveAndClose() {
+    public WebSocketFrame move() {
         return new BinaryWebSocketFrame(this, getBuffer());
     }
 }

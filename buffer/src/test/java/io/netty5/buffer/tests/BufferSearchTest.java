@@ -34,7 +34,7 @@ public class BufferSearchTest extends BufferTestSupport {
             Buffer buffer = allocator.allocate(8);
             buffer.writeLong(0x0102030405060708L);
             assertThat(buffer.bytesBefore((byte) 0x03)).isEqualTo(2);
-            Buffer received = buffer.moveAndClose();
+            Buffer received = buffer.move();
             assertThrows(IllegalStateException.class, () -> buffer.bytesBefore((byte) 0));
             assertThat(received.bytesBefore((byte) 0x03)).isEqualTo(2);
             received.close();
@@ -50,7 +50,7 @@ public class BufferSearchTest extends BufferTestSupport {
             Buffer buffer = allocator.allocate(8);
             buffer.writeLong(0x0102030405060708L);
             assertThat(buffer.bytesBefore(needle)).isEqualTo(2);
-            Buffer received = buffer.moveAndClose();
+            Buffer received = buffer.move();
             assertThrows(IllegalStateException.class, () -> buffer.bytesBefore((byte) 0));
             assertThat(received.bytesBefore(needle)).isEqualTo(2);
             received.close();

@@ -37,7 +37,7 @@ public interface Resource<T extends Resource<T>> extends AutoCloseable {
      * preventing access to the resource through any references to this instance.
      * @return A new resource instance.
      */
-    T moveAndClose();
+    T move();
 
     /**
      * Check if this object is accessible.

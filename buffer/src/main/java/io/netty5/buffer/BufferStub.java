@@ -231,8 +231,8 @@ public class BufferStub implements Buffer {
     }
 
     @Override
-    public Buffer moveAndClose() {
-        return new BufferStub(delegate.moveAndClose());
+    public Buffer move() {
+        return new BufferStub(delegate.move());
     }
 
     @Override

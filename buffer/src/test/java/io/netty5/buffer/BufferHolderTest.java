@@ -53,7 +53,7 @@ class BufferHolderTest {
         }
 
         @Override
-        public Example moveAndClose() {
+        public Example move() {
             return new DefaultExample(getBuffer());
         }
     }
@@ -67,13 +67,13 @@ class BufferHolderTest {
         BufferRef2 other = new BufferRef2(onHeapUnpooled().allocate(0));
         BufferHolder<?> constant1 = new BufferHolder(onHeapUnpooled().allocate(0)) {
             @Override
-            public BufferHolder<?> moveAndClose() {
+            public BufferHolder<?> move() {
                 return null;
             }
         };
         BufferHolder<?> constant2 = new BufferHolder(onHeapUnpooled().allocate(0)) {
             @Override
-            public Resource moveAndClose() {
+            public Resource move() {
                 return null;
             }
         };
@@ -98,7 +98,7 @@ class BufferHolderTest {
         }
 
         @Override
-        public BufferRef2 moveAndClose() {
+        public BufferRef2 move() {
             return new BufferRef2(getBuffer());
         }
     }

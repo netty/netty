@@ -164,7 +164,7 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
      * No input validation is performed to validate it.
      */
     public static PemX509Certificate valueOf(Buffer key) {
-        return new PemX509Certificate(key.moveAndClose());
+        return new PemX509Certificate(key.move());
     }
 
     private final Buffer content;
@@ -189,8 +189,8 @@ public final class PemX509Certificate extends X509Certificate implements PemEnco
     }
 
     @Override
-    public PemX509Certificate moveAndClose() {
-        return new PemX509Certificate(content.moveAndClose());
+    public PemX509Certificate move() {
+        return new PemX509Certificate(content.move());
     }
 
     @Override

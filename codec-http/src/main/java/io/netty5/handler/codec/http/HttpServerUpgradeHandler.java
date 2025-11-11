@@ -136,8 +136,8 @@ public class HttpServerUpgradeHandler<C extends HttpContent<C>> extends HttpObje
         }
 
         @Override
-        public UpgradeEvent moveAndClose() {
-            return new UpgradeEvent(protocol, upgradeRequest.moveAndClose());
+        public UpgradeEvent move() {
+            return new UpgradeEvent(protocol, upgradeRequest.move());
         }
 
         @Override

@@ -79,7 +79,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buf = allocator.allocate(8)) {
             buf.makeReadOnly();
-            try (Buffer receive = buf.moveAndClose()) {
+            try (Buffer receive = buf.move()) {
                 assertTrue(receive.readOnly());
                 verifyWriteInaccessible(receive, BufferReadOnlyException.class);
             }
@@ -87,11 +87,11 @@ public class BufferReadOnlyTest extends BufferTestSupport {
     }
 
     @Test
-    public void readOnlyBufferMustRemainReadOnlyAfterMoveAndCloseForEmptyCompositeBuffer() {
+    public void readOnlyBufferMustRemainReadOnlyAfterMoveForEmptyCompositeBuffer() {
         try (BufferAllocator allocator = BufferAllocator.onHeapUnpooled();
              Buffer buf = allocator.compose()) {
             buf.makeReadOnly();
-            try (Buffer receive = buf.moveAndClose()) {
+            try (Buffer receive = buf.move()) {
                 assertTrue(receive.readOnly());
             }
         }
@@ -274,7 +274,7 @@ public class BufferReadOnlyTest extends BufferTestSupport {
         try (BufferAllocator allocator = fixture.createAllocator()) {
             Supplier<Buffer> supplier = allocator.constBufferSupplier(new byte[] {1, 2, 3, 4});
             try (Buffer buffer = supplier.get()) {
-                try (Buffer moved = buffer.moveAndClose()) {
+                try (Buffer moved = buffer.move()) {
                     assertEquals(0x01020304, moved.readInt());
                 }
             }

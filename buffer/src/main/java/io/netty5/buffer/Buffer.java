@@ -49,9 +49,9 @@ import static io.netty5.util.internal.ObjectUtil.checkPositiveOrZero;
  *
  * The buffer has a life cycle, where it is allocated, used, and deallocated.
  * When the buffer is initially allocated, a pairing {@link #close()} call will deallocate it.
- * If a buffer is {@linkplain #moveAndClose() moved} elsewhere, the {@linkplain #close() close} method on
+ * If a buffer is {@linkplain #move() moved} elsewhere, the {@linkplain #close() close} method on
  * the given instance will become a no-op.
- * The buffer can be thought of as a view onto memory, and calling {@link #moveAndClose()} on the buffer will
+ * The buffer can be thought of as a view onto memory, and calling {@link #move()} on the buffer will
  * effectively close that view, and recreate it in the returned instance.
  *
  * <h3>Thread-safety</h3>
@@ -251,7 +251,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * <p>
      * The default limit is the maximum buffer size.
      * <p>
-     * The limit is carried through {@link #moveAndClose()} calls, but the buffer instances returned from the various
+     * The limit is carried through {@link #move()} calls, but the buffer instances returned from the various
      * {@code split} and {@code copy} methods will have the default limit set.
      * <p>
      * The limit is not impacted by calls to {@code split} methods on this buffer. In other words, even though
@@ -846,7 +846,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * @return A new buffer instance with the same offsets, and the same underlying memory.
      */
     @Override
-    Buffer moveAndClose();
+    Buffer move();
 
     /**
      * Splits the buffer into two, at {@code length} number of bytes from the current
@@ -1117,7 +1117,7 @@ public interface Buffer extends Resource<Buffer>, BufferAccessor {
      * This means they can be accessed as long as the internal memory store remain unchanged. Methods that may cause
      * such changes are {@link #split(int)}, {@link #split()}, {@link #readSplit(int)}, {@link #writeSplit(int)},
      * {@link #compact()}, {@link #ensureWritable(int)}, {@link #ensureWritable(int, int, boolean)},
-     * and {@link #moveAndClose()}.
+     * and {@link #move()}.
      * <p>
      * The best way to ensure this doesn't cause any trouble, is to use the buffers directly as part of the iteration.
      * <p>

@@ -94,8 +94,8 @@ public class DefaultLastHttpContent extends DefaultHttpObject implements LastHtt
     }
 
     @Override
-    public DefaultLastHttpContent moveAndClose() {
-        return new DefaultLastHttpContent(payload.moveAndClose(), trailingHeaders);
+    public DefaultLastHttpContent move() {
+        return new DefaultLastHttpContent(payload.move(), trailingHeaders);
     }
 
     @Override

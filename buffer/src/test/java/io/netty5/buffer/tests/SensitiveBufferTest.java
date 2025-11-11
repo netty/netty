@@ -99,7 +99,7 @@ public class SensitiveBufferTest {
             }
             final Buffer moved;
             try (Buffer copy = buffer.copy(true)) {
-                moved = buffer.moveAndClose();
+                moved = buffer.move();
                 copy.readSplit(2).close();
             }
             assertEquals(0, stubManager.getBytesCleared());

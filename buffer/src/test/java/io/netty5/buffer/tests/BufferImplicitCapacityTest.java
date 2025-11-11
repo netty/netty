@@ -124,11 +124,11 @@ public class BufferImplicitCapacityTest extends BufferTestSupport {
 
     @ParameterizedTest
     @MethodSource("allocators")
-    public void moveAndCloseMustPreserveImplicitCapacityLimit(Fixture fixture) {
+    public void moveMustPreserveImplicitCapacityLimit(Fixture fixture) {
         try (BufferAllocator allocator = fixture.createAllocator();
              Buffer buffer = allocator.allocate(8)) {
             buffer.writeLong(0x0102030405060708L);
-            try (Buffer sent = buffer.implicitCapacityLimit(8).moveAndClose()) {
+            try (Buffer sent = buffer.implicitCapacityLimit(8).move()) {
                 assertThrows(IndexOutOfBoundsException.class, () -> sent.writeByte((byte) 0));
                 assertEquals(0x0102030405060708L, sent.readLong());
             }

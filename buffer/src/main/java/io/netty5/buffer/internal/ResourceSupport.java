@@ -121,7 +121,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
 
     @Override
     @SuppressWarnings("unchecked")
-    public I moveAndClose() {
+    public I move() {
         if (acquires < 0) {
             throw attachTrace(createResourceClosedException());
         }
@@ -218,7 +218,7 @@ public abstract class ResourceSupport<I extends Resource<I>, T extends ResourceS
 
     /**
      * Perform an ownership transfer of this instance into the returned instance in a single step.
-     * This method is called from {@link #moveAndClose()}.
+     * This method is called from {@link #move()}.
      * The given drop will be the drop instance used for the new instance.
      * After this method returns, this instance will be moved to the closed state without calling the drop instance.
      * @param drop The drop instance to use in the new instance.
