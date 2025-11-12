@@ -25,6 +25,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
+import java.util.function.BiPredicate;
 
 import static io.netty.util.AsciiString.of;
 import static java.util.Arrays.asList;
@@ -827,5 +828,65 @@ public class DefaultHeadersTest {
         for (CharSequence crumb : cookiesToAdd) {
             headers.add("Cookie", crumb);
         }
+    }
+
+    @Test
+    public void testContainsAnyEquality() {
+        TestDefaultHeaders headers = newInstance();
+        headers.add(of("name"), of("value1"), of("value2"));
+
+        BiPredicate<CharSequence, CharSequence> equalsPredicate = Object::equals;
+
+        assertTrue(headers.containsAny(of("name"), of("value2"), equalsPredicate));
+        assertFalse(headers.containsAny(of("name"), of("value3"), equalsPredicate));
+        // Unknown name should return false
+        assertFalse(headers.containsAny(of("unknown"), of("value1"), equalsPredicate));
+    }
+
+    @Test
+    public void testContainsAnySubstringPredicate() {
+        TestDefaultHeaders headers = newInstance();
+        headers.add(of("h1"), of("prefix-value"));
+        headers.add(of("h1"), of("other"));
+
+        BiPredicate<CharSequence, CharSequence> containsPredicate = (stored, arg) ->
+                stored.toString().contains(arg);
+
+        assertTrue(headers.containsAny(of("h1"), of("value"), containsPredicate));
+        assertFalse(headers.containsAny(of("h1"), of("missing"), containsPredicate));
+    }
+
+    @Test
+    public void containsAnyHandlesHashCollisions() {
+        TestDefaultHeaders headers = new TestDefaultHeaders(new HashingStrategy<CharSequence>() {
+            @Override
+            public int hashCode(CharSequence obj) {
+                return 0; // force collisions
+            }
+
+            @Override
+            public boolean equals(CharSequence a, CharSequence b) {
+                return a.equals(b);
+            }
+        });
+
+        headers.add(of("name1"), of("value1"));
+        headers.add(of("name2"), of("value2"));
+
+        BiPredicate<CharSequence, CharSequence> eq = Object::equals;
+
+        assertTrue(headers.containsAny(of("name1"), of("value1"), eq));
+        assertTrue(headers.containsAny(of("name2"), of("value2"), eq));
+        assertFalse(headers.containsAny(of("name1"), of("no"), eq));
+    }
+
+    @Test
+    public void containsAnyShouldValidateArguments() {
+        final TestDefaultHeaders headers = newInstance();
+        headers.add(of("n"), of("v"));
+
+        assertThrows(NullPointerException.class, () -> headers.containsAny(null, of("v"), (stored, arg) -> false));
+
+        assertThrows(NullPointerException.class, () -> headers.containsAny(of("n"), of("v"), null));
     }
 }
