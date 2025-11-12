@@ -61,6 +61,6 @@ public interface Http2ConnectionEncoder extends Http2FrameWriter {
      * state checks on the connection/stream.
      */
     @Override
-    Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+    Future<Void> writeFrame(ChannelHandlerContext ctx, short frameType, int streamId,
                             Http2Flags flags, Buffer payload);
 }

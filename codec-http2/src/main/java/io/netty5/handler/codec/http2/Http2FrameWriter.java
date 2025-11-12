@@ -197,7 +197,7 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param payload the payload to write for this frame. This will be released by this method.
      * @return the future for the write.
      */
-    Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+    Future<Void> writeFrame(ChannelHandlerContext ctx, short frameType, int streamId,
             Http2Flags flags, Buffer payload);
 
     /**

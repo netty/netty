@@ -152,7 +152,7 @@ public class Http2FrameLogger {
         }
     }
 
-    public void logUnknownFrame(Direction direction, ChannelHandlerContext ctx, byte frameType, int streamId,
+    public void logUnknownFrame(Direction direction, ChannelHandlerContext ctx, short frameType, int streamId,
             Http2Flags flags, Buffer data) {
         if (isEnabled()) {
             logger.atLevel(level).log("{} {} UNKNOWN: frameType={} streamId={} flags={} length={} bytes={}",

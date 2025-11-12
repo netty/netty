@@ -580,7 +580,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
 
         @Override
         public void onUnknownFrame(
-                ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags, Buffer payload) {
+                ChannelHandlerContext ctx, short frameType, int streamId, Http2Flags flags, Buffer payload) {
             if (streamId == 0) {
                 // Ignore unknown frames on connection stream, for example: HTTP/2 GREASE testing
                 return;
@@ -712,7 +712,7 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
     /**
      * Create a Http2UnknownFrame. The ownership of the {@link Buffer} is transferred.
      * */
-    protected Http2StreamFrame newHttp2UnknownFrame(byte frameType, int streamId, Http2Flags flags, Buffer payload) {
+    protected Http2StreamFrame newHttp2UnknownFrame(short frameType, int streamId, Http2Flags flags, Buffer payload) {
         return new DefaultHttp2UnknownFrame(frameType, flags, payload);
     }
 

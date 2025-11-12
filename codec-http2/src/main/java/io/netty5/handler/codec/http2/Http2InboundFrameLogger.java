@@ -129,7 +129,7 @@ public class Http2InboundFrameLogger implements Http2FrameReader {
             }
 
             @Override
-            public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+            public void onUnknownFrame(ChannelHandlerContext ctx, short frameType, int streamId,
                                        Http2Flags flags, Buffer payload) throws Http2Exception {
                 logger.logUnknownFrame(INBOUND, ctx, frameType, streamId, flags, payload);
                 listener.onUnknownFrame(ctx, frameType, streamId, flags, payload);

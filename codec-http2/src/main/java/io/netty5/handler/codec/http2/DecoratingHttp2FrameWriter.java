@@ -96,7 +96,7 @@ public class DecoratingHttp2FrameWriter implements Http2FrameWriter {
     }
 
     @Override
-    public Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+    public Future<Void> writeFrame(ChannelHandlerContext ctx, short frameType, int streamId, Http2Flags flags,
                                    Buffer payload) {
         return delegate.writeFrame(ctx, frameType, streamId, flags, payload);
     }
