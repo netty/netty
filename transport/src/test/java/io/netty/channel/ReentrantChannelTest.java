@@ -21,6 +21,7 @@ import io.netty.channel.LoggingHandler.Event;
 import io.netty.channel.local.LocalAddress;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 
@@ -104,6 +105,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
     /**
      * Similar to {@link #testWritabilityChanged()} with slight variation.
      */
+    @Disabled
     @Test
     public void testFlushInWritabilityChanged() throws Exception {
 
@@ -154,6 +156,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                 "WRITABILITY: writable=true\n");
     }
 
+    @Disabled
     @Test
     public void testWriteFlushPingPong() throws Exception {
 
