@@ -27,15 +27,17 @@ import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
+import java.util.ArrayDeque;
 import java.util.List;
+import java.util.Queue;
 
+import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
-import static java.lang.Integer.MAX_VALUE;
 
 /**
- * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to an
- * other Message type.
- *
+ * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to
+ * another Message type.
+ * <p>
  * For example here is an implementation which reads all readable bytes from
  * the input {@link ByteBuf} and create a new {@link ByteBuf}.
  *
@@ -66,7 +68,7 @@ import static java.lang.Integer.MAX_VALUE;
  * is not always the case. Use <tt>in.getInt(in.readerIndex())</tt> instead.
  * <h3>Pitfalls</h3>
  * <p>
- * Be aware that sub-classes of {@link ByteToMessageDecoder} <strong>MUST NOT</strong>
+ * Be aware that subclasses of {@link ByteToMessageDecoder} <strong>MUST NOT</strong>
  * annotated with {@link @Sharable}.
  * <p>
  * Some methods such as {@link ByteBuf#readBytes(int)} will cause a memory leak if the returned buffer
@@ -162,6 +164,8 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private static final byte STATE_CALLING_CHILD_DECODE = 1;
     private static final byte STATE_HANDLER_REMOVED_PENDING = 2;
 
+    // Used to guard the inputs for reentrant channelRead calls
+    private Queue<Object> inputMessages;
     ByteBuf cumulation;
     private Cumulator cumulator = MERGE_CUMULATOR;
     private boolean singleDecode;
@@ -279,49 +283,60 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     protected void handlerRemoved0(ChannelHandlerContext ctx) throws Exception { }
 
     @Override
-    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-        if (msg instanceof ByteBuf) {
-            selfFiredChannelRead = true;
-            CodecOutputList out = CodecOutputList.newInstance();
-            try {
-                first = cumulation == null;
-                cumulation = cumulator.cumulate(ctx.alloc(),
-                        first ? Unpooled.EMPTY_BUFFER : cumulation, (ByteBuf) msg);
-                callDecode(ctx, cumulation, out);
-            } catch (DecoderException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new DecoderException(e);
-            } finally {
-                try {
-                    if (cumulation != null && !cumulation.isReadable()) {
-                        numReads = 0;
+    public void channelRead(ChannelHandlerContext ctx, Object input) throws Exception {
+        if (decodeState == STATE_INIT) {
+            do {
+                if (input instanceof ByteBuf) {
+                    selfFiredChannelRead = true;
+                    CodecOutputList out = CodecOutputList.newInstance();
+                    try {
+                        first = cumulation == null;
+                        cumulation = cumulator.cumulate(ctx.alloc(),
+                                first ? EMPTY_BUFFER : cumulation, (ByteBuf) input);
+                        callDecode(ctx, cumulation, out);
+                    } catch (DecoderException e) {
+                        throw e;
+                    } catch (Exception e) {
+                        throw new DecoderException(e);
+                    } finally {
                         try {
-                            cumulation.release();
-                        } catch (IllegalReferenceCountException e) {
-                            //noinspection ThrowFromFinallyBlock
-                            throw new IllegalReferenceCountException(
-                                    getClass().getSimpleName() + "#decode() might have released its input buffer, " +
-                                            "or passed it down the pipeline without a retain() call, " +
-                                            "which is not allowed.", e);
-                        }
-                        cumulation = null;
-                    } else if (++numReads >= discardAfterReads) {
-                        // We did enough reads already try to discard some bytes, so we not risk to see a OOME.
-                        // See https://github.com/netty/netty/issues/4275
-                        numReads = 0;
-                        discardSomeReadBytes();
-                    }
+                            if (cumulation != null && !cumulation.isReadable()) {
+                                numReads = 0;
+                                try {
+                                    cumulation.release();
+                                } catch (IllegalReferenceCountException e) {
+                                    //noinspection ThrowFromFinallyBlock
+                                    throw new IllegalReferenceCountException(
+                                            getClass().getSimpleName() +
+                                                    "#decode() might have released its input buffer, " +
+                                                    "or passed it down the pipeline without a retain() call, " +
+                                                    "which is not allowed.", e);
+                                }
+                                cumulation = null;
+                            } else if (++numReads >= discardAfterReads) {
+                                // We did enough reads already try to discard some bytes, so we not risk to see a OOME.
+                                // See https://github.com/netty/netty/issues/4275
+                                numReads = 0;
+                                discardSomeReadBytes();
+                            }
 
-                    int size = out.size();
-                    firedChannelRead |= out.insertSinceRecycled();
-                    fireChannelRead(ctx, out, size);
-                } finally {
-                    out.recycle();
+                            int size = out.size();
+                            firedChannelRead |= out.insertSinceRecycled();
+                            fireChannelRead(ctx, out, size);
+                        } finally {
+                            out.recycle();
+                        }
+                    }
+                } else {
+                    ctx.fireChannelRead(input);
                 }
-            }
+            } while (inputMessages != null && (input = inputMessages.poll()) != null);
         } else {
-            ctx.fireChannelRead(msg);
+            // Reentrant call. Bail out here and let original call process our message.
+            if (inputMessages == null) {
+                inputMessages = new ArrayDeque<>(2);
+            }
+            inputMessages.offer(input);
         }
     }
 
@@ -529,12 +544,14 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         try {
             decode(ctx, in, out);
         } finally {
-            boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
-            decodeState = STATE_INIT;
-            if (removePending) {
-                fireChannelRead(ctx, out, out.size());
-                out.clear();
-                handlerRemoved(ctx);
+            if (inputMessages == null || inputMessages.isEmpty()) {
+                boolean removePending = decodeState == STATE_HANDLER_REMOVED_PENDING;
+                decodeState = STATE_INIT;
+                if (removePending) {
+                    fireChannelRead(ctx, out, out.size());
+                    out.clear();
+                    handlerRemoved(ctx);
+                }
             }
         }
     }
@@ -558,7 +575,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
         int oldBytes = oldCumulation.readableBytes();
         int newBytes = in.readableBytes();
         int totalBytes = oldBytes + newBytes;
-        ByteBuf newCumulation = alloc.buffer(alloc.calculateNewCapacity(totalBytes, MAX_VALUE));
+        ByteBuf newCumulation = alloc.buffer(alloc.calculateNewCapacity(totalBytes, Integer.MAX_VALUE));
         ByteBuf toRelease = newCumulation;
         try {
             // This avoids redundant checks and stack depth compared to calling writeBytes(...)
