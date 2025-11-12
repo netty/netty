@@ -25,13 +25,20 @@ import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.CharsetUtil;
+import io.netty.util.ReferenceCountUtil;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadLocalRandom;
@@ -683,5 +690,110 @@ public class ByteToMessageDecoderTest {
         buffer.release(); // we are done with the buffer - release it from the pool
         assertEquals(0, buffer.refCnt(), "Buffer should be released");
         assertFalse(channel.finish());
+    }
+
+    @Test
+    void reentrantReadSafety() throws Exception {
+        LocalChannel channel = new LocalChannel();
+        EventLoopGroup eventLoopGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
+        try {
+            eventLoopGroup.register(channel).sync();
+            final BlockingQueue<Integer> messageQueue = new ArrayBlockingQueue<>(2);
+            channel.pipeline().addLast(new ByteToMessageDecoder() {
+                int reentrancy;
+
+                @Override
+                protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+                    reentrancy++;
+                    if (reentrancy == 1) {
+                        ByteBuf buf2 = channel.alloc().buffer();
+                        buf2.writeLong(42); // Adding 8 bytes.
+                        channel.pipeline().fireChannelRead(buf2); // Reentrant call back into ByteToMessageDecoder
+                        ctx.read();
+                    }
+                    int bytes = in.readableBytes();
+                    out.add(bytes);
+                    in.skipBytes(bytes);
+                }
+            }, new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                    messageQueue.add((Integer) msg);
+                }
+            });
+
+            ByteBuf buf1 = channel.alloc().buffer();
+            buf1.writeInt(42); // Adding 4 bytes.
+            channel.pipeline().fireChannelRead(buf1);
+            channel.pipeline().fireChannelReadComplete();
+            Integer first = messageQueue.take();
+            Integer second = messageQueue.take();
+            assertEquals(4, first);
+            assertEquals(8, second);
+            channel.close().sync();
+            assertTrue(messageQueue.isEmpty());
+        } finally {
+            eventLoopGroup.shutdownGracefully();
+        }
+    }
+
+    @Disabled
+    @Test
+    void reentrantReadThenRemoveSafety() throws Exception {
+        LocalChannel channel = new LocalChannel();
+        EventLoopGroup eventLoopGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
+        try {
+            eventLoopGroup.register(channel).sync();
+            final BlockingQueue<Object> messageQueue = new ArrayBlockingQueue<>(2);
+            channel.pipeline().addLast(new ByteToMessageDecoder() {
+                boolean removed;
+                int reentrancy;
+
+                @Override
+                protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+                    assertFalse(removed);
+                    reentrancy++;
+                    if (reentrancy == 1) {
+                        ByteBuf buf2 = channel.alloc().buffer();
+                        buf2.writeLong(42); // Adding 8 bytes.
+                        channel.pipeline().fireChannelRead(buf2); // Reentrant call back into ByteToMessageDecoder
+                        ByteBuf buf3 = channel.alloc().buffer();
+                        buf3.writeShort(42); // Adding 2 bytes.
+                        channel.pipeline().fireChannelRead(buf3); // Reentrant call back into ByteToMessageDecoder
+                        ctx.read();
+                    } else if (reentrancy == 2) {
+                        ctx.pipeline().remove(this);
+                    }
+                    int bytes = in.readableBytes();
+                    out.add(bytes);
+                    in.skipBytes(bytes);
+                }
+
+                @Override
+                protected void handlerRemoved0(ChannelHandlerContext ctx) {
+                    removed = true;
+                }
+            }, new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                    messageQueue.add(msg);
+                }
+            });
+            ByteBuf buf1 = channel.alloc().buffer();
+            buf1.writeInt(42); // Adding 4 bytes.
+            channel.pipeline().fireChannelRead(buf1);
+            channel.pipeline().fireChannelReadComplete();
+
+            Integer first = (Integer) messageQueue.take();
+            Integer second = (Integer) messageQueue.take();
+            assertEquals(4, first);
+            assertEquals(8, second);
+            Object third = messageQueue.take();
+            ReferenceCountUtil.release(third);
+            channel.close().sync();
+            assertTrue(messageQueue.isEmpty());
+        } finally {
+            eventLoopGroup.shutdownGracefully();
+        }
     }
 }

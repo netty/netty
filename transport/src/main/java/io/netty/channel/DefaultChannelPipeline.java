@@ -67,6 +67,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final ChannelFuture succeededFuture;
     private final VoidChannelPromise voidPromise;
     private final boolean touch = ResourceLeakDetector.isEnabled();
+    final boolean reentrancyGuardEnabled;
 
     private Map<EventExecutorGroup, EventExecutor> childExecutors;
     private volatile MessageSizeEstimator.Handle estimatorHandle;
@@ -89,7 +90,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private boolean registered;
 
     protected DefaultChannelPipeline(Channel channel) {
+        this(channel, true);
+    }
+
+    protected DefaultChannelPipeline(Channel channel, boolean reentrancyGuardEnabled) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
+        this.reentrancyGuardEnabled = reentrancyGuardEnabled;
         succeededFuture = new SucceededChannelFuture(channel, null);
         voidPromise = new VoidChannelPromise(channel, true);
 

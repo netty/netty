@@ -1340,7 +1340,9 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private final class EmbeddedChannelPipeline extends DefaultChannelPipeline {
         EmbeddedChannelPipeline(EmbeddedChannel channel) {
-            super(channel);
+            // Disable the reentrancyGuard as it will not work with EmbeddedChannel as everything runs in
+            // the calling thread and so its impossible to trampoline to break reentrancy.
+            super(channel, false);
         }
 
         @Override
