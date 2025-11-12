@@ -1607,7 +1607,7 @@ public abstract class HttpHeaders implements Iterable<Map.Entry<String, String>>
         return false;
     }
 
-    private static boolean containsCommaSeparatedTrimmed(CharSequence rawNext, CharSequence expected,
+    static boolean containsCommaSeparatedTrimmed(CharSequence rawNext, CharSequence expected,
                                                          boolean ignoreCase) {
         int begin = 0;
         int end;

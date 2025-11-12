@@ -22,6 +22,7 @@ import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.AsciiString;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
+import org.openjdk.jmh.annotations.CompilerControl;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
@@ -65,6 +66,7 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
     AsciiString[] httpNames;
     AsciiString[] http2Names;
     AsciiString[] httpValues;
+    AsciiString[] httpWrongValues;
 
     DefaultHttpHeaders httpHeaders;
     DefaultHttp2Headers http2Headers;
@@ -80,6 +82,7 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
         httpNames = new AsciiString[headers.size()];
         http2Names = new AsciiString[headers.size()];
         httpValues = new AsciiString[headers.size()];
+        httpWrongValues = new AsciiString[headers.size()];
         httpHeaders = new DefaultHttpHeaders(false);
         http2Headers = new DefaultHttp2Headers(false);
         int idx = 0;
@@ -91,6 +94,8 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
             httpNames[idx] = new AsciiString(httpName);
             http2Names[idx] = new AsciiString(http2Name);
             httpValues[idx] = new AsciiString(value);
+            // make it wrong by appending "wrong"
+            httpWrongValues[idx] = new AsciiString(value + "wrong");
             httpHeaders.add(httpNames[idx], httpValues[idx]);
             http2Headers.add(http2Names[idx], httpValues[idx]);
             idx++;
@@ -116,6 +121,31 @@ public class HeadersBenchmark extends AbstractMicrobenchmark {
         for (AsciiString name : httpNames) {
             bh.consume(httpHeaders.get(name));
         }
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public void httpContainsValueIgnoreCase(Blackhole bh) {
+        AsciiString[] names = httpNames;
+        AsciiString[] values = httpValues;
+        for (int i = 0; i < names.length; i++) {
+            bh.consume(containsValue(httpHeaders, names[i], values[i]));
+        }
+    }
+
+    @Benchmark
+    @BenchmarkMode(Mode.AverageTime)
+    public void httpContainsValueIgnoreCaseNonExisting(Blackhole bh) {
+        AsciiString[] names = httpNames;
+        AsciiString[] values = httpWrongValues;
+        for (int i = 0; i < names.length; i++) {
+            bh.consume(containsValue(httpHeaders, names[i], values[i]));
+        }
+    }
+
+    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+    private static boolean containsValue(DefaultHttpHeaders headers, AsciiString name, AsciiString value) {
+        return headers.containsValue(name, value, true);
     }
 
     @Benchmark

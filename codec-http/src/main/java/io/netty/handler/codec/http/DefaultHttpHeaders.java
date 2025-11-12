@@ -34,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.BiPredicate;
 
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
 import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
@@ -42,6 +43,13 @@ import static io.netty.util.AsciiString.CASE_SENSITIVE_HASHER;
  * Default implementation of {@link HttpHeaders}.
  */
 public class DefaultHttpHeaders extends HttpHeaders {
+    private static final BiPredicate<CharSequence, CharSequence> CASE_INSENSITIVE_CONTAINS =
+            (value, expected) ->
+                    HttpHeaders.containsCommaSeparatedTrimmed(value, expected, true);
+    private static final BiPredicate<CharSequence, CharSequence> CASE_SENSITIVE_CONTAINS =
+            (value, expected) ->
+                    HttpHeaders.containsCommaSeparatedTrimmed(value, expected, false);
+
     private final DefaultHeaders<CharSequence, CharSequence, ?> headers;
 
     /**
@@ -364,6 +372,11 @@ public class DefaultHttpHeaders extends HttpHeaders {
     @Override
     public Iterator<CharSequence> valueCharSequenceIterator(CharSequence name) {
         return headers.valueIterator(name);
+    }
+
+    @Override
+    public boolean containsValue(CharSequence name, CharSequence value, boolean ignoreCase) {
+        return headers.containsAny(name, value, ignoreCase ? CASE_INSENSITIVE_CONTAINS : CASE_SENSITIVE_CONTAINS);
     }
 
     @Override

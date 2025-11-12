@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Set;
+import java.util.function.BiPredicate;
 
 import static io.netty.util.HashingStrategy.JAVA_HASHER;
 import static io.netty.util.internal.MathUtil.findNextPositivePowerOfTwo;
@@ -145,6 +146,33 @@ public class DefaultHeaders<K, V, T extends Headers<K, V, T>> implements Headers
         entries = new HeaderEntry[findNextPositivePowerOfTwo(max(2, min(arraySizeHint, 128)))];
         hashMask = (byte) (entries.length - 1);
         head = new HeaderEntry<K, V>();
+    }
+
+    /**
+     * Returns {@code true} if there exists a header with the given {@code name} for which the
+     * supplied {@code valuePredicate} returns {@code true} when invoked with the stored header
+     * value as the first argument and {@code predicateArg} as the second argument.
+     * <p>
+     * Matching is performed by invoking {@code valuePredicate.test(storedValue, predicateArg)}
+     * on each stored header value for {@code name}.
+     *
+     * @param name           the header name to search for (must not be {@code null})
+     * @param predicateArg   argument passed as the second parameter to {@code valuePredicate} (may be {@code null})
+     * @param valuePredicate predicate used to test stored header values (must not be {@code null})
+     */
+    public boolean containsAny(K name, V predicateArg, BiPredicate<? super V, ? super V> valuePredicate) {
+        checkNotNull(name, "name");
+        checkNotNull(valuePredicate, "valuePredicate");
+        int h = hashingStrategy.hashCode(name);
+        int i = index(h);
+        HeaderEntry<K, V> e = entries[i];
+        while (e != null) {
+            if (e.hash == h && hashingStrategy.equals(name, e.key) && valuePredicate.test(e.value, predicateArg)) {
+                return true;
+            }
+            e = e.next;
+        }
+        return false;
     }
 
     @Override
