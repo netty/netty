@@ -114,6 +114,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                     Http2CodecUtil.SMALLEST_MAX_CONCURRENT_STREAMS);
 
     private boolean parentReadInProgress;
+    private int idCount;
 
     // Need to be volatile as accessed from within the Http2MultiplexHandlerStreamChannel in a multi-threaded fashion.
     private volatile ChannelHandlerContext ctx;
@@ -387,7 +388,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
     private final class Http2MultiplexHandlerStreamChannel extends AbstractHttp2StreamChannel {
 
         Http2MultiplexHandlerStreamChannel(DefaultHttp2FrameStream stream, ChannelHandler inboundHandler) {
-            super(stream, inboundHandler);
+            super(stream, ++idCount, inboundHandler);
         }
 
         @Override
