@@ -51,7 +51,7 @@ import java.nio.channels.UnresolvedAddressException;
 import static io.netty.channel.unix.Errors.ioResult;
 
 public final class IoUringDatagramChannel extends AbstractIoUringChannel implements DatagramChannel {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractByteBuf.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringDatagramChannel.class);
     private static final boolean IP_MULTICAST_ALL =
             SystemPropertyUtil.getBoolean("io.netty.transport.linux.ipMulticastAll", false);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
