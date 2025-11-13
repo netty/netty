@@ -74,7 +74,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     static {
         if (logger.isDebugEnabled()) {
-            logger.debug("-Dio.netty.transport.linux.ipMulticastAll: {}", IP_MULTICAST_ALL);
+            logger.debug("-Dio.netty.channel.epoll.ipMulticastAll: {}", IP_MULTICAST_ALL);
         }
     }
 
