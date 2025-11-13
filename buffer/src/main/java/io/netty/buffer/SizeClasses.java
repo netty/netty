@@ -107,7 +107,7 @@ final class SizeClasses implements SizeClassesMetric {
 
     private final int[] pageIdx2sizeTab;
 
-    // lookup table for sizeIdx <= smallMaxSizeIdx
+    // lookup table for sizeIdx < nSizes
     private final int[] sizeIdx2sizeTab;
 
     // lookup table used for size <= lookupMaxClass
