@@ -15,6 +15,7 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.socket.TunAddress;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.Socket;
@@ -28,7 +29,15 @@ import java.net.InetSocketAddress;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class LinuxSocketTest {
     @BeforeAll
@@ -92,6 +101,83 @@ public class LinuxSocketTest {
             Assertions.assertTrue(exception.getMessage().contains("too long"));
         } finally {
             socket.close();
+        }
+    }
+
+    @Test
+    public void testTunBind() throws IOException {
+        LinuxSocket tun = null;
+        try {
+            tun = LinuxSocket.newSocketTun();
+            tun.bindTun(new TunAddress(), false);
+            assertTrue(true);
+        } finally {
+            if (tun != null) {
+                tun.close();
+            }
+        }
+    }
+
+    @Test
+    public void testTunBindInvalidName() throws IOException {
+        LinuxSocket tun = null;
+        try {
+            tun = LinuxSocket.newSocketTun();
+            tun.bindTun(new TunAddress("tooLongTunDeviceName"), false);
+            fail();
+        } catch (Exception e) {
+            // expected
+        } finally {
+            if (tun != null) {
+                tun.close();
+            }
+        }
+    }
+
+    @Test
+    public void testTunAddress() throws IOException {
+        LinuxSocket tun = null;
+        try {
+            tun = LinuxSocket.newSocketTun();
+            final TunAddress address = tun.bindTun(new TunAddress(), false);
+            assertNotNull(address);
+            assertThat(address, is(instanceOf(TunAddress.class)));
+            assertNotNull(address.ifName());
+        } finally {
+            if (tun != null) {
+                tun.close();
+            }
+        }
+    }
+
+    @Test
+    public void testTunGetMtu() throws IOException {
+        LinuxSocket tun = null;
+        try {
+            tun = LinuxSocket.newSocketTun();
+            final TunAddress address = tun.bindTun(new TunAddress(), false);
+            final String name = address.ifName();
+            assertThat(LinuxSocket.getMtu(name), is(greaterThan(0)));
+        } finally {
+            if (tun != null) {
+                tun.close();
+            }
+        }
+    }
+
+    @Test
+    public void testTunSetMtu() throws IOException {
+        LinuxSocket tun = null;
+        try {
+            tun = LinuxSocket.newSocketTun();
+            final TunAddress address = tun.bindTun(new TunAddress(), false);
+            final String name = address.ifName();
+            LinuxSocket.setMtu(name, 1000);
+            assertEquals(1000, LinuxSocket.getMtu(name));
+        } finally {
+            if (tun != null) {
+                tun.close();
+            }
         }
     }
 }

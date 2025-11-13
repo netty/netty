@@ -52,6 +52,8 @@ EXAMPLE_MAP=(
   'socksproxy-server:io.netty.example.socksproxy.SocksServer'
   'memcache-binary-client:io.netty.example.memcache.binary.MemcacheClient'
   'stomp-client:io.netty.example.stomp.StompClient'
+  'tun-ping-device:io.netty.example.tun.TunPingDevice'
+  'tun-echo-device:io.netty.example.tun.TunEchoDevice'
   'uptime-client:io.netty.example.uptime.UptimeClient'
   'uptime-server:io.netty.example.uptime.UptimeServer'
   'sctpecho-client:io.netty.example.sctp.SctpEchoClient'
@@ -128,6 +130,17 @@ for E in "${NEEDS_NPN_MAP[@]}"; do
   fi
 done
 
+OS="$(uname)"
+if [[ "${OS}" == "Linux" ]]
+then
+  PROFILE="-P linux"
+elif [[ "${OS}" == "Darwin" ]]
+then
+  PROFILE="-P mac"
+else
+  PROFILE=""
+fi
+
 cd "`dirname "$0"`"/example
 echo "[INFO] Running: $EXAMPLE ($EXAMPLE_CLASS $EXAMPLE_ARGS)"
-exec mvn -q -nsu compile exec:exec -Dcheckstyle.skip=true -Dforbiddenapis.skip=true -Dforcenpn="$FORCE_NPN" -DargLine.example="$EXAMPLE_ARGS" -DexampleClass="$EXAMPLE_CLASS"
+exec mvn -q $PROFILE -nsu compile exec:exec -Dcheckstyle.skip=true -Dforbiddenapis.skip=true -Dforcenpn="$FORCE_NPN" -DargLine.example="$EXAMPLE_ARGS" -DexampleClass="$EXAMPLE_CLASS"

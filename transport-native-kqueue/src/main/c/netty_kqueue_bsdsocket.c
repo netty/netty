@@ -25,6 +25,13 @@
 #include <sys/ucred.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <sys/kern_control.h>
+#include <sys/sockio.h>
+#include <sys/sys_domain.h>
+#include <net/if.h>
+#include <net/if_utun.h>
 
 #include "netty_kqueue_bsdsocket.h"
 #include "netty_unix_errors.h"
@@ -136,6 +143,84 @@ static jint netty_kqueue_bsdsocket_connectx(JNIEnv* env, jclass clazz,
 #else
     return -ENOSYS;
 #endif
+}
+
+static jint netty_kqueue_bsdsocket_newSocketTunFd(JNIEnv* env, jclass clazz) {
+#ifdef SOCK_NONBLOCK
+    return socket(AF_SYSTEM, SOCK_DGRAM | SOCK_NONBLOCK, SYSPROTO_CONTROL);
+#else
+    int socketFd = socket(AF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
+    int flags;
+    // Don't initialize flags until we know the socket is good so errno is preserved.
+    if (socketFd < 0 ||
+        (flags = fcntl(socketFd, F_GETFL, 0)) < 0 ||
+         fcntl(socketFd, F_SETFL, flags | O_NONBLOCK) < 0) {
+      return -1;
+    }
+    return socketFd;
+#endif
+}
+
+static jint netty_kqueue_bsdsocket_bindTun(JNIEnv* env, jclass clazz, jint fd, jint number) {
+    // mark as tun device
+    struct ctl_info ctlInfo;
+    memset(&ctlInfo, 0, sizeof(ctlInfo));
+    if (strlcpy(ctlInfo.ctl_name, UTUN_CONTROL_NAME, sizeof(ctlInfo.ctl_name)) >= sizeof(ctlInfo.ctl_name)) {
+        netty_unix_errors_throwIOException(env, "UTUN_CONTROL_NAME too long");
+        return -1;
+    }
+    if (ioctl(fd, CTLIOCGINFO, &ctlInfo) == -1) {
+        netty_unix_errors_throwIOException(env, "ioctl() failed");
+        return -1;
+    }
+
+    // define address of socket
+    struct sockaddr_ctl address;
+    address.sc_id = ctlInfo.ctl_id;
+    address.sc_len = sizeof(address);
+    address.sc_family = AF_SYSTEM;
+    address.ss_sysaddr = AF_SYS_CONTROL;
+    address.sc_unit = number + 1; // 1 -> utun0, etc.
+    if (connect(fd, (struct sockaddr*) &address, sizeof(address)) == -1) {
+        netty_unix_errors_throwIOException(env, "connect() failed");
+        return -1;
+    }
+
+    return 0;
+}
+
+static jstring netty_kqueue_bsdsocket_localAddressTun(JNIEnv* env, jclass clazz, jint fd) {
+    char sockName[IFNAMSIZ];
+    int sockNameLen = IFNAMSIZ;
+    if (getsockopt(fd, SYSPROTO_CONTROL, UTUN_OPT_IFNAME, sockName, (uint32_t*) &sockNameLen) == -1) {
+        netty_unix_errors_throwIOException(env, "getsockopt() failed");
+        return NULL;
+    }
+
+    return (*env)->NewStringUTF(env, sockName);
+}
+
+static jint netty_kqueue_bsdsocket_getMtu(JNIEnv* env, jclass clazz, jint fd, jstring name) {
+    struct ifreq ifr;
+    const char* f_name = (*env)->GetStringUTFChars(env, name, 0);
+    strncpy(ifr.ifr_name, f_name, IFNAMSIZ);
+    (*env)->ReleaseStringUTFChars(env, name, f_name);
+
+    if (ioctl(fd, SIOCGIFMTU, &ifr) == -1) {
+        return -1;
+    }
+
+    return ifr.ifr_mtu;
+}
+
+static jint netty_kqueue_bsdsocket_setMtu(JNIEnv* env, jclass clazz, jint fd, jstring name, jint mtu) {
+     struct ifreq ifr;
+     const char* f_name = (*env)->GetStringUTFChars(env, name, 0);
+     strncpy(ifr.ifr_name, f_name, IFNAMSIZ);
+     (*env)->ReleaseStringUTFChars(env, name, f_name);
+     ifr.ifr_mtu = mtu;
+
+     return ioctl(fd, SIOCSIFMTU, &ifr);
 }
 
 static void netty_kqueue_bsdsocket_setAcceptFilter(JNIEnv* env, jclass clazz, jint fd, jstring afName, jstring afArg) {
@@ -275,7 +360,12 @@ static const JNINativeMethod fixed_method_table[] = {
   { "getTcpNoPush", "(I)I", (void *) netty_kqueue_bsdsocket_getTcpNoPush },
   { "getSndLowAt", "(I)I", (void *) netty_kqueue_bsdsocket_getSndLowAt },
   { "isTcpFastOpen", "(I)I", (void *) netty_kqueue_bsdsocket_isTcpFastOpen },
-  { "connectx", "(IIZ[BIIZ[BIIIJII)I", (void *) netty_kqueue_bsdsocket_connectx }
+  { "connectx", "(IIZ[BIIZ[BIIIJII)I", (void *) netty_kqueue_bsdsocket_connectx },
+  { "newSocketTunFd", "()I", (void *) netty_kqueue_bsdsocket_newSocketTunFd },
+  { "bindTun", "(II)I", (void *) netty_kqueue_bsdsocket_bindTun },
+  { "localAddressTun", "(I)Ljava/lang/String;", (void *) netty_kqueue_bsdsocket_localAddressTun },
+  { "getMtu", "(ILjava/lang/String;)I", (void *) netty_kqueue_bsdsocket_getMtu },
+  { "setMtu", "(ILjava/lang/String;I)I", (void *) netty_kqueue_bsdsocket_setMtu }
 };
 
 static const jint fixed_method_table_size = sizeof(fixed_method_table) / sizeof(fixed_method_table[0]);

@@ -22,12 +22,20 @@
 #define _GNU_SOURCE
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <netinet/in.h>
 #include <netinet/udp.h> // SOL_UDP
 #include <sys/sendfile.h>
 #include <linux/tcp.h> // TCP_NOTSENT_LOWAT is a linux specific define
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <linux/if_tun.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
 #include "netty_epoll_linuxsocket.h"
 #include "netty_epoll_vmsocket.h"
 #include "netty_unix_errors.h"
@@ -742,6 +750,68 @@ static void netty_epoll_linuxsocket_setUdpGro(JNIEnv* env, jclass clazz, jint fd
     netty_unix_socket_setOption(env, fd, SOL_UDP, UDP_GRO, &optval, sizeof(optval));
 }
 
+static jint netty_epoll_linuxsocket_openTunFd(JNIEnv* env) {
+    return open("/dev/net/tun", O_RDWR | O_NONBLOCK);
+}
+
+static jstring netty_epoll_linuxsocket_bindTun(JNIEnv* env, jclass clazz, jint fd, jstring name, jboolean multiqueue) {
+    // mark as tun device
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+    ifr.ifr_flags = IFF_TUN | IFF_NO_PI;
+    if (name != NULL) {
+        const char* f_name = (*env)->GetStringUTFChars(env, name, 0);
+        strncpy(ifr.ifr_name, f_name, IFNAMSIZ);
+        (*env)->ReleaseStringUTFChars(env, name, f_name);
+    }
+    if (multiqueue) {
+#if defined(IFF_MULTI_QUEUE)
+        ifr.ifr_flags |= IFF_MULTI_QUEUE;
+#else
+        // not available on CentOS 6
+        netty_unix_errors_throwIOException(env, "netty-transport-native-epoll was built on a platform that does not support IFF_MULTI_QUEUE");
+#endif
+    }
+
+    if (ioctl(fd, TUNSETIFF, &ifr) == -1) {
+        netty_unix_errors_throwIOException(env, "ioctl() failed");
+        return NULL;
+    }
+
+    return (*env)->NewStringUTF(env, ifr.ifr_name);
+}
+
+static jint netty_epoll_linuxsocket_getMtu(JNIEnv* env, jclass clazz, jstring name) {
+    struct ifreq ifr;
+    const char* f_name = (*env)->GetStringUTFChars(env, name, 0);
+    strncpy(ifr.ifr_name, f_name, IFNAMSIZ);
+    (*env)->ReleaseStringUTFChars(env, name, f_name);
+
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    int res = ioctl(sock, SIOCGIFMTU, &ifr);
+    close(sock);
+
+    if (res == -1) {
+        return -1;
+    }
+
+    return ifr.ifr_mtu;
+}
+
+static jint netty_epoll_linuxsocket_setMtu(JNIEnv* env, jclass clazz, jstring name, jint mtu) {
+    struct ifreq ifr;
+    const char* f_name = (*env)->GetStringUTFChars(env, name, 0);
+    strncpy(ifr.ifr_name, f_name, IFNAMSIZ);
+    (*env)->ReleaseStringUTFChars(env, name, f_name);
+    ifr.ifr_mtu = mtu;
+
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    int res = ioctl(sock, SIOCSIFMTU, &ifr);
+    close(sock);
+
+    return res;
+}
+
 
 static jlong netty_epoll_linuxsocket_sendFile(JNIEnv* env, jclass clazz, jint fd, jobject fileRegion, jlong base_off, jlong off, jlong len) {
     jobject fileChannel = (*env)->GetObjectField(env, fileRegion, fileChannelFieldId);
@@ -825,7 +895,11 @@ static const JNINativeMethod fixed_method_table[] = {
   { "leaveGroup", "(IZ[B[BII)V", (void *) netty_epoll_linuxsocket_leaveGroup },
   { "leaveSsmGroup", "(IZ[B[BII[B)V", (void *) netty_epoll_linuxsocket_leaveSsmGroup },
   { "isUdpGro", "(I)I", (void *) netty_epoll_linuxsocket_isUdpGro },
-  { "setUdpGro", "(II)V", (void *) netty_epoll_linuxsocket_setUdpGro }
+  { "setUdpGro", "(II)V", (void *) netty_epoll_linuxsocket_setUdpGro },
+  { "newSocketTunFd", "()I", (void *) netty_epoll_linuxsocket_openTunFd },
+  { "bindTun", "(ILjava/lang/String;Z)Ljava/lang/String;", (void *) netty_epoll_linuxsocket_bindTun },
+  { "getMtu0", "(Ljava/lang/String;)I", (void *) netty_epoll_linuxsocket_getMtu },
+  { "setMtu0", "(Ljava/lang/String;I)I", (void *) netty_epoll_linuxsocket_setMtu }
 
   // "sendFile" has a dynamic signature
 };

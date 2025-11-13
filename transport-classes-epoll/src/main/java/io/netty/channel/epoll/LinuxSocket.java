@@ -17,6 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultFileRegion;
+import io.netty.channel.socket.TunAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.NativeInetAddress;
 import io.netty.channel.unix.PeerCredentials;
@@ -30,21 +31,31 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.Inet6Address;
 import java.net.NetworkInterface;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 
 import static io.netty.channel.unix.Errors.ioResult;
 import static io.netty.channel.unix.Errors.newIOException;
+import static io.netty.util.CharsetUtil.US_ASCII;
 
 /**
  * A socket which provides access Linux native methods.
  */
 @UnstableApi
 public final class LinuxSocket extends Socket {
+    static final int IFNAMSIZ = 16; // net/if.h
+    private static final IllegalArgumentException TUN_ILLEGAL_NAME_EXCEPTION =
+            new IllegalArgumentException("Device name must be an ASCII string shorter than " +
+                    IFNAMSIZ + " characters or null.");
     private static final long MAX_UINT32_T = 0xFFFFFFFFL;
 
     LinuxSocket(int fd) {
         super(fd);
+    }
+
+    LinuxSocket(int fd, boolean ipv6) {
+        super(fd, ipv6);
     }
 
     InternetProtocolFamily family() {
@@ -429,6 +440,49 @@ public final class LinuxSocket extends Socket {
     private static native byte[] remoteVSockAddress(int fd);
     private static native byte[] localVSockAddress(int fd);
 
+    public static LinuxSocket newSocketTun() {
+        int res = newSocketTunFd();
+        if (res < 0) {
+            throw new ChannelException(newIOException("newSocketTun", res));
+        }
+        return new LinuxSocket(res, false);
+    }
+
+    public TunAddress bindTun(SocketAddress socketAddress, boolean multiQueue) throws IOException {
+        if (socketAddress instanceof TunAddress) {
+            TunAddress addr = (TunAddress) socketAddress;
+
+            if (addr.ifName() != null && (addr.ifName().length() >= IFNAMSIZ ||
+                    !US_ASCII.newEncoder().canEncode(addr.ifName()))) {
+                throw TUN_ILLEGAL_NAME_EXCEPTION;
+            }
+
+            String name = bindTun(intValue(), addr.ifName(), multiQueue);
+            if (name == null) {
+                throw new IOException("bind(...) failed");
+            }
+
+            return new TunAddress(name);
+        } else {
+            throw new Error("Unexpected SocketAddress implementation " + socketAddress);
+        }
+    }
+
+    public static int getMtu(String name) throws IOException {
+        int res = getMtu0(name);
+        if (res < 0) {
+            throw newIOException("getMtu", res);
+        }
+        return res;
+    }
+
+    public static void setMtu(String name, int mtu) throws IOException {
+        int res = setMtu0(name, mtu);
+        if (res < 0) {
+            throw newIOException("setMtu", res);
+        }
+    }
+
     private static native void joinGroup(int fd, boolean ipv6, byte[] group, byte[] interfaceAddress,
                                          int scopeId, int interfaceIndex) throws IOException;
     private static native void joinSsmGroup(int fd, boolean ipv6, byte[] group, byte[] interfaceAddress,
@@ -481,4 +535,9 @@ public final class LinuxSocket extends Socket {
     private static native void setTimeToLive(int fd, int ttl) throws IOException;
     private static native int isUdpGro(int fd) throws IOException;
     private static native void setUdpGro(int fd, int gro) throws IOException;
+
+    private static native int newSocketTunFd();
+    public static native String bindTun(int fd, String name, boolean multiQueue);
+    private static native int getMtu0(String name);
+    private static native int setMtu0(String name, int mtu);
 }
