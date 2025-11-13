@@ -512,6 +512,22 @@ public class CorsHandlerTest {
         assertTrue(ReferenceCountUtil.release(response));
     }
 
+    @Test
+    public void sameOriginIsAllowed() {
+        final CorsConfig config = forOrigin("https://unrelated.host").shortCircuit().build();
+        final HttpResponse response = simpleRequest(config, "http://my-app.host", "my-app.host", null, GET);
+        assertThat(response.status(), is(OK));
+        assertThat(ReferenceCountUtil.release(response), is(true));
+    }
+
+    @Test
+    public void differentSchemeIsNotAllowed() {
+        final CorsConfig config = forOrigin("https://unrelated.host").shortCircuit().build();
+        final HttpResponse response = simpleRequest(config, "https://my-app.host", "my-app.host", null, GET);
+        assertThat(response.status(), is(FORBIDDEN));
+        assertThat(ReferenceCountUtil.release(response), is(true));
+    }
+
     private static HttpResponse simpleRequest(final CorsConfig config, final String origin) {
         return simpleRequest(config, origin, null);
     }
@@ -519,20 +535,24 @@ public class CorsHandlerTest {
     private static HttpResponse simpleRequest(final CorsConfig config,
                                               final String origin,
                                               final String requestHeaders) {
-        return simpleRequest(config, origin, requestHeaders, GET);
+        return simpleRequest(config, origin, null, requestHeaders, GET);
     }
 
     private static HttpResponse simpleRequest(final CorsConfig config,
                                               final String origin,
-                                              final String requestHeaders,
+                                              final String host,
+                                              final String accessControlRequestHeader,
                                               final HttpMethod method) {
         final EmbeddedChannel channel = new EmbeddedChannel(new CorsHandler(config), new EchoHandler());
         final FullHttpRequest httpRequest = createHttpRequest(method);
         if (origin != null) {
             httpRequest.headers().set(ORIGIN, origin);
         }
-        if (requestHeaders != null) {
-            httpRequest.headers().set(ACCESS_CONTROL_REQUEST_HEADERS, requestHeaders);
+        if (host != null) {
+            httpRequest.headers().set(HOST, host);
+        }
+        if (accessControlRequestHeader != null) {
+            httpRequest.headers().set(ACCESS_CONTROL_REQUEST_HEADERS, accessControlRequestHeader);
         }
         assertFalse(channel.writeInbound(httpRequest));
         HttpResponse response =  channel.readOutbound();
