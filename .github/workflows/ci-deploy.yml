@@ -90,7 +90,7 @@ jobs:
       matrix:
         include:
           - setup: macos-x86_64-java11
-            os: macos-13
+            os: macos-15-intel
           - setup: macos-aarch64-java11
             os: macos-15
 
