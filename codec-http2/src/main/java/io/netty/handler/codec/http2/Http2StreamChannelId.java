@@ -69,6 +69,10 @@ final class Http2StreamChannelId implements ChannelId {
         return id == otherId.id && parentId.equals(otherId.parentId);
     }
 
+    public int getSequenceId() {
+        return id;
+    }
+
     @Override
     public String toString() {
         return asShortText();
