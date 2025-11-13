@@ -1157,7 +1157,7 @@ public final class PlatformDependent {
      * The resulting hash code will be case insensitive.
      */
     public static int hashCodeAscii(byte[] bytes, int startPos, int length) {
-        return !hasUnsafe() || !unalignedAccess() ?
+        return !hasUnsafe() || !unalignedAccess() || BIG_ENDIAN_NATIVE_ORDER ?
                 hashCodeAsciiSafe(bytes, startPos, length) :
                 PlatformDependent0.hashCodeAscii(bytes, startPos, length);
     }
