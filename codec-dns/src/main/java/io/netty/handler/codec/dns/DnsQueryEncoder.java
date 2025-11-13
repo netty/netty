@@ -19,21 +19,24 @@ import io.netty.buffer.ByteBuf;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
-final class DnsQueryEncoder {
+/**
+ * Represents a Dns query encoder.
+ */
+public final class DnsQueryEncoder {
 
     private final DnsRecordEncoder recordEncoder;
 
     /**
      * Creates a new encoder with the specified {@code recordEncoder}.
      */
-    DnsQueryEncoder(DnsRecordEncoder recordEncoder) {
+    public DnsQueryEncoder(DnsRecordEncoder recordEncoder) {
         this.recordEncoder = checkNotNull(recordEncoder, "recordEncoder");
     }
 
     /**
      * Encodes the given {@link DnsQuery} into a {@link ByteBuf}.
      */
-    void encode(DnsQuery query, ByteBuf out) throws Exception {
+    public void encode(DnsQuery query, ByteBuf out) throws Exception {
         encodeHeader(query, out);
         encodeQuestions(query, out);
         encodeRecords(query, DnsSection.ADDITIONAL, out);
