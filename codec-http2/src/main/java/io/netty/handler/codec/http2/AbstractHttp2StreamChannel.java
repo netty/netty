@@ -185,7 +185,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     private final Http2StreamChannelConfig config = new Http2StreamChannelConfig(this);
     private final Http2ChannelUnsafe unsafe = new Http2ChannelUnsafe();
-    private final ChannelId channelId;
+    private final Http2StreamChannelId channelId;
     private final ChannelPipeline pipeline;
     private final DefaultHttp2FrameStream stream;
     private final ChannelPromise closePromise;
@@ -584,7 +584,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     @Override
     public String toString() {
-        return parent().toString() + "(H2 - " + stream + ')';
+        return parent().toString() + '/' + channelId.getSequenceId() + " (H2 - " + stream + ')';
     }
 
     /**
