@@ -271,6 +271,7 @@ public class Http3FrameCodecTest {
         settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 100L);
         settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 1L);
         settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE, 128L);
+        settingsFrame.put(Http3SettingsFrame.HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL, 0L);
         // Ensure we can encode and decode all sizes correctly.
         settingsFrame.put(63, 63L);
         settingsFrame.put(16383, 16383L);
