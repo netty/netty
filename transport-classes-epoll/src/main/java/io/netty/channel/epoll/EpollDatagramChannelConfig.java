@@ -50,7 +50,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
                 ChannelOption.IP_TOS, ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION,
                 EpollChannelOption.SO_REUSEPORT, EpollChannelOption.IP_FREEBIND, EpollChannelOption.IP_TRANSPARENT,
                 EpollChannelOption.IP_RECVORIGDSTADDR, EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE,
-                EpollChannelOption.UDP_GRO);
+                EpollChannelOption.UDP_GRO, EpollChannelOption.IP_MULTICAST_ALL);
     }
 
     @SuppressWarnings({ "unchecked", "deprecation" })
@@ -98,6 +98,9 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         if (option == EpollChannelOption.IP_RECVORIGDSTADDR) {
             return (T) Boolean.valueOf(isIpRecvOrigDestAddr());
         }
+        if (option == EpollChannelOption.IP_MULTICAST_ALL) {
+            return (T) Boolean.valueOf(isIpMulticastAll());
+        }
         if (option == EpollChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE) {
             return (T) Integer.valueOf(getMaxDatagramPayloadSize());
         }
@@ -128,6 +131,8 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
             setNetworkInterface((NetworkInterface) value);
         } else if (option == ChannelOption.IP_MULTICAST_TTL) {
             setTimeToLive((Integer) value);
+        } else if (option == EpollChannelOption.IP_MULTICAST_ALL) {
+            setIpMulticastAll((Boolean) value);
         } else if (option == ChannelOption.IP_TOS) {
             setTrafficClass((Integer) value);
         } else if (option == ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) {
@@ -505,6 +510,31 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     public EpollDatagramChannelConfig setIpRecvOrigDestAddr(boolean ipTransparent) {
         try {
             ((EpollDatagramChannel) channel).socket.setIpRecvOrigDestAddr(ipTransparent);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> (or
+     * IPV6_MULTICAST_ALL for IPV6) is enabled, {@code false} otherwise.
+     */
+    public boolean isIpMulticastAll() {
+        try {
+            return ((EpollDatagramChannel) channel).socket.isIpMulticastAll();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> is
+     * enabled (or IPV6_MULTICAST_ALL for IPV6), {@code false} for disable it. Default is enabled.
+     */
+    public EpollDatagramChannelConfig setIpMulticastAll(boolean multicastAll) {
+        try {
+            ((EpollDatagramChannel) channel).socket.setIpMulticastAll(multicastAll);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
