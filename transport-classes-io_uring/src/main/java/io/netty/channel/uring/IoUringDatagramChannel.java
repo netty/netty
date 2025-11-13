@@ -15,7 +15,6 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.buffer.AbstractByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFuture;
