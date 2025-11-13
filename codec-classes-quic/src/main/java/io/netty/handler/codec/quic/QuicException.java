@@ -20,43 +20,33 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Exception produced while processing {@code QUIC}.
  */
-public final class QuicException extends Exception {
+public class QuicException extends Exception {
 
     private final QuicTransportError error;
-    private final int applicationProtocolCode;
 
     QuicException(String message) {
-        this(message, -1);
-    }
-
-    QuicException(String message, int applicationProtocolCode) {
         super(message);
         this.error = null;
-        this.applicationProtocolCode = applicationProtocolCode;
     }
 
     public QuicException(QuicTransportError error) {
         super(error.name());
         this.error = error;
-        this.applicationProtocolCode = -1;
     }
 
     public QuicException(String message, QuicTransportError error) {
         super(message);
         this.error = error;
-        this.applicationProtocolCode = -1;
     }
 
     public QuicException(Throwable cause, QuicTransportError error) {
         super(cause);
         this.error = error;
-        this.applicationProtocolCode = -1;
     }
 
     public QuicException(String message, Throwable cause, QuicTransportError error) {
         super(message, cause);
         this.error = error;
-        this.applicationProtocolCode = -1;
     }
 
     /**
@@ -68,16 +58,5 @@ public final class QuicException extends Exception {
     @Nullable
     public QuicTransportError error() {
         return error;
-    }
-
-    /**
-     * Returns the optional application protocol error code set on {@code RESET_STREAM} frames.
-     *
-     * Note: this is not yet implemented for {@code STOP_SENDING} frames.
-     *
-     * @return the optional application protocol error code or {@code -1} when no such code is provided.
-     */
-    public int applicationProtocolCode() {
-        return applicationProtocolCode;
     }
 }

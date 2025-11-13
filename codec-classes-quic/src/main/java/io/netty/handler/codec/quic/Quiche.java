@@ -896,14 +896,22 @@ final class Quiche {
     }
 
     static Exception convertToException(int result) {
-        return convertToException(result, -1);
+        return convertToException(result, -1L);
     }
 
-    static Exception convertToException(int result, int code) {
+    static Exception convertToException(int result, long code) {
         QuicTransportErrorHolder holder = ERROR_MAPPINGS.get(result);
         if (holder == null) {
             // There is no mapping to a transport error, it's something internal so throw it directly.
-            return new QuicException(QuicheError.valueOf(result).message(), code);
+            QuicheError error = QuicheError.valueOf(result);
+            switch (error) {
+                case STREAM_RESET:
+                    return new QuicStreamResetException(error.message(), code);
+                case STREAM_STOPPED:
+                    return new QuicStreamException(error.message());
+                default:
+                    return new QuicException(error.message());
+            }
         }
         Exception exception = new QuicException(holder.error + ": " + holder.quicheErrorName, holder.error);
         if (result == QUICHE_ERR_TLS_FAIL) {

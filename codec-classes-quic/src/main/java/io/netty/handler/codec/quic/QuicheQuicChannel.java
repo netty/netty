@@ -957,7 +957,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (recvLen == Quiche.QUICHE_ERR_DONE) {
             return StreamRecvResult.DONE;
         } else if (recvLen < 0) {
-            throw Quiche.convertToException(recvLen, (int) errorCode);
+            throw Quiche.convertToException(recvLen, errorCode);
         }
         buffer.writerIndex(writerIndex + recvLen);
         return finBuffer.getBoolean(0) ? StreamRecvResult.FIN : StreamRecvResult.OK;

@@ -32,6 +32,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -171,7 +172,7 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
         Channel channel = null;
         CountDownLatch latch = new CountDownLatch(2);
         AtomicReference<Throwable> errorRef = new AtomicReference<>();
-        AtomicInteger applicationErrorCode = new AtomicInteger(-1);
+        AtomicLong applicationErrorCode = new AtomicLong(-1);
         try {
             server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(),
                     new ChannelInboundHandlerAdapter() {
@@ -209,9 +210,9 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                     new ChannelInboundHandlerAdapter() {
                         @Override
                         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                            if (cause instanceof QuicException) {
-                                QuicException quicException = (QuicException) cause;
-                                applicationErrorCode.set(quicException.applicationProtocolCode());
+                            if (cause instanceof QuicStreamResetException) {
+                                QuicStreamResetException reset = (QuicStreamResetException) cause;
+                                applicationErrorCode.set(reset.applicationProtocolCode());
                                 latch.countDown();
                             } else {
                                 errorRef.set(cause);
