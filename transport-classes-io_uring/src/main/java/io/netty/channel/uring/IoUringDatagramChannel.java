@@ -67,7 +67,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
     static {
         if (logger.isDebugEnabled()) {
-            logger.debug("-Dio.netty.transport.linux.ipMulticastAll: {}", IP_MULTICAST_ALL);
+            logger.debug("-Dio.netty.channel.iouring.ipMulticastAll: {}", IP_MULTICAST_ALL);
         }
     }
 
