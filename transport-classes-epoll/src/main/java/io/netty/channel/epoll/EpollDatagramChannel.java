@@ -60,7 +60,7 @@ import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
 public final class EpollDatagramChannel extends AbstractEpollChannel implements DatagramChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractByteBuf.class);
     private static final boolean IP_MULTICAST_ALL =
-            SystemPropertyUtil.getBoolean("io.netty.transport.linux.ipMulticastAll", false);
+            SystemPropertyUtil.getBoolean("io.netty.channel.epoll.ipMulticastAll", false);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
