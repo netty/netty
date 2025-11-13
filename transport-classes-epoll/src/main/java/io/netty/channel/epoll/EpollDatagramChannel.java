@@ -58,7 +58,7 @@ import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
  * maximal performance.
  */
 public final class EpollDatagramChannel extends AbstractEpollChannel implements DatagramChannel {
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractByteBuf.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDatagramChannel.class);
     private static final boolean IP_MULTICAST_ALL =
             SystemPropertyUtil.getBoolean("io.netty.channel.epoll.ipMulticastAll", false);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
