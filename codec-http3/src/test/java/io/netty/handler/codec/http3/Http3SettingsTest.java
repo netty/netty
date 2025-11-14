@@ -47,6 +47,7 @@ public class Http3SettingsTest {
         assertEquals(0L, settings.qpackBlockedStreams());
         assertEquals(Boolean.FALSE, settings.connectProtocolEnabled());
         assertEquals(Long.MAX_VALUE, settings.maxFieldSectionSize());
+        assertEquals(Boolean.FALSE, settings.h3DatagramEnabled());
     }
 
     @Test
@@ -62,11 +63,13 @@ public class Http3SettingsTest {
         assertEquals(4L, settings.qpackBlockedStreams());
         assertEquals(Boolean.TRUE, settings.connectProtocolEnabled());
         assertEquals(4096L, settings.maxFieldSectionSize());
+        assertNull(settings.h3DatagramEnabled());
     }
 
     @Test
     void testEqualsAndHashCode() {
         Http3Settings s1 = new Http3Settings()
+                .enableH3Datagram(true)
                 .qpackMaxTableCapacity(256)
                 .qpackBlockedStreams(8)
                 .enableConnectProtocol(true);
@@ -74,7 +77,8 @@ public class Http3SettingsTest {
         Http3Settings s2 = new Http3Settings()
                 .qpackMaxTableCapacity(256)
                 .qpackBlockedStreams(8)
-                .enableConnectProtocol(true);
+                .enableConnectProtocol(true)
+                .enableH3Datagram(true);
 
         Http3Settings s3 = new Http3Settings().qpackMaxTableCapacity(999);
 
@@ -97,19 +101,23 @@ public class Http3SettingsTest {
             assertNotNull(e.getValue());
             count.incrementAndGet();
         }
-        assertTrue(count.get() >= 2);
+        assertTrue(count.get() == 2);
     }
 
     @Test
     void testForEachConsumer() {
         Http3Settings settings = new Http3Settings()
                 .qpackMaxTableCapacity(5)
-                .qpackBlockedStreams(7);
+                .qpackBlockedStreams(7)
+                .enableH3Datagram(true)
+                .maxFieldSectionSize(1);
 
         List<Long> keys = new ArrayList<>();
         settings.forEach(entry -> keys.add(entry.getKey()));
         assertTrue(keys.contains(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id()));
         assertTrue(keys.contains(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id()));
+        assertTrue(keys.contains(Http3SettingIdentifier.HTTP3_SETTINGS_H3_DATAGRAM.id()));
+        assertTrue(keys.contains(Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id()));
     }
 
     @Test
@@ -152,11 +160,14 @@ public class Http3SettingsTest {
         assertThrows(IllegalArgumentException.class,
                 () -> settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL.id(), 5L));
 
+        assertThrows(IllegalArgumentException.class,
+                () -> settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL.id(), 15L));
     }
 
     @Test
     void testVerifyStandardSettingValidCases() {
         Http3Settings settings = new Http3Settings();
+        settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL.id(), 1L);
         settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL.id(), 1L);
         settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(), 0L);
         settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(), 5L);

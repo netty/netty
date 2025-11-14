@@ -36,6 +36,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  *   <li>{@code MAX_FIELD_SECTION_SIZE} (0x6)</li>
  *   <li>{@code QPACK_BLOCKED_STREAMS} (0x7)</li>
  *   <li>{@code ENABLE_CONNECT_PROTOCOL} (0x8)</li>
+ *   <li>{@code H3_DATAGRAM} (0x33)</>
  * </ul>
  *
  * Non-standard settings are ignored
@@ -89,12 +90,12 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
     @Nullable
     public Long put(long key, Long value) {
 
-        //HTTP2 Settings present - Throw Error
+        // When HTTP2 settings identifier present - Throw Error
         if (Http3CodecUtils.isReservedHttp2Setting(key)) {
             throw new IllegalArgumentException("Setting is reserved for HTTP/2: " + key);
         }
 
-        //Non-Standard/Unknown setting identifier present - Ignore
+        // When Non-Standard/Unknown settings identifier identifier present - Ignore
         if (Http3SettingIdentifier.fromId(key) == null) {
             return value;
         }
@@ -202,6 +203,28 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
     }
 
     /**
+     * Returns whether the {@code H3_DATAGRAM} setting is enabled.
+     *
+     * @return {@code true} if enabled, {@code false} if disabled, or {@code null} if not set
+     */
+    @Nullable
+    public Boolean h3DatagramEnabled() {
+        Long value = get(Http3SettingIdentifier.HTTP3_SETTINGS_H3_DATAGRAM.id());
+        return value == null ? null : TRUE.equals(value);
+    }
+
+    /**
+     * Sets the {@code H3_DATAGRAM} settings identifier.
+     *
+     * @param enabled whether to enable the H3 Datagram
+     * @return this instance for method chaining
+     */
+    public Http3Settings enableH3Datagram(boolean enabled) {
+        put(Http3SettingIdentifier.HTTP3_SETTINGS_H3_DATAGRAM.id(), enabled ? TRUE : FALSE);
+        return this;
+    }
+
+    /**
      * Replaces all current settings with those from another {@link Http3Settings} instance.
      *
      * @param http3Settings the source settings (non-null)
@@ -220,6 +243,7 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
      *   <li>{@code QPACK_BLOCKED_STREAMS} = 0</li>
      *   <li>{@code ENABLE_CONNECT_PROTOCOL} = false</li>
      *   <li>{@code MAX_FIELD_SECTION_SIZE} = unlimited</li>
+     *   <li>{@code H3_DATAGRAM} = false </>
      * </ul>
      *
      * @return a default {@link Http3Settings} instance
@@ -229,7 +253,8 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
                 .qpackMaxTableCapacity(0)
                 .qpackBlockedStreams(0)
                 .maxFieldSectionSize(Long.MAX_VALUE)
-                .enableConnectProtocol(false);
+                .enableConnectProtocol(false)
+                .enableH3Datagram(false);
     }
 
     /**
