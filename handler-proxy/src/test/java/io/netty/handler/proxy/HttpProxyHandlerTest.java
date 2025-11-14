@@ -176,6 +176,76 @@ public class HttpProxyHandlerTest {
     }
 
     @Test
+    public void testHostnameWithPreDestinationSettlement() throws Exception {
+        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("localhost"), 8080);
+        testInitialMessageWithPreDestinationSettlement(socketAddress, null, true);
+    }
+
+    @Test
+    public void testHostnameUnresolvedWithPreDestinationSettlement() throws Exception {
+        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("localhost", 8080);
+        testInitialMessageWithPreDestinationSettlement(socketAddress, null, true);
+    }
+
+    @Test
+    public void testHostHeaderWithHttpDefaultPortWithPreDestinationSettlement() throws Exception {
+        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("localhost"), 80);
+        testInitialMessageWithPreDestinationSettlement(socketAddress, null, false);
+    }
+
+    @Test
+    public void testHostHeaderWithHttpDefaultPortIgnoredWithPreDestinationSettlement() throws Exception {
+        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("localhost", 80);
+        testInitialMessageWithPreDestinationSettlement(socketAddress, null, true);
+    }
+
+    @Test
+    public void testHostHeaderWithHttpsDefaultPortWithPreDestinationSettlement() throws Exception {
+        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("localhost"), 443);
+        testInitialMessageWithPreDestinationSettlement(socketAddress, null, false);
+    }
+
+    @Test
+    public void testHostHeaderWithHttpsDefaultPortIgnoredWithPreDestinationSettlement() throws Exception {
+        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("localhost", 443);
+        testInitialMessageWithPreDestinationSettlement(socketAddress, null, true);
+    }
+
+    @Test
+    public void testIpv6WithPreDestinationSettlement() throws Exception {
+        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("::1"), 8080);
+        testInitialMessageWithPreDestinationSettlement(socketAddress, null, true);
+    }
+
+    @Test
+    public void testIpv6UnresolvedWithPreDestinationSettlement() throws Exception {
+        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("::1", 8080);
+        testInitialMessageWithPreDestinationSettlement(socketAddress, null, true);
+    }
+
+    @Test
+    public void testIpv4WithPreDestinationSettlement() throws Exception {
+        InetSocketAddress socketAddress = new InetSocketAddress(InetAddress.getByName("10.0.0.1"), 8080);
+        testInitialMessageWithPreDestinationSettlement(socketAddress, null, true);
+    }
+
+    @Test
+    public void testIpv4UnresolvedWithPreDestinationSettlement() throws Exception {
+        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("10.0.0.1", 8080);
+        testInitialMessageWithPreDestinationSettlement(socketAddress, null, true);
+    }
+
+    @Test
+    public void testCustomHeadersWithPreDestinationSettlement() throws Exception {
+        InetSocketAddress socketAddress = InetSocketAddress.createUnresolved("10.0.0.1", 8080);
+        testInitialMessageWithPreDestinationSettlement(socketAddress,
+            new DefaultHttpHeaders()
+                .add("CUSTOM_HEADER", "CUSTOM_VALUE1")
+                .add("CUSTOM_HEADER", "CUSTOM_VALUE2"),
+            true);
+    }
+
+    @Test
     public void testExceptionDuringConnect() throws Exception {
         EventLoopGroup group = null;
         Channel serverChannel = null;
@@ -272,10 +342,49 @@ public class HttpProxyHandlerTest {
         verify(ctx).connect(proxyAddress, null, promise);
     }
 
+    private static void testInitialMessageWithPreDestinationSettlement(InetSocketAddress socketAddress,
+                                                                       HttpHeaders headers,
+                                                                       boolean ignoreDefaultPortsInConnectHostHeader) throws Exception {
+        InetSocketAddress proxyAddress = new InetSocketAddress(NetUtil.LOCALHOST, 8080);
+
+        ChannelPromise promise = mock(ChannelPromise.class);
+        verifyNoMoreInteractions(promise);
+
+        ChannelHandlerContext ctx = mock(ChannelHandlerContext.class);
+        when(ctx.connect(same(socketAddress), isNull(InetSocketAddress.class), same(promise))).thenReturn(promise);
+
+        HttpProxyHandler handler = new HttpProxyHandler(
+                proxyAddress,
+                headers,
+                ignoreDefaultPortsInConnectHostHeader);
+        handler.setDestinationAddress(socketAddress);
+        handler.connect(ctx, proxyAddress, null, promise);
+
+        assertEquals(socketAddress, handler.destinationAddress());
+        verify(ctx).connect(proxyAddress, null, promise);
+    }
+
     @Test
     public void testHttpClientCodecIsInvisible() {
         EmbeddedChannel channel = new EmbeddedChannel(new HttpProxyHandler(
                 new InetSocketAddress(NetUtil.LOCALHOST, 8080))) {
+            @Override
+            public boolean isActive() {
+                // We want to simulate that the Channel did not become active yet.
+                return false;
+            }
+        };
+        assertNotNull(channel.pipeline().get(HttpProxyHandler.class));
+        assertNull(channel.pipeline().get(HttpClientCodec.class));
+    }
+
+    @Test
+    public void testHttpClientCodecIsInvisibleWithPreSetCodec() {
+        HttpProxyHandler httpProxyHandler = new HttpProxyHandler(
+            new InetSocketAddress(NetUtil.LOCALHOST, 8080));
+        httpProxyHandler.setCodec(new HttpClientCodec());
+        httpProxyHandler.setDestinationAddress(new InetSocketAddress(8080));
+        EmbeddedChannel channel = new EmbeddedChannel(httpProxyHandler) {
             @Override
             public boolean isActive() {
                 // We want to simulate that the Channel did not become active yet.

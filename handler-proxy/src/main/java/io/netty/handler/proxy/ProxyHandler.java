@@ -53,6 +53,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     static final String AUTH_NONE = "none";
 
     private final SocketAddress proxyAddress;
+    private volatile boolean isManuallySetDestination = false;
     private volatile SocketAddress destinationAddress;
     private volatile long connectTimeoutMillis = DEFAULT_CONNECT_TIMEOUT_MILLIS;
 
@@ -172,6 +173,10 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
             ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
             ChannelPromise promise) throws Exception {
 
+        if (this.isManuallySetDestination) {
+            ctx.connect(remoteAddress, localAddress, promise);
+            return;
+        }
         if (destinationAddress != null) {
             promise.setFailure(new ConnectionPendingException());
             return;
@@ -455,5 +460,19 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
             }
             return ctx.executor();
         }
+    }
+
+    /**
+     * Manually sets the destination address for the packet.
+     * <p>
+     * This method allows you to set the destination address directly, without waiting for it to be filled
+     * during the pipeline process.
+     * </p>
+     *
+     * @param destinationAddress the destination address to set
+     */
+    public void setDestinationAddress(SocketAddress destinationAddress) {
+        this.isManuallySetDestination = true;
+        this.destinationAddress = ObjectUtil.checkNotNull(destinationAddress, "destinationAddress");
     }
 }
