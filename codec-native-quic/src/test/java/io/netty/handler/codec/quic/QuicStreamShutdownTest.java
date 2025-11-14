@@ -99,11 +99,6 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
             server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(),
                     new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelRegistered(ChannelHandlerContext ctx) {
-                            ctx.fireChannelRegistered();
-                        }
-
-                        @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             QuicStreamChannel streamChannel = (QuicStreamChannel) ctx.channel();
                             streamChannel.shutdownInput().addListener(new ChannelFutureListener() {
@@ -178,18 +173,13 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
             server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(),
                     new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelRegistered(ChannelHandlerContext ctx) {
-                            ctx.fireChannelRegistered();
-                        }
-
-                        @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             QuicStreamChannel streamChannel = (QuicStreamChannel) ctx.channel();
                             ByteBuf buffer = (ByteBuf) msg;
                             buffer.release();
                             streamChannel.shutdownOutput(100).addListener(new ChannelFutureListener() {
                                 @Override
-                                public void operationComplete(ChannelFuture f) throws Exception {
+                                public void operationComplete(ChannelFuture f) {
                                     if (!f.isSuccess()) {
                                         errorRef.compareAndSet(null, f.cause());
                                     }
@@ -214,10 +204,10 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                             if (cause instanceof QuicStreamResetException) {
                                 QuicStreamResetException reset = (QuicStreamResetException) cause;
                                 applicationErrorCode.set(reset.applicationProtocolCode());
-                                latch.countDown();
                             } else {
                                 errorRef.set(cause);
                             }
+                            latch.countDown();
                         }
                     }).sync().getNow();
 
