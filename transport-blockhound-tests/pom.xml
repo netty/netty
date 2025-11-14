@@ -19,11 +19,11 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
-    <version>4.2.8.Final-SNAPSHOT</version>
+    <artifactId>netty5-parent</artifactId>
+    <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-transport-blockhound-tests</artifactId>
+  <artifactId>netty5-transport-blockhound-tests</artifactId>
   <packaging>jar</packaging>
   <description>
     Tests for the BlockHound integration.
@@ -174,22 +174,22 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport</artifactId>
+      <artifactId>netty5-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-handler</artifactId>
+      <artifactId>netty5-handler</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-pkitesting</artifactId>
+      <artifactId>netty5-pkitesting</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-resolver-dns</artifactId>
+      <artifactId>netty5-resolver-dns</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

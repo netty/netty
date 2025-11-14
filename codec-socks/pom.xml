@@ -19,11 +19,11 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
-    <version>4.2.8.Final-SNAPSHOT</version>
+    <artifactId>netty5-parent</artifactId>
+    <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-codec-socks</artifactId>
+  <artifactId>netty5-codec-socks</artifactId>
   <packaging>jar</packaging>
 
   <name>Netty/Codec/Socks</name>
@@ -35,22 +35,22 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-common</artifactId>
+      <artifactId>netty5-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-buffer</artifactId>
+      <artifactId>netty5-buffer</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport</artifactId>
+      <artifactId>netty5-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-base</artifactId>
+      <artifactId>netty5-codec-base</artifactId>
       <version>${project.version}</version>
     </dependency>
 
@@ -65,7 +65,7 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport</artifactId>
+      <artifactId>netty5-transport</artifactId>
       <version>${project.version}</version>
       <type>test-jar</type>
       <scope>test</scope>
@@ -92,7 +92,7 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-testsuite-common</artifactId>
+      <artifactId>netty5-testsuite-common</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>

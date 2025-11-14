@@ -19,11 +19,11 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
-    <version>4.2.8.Final-SNAPSHOT</version>
+    <artifactId>netty5-parent</artifactId>
+    <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-pkitesting</artifactId>
+  <artifactId>netty5-pkitesting</artifactId>
   <packaging>jar</packaging>
 
   <name>Netty/PKITesting</name>
@@ -35,7 +35,7 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-common</artifactId>
+      <artifactId>netty5-common</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

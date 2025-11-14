@@ -20,11 +20,11 @@
   
   <parent>
     <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
-    <version>4.2.8.Final-SNAPSHOT</version>
+    <artifactId>netty5-parent</artifactId>
+    <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-transport-rxtx</artifactId>
+  <artifactId>netty5-transport-rxtx</artifactId>
   <packaging>jar</packaging>
 
   <name>Netty/Transport/RXTX</name>
@@ -36,12 +36,12 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-buffer</artifactId>
+      <artifactId>netty5-buffer</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport</artifactId>
+      <artifactId>netty5-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
     <!-- FIXME find/make osgi bundle -->

@@ -19,11 +19,11 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
-    <version>4.2.8.Final-SNAPSHOT</version>
+    <artifactId>netty5-parent</artifactId>
+    <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-testsuite-jpms</artifactId>
+  <artifactId>netty5-testsuite-jpms</artifactId>
   <packaging>${packaging.type}</packaging>
 
   <name>Netty/Testsuite/JPMS</name>
@@ -44,42 +44,42 @@
   <dependencies>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-buffer</artifactId>
+      <artifactId>netty5-buffer</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-base</artifactId>
+      <artifactId>netty5-codec-base</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-handler</artifactId>
+      <artifactId>netty5-handler</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-pkitesting</artifactId>
+      <artifactId>netty5-pkitesting</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-http</artifactId>
+      <artifactId>netty5-codec-http</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport-classes-kqueue</artifactId>
+      <artifactId>netty5-transport-classes-kqueue</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport-classes-epoll</artifactId>
+      <artifactId>netty5-transport-classes-epoll</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport-classes-io_uring</artifactId>
+      <artifactId>netty5-transport-classes-io_uring</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
@@ -94,72 +94,72 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-http2</artifactId>
+      <artifactId>netty5-codec-http2</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-http3</artifactId>
+      <artifactId>netty5-codec-http3</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-xml</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-compression</artifactId>
+      <artifactId>netty5-codec-xml</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-mqtt</artifactId>
+      <artifactId>netty5-codec-compression</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-smtp</artifactId>
+      <artifactId>netty5-codec-mqtt</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-memcache</artifactId>
+      <artifactId>netty5-codec-smtp</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-stomp</artifactId>
+      <artifactId>netty5-codec-memcache</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-socks</artifactId>
+      <artifactId>netty5-codec-stomp</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-redis</artifactId>
+      <artifactId>netty5-codec-socks</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-haproxy</artifactId>
+      <artifactId>netty5-codec-redis</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-protobuf</artifactId>
+      <artifactId>netty5-codec-haproxy</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>netty5-codec-protobuf</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
@@ -175,7 +175,7 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-marshalling</artifactId>
+      <artifactId>netty5-codec-marshalling</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
@@ -191,13 +191,13 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-resolver-dns-classes-macos</artifactId>
+      <artifactId>netty5-resolver-dns-classes-macos</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-handler-ssl-ocsp</artifactId>
+      <artifactId>netty5-handler-ssl-ocsp</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
@@ -272,21 +272,21 @@
       <dependencies>
         <dependency>
           <groupId>${project.groupId}</groupId>
-          <artifactId>netty-transport-native-epoll</artifactId>
+          <artifactId>netty5-transport-native-epoll</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
-          <artifactId>netty-transport-native-io_uring</artifactId>
+          <artifactId>netty5-transport-native-io_uring</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
-          <artifactId>netty-codec-native-quic</artifactId>
+          <artifactId>netty5-codec-native-quic</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
@@ -304,7 +304,7 @@
       <dependencies>
         <dependency>
           <groupId>${project.groupId}</groupId>
-          <artifactId>netty-transport-native-kqueue</artifactId>
+          <artifactId>netty5-transport-native-kqueue</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
@@ -312,14 +312,14 @@
         <!-- note : this is not yet tested with jlink -->
         <dependency>
           <groupId>${project.groupId}</groupId>
-          <artifactId>netty-resolver-dns-native-macos</artifactId>
+          <artifactId>netty5-resolver-dns-native-macos</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
         </dependency>
         <dependency>
           <groupId>${project.groupId}</groupId>
-          <artifactId>netty-codec-native-quic</artifactId>
+          <artifactId>netty5-codec-native-quic</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>
@@ -337,7 +337,7 @@
       <dependencies>
         <dependency>
           <groupId>${project.groupId}</groupId>
-          <artifactId>netty-codec-native-quic</artifactId>
+          <artifactId>netty5-codec-native-quic</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>compile</scope>

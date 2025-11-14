@@ -18,11 +18,11 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
-    <version>4.2.8.Final-SNAPSHOT</version>
+    <artifactId>netty5-parent</artifactId>
+    <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-codec-native-quic</artifactId>
+  <artifactId>netty5-codec-native-quic</artifactId>
   <packaging>${packaging.type}</packaging>
 
   <name>Netty/Codec/Native/Quic</name>
@@ -32,7 +32,7 @@
     <javaModuleNameWithClassifier>${javaModuleName}.${javaModuleNameClassifier}</javaModuleNameWithClassifier>
     <fallbackModuleName>io.netty.codec.quic</fallbackModuleName>
     <javaModuleName>${fallbackModuleName}.${javaModuleNameClassifier}</javaModuleName>
-    <fragmentHost>io.netty.netty-codec-classes-quic</fragmentHost>
+    <fragmentHost>io.netty.netty5-codec-classes-quic</fragmentHost>
     <logging.config>${project.basedir}/../codec-native-quic/src/test/resources/logback-test.xml</logging.config>
     <nativeSourceDirectory>${project.basedir}/src/main/c</nativeSourceDirectory>
     <fallbackOutputDirectory>${project.build.directory}/fallback-classes</fallbackOutputDirectory>
@@ -217,7 +217,7 @@
       <dependencies>
         <dependency>
           <groupId>${project.groupId}</groupId>
-          <artifactId>netty-transport-native-epoll</artifactId>
+          <artifactId>netty5-transport-native-epoll</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <scope>test</scope>
@@ -585,7 +585,7 @@
                 <defaultMode>Conditional</defaultMode>
                 <modes>
                   <conditional>
-                    <userCodeFilterPath>${project.basedir}/src/test/resources/netty-filter.json</userCodeFilterPath>
+                    <userCodeFilterPath>${project.basedir}/src/test/resources/netty5-filter.json</userCodeFilterPath>
                     <extraFilterPath>${project.basedir}/src/test/resources/test-class-filter.json</extraFilterPath>
                     <parallel>true</parallel>
                   </conditional>
@@ -1249,13 +1249,13 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-codec-classes-quic</artifactId>
+      <artifactId>netty5-codec-classes-quic</artifactId>
       <version>${project.version}</version>
       <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-transport-classes-epoll</artifactId>
+      <artifactId>netty5-transport-classes-epoll</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>

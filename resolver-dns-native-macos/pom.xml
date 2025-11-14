@@ -18,10 +18,10 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
-    <version>4.2.8.Final-SNAPSHOT</version>
+    <artifactId>netty5-parent</artifactId>
+    <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
-  <artifactId>netty-resolver-dns-native-macos</artifactId>
+  <artifactId>netty5-resolver-dns-native-macos</artifactId>
 
   <name>Netty/Resolver/DNS/Native/MacOS</name>
   <packaging>jar</packaging>
@@ -52,7 +52,7 @@
                 </goals>
                 <configuration>
                   <includeGroupIds>${project.groupId}</includeGroupIds>
-                  <includeArtifactIds>netty-transport-native-unix-common</includeArtifactIds>
+                  <includeArtifactIds>netty5-transport-native-unix-common</includeArtifactIds>
                   <classifier>${jni.classifier}</classifier>
                   <outputDirectory>${unix.common.lib.dir}</outputDirectory>
                   <includes>META-INF/native/**</includes>
@@ -144,7 +144,7 @@
       <dependencies>
         <dependency>
           <groupId>io.netty</groupId>
-          <artifactId>netty-transport-native-unix-common</artifactId>
+          <artifactId>netty5-transport-native-unix-common</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <!--
@@ -180,7 +180,7 @@
                 </goals>
                 <configuration>
                   <includeGroupIds>${project.groupId}</includeGroupIds>
-                  <includeArtifactIds>netty-transport-native-unix-common</includeArtifactIds>
+                  <includeArtifactIds>netty5-transport-native-unix-common</includeArtifactIds>
                   <classifier>${jni.classifier}</classifier>
                   <outputDirectory>${unix.common.lib.dir}</outputDirectory>
                   <includes>META-INF/native/**</includes>
@@ -273,7 +273,7 @@
       <dependencies>
         <dependency>
           <groupId>io.netty</groupId>
-          <artifactId>netty-transport-native-unix-common</artifactId>
+          <artifactId>netty5-transport-native-unix-common</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <!--
@@ -310,7 +310,7 @@
                 </goals>
                 <configuration>
                   <includeGroupIds>${project.groupId}</includeGroupIds>
-                  <includeArtifactIds>netty-transport-native-unix-common</includeArtifactIds>
+                  <includeArtifactIds>netty5-transport-native-unix-common</includeArtifactIds>
                   <classifier>${jni.classifier}</classifier>
                   <outputDirectory>${unix.common.lib.dir}</outputDirectory>
                   <includes>META-INF/native/**</includes>
@@ -403,7 +403,7 @@
       <dependencies>
         <dependency>
           <groupId>io.netty</groupId>
-          <artifactId>netty-transport-native-unix-common</artifactId>
+          <artifactId>netty5-transport-native-unix-common</artifactId>
           <version>${project.version}</version>
           <classifier>${jni.classifier}</classifier>
           <!--
@@ -420,7 +420,7 @@
     <javaModuleNameClassifier>${os.detected.name}.${os.detected.arch}</javaModuleNameClassifier>
     <javaModuleName>io.netty.resolver.dns.macos.${javaModuleNameClassifier}</javaModuleName>
     <!-- Needed as we use SelfSignedCertificate in our tests -->
-    <unix.common.lib.name>netty-unix-common</unix.common.lib.name>
+    <unix.common.lib.name>netty5-unix-common</unix.common.lib.name>
     <unix.common.lib.dir>${project.build.directory}/unix-common-lib</unix.common.lib.dir>
     <unix.common.lib.unpacked.dir>${unix.common.lib.dir}/META-INF/native/lib</unix.common.lib.unpacked.dir>
     <unix.common.include.unpacked.dir>${unix.common.lib.dir}/META-INF/native/include</unix.common.include.unpacked.dir>
@@ -434,7 +434,7 @@
   <dependencies>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-resolver-dns-classes-macos</artifactId>
+      <artifactId>netty5-resolver-dns-classes-macos</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>

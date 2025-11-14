@@ -19,11 +19,11 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
-    <version>4.2.8.Final-SNAPSHOT</version>
+    <artifactId>netty5-parent</artifactId>
+    <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-handler-ssl-ocsp</artifactId>
+  <artifactId>netty5-handler-ssl-ocsp</artifactId>
   <packaging>jar</packaging>
 
   <properties>
@@ -40,22 +40,22 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-http</artifactId>
+      <artifactId>netty5-codec-http</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-transport</artifactId>
+      <artifactId>netty5-transport</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-resolver-dns</artifactId>
+      <artifactId>netty5-resolver-dns</artifactId>
       <version>${project.version}</version>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-pkitesting</artifactId>
+      <artifactId>netty5-pkitesting</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>
@@ -81,7 +81,7 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty-testsuite-common</artifactId>
+      <artifactId>netty5-testsuite-common</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>
     </dependency>

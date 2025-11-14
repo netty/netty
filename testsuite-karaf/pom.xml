@@ -20,11 +20,11 @@
 
   <parent>
     <groupId>io.netty</groupId>
-    <artifactId>netty-parent</artifactId>
-    <version>4.2.8.Final-SNAPSHOT</version>
+    <artifactId>netty5-parent</artifactId>
+    <version>5.0.0.Final-SNAPSHOT</version>
   </parent>
 
-  <artifactId>netty-testsuite-karaf</artifactId>
+  <artifactId>netty5-testsuite-karaf</artifactId>
   <packaging>feature</packaging>
   <name>Netty/Testsuite/Karaf</name>
 
@@ -39,7 +39,7 @@
     <dependencies>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty-bom</artifactId>
+        <artifactId>netty5-bom</artifactId>
         <version>${project.version}</version>
         <type>pom</type>
         <scope>import</scope>
@@ -50,169 +50,169 @@
   <dependencies>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-buffer</artifactId>
+      <artifactId>netty5-buffer</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-base</artifactId>
+      <artifactId>netty5-codec-base</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-compression</artifactId>
+      <artifactId>netty5-codec-compression</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-classes-quic</artifactId>
+      <artifactId>netty5-codec-classes-quic</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-dns</artifactId>
+      <artifactId>netty5-codec-dns</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-haproxy</artifactId>
+      <artifactId>netty5-codec-haproxy</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-http</artifactId>
+      <artifactId>netty5-codec-http</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-http2</artifactId>
+      <artifactId>netty5-codec-http2</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-http3</artifactId>
+      <artifactId>netty5-codec-http3</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-marshalling</artifactId>
+      <artifactId>netty5-codec-marshalling</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-memcache</artifactId>
+      <artifactId>netty5-codec-memcache</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-mqtt</artifactId>
+      <artifactId>netty5-codec-mqtt</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-redis</artifactId>
+      <artifactId>netty5-codec-redis</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-smtp</artifactId>
+      <artifactId>netty5-codec-smtp</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-socks</artifactId>
+      <artifactId>netty5-codec-socks</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-stomp</artifactId>
+      <artifactId>netty5-codec-stomp</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-codec-xml</artifactId>
+      <artifactId>netty5-codec-xml</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-common</artifactId>
+      <artifactId>netty5-common</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-handler</artifactId>
+      <artifactId>netty5-handler</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-handler-proxy</artifactId>
+      <artifactId>netty5-handler-proxy</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-handler-ssl-ocsp</artifactId>
+      <artifactId>netty5-handler-ssl-ocsp</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-resolver</artifactId>
+      <artifactId>netty5-resolver</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-resolver-dns</artifactId>
+      <artifactId>netty5-resolver-dns</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-resolver-dns-classes-macos</artifactId>
+      <artifactId>netty5-resolver-dns-classes-macos</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-transport</artifactId>
+      <artifactId>netty5-transport</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-transport-classes-epoll</artifactId>
+      <artifactId>netty5-transport-classes-epoll</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-transport-classes-io_uring</artifactId>
+      <artifactId>netty5-transport-classes-io_uring</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-transport-classes-kqueue</artifactId>
+      <artifactId>netty5-transport-classes-kqueue</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-transport-native-unix-common</artifactId>
+      <artifactId>netty5-transport-native-unix-common</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-transport-rxtx</artifactId>
+      <artifactId>netty5-transport-rxtx</artifactId>
       <scope>provided</scope>
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty-transport-sctp</artifactId>
+      <artifactId>netty5-transport-sctp</artifactId>
       <scope>provided</scope>
     </dependency>
 
-    <!-- TODO: netty-codec-protobuf requires figuring out dependencies -->
-    <!-- TODO: netty-transport-udt: requires figuring out slf4j dependency -->
+    <!-- TODO: netty5-codec-protobuf requires figuring out dependencies -->
+    <!-- TODO: netty5-transport-udt: requires figuring out slf4j dependency -->
     <!-- TODO: these require figuring out platform build
-        netty-codec-native-quic
-        netty-resolver-dns-native-macos
-        netty-transport-native-epoll
-        netty-transport-native-io_uring
-        netty-transport-native-kqueue
-        netty-transport-native-unix-common (with classifiers)
+        netty5-codec-native-quic
+        netty5-resolver-dns-native-macos
+        netty5-transport-native-epoll
+        netty5-transport-native-io_uring
+        netty5-transport-native-kqueue
+        netty5-transport-native-unix-common (with classifiers)
     -->
 
     <!-- verify dependencies -->
@@ -245,10 +245,10 @@
             <descriptor>file:${project.build.directory}/feature/feature.xml</descriptor>
           </descriptors>
           <features>
-            <feature>netty-java8</feature>
-            <feature>netty-aalto</feature>
-            <feature>netty-bc</feature>
-            <feature>netty-rxtx</feature>
+            <feature>netty5-java8</feature>
+            <feature>netty5-aalto</feature>
+            <feature>netty5-bc</feature>
+            <feature>netty5-rxtx</feature>
           </features>
           <javase>1.8</javase>
         </configuration>
@@ -261,7 +261,7 @@
             </goals>
             <configuration>
               <features>
-                <feature>netty-java9</feature>
+                <feature>netty5-java9</feature>
               </features>
               <javase>9</javase>
             </configuration>
@@ -274,7 +274,7 @@
             </goals>
             <configuration>
               <features>
-                <feature>netty-jboss</feature>
+                <feature>netty5-jboss</feature>
               </features>
               <javase>11</javase>
             </configuration>
