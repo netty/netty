@@ -134,7 +134,6 @@
 
   <build>
     <plugins>
-      <!-- Disable shading for now as it breaks with JDK25
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
         <executions>
@@ -155,14 +154,16 @@
                   <shadedPattern>io.netty.util.internal.shaded.org.jctools.</shadedPattern>
                 </relocation>
               </relocations>
+              <!-- Disable minimizeJar for now as it breaks with JDK25
               <minimizeJar>true</minimizeJar>
+              -->
               <createSourcesJar>true</createSourcesJar>
               <shadeSourcesContent>true</shadeSourcesContent>
             </configuration>
           </execution>
         </executions>
       </plugin>
-      -->
+
       <!-- Add generated collection sources. -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
