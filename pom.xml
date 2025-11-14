@@ -715,7 +715,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
     <jboss.marshalling.version>2.2.3.Final</jboss.marshalling.version>
-    <bouncycastle.version>1.80</bouncycastle.version>
+    <bouncycastle.version>1.82</bouncycastle.version>
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...
@@ -918,61 +918,13 @@
         <scope>test</scope>
       </dependency>
 
-      <!--
-        Bouncy Castle - completely optional, only needed when:
-        - you generate a temporary self-signed certificate using SelfSignedCertificate, and
-        - you don't use the JDK which doesn't provide sun.security.x509 package.
-      -->
+      <!-- Bouncy Castle BOM. Controlling the versions of our other Bouncy Castle dependencies. -->
       <dependency>
         <groupId>org.bouncycastle</groupId>
-        <artifactId>bcpkix-jdk18on</artifactId>
+        <artifactId>bc-jdk18on-bom</artifactId>
         <version>${bouncycastle.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
-      <!--
-        Completely optional and only needed for OCSP stapling to construct and
-        parse OCSP requests and responses.
-      -->
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bcprov-jdk18on</artifactId>
-        <version>${bouncycastle.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
-
-      <!--
-        Completely optional integration of netty5-handler with Bouncy Castle.
-
-        In particular, BouncyCastleAlpnSslUtils is using
-        org.bouncycastle.jsse.{BCApplicationProtocolSelector,BCSSLEngine}
-        via reflection, loading them via Class.forName(String).
-
-        This method of use leads to zero bytecode-level traces of this
-        dependency and works for plain Java without any further reference to
-        bctls.
-
-        maven-bundle-plugin recognizes the invocation of Class.forName() parses
-        its argument to recognize the call requires the org.bouncycastle.jsse
-        to succeed. It generates an Import-Package stanza for it, resulting in
-        a bundle which does not resolve without bctls.
-
-        This declaration, along with its corresponding dependency declaration
-        in netty5-handler, provides the additional information about our use.
-        Its presence allows maven-bundle-plugin to observe
-        'org.bouncycastle.jsse' to live in an optional dependency, which is
-        enough for it to also add ';resolution=optional' and thus netty5-handler
-        will resolve successfully even when bctls is not present, matching our
-        intent.
-      -->
-      <dependency>
-        <groupId>org.bouncycastle</groupId>
-        <artifactId>bctls-jdk18on</artifactId>
-        <version>${bouncycastle.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
 
       <dependency>
