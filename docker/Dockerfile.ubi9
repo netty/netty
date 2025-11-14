@@ -4,11 +4,13 @@ RUN microdnf install -y \
  apr-devel \
  autoconf \
  automake \
+ cmake \
  git \
  glibc-devel \
  libtool \
  lksctp-tools \
  make \
+ ninja \
  openssl-devel \
  tar \
  unzip \
@@ -29,6 +31,10 @@ RUN bash -c "source $HOME/.sdkman/bin/sdkman-init.sh && \
 
 RUN echo 'export JAVA_HOME="/root/.sdkman/candidates/java/current"' >> ~/.bashrc
 RUN echo 'PATH=/jdk/bin:$PATH' >> ~/.bashrc
+
+# install rust and setup PATH
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
+RUN echo 'PATH=$PATH:$HOME/.cargo/bin' >> ~/.bashrc
 
 # Cleanup
 RUN microdnf clean all
