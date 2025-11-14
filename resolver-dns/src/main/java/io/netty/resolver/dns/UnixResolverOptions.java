@@ -52,7 +52,7 @@ final class UnixResolverOptions {
 
     /**
      * The maximum allowed number of DNS queries to send when resolving a host name.
-     * The default value is {@code 16}.
+     * The default value is {@code 2}.
      */
     int attempts() {
         return attempts;
@@ -71,7 +71,9 @@ final class UnixResolverOptions {
 
         private int ndots = 1;
         private int timeout = 5;
-        private int attempts = 16;
+        // Use 2 as default as this is also what is used by the native resolver:
+        // https://linux.die.net/man/5/resolver
+        private int attempts = 2;
 
         private Builder() {
         }

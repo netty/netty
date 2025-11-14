@@ -193,7 +193,7 @@ public class UnixResolverDnsServerAddressStreamProviderTest {
     public void defaultValueReturnedIfAttemptsOptionsIsNotPresent(@TempDir Path tempDir) throws IOException {
         File f = buildFile(tempDir, "search localdomain\n" +
             "nameserver 127.0.0.11\n");
-        assertEquals(16, parseEtcResolverOptions(f).attempts());
+        assertEquals(2, parseEtcResolverOptions(f).attempts());
     }
 
     @Test
