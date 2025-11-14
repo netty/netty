@@ -17,7 +17,7 @@ name: Build project
 
 on:
   push:
-    branches: [ "4.2"]
+    branches: [ "5.0" ]
 
   schedule:
     - cron: '30 1 * * 1'  # At 01:30 on Monday, every Monday.
@@ -26,7 +26,7 @@ on:
   workflow_dispatch:
 
 env:
-  MAVEN_OPTS: -Xmx6g -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
 
 permissions:
   contents: read
@@ -43,12 +43,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - setup: linux-x86_64-java11
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build"
-          - setup: linux-x86_64-java11-boringssl-snapshot
-            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
-            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-boringssl-snapshot"
+          - setup: linux-x86_64-java25
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=25-zulu"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build"
+          - setup: linux-x86_64-java25-boringssl-snapshot
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml build --build-arg java_version=25-zulu"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.ubi9.yaml run build-boringssl-snapshot"
 
     name: ${{ matrix.setup }}
     steps:
@@ -73,6 +73,9 @@ jobs:
 
       - name: Checking for test failures
         run: ./.github/scripts/check_build_result.sh build.output
+
+      - name: Checking bom dependency versions
+        run: ./.github/scripts/check_bom_dependencies.sh
 
       - name: print JVM thread dumps when cancelled
         uses: ./.github/actions/thread-dump-jvms

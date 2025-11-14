@@ -97,18 +97,6 @@
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
     </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty5-jfr-stub</artifactId>
-      <version>${project.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty5-varhandle-stub</artifactId>
-      <version>${project.version}</version>
-      <scope>provided</scope>
-    </dependency>
     <!-- Add dependency on dev-tools as otherwise the build will fail if not installed first manually -->
     <!-- See https://github.com/netty/netty/issues/7842 -->
     <dependency>
@@ -146,6 +134,7 @@
 
   <build>
     <plugins>
+      <!-- Disable shading for now as it breaks with JDK25
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
         <executions>
@@ -173,6 +162,7 @@
           </execution>
         </executions>
       </plugin>
+      -->
       <!-- Add generated collection sources. -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -252,6 +242,7 @@
           </execution>
         </executions>
       </plugin>
+      <!--
       <plugin>
         <groupId>io.github.dmlloyd.module-info</groupId>
         <artifactId>module-info</artifactId>
@@ -261,6 +252,7 @@
           </execution>
         </executions>
       </plugin>
+      -->
     </plugins>
   </build>
 </project>

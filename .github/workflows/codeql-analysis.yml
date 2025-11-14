@@ -13,19 +13,24 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 # ----------------------------------------------------------------------------
+# For most projects, this workflow file will not need changing; you simply need
+# to commit it to your repository.
+#
+# You may wish to alter this file to override the set of languages analyzed,
+# or to provide custom queries or build logic.
 name: "CodeQL"
 
 on:
   push:
-    branches: ["4.1", "4.2"]
+    branches: [ "5.0" ]
   pull_request:
     # The branches below must be a subset of the branches above
-    branches: ["4.1", "4.2"]
+    branches: [ "5.0" ]
   schedule:
     - cron: '0 13 * * 3'
 
 env:
-  MAVEN_OPTS: -Xmx6g -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
+  MAVEN_OPTS: -Dhttp.keepAlive=false -Dmaven.wagon.http.pool=false -Dmaven.wagon.http.retryhandler.count=5 -Dmaven.wagon.httpconnectionManager.ttlSeconds=240
 
 permissions:
   contents: read
@@ -67,7 +72,7 @@ jobs:
         uses: actions/setup-java@v5
         with:
           distribution: 'zulu'
-          java-version: '11'
+          java-version: '25'
 
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v3
@@ -76,11 +81,8 @@ jobs:
           build-mode: manual
           languages: ${{ matrix.language }}
 
-      - name: Install tools / libraries
-        run: sudo apt-get update && sudo apt-get -y install autoconf automake libtool make tar cmake perl ninja-build git cargo
-
       - name: Compile project
-        run: ./mvnw -B -ntp clean package -DskipTests=true -DskipH3Spec=true
+        run: ./mvnw -B -ntp clean package -DskipTests=true
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3

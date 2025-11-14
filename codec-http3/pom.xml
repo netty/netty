@@ -224,6 +224,7 @@
           </execution>
         </executions>
       </plugin>
+      <!--
       <plugin>
         <groupId>io.github.dmlloyd.module-info</groupId>
         <artifactId>module-info</artifactId>
@@ -233,6 +234,7 @@
           </execution>
         </executions>
       </plugin>
+      -->
       <plugin>
         <groupId>io.netty.incubator</groupId>
         <artifactId>netty-incubator-h3spec-maven-plugin</artifactId>

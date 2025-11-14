@@ -39,18 +39,6 @@
       <version>${project.version}</version>
     </dependency>
     <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-jfr-stub</artifactId>
-      <version>${project.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-varhandle-stub</artifactId>
-      <version>${project.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>org.graalvm.nativeimage</groupId>
       <artifactId>svm</artifactId>
       <!-- Optional so maven-bundle-plugin does not make com.oracle.svm.core.annotate a required import -->
@@ -152,6 +140,7 @@
           </execution>
         </executions>
       </plugin>
+      <!--
       <plugin>
         <groupId>io.github.dmlloyd.module-info</groupId>
         <artifactId>module-info</artifactId>
@@ -161,6 +150,7 @@
           </execution>
         </executions>
       </plugin>
+      -->
     </plugins>
   </build>
 
