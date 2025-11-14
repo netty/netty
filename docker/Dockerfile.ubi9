@@ -10,7 +10,7 @@ RUN microdnf install -y \
  libtool \
  lksctp-tools \
  make \
- ninja \
+ ninja-build \
  openssl-devel \
  tar \
  unzip \
