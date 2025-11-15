@@ -141,6 +141,8 @@ public final class ZstdEncoder extends MessageToByteEncoder<ByteBuf> {
                 flushBufferedData(out);
             }
         }
+        // return the remaining data in the buffer
+        // when buffer size is smaller than the block size
         if (buffer.isReadable()) {
             flushBufferedData(out);
         }

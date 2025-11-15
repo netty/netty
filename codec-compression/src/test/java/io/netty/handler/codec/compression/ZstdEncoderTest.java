@@ -25,6 +25,7 @@ import io.netty.channel.VoidChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
@@ -56,11 +57,6 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
         return new EmbeddedChannel(new ZstdEncoder());
     }
 
-    public static ByteBuf[] tinyData() {
-        ByteBuf in = Unpooled.copiedBuffer(TEST_CONTENT, CharsetUtil.UTF_8);
-        return new ByteBuf[] {in};
-    }
-
     @ParameterizedTest
     @MethodSource("largeData")
     public void testCompressionOfLargeBatchedFlow(final ByteBuf data) throws Exception {
@@ -88,20 +84,17 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
         testCompressionOfBatchedFlow(data);
     }
 
-    @ParameterizedTest
-    @MethodSource("tinyData")
-    public void testCompressionOfTinyData(final ByteBuf data) throws Exception {
-        ZstdEncoder encoder = new ZstdEncoder();
-        encoder.handlerAdded(ctx);
-        VoidChannelPromise promise = new VoidChannelPromise(channel, true);
-        encoder.write(ctx, data, promise);
-        ArgumentCaptor<ByteBuf> outCaptor = ArgumentCaptor.forClass(ByteBuf.class);
-        verify(ctx).write(outCaptor.capture(), eq(promise));
+    @Test
+    public void testCompressionOfTinyData() throws Exception {
+        ByteBuf data = Unpooled.copiedBuffer(TEST_CONTENT, CharsetUtil.UTF_8);
+        assertTrue(channel.writeOutbound(data.retain()));
+        assertTrue(channel.finish());
 
-        ByteBuf out = outCaptor.getValue();
+        ByteBuf out = channel.readOutbound();
         assertThat(out.readableBytes()).isPositive();
-        encoder.handlerRemoved(ctx);
+
         out.release();
+        data.release();
     }
 
     @Override
