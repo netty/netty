@@ -102,6 +102,13 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
     private final RejectedExecutionHandler rejectedExecutionHandler;
     private final boolean supportSuspension;
 
+    /**
+     * Flag to notify event loop thread to continue running when going from state
+     * ST_SUSPENDING back to ST_STARTED. This happens when attempting to un-suspend
+     * a thread that is not fully suspended.
+     */
+    private boolean attemptRestart;
+
     // A running total of nanoseconds this executor has spent in an "active" state.
     private volatile long accumulatedActiveTimeNanos;
     // Timestamp of the last recorded activity (tasks + I/O).
@@ -1154,6 +1161,24 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     }
                 }
             }
+        } else if (currentState == ST_SUSPENDING) {
+            boolean success = false;
+            while (state == ST_SUSPENDING) {
+                if (!STATE_UPDATER.compareAndSet(this, ST_SUSPENDING, ST_STARTED)) {
+                    continue;
+                    // CAS did not work, try again if the state is still in suspending
+                }
+                // The state changed to started but the event loop thread may have already
+                // started attempting to suspend the thread. Therefore set the flag to attempt
+                // a restart if possible
+                attemptRestart = true;
+                success = true;
+                break;
+            }
+            if (!success) {
+                // Re-do start thread again because state may have changed while attempting to start
+                startThread();
+            }
         }
     }
 
@@ -1210,6 +1235,9 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                                 continue;
                             }
                             suspend = true;
+                        } else if (attemptRestart && currentState == ST_STARTED) {
+                            attemptRestart = false;
+                            continue;
                         }
                         break;
                     }
@@ -1217,6 +1245,7 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
                     unexpectedException = t;
                     logger.warn("Unexpected exception from an event executor: ", t);
                 } finally {
+                    attemptRestart = false;
                     boolean shutdown = !suspend;
                     if (shutdown) {
                         for (;;) {
