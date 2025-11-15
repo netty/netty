@@ -19,6 +19,8 @@ import io.netty.util.internal.StringUtil;
 
 import static io.netty.handler.codec.http2.Http2CodecUtil.verifyPadding;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * The default {@link Http2HeadersFrame} implementation.
@@ -105,10 +107,6 @@ public final class DefaultHttp2HeadersFrame extends AbstractHttp2StreamFrame imp
 
     @Override
     public int hashCode() {
-        int hash = super.hashCode();
-        hash = hash * 31 + headers.hashCode();
-        hash = hash * 31 + (endStream ? 0 : 1);
-        hash = hash * 31 + padding;
-        return hash;
+        return hashSum(super.hashCode(), hash(headers), Boolean.hashCode(endStream), padding);
     }
 }

@@ -47,6 +47,7 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.hash;
 
 abstract class DnsQueryContext {
 
@@ -551,14 +552,7 @@ abstract class DnsQueryContext {
 
         @Override
         public int hashCode() {
-            int hashCode = response.hashCode();
-            if (sender() != null) {
-                hashCode = hashCode * 31 + sender().hashCode();
-            }
-            if (recipient() != null) {
-                hashCode = hashCode * 31 + recipient().hashCode();
-            }
-            return hashCode;
+            return hash(response, sender(), recipient());
         }
     }
 }

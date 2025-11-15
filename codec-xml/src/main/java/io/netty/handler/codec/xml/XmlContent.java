@@ -15,6 +15,10 @@
  */
 package io.netty.handler.codec.xml;
 
+import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.hash;
+
 /**
  * XML Content is base class for XML CDATA, Comments, Characters and Space
  */
@@ -40,17 +44,12 @@ public abstract class XmlContent {
         }
 
         XmlContent that = (XmlContent) o;
-
-        if (data != null ? !data.equals(that.data) : that.data != null) {
-            return false;
-        }
-
-        return true;
+        return Objects.equals(data, that.data);
     }
 
     @Override
     public int hashCode() {
-        return data != null ? data.hashCode() : 0;
+        return hash(data);
     }
 
     @Override

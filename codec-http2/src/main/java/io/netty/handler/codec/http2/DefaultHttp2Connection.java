@@ -63,7 +63,7 @@ import static java.lang.Integer.MAX_VALUE;
 public class DefaultHttp2Connection implements Http2Connection {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultHttp2Connection.class);
     // Fields accessed by inner classes
-    final IntObjectMap<Http2Stream> streamMap = new IntObjectHashMap<Http2Stream>();
+    final IntObjectMap<Http2Stream> streamMap = new IntObjectHashMap<>();
     final PropertyKeyRegistry propertyKeyRegistry = new PropertyKeyRegistry();
     final ConnectionStream connectionStream = new ConnectionStream();
     final DefaultEndpoint<Http2LocalFlowController> localEndpoint;
@@ -77,13 +77,13 @@ public class DefaultHttp2Connection implements Http2Connection {
      * (local/remote flow controller and {@link StreamByteDistributor}) and we leave room for 1 extra.
      * We could be more aggressive but the ArrayList resize will double the size if we are too small.
      */
-    final List<Listener> listeners = new ArrayList<Listener>(4);
+    final List<Listener> listeners = new ArrayList<>(4);
     final ActiveStreams activeStreams;
     Promise<Void> closePromise;
 
     /**
      * Creates a new connection with the given settings.
-     * @param server whether or not this end-point is the server-side of the HTTP/2 connection.
+     * @param server whether this end-point is the server-side of the HTTP/2 connection.
      */
     public DefaultHttp2Connection(boolean server) {
         this(server, DEFAULT_MAX_RESERVED_STREAMS);
@@ -91,7 +91,7 @@ public class DefaultHttp2Connection implements Http2Connection {
 
     /**
      * Creates a new connection with the given settings.
-     * @param server whether or not this end-point is the server-side of the HTTP/2 connection.
+     * @param server whether this end-point is the server-side of the HTTP/2 connection.
      * @param maxReservedStreams The maximum amount of streams which can exist in the reserved state for each endpoint.
      */
     public DefaultHttp2Connection(boolean server, int maxReservedStreams) {
@@ -101,8 +101,8 @@ public class DefaultHttp2Connection implements Http2Connection {
         // in response to any locally enforced limits being exceeded [2].
         // [1] https://tools.ietf.org/html/rfc7540#section-5.1.2
         // [2] https://tools.ietf.org/html/rfc7540#section-8.2.2
-        localEndpoint = new DefaultEndpoint<Http2LocalFlowController>(server, server ? MAX_VALUE : maxReservedStreams);
-        remoteEndpoint = new DefaultEndpoint<Http2RemoteFlowController>(!server, maxReservedStreams);
+        localEndpoint = new DefaultEndpoint<>(server, server ? MAX_VALUE : maxReservedStreams);
+        remoteEndpoint = new DefaultEndpoint<>(!server, maxReservedStreams);
 
         // Add the connection stream to the map.
         streamMap.put(connectionStream.id(), connectionStream);
@@ -276,14 +276,11 @@ public class DefaultHttp2Connection implements Http2Connection {
 
     private void closeStreamsGreaterThanLastKnownStreamId(final int lastKnownStream,
                                                           final DefaultEndpoint<?> endpoint) throws Http2Exception {
-        forEachActiveStream(new Http2StreamVisitor() {
-            @Override
-            public boolean visit(Http2Stream stream) {
-                if (stream.id() > lastKnownStream && endpoint.isValidStreamId(stream.id())) {
-                    stream.close();
-                }
-                return true;
+        forEachActiveStream(stream -> {
+            if (stream.id() > lastKnownStream && endpoint.isValidStreamId(stream.id())) {
+                stream.close();
             }
+            return true;
         });
     }
 
@@ -608,10 +605,7 @@ public class DefaultHttp2Connection implements Http2Connection {
         @Override
         public int hashCode() {
             long value = identity;
-            if (value == 0) {
-                return System.identityHashCode(this);
-            }
-            return (int) (value ^ (value >>> 32));
+            return value == 0 ? System.identityHashCode(this) : Long.hashCode(value);
         }
 
         @Override
@@ -969,8 +963,8 @@ public class DefaultHttp2Connection implements Http2Connection {
      */
     private final class ActiveStreams {
         private final List<Listener> listeners;
-        private final Queue<Event> pendingEvents = new ArrayDeque<Event>(4);
-        private final Set<Http2Stream> streams = new LinkedHashSet<Http2Stream>();
+        private final Queue<Event> pendingEvents = new ArrayDeque<>(4);
+        private final Set<Http2Stream> streams = new LinkedHashSet<>();
         private int pendingIterations;
 
         ActiveStreams(List<Listener> listeners) {
@@ -985,12 +979,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (allowModifications()) {
                 addToActiveStreams(stream);
             } else {
-                pendingEvents.add(new Event() {
-                    @Override
-                    public void process() {
-                        addToActiveStreams(stream);
-                    }
-                });
+                pendingEvents.add(() -> addToActiveStreams(stream));
             }
         }
 
@@ -998,12 +987,7 @@ public class DefaultHttp2Connection implements Http2Connection {
             if (allowModifications() || itr != null) {
                 removeFromActiveStreams(stream, itr);
             } else {
-                pendingEvents.add(new Event() {
-                    @Override
-                    public void process() {
-                        removeFromActiveStreams(stream, itr);
-                    }
-                });
+                pendingEvents.add(() -> removeFromActiveStreams(stream, itr));
             }
         }
 
@@ -1098,7 +1082,7 @@ public class DefaultHttp2Connection implements Http2Connection {
          * (local/remote flow controller and {@link StreamByteDistributor}) and we leave room for 1 extra.
          * We could be more aggressive but the ArrayList resize will double the size if we are too small.
          */
-        final List<DefaultPropertyKey> keys = new ArrayList<DefaultPropertyKey>(4);
+        final List<DefaultPropertyKey> keys = new ArrayList<>(4);
 
         /**
          * Registers a new property key.

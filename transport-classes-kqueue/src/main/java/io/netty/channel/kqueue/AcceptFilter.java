@@ -18,6 +18,8 @@ package io.netty.channel.kqueue;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.UnstableApi;
 
+import static io.netty.util.internal.ObjectUtil.hash;
+
 @UnstableApi
 public final class AcceptFilter {
     static final AcceptFilter PLATFORM_UNSUPPORTED = new AcceptFilter("", "");
@@ -51,7 +53,7 @@ public final class AcceptFilter {
 
     @Override
     public int hashCode() {
-        return 31 * (31 + filterName.hashCode()) + filterArgs.hashCode();
+        return hash(filterName, filterArgs);
     }
 
     @Override

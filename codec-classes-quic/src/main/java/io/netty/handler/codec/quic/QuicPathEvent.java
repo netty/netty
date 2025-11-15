@@ -18,6 +18,8 @@ package io.netty.handler.codec.quic;
 import java.net.InetSocketAddress;
 import java.util.Objects;
 
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 import static java.util.Objects.requireNonNull;
 
 /**
@@ -77,9 +79,7 @@ public abstract class QuicPathEvent implements QuicEvent {
 
     @Override
     public int hashCode() {
-        int result = local != null ? local.hashCode() : 0;
-        result = 31 * result + (remote != null ? remote.hashCode() : 0);
-        return result;
+        return hash(local, remote);
     }
 
     public static final class New extends QuicPathEvent {
@@ -258,11 +258,7 @@ public abstract class QuicPathEvent implements QuicEvent {
 
         @Override
         public int hashCode() {
-            int result = super.hashCode();
-            result = 31 * result + (int) (seq ^ (seq >>> 32));
-            result = 31 * result + (oldLocal != null ? oldLocal.hashCode() : 0);
-            result = 31 * result + (oldRemote != null ? oldRemote.hashCode() : 0);
-            return result;
+            return hashSum(super.hashCode(), Long.hashCode(seq), hash(oldLocal), hash(oldRemote));
         }
 
         @Override

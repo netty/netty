@@ -17,7 +17,7 @@ package io.netty.handler.codec.quic;
 
 import io.netty.util.internal.ObjectUtil;
 
-import java.util.Objects;
+import static io.netty.util.internal.ObjectUtil.hash;
 
 /**
  * The priority of a {@link QuicStreamChannel}.
@@ -70,7 +70,7 @@ public final class QuicStreamPriority {
 
     @Override
     public int hashCode() {
-        return Objects.hash(urgency, incremental);
+        return ObjectUtil.hashSum(urgency, hash(incremental));
     }
 
     @Override

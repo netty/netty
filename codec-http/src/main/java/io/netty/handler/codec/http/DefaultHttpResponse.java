@@ -19,6 +19,8 @@ import io.netty.util.internal.ObjectUtil;
 
 import static io.netty.handler.codec.http.DefaultHttpHeadersFactory.headersFactory;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
 
 /**
  * The default {@link HttpResponse} implementation.
@@ -126,10 +128,7 @@ public class DefaultHttpResponse extends DefaultHttpMessage implements HttpRespo
 
     @Override
     public int hashCode() {
-        int result = 1;
-        result = 31 * result + status.hashCode();
-        result = 31 * result + super.hashCode();
-        return result;
+        return hashSum(hash(status), super.hashCode());
     }
 
     @Override

@@ -60,13 +60,7 @@ public abstract class QuicheQuicCodecTest<B extends QuicCodecBuilder<B>> extends
         builder.flushStrategy((numPackets, numBytes) -> {
             numPacketsTracker.set(numPackets);
             numBytesTracker.set(numBytes);
-            if (useBytes) {
-                return numBytes > 8;
-            }
-            if (numPackets == 2) {
-                return true;
-            }
-            return false;
+            return useBytes ? numBytes > 8 : numPackets == 2;
         });
 
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {

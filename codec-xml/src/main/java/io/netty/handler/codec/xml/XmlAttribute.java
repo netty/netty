@@ -16,6 +16,10 @@
 package io.netty.handler.codec.xml;
 
 
+import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.hash;
+
 /**
  * XML attributes, it is part of {@link XmlElement}
  */
@@ -65,34 +69,16 @@ public class XmlAttribute {
         }
 
         XmlAttribute that = (XmlAttribute) o;
-
-        if (!name.equals(that.name)) {
-            return false;
-        }
-        if (namespace != null ? !namespace.equals(that.namespace) : that.namespace != null) {
-            return false;
-        }
-        if (prefix != null ? !prefix.equals(that.prefix) : that.prefix != null) {
-            return false;
-        }
-        if (type != null ? !type.equals(that.type) : that.type != null) {
-            return false;
-        }
-        if (value != null ? !value.equals(that.value) : that.value != null) {
-            return false;
-        }
-
-        return true;
+        return name.equals(that.name) &&
+                Objects.equals(namespace, that.namespace) &&
+                Objects.equals(prefix, that.prefix) &&
+                Objects.equals(type, that.type) &&
+                Objects.equals(value, that.value);
     }
 
     @Override
     public int hashCode() {
-        int result = type != null ? type.hashCode() : 0;
-        result = 31 * result + name.hashCode();
-        result = 31 * result + (prefix != null ? prefix.hashCode() : 0);
-        result = 31 * result + (namespace != null ? namespace.hashCode() : 0);
-        result = 31 * result + (value != null ? value.hashCode() : 0);
-        return result;
+        return hash(type, name, prefix, namespace, value);
     }
 
     @Override

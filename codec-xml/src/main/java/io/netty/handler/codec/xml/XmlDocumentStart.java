@@ -15,6 +15,11 @@
  */
 package io.netty.handler.codec.xml;
 
+import java.util.Objects;
+
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
+
 /**
  * Beginning of the XML document ... i.e. XML header
  */
@@ -62,30 +67,15 @@ public class XmlDocumentStart {
         }
 
         XmlDocumentStart that = (XmlDocumentStart) o;
-
-        if (standalone != that.standalone) {
-            return false;
-        }
-        if (encoding != null ? !encoding.equals(that.encoding) : that.encoding != null) {
-            return false;
-        }
-        if (encodingScheme != null ? !encodingScheme.equals(that.encodingScheme) : that.encodingScheme != null) {
-            return false;
-        }
-        if (version != null ? !version.equals(that.version) : that.version != null) {
-            return false;
-        }
-
-        return true;
+        return standalone == that.standalone &&
+                Objects.equals(encoding, that.encoding) &&
+                Objects.equals(encodingScheme, that.encodingScheme) &&
+                Objects.equals(version, that.version);
     }
 
     @Override
     public int hashCode() {
-        int result = encoding != null ? encoding.hashCode() : 0;
-        result = 31 * result + (version != null ? version.hashCode() : 0);
-        result = 31 * result + (standalone ? 1 : 0);
-        result = 31 * result + (encodingScheme != null ? encodingScheme.hashCode() : 0);
-        return result;
+        return hashSum(hash(encoding), hash(version), Boolean.hashCode(standalone), hash(encodingScheme));
     }
 
     @Override

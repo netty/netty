@@ -15,6 +15,9 @@
  */
 package io.netty.handler.codec.mqtt;
 
+import static io.netty.util.internal.ObjectUtil.hash;
+import static io.netty.util.internal.ObjectUtil.hashSum;
+
 /**
  * Model the SubscriptionOption used in Subscribe MQTT v5 packet
  */
@@ -94,26 +97,15 @@ public final class MqttSubscriptionOption {
         }
 
         MqttSubscriptionOption that = (MqttSubscriptionOption) o;
-
-        if (noLocal != that.noLocal) {
-            return false;
-        }
-        if (retainAsPublished != that.retainAsPublished) {
-            return false;
-        }
-        if (qos != that.qos) {
-            return false;
-        }
-        return retainHandling == that.retainHandling;
+        return noLocal == that.noLocal &&
+                retainAsPublished == that.retainAsPublished &&
+                qos == that.qos &&
+                retainHandling == that.retainHandling;
     }
 
     @Override
     public int hashCode() {
-        int result = qos.hashCode();
-        result = 31 * result + (noLocal ? 1 : 0);
-        result = 31 * result + (retainAsPublished ? 1 : 0);
-        result = 31 * result + retainHandling.hashCode();
-        return result;
+        return hashSum(hash(qos), Boolean.hashCode(noLocal), Boolean.hashCode(retainAsPublished), hash(retainHandling));
     }
 
     @Override
