@@ -27,6 +27,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.function.BiPredicate;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.SET_COOKIE;
 import static io.netty.util.AsciiString.CASE_INSENSITIVE_HASHER;
@@ -143,6 +144,18 @@ public class CombinedHttpHeaders extends DefaultHttpHeaders {
                 throw new IllegalStateException("CombinedHttpHeaders should only have one value");
             }
             return unescapedItr;
+        }
+
+        @Override
+        public boolean containsAny(CharSequence name, CharSequence predicateArg,
+                                   BiPredicate<? super CharSequence, ? super CharSequence> valuePredicate) {
+            Iterator<CharSequence> itr = valueIterator(name);
+            while (itr.hasNext()) {
+                if (valuePredicate.test(itr.next(), predicateArg)) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Override
