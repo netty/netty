@@ -11,7 +11,7 @@ RUN microdnf install -y \
  glibc-devel \
  golang \
  libtool \
- libstdc++-devel \
+ libstdc++-static \
  lksctp-tools \
  make \
  ninja-build \
