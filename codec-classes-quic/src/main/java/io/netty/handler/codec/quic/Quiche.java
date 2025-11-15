@@ -403,7 +403,8 @@ final class Quiche {
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L258">quiche_conn_stream_recv</a>.
      */
-    static native int quiche_conn_stream_recv(long connAddr, long streamId, long outAddr, int bufLen, long finAddr);
+    static native int quiche_conn_stream_recv(long connAddr, long streamId, long outAddr, int bufLen, long finAddr,
+                                              long outErrorCodeAddr);
 
     /**
      * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L262">quiche_conn_stream_send</a>.
@@ -895,10 +896,22 @@ final class Quiche {
     }
 
     static Exception convertToException(int result) {
+        return convertToException(result, -1L);
+    }
+
+    static Exception convertToException(int result, long code) {
         QuicTransportErrorHolder holder = ERROR_MAPPINGS.get(result);
         if (holder == null) {
             // There is no mapping to a transport error, it's something internal so throw it directly.
-            return new QuicException(QuicheError.valueOf(result).message());
+            QuicheError error = QuicheError.valueOf(result);
+            switch (error) {
+                case STREAM_RESET:
+                    return new QuicStreamResetException(error.message(), code);
+                case STREAM_STOPPED:
+                    return new QuicStreamException(error.message());
+                default:
+                    return new QuicException(error.message());
+            }
         }
         Exception exception = new QuicException(holder.error + ": " + holder.quicheErrorName, holder.error);
         if (result == QUICHE_ERR_TLS_FAIL) {

@@ -142,6 +142,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean inFireChannelReadCompleteQueue;
     private boolean fireChannelReadCompletePending;
     private ByteBuf finBuffer;
+    private ByteBuf outErrorCodeBuffer;
     private ChannelPromise connectPromise;
     private ScheduledFuture<?> connectTimeoutFuture;
     private QuicConnectionAddress connectAddress;
@@ -624,6 +625,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     finBuffer.release();
                     finBuffer = null;
                 }
+                if (outErrorCodeBuffer != null) {
+                    outErrorCodeBuffer.release();
+                    outErrorCodeBuffer = null;
+                }
             } finally {
                 if (sendResult == SendResult.SOME) {
                     // As this is the close let us flush it asap.
@@ -940,13 +945,19 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (finBuffer == null) {
             finBuffer = alloc().directBuffer(1);
         }
+        if (outErrorCodeBuffer == null) {
+            outErrorCodeBuffer = alloc().directBuffer(8);
+        }
+        outErrorCodeBuffer.setLongLE(0, -1L);
         int writerIndex = buffer.writerIndex();
         int recvLen = Quiche.quiche_conn_stream_recv(connAddr, streamId,
-                Quiche.writerMemoryAddress(buffer), buffer.writableBytes(), Quiche.writerMemoryAddress(finBuffer));
+                Quiche.writerMemoryAddress(buffer), buffer.writableBytes(), Quiche.writerMemoryAddress(finBuffer),
+                Quiche.writerMemoryAddress(outErrorCodeBuffer));
+        long errorCode = outErrorCodeBuffer.getLongLE(0);
         if (recvLen == Quiche.QUICHE_ERR_DONE) {
             return StreamRecvResult.DONE;
         } else if (recvLen < 0) {
-            throw Quiche.convertToException(recvLen);
+            throw Quiche.convertToException(recvLen, errorCode);
         }
         buffer.writerIndex(writerIndex + recvLen);
         return finBuffer.getBoolean(0) ? StreamRecvResult.FIN : StreamRecvResult.OK;

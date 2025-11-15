@@ -20,7 +20,7 @@ import org.jetbrains.annotations.Nullable;
 /**
  * Exception produced while processing {@code QUIC}.
  */
-public final class QuicException extends Exception {
+public class QuicException extends Exception {
 
     private final QuicTransportError error;
 
