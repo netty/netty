@@ -5,8 +5,11 @@ RUN microdnf install -y \
  autoconf \
  automake \
  cmake \
+ g++ \
+ gcc \
  git \
  glibc-devel \
+ golang \
  libtool \
  lksctp-tools \
  make \
