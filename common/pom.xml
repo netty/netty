@@ -97,18 +97,6 @@
       <groupId>org.mockito</groupId>
       <artifactId>mockito-core</artifactId>
     </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty5-jfr-stub</artifactId>
-      <version>${project.version}</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
-      <artifactId>netty5-varhandle-stub</artifactId>
-      <version>${project.version}</version>
-      <scope>provided</scope>
-    </dependency>
     <!-- Add dependency on dev-tools as otherwise the build will fail if not installed first manually -->
     <!-- See https://github.com/netty/netty/issues/7842 -->
     <dependency>
@@ -166,13 +154,16 @@
                   <shadedPattern>io.netty.util.internal.shaded.org.jctools.</shadedPattern>
                 </relocation>
               </relocations>
+              <!-- Disable minimizeJar for now as it breaks with JDK25
               <minimizeJar>true</minimizeJar>
+              -->
               <createSourcesJar>true</createSourcesJar>
               <shadeSourcesContent>true</shadeSourcesContent>
             </configuration>
           </execution>
         </executions>
       </plugin>
+
       <!-- Add generated collection sources. -->
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
