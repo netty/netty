@@ -18,8 +18,11 @@ package io.netty.util.concurrent;
 import io.netty.util.internal.ObjectUtil;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -277,6 +280,47 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                     return;
                 }
 
+                final AutoScalingState currentState;
+                final Set<EventExecutor> newlyWokenExecutors;
+
+                for (;;) {
+                    AutoScalingState oldState = state.get();
+                    List<EventExecutor> active = new ArrayList<>(oldState.activeChildrenCount);
+                    for (EventExecutor executor : executors) {
+                        if (!executor.isSuspended()) {
+                            active.add(executor);
+                        }
+                    }
+
+                    EventExecutor[] newActiveExecutors = active.toArray(new EventExecutor[0]);
+                    if (newActiveExecutors.length == oldState.activeChildrenCount) {
+                        // No external state change was detected. We can proceed with the current state.
+                        currentState = oldState;
+                        newlyWokenExecutors = Collections.emptySet();
+                        break;
+                    }
+
+                    // An external change was detected.
+                    // Preserve nextWakeUpIndex as this is a reconciliation, not a scale-up.
+                    AutoScalingState newState = new AutoScalingState(
+                            newActiveExecutors.length, oldState.nextWakeUpIndex, newActiveExecutors);
+
+                    if (state.compareAndSet(oldState, newState)) {
+                        currentState = newState;
+                        newlyWokenExecutors = new HashSet<>(active);
+                        newlyWokenExecutors.removeAll(Arrays.asList(oldState.activeExecutors));
+
+                        for (EventExecutor woken : newlyWokenExecutors) {
+                            if (woken instanceof SingleThreadEventExecutor) {
+                                SingleThreadEventExecutor eventExecutor = (SingleThreadEventExecutor) woken;
+                                eventExecutor.resetIdleCycles();
+                                eventExecutor.resetBusyCycles();
+                            }
+                        }
+                        break;
+                    }
+                }
+
                 // Calculate the actual elapsed time since the last run.
                 final long now = executors[0].ticker().nanoTime();
                 long totalTime;
@@ -300,10 +344,17 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                 int consistentlyBusyChildren = 0;
                 consistentlyIdleChildren.clear();
 
-                final AutoScalingState currentState = state.get();
-
                 for (int i = 0; i < executors.length; i++) {
                     EventExecutor child = executors[i];
+
+                    // Give a grace period to newly woken executors.
+                    // By skipping them entirely for one cycle, we prevent them from being
+                    // immediately re-suspended due to near-zero initial utilization.
+                    if (newlyWokenExecutors.contains(child)) {
+                        utilizationMetrics.get(i).setUtilization(0.0);
+                        continue;
+                    }
+
                     if (!(child instanceof SingleThreadEventExecutor)) {
                         continue;
                     }
@@ -385,8 +436,8 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                     }
                 }
 
-                // If a scale-down occurred, or if the actual state differs from our view, rebuild.
-                if (changed || currentActive != currentState.activeExecutors.length) {
+                // If a scale-down occurred, rebuild.
+                if (changed) {
                     rebuildActiveExecutors();
                 }
             }
@@ -394,7 +445,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
             /**
              * Atomically updates the state by creating a new snapshot with the current set of active executors.
              */
-            private void rebuildActiveExecutors() {
+            private AutoScalingState rebuildActiveExecutors() {
                 for (;;) {
                     AutoScalingState oldState = state.get();
                     List<EventExecutor> active = new ArrayList<>(oldState.activeChildrenCount);
@@ -412,7 +463,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                             newActiveExecutors.length, oldState.nextWakeUpIndex, newActiveExecutors);
 
                     if (state.compareAndSet(oldState, newState)) {
-                        break;
+                        return newState;
                     }
                 }
             }
