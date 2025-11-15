@@ -19,7 +19,8 @@ RUN microdnf install -y \
  tar \
  unzip \
  wget \
- zip
+ zip \
+ zlib-devel
 
 # Downloading and installing SDKMAN!
 RUN curl -s "https://get.sdkman.io?ci=true" | bash
