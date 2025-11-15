@@ -107,7 +107,6 @@
   <build>
     <plugins>
       <!-- Empty module -->
-      <!--
       <plugin>
         <groupId>io.github.dmlloyd.module-info</groupId>
         <artifactId>module-info</artifactId>
@@ -117,7 +116,6 @@
           </execution>
         </executions>
       </plugin>
-      -->
       <!-- We must generate a -javadoc and -sources JAR file to publish on Maven Central -->
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>

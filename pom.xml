@@ -1761,11 +1761,10 @@
           <artifactId>maven-shade-plugin</artifactId>
           <version>3.6.1</version>
         </plugin>
-        <!--
         <plugin>
           <groupId>io.github.dmlloyd.module-info</groupId>
           <artifactId>module-info</artifactId>
-          <version>2.1</version>
+          <version>2.2</version>
           <executions>
             <execution>
               <id>module-info</id>
@@ -1780,7 +1779,6 @@
             </execution>
           </executions>
         </plugin>
-        -->
         <plugin>
           <groupId>de.thetaphi</groupId>
           <artifactId>forbiddenapis</artifactId>

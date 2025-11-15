@@ -173,7 +173,6 @@
 
   <build>
     <plugins>
-      <!--
       <plugin>
         <groupId>io.github.dmlloyd.module-info</groupId>
         <artifactId>module-info</artifactId>
@@ -183,7 +182,6 @@
           </execution>
         </executions>
       </plugin>
-      -->
     </plugins>
   </build>
 

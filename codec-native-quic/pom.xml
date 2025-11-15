@@ -390,7 +390,6 @@
               </execution>
             </executions>
           </plugin>
-          <!--
           <plugin>
             <groupId>io.github.dmlloyd.module-info</groupId>
             <artifactId>module-info</artifactId>
@@ -411,7 +410,6 @@
               </execution>
             </executions>
           </plugin>
-          -->
           <plugin>
             <artifactId>maven-jar-plugin</artifactId>
             <executions>
@@ -1143,7 +1141,6 @@
         </executions>
       </plugin>
 
-      <!--
       <plugin>
         <groupId>io.github.dmlloyd.module-info</groupId>
         <artifactId>module-info</artifactId>
@@ -1164,7 +1161,6 @@
           </execution>
         </executions>
       </plugin>
-      -->
       <plugin>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
