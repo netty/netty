@@ -141,6 +141,9 @@ public final class ZstdEncoder extends MessageToByteEncoder<ByteBuf> {
                 flushBufferedData(out);
             }
         }
+        if (buffer.isReadable()) {
+            flushBufferedData(out);
+        }
     }
 
     private void flushBufferedData(ByteBuf out) {

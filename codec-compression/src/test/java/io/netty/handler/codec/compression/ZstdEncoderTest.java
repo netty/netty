@@ -21,21 +21,29 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.VoidChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class ZstdEncoderTest extends AbstractEncoderTest {
 
     @Mock
     private ChannelHandlerContext ctx;
+
+    private static String TEST_CONTENT = "Hello, World";
 
     @BeforeEach
     public void setup() {
@@ -46,6 +54,11 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     @Override
     public EmbeddedChannel createChannel() {
         return new EmbeddedChannel(new ZstdEncoder());
+    }
+
+    public static ByteBuf[] tinyData() {
+        ByteBuf in = Unpooled.copiedBuffer(TEST_CONTENT, CharsetUtil.UTF_8);
+        return new ByteBuf[] {in};
     }
 
     @ParameterizedTest
@@ -73,6 +86,22 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     @MethodSource("smallData")
     public void testCompressionOfSmallBatchedFlow(final ByteBuf data) throws Exception {
         testCompressionOfBatchedFlow(data);
+    }
+
+    @ParameterizedTest
+    @MethodSource("tinyData")
+    public void testCompressionOfTinyData(final ByteBuf data) throws Exception {
+        ZstdEncoder encoder = new ZstdEncoder();
+        encoder.handlerAdded(ctx);
+        VoidChannelPromise promise = new VoidChannelPromise(channel, true);
+        encoder.write(ctx, data, promise);
+        ArgumentCaptor<ByteBuf> outCaptor = ArgumentCaptor.forClass(ByteBuf.class);
+        verify(ctx).write(outCaptor.capture(), eq(promise));
+
+        ByteBuf out = outCaptor.getValue();
+        assertThat(out.readableBytes()).isPositive();
+        encoder.handlerRemoved(ctx);
+        out.release();
     }
 
     @Override
