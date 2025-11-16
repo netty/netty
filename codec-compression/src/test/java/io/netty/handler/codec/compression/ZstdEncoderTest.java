@@ -60,27 +60,16 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     @ParameterizedTest
     @MethodSource("largeData")
     public void testCompressionOfLargeBatchedFlow(final ByteBuf data) throws Exception {
-        final int dataLength = data.readableBytes();
-        int written = 0;
-
-        ByteBuf in = data.retainedSlice(written, 65535);
-        assertTrue(channel.writeOutbound(in));
-
-        ByteBuf in2 = data.retainedSlice(65535, dataLength - 65535);
-        assertTrue(channel.writeOutbound(in2));
-
-        assertTrue(channel.finish());
-
-        ByteBuf decompressed = readDecompressed(dataLength);
-        assertEquals(data, decompressed);
-
-        decompressed.release();
-        data.release();
+        testCompressionOfLargeDataBatchedFlow(data);
     }
 
     @ParameterizedTest
     @MethodSource("hugeData")
     public void testCompressionOfHugeBatchedFlow(final ByteBuf data) throws Exception {
+        testCompressionOfLargeDataBatchedFlow(data);
+    }
+
+    public void testCompressionOfLargeDataBatchedFlow(final ByteBuf data) throws Exception {
         final int dataLength = data.readableBytes();
         int written = 0;
 
