@@ -39,7 +39,6 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
 
     protected static final byte[] BYTES_HUGE = new byte[256 * 1024 * 1024];
 
-
     @BeforeEach
     public void setup() {
         MockitoAnnotations.initMocks(this);
