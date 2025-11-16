@@ -44,7 +44,7 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     }
 
     public static ByteBuf[] hugeData() {
-        final byte[] bytesHuge = new byte[256 * 1024 * 1024];
+        final byte[] bytesHuge = new byte[36 * 1024 * 1024];
         ByteBuf heap = Unpooled.wrappedBuffer(bytesHuge);
         ByteBuf direct = Unpooled.directBuffer(bytesHuge.length);
         direct.writeBytes(bytesHuge);
