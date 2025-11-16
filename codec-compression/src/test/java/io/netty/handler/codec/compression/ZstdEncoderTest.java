@@ -37,10 +37,20 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     @Mock
     private ChannelHandlerContext ctx;
 
+    protected static final byte[] BYTES_HUGE = new byte[256 * 1024 * 1024];
+
+
     @BeforeEach
     public void setup() {
         MockitoAnnotations.initMocks(this);
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
+    }
+
+    public static ByteBuf[] hugeData() {
+        ByteBuf heap = Unpooled.wrappedBuffer(BYTES_HUGE);
+        ByteBuf direct = Unpooled.directBuffer(BYTES_HUGE.length);
+        direct.writeBytes(BYTES_HUGE);
+        return new ByteBuf[] {heap, direct};
     }
 
     @Override
@@ -51,6 +61,27 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     @ParameterizedTest
     @MethodSource("largeData")
     public void testCompressionOfLargeBatchedFlow(final ByteBuf data) throws Exception {
+        final int dataLength = data.readableBytes();
+        int written = 0;
+
+        ByteBuf in = data.retainedSlice(written, 65535);
+        assertTrue(channel.writeOutbound(in));
+
+        ByteBuf in2 = data.retainedSlice(65535, dataLength - 65535);
+        assertTrue(channel.writeOutbound(in2));
+
+        assertTrue(channel.finish());
+
+        ByteBuf decompressed = readDecompressed(dataLength);
+        assertEquals(data, decompressed);
+
+        decompressed.release();
+        data.release();
+    }
+
+    @ParameterizedTest
+    @MethodSource("hugeData")
+    public void testCompressionOfHugeBatchedFlow(final ByteBuf data) throws Exception {
         final int dataLength = data.readableBytes();
         int written = 0;
 

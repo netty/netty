@@ -113,7 +113,7 @@ public final class ZstdEncoder extends MessageToByteEncoder<ByteBuf> {
         while (remaining > 0) {
             int curSize = Math.min(blockSize, remaining);
             remaining -= curSize;
-            bufferSize += Zstd.compressBound(curSize);
+            bufferSize = Math.max(bufferSize, Zstd.compressBound(curSize));
         }
 
         if (bufferSize > maxEncodeSize || 0 > bufferSize) {

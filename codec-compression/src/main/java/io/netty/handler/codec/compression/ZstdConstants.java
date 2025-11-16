@@ -37,7 +37,7 @@ final class ZstdConstants {
     /**
      * Max block size
      */
-    static final int MAX_BLOCK_SIZE = 1 << (DEFAULT_COMPRESSION_LEVEL + 7) + 0x0F;   //  32 M
+    static final int MAX_BLOCK_SIZE = Integer.MAX_VALUE;
     /**
      * Default block size
      */
