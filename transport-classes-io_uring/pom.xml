@@ -148,7 +148,6 @@
             </configuration>
           </execution>
         </executions>
-
       </plugin>
       <plugin>
         <groupId>io.github.dmlloyd.module-info</groupId>

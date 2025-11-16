@@ -1,6 +1,6 @@
 FROM --platform=linux/amd64 amazonlinux:2023
 
-ARG java_version=11.0.27-amzn
+ARG java_version=25-amzn
 ARG aws_lc_version=v1.54.0
 ARG maven_version=3.9.10
 ENV JAVA_VERSION $java_version

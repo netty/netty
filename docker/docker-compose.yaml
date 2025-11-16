@@ -1,12 +1,9 @@
-version: "3"
-
 services:
-
   runtime-setup:
     image: netty:default
     build:
       context: .
-      dockerfile: Dockerfile.centos7
+      dockerfile: Dockerfile.ubi9
 
   common: &common
     image: netty:default
@@ -27,19 +24,19 @@ services:
 
   build-leak:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pleak clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty5.testsuite.badHost=netty.io"
 
   build:
     <<: *common
     command: '/bin/bash -cl "
-      ./mvnw -B -ntp clean install -Dio.netty.testsuite.badHost=netty.io -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true && 
+      ./mvnw -B -ntp clean install -Pboringssl -Dio.netty5.testsuite.badHost=netty.io &&
       cd testsuite-shading &&
-      ../mvnw -B -ntp integration-test failsafe:verify -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true
+      ../mvnw -B -ntp integration-test -Pboringssl failsafe:verify
     "'
 
   deploy:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp clean deploy -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+    command: /bin/bash -cl "./mvnw -B -ntp clean deploy -DskipTests=true"
 
   stage-snapshot:
     <<: *common
@@ -49,7 +46,7 @@ services:
       - ~/.m2:/root/.m2
       - ~/local-staging:/root/local-staging
       - ..:/code
-    command: /bin/bash -cl "./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DskipRemoteStaging=true -DaltStagingDirectory=/root/local-staging -DskipTests=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+    command: /bin/bash -cl "./mvnw -B -ntp clean package org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DaltStagingDirectory=/root/local-staging -DskipRemoteStaging=true -DskipTests=true"
 
   stage-release:
     <<: *common
@@ -58,31 +55,19 @@ services:
       - ~/.m2:/root/.m2
       - ~/local-staging:/root/local-staging
       - ..:/code
-    command: /bin/bash -cl "cat <(echo -e \"${GPG_PRIVATE_KEY}\") | gpg --batch --import && ./mvnw -B -ntp clean javadoc:jar package gpg:sign org.sonatype.central:central-publishing-maven-plugin:publish -DskipPublishing=true -DskipTests=true -Dgpg.passphrase=${GPG_PASSPHRASE} -Dgpg.keyname=${GPG_KEYNAME} -Dtcnative.classifier=linux-x86_64-fedora -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+    command: /bin/bash -cl "cat <(echo -e \"${GPG_PRIVATE_KEY}\") | gpg --batch --import && ./mvnw -B -ntp clean javadoc:jar package gpg:sign org.sonatype.plugins:nexus-staging-maven-plugin:deploy -DnexusUrl=https://oss.sonatype.org -DserverId=sonatype-nexus-staging -DaltStagingDirectory=/root/local-staging -DskipRemoteStaging=true -DskipTests=true -Dgpg.passphrase=${GPG_PASSPHRASE} -Dgpg.keyname=${GPG_KEYNAME}"
 
-  build-with-oio-testsuite:
+  build-unsafe-buffer:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl clean install -Dio.netty.testsuite.includeOio=true -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+    command: /bin/bash -cl "./mvnw -Pboringssl,unsafeBuffer clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true"
 
-  build-boringssl-static:
+  build-leak-adaptive:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
-
-  build-leak-boringssl-static:
-    <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
-
-  build-leak-pooled:
-    <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Dio.netty.allocator.type=pooled -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true"
+    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,leak clean install -Dio.netty5.testsuite.badHost=netty.io -Dxml.skip=true -Dio.netty5.allocator.type=adaptive"
 
   build-boringssl-snapshot:
     <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -pl handler -Pboringssl-snapshot clean package -Dxml.skip=true -Dtcnative.classifier=linux-x86_64"
-
-  build-boringssl-static-jdk8-tests:
-    <<: *common
-    command: /bin/bash -cl "./mvnw -B -ntp -Pboringssl,jdk8-tests,\!testsuite-jpms clean install -Dio.netty.testsuite.badHost=netty.io -Dxml.skip=true -Drevapi.skip=true -Dcheckstyle.skip=true -Dforbiddenapis.skip=true -DtestJavaHome=/usr/lib/jvm/java-1.8.0-openjdk"
+    command: /bin/bash -cl "./mvnw -B -ntp -am -pl handler -Pboringssl-snapshot clean package -Dxml.skip=true -Dtcnative.classifier=linux-x86_64"
 
   shell:
     <<: *common
