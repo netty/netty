@@ -37,8 +37,6 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     @Mock
     private ChannelHandlerContext ctx;
 
-    protected static final byte[] BYTES_HUGE = new byte[256 * 1024 * 1024];
-
     @BeforeEach
     public void setup() {
         MockitoAnnotations.initMocks(this);
@@ -46,9 +44,10 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     }
 
     public static ByteBuf[] hugeData() {
-        ByteBuf heap = Unpooled.wrappedBuffer(BYTES_HUGE);
-        ByteBuf direct = Unpooled.directBuffer(BYTES_HUGE.length);
-        direct.writeBytes(BYTES_HUGE);
+        final byte[] bytesHuge = new byte[256 * 1024 * 1024];
+        ByteBuf heap = Unpooled.wrappedBuffer(bytesHuge);
+        ByteBuf direct = Unpooled.directBuffer(bytesHuge.length);
+        direct.writeBytes(bytesHuge);
         return new ByteBuf[] {heap, direct};
     }
 
