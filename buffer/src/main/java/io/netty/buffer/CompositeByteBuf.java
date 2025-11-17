@@ -2363,7 +2363,7 @@ public class CompositeByteBuf extends AbstractReferenceCountedByteBuf implements
 
     /**
      * Decreases the reference count by the specified {@code decrement} and deallocates this object if the reference
-     * count reaches at {@code 0}. At this point it will also decrement the reference count of each internal 
+     * count reaches at {@code 0}. At this point it will also decrement the reference count of each internal
      * component by {@code 1}.
      *
      * @param decrement the number by which the reference count should be decreased
