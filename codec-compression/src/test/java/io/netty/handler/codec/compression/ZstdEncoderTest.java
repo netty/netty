@@ -86,7 +86,6 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
 
         ByteBuf out = channel.readOutbound();
         assertThat(out.readableBytes()).isPositive();
-
         out.release();
         asssertNull(out.readOutbound());
     }
