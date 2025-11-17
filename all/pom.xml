@@ -467,30 +467,8 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-transport-rxtx</artifactId>
-      <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.rxtx</groupId>
-          <artifactId>rxtx</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
       <artifactId>netty5-transport-sctp</artifactId>
       <scope>compile</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-transport-udt</artifactId>
-      <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>com.barchart.udt</groupId>
-          <artifactId>barchart-udt-bundle</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
     <!--
       The native dependencies with the classifier are added by the native-dependencies profile.
