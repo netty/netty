@@ -531,8 +531,8 @@
     <module>testsuite-autobahn</module>
     <module>testsuite-common</module>
     <module>testsuite-http2</module>
-    <!-- Disable modules as these need work for JDK25 requirement
     <module>testsuite-jpms</module>
+    <!-- Disable modules as these need work for JDK25 requirement
     <module>testsuite-karaf</module>
     <module>testsuite-osgi</module>
     <module>testsuite-shading</module>
