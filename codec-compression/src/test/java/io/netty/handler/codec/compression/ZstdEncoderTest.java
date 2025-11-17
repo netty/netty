@@ -40,8 +40,6 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     @Mock
     private ChannelHandlerContext ctx;
 
-    private static String TEST_CONTENT = "Hello, World";
-
     @BeforeEach
     public void setup() {
         MockitoAnnotations.initMocks(this);
