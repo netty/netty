@@ -66,16 +66,6 @@ public final class IoUringServerSocketChannel extends AbstractIoUringServerChann
     }
 
     @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
     public void doBind(SocketAddress localAddress) throws Exception {
         super.doBind(localAddress);
         if (IoUring.isTcpFastOpenServerSideAvailable()) {

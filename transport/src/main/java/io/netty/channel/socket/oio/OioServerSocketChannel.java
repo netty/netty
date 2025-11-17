@@ -26,7 +26,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -100,11 +99,6 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
     public ChannelMetadata metadata() {
         return METADATA;
     }
@@ -115,7 +109,7 @@ public class OioServerSocketChannel extends AbstractOioMessageChannel
     }
 
     @Override
-    public InetSocketAddress remoteAddress() {
+    public SocketAddress remoteAddress() {
         return null;
     }
 

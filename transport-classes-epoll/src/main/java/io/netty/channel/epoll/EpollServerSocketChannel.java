@@ -87,16 +87,6 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     }
 
     @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
     public EpollServerSocketChannelConfig config() {
         return config;
     }

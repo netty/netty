@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Timeout;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.concurrent.TimeUnit;
 
@@ -62,7 +63,8 @@ public class IoUringAutoReadTest {
                     })
                     .bind(0).sync().channel();
 
-            try (Socket sock = new Socket(server.localAddress().getAddress(), server.localAddress().getPort())) {
+            InetSocketAddress localAddress = (InetSocketAddress) server.localAddress();
+            try (Socket sock = new Socket(localAddress.getAddress(), localAddress.getPort())) {
                 OutputStream out = sock.getOutputStream();
                 InputStream in = sock.getInputStream();
 

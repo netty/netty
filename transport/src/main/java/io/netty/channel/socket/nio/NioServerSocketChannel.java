@@ -30,7 +30,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.SocketAddress;
 import java.nio.channels.SelectionKey;
@@ -107,11 +106,6 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
     public ChannelMetadata metadata() {
         return METADATA;
     }
@@ -129,7 +123,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    public InetSocketAddress remoteAddress() {
+    public SocketAddress remoteAddress() {
         return null;
     }
 
