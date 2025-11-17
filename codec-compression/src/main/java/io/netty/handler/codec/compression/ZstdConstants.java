@@ -35,9 +35,9 @@ final class ZstdConstants {
     static final int MAX_COMPRESSION_LEVEL = Zstd.maxCompressionLevel();
 
     /**
-     * Max block size
+     * Max encode size
      */
-    static final int MAX_BLOCK_SIZE = Integer.MAX_VALUE;
+    static final int DEFAULT_MAX_ENCODE_SIZE = Integer.MAX_VALUE;
     /**
      * Default block size
      */
