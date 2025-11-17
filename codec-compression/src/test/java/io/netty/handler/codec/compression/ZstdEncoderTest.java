@@ -86,15 +86,15 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
 
     @Test
     public void testCompressionOfTinyData() throws Exception {
-        ByteBuf data = Unpooled.copiedBuffer(TEST_CONTENT, CharsetUtil.UTF_8);
-        assertTrue(channel.writeOutbound(data.retain()));
+        ByteBuf data = Unpooled.copiedBuffer("Hello, World", CharsetUtil.UTF_8);
+        assertTrue(channel.writeOutbound(data));
         assertTrue(channel.finish());
 
         ByteBuf out = channel.readOutbound();
         assertThat(out.readableBytes()).isPositive();
 
         out.release();
-        data.release();
+        asssertNull(out.readOutbound());
     }
 
     @Override
