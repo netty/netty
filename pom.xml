@@ -2014,6 +2014,7 @@
               <configuration>
                 <moduleName>${javaModuleName}</moduleName>
                 <outputDirectory>${project.build.outputDirectory}/META-INF/versions/11/</outputDirectory>
+                <detectProvides>false</detectProvides>
               </configuration>
               <goals>
                 <goal>generate</goal>
