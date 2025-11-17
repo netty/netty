@@ -68,7 +68,7 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
         testCompressionOfLargeDataBatchedFlow(data);
     }
 
-    public void testCompressionOfLargeDataBatchedFlow(final ByteBuf data) throws Exception {
+    private void testCompressionOfLargeDataBatchedFlow(final ByteBuf data) throws Exception {
         final int dataLength = data.readableBytes();
         int written = 0;
 
