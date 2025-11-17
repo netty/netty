@@ -258,6 +258,10 @@
         <executions>
           <execution>
             <id>module-info</id>
+            <configuration>
+              <!-- Otherwise detects blockhound that is not an explicit JPMS module -->
+              <detectProvides>false</detectProvides>
+            </configuration>
           </execution>
         </executions>
       </plugin>
