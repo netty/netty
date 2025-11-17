@@ -195,17 +195,11 @@
     </dependency>
     <dependency>
       <groupId>io.netty</groupId>
-      <artifactId>netty5-transport-rxtx</artifactId>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>io.netty</groupId>
       <artifactId>netty5-transport-sctp</artifactId>
       <scope>provided</scope>
     </dependency>
 
     <!-- TODO: netty5-codec-protobuf requires figuring out dependencies -->
-    <!-- TODO: netty5-transport-udt: requires figuring out slf4j dependency -->
     <!-- TODO: these require figuring out platform build
         netty5-codec-native-quic
         netty5-resolver-dns-native-macos

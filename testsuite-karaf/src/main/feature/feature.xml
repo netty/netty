@@ -75,11 +75,4 @@
     <bundle dependency="true">wrap:mvn:org.jboss.marshalling/jboss-marshalling/${jboss.marshalling.version}</bundle>
     <bundle>mvn:io.netty/netty5-codec-marshalling/${project.version}</bundle>
   </feature>
-
-  <!-- Artifacts requiring RXTX -->
-  <feature name="netty5-rxtx" version="${project.version}">
-    <feature>netty5-java8</feature>
-    <bundle dependency="true">wrap:mvn:org.rxtx/rxtx/${rxtx.version}</bundle>
-    <bundle>mvn:io.netty/netty5-transport-rxtx/${project.version}</bundle>
-  </feature>
 </features>

@@ -219,17 +219,7 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty5-transport-rxtx</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.netty</groupId>
         <artifactId>netty5-transport-sctp</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.netty</groupId>
-        <artifactId>netty5-transport-udt</artifactId>
         <version>${project.version}</version>
       </dependency>
       <dependency>

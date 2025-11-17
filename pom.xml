@@ -521,9 +521,7 @@
     <module>transport-native-io_uring</module>
     <module>transport-classes-kqueue</module>
     <module>transport-native-kqueue</module>
-    <module>transport-rxtx</module>
     <module>transport-sctp</module>
-    <module>transport-udt</module>
     <module>handler</module>
     <module>handler-proxy</module>
     <module>handler-ssl-ocsp</module>
