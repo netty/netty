@@ -38,7 +38,8 @@ public class ZstdOptions implements CompressionOptions {
      * {@link ZstdConstants#DEFAULT_COMPRESSION_LEVEL},{@link ZstdConstants#DEFAULT_BLOCK_SIZE},
      * {@link ZstdConstants#DEFAULT_MAX_ENCODE_SIZE}
      */
-    static final ZstdOptions DEFAULT = new ZstdOptions(DEFAULT_COMPRESSION_LEVEL, DEFAULT_BLOCK_SIZE, DEFAULT_MAX_ENCODE_SIZE);
+    static final ZstdOptions DEFAULT = new ZstdOptions(DEFAULT_COMPRESSION_LEVEL, DEFAULT_BLOCK_SIZE,
+            DEFAULT_MAX_ENCODE_SIZE);
 
     /**
      * Create a new {@link ZstdOptions}
