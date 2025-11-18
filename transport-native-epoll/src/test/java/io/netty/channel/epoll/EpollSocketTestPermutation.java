@@ -22,7 +22,6 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -168,7 +167,7 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
 
                             @Override
                             public String toString() {
-                                return InternetProtocolFamily.class.getSimpleName() + ".class";
+                                return SocketProtocolFamily.class.getSimpleName() + ".class";
                             }
                         });
                     }

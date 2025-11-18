@@ -17,7 +17,6 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.ChannelException;
 import io.netty.channel.DefaultFileRegion;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.NativeInetAddress;
@@ -401,14 +400,6 @@ public final class LinuxSocket extends Socket {
         return new LinuxSocket(newSocketStream0(ipv6));
     }
 
-    /**
-     * @deprecated use {@link #newSocketStream(SocketProtocolFamily)}
-     */
-    @Deprecated
-    public static LinuxSocket newSocketStream(InternetProtocolFamily protocol) {
-        return new LinuxSocket(newSocketStream0(protocol));
-    }
-
     public static LinuxSocket newSocketStream(SocketProtocolFamily protocol) {
         return new LinuxSocket(newSocketStream0(protocol));
     }
@@ -419,14 +410,6 @@ public final class LinuxSocket extends Socket {
 
     public static LinuxSocket newSocketDgram(boolean ipv6) {
         return new LinuxSocket(newSocketDgram0(ipv6));
-    }
-
-    /**
-     * @deprecated use {@link #newSocketDgram(SocketProtocolFamily)}
-     */
-    @Deprecated
-    public static LinuxSocket newSocketDgram(InternetProtocolFamily family) {
-        return new LinuxSocket(newSocketDgram0(family));
     }
 
     public static LinuxSocket newSocketDgram(SocketProtocolFamily family) {

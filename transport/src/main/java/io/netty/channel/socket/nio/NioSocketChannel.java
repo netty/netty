@@ -29,7 +29,6 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.socket.DefaultSocketChannelConfig;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
@@ -40,7 +39,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
-import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -84,16 +82,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
      */
     public NioSocketChannel(SelectorProvider provider) {
         this(provider, (SocketProtocolFamily) null);
-    }
-
-    /**
-     * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
-     *
-     * @deprecated use {@link NioSocketChannel#NioSocketChannel(SelectorProvider, SocketProtocolFamily)}
-     */
-    @Deprecated
-    public NioSocketChannel(SelectorProvider provider, InternetProtocolFamily family) {
-        this(provider, family == null ? null : family.toSocketProtocolFamily());
     }
 
     /**

@@ -16,7 +16,6 @@
 package io.netty.channel.kqueue;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.DatagramUnicastInetTest;

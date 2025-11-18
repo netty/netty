@@ -16,7 +16,6 @@
 package io.netty.channel.unix;
 
 import io.netty.channel.ChannelException;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
@@ -550,15 +549,6 @@ public class Socket extends FileDescriptor {
         return isIpv6Preferred;
     }
 
-    /**
-     * @deprecated use {{@link #shouldUseIpv6(SocketProtocolFamily)}}
-     */
-    @Deprecated
-    public static boolean shouldUseIpv6(InternetProtocolFamily family) {
-        return family == null ? isIPv6Preferred() :
-                        family == InternetProtocolFamily.IPv6;
-    }
-
     public static boolean shouldUseIpv6(SocketProtocolFamily family) {
         return family == null ? isIPv6Preferred() :
                 family == SocketProtocolFamily.INET6;
@@ -599,16 +589,6 @@ public class Socket extends FileDescriptor {
         return newSocketStream0(isIPv6Preferred());
     }
 
-    /**
-     * @deprecated use {@link #newSocketStream0(SocketProtocolFamily)}
-     * @param protocol
-     * @return
-     */
-    @Deprecated
-    protected static int newSocketStream0(InternetProtocolFamily protocol) {
-        return newSocketStream0(shouldUseIpv6(protocol));
-    }
-
     protected static int newSocketStream0(SocketProtocolFamily protocol) {
         return newSocketStream0(shouldUseIpv6(protocol));
     }
@@ -623,14 +603,6 @@ public class Socket extends FileDescriptor {
 
     protected static int newSocketDgram0() {
         return newSocketDgram0(isIPv6Preferred());
-    }
-
-    /**
-     * @deprecated use {@link #newSocketDgram0(SocketProtocolFamily)}
-     */
-    @Deprecated
-    protected static int newSocketDgram0(InternetProtocolFamily family) {
-        return newSocketDgram0(shouldUseIpv6(family));
     }
 
     protected static int newSocketDgram0(SocketProtocolFamily family) {
