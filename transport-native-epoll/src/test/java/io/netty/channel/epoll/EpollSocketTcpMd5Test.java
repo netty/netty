@@ -21,6 +21,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.AfterAll;
@@ -45,7 +46,7 @@ public class EpollSocketTcpMd5Test {
 
     @BeforeAll
     public static void beforeClass() {
-        GROUP = new EpollEventLoopGroup(1);
+        GROUP = new MultiThreadIoEventLoopGroup(1, EpollIoHandler.newFactory());
     }
 
     @AfterAll

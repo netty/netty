@@ -20,6 +20,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Socket;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,7 +71,7 @@ public class EpollDatagramChannelTest {
 
     @Test
     public void testLocalAddressBeforeAndAfterBind() {
-        EventLoopGroup group = new EpollEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, EpollIoHandler.newFactory());
         try {
             TestHandler handler = new TestHandler();
             InetSocketAddress localAddressBeforeBind = new InetSocketAddress(LOCALHOST, 0);
