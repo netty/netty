@@ -22,7 +22,10 @@ import java.util.Queue;
  *
  * Generally speaking the returned {@link Queue} MUST be thread-safe and depending on the {@link EventLoop}
  * implementation must be of type {@link java.util.concurrent.BlockingQueue}.
+ *
+ * @deprecated Not used anymore by new {@link IoEventLoopGroup} and {@link IoEventLoop} implementations
  */
+@Deprecated
 public interface EventLoopTaskQueueFactory {
 
     /**
