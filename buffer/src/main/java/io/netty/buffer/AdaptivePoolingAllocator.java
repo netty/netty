@@ -1687,11 +1687,14 @@ final class AdaptivePoolingAllocator {
         @Override
         public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
             checkIndex(index, length);
-            ByteBuffer tmp = internalNioBuffer();
             if (src instanceof AdaptiveByteBuf && PlatformDependent.javaVersion() >= 16) {
                 AdaptiveByteBuf srcBuf = (AdaptiveByteBuf) src;
-                PlatformDependent.absolutePut(tmp, index, srcBuf.internalNioBuffer(), srcIndex, length);
+                srcBuf.checkIndex(srcIndex, length);
+                ByteBuffer dstBuffer = rootParent()._internalNioBuffer();
+                ByteBuffer srcBuffer = srcBuf.rootParent()._internalNioBuffer();
+                PlatformDependent.absolutePut(dstBuffer, idx(index), srcBuffer, srcBuf.idx(srcIndex), length);
             } else {
+                ByteBuffer tmp = internalNioBuffer();
                 tmp.position(index);
                 tmp.put(src.nioBuffer(srcIndex, length));
             }
