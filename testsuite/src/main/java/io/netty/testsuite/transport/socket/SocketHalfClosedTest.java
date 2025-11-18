@@ -31,7 +31,6 @@ import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioIoHandler;
-import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
@@ -67,10 +66,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
             public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
-                if (bootstrap.config().group() instanceof OioEventLoopGroup) {
-                    logger.debug("Ignoring test for incompatible OIO event system");
-                    return;
-                } else if (bootstrap.config().group() instanceof IoEventLoopGroup) {
+                if (bootstrap.config().group() instanceof IoEventLoopGroup) {
                     IoEventLoopGroup group = (IoEventLoopGroup) bootstrap.config().group();
                     if (group.isIoType(NioIoHandler.class)) {
                         logger.debug("Ignoring test for incompatible NioHandler");

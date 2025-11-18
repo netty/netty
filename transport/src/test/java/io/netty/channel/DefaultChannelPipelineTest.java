@@ -28,9 +28,7 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioIoHandler;
-import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.channel.socket.oio.OioSocketChannel;
 import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
@@ -1185,13 +1183,6 @@ public class DefaultChannelPipelineTest {
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddInListenerNio() {
         testAddInListener(new NioSocketChannel(), new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()));
-    }
-
-    @SuppressWarnings("deprecation")
-    @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testAddInListenerOio() {
-        testAddInListener(new OioSocketChannel(), new OioEventLoopGroup(1));
     }
 
     @Test

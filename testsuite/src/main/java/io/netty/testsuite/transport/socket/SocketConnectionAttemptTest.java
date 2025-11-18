@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.socket.oio.OioSocketChannel;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -172,9 +171,8 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
         }
     }
 
-    @SuppressWarnings("deprecation")
     protected boolean isConnectCancellationSupported(Channel channel) {
-        return !(channel instanceof OioSocketChannel);
+        return true;
     }
 
     private static class TestHandler extends ChannelInboundHandlerAdapter {
