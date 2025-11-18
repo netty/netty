@@ -110,7 +110,7 @@ abstract class ProxyServer {
     }
 
     public final InetSocketAddress address() {
-        return new InetSocketAddress(NetUtil.LOCALHOST, ch.localAddress().getPort());
+        return new InetSocketAddress(NetUtil.LOCALHOST, ((InetSocketAddress) ch.localAddress()).getPort());
     }
 
     protected abstract void configure(SocketChannel ch) throws Exception;

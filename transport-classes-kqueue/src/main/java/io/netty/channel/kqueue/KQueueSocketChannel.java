@@ -62,16 +62,6 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
     }
 
     @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
     public KQueueSocketChannelConfig config() {
         return config;
     }

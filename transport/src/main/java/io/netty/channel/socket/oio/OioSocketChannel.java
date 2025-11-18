@@ -267,16 +267,6 @@ public class OioSocketChannel extends OioByteStreamChannel implements SocketChan
     }
 
     @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
     protected SocketAddress localAddress0() {
         return socket.getLocalSocketAddress();
     }

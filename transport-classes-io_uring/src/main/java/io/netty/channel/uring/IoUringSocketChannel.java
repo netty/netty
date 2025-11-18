@@ -23,7 +23,6 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.IovArray;
 
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -56,16 +55,6 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
     @Override
     public SocketChannelConfig config() {
         return config;
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
     }
 
     @Override
