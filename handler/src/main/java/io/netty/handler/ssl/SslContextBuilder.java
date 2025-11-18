@@ -441,7 +441,10 @@ public final class SslContextBuilder {
      * @param keyPassword the password of the {@code key}, or {@code null} if it's not
      *     password-protected
      * @param keyCertChain an X.509 certificate chain
+     * @deprecated Use {@link #keyManager(PrivateKey, X509Certificate...)} instead since the private key is given
+     * directly.
      */
+    @Deprecated
     public SslContextBuilder keyManager(PrivateKey key, String keyPassword, X509Certificate... keyCertChain) {
         if (forServer) {
             checkNonEmpty(keyCertChain, "keyCertChain");
@@ -469,7 +472,9 @@ public final class SslContextBuilder {
      * @param keyPassword the password of the {@code key}, or {@code null} if it's not
      *     password-protected
      * @param keyCertChain an X.509 certificate chain
+     * @deprecated Use {@link #keyManager(PrivateKey, Iterable)} instead since the private key is given directly.
      */
+    @Deprecated
     public SslContextBuilder keyManager(PrivateKey key, String keyPassword,
                                         Iterable<? extends X509Certificate> keyCertChain) {
         return keyManager(key, keyPassword, toArray(keyCertChain, EMPTY_X509_CERTIFICATES));
