@@ -17,20 +17,18 @@ package io.netty.channel.socket.nio;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledForJreRange;
-import org.junit.jupiter.api.condition.JRE;
 
 import java.io.IOException;
+import java.net.StandardProtocolFamily;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
 
-@EnabledForJreRange(min = JRE.JAVA_16)
 class NioDomainSocketChannelTest {
     @Test
     void accessParent() throws IOException {
-        NioServerDomainSocketChannel parent = new NioServerDomainSocketChannel();
-        SocketChannel ch = NioDomainSocketChannel.newChannel(SelectorProvider.provider());
-        NioDomainSocketChannel child = new NioDomainSocketChannel(parent, ch);
+        NioServerSocketChannel parent = new NioServerSocketChannel();
+        SocketChannel ch = SelectorProvider.provider().openSocketChannel(StandardProtocolFamily.UNIX);
+        NioSocketChannel child = new NioSocketChannel(parent, ch);
         Assertions.assertSame(parent, child.parent());
         ch.close();
     }

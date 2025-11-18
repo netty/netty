@@ -60,12 +60,8 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
             // See https://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
             return false;
         }
-        try {
-            channel.setOption(option.option, value);
-            return true;
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        setOption0(channel, option.option, value);
+        return true;
     }
 
     static <T> T getOption(Channel jdkChannel, NioChannelOption<T> option) {
@@ -79,11 +75,7 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
             // See https://mail.openjdk.java.net/pipermail/nio-dev/2018-August/005365.html
             return null;
         }
-        try {
-            return channel.getOption(option.option);
-        } catch (IOException e) {
-            throw new ChannelException(e);
-        }
+        return getOption0(channel, option.option);
     }
 
     @SuppressWarnings("unchecked")
@@ -110,6 +102,22 @@ public final class NioChannelOption<T> extends ChannelOption<T> {
                 extraOpts[i++] = new NioChannelOption(opt);
             }
             return extraOpts;
+        }
+    }
+
+    static <T> void setOption0(NetworkChannel channel, SocketOption<T> option, T value) {
+        try {
+            channel.setOption(option, value);
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    static <T> T getOption0(NetworkChannel channel, SocketOption<T> option) {
+        try {
+            return channel.getOption(option);
+        } catch (IOException e) {
+            throw new ChannelException(e);
         }
     }
 }
