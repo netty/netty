@@ -36,7 +36,6 @@ public class LoadClassTest {
         classes.add(EpollDomainDatagramChannel.class);
 
         classes.add(EpollIoHandler.class);
-        classes.add(EpollEventLoopGroup.class);
 
         return classes.toArray(new Class<?>[0]);
     }

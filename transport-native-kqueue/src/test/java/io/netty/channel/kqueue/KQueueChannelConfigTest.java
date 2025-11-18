@@ -21,6 +21,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.IntegerUnixChannelOption;
 import io.netty.channel.unix.RawUnixChannelOption;
@@ -70,7 +71,7 @@ public class KQueueChannelConfigTest {
     // See https://github.com/netty/netty/issues/7159
     @Test
     public void testSoLingerNoAssertError() throws Exception {
-        EventLoopGroup group = new KQueueEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, KQueueIoHandler.newFactory());
 
         try {
             Bootstrap bootstrap = new Bootstrap();

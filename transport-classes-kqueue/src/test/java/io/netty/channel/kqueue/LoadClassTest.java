@@ -36,7 +36,6 @@ public class LoadClassTest {
         classes.add(KQueueDomainDatagramChannel.class);
 
         classes.add(KQueueIoHandler.class);
-        classes.add(KQueueEventLoopGroup.class);
 
         return classes.toArray(new Class<?>[0]);
     }
