@@ -21,7 +21,7 @@ import io.netty.handler.codec.http.HttpHeaders;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -53,7 +53,7 @@ public final class WebSocketExtensionUtil {
                 String name = extensionParameters[0].trim();
                 Map<String, String> parameters;
                 if (extensionParameters.length > 1) {
-                    parameters = new HashMap<String, String>(extensionParameters.length - 1);
+                    parameters = new LinkedHashMap<String, String>(extensionParameters.length - 1);
                     for (int i = 1; i < extensionParameters.length; i++) {
                         String parameter = extensionParameters[i].trim();
                         Matcher parameterMatcher = PARAMETER.matcher(parameter);
@@ -93,7 +93,7 @@ public final class WebSocketExtensionUtil {
                 extraExtensions.add(userDefined);
             } else {
                 // merge with higher precedence to user defined parameters
-                Map<String, String> mergedParameters = new HashMap<String, String>(matchingExtra.parameters());
+                Map<String, String> mergedParameters = new LinkedHashMap<String, String>(matchingExtra.parameters());
                 mergedParameters.putAll(userDefined.parameters());
                 extraExtensions.set(i, new WebSocketExtensionData(matchingExtra.name(), mergedParameters));
             }
