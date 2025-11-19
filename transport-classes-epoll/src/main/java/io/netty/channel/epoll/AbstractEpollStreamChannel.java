@@ -31,12 +31,10 @@ import io.netty.channel.FileRegion;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.DuplexChannel;
-import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.LeakPresenceDetector;
-import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -44,16 +42,11 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.ClosedChannelException;
 import java.nio.channels.WritableByteChannel;
-import java.util.Queue;
 import java.util.concurrent.Executor;
 
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
-import static io.netty.channel.unix.FileDescriptor.pipe;
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 import static io.netty.util.internal.StringUtil.className;
 
 public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel implements DuplexChannel {
@@ -71,11 +64,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             ((AbstractEpollUnsafe) unsafe()).flush0();
         }
     };
-
-    // Lazy init these if we need to splice(...)
-    private volatile Queue<SpliceInTask> spliceQueue;
-    private FileDescriptor pipeIn;
-    private FileDescriptor pipeOut;
 
     private WritableByteChannel byteChannel;
 
@@ -114,111 +102,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     @Override
     public ChannelMetadata metadata() {
         return METADATA;
-    }
-
-    /**
-     * Splice from this {@link AbstractEpollStreamChannel} to another {@link AbstractEpollStreamChannel}.
-     * The {@code len} is the number of bytes to splice. If using {@link Integer#MAX_VALUE} it will
-     * splice until the {@link ChannelFuture} was canceled or it was failed.
-     *
-     * Please note:
-     * <ul>
-     *   <li>both channels need to be registered to the same {@link EventLoop}, otherwise an
-     *   {@link IllegalArgumentException} is thrown. </li>
-     * </ul>
-     *
-     */
-    public final ChannelFuture spliceTo(final AbstractEpollStreamChannel ch, final int len) {
-        return spliceTo(ch, len, newPromise());
-    }
-
-    /**
-     * Splice from this {@link AbstractEpollStreamChannel} to another {@link AbstractEpollStreamChannel}.
-     * The {@code len} is the number of bytes to splice. If using {@link Integer#MAX_VALUE} it will
-     * splice until the {@link ChannelFuture} was canceled or it was failed.
-     *
-     * Please note:
-     * <ul>
-     *   <li>both channels need to be registered to the same {@link EventLoop}, otherwise an
-     *   {@link IllegalArgumentException} is thrown. </li>
-     * </ul>
-     *
-     */
-    public final ChannelFuture spliceTo(final AbstractEpollStreamChannel ch, final int len,
-                                        final ChannelPromise promise) {
-        if (ch.executor() != executor()) {
-            throw new IllegalArgumentException("EventLoops are not the same.");
-        }
-        checkPositiveOrZero(len, "len");
-        checkNotNull(promise, "promise");
-        if (!isOpen()) {
-            promise.tryFailure(new ClosedChannelException());
-        } else {
-            addToSpliceQueue(new SpliceInChannelTask(ch, len, promise));
-            failSpliceIfClosed(promise);
-        }
-        return promise;
-    }
-
-    /**
-     * Splice from this {@link AbstractEpollStreamChannel} to another {@link FileDescriptor}.
-     * The {@code offset} is the offset for the {@link FileDescriptor} and {@code len} is the
-     * number of bytes to splice. If using {@link Integer#MAX_VALUE} it will splice until the
-     * {@link ChannelFuture} was canceled or it was failed.
-     *
-     * Please note:
-     * <ul>
-     *   <li>the {@link FileDescriptor} will not be closed after the {@link ChannelFuture} is notified</li>
-     *   <li>this channel must be registered to an event loop or {@link IllegalStateException} will be thrown.</li>
-     * </ul>
-     */
-    public final ChannelFuture spliceTo(final FileDescriptor ch, final int offset, final int len) {
-        return spliceTo(ch, offset, len, newPromise());
-    }
-
-    /**
-     * Splice from this {@link AbstractEpollStreamChannel} to another {@link FileDescriptor}.
-     * The {@code offset} is the offset for the {@link FileDescriptor} and {@code len} is the
-     * number of bytes to splice. If using {@link Integer#MAX_VALUE} it will splice until the
-     * {@link ChannelFuture} was canceled or it was failed.
-     *
-     * Please note:
-     * <ul>
-     *   <li>the {@link FileDescriptor} will not be closed after the {@link ChannelPromise} is notified</li>
-     *   <li>this channel must be registered to an event loop or {@link IllegalStateException} will be thrown.</li>
-     * </ul>
-     */
-    public final ChannelFuture spliceTo(final FileDescriptor ch, final int offset, final int len,
-                                        final ChannelPromise promise) {
-        checkPositiveOrZero(len, "len");
-        checkPositiveOrZero(offset, "offset");
-        checkNotNull(promise, "promise");
-        if (!isOpen()) {
-            promise.tryFailure(new ClosedChannelException());
-        } else {
-            addToSpliceQueue(new SpliceFdTask(ch, offset, len, promise));
-            failSpliceIfClosed(promise);
-        }
-        return promise;
-    }
-
-    private void failSpliceIfClosed(ChannelPromise promise) {
-        if (!isOpen()) {
-            // Seems like the Channel was closed in the meantime try to fail the promise to prevent any
-            // cases where a future may not be notified otherwise.
-            if (!promise.isDone()) {
-                final ClosedChannelException ex = new ClosedChannelException();
-                if (promise.tryFailure(ex)) {
-                    executor().execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            // Call this via the EventLoop as it is a MPSC queue.
-                            clearSpliceQueue(ex);
-                        }
-                    });
-                }
-            }
-        }
     }
 
     /**
@@ -459,12 +342,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             return writeDefaultFileRegion(in, (DefaultFileRegion) msg);
         } else if (msg instanceof FileRegion) {
             return writeFileRegion(in, (FileRegion) msg);
-        } else if (msg instanceof SpliceOutTask) {
-            if (!((SpliceOutTask) msg).spliceOut()) {
-                return WRITE_STATUS_SNDBUF_FULL;
-            }
-            in.remove();
-            return 1;
         } else {
             // Should never reach here.
             throw new Error("Unexpected message type: " + className(msg));
@@ -507,7 +384,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf): buf;
         }
 
-        if (msg instanceof FileRegion || msg instanceof SpliceOutTask) {
+        if (msg instanceof FileRegion) {
             return msg;
         }
 
@@ -650,45 +527,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
     }
 
-    @Override
-    protected void doClose() throws Exception {
-        try {
-            // Calling super.doClose() first so spliceTo(...) will fail on next call.
-            super.doClose();
-        } finally {
-            safeClosePipe(pipeIn);
-            safeClosePipe(pipeOut);
-            clearSpliceQueue(null);
-        }
-    }
-
-    private void clearSpliceQueue(ClosedChannelException exception) {
-        Queue<SpliceInTask> sQueue = spliceQueue;
-        if (sQueue == null) {
-            return;
-        }
-        for (;;) {
-            SpliceInTask task = sQueue.poll();
-            if (task == null) {
-                break;
-            }
-            if (exception == null) {
-                exception = new ClosedChannelException();
-            }
-            task.promise.tryFailure(exception);
-        }
-    }
-
-    private static void safeClosePipe(FileDescriptor fd) {
-        if (fd != null) {
-            try {
-                fd.close();
-            } catch (IOException e) {
-                logger.warn("Error while closing a pipe", e);
-            }
-        }
-    }
-
     class EpollStreamUnsafe extends AbstractEpollUnsafe {
         // Overridden here just to be able to access this method from AbstractEpollStreamChannel
         @Override
@@ -739,30 +577,8 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
             ByteBuf byteBuf = null;
             boolean allDataRead = false;
-            Queue<SpliceInTask> sQueue = null;
             try {
                 do {
-                    if (sQueue != null || (sQueue = spliceQueue) != null) {
-                        SpliceInTask spliceTask = sQueue.peek();
-                        if (spliceTask != null) {
-                            boolean spliceInResult = spliceTask.spliceIn(allocHandle);
-
-                            if (allocHandle.isReceivedRdHup()) {
-                                shutdownInput(false);
-                            }
-                            if (spliceInResult) {
-                                // We need to check if it is still active as if not we removed all SpliceTasks in
-                                // doClose(...)
-                                if (isActive()) {
-                                    sQueue.remove();
-                                }
-                                continue;
-                            } else {
-                                break;
-                            }
-                        }
-                    }
-
                     // we use a direct buffer here as the native implementations only be able
                     // to handle direct buffers.
                     byteBuf = allocHandle.allocate(allocator);
@@ -808,225 +624,9 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             } catch (Throwable t) {
                 handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
             } finally {
-                if (sQueue == null) {
-                    if (shouldStopReading(config)) {
-                        clearEpollIn();
-                    }
-                } else {
-                    if (!config.isAutoRead()) {
-                        clearEpollIn();
-                    }
+                if (shouldStopReading(config)) {
+                    clearEpollIn();
                 }
-            }
-        }
-    }
-
-    private void addToSpliceQueue(final SpliceInTask task) {
-        Queue<SpliceInTask> sQueue = spliceQueue;
-        if (sQueue == null) {
-            synchronized (this) {
-                sQueue = spliceQueue;
-                if (sQueue == null) {
-                    spliceQueue = sQueue = PlatformDependent.newMpscQueue();
-                }
-            }
-        }
-        sQueue.add(task);
-    }
-
-    protected abstract class SpliceInTask {
-        final ChannelPromise promise;
-        int len;
-
-        protected SpliceInTask(int len, ChannelPromise promise) {
-            this.promise = promise;
-            this.len = len;
-        }
-
-        abstract boolean spliceIn(RecvByteBufAllocator.Handle handle);
-
-        protected final int spliceIn(FileDescriptor pipeOut, RecvByteBufAllocator.Handle handle) throws IOException {
-            // calculate the maximum amount of data we are allowed to splice
-            int length = Math.min(handle.guess(), len);
-            int splicedIn = 0;
-            for (;;) {
-                // Splicing until there is nothing left to splice.
-                int localSplicedIn = Native.splice(socket.intValue(), -1, pipeOut.intValue(), -1, length);
-                handle.lastBytesRead(localSplicedIn);
-                if (localSplicedIn == 0) {
-                    break;
-                }
-                splicedIn += localSplicedIn;
-                length -= localSplicedIn;
-            }
-
-            return splicedIn;
-        }
-    }
-
-    // Let it directly implement channelFutureListener as well to reduce object creation.
-    private final class SpliceInChannelTask extends SpliceInTask implements ChannelFutureListener {
-        private final AbstractEpollStreamChannel ch;
-
-        SpliceInChannelTask(AbstractEpollStreamChannel ch, int len, ChannelPromise promise) {
-            super(len, promise);
-            this.ch = ch;
-        }
-
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            if (!future.isSuccess()) {
-                // Use tryFailure(...) as the promise might already be closed by spliceTo(...)
-                promise.tryFailure(future.cause());
-            }
-        }
-
-        @Override
-        public boolean spliceIn(RecvByteBufAllocator.Handle handle) {
-            assert ch.executor().inEventLoop();
-            if (len == 0) {
-                // Use trySuccess() as the promise might already be closed by spliceTo(...)
-                promise.trySuccess();
-                return true;
-            }
-            try {
-                // We create the pipe on the target channel as this will allow us to just handle pending writes
-                // later in a correct fashion without get into any ordering issues when spliceTo(...) is called
-                // on multiple Channels pointing to one target Channel.
-                FileDescriptor pipeOut = ch.pipeOut;
-                if (pipeOut == null) {
-                    // Create a new pipe as non was created before.
-                    FileDescriptor[] pipe = pipe();
-                    ch.pipeIn = pipe[0];
-                    pipeOut = ch.pipeOut = pipe[1];
-                }
-
-                int splicedIn = spliceIn(pipeOut, handle);
-                if (splicedIn > 0) {
-                    // Integer.MAX_VALUE is a special value which will result in splice forever.
-                    if (len != Integer.MAX_VALUE) {
-                        len -= splicedIn;
-                    }
-
-                    // Depending on if we are done with splicing inbound data we set the right promise for the
-                    // outbound splicing.
-                    final ChannelPromise splicePromise;
-                    if (len == 0) {
-                        splicePromise = promise;
-                    } else {
-                        splicePromise = ch.newPromise().addListener(this);
-                    }
-
-                    boolean autoRead = config().isAutoRead();
-
-                    // Just call unsafe().write(...) and flush() as we not want to traverse the whole pipeline for this
-                    // case.
-                    ch.unsafe().write(new SpliceOutTask(ch, splicedIn, autoRead), splicePromise);
-                    ch.unsafe().flush();
-                    if (autoRead && !splicePromise.isDone()) {
-                        // Write was not done which means the target channel was not writable. In this case we need to
-                        // disable reading until we are done with splicing to the target channel because:
-                        //
-                        // - The user may want to trigger another splice operation once the splicing was complete.
-                        config().setAutoRead(false);
-                    }
-                }
-
-                return len == 0;
-            } catch (Throwable cause) {
-                // Use tryFailure(...) as the promise might already be closed by spliceTo(...)
-                promise.tryFailure(cause);
-                return true;
-            }
-        }
-    }
-
-    private final class SpliceOutTask {
-        private final AbstractEpollStreamChannel ch;
-        private final boolean autoRead;
-        private int len;
-
-        SpliceOutTask(AbstractEpollStreamChannel ch, int len, boolean autoRead) {
-            this.ch = ch;
-            this.len = len;
-            this.autoRead = autoRead;
-        }
-
-        public boolean spliceOut() throws Exception {
-            assert ch.executor().inEventLoop();
-            try {
-                int splicedOut = Native.splice(ch.pipeIn.intValue(), -1, ch.socket.intValue(), -1, len);
-                len -= splicedOut;
-                if (len == 0) {
-                    if (autoRead) {
-                        // AutoRead was used and we spliced everything so start reading again
-                        config().setAutoRead(true);
-                    }
-                    return true;
-                }
-                return false;
-            } catch (IOException e) {
-                if (autoRead) {
-                    // AutoRead was used and we spliced everything so start reading again
-                    config().setAutoRead(true);
-                }
-                throw e;
-            }
-        }
-    }
-
-    private final class SpliceFdTask extends SpliceInTask {
-        private final FileDescriptor fd;
-        private final ChannelPromise promise;
-        private int offset;
-
-        SpliceFdTask(FileDescriptor fd, int offset, int len, ChannelPromise promise) {
-            super(len, promise);
-            this.fd = fd;
-            this.promise = promise;
-            this.offset = offset;
-        }
-
-        @Override
-        public boolean spliceIn(RecvByteBufAllocator.Handle handle) {
-            assert executor().inEventLoop();
-            if (len == 0) {
-                // Use trySuccess() as the promise might already be failed by spliceTo(...)
-                promise.trySuccess();
-                return true;
-            }
-
-            try {
-                FileDescriptor[] pipe = pipe();
-                FileDescriptor pipeIn = pipe[0];
-                FileDescriptor pipeOut = pipe[1];
-                try {
-                    int splicedIn = spliceIn(pipeOut, handle);
-                    if (splicedIn > 0) {
-                        // Integer.MAX_VALUE is a special value which will result in splice forever.
-                        if (len != Integer.MAX_VALUE) {
-                            len -= splicedIn;
-                        }
-                        do {
-                            int splicedOut = Native.splice(pipeIn.intValue(), -1, fd.intValue(), offset, splicedIn);
-                            offset += splicedOut;
-                            splicedIn -= splicedOut;
-                        } while (splicedIn > 0);
-                        if (len == 0) {
-                            // Use trySuccess() as the promise might already be failed by spliceTo(...)
-                            promise.trySuccess();
-                            return true;
-                        }
-                    }
-                    return false;
-                } finally {
-                    safeClosePipe(pipeIn);
-                    safeClosePipe(pipeOut);
-                }
-            } catch (Throwable cause) {
-                // Use tryFailure(...) as the promise might already be failed by spliceTo(...)
-                promise.tryFailure(cause);
-                return true;
             }
         }
     }
