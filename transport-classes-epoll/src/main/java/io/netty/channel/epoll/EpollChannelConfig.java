@@ -25,18 +25,13 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.unix.IntegerUnixChannelOption;
 import io.netty.channel.unix.RawUnixChannelOption;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.Map;
 
 import static io.netty.channel.unix.Limits.SSIZE_MAX;
 
 public class EpollChannelConfig extends DefaultChannelConfig {
-
-    private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(EpollChannelConfig.class);
 
     private volatile long maxBytesPerGatheringWrite = SSIZE_MAX;
 
@@ -59,17 +54,9 @@ public class EpollChannelConfig extends DefaultChannelConfig {
         return channel;
     }
 
-    @Override
-    public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), EpollChannelOption.EPOLL_MODE);
-    }
-
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
-        if (option == EpollChannelOption.EPOLL_MODE) {
-            return (T) getEpollMode();
-        }
         try {
             if (option instanceof IntegerUnixChannelOption) {
                 IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
@@ -91,25 +78,20 @@ public class EpollChannelConfig extends DefaultChannelConfig {
     @Override
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         validate(option, value);
-        if (option == EpollChannelOption.EPOLL_MODE) {
-            setEpollMode((EpollMode) value);
-        } else {
-            try {
-                if (option instanceof IntegerUnixChannelOption) {
-                    IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
-                    ((AbstractEpollChannel) channel).socket.setIntOpt(opt.level(), opt.optname(), (Integer) value);
-                    return true;
-                } else if (option instanceof RawUnixChannelOption) {
-                    RawUnixChannelOption opt = (RawUnixChannelOption) option;
-                    ((AbstractEpollChannel) channel).socket.setRawOpt(opt.level(), opt.optname(), (ByteBuffer) value);
-                    return true;
-                }
-            } catch (IOException e) {
-                throw new ChannelException(e);
+        try {
+            if (option instanceof IntegerUnixChannelOption) {
+                IntegerUnixChannelOption opt = (IntegerUnixChannelOption) option;
+                ((AbstractEpollChannel) channel).socket.setIntOpt(opt.level(), opt.optname(), (Integer) value);
+                return true;
+            } else if (option instanceof RawUnixChannelOption) {
+                RawUnixChannelOption opt = (RawUnixChannelOption) option;
+                ((AbstractEpollChannel) channel).socket.setRawOpt(opt.level(), opt.optname(), (ByteBuffer) value);
+                return true;
             }
-            return super.setOption(option, value);
+        } catch (IOException e) {
+            throw new ChannelException(e);
         }
-        return true;
+        return super.setOption(option, value);
     }
 
     @Override
@@ -176,35 +158,6 @@ public class EpollChannelConfig extends DefaultChannelConfig {
     @Override
     public EpollChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
         super.setMessageSizeEstimator(estimator);
-        return this;
-    }
-
-    /**
-     * Return the {@link EpollMode} used. Default is
-     * {@link EpollMode#EDGE_TRIGGERED}. If you want to use {@link #isAutoRead()} {@code false} or
-     * {@link #getMaxMessagesPerRead()} and have an accurate behaviour you should use
-     * {@link EpollMode#LEVEL_TRIGGERED}.
-     *
-     * @deprecated Netty always uses level-triggered mode and so this method is just a no-op.
-     */
-    @Deprecated
-    public EpollMode getEpollMode() {
-        return EpollMode.LEVEL_TRIGGERED;
-    }
-
-    /**
-     * Set the {@link EpollMode} used. Default is
-     * {@link EpollMode#EDGE_TRIGGERED}. If you want to use {@link #isAutoRead()} {@code false} or
-     * {@link #getMaxMessagesPerRead()} and have an accurate behaviour you should use
-     * {@link EpollMode#LEVEL_TRIGGERED}.
-     *
-     * <strong>Be aware this config setting can only be adjusted before the channel was registered.</strong>
-     *
-     * @deprecated Netty always uses level-triggered mode and so this method is just a no-op.
-     */
-    @Deprecated
-    public EpollChannelConfig setEpollMode(EpollMode mode) {
-        LOGGER.debug("Changing the EpollMode is not supported anymore, this is just a no-op");
         return this;
     }
 

@@ -110,12 +110,6 @@ public final class EpollDomainDatagramChannelConfig extends EpollChannelConfig i
     }
 
     @Override
-    public EpollDomainDatagramChannelConfig setEpollMode(EpollMode mode) {
-        super.setEpollMode(mode);
-        return this;
-    }
-
-    @Override
     @Deprecated
     public EpollDomainDatagramChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
         super.setMaxMessagesPerRead(maxMessagesPerRead);

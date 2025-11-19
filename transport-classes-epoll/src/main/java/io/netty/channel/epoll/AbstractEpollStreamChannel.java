@@ -125,8 +125,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      * <ul>
      *   <li>both channels need to be registered to the same {@link EventLoop}, otherwise an
      *   {@link IllegalArgumentException} is thrown. </li>
-     *   <li>{@link EpollChannelConfig#getEpollMode()} must be {@link EpollMode#LEVEL_TRIGGERED} for this and the
-     *   target {@link AbstractEpollStreamChannel}</li>
      * </ul>
      *
      */
@@ -143,8 +141,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      * <ul>
      *   <li>both channels need to be registered to the same {@link EventLoop}, otherwise an
      *   {@link IllegalArgumentException} is thrown. </li>
-     *   <li>{@link EpollChannelConfig#getEpollMode()} must be {@link EpollMode#LEVEL_TRIGGERED} for this and the
-     *   target {@link AbstractEpollStreamChannel}</li>
      * </ul>
      *
      */
@@ -154,10 +150,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             throw new IllegalArgumentException("EventLoops are not the same.");
         }
         checkPositiveOrZero(len, "len");
-        if (ch.config().getEpollMode() != EpollMode.LEVEL_TRIGGERED
-                || config().getEpollMode() != EpollMode.LEVEL_TRIGGERED) {
-            throw new IllegalStateException("spliceTo() supported only when using " + EpollMode.LEVEL_TRIGGERED);
-        }
         checkNotNull(promise, "promise");
         if (!isOpen()) {
             promise.tryFailure(new ClosedChannelException());
@@ -176,8 +168,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      *
      * Please note:
      * <ul>
-     *   <li>{@link EpollChannelConfig#getEpollMode()} must be {@link EpollMode#LEVEL_TRIGGERED} for this
-     *   {@link AbstractEpollStreamChannel}</li>
      *   <li>the {@link FileDescriptor} will not be closed after the {@link ChannelFuture} is notified</li>
      *   <li>this channel must be registered to an event loop or {@link IllegalStateException} will be thrown.</li>
      * </ul>
@@ -194,8 +184,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      *
      * Please note:
      * <ul>
-     *   <li>{@link EpollChannelConfig#getEpollMode()} must be {@link EpollMode#LEVEL_TRIGGERED} for this
-     *   {@link AbstractEpollStreamChannel}</li>
      *   <li>the {@link FileDescriptor} will not be closed after the {@link ChannelPromise} is notified</li>
      *   <li>this channel must be registered to an event loop or {@link IllegalStateException} will be thrown.</li>
      * </ul>
@@ -204,9 +192,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                                         final ChannelPromise promise) {
         checkPositiveOrZero(len, "len");
         checkPositiveOrZero(offset, "offset");
-        if (config().getEpollMode() != EpollMode.LEVEL_TRIGGERED) {
-            throw new IllegalStateException("spliceTo() supported only when using " + EpollMode.LEVEL_TRIGGERED);
-        }
         checkNotNull(promise, "promise");
         if (!isOpen()) {
             promise.tryFailure(new ClosedChannelException());
