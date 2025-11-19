@@ -118,7 +118,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     @Override
     public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
             final boolean endOfStream, ChannelPromise promise) {
-        promise = promise.unvoid();
         final Http2Stream stream;
         try {
             stream = requireStream(streamId);
@@ -225,7 +224,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             if (!endOfStream || !flowController.hasFlowControlled(stream)) {
                 // The behavior here should mirror that in FlowControlledHeaders
 
-                promise = promise.unvoid();
                 boolean isInformational = validateHeadersSentState(stream, headers, connection.isServer(), endOfStream);
 
                 ChannelFuture future = sendHeaders(frameWriter, ctx, streamId, headers, hasPriority, streamDependency,
@@ -347,7 +345,6 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             // Reserve the promised stream.
             connection.local().reservePushStream(promisedStreamId, stream);
 
-            promise = promise.unvoid();
             ChannelFuture future = frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding,
                                                                 promise);
             // Writing headers may fail during the encode state if they violate HPACK limits.
@@ -551,7 +548,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         FlowControlledHeaders(Http2Stream stream, Http2Headers headers, boolean hasPriority,
                               int streamDependency, short weight, boolean exclusive,
                               int padding, boolean endOfStream, ChannelPromise promise) {
-            super(stream, padding, endOfStream, promise.unvoid());
+            super(stream, padding, endOfStream, promise);
             this.headers = headers;
             this.hasPriority = hasPriority;
             this.streamDependency = streamDependency;

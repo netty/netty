@@ -30,7 +30,6 @@ import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.PendingWriteQueue;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.VoidChannelPromise;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownException;
@@ -247,7 +246,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
         inputShutdown = true;
         outputShutdown = true;
-        unsafe.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, unsafe.voidPromise());
+        unsafe.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, newPromise());
         unsafe.flush();
         parent().streamShutdown(streamId(), true, false, 0, promise);
         closeIfDone();
@@ -283,7 +282,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     private void closeIfDone() {
         if (finSent && (finReceived || type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated())) {
-            unsafe().close(unsafe().voidPromise());
+            unsafe().close(newPromise());
         }
     }
 
@@ -431,7 +430,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 }
                 // IF this error was not QUICHE_ERR_STREAM_STOPPED we should close the channel.
                 finSent = true;
-                unsafe().close(unsafe().voidPromise());
+                unsafe().close(newPromise());
             }
             return false;
         }
@@ -466,8 +465,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         @SuppressWarnings("deprecation")
         private RecvByteBufAllocator.Handle recvHandle;
 
-        private final ChannelPromise voidPromise = new VoidChannelPromise(
-                QuicheQuicStreamChannel.this, false);
         @Override
         public void connect(SocketAddress remote, SocketAddress local, ChannelPromise promise) {
             assert executor().inEventLoop();
@@ -539,9 +536,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 return;
             }
             if (!active || closePromise.isDone()) {
-                if (promise.isVoid()) {
-                    return;
-                }
                 closePromise.addListener(new PromiseNotifier<>(promise));
                 return;
             }
@@ -573,9 +567,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 }
             }
             if (inWriteQueued) {
-                invokeLater(() -> deregister(voidPromise(), true));
+                invokeLater(() -> deregister(newPromise(), true));
             } else {
-                deregister(voidPromise(), true);
+                deregister(newPromise(), true);
             }
         }
 
@@ -637,7 +631,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         @Override
         public void closeForcibly() {
             assert executor().inEventLoop();
-            close(unsafe().voidPromise());
+            close(newPromise());
         }
 
         @Override
@@ -670,7 +664,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             if (!wasFinSent && QuicheQuicStreamChannel.this.finSent
                     && (type() == QuicStreamType.UNIDIRECTIONAL || finReceived)) {
                 // close the channel now
-                close(voidPromise());
+                close(newPromise());
             }
         }
 
@@ -895,12 +889,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         @Override
-        public ChannelPromise voidPromise() {
-            assert executor().inEventLoop();
-            return voidPromise;
-        }
-
-        @Override
         @Nullable
         public ChannelOutboundBuffer outboundBuffer() {
             return null;
@@ -908,7 +896,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
         private void closeOnRead(ChannelPipeline pipeline, boolean readFrames) {
             if (readFrames && finReceived && finSent) {
-                close(voidPromise());
+                close(newPromise());
             } else if (config.isAllowHalfClosure()) {
                 if (finReceived) {
                     // If we receive a fin there will be no more data to read so we need to fire both events
@@ -918,13 +906,13 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     if (finSent) {
                         // This was an unidirectional stream which means as soon as we received FIN and sent a FIN
                         // we need close the connection.
-                        close(voidPromise());
+                        close(newPromise());
                     }
                 }
             } else {
                 // This was an unidirectional stream which means as soon as we received FIN we need
                 // close the connection.
-                close(voidPromise());
+                close(newPromise());
             }
         }
 

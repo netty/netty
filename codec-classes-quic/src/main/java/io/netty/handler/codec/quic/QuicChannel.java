@@ -134,11 +134,6 @@ public interface QuicChannel extends Channel {
     }
 
     @Override
-    default ChannelPromise voidPromise() {
-        return pipeline().voidPromise();
-    }
-
-    @Override
     QuicChannel read();
 
     @Override

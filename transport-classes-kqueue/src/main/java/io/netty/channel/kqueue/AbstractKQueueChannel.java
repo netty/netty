@@ -385,7 +385,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
         @Override
         public void close() {
-            close(voidPromise());
+            close(newPromise());
         }
 
         @Override
@@ -485,7 +485,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                     }
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
-                    close(voidPromise());
+                    close(newPromise());
                     return;
                 }
             }
@@ -542,13 +542,13 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 // When this happens there is something completely wrong with either the filedescriptor or epoll,
                 // so fire the exception through the pipeline and close the Channel.
                 pipeline().fireExceptionCaught(e);
-                unsafe().close(unsafe().voidPromise());
+                unsafe().close(newPromise());
             }
         }
 
         private void fireEventAndClose(Object evt) {
             pipeline().fireUserEventTriggered(evt);
-            close(voidPromise());
+            close(newPromise());
         }
 
         @Override
@@ -583,7 +583,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                                         && connectPromise.tryFailure(new ConnectTimeoutException(
                                                 "connection timed out after " + connectTimeoutMillis + " ms: " +
                                                         remoteAddress))) {
-                                    close(voidPromise());
+                                    close(newPromise());
                                 }
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -599,7 +599,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                                     connectTimeoutFuture.cancel(false);
                                 }
                                 connectPromise = null;
-                                close(voidPromise());
+                                close(newPromise());
                             }
                         }
                     });
@@ -632,7 +632,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
             // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
             if (!promiseSet) {
-                close(voidPromise());
+                close(newPromise());
             }
         }
 

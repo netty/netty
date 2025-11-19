@@ -530,7 +530,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         @Override
         public final void close() throws Exception {
-            close(voidPromise());
+            close(newPromise());
         }
 
         @Override
@@ -544,7 +544,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 // We have a write operation pending that should be completed asap.
                 // We will do the actual close operation one this write result is returned as otherwise
                 // we may get into trouble as we may close the fd while we did not process the write yet.
-                delayedClose = new DelayedClose(promise.isVoid() ? newPromise() : promise, cause, closeCause);
+                delayedClose = new DelayedClose(promise, cause, closeCause);
             } else {
                 delayedClose.promise.addListener(new PromiseNotifier<>(false, promise));
                 return;
@@ -671,7 +671,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
             // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
             if (!promiseSet) {
-                close(voidPromise());
+                close(newPromise());
             }
         }
 
@@ -703,7 +703,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 } else {
                     // Handle this same way as if we did read all data so we don't schedule another read.
                     inputClosedSeenErrorOnRead = true;
-                    close(voidPromise());
+                    close(newPromise());
                     return;
                 }
             }
@@ -715,7 +715,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         private void fireEventAndClose(Object evt) {
             pipeline().fireUserEventTriggered(evt);
-            close(voidPromise());
+            close(newPromise());
         }
 
         final void schedulePollIn() {
@@ -1145,7 +1145,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                         if (connectPromise != null && !connectPromise.isDone() &&
                                 connectPromise.tryFailure(new ConnectTimeoutException(
                                         "connection timed out: " + remoteAddress))) {
-                            close(voidPromise());
+                            close(newPromise());
                         }
                     }
                 }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -1159,7 +1159,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     if (future.isCancelled()) {
                         cancelConnectTimeoutFuture();
                         connectPromise = null;
-                        close(voidPromise());
+                        close(newPromise());
                     }
                 }
             });

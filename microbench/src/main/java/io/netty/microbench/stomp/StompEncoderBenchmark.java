@@ -58,9 +58,6 @@ public class StompEncoderBenchmark extends AbstractMicrobenchmark {
     @Param({ "true", "false" })
     public boolean pooledAllocator;
 
-    @Param({ "true", "false" })
-    public boolean voidPromise;
-
     @Param
     public ExampleStompHeadersSubframe.HeadersType headersType;
 
@@ -100,7 +97,7 @@ public class StompEncoderBenchmark extends AbstractMicrobenchmark {
     }
 
     private ChannelPromise newPromise() {
-        return voidPromise? context.voidPromise() : context.newPromise();
+        return context.newPromise();
     }
 
     @Override

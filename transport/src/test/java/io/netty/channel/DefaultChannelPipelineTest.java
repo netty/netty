@@ -746,24 +746,6 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
-    public void testUnexpectedVoidChannelPromise() throws Exception {
-        final ChannelPipeline pipeline = new LocalChannel().pipeline();
-        group.register(pipeline.channel()).sync();
-
-        try {
-            final ChannelPromise promise = new VoidChannelPromise(pipeline.channel(), false);
-            assertThrows(IllegalArgumentException.class, new Executable() {
-                @Override
-                public void execute() {
-                    pipeline.close(promise);
-                }
-            });
-        } finally {
-            pipeline.close();
-        }
-    }
-
-    @Test
     public void testUnexpectedVoidChannelPromiseCloseFuture() throws Exception {
         final ChannelPipeline pipeline = new LocalChannel().pipeline();
         group.register(pipeline.channel()).sync();
@@ -1313,36 +1295,6 @@ public class DefaultChannelPipelineTest {
         assertNotNull(executor2);
         assertNotSame(executor1, executor2);
         group.shutdownGracefully(0, 0, TimeUnit.SECONDS);
-    }
-
-    @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testVoidPromiseNotify() {
-        ChannelPipeline pipeline1 = new LocalChannel().pipeline();
-
-        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(1);
-        EventLoop eventLoop1 = defaultGroup.next();
-        final Promise<Throwable> promise = eventLoop1.newPromise();
-        final Exception exception = new IllegalArgumentException();
-        try {
-            eventLoop1.register(pipeline1.channel()).syncUninterruptibly();
-            pipeline1.addLast(new ChannelDuplexHandler() {
-                @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-                    throw exception;
-                }
-
-                @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                    promise.setSuccess(cause);
-                }
-            });
-            pipeline1.write("test", pipeline1.voidPromise());
-            assertSame(exception, promise.syncUninterruptibly().getNow());
-        } finally {
-            pipeline1.channel().close().syncUninterruptibly();
-            defaultGroup.shutdownGracefully();
-        }
     }
 
     // Test for https://github.com/netty/netty/issues/8676.

@@ -40,7 +40,6 @@ import org.junit.jupiter.api.Timeout;
 
 import static io.netty.testsuite.transport.TestsuitePermutation.randomBufferType;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 public class SocketEchoTest extends AbstractSocketTest {
 
@@ -75,7 +74,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, false, false, true);
+        testSimpleEcho0(sb, cb, false, true);
     }
 
     @Test
@@ -90,7 +89,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, false, false, false);
+        testSimpleEcho0(sb, cb, false, false);
     }
 
     @Test
@@ -104,7 +103,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoWithAdditionalExecutor(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, true, false, true);
+        testSimpleEcho0(sb, cb, true, true);
     }
 
     @Test
@@ -118,54 +117,11 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoWithAdditionalExecutorNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, true, false, false);
-    }
-
-    @Test
-    public void testSimpleEchoWithVoidPromise(TestInfo testInfo) throws Throwable {
-        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
-            @Override
-            public void run(ServerBootstrap sb1, Bootstrap cb1) throws Throwable {
-                testSimpleEchoWithVoidPromise(sb1, cb1);
-            }
-        });
-    }
-
-    public void testSimpleEchoWithVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, false, true, true);
-    }
-
-    @Test
-    public void testSimpleEchoWithVoidPromiseNotAutoRead(TestInfo testInfo) throws Throwable {
-        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
-            @Override
-            public void run(ServerBootstrap sb1, Bootstrap cb1) throws Throwable {
-                testSimpleEchoWithVoidPromiseNotAutoRead(sb1, cb1);
-            }
-        });
-    }
-
-    public void testSimpleEchoWithVoidPromiseNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, false, true, false);
-    }
-
-    @Test
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testSimpleEchoWithAdditionalExecutorAndVoidPromise(TestInfo testInfo) throws Throwable {
-        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
-            @Override
-            public void run(ServerBootstrap sb1, Bootstrap cb1) throws Throwable {
-                testSimpleEchoWithAdditionalExecutorAndVoidPromise(sb1, cb1);
-            }
-        });
-    }
-
-    public void testSimpleEchoWithAdditionalExecutorAndVoidPromise(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, true, true, true);
+        testSimpleEcho0(sb, cb, true, false);
     }
 
     private static void testSimpleEcho0(
-            ServerBootstrap sb, Bootstrap cb, boolean additionalExecutor, boolean voidPromise, boolean autoRead)
+            ServerBootstrap sb, Bootstrap cb, boolean additionalExecutor, boolean autoRead)
             throws Throwable {
 
         final EchoHandler sh = new EchoHandler(autoRead);
@@ -203,11 +159,7 @@ public class SocketEchoTest extends AbstractSocketTest {
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);
             ByteBuf buf = randomBufferType(cc.alloc(), data, i, length);
-            if (voidPromise) {
-                assertEquals(cc.voidPromise(), cc.writeAndFlush(buf, cc.voidPromise()));
-            } else {
-                assertNotEquals(cc.voidPromise(), cc.writeAndFlush(buf));
-            }
+            cc.writeAndFlush(buf);
             i += length;
         }
 

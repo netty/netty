@@ -106,7 +106,7 @@ final class Http2ControlFrameLimitEncoder extends DecoratingHttp2ConnectionEncod
 
             // We did not reach the limit yet, add the listener to decrement the number of outstanding control frames
             // once the promise was completed
-            return promise.unvoid().addListener(outstandingControlFramesListener);
+            return promise.addListener(outstandingControlFramesListener);
         }
         return promise;
     }

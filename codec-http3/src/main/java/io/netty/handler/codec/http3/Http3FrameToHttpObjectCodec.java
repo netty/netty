@@ -165,10 +165,10 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
             Http3Headers headers = toHttp3Headers((HttpMessage) msg);
             DefaultHttp3HeadersFrame frame = new DefaultHttp3HeadersFrame(headers);
 
-            if (msg instanceof HttpContent && (!promise.isVoid() || isLast)) {
+            if (msg instanceof HttpContent) {
                 combiner = new PromiseCombiner(ctx.executor());
             }
-            promise = writeWithOptionalCombiner(ctx, frame, promise, combiner, isLast);
+            promise = writeWithOptionalCombiner(ctx, frame, promise, combiner);
         }
 
         if (isLast) {
@@ -177,36 +177,36 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
                 boolean readable = last.content().isReadable();
                 boolean hasTrailers = !last.trailingHeaders().isEmpty();
 
-                if (combiner == null && readable && hasTrailers && !promise.isVoid()) {
+                if (combiner == null && readable && hasTrailers) {
                     combiner = new PromiseCombiner(ctx.executor());
                 }
 
                 if (readable) {
                     promise = writeWithOptionalCombiner(
-                            ctx, new DefaultHttp3DataFrame(last.content().retain()), promise, combiner, true);
+                            ctx, new DefaultHttp3DataFrame(last.content().retain()), promise, combiner);
                 }
                 if (hasTrailers) {
                     Http3Headers headers = HttpConversionUtil.toHttp3Headers(last.trailingHeaders(), validateHeaders);
                     promise = writeWithOptionalCombiner(ctx,
-                            new DefaultHttp3HeadersFrame(headers), promise, combiner, true);
+                            new DefaultHttp3HeadersFrame(headers), promise, combiner);
                 } else if (!readable) {
                     if (combiner == null) {
                         // We only need to write something if there was no write before.
                         promise = writeWithOptionalCombiner(
-                                ctx, new DefaultHttp3DataFrame(last.content().retain()), promise, combiner, true);
+                                ctx, new DefaultHttp3DataFrame(last.content().retain()), promise, combiner);
                     }
                 }
                 // The shutdown is always done via the listener to ensure previous written data is correctly drained
                 // before QuicStreamChannel.shutdownOutput() is called. Missing to do so might cause previous queued
                 // data to be failed with a ClosedChannelException.
-                promise = promise.unvoid().addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                promise = promise.addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
             } finally {
                 // Release LastHttpContent, we retain the content if we need it.
                 last.release();
             }
         } else if (msg instanceof HttpContent) {
             promise = writeWithOptionalCombiner(ctx,
-                    new DefaultHttp3DataFrame(((HttpContent) msg).content()), promise, combiner, false);
+                    new DefaultHttp3DataFrame(((HttpContent) msg).content()), promise, combiner);
         }
 
         if (combiner != null) {
@@ -222,12 +222,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
             ChannelHandlerContext ctx,
             Object msg,
             ChannelPromise outerPromise,
-            @Nullable PromiseCombiner combiner,
-            boolean unvoidPromise
-    ) {
-        if (unvoidPromise) {
-            outerPromise = outerPromise.unvoid();
-        }
+            @Nullable PromiseCombiner combiner) {
         if (combiner == null) {
             ctx.write(msg, outerPromise);
         } else {

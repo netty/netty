@@ -261,7 +261,7 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry == null) {
                     if (previousBuf != null) {
                         decrementReadableBytes(previousBuf.readableBytes());
-                        ctx.write(previousBuf, ctx.voidPromise());
+                        ctx.write(previousBuf, ctx.newPromise());
                     }
                     break;
                 }
@@ -269,7 +269,7 @@ public abstract class AbstractCoalescingBufferQueue {
                 if (entry instanceof ByteBuf) {
                     if (previousBuf != null) {
                         decrementReadableBytes(previousBuf.readableBytes());
-                        ctx.write(previousBuf, ctx.voidPromise());
+                        ctx.write(previousBuf, ctx.newPromise());
                     }
                     previousBuf = (ByteBuf) entry;
                 } else if (entry instanceof ChannelPromise) {
@@ -427,6 +427,6 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     private static ChannelFutureListener toChannelFutureListener(ChannelPromise promise) {
-        return promise.isVoid() ? null : new DelegatingChannelPromiseNotifier(promise);
+        return new DelegatingChannelPromiseNotifier(promise);
     }
 }

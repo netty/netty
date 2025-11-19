@@ -137,11 +137,6 @@ public interface QuicStreamChannel extends DuplexChannel {
     }
 
     @Override
-    default ChannelPromise voidPromise() {
-        return pipeline().voidPromise();
-    }
-
-    @Override
     default ChannelFuture shutdownInput() {
         return shutdownInput(newPromise());
     }

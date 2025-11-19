@@ -101,7 +101,7 @@ public class WebSocketFrame08EncoderBenchmark extends AbstractMicrobenchmark {
     }
 
     private ChannelPromise newPromise() {
-        return voidPromise? context.voidPromise() : context.newPromise();
+        return context.newPromise();
     }
 
     @Override

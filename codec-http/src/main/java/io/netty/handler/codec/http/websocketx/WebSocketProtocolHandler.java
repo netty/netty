@@ -113,7 +113,7 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
             ReferenceCountUtil.release(msg);
             promise.setFailure(new ClosedChannelException());
         } else if (msg instanceof CloseWebSocketFrame) {
-            closeSent(promise.unvoid());
+            closeSent(promise);
             ctx.write(msg).addListener(new PromiseNotifier<Void, ChannelFuture>(false, closeSent));
         } else {
             ctx.write(msg, promise);

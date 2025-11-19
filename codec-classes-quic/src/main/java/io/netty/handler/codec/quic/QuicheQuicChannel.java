@@ -424,7 +424,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     void forceClose() {
-        unsafe().close(voidPromise());
+        unsafe().close(newPromise());
     }
 
     @Override
@@ -810,7 +810,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         // Make a copy to ensure we not run into a situation when we change the underlying iterator from
         // another method and so run in an assert error.
         for (QuicheQuicStreamChannel stream: streams.values().toArray(new QuicheQuicStreamChannel[0])) {
-            stream.unsafe().close(closedChannelException, voidPromise());
+            stream.unsafe().close(closedChannelException, newPromise());
         }
         streams.clear();
     }
@@ -1543,7 +1543,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                         if (connectPromise != null && !connectPromise.isDone()
                                 && connectPromise.tryFailure(new ConnectTimeoutException(
                                 "connection timed out: " + remote))) {
-                            close(voidPromise());
+                            close(newPromise());
                         }
                     }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
                 }
@@ -1554,7 +1554,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             connectTimeoutFuture.cancel(false);
                         }
                         connectPromise = null;
-                        close(voidPromise());
+                        close(newPromise());
                     }
                 });
 
@@ -1929,7 +1929,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 fireDatagramExtensionEvent(conn);
                 if (!promiseSet) {
                     fireConnectCloseEventIfNeeded(conn);
-                    this.close(this.voidPromise());
+                    this.close(newPromise());
                     return true;
                 }
             }

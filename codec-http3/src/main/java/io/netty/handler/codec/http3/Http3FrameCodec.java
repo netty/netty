@@ -760,7 +760,7 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
 
         void enqueueFlush() {
             assert ctx.channel().executor().inEventLoop();
-            queue.add(FLUSH, ctx.voidPromise());
+            queue.add(FLUSH, ctx.newPromise());
         }
 
         void drain() {

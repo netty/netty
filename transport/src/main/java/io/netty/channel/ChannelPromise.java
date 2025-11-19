@@ -60,9 +60,4 @@ public interface ChannelPromise extends ChannelFuture, Promise<Void> {
 
     @Override
     ChannelPromise awaitUninterruptibly();
-
-    /**
-     * Returns a new {@link ChannelPromise} if {@link #isVoid()} returns {@code true} otherwise itself.
-     */
-    ChannelPromise unvoid();
 }

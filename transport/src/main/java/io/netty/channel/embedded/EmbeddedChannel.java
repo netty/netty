@@ -374,7 +374,7 @@ public class EmbeddedChannel extends AbstractChannel {
                 p.fireChannelRead(m);
             }
 
-            flushInbound(false, voidPromise());
+            flushInbound(false, newPromise()).syncUninterruptibly();
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -417,7 +417,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * @see #flushOutbound()
      */
     public EmbeddedChannel flushInbound() {
-        flushInbound(true, voidPromise());
+        flushInbound(true, newPromise());
         return this;
     }
 
@@ -527,7 +527,7 @@ public class EmbeddedChannel extends AbstractChannel {
             executingStackCnt--;
             maybeRunPendingTasks();
         }
-        checkException(voidPromise());
+        checkException(newPromise()).syncUninterruptibly();
         return this;
     }
 
@@ -935,13 +935,8 @@ public class EmbeddedChannel extends AbstractChannel {
     private ChannelFuture checkException(ChannelPromise promise) {
       Throwable t = lastException;
       if (t != null) {
-        lastException = null;
-
-        if (promise.isVoid()) {
-            PlatformDependent.throwException(t);
-        }
-
-        return promise.setFailure(t);
+          lastException = null;
+          return promise.setFailure(t);
       }
 
       return promise.setSuccess();
@@ -951,7 +946,7 @@ public class EmbeddedChannel extends AbstractChannel {
      * Check if there was any {@link Throwable} received and if so rethrow it.
      */
     public void checkException() {
-      checkException(voidPromise());
+      checkException(newPromise()).syncUninterruptibly();
     }
 
     /**
@@ -1319,11 +1314,6 @@ public class EmbeddedChannel extends AbstractChannel {
                     executingStackCnt--;
                     maybeRunPendingTasks();
                 }
-            }
-
-            @Override
-            public ChannelPromise voidPromise() {
-                return EmbeddedUnsafe.this.voidPromise();
             }
 
             @Override

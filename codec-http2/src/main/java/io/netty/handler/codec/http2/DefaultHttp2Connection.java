@@ -123,8 +123,6 @@ public class DefaultHttp2Connection implements Http2Connection {
         if (closePromise != null) {
             if (closePromise == promise) {
                 // Do nothing
-            } else if (promise instanceof ChannelPromise && ((ChannelFuture) closePromise).isVoid()) {
-                closePromise = promise;
             } else {
                 PromiseNotifier.cascade(closePromise, promise);
             }
