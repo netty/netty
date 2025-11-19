@@ -21,7 +21,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.oio.OioDatagramChannel;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
@@ -74,9 +73,7 @@ public class DatagramConnectNotExistsTest extends AbstractClientSocketTest {
             assertTrue(datagramChannel.isActive());
             datagramChannel.writeAndFlush(
                     Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII)).syncUninterruptibly();
-            if (!(datagramChannel instanceof OioDatagramChannel)) {
-                assertTrue(promise.syncUninterruptibly().getNow() instanceof PortUnreachableException);
-            }
+            assertTrue(promise.syncUninterruptibly().getNow() instanceof PortUnreachableException);
         } finally {
             future.channel().close();
         }

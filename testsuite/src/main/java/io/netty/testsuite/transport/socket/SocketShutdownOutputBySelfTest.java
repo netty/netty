@@ -25,7 +25,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.oio.OioSocketChannel;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -47,7 +46,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
@@ -168,7 +166,6 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
             ss.bind(newSocketAddress());
             cb.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(2, 4));
             ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).sync().channel();
-            assumeFalse(ch instanceof OioSocketChannel);
             assertTrue(ch.isActive());
             assertFalse(ch.isOutputShutdown());
 

@@ -20,18 +20,13 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
-import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.channel.socket.oio.OioDatagramChannel;
-import io.netty.channel.socket.oio.OioServerSocketChannel;
-import io.netty.channel.socket.oio.OioSocketChannel;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
 import io.netty.util.concurrent.DefaultThreadFactory;
@@ -46,7 +41,6 @@ public class SocketTestPermutation {
 
     static final String BAD_HOST = SystemPropertyUtil.get("io.netty.testsuite.badHost", "198.51.100.254");
     static final int BAD_PORT = SystemPropertyUtil.getInt("io.netty.testsuite.badPort", 65535);
-    static final boolean INCLUDE_OIO = SystemPropertyUtil.getBoolean("io.netty.testsuite.includeOio", false);
 
     // See /etc/services
     public static final int UNASSIGNED_PORT = 4;
@@ -61,12 +55,8 @@ public class SocketTestPermutation {
 
     protected static final int NUM_THREADS = 4;
 
-    protected static final int OIO_SO_TIMEOUT = 10;  // Use short timeout for faster runs.
-
     protected final EventLoopGroup NIO_GROUP = new MultiThreadIoEventLoopGroup(
             NUM_THREADS, new DefaultThreadFactory("testsuite-nio", true), NioIoHandler.newFactory());
-    protected final EventLoopGroup OIO_GROUP =
-            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-oio", true));
 
     protected <A extends AbstractBootstrap<?, ?>, B extends AbstractBootstrap<?, ?>>
 
@@ -106,11 +96,6 @@ public class SocketTestPermutation {
         // Populate the combinations
         List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> list = combo(sbfs, cbfs);
 
-        if (INCLUDE_OIO) {
-            // Remove the OIO-OIO case which often leads to a dead lock by its nature.
-            list.remove(list.size() - 1);
-        }
-
         return list;
     }
 
@@ -123,11 +108,6 @@ public class SocketTestPermutation {
 
         // Populate the combinations
         List<BootstrapComboFactory<ServerBootstrap, Bootstrap>> list = combo(sbfs, cbfs);
-
-        if (INCLUDE_OIO) {
-            // Remove the OIO-OIO case which often leads to a dead lock by its nature.
-            list.remove(list.size() - 1);
-        }
 
         return list;
     }
@@ -152,15 +132,6 @@ public class SocketTestPermutation {
                 });
             }
         });
-        if (INCLUDE_OIO) {
-            bfs.add(new BootstrapFactory<Bootstrap>() {
-                @Override
-                public Bootstrap newInstance() {
-                    return new Bootstrap().group(OIO_GROUP).channel(OioDatagramChannel.class)
-                            .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
-                }
-            });
-        }
 
         // Populare the combinations.
         return combo(bfs, bfs);
@@ -175,17 +146,6 @@ public class SocketTestPermutation {
                         .channel(NioServerSocketChannel.class);
             }
         });
-        if (INCLUDE_OIO) {
-            factories.add(new BootstrapFactory<ServerBootstrap>() {
-                @Override
-                public ServerBootstrap newInstance() {
-                    return new ServerBootstrap().group(OIO_GROUP)
-                            .channel(OioServerSocketChannel.class)
-                            .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
-                }
-            });
-        }
-
         return factories;
     }
 
@@ -197,15 +157,6 @@ public class SocketTestPermutation {
                 return new Bootstrap().group(NIO_GROUP).channel(NioSocketChannel.class);
             }
         });
-        if (INCLUDE_OIO) {
-            factories.add(new BootstrapFactory<Bootstrap>() {
-                @Override
-                public Bootstrap newInstance() {
-                    return new Bootstrap().group(OIO_GROUP).channel(OioSocketChannel.class)
-                            .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
-                }
-            });
-        }
         return factories;
     }
 
@@ -221,15 +172,6 @@ public class SocketTestPermutation {
                 return new Bootstrap().group(NIO_GROUP).channel(NioDatagramChannel.class);
             }
         });
-        if (INCLUDE_OIO) {
-            factories.add(new BootstrapFactory<Bootstrap>() {
-                @Override
-                public Bootstrap newInstance() {
-                    return new Bootstrap().group(OIO_GROUP).channel(OioDatagramChannel.class)
-                            .option(ChannelOption.SO_TIMEOUT, OIO_SO_TIMEOUT);
-                }
-            });
-        }
-         return factories;
+        return factories;
     }
 }

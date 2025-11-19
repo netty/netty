@@ -20,11 +20,8 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
-import io.netty.channel.oio.OioEventLoopGroup;
 import io.netty.channel.sctp.nio.NioSctpChannel;
 import io.netty.channel.sctp.nio.NioSctpServerChannel;
-import io.netty.channel.sctp.oio.OioSctpChannel;
-import io.netty.channel.sctp.oio.OioSctpServerChannel;
 import io.netty.testsuite.util.TestUtils;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapComboFactory;
 import io.netty.testsuite.transport.TestsuitePermutation.BootstrapFactory;
@@ -39,8 +36,6 @@ public final class SctpTestPermutation {
     private static final int NUM_THREADS = 4;
     private static final EventLoopGroup NIO_GROUP = new MultiThreadIoEventLoopGroup(
             NUM_THREADS, new DefaultThreadFactory("testsuite-sctp-nio", true), NioIoHandler.newFactory());
-    private static final EventLoopGroup OIO_GROUP =
-            new OioEventLoopGroup(Integer.MAX_VALUE, new DefaultThreadFactory("testsuite-sctp-oio-worker", true));
 
     static List<BootstrapFactory<ServerBootstrap>> sctpServerChannel() {
         if (!TestUtils.isSctpSupported()) {
@@ -57,14 +52,6 @@ public final class SctpTestPermutation {
                         channel(NioSctpServerChannel.class);
             }
         });
-        list.add(new BootstrapFactory<ServerBootstrap>() {
-            @Override
-            public ServerBootstrap newInstance() {
-                return new ServerBootstrap().
-                        group(OIO_GROUP).
-                        channel(OioSctpServerChannel.class);
-            }
-        });
 
         return list;
     }
@@ -79,12 +66,6 @@ public final class SctpTestPermutation {
             @Override
             public Bootstrap newInstance() {
                 return new Bootstrap().group(NIO_GROUP).channel(NioSctpChannel.class);
-            }
-        });
-        list.add(new BootstrapFactory<Bootstrap>() {
-            @Override
-            public Bootstrap newInstance() {
-                return new Bootstrap().group(OIO_GROUP).channel(OioSctpChannel.class);
             }
         });
         return list;
