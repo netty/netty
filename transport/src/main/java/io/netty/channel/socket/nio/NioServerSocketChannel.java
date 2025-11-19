@@ -21,7 +21,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DefaultServerSocketChannelConfig;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.internal.SocketUtils;
@@ -78,16 +77,6 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      */
     public NioServerSocketChannel(SelectorProvider provider) {
         this(provider, (SocketProtocolFamily) null);
-    }
-
-    /**
-     * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
-     *
-     * @deprecated use {@link NioServerSocketChannel#NioServerSocketChannel(SelectorProvider, SocketProtocolFamily)}
-     */
-    @Deprecated
-    public NioServerSocketChannel(SelectorProvider provider, InternetProtocolFamily family) {
-        this(provider, family == null ? null : family.toSocketProtocolFamily());
     }
 
     /**

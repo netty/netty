@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.NetUtil;
 
@@ -54,19 +53,6 @@ public final class DefaultDnsOptEcsRecord extends AbstractDnsOptPseudoRrRecord i
      */
     public DefaultDnsOptEcsRecord(int maxPayloadSize, int srcPrefixLength, byte[] address) {
         this(maxPayloadSize, 0, 0, srcPrefixLength, address);
-    }
-
-    /**
-     * Creates a new instance.
-     *
-     * @param maxPayloadSize    the suggested max payload size in bytes
-     * @param protocolFamily    the {@link InternetProtocolFamily} to use. This should be the same as the one used to
-     *                          send the query.
-     * @deprecated              use {@link DefaultDnsOptEcsRecord#DefaultDnsOptEcsRecord(int, SocketProtocolFamily)}
-     */
-    @Deprecated
-    public DefaultDnsOptEcsRecord(int maxPayloadSize, InternetProtocolFamily protocolFamily) {
-        this(maxPayloadSize, 0, 0, 0, protocolFamily.localhost().getAddress());
     }
 
     /**

@@ -19,7 +19,6 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.resolver.HostsFileEntriesResolver;
@@ -363,37 +362,6 @@ public final class DnsNameResolverBuilder {
     }
 
     /**
-     * Compute a {@link ResolvedAddressTypes} from some {@link InternetProtocolFamily}s.
-     * An empty input will return the default value, based on "java.net" System properties.
-     * Valid inputs are (), (IPv4), (IPv6), (Ipv4, IPv6) and (IPv6, IPv4).
-     *
-     * @param internetProtocolFamilies a valid sequence of {@link InternetProtocolFamily}s
-     * @return a {@link ResolvedAddressTypes}
-     * @deprecated use {@link #toResolvedAddressTypes(SocketProtocolFamily...)}
-     */
-    @Deprecated
-    public static ResolvedAddressTypes computeResolvedAddressTypes(InternetProtocolFamily... internetProtocolFamilies) {
-        if (internetProtocolFamilies == null || internetProtocolFamilies.length == 0) {
-            return DnsNameResolver.DEFAULT_RESOLVE_ADDRESS_TYPES;
-        }
-        if (internetProtocolFamilies.length > 2) {
-            throw new IllegalArgumentException("No more than 2 InternetProtocolFamilies");
-        }
-        return toResolvedAddressTypes(toSocketProtocolFamilies(internetProtocolFamilies));
-    }
-
-    private static SocketProtocolFamily[] toSocketProtocolFamilies(InternetProtocolFamily... internetProtocolFamilies) {
-        if (internetProtocolFamilies == null || internetProtocolFamilies.length == 0) {
-            return null;
-        }
-        SocketProtocolFamily[] socketProtocolFamilies = new SocketProtocolFamily[internetProtocolFamilies.length];
-        for (int i = 0; i < internetProtocolFamilies.length; i++) {
-            socketProtocolFamilies[i] = internetProtocolFamilies[i].toSocketProtocolFamily();
-        }
-        return socketProtocolFamilies;
-    }
-
-    /**
      * Compute a {@link ResolvedAddressTypes} from some {@link SocketProtocolFamily}s.
      * An empty input will return the default value, based on "java.net" System properties.
      * Valid inputs are (), (IPv4), (IPv6), (Ipv4, IPv6) and (IPv6, IPv4).
@@ -425,8 +393,8 @@ public final class DnsNameResolverBuilder {
 
     /**
      * Sets the list of the protocol families of the address resolved.
-     * You can use {@link DnsNameResolverBuilder#computeResolvedAddressTypes(InternetProtocolFamily...)}
-     * to get a {@link ResolvedAddressTypes} out of some {@link InternetProtocolFamily}s.
+     * You can use {@link DnsNameResolverBuilder#toResolvedAddressTypes(SocketProtocolFamily...)}
+     * to get a {@link ResolvedAddressTypes} out of some {@link SocketProtocolFamily}s.
      *
      * @param resolvedAddressTypes the address types
      * @return {@code this}

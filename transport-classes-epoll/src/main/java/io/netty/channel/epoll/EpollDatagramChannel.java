@@ -27,7 +27,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.Errors.NativeIoException;
@@ -95,17 +94,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
      */
     public EpollDatagramChannel() {
         this((SocketProtocolFamily) null);
-    }
-
-    /**
-     * Create a new instance using the given {@link InternetProtocolFamily}. If {@code null} is used it will depend
-     * on the Operation Systems default which will be chosen.
-     *
-     * @deprecated use {@link EpollDatagramChannel#EpollDatagramChannel(SocketProtocolFamily)}
-     */
-    @Deprecated
-    public EpollDatagramChannel(InternetProtocolFamily family) {
-        this(newSocketDgram(family), false);
     }
 
     /**

@@ -16,13 +16,11 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketProtocolFamily;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.Collection;
 import java.util.Collections;
@@ -43,15 +41,6 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
 
     public EpollServerSocketChannel() {
         this((SocketProtocolFamily) null);
-    }
-
-    /**
-     * @deprecated  use {@link EpollServerSocketChannel#EpollServerSocketChannel(SocketProtocolFamily)}
-     */
-    @Deprecated
-    public EpollServerSocketChannel(InternetProtocolFamily protocol) {
-        super(newSocketStream(protocol), false);
-        config = new EpollServerSocketChannelConfig(this);
     }
 
     public EpollServerSocketChannel(SocketProtocolFamily protocol) {

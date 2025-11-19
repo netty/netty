@@ -29,7 +29,6 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
@@ -120,34 +119,11 @@ public final class NioDatagramChannel
     }
 
     /**
-     * Create a new instance using the given {@link InternetProtocolFamily}. If {@code null} is used it will depend
-     * on the Operation Systems default which will be chosen.
-     *
-     * @deprecated use {@link NioDatagramChannel#NioDatagramChannel(SocketProtocolFamily)}
-     */
-    @Deprecated
-    public NioDatagramChannel(InternetProtocolFamily ipFamily) {
-        this(ipFamily == null ? null : ipFamily.toSocketProtocolFamily());
-    }
-
-    /**
      * Create a new instance using the given {@link SocketProtocolFamily}. If {@code null} is used it will depend
      * on the Operation Systems default which will be chosen.
      */
     public NioDatagramChannel(SocketProtocolFamily protocolFamily) {
         this(newSocket(DEFAULT_SELECTOR_PROVIDER, protocolFamily));
-    }
-
-    /**
-     * Create a new instance using the given {@link SelectorProvider} and {@link InternetProtocolFamily}.
-     * If {@link InternetProtocolFamily} is {@code null} it will depend on the Operation Systems default
-     * which will be chosen.
-     *
-     * @deprecated use {@link NioDatagramChannel#NioDatagramChannel(SelectorProvider, SocketProtocolFamily)}
-     */
-    @Deprecated
-    public NioDatagramChannel(SelectorProvider provider, InternetProtocolFamily ipFamily) {
-        this(provider, ipFamily == null ? null : ipFamily.toSocketProtocolFamily());
     }
 
     /**
