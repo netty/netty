@@ -133,10 +133,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     @Override
     void init(Channel channel) throws Throwable {
-        Throwable cause = setChannelOptions(channel, newOptionsArray(), logger);
-        if (cause != null) {
-            throw cause;
-        }
+        setChannelOptions(channel, newOptionsArray(), logger);
         setAttributes(channel, newAttributesArray());
 
         ChannelPipeline p = channel.pipeline();
@@ -230,8 +227,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
             child.pipeline().addLast(childHandler);
 
-            Throwable cause = setChannelOptions(child, childOptions, logger);
-            if (cause != null) {
+            try {
+                setChannelOptions(child, childOptions, logger);
+            } catch (Throwable cause) {
                 forceClose(child, cause);
                 return;
             }

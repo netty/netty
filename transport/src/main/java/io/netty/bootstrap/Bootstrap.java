@@ -275,10 +275,8 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         ChannelPipeline p = channel.pipeline();
         p.addLast(config.handler());
 
-        Throwable cause = setChannelOptions(channel, newOptionsArray(), logger);
-        if (cause != null) {
-            throw cause;
-        }
+        setChannelOptions(channel, newOptionsArray(), logger);
+
         setAttributes(channel, newAttributesArray());
         Collection<ChannelInitializerExtension> extensions = getInitializerExtensions();
         if (!extensions.isEmpty()) {

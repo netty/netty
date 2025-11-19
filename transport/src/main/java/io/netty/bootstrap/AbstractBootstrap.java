@@ -473,31 +473,26 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
     }
 
-    static Throwable setChannelOptions(
-            Channel channel, Map.Entry<ChannelOption<?>, Object>[] options, InternalLogger logger) {
+    static void setChannelOptions(
+            Channel channel, Map.Entry<ChannelOption<?>, Object>[] options, InternalLogger logger) throws Throwable {
         for (Map.Entry<ChannelOption<?>, Object> e: options) {
-            Throwable error = setChannelOption(channel, e.getKey(), e.getValue(), logger);
-            if (error != null) {
-                return error;
-            }
+            setChannelOption(channel, e.getKey(), e.getValue(), logger);
         }
-        return null;
     }
 
     @SuppressWarnings("unchecked")
-    private static Throwable setChannelOption(
-            Channel channel, ChannelOption<?> option, Object value, InternalLogger logger) {
+    private static void setChannelOption(
+            Channel channel, ChannelOption<?> option, Object value, InternalLogger logger) throws Throwable {
         try {
             if (!channel.config().setOption((ChannelOption<Object>) option, value)) {
                 logger.warn("Unknown channel option '{}' for channel '{}' of type '{}'",
                         option, channel, channel.getClass());
             }
-            return null;
         } catch (Throwable t) {
             logger.warn(
                     "Failed to set channel option '{}' with value '{}' for channel '{}' of type '{}'",
                     option, value, channel, channel.getClass(), t);
-            return t;
+            throw t;
         }
     }
 
