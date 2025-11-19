@@ -66,13 +66,11 @@ public class EpollSpliceTest {
 
         ServerBootstrap bs2 = new ServerBootstrap();
         bs2.channel(EpollServerSocketChannel.class);
-        bs2.childOption(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
         bs2.group(group).childHandler(new ChannelInboundHandlerAdapter() {
             @Override
             public void channelActive(final ChannelHandlerContext ctx) throws Exception {
                 ctx.channel().config().setAutoRead(false);
                 Bootstrap bs = new Bootstrap();
-                bs.option(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
 
                 bs.channel(EpollSocketChannel.class);
                 bs.group(ctx.channel().executor()).handler(new ChannelInboundHandlerAdapter() {
@@ -196,7 +194,6 @@ public class EpollSpliceTest {
         ServerBootstrap bs = new ServerBootstrap();
         bs.channel(EpollServerSocketChannel.class);
         bs.group(group).childHandler(sh);
-        bs.childOption(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
         Channel sc = bs.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
 
         Bootstrap cb = new Bootstrap();
