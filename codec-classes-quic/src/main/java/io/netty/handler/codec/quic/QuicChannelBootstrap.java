@@ -190,7 +190,7 @@ public final class QuicChannelBootstrap {
      * @return {@link Future} which is notified once the operation completes.
      */
     public Future<QuicChannel> connect() {
-        return connect(parent.eventLoop().newPromise());
+        return connect(parent.executor().newPromise());
     }
 
     /**
@@ -226,7 +226,7 @@ public final class QuicChannelBootstrap {
                 streamHandler, Quic.toOptionsArray(streamOptions), Quic.toAttributesArray(streamAttrs));
 
         Quic.setupChannel(channel, Quic.toOptionsArray(options), Quic.toAttributesArray(attrs), handler, logger);
-        EventLoop eventLoop = parent.eventLoop();
+        EventLoop eventLoop = parent.executor();
         eventLoop.register(channel).addListener((ChannelFuture future) -> {
             Throwable cause = future.cause();
             if (cause != null) {

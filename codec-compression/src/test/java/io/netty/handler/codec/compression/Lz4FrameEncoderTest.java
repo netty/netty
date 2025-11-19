@@ -273,7 +273,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
             clientChannel = bs.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
 
             final Channel finalClientChannel = clientChannel;
-            clientChannel.eventLoop().execute(new Runnable() {
+            clientChannel.executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     finalClientChannel.close();

@@ -367,7 +367,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
 
         @Override
         void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
             final DatagramChannelConfig config = config();
             if (shouldBreakReadReady(config)) {
                 clearReadFilter0();

@@ -892,7 +892,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     private EmbeddedEventLoop.FreezableTicker freezableTicker() {
-        Ticker ticker = eventLoop().ticker();
+        Ticker ticker = executor().ticker();
         if (ticker instanceof EmbeddedEventLoop.FreezableTicker) {
             return (EmbeddedEventLoop.FreezableTicker) ticker;
         } else {
@@ -971,7 +971,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private EmbeddedEventLoop embeddedEventLoop() {
         if (isRegistered()) {
-            return (EmbeddedEventLoop) super.eventLoop();
+            return (EmbeddedEventLoop) super.executor();
         }
 
         return loop;

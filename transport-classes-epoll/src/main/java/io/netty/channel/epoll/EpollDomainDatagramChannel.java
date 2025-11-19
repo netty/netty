@@ -288,7 +288,7 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
 
         @Override
         void epollInReady() {
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
             final DomainDatagramChannelConfig config = config();
             if (shouldBreakEpollInReady(config)) {
                 clearEpollIn0();

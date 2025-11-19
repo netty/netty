@@ -202,7 +202,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
                 return promise;
             }
 
-            final EventLoop eventLoop = channel.eventLoop();
+            final EventLoop eventLoop = channel.executor();
             AddressResolver<SocketAddress> resolver;
             try {
                 resolver = ExternalAddressResolver.getOrDefault(externalResolver).getResolver(eventLoop);
@@ -257,7 +257,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
         final Channel channel = connectPromise.channel();
-        channel.eventLoop().execute(new Runnable() {
+        channel.executor().execute(new Runnable() {
             @Override
             public void run() {
                 if (localAddress == null) {

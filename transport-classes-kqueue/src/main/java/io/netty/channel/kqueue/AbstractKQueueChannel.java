@@ -200,7 +200,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     @Override
     protected void doRegister(ChannelPromise promise) {
-        ((IoEventLoop) eventLoop()).register((AbstractKQueueUnsafe) unsafe()).addListener(f -> {
+        ((IoEventLoop) executor()).register((AbstractKQueueUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 this.registration = (IoRegistration) f.getNow();
                 // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old
@@ -332,7 +332,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     final void clearReadFilter() {
         // Only clear if registered with an EventLoop as otherwise
         if (isRegistered()) {
-            final EventLoop loop = eventLoop();
+            final EventLoop loop = executor();
             final AbstractKQueueUnsafe unsafe = (AbstractKQueueUnsafe) unsafe();
             if (loop.inEventLoop()) {
                 unsafe.clearReadFilter0();
@@ -534,7 +534,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
 
         protected final void clearReadFilter0() {
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
             try {
                 readPending = false;
                 readFilter(false);
@@ -575,7 +575,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                     // Schedule connect timeout.
                     final int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
-                        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                        connectTimeoutFuture = executor().schedule(new Runnable() {
                             @Override
                             public void run() {
                                 ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
@@ -651,7 +651,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             // Note this method is invoked by the event loop only if the connection attempt was
             // neither cancelled nor timed out.
 
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
 
             boolean connectStillInProgress = false;
             try {

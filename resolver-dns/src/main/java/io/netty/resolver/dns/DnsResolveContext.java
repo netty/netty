@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.EventLoop;
 import io.netty.handler.codec.CorruptedFrameException;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
@@ -454,7 +453,7 @@ abstract class DnsResolveContext<T> {
             return;
         }
         final Promise<AddressedEnvelope<? extends DnsResponse, InetSocketAddress>> queryPromise =
-                channel.eventLoop().newPromise();
+                channel.executor().newPromise();
 
         final long queryStartTimeNanos;
         final boolean isFeedbackAddressStream;

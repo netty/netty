@@ -65,11 +65,9 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
-import org.opentest4j.AssertionFailedError;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -1533,7 +1531,7 @@ public abstract class SSLEngineTest {
                                 // The server then attempts to trigger a flush operation once the application data is
                                 // received from the client. The flush will encrypt all data and should not result in
                                 // deadlock.
-                                ctx.channel().eventLoop().schedule(new Runnable() {
+                                ctx.channel().executor().schedule(new Runnable() {
                                     @Override
                                     public void run() {
                                         ctx.writeAndFlush(ctx.alloc().buffer(1).writeByte(101));
@@ -4004,7 +4002,7 @@ public abstract class SSLEngineTest {
         int checkServerTrustedCalls = checkServerTrustedCount.get();
         if (checkServerTrustedCalls == 1) {
             do {
-                clientChannel.eventLoop().submit(NOOP).await(); // Wait for exception to propagate.
+                clientChannel.executor().submit(NOOP).await(); // Wait for exception to propagate.
             } while (clientException == null);
             assertEquals("Test exception", clientException.getMessage());
             assertNotNull(handshakeFuture);
@@ -4070,7 +4068,7 @@ public abstract class SSLEngineTest {
         int checkClientTrustedCalls = checkClientTrustedCount.get();
         if (checkClientTrustedCalls == 1) {
             do {
-                serverChannel.eventLoop().submit(NOOP).await(); // Wait for exception to propagate.
+                serverChannel.executor().submit(NOOP).await(); // Wait for exception to propagate.
             } while (serverException == null);
             assertEquals("Test exception", serverException.getMessage());
             assertNotNull(handshakeFuture);

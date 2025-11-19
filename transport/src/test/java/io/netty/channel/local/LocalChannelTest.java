@@ -117,7 +117,7 @@ public class LocalChannelTest {
                 // Connect to the server
                 cc = cb.connect(sc.localAddress()).sync().channel();
                 final Channel ccCpy = cc;
-                cc.eventLoop().execute(new Runnable() {
+                cc.executor().execute(new Runnable() {
                     @Override
                     public void run() {
                         // Send a message event up the pipeline.
@@ -764,7 +764,7 @@ public class LocalChannelTest {
                         .addListener(new ChannelFutureListener() {
                             @Override
                             public void operationComplete(ChannelFuture future) throws Exception {
-                                serverChannelCpy.eventLoop().execute(new Runnable() {
+                                serverChannelCpy.executor().execute(new Runnable() {
                                     @Override
                                     public void run() {
                                         // The point of this test is to write while the peer is closed, so we should
@@ -843,7 +843,7 @@ public class LocalChannelTest {
             cc = cb.register().sync().channel();
 
             final ChannelPromise promise = cc.newPromise();
-            final Promise<Void> assertPromise = cc.eventLoop().newPromise();
+            final Promise<Void> assertPromise = cc.executor().newPromise();
 
             cc.pipeline().addLast(new TestHandler() {
                 @Override

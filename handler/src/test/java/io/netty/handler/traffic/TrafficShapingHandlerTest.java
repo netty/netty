@@ -106,7 +106,7 @@ public class TrafficShapingHandlerTest {
             ch.writeAndFlush(Unpooled.wrappedBuffer("bar".getBytes(CharsetUtil.UTF_8))).await();
             assertNotNull(attr.get());
             final Channel clientChannel = ch;
-            ch.eventLoop().submit(new Runnable() {
+            ch.executor().submit(new Runnable() {
                 @Override
                 public void run() {
                     clientChannel.pipeline().remove("traffic-shaping");

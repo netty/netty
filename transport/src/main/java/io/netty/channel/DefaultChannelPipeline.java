@@ -141,6 +141,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
         return childExecutor;
     }
+
+    @Override
+    public EventExecutor executor() {
+        return channel().executor();
+    }
+
     @Override
     public final Channel channel() {
         return channel;
@@ -591,7 +597,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     final void invokeHandlerAddedIfNeeded() {
-        assert channel.eventLoop().inEventLoop();
+        assert channel.executor().inEventLoop();
         if (firstRegistration) {
             firstRegistration = false;
             // We are now registered to the EventLoop. It's time to call the callbacks for the ChannelHandlers,

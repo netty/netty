@@ -150,7 +150,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
      */
     public final ChannelFuture spliceTo(final AbstractEpollStreamChannel ch, final int len,
                                         final ChannelPromise promise) {
-        if (ch.eventLoop() != eventLoop()) {
+        if (ch.executor() != executor()) {
             throw new IllegalArgumentException("EventLoops are not the same.");
         }
         checkPositiveOrZero(len, "len");
@@ -224,7 +224,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             if (!promise.isDone()) {
                 final ClosedChannelException ex = new ClosedChannelException();
                 if (promise.tryFailure(ex)) {
-                    eventLoop().execute(new Runnable() {
+                    executor().execute(new Runnable() {
                         @Override
                         public void run() {
                             // Call this via the EventLoop as it is a MPSC queue.
@@ -443,7 +443,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
             clearFlag(Native.EPOLLOUT);
 
             // We used our writeSpin quantum, and should try to write again later.
-            eventLoop().execute(flushTask);
+            executor().execute(flushTask);
         } else {
             // Underlying descriptor can not accept all data currently, so set the EPOLLOUT flag to be woken up
             // when it can accept more data.
@@ -566,7 +566,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     public ChannelFuture shutdownOutput(final ChannelPromise promise) {
-        EventLoop loop = eventLoop();
+        EventLoop loop = executor();
         if (loop.inEventLoop()) {
             ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
         } else {
@@ -597,7 +597,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
                 }
             });
         } else {
-            EventLoop loop = eventLoop();
+            EventLoop loop = executor();
             if (loop.inEventLoop()) {
                 shutdownInput0(promise);
             } else {
@@ -898,7 +898,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
         @Override
         public boolean spliceIn(RecvByteBufAllocator.Handle handle) {
-            assert ch.eventLoop().inEventLoop();
+            assert ch.executor().inEventLoop();
             if (len == 0) {
                 // Use trySuccess() as the promise might already be closed by spliceTo(...)
                 promise.trySuccess();
@@ -968,7 +968,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
 
         public boolean spliceOut() throws Exception {
-            assert ch.eventLoop().inEventLoop();
+            assert ch.executor().inEventLoop();
             try {
                 int splicedOut = Native.splice(ch.pipeIn.intValue(), -1, ch.socket.intValue(), -1, len);
                 len -= splicedOut;
@@ -1004,7 +1004,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
         @Override
         public boolean spliceIn(RecvByteBufAllocator.Handle handle) {
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
             if (len == 0) {
                 // Use trySuccess() as the promise might already be failed by spliceTo(...)
                 promise.trySuccess();

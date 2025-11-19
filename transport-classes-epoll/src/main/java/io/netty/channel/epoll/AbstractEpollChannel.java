@@ -191,7 +191,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 // if SO_LINGER is used.
                 //
                 // See https://github.com/netty/netty/issues/7159
-                EventLoop loop = eventLoop();
+                EventLoop loop = executor();
                 if (loop.inEventLoop()) {
                     doDeregister();
                 } else {
@@ -268,7 +268,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     final void clearEpollIn() {
         // Only clear if registered with an EventLoop as otherwise
         if (isRegistered()) {
-            final EventLoop loop = eventLoop();
+            final EventLoop loop = executor();
             final AbstractEpollUnsafe unsafe = (AbstractEpollUnsafe) unsafe();
             if (loop.inEventLoop()) {
                 unsafe.clearEpollIn0();
@@ -293,7 +293,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected void doRegister(ChannelPromise promise) {
-        ((IoEventLoop) eventLoop()).register((AbstractEpollUnsafe) unsafe()).addListener(f -> {
+        ((IoEventLoop) executor()).register((AbstractEpollUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
                 registration.submit(ops);
@@ -616,7 +616,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
 
         protected final void clearEpollIn0() {
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
             try {
                 readPending = false;
                 if (!ops.contains(EpollIoOps.EPOLLIN)) {
@@ -657,7 +657,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                     // Schedule connect timeout.
                     final int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
-                        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                        connectTimeoutFuture = executor().schedule(new Runnable() {
                             @Override
                             public void run() {
                                 ChannelPromise connectPromise = AbstractEpollChannel.this.connectPromise;
@@ -733,7 +733,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             // Note this method is invoked by the event loop only if the connection attempt was
             // neither cancelled nor timed out.
 
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
 
             boolean connectStillInProgress = false;
             try {

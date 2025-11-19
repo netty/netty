@@ -59,7 +59,7 @@ public final class PendingWriteQueue {
     public PendingWriteQueue(Channel channel) {
         tracker = PendingBytesTracker.newTracker(channel);
         this.invoker = channel;
-        this.executor = channel.eventLoop();
+        this.executor = channel.executor();
     }
 
     /**

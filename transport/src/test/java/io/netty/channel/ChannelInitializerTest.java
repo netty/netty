@@ -139,7 +139,7 @@ public class ChannelInitializerTest {
         try {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
-            channel.eventLoop().submit(new Runnable() {
+            channel.executor().submit(new Runnable() {
                 @Override
                 public void run() {
                     // NOOP
@@ -179,7 +179,7 @@ public class ChannelInitializerTest {
         try {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
-            channel.eventLoop().submit(new Runnable() {
+            channel.executor().submit(new Runnable() {
                 @Override
                 public void run() {
                     // NOOP

@@ -185,7 +185,7 @@ public abstract class AbstractEventLoopTest {
 
         @Override
         public void channelRead(ChannelHandlerContext outCtx, Object msg) throws Exception {
-            final EventLoop newLoop = anyNotEqual(outCtx.channel().eventLoop());
+            final EventLoop newLoop = anyNotEqual(outCtx.channel().executor());
             ChannelFutureListener pipelieModifyingListener = register -> {
                 outCtx.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                     @Override

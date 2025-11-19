@@ -752,19 +752,19 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         }
 
         void enqueue(Object msg, ChannelPromise promise) {
-            assert ctx.channel().eventLoop().inEventLoop();
+            assert ctx.channel().executor().inEventLoop();
             // Touch the message to allow easier debugging of memory leaks
             ReferenceCountUtil.touch(msg);
             queue.add(msg, promise);
         }
 
         void enqueueFlush() {
-            assert ctx.channel().eventLoop().inEventLoop();
+            assert ctx.channel().executor().inEventLoop();
             queue.add(FLUSH, ctx.voidPromise());
         }
 
         void drain() {
-            assert ctx.channel().eventLoop().inEventLoop();
+            assert ctx.channel().executor().inEventLoop();
             boolean flushSeen = false;
             try {
                 for (;;) {

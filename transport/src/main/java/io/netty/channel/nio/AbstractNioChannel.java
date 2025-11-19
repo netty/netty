@@ -173,7 +173,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Deprecated
     protected void setReadPending(final boolean readPending) {
         if (isRegistered()) {
-            EventLoop eventLoop = eventLoop();
+            EventLoop eventLoop = executor();
             if (eventLoop.inEventLoop()) {
                 setReadPending0(readPending);
             } else {
@@ -197,7 +197,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
      */
     protected final void clearReadPending() {
         if (isRegistered()) {
-            EventLoop eventLoop = eventLoop();
+            EventLoop eventLoop = executor();
             if (eventLoop.inEventLoop()) {
                 clearReadPending0();
             } else {
@@ -301,7 +301,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     // Schedule connect timeout.
                     final int connectTimeoutMillis = config().getConnectTimeoutMillis();
                     if (connectTimeoutMillis > 0) {
-                        connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                        connectTimeoutFuture = executor().schedule(new Runnable() {
                             @Override
                             public void run() {
                                 ChannelPromise connectPromise = AbstractNioChannel.this.connectPromise;
@@ -377,7 +377,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             // Note this method is invoked by the event loop only if the connection attempt was
             // neither cancelled nor timed out.
 
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
 
             try {
                 boolean wasActive = isActive();
@@ -459,7 +459,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Override
     protected void doRegister(ChannelPromise promise) {
         assert registration == null;
-        ((IoEventLoop) eventLoop()).register((AbstractNioUnsafe) unsafe()).addListener(f -> {
+        ((IoEventLoop) executor()).register((AbstractNioUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
                 promise.setSuccess();

@@ -141,7 +141,7 @@ public final class Http3ServerPushStreamManager {
      * @return the {@link Future} that will be notified once the push-stream was opened.
      */
     public Future<QuicStreamChannel> newPushStream(long pushId, @Nullable ChannelHandler handler) {
-        final Promise<QuicStreamChannel> promise = channel.eventLoop().newPromise();
+        final Promise<QuicStreamChannel> promise = channel.executor().newPromise();
         newPushStream(pushId, handler, promise);
         return promise;
     }

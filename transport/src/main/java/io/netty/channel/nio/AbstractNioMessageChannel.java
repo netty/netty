@@ -68,7 +68,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
 
         @Override
         public void read() {
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
             final ChannelConfig config = config();
             final ChannelPipeline pipeline = pipeline();
             final RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();

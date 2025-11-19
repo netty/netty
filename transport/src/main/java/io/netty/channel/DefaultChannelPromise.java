@@ -57,7 +57,7 @@ public class DefaultChannelPromise extends DefaultPromise<Void> implements Chann
     protected EventExecutor executor() {
         EventExecutor e = super.executor();
         if (e == null) {
-            return channel().eventLoop();
+            return channel().executor();
         } else {
             return e;
         }

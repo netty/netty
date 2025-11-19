@@ -68,7 +68,7 @@ public class UptimeClientHandler extends SimpleChannelInboundHandler<Object> {
     public void channelUnregistered(final ChannelHandlerContext ctx) throws Exception {
         println("Sleeping for: " + UptimeClient.RECONNECT_DELAY + 's');
 
-        ctx.channel().eventLoop().schedule(new Runnable() {
+        ctx.channel().executor().schedule(new Runnable() {
             @Override
             public void run() {
                 println("Reconnecting to: " + UptimeClient.HOST + ':' + UptimeClient.PORT);

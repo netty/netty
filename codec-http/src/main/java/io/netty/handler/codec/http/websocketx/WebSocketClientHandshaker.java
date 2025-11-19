@@ -422,7 +422,7 @@ public abstract class WebSocketClientHandshaker {
             // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
             // WebSocketFrame messages.
             // See https://github.com/netty/netty/issues/4533
-            channel.eventLoop().execute(new Runnable() {
+            channel.executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     p.remove(codec);
@@ -439,7 +439,7 @@ public abstract class WebSocketClientHandshaker {
             // Delay the removal of the decoder so the user can setup the pipeline if needed to handle
             // WebSocketFrame messages.
             // See https://github.com/netty/netty/issues/4533
-            channel.eventLoop().execute(new Runnable() {
+            channel.executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     p.remove(context.handler());
@@ -696,7 +696,7 @@ public abstract class WebSocketClientHandshaker {
                 // Also, close might be called twice from different threads.
                 if (future.isSuccess() && channel.isActive() &&
                         FORCE_CLOSE_INIT_UPDATER.compareAndSet(handshaker, 0, 1)) {
-                    final Future<?> forceCloseFuture = channel.eventLoop().schedule(new Runnable() {
+                    final Future<?> forceCloseFuture = channel.executor().schedule(new Runnable() {
                         @Override
                         public void run() {
                             if (channel.isActive()) {

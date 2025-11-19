@@ -330,7 +330,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                     }
                 };
             }
-            eventLoop().execute(task);
+            executor().execute(task);
         } else {
             pipeline.fireChannelWritabilityChanged();
         }
@@ -382,8 +382,8 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     @Override
-    public EventLoop eventLoop() {
-        return parent().eventLoop();
+    public EventLoop executor() {
+        return parent().executor();
     }
 
     @Override
@@ -592,7 +592,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
      * channel.
      */
     void fireChildRead(Http2Frame frame) {
-        assert eventLoop().inEventLoop();
+        assert executor().inEventLoop();
         if (!isActive()) {
             ReferenceCountUtil.release(frame);
         } else if (readStatus != ReadStatus.IDLE) {
@@ -620,13 +620,13 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     void fireChildReadComplete() {
-        assert eventLoop().inEventLoop();
+        assert executor().inEventLoop();
         assert readStatus != ReadStatus.IDLE || !readCompletePending;
         unsafe.notifyReadComplete(unsafe.recvBufAllocHandle(), false, false);
     }
 
     final void closeWithError(Http2Error error) {
-        assert eventLoop().inEventLoop();
+        assert executor().inEventLoop();
         unsafe.close(unsafe.voidPromise(), error);
     }
 
@@ -839,7 +839,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 //       -> handlerA.channelInactive() - (2) another inbound handler method called while in (1) yet
                 //
                 // which means the execution of two inbound handler methods of the same handler overlap undesirably.
-                eventLoop().execute(task);
+                executor().execute(task);
             } catch (RejectedExecutionException e) {
                 logger.warn("{} Can't invoke task later as EventLoop rejected it", channel, e);
             }
@@ -1264,10 +1264,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 if (changed) {
                     if (channel.isRegistered()) {
                         final Http2ChannelUnsafe unsafe = (Http2ChannelUnsafe) channel.unsafe();
-                        if (channel.eventLoop().inEventLoop()) {
+                        if (channel.executor().inEventLoop()) {
                             unsafe.updateLocalWindowIfNeededAndFlush();
                         } else {
-                            channel.eventLoop().execute(new Runnable() {
+                            channel.executor().execute(new Runnable() {
                                 @Override
                                 public void run() {
                                     unsafe.updateLocalWindowIfNeededAndFlush();

@@ -301,7 +301,7 @@ public class Http2MultiplexTransportTest {
                                                 ctx.write(new DefaultHttp2DataFrame(
                                                         Unpooled.copiedBuffer("Hello World", CharsetUtil.US_ASCII),
                                                         true));
-                                                ctx.channel().eventLoop().execute(new Runnable() {
+                                                ctx.channel().executor().execute(new Runnable() {
                                                     @Override
                                                     public void run() {
                                                         ctx.flush();

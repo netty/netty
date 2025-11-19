@@ -435,7 +435,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 if (msg instanceof QuicStreamChannel) {
                     QuicStreamChannel channel = (QuicStreamChannel) msg;
                     Quic.setupChannel(channel, streamOptionsArray, streamAttrsArray, streamHandler, logger);
-                    ctx.channel().eventLoop().register(channel);
+                    ctx.channel().executor().register(channel);
                 } else {
                     super.onUnhandledInboundMessage(ctx, msg);
                 }
@@ -458,20 +458,20 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     @Override
     public Future<QuicStreamChannel> createStream(QuicStreamType type, @Nullable ChannelHandler handler,
                                                   Promise<QuicStreamChannel> promise) {
-        if (eventLoop().inEventLoop()) {
+        if (executor().inEventLoop()) {
             ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise);
         } else {
-            eventLoop().execute(() -> ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise));
+            executor().execute(() -> ((QuicChannelUnsafe) unsafe()).connectStream(type, handler, promise));
         }
         return promise;
     }
 
     @Override
     public ChannelFuture close(boolean applicationClose, int error, ByteBuf reason, ChannelPromise promise) {
-        if (eventLoop().inEventLoop()) {
+        if (executor().inEventLoop()) {
             close0(applicationClose, error, reason, promise);
         } else {
-            eventLoop().execute(() -> close0(applicationClose, error, reason, promise));
+            executor().execute(() -> close0(applicationClose, error, reason, promise));
         }
         return promise;
     }
@@ -510,7 +510,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     @Override
     protected boolean isCompatible(EventLoop eventLoop) {
-        return parent().eventLoop() == eventLoop;
+        return parent().executor() == eventLoop;
     }
 
     @Override
@@ -615,7 +615,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
             // making sure that connection statistics is available
             // even after channel is closed
-            statsAtClose = collectStats0(conn, eventLoop().newPromise());
+            statsAtClose = collectStats0(conn, executor().newPromise());
             try {
                 timedOut = Quiche.quiche_conn_is_timed_out(conn.address());
 
@@ -1174,7 +1174,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 runAll(conn, task);
             } finally {
                 // Move back to the EventLoop.
-                eventLoop().execute(() -> {
+                executor().execute(() -> {
                     // Call connection send to continue handshake if needed.
                     if (connectionSend(conn) != SendResult.NONE) {
                         forceFlushParent();
@@ -1446,7 +1446,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                     // Let's try again sending after we did process all tasks.
                     // We schedule this on the EventLoop as otherwise we will get into trouble with re-entrance.
-                    eventLoop().execute(new Runnable() {
+                    executor().execute(new Runnable() {
                         @Override
                         public void run() {
                             // Call connection send to continue handshake if needed.
@@ -1499,7 +1499,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             if (handler != null) {
                 streamChannel.pipeline().addLast(handler);
             }
-            eventLoop().register(streamChannel).addListener((ChannelFuture f) -> {
+            executor().register(streamChannel).addListener((ChannelFuture f) -> {
                 if (f.isSuccess()) {
                     promise.setSuccess(streamChannel);
                 } else {
@@ -1511,7 +1511,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
         @Override
         public void connect(SocketAddress remote, SocketAddress local, ChannelPromise channelPromise) {
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
             if (!channelPromise.setUncancellable()) {
                 return;
             }
@@ -1538,7 +1538,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 // Schedule connect timeout.
                 int connectTimeoutMillis = config().getConnectTimeoutMillis();
                 if (connectTimeoutMillis > 0) {
-                    connectTimeoutFuture = eventLoop().schedule(() -> {
+                    connectTimeoutFuture = executor().schedule(() -> {
                         ChannelPromise connectPromise = QuicheQuicChannel.this.connectPromise;
                         if (connectPromise != null && !connectPromise.isDone()
                                 && connectPromise.tryFailure(new ConnectTimeoutException(
@@ -1771,7 +1771,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     runAll(conn, task);
                 } finally {
                     // Move back to the EventLoop.
-                    eventLoop().execute(() -> {
+                    executor().execute(() -> {
                         if (!conn.isFreed()) {
                             processReceived(conn);
 
@@ -2026,7 +2026,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 return;
             }
             if (timeoutFuture == null) {
-                timeoutFuture = eventLoop().schedule(this,
+                timeoutFuture = executor().schedule(this,
                         nanos, TimeUnit.NANOSECONDS);
             } else {
                 long remaining = timeoutFuture.getDelay(TimeUnit.NANOSECONDS);
@@ -2039,7 +2039,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     // The new timeout is smaller then what was scheduled before. Let's cancel the old timeout
                     // and schedule a new one.
                     cancel();
-                    timeoutFuture = eventLoop().schedule(this, nanos, TimeUnit.NANOSECONDS);
+                    timeoutFuture = executor().schedule(this, nanos, TimeUnit.NANOSECONDS);
                 }
             }
         }
@@ -2054,10 +2054,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     @Override
     public Future<QuicConnectionStats> collectStats(Promise<QuicConnectionStats> promise) {
-        if (eventLoop().inEventLoop()) {
+        if (executor().inEventLoop()) {
             collectStats0(promise);
         } else {
-            eventLoop().execute(() -> collectStats0(promise));
+            executor().execute(() -> collectStats0(promise));
         }
         return promise;
     }
@@ -2088,10 +2088,10 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     @Override
     public Future<QuicConnectionPathStats> collectPathStats(int pathIdx, Promise<QuicConnectionPathStats> promise) {
-        if (eventLoop().inEventLoop()) {
+        if (executor().inEventLoop()) {
             collectPathStats0(pathIdx, promise);
         } else {
-            eventLoop().execute(() -> collectPathStats0(pathIdx, promise));
+            executor().execute(() -> collectPathStats0(pathIdx, promise));
         }
         return promise;
     }

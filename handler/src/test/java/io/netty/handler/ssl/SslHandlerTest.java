@@ -521,7 +521,7 @@ public class SslHandlerTest {
                         ch.pipeline().remove(sslHandler);
 
                         // Schedule the close so removal has time to propagate exception if any.
-                        ch.eventLoop().execute(new Runnable() {
+                        ch.executor().execute(new Runnable() {
                             @Override
                             public void run() {
                                 ch.close();

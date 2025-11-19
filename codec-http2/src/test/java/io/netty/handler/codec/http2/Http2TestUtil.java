@@ -68,7 +68,7 @@ public final class Http2TestUtil {
      * Runs the given operation within the event loop thread of the given {@link Channel}.
      */
     static void runInChannel(Channel channel, final Http2Runnable runnable) {
-        channel.eventLoop().execute(new Runnable() {
+        channel.executor().execute(new Runnable() {
             @Override
             public void run() {
                 try {

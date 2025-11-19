@@ -101,7 +101,7 @@ public final class Http2StreamChannelBootstrap {
      * @return the {@link Future} that will be notified once the channel was opened successfully or it failed.
      */
     public Future<Http2StreamChannel> open() {
-        return open(channel.eventLoop().<Http2StreamChannel>newPromise());
+        return open(channel.executor().<Http2StreamChannel>newPromise());
     }
 
     /**
@@ -186,7 +186,7 @@ public final class Http2StreamChannelBootstrap {
             return;
         }
 
-        ChannelFuture future = ctx.channel().eventLoop().register(streamChannel);
+        ChannelFuture future = ctx.channel().executor().register(streamChannel);
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {

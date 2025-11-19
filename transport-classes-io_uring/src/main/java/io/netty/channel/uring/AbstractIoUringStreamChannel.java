@@ -125,7 +125,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
     @Override
     public final ChannelFuture shutdownOutput(final ChannelPromise promise) {
-        EventLoop loop = eventLoop();
+        EventLoop loop = executor();
         if (loop.inEventLoop()) {
             ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
         } else {
@@ -147,7 +147,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
 
     @Override
     public final ChannelFuture shutdownInput(final ChannelPromise promise) {
-        EventLoop loop = eventLoop();
+        EventLoop loop = executor();
         if (loop.inEventLoop()) {
             shutdownInput0(promise);
         } else {

@@ -235,7 +235,7 @@ public interface QuicChannel extends Channel {
      * @return          the {@link Future} that will be notified once the operation completes.
      */
     default Future<QuicStreamChannel> createStream(QuicStreamType type, @Nullable ChannelHandler handler) {
-        return createStream(type, handler, eventLoop().newPromise());
+        return createStream(type, handler, executor().newPromise());
     }
 
     /**
@@ -295,7 +295,7 @@ public interface QuicChannel extends Channel {
      * @return the {@link Future} that is notified once the stats were collected.
      */
     default Future<QuicConnectionStats> collectStats() {
-        return collectStats(eventLoop().newPromise());
+        return collectStats(executor().newPromise());
     }
 
     /**
@@ -312,7 +312,7 @@ public interface QuicChannel extends Channel {
      * @return the {@link Future} that is notified once the stats were collected.
      */
     default Future<QuicConnectionPathStats> collectPathStats(int pathIdx) {
-        return collectPathStats(pathIdx, eventLoop().newPromise());
+        return collectPathStats(pathIdx, executor().newPromise());
     }
 
     /**

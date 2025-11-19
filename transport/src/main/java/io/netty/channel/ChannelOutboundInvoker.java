@@ -284,4 +284,11 @@ public interface ChannelOutboundInvoker {
      * <strong>Be aware this is an expert feature and should be used with care!</strong>
      */
     ChannelPromise voidPromise();
+
+    /**
+     * Returns the {@link EventExecutor} that is used to execute the operations of this {@link ChannelOutboundInvoker}.
+     *
+     * @return  the executor.
+     */
+    EventExecutor executor();
 }

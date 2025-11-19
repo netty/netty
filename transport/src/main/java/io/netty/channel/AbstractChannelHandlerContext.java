@@ -133,7 +133,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     public EventExecutor executor() {
         EventExecutor ex = contextExecutor;
         if (ex == null) {
-            contextExecutor = ex = childExecutor != null ? childExecutor : channel().eventLoop();
+            contextExecutor = ex = childExecutor != null ? childExecutor : channel().executor();
         }
         return ex;
     }

@@ -108,7 +108,7 @@ public class SimpleChannelPool implements ChannelPool {
         this.bootstrap.handler(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) throws Exception {
-                assert ch.eventLoop().inEventLoop();
+                assert ch.executor().inEventLoop();
                 handler.channelCreated(ch);
             }
         });
@@ -186,7 +186,7 @@ public class SimpleChannelPool implements ChannelPool {
                     });
                 }
             } else {
-                EventLoop loop = ch.eventLoop();
+                EventLoop loop = ch.executor();
                 if (loop.inEventLoop()) {
                     doHealthCheck(ch, promise);
                 } else {
@@ -224,7 +224,7 @@ public class SimpleChannelPool implements ChannelPool {
 
     private void doHealthCheck(final Channel channel, final Promise<Channel> promise) {
         try {
-            assert channel.eventLoop().inEventLoop();
+            assert channel.executor().inEventLoop();
             Future<Boolean> f = healthCheck.isHealthy(channel);
             if (f.isDone()) {
                 notifyHealthCheck(f, channel, promise);
@@ -243,7 +243,7 @@ public class SimpleChannelPool implements ChannelPool {
 
     private void notifyHealthCheck(Future<Boolean> future, Channel channel, Promise<Channel> promise) {
         try {
-            assert channel.eventLoop().inEventLoop();
+            assert channel.executor().inEventLoop();
             if (future.isSuccess() && future.getNow()) {
                 channel.attr(POOL_KEY).set(this);
                 handler.channelAcquired(channel);
@@ -269,7 +269,7 @@ public class SimpleChannelPool implements ChannelPool {
 
     @Override
     public final Future<Void> release(Channel channel) {
-        return release(channel, channel.eventLoop().<Void>newPromise());
+        return release(channel, channel.executor().<Void>newPromise());
     }
 
     @Override
@@ -277,7 +277,7 @@ public class SimpleChannelPool implements ChannelPool {
         try {
             checkNotNull(channel, "channel");
             checkNotNull(promise, "promise");
-            EventLoop loop = channel.eventLoop();
+            EventLoop loop = channel.executor();
             if (loop.inEventLoop()) {
                 doReleaseChannel(channel, promise);
             } else {
@@ -296,7 +296,7 @@ public class SimpleChannelPool implements ChannelPool {
 
     private void doReleaseChannel(Channel channel, Promise<Void> promise) {
         try {
-            assert channel.eventLoop().inEventLoop();
+            assert channel.executor().inEventLoop();
             // Remove the POOL_KEY attribute from the Channel and check if it was acquired from this pool, if not fail.
             if (channel.attr(POOL_KEY).getAndSet(null) != this) {
                 closeAndFail(channel,

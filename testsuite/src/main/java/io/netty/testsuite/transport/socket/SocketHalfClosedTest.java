@@ -154,7 +154,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                             if (bytesRead == totalServerBytesWritten) {
                                 // Bounce this through the event loop to make sure it happens after we're done
                                 // with the read operation.
-                                ch.eventLoop().execute(new Runnable() {
+                                ch.executor().execute(new Runnable() {
                                     @Override
                                     public void run() {
                                         clientReadAllDataLatch.countDown();
@@ -588,7 +588,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                                 // but the close will be done after the Selector did process all events. Because of
                                 // this we will need to give it a bit time to ensure the FD is actual closed before we
                                 // count down the latch and try to write.
-                                future.channel().eventLoop().schedule(new Runnable() {
+                                future.channel().executor().schedule(new Runnable() {
                                     @Override
                                     public void run() {
                                         followerCloseLatch.countDown();
