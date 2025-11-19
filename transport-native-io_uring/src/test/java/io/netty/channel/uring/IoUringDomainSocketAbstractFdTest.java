@@ -23,4 +23,3 @@ public class IoUringDomainSocketAbstractFdTest extends IoUringDomainSocketFdTest
         return IoUringSocketTestPermutation.newAbstractSocketAddress();
     }
 }
-
