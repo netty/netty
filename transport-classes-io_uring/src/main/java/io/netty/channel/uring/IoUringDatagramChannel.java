@@ -23,6 +23,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.EventLoop;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -85,16 +86,16 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
      * Create a new instance which selects the {@link SocketProtocolFamily} to use depending
      * on the Operation Systems default which will be chosen.
      */
-    public IoUringDatagramChannel() {
-        this(null);
+    public IoUringDatagramChannel(EventLoop eventLoop) {
+        this(eventLoop, null);
     }
 
     /**
      * Create a new instance using the given {@link SocketProtocolFamily}. If {@code null} is used it will depend
      * on the Operation Systems default which will be chosen.
      */
-    public IoUringDatagramChannel(SocketProtocolFamily family) {
-        this(LinuxSocket.newSocketDgram(useIpv6(family)), false);
+    public IoUringDatagramChannel(EventLoop eventLoop, SocketProtocolFamily family) {
+        this(eventLoop, LinuxSocket.newSocketDgram(useIpv6(family)), false);
     }
 
     private static boolean useIpv6(SocketProtocolFamily family) {
@@ -108,13 +109,13 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
      * Create a new instance which selects the {@link SocketProtocolFamily} to use depending
      * on the Operation Systems default which will be chosen.
      */
-    public IoUringDatagramChannel(int fd) {
-        this(new LinuxSocket(fd), true);
+    public IoUringDatagramChannel(EventLoop eventLoop, int fd) {
+        this(eventLoop, new LinuxSocket(fd), true);
     }
 
-    private IoUringDatagramChannel(LinuxSocket fd, boolean active) {
+    private IoUringDatagramChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
         // Always use a blocking fd and so make use of fast-poll.
-        super(null, fd, active);
+        super(eventLoop, null, fd, active);
 
         // Configure IP_MULTICAST_ALL - disable by default to match the behaviour of NIO.
         try {

@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.DomainSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
@@ -35,26 +36,26 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
     private volatile DomainSocketAddress local;
     private volatile DomainSocketAddress remote;
 
-    public EpollDomainSocketChannel() {
-        super(newSocketDomain(), false);
+    public EpollDomainSocketChannel(EventLoop eventLoop) {
+        super(eventLoop, newSocketDomain(), false);
     }
 
-    EpollDomainSocketChannel(Channel parent, FileDescriptor fd) {
-        this(parent, new LinuxSocket(fd.intValue()));
+    EpollDomainSocketChannel(EventLoop eventLoop, Channel parent, FileDescriptor fd) {
+        this(eventLoop, parent, new LinuxSocket(fd.intValue()));
     }
 
-    public EpollDomainSocketChannel(int fd) {
-        super(fd);
+    public EpollDomainSocketChannel(EventLoop eventLoop, int fd) {
+        super(eventLoop, fd);
     }
 
-    public EpollDomainSocketChannel(Channel parent, LinuxSocket fd) {
-        super(parent, fd);
+    public EpollDomainSocketChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd) {
+        super(eventLoop, parent, fd);
         local = fd.localDomainSocketAddress();
         remote = fd.remoteDomainSocketAddress();
     }
 
-    public EpollDomainSocketChannel(int fd, boolean active) {
-        super(new LinuxSocket(fd), active);
+    public EpollDomainSocketChannel(EventLoop eventLoop, int fd, boolean active) {
+        super(eventLoop, new LinuxSocket(fd), active);
     }
 
     @Override

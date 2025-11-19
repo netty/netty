@@ -43,11 +43,11 @@ public class AbstractChannelTest {
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
 
-        TestChannel channel = new TestChannel();
+        TestChannel channel = new TestChannel(eventLoop);
         ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
         channel.pipeline().addLast(handler);
 
-        registerChannel(eventLoop, channel);
+        registerChannel(channel);
 
         verify(handler).handlerAdded(any(ChannelHandlerContext.class));
         verify(handler).channelRegistered(any(ChannelHandlerContext.class));
@@ -68,15 +68,15 @@ public class AbstractChannelTest {
             }
         }).when(eventLoop).execute(any(Runnable.class));
 
-        final TestChannel channel = new TestChannel();
+        final TestChannel channel = new TestChannel(eventLoop);
         ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
 
         channel.pipeline().addLast(handler);
 
-        registerChannel(eventLoop, channel);
+        registerChannel(channel);
         channel.unsafe().deregister(new DefaultChannelPromise(channel));
 
-        registerChannel(eventLoop, channel);
+        registerChannel(channel);
 
         verify(handler).handlerAdded(any(ChannelHandlerContext.class));
 
@@ -88,7 +88,8 @@ public class AbstractChannelTest {
 
     @Test
     public void ensureDefaultChannelId() {
-        TestChannel channel = new TestChannel();
+        final EventLoop eventLoop = mock(EventLoop.class);
+        TestChannel channel = new TestChannel(eventLoop);
         final ChannelId channelId = channel.id();
         assertTrue(channelId instanceof DefaultChannelId);
     }
@@ -114,44 +115,6 @@ public class AbstractChannelTest {
 
     @Test
     public void testClosedChannelExceptionCarryIOException() throws Exception {
-        final IOException ioException = new IOException();
-        final Channel channel = new TestChannel() {
-            private boolean open = true;
-            private boolean active;
-
-            @Override
-            protected AbstractUnsafe newUnsafe() {
-                return new AbstractUnsafe() {
-                    @Override
-                    public void connect(
-                            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                        active = true;
-                        promise.setSuccess();
-                    }
-                };
-            }
-
-            @Override
-            protected void doClose()  {
-                active = false;
-                open = false;
-            }
-
-            @Override
-            protected void doWrite(ChannelOutboundBuffer in) throws Exception {
-                throw ioException;
-            }
-
-            @Override
-            public boolean isOpen() {
-                return open;
-            }
-
-            @Override
-            public boolean isActive() {
-                return active;
-            }
-        };
 
         EventLoop loop = new SingleThreadEventLoop(null, Executors.defaultThreadFactory(), true) {
 
@@ -205,8 +168,47 @@ public class AbstractChannelTest {
                 return true;
             }
         };
+        final IOException ioException = new IOException();
+        final Channel channel = new TestChannel(loop) {
+            private boolean open = true;
+            private boolean active;
+
+            @Override
+            protected AbstractUnsafe newUnsafe() {
+                return new AbstractUnsafe() {
+                    @Override
+                    public void connect(
+                            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+                        active = true;
+                        promise.setSuccess();
+                    }
+                };
+            }
+
+            @Override
+            protected void doClose()  {
+                active = false;
+                open = false;
+            }
+
+            @Override
+            protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+                throw ioException;
+            }
+
+            @Override
+            public boolean isOpen() {
+                return open;
+            }
+
+            @Override
+            public boolean isActive() {
+                return active;
+            }
+        };
+
         try {
-            registerChannel(loop, channel);
+            registerChannel(channel);
             channel.connect(new InetSocketAddress(NetUtil.LOCALHOST, 8888)).sync();
             assertSame(ioException, channel.writeAndFlush("").await().cause());
 
@@ -226,9 +228,9 @@ public class AbstractChannelTest {
         assertSame(expected, cause.getCause());
     }
 
-    private static void registerChannel(EventLoop eventLoop, Channel channel) throws Exception {
+    private static void registerChannel(Channel channel) throws Exception {
         DefaultChannelPromise future = new DefaultChannelPromise(channel);
-        channel.unsafe().register(eventLoop, future);
+        channel.unsafe().register(future);
         future.sync(); // Cause any exceptions to be thrown
     }
 
@@ -237,8 +239,8 @@ public class AbstractChannelTest {
 
         private final ChannelConfig config = new DefaultChannelConfig(this);
 
-        TestChannel() {
-            super(null);
+        TestChannel(EventLoop eventLoop) {
+            super(eventLoop, null, null);
         }
 
         @Override
@@ -269,11 +271,6 @@ public class AbstractChannelTest {
                     promise.setFailure(new UnsupportedOperationException());
                 }
             };
-        }
-
-        @Override
-        protected boolean isCompatible(EventLoop loop) {
-            return true;
         }
 
         @Override

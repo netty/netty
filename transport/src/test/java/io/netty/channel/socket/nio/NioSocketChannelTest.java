@@ -59,7 +59,6 @@ import java.util.concurrent.TimeUnit;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 
@@ -168,16 +167,10 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testChannelReRegisterReadSameEventLoop() throws Exception {
-        testChannelReRegisterRead(true);
+        testChannelReRegisterRead();
     }
 
-    @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testChannelReRegisterReadDifferentEventLoop() throws Exception {
-        testChannelReRegisterRead(false);
-    }
-
-    private static void testChannelReRegisterRead(final boolean sameEventLoop) throws Exception {
+    private static void testChannelReRegisterRead() throws Exception {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(2, NioIoHandler.newFactory());
         final CountDownLatch latch = new CountDownLatch(1);
 
@@ -205,20 +198,6 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
 
                          @Override
                          public void channelActive(final ChannelHandlerContext ctx) throws Exception {
-                             final EventLoop loop = group.next();
-                             if (sameEventLoop) {
-                                 deregister(ctx, loop);
-                             } else {
-                                 loop.execute(new Runnable() {
-                                     @Override
-                                     public void run() {
-                                         deregister(ctx, loop);
-                                     }
-                                 });
-                             }
-                         }
-
-                         private void deregister(ChannelHandlerContext ctx, final EventLoop loop) {
                              // As soon as the channel becomes active re-register it to another
                              // EventLoop. After this is done we should still receive the data that
                              // was written to the channel.
@@ -226,8 +205,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                                  @Override
                                  public void operationComplete(ChannelFuture cf) {
                                      Channel channel = cf.channel();
-                                     assertNotSame(loop, channel.executor());
-                                     channel.register(group.next());
+                                     channel.register();
                                  }
                              });
                          }
@@ -291,8 +269,8 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
     }
 
     @Override
-    protected NioSocketChannel newNioChannel() {
-        return new NioSocketChannel();
+    protected NioSocketChannel newNioChannel(EventLoopGroup eventLoopGroup) {
+        return new NioSocketChannel(eventLoopGroup.next());
     }
 
     @Override

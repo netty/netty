@@ -29,7 +29,8 @@ public class EpollDomainDatagramChannelTest {
 
     @Test
     public void testDefaultMaxMessagePerRead() {
-        EpollDomainDatagramChannel channel = new EpollDomainDatagramChannel();
+        EpollDomainDatagramChannel channel = new EpollDomainDatagramChannel(
+                EpollSocketTestPermutation.EPOLL_GROUP.next());
         assertEquals(16, channel.config().getMaxMessagesPerRead());
         channel.unsafe().closeForcibly();
     }

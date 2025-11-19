@@ -169,7 +169,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testRemoveChannelHandler() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         ChannelHandler handler1 = newHandler();
         ChannelHandler handler2 = newHandler();
@@ -192,7 +192,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testRemoveIfExists() {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
+        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel(group.next()));
 
         ChannelHandler handler1 = newHandler();
         ChannelHandler handler2 = newHandler();
@@ -214,7 +214,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testRemoveIfExistsDoesNotThrowException() {
-        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
+        DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel(group.next()));
 
         ChannelHandler handler1 = newHandler();
         ChannelHandler handler2 = newHandler();
@@ -228,7 +228,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testRemoveThrowNoSuchElementException() {
-        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel());
+        final DefaultChannelPipeline pipeline = new DefaultChannelPipeline(new LocalChannel(group.next()));
 
         ChannelHandler handler1 = newHandler();
         pipeline.addLast("handler1", handler1);
@@ -243,7 +243,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testReplaceChannelHandler() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         ChannelHandler handler1 = newHandler();
         pipeline.addLast("handler1", handler1);
@@ -268,7 +268,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testReplaceHandlerChecksDuplicateNames() {
-        final ChannelPipeline pipeline = new LocalChannel().pipeline();
+        final ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         ChannelHandler handler1 = newHandler();
         ChannelHandler handler2 = newHandler();
@@ -286,7 +286,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testReplaceNameWithGenerated() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         ChannelHandler handler1 = newHandler();
         pipeline.addLast("handler1", handler1);
@@ -300,7 +300,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testRenameChannelHandler() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         ChannelHandler handler1 = newHandler();
         pipeline.addLast("handler1", handler1);
@@ -328,7 +328,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testChannelHandlerContextNavigation() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         final int HANDLER_ARRAY_LEN = 5;
         ChannelHandler[] firstHandlers = newHandlers(HANDLER_ARRAY_LEN);
@@ -345,9 +345,9 @@ public class DefaultChannelPipelineTest {
     public void testThrowInExceptionCaught() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicInteger counter = new AtomicInteger();
-        Channel channel = new LocalChannel();
+        Channel channel = new LocalChannel(group.next());
         try {
-            channel.register(group.next()).syncUninterruptibly();
+            channel.register().syncUninterruptibly();
             channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                 class TestException extends Exception { }
 
@@ -384,9 +384,9 @@ public class DefaultChannelPipelineTest {
     public void testThrowInOtherHandlerAfterInvokedFromExceptionCaught() throws InterruptedException {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicInteger counter = new AtomicInteger();
-        Channel channel = new LocalChannel();
+        Channel channel = new LocalChannel(group.next());
         try {
-            channel.register(group.next()).syncUninterruptibly();
+            channel.register().syncUninterruptibly();
             channel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
                 @Override
                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
@@ -426,7 +426,7 @@ public class DefaultChannelPipelineTest {
     @Test
     public void testFireChannelRegistered() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.addLast(new ChannelInitializer<Channel>() {
             @Override
             protected void initChannel(Channel ch) {
@@ -438,13 +438,13 @@ public class DefaultChannelPipelineTest {
                 });
             }
         });
-        pipeline.channel().register(group.next());
+        pipeline.channel().register();
         assertTrue(latch.await(2, TimeUnit.SECONDS));
     }
 
     @Test
     public void testPipelineOperation() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         final int handlerNum = 5;
         ChannelHandler[] handlers1 = newHandlers(handlerNum);
@@ -472,7 +472,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testChannelHandlerContextOrder() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         pipeline.addFirst("1", newHandler());
         pipeline.addLast("10", newHandler());
@@ -675,8 +675,8 @@ public class DefaultChannelPipelineTest {
     // Tests for https://github.com/netty/netty/issues/2349
     @Test
     public void testCancelBind() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
-        pipeline.channel().register(group.next());
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+        pipeline.channel().register();
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
@@ -686,8 +686,8 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testCancelConnect() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
-        pipeline.channel().register(group.next());
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+        pipeline.channel().register();
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
@@ -697,8 +697,8 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testCancelDisconnect() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
-        pipeline.channel().register(group.next());
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+        pipeline.channel().register();
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
@@ -708,8 +708,8 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testCancelClose() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
-        pipeline.channel().register(group.next());
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+        pipeline.channel().register();
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
@@ -719,11 +719,11 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testWrongPromiseChannel() throws Exception {
-        final ChannelPipeline pipeline = new LocalChannel().pipeline();
-        pipeline.channel().register(group.next()).sync();
+        final ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+        pipeline.channel().register().sync();
 
-        ChannelPipeline pipeline2 = new LocalChannel().pipeline();
-        pipeline2.channel().register(group.next()).sync();
+        ChannelPipeline pipeline2 = new LocalChannel(group.next()).pipeline();
+        pipeline2.channel().register().sync();
 
         try {
             final ChannelPromise promise2 = pipeline2.channel().newPromise();
@@ -741,8 +741,8 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testUnexpectedVoidChannelPromiseCloseFuture() throws Exception {
-        final ChannelPipeline pipeline = new LocalChannel().pipeline();
-        pipeline.channel().register(group.next()).sync();
+        final ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+        pipeline.channel().register().sync();
 
         try {
             final ChannelPromise promise = (ChannelPromise) pipeline.channel().closeFuture();
@@ -759,8 +759,8 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testCancelDeregister() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
-        pipeline.channel().register(group.next());
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+        pipeline.channel().register();
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
@@ -770,8 +770,8 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testCancelWrite() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
-        pipeline.channel().register(group.next());
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+        pipeline.channel().register();
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
@@ -784,8 +784,8 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testCancelWriteAndFlush() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
-        pipeline.channel().register(group.next());
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+        pipeline.channel().register();
 
         ChannelPromise promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
@@ -798,25 +798,25 @@ public class DefaultChannelPipelineTest {
 
     @Test
     public void testFirstContextEmptyPipeline() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         assertNull(pipeline.firstContext());
     }
 
     @Test
     public void testLastContextEmptyPipeline() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         assertNull(pipeline.lastContext());
     }
 
     @Test
     public void testFirstHandlerEmptyPipeline() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         assertNull(pipeline.first());
     }
 
     @Test
     public void testLastHandlerEmptyPipeline() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         assertNull(pipeline.last());
     }
 
@@ -850,10 +850,10 @@ public class DefaultChannelPipelineTest {
         final EventLoop loop = group.next();
 
         CheckEventExecutorHandler handler = new CheckEventExecutorHandler(loop);
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.addFirst(handler);
         assertFalse(handler.addedPromise.isDone());
-        pipeline.channel().register(group.next());
+        pipeline.channel().register();
         handler.addedPromise.syncUninterruptibly();
         pipeline.remove(handler);
         handler.removedPromise.syncUninterruptibly();
@@ -866,10 +866,10 @@ public class DefaultChannelPipelineTest {
         final CountDownLatch latch = new CountDownLatch(1);
 
         CheckEventExecutorHandler handler = new CheckEventExecutorHandler(loop);
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.addFirst(handler);
         assertFalse(handler.addedPromise.isDone());
-        pipeline.channel().register(group.next());
+        pipeline.channel().register();
         handler.addedPromise.syncUninterruptibly();
         pipeline.replace(handler, null, new ChannelHandlerAdapter() {
             @Override
@@ -885,7 +885,7 @@ public class DefaultChannelPipelineTest {
     public void testAddRemoveHandlerNotRegistered() throws Throwable {
         final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
         ChannelHandler handler = new ErrorChannelHandler(error);
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.addFirst(handler);
         pipeline.remove(handler);
 
@@ -899,7 +899,7 @@ public class DefaultChannelPipelineTest {
     public void testAddReplaceHandlerNotRegistered() throws Throwable {
         final AtomicReference<Throwable> error = new AtomicReference<Throwable>();
         ChannelHandler handler = new ErrorChannelHandler(error);
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.addFirst(handler);
         pipeline.replace(handler, null, new ErrorChannelHandler(error));
 
@@ -912,7 +912,7 @@ public class DefaultChannelPipelineTest {
     @Test
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void testAddRemoveHandlerCalledOnceRegistered() throws Throwable {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         CallbackCheckHandler handler = new CallbackCheckHandler();
 
         pipeline.addFirst(handler);
@@ -921,7 +921,7 @@ public class DefaultChannelPipelineTest {
         assertNull(handler.addedHandler.getNow());
         assertNull(handler.removedHandler.getNow());
 
-        pipeline.channel().register(group.next()).syncUninterruptibly();
+        pipeline.channel().register().syncUninterruptibly();
         Throwable cause = handler.error.get();
         if (cause != null) {
             throw cause;
@@ -934,7 +934,7 @@ public class DefaultChannelPipelineTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddReplaceHandlerCalledOnceRegistered() throws Throwable {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         CallbackCheckHandler handler = new CallbackCheckHandler();
         CallbackCheckHandler handler2 = new CallbackCheckHandler();
 
@@ -946,7 +946,7 @@ public class DefaultChannelPipelineTest {
         assertNull(handler2.addedHandler.getNow());
         assertNull(handler2.removedHandler.getNow());
 
-        pipeline.channel().register(group.next()).syncUninterruptibly();
+        pipeline.channel().register().syncUninterruptibly();
         Throwable cause = handler.error.get();
         if (cause != null) {
             throw cause;
@@ -969,16 +969,14 @@ public class DefaultChannelPipelineTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddBefore() throws Throwable {
-        ChannelPipeline pipeline1 = new LocalChannel().pipeline();
-        ChannelPipeline pipeline2 = new LocalChannel().pipeline();
-
         EventLoopGroup defaultGroup = new MultiThreadIoEventLoopGroup(2, LocalIoHandler.newFactory());
+        EventLoop eventLoop1 = defaultGroup.next();
+        EventLoop eventLoop2 = defaultGroup.next();
         try {
-            EventLoop eventLoop1 = defaultGroup.next();
-            EventLoop eventLoop2 = defaultGroup.next();
-
-            pipeline1.channel().register(eventLoop1).syncUninterruptibly();
-            pipeline2.channel().register(eventLoop2).syncUninterruptibly();
+            ChannelPipeline pipeline1 = new LocalChannel(eventLoop1).pipeline();
+            ChannelPipeline pipeline2 = new LocalChannel(eventLoop2).pipeline();
+            pipeline1.channel().register().syncUninterruptibly();
+            pipeline2.channel().register().syncUninterruptibly();
 
             CountDownLatch latch = new CountDownLatch(2 * 10);
             for (int i = 0; i < 10; i++) {
@@ -994,21 +992,31 @@ public class DefaultChannelPipelineTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddInListenerNio() {
-        testAddInListener(new NioSocketChannel(), new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()));
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        try {
+            testAddInListener(new NioSocketChannel(group.next()));
+        } finally {
+            group.shutdownGracefully();
+        }
     }
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testAddInListenerLocal() {
-        testAddInListener(new LocalChannel(), new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory()));
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
+        try {
+            testAddInListener(new LocalChannel(group.next()));
+        } finally {
+            group.shutdownGracefully();
+        }
     }
 
-    private static void testAddInListener(Channel channel, EventLoopGroup group) {
+    private static void testAddInListener(Channel channel) {
         ChannelPipeline pipeline1 = channel.pipeline();
         try {
             final Object event = new Object();
             final Promise<Object> promise = ImmediateEventExecutor.INSTANCE.newPromise();
-            pipeline1.channel().register(group.next()).addListener(new ChannelFutureListener() {
+            pipeline1.channel().register().addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) {
                     ChannelPipeline pipeline = future.channel().pipeline();
@@ -1040,13 +1048,12 @@ public class DefaultChannelPipelineTest {
             assertSame(event, promise.syncUninterruptibly().getNow());
         } finally {
             pipeline1.channel().close().syncUninterruptibly();
-            group.shutdownGracefully();
         }
     }
 
     @Test
     public void testNullName() {
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.addLast(newHandler());
         pipeline.addLast(null, newHandler());
         pipeline.addFirst(newHandler());
@@ -1069,8 +1076,8 @@ public class DefaultChannelPipelineTest {
             // the time.
             for (int i = 0; i < 500; i++) {
 
-                ChannelPipeline pipeline = new LocalChannel().pipeline();
-                pipeline.channel().register(group.next()).sync();
+                ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+                pipeline.channel().register().sync();
 
                 final CountDownLatch latch = new CountDownLatch(1);
 
@@ -1516,10 +1523,10 @@ public class DefaultChannelPipelineTest {
         };
         assertEquals(1, referenceCounted.refCnt());
 
-        Channel channel = new LocalChannel();
-        Channel channel2 = new LocalChannel();
-        channel.register(group.next()).syncUninterruptibly();
-        channel2.register(group.next()).syncUninterruptibly();
+        Channel channel = new LocalChannel(group.next());
+        Channel channel2 = new LocalChannel(group.next());
+        channel.register().syncUninterruptibly();
+        channel2.register().syncUninterruptibly();
 
         try {
             if (flush) {
@@ -1551,12 +1558,12 @@ public class DefaultChannelPipelineTest {
 
     private static void handlerAddedStateUpdatedBeforeHandlerAddedDone(boolean executeInEventLoop)
             throws InterruptedException {
-        final ChannelPipeline pipeline = new LocalChannel().pipeline();
+        final ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         final Object userEvent = new Object();
         final Object writeObject = new Object();
         final CountDownLatch doneLatch = new CountDownLatch(1);
 
-        pipeline.channel().register(group.next()).syncUninterruptibly();
+        pipeline.channel().register().syncUninterruptibly();
 
         Runnable r = new Runnable() {
             @Override

@@ -44,7 +44,7 @@ public class KQueueChannelConfigTest {
 
     @Test
     public void testOptionGetThrowsChannelException() throws Exception {
-        KQueueSocketChannel channel = new KQueueSocketChannel();
+        KQueueSocketChannel channel = new KQueueSocketChannel(KQueueSocketTestPermutation.KQUEUE_GROUP.next());
         channel.config().getSoLinger();
         channel.fd().close();
         try {
@@ -57,7 +57,7 @@ public class KQueueChannelConfigTest {
 
     @Test
     public void testOptionSetThrowsChannelException() throws Exception {
-        KQueueSocketChannel channel = new KQueueSocketChannel();
+        KQueueSocketChannel channel = new KQueueSocketChannel(KQueueSocketTestPermutation.KQUEUE_GROUP.next());
         channel.config().setKeepAlive(true);
         channel.fd().close();
         try {
@@ -88,7 +88,7 @@ public class KQueueChannelConfigTest {
 
     @Test
     public void testIntegerOption() throws Exception {
-        KQueueSocketChannel channel = new KQueueSocketChannel();
+        KQueueSocketChannel channel = new KQueueSocketChannel(KQueueSocketTestPermutation.KQUEUE_GROUP.next());
         IntegerUnixChannelOption opt = new IntegerUnixChannelOption("INT_OPT", 0xffff, 0x0004);
         Integer zero = 0;
         assertEquals(zero, channel.config().getOption(opt));
@@ -99,7 +99,7 @@ public class KQueueChannelConfigTest {
 
     @Test
     public void testRawOption() throws Exception {
-        KQueueSocketChannel channel = new KQueueSocketChannel();
+        KQueueSocketChannel channel = new KQueueSocketChannel(KQueueSocketTestPermutation.KQUEUE_GROUP.next());
         // Value for SOL_SOCKET and SO_REUSEADDR
         // See https://opensource.apple.com/source/xnu/xnu-201/bsd/sys/socket.h.auto.html
         RawUnixChannelOption opt = new RawUnixChannelOption("RAW_OPT", 0xffff, 0x0004, 4);

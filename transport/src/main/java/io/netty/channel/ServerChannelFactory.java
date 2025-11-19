@@ -1,5 +1,5 @@
 /*
- * Copyright 2014 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,14 +16,15 @@
 package io.netty.channel;
 
 /**
- * Creates a new {@link Channel}.
+ * Creates a new {@link ServerChannel}.
  */
-public interface ChannelFactory<T extends Channel> {
+public interface ServerChannelFactory<T extends ServerChannel> {
     /**
      * Creates a new channel.
      *
-     * @param eventLoop             the {@link EventLoop} to use for the {@link Channel}
-     * @return                      the {@link Channel}.
+     * @param eventLoop             the {@link EventLoop} to use for the {@link ServerChannel}
+     * @param childEventLoopGroup   the {@link EventLoopGroup} that is used for the child {@link Channel}s.
+     * @return                      the {@link ServerChannel}.
      */
-    T newChannel(EventLoop eventLoop);
+    T newChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup);
 }

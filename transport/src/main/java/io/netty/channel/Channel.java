@@ -354,15 +354,15 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     // These are just added for now and will be removed in the followup PR.
-    default ChannelFuture register(EventLoop loop) {
-        DefaultChannelPromise promise = new DefaultChannelPromise(this, loop);
-        register(loop, promise);
+    default ChannelFuture register() {
+        DefaultChannelPromise promise = new DefaultChannelPromise(this, executor());
+        register(promise);
         return promise;
     }
 
     // These are just added for now and will be removed in the followup PR.
-    default ChannelFuture register(EventLoop loop, ChannelPromise promise) {
-        unsafe().register(loop, promise);
+    default ChannelFuture register(ChannelPromise promise) {
+        unsafe().register(promise);
         return promise;
     }
 
@@ -374,7 +374,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      *   <li>{@link #localAddress()}</li>
      *   <li>{@link #remoteAddress()}</li>
      *   <li>{@link #closeForcibly()}</li>
-     *   <li>{@link #register(EventLoop, ChannelPromise)}</li>
+     *   <li>{@link #register(ChannelPromise)}</li>
      *   <li>{@link #deregister(ChannelPromise)}</li>
      * </ul>
      */
@@ -400,9 +400,9 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
 
         /**
          * Register the {@link Channel} of the {@link ChannelPromise} and notify
-         * the {@link ChannelFuture} once the registration was complete.
+         * the {@link ChannelPromise} once the registration was complete.
          */
-        void register(EventLoop eventLoop, ChannelPromise promise);
+        void register(ChannelPromise promise);
 
         /**
          * Bind the {@link SocketAddress} to the {@link Channel} of the {@link ChannelPromise} and notify

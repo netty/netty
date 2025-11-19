@@ -23,5 +23,10 @@ import io.netty.channel.socket.ServerSocketChannel;
  * a good example.
  */
 public interface ServerChannel extends Channel {
-    // This is a tag interface.
+    /**
+     * Returns the {@link EventLoopGroup} that is used for the child {@link Channel}s.
+     *
+     * @return  the used child group.
+     */
+    EventLoopGroup childEventExecutorGroup();
 }

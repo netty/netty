@@ -25,6 +25,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
@@ -92,28 +93,28 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
      * Create a new instance which selects the {@link SocketProtocolFamily} to use depending
      * on the Operation Systems default which will be chosen.
      */
-    public EpollDatagramChannel() {
-        this((SocketProtocolFamily) null);
+    public EpollDatagramChannel(EventLoop eventLoop) {
+        this(eventLoop, (SocketProtocolFamily) null);
     }
 
     /**
      * Create a new instance using the given {@link SocketProtocolFamily}. If {@code null} is used it will depend
      * on the Operation Systems default which will be chosen.
      */
-    public EpollDatagramChannel(SocketProtocolFamily family) {
-        this(newSocketDgram(family), false);
+    public EpollDatagramChannel(EventLoop eventLoop, SocketProtocolFamily family) {
+        this(eventLoop, newSocketDgram(family), false);
     }
 
     /**
      * Create a new instance which selects the {@link SocketProtocolFamily} to use depending
      * on the Operation Systems default which will be chosen.
      */
-    public EpollDatagramChannel(int fd) {
-        this(new LinuxSocket(fd), true);
+    public EpollDatagramChannel(EventLoop eventLoop, int fd) {
+        this(eventLoop, new LinuxSocket(fd), true);
     }
 
-    private EpollDatagramChannel(LinuxSocket fd, boolean active) {
-        super(null, fd, active, EpollIoOps.valueOf(0));
+    private EpollDatagramChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
+        super(eventLoop, null, fd, active, EpollIoOps.valueOf(0));
 
         // Configure IP_MULTICAST_ALL - disable by default to match the behaviour of NIO.
         try {

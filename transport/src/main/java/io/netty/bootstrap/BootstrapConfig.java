@@ -16,6 +16,7 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.resolver.AddressResolverGroup;
 
 import java.net.SocketAddress;
@@ -44,6 +45,13 @@ public final class BootstrapConfig extends AbstractBootstrapConfig<Bootstrap, Ch
         return bootstrap.resolver();
     }
 
+    /**
+     * Returns the configured {@link ChannelFactory} or {@code null} if non is configured yet.
+     */
+    public ChannelFactory<? extends Channel> channelFactory() {
+        return bootstrap.channelFactory();
+    }
+
     @Override
     public String toString() {
         StringBuilder buf = new StringBuilder(super.toString());
@@ -57,6 +65,12 @@ public final class BootstrapConfig extends AbstractBootstrapConfig<Bootstrap, Ch
         if (remoteAddress != null) {
             buf.append(", remoteAddress: ")
                     .append(remoteAddress);
+        }
+        ChannelFactory<? extends Channel> factory = channelFactory();
+        if (factory != null) {
+            buf.append("channelFactory: ")
+                    .append(factory)
+                    .append(", ");
         }
         return buf.append(')').toString();
     }

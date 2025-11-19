@@ -22,6 +22,7 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.EventLoop;
 import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.channel.unix.DomainDatagramChannelConfig;
 import io.netty.channel.unix.DomainDatagramPacket;
@@ -58,16 +59,16 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
 
     private final EpollDomainDatagramChannelConfig config;
 
-    public EpollDomainDatagramChannel() {
-        this(newSocketDomainDgram(), false);
+    public EpollDomainDatagramChannel(EventLoop eventLoop) {
+        this(eventLoop, newSocketDomainDgram(), false);
     }
 
-    public EpollDomainDatagramChannel(int fd) {
-        this(new LinuxSocket(fd), true);
+    public EpollDomainDatagramChannel(EventLoop eventLoop, int fd) {
+        this(eventLoop, new LinuxSocket(fd), true);
     }
 
-    private EpollDomainDatagramChannel(LinuxSocket socket, boolean active) {
-        super(null, socket, active, EpollIoOps.valueOf(0));
+    private EpollDomainDatagramChannel(EventLoop eventLoop, LinuxSocket socket, boolean active) {
+        super(eventLoop, null, socket, active, EpollIoOps.valueOf(0));
         config = new EpollDomainDatagramChannelConfig(this);
     }
 

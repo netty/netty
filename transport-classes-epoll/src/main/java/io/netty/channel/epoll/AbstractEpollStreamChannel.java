@@ -67,31 +67,31 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     private WritableByteChannel byteChannel;
 
-    protected AbstractEpollStreamChannel(Channel parent, int fd) {
-        this(parent, new LinuxSocket(fd));
+    protected AbstractEpollStreamChannel(EventLoop eventLoop, Channel parent, int fd) {
+        this(eventLoop, parent, new LinuxSocket(fd));
     }
 
-    protected AbstractEpollStreamChannel(int fd) {
-        this(new LinuxSocket(fd));
+    protected AbstractEpollStreamChannel(EventLoop eventLoop, int fd) {
+        this(eventLoop, new LinuxSocket(fd));
     }
 
-    AbstractEpollStreamChannel(LinuxSocket fd) {
-        this(fd, isSoErrorZero(fd));
+    AbstractEpollStreamChannel(EventLoop eventLoop, LinuxSocket fd) {
+        this(eventLoop, fd, isSoErrorZero(fd));
     }
 
-    AbstractEpollStreamChannel(Channel parent, LinuxSocket fd) {
+    AbstractEpollStreamChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(parent, fd, true, EpollIoOps.EPOLLRDHUP);
+        super(eventLoop, parent, fd, true, EpollIoOps.EPOLLRDHUP);
     }
 
-    protected AbstractEpollStreamChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
+    protected AbstractEpollStreamChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd, SocketAddress remote) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(parent, fd, remote, EpollIoOps.EPOLLRDHUP);
+        super(eventLoop, parent, fd, remote, EpollIoOps.EPOLLRDHUP);
     }
 
-    protected AbstractEpollStreamChannel(LinuxSocket fd, boolean active) {
+    protected AbstractEpollStreamChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(null, fd, active, EpollIoOps.EPOLLRDHUP);
+        super(eventLoop, null, fd, active, EpollIoOps.EPOLLRDHUP);
     }
 
     @Override

@@ -19,7 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -226,8 +225,7 @@ public final class QuicChannelBootstrap {
                 streamHandler, Quic.toOptionsArray(streamOptions), Quic.toAttributesArray(streamAttrs));
 
         Quic.setupChannel(channel, Quic.toOptionsArray(options), Quic.toAttributesArray(attrs), handler, logger);
-        EventLoop eventLoop = parent.executor();
-        channel.register(eventLoop).addListener((ChannelFuture future) -> {
+        channel.register().addListener((ChannelFuture future) -> {
             Throwable cause = future.cause();
             if (cause != null) {
                 promise.setFailure(cause);

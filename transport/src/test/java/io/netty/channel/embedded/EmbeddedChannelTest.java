@@ -72,7 +72,7 @@ public class EmbeddedChannelTest {
     public void testNotRegistered() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(false, false);
         assertFalse(channel.isRegistered());
-        channel.register();
+        channel.register().sync();
         assertTrue(channel.isRegistered());
         assertFalse(channel.finish());
     }
@@ -82,7 +82,7 @@ public class EmbeddedChannelTest {
         EmbeddedChannel channel = new EmbeddedChannel(true, false);
         assertTrue(channel.isRegistered());
         try {
-            channel.register();
+            channel.register().sync();
             fail();
         } catch (IllegalStateException expected) {
             // This is expected the channel is registered already on an EventLoop.
@@ -633,7 +633,7 @@ public class EmbeddedChannelTest {
         channel.deregister().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
-                channel.register(embeddedEventLoop);
+                channel.register();
             }
         });
 

@@ -17,6 +17,8 @@ package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 
@@ -27,7 +29,7 @@ import java.nio.ByteBuffer;
 public final class IoUringServerSocketChannel extends AbstractIoUringServerChannel implements ServerSocketChannel {
     private final IoUringServerSocketChannelConfig config;
 
-    public IoUringServerSocketChannel() {
+    public IoUringServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
         // We don't use a blocking fd for the server channel at the moment as
         // there is no support for IORING_CQE_F_SOCK_NONEMPTY and IORING_ACCEPT_DONTWAIT
         // at the moment. Once these land in the kernel we should check if we can use these and if so make
@@ -36,7 +38,7 @@ public final class IoUringServerSocketChannel extends AbstractIoUringServerChann
         //
         //  - https://lore.kernel.org/netdev/20240509180627.204155-1-axboe@kernel.dk/
         //  - https://lore.kernel.org/io-uring/20240508142725.91273-1-axboe@kernel.dk/
-        super(LinuxSocket.newSocketStream(), false);
+        super(eventLoop, childEventLoopGroup, LinuxSocket.newSocketStream(), false);
         this.config = new IoUringServerSocketChannelConfig(this);
     }
 
@@ -46,7 +48,7 @@ public final class IoUringServerSocketChannel extends AbstractIoUringServerChann
     }
 
     @Override
-    Channel newChildChannel(int fd, ByteBuffer acceptedAddressMemory) {
+    Channel newChildChannel(EventLoop eventLoop, int fd, ByteBuffer acceptedAddressMemory) {
         IoUringIoHandler handler = registration().attachment();
         LinuxSocket socket = new LinuxSocket(fd);
         if (acceptedAddressMemory != null) {
@@ -60,9 +62,9 @@ public final class IoUringServerSocketChannel extends AbstractIoUringServerChann
                 byte[] addressArray = handler.inet4AddressArray();
                 address = SockaddrIn.getIPv4(acceptedAddressMemory, addressArray);
             }
-            return new IoUringSocketChannel(this, new LinuxSocket(fd), address);
+            return new IoUringSocketChannel(eventLoop, this, new LinuxSocket(fd), address);
         }
-        return new IoUringSocketChannel(this, new LinuxSocket(fd));
+        return new IoUringSocketChannel(eventLoop, this, new LinuxSocket(fd));
     }
 
     @Override

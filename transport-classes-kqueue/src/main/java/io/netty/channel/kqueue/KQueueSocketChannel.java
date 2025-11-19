@@ -18,6 +18,7 @@ package io.netty.channel.kqueue;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketProtocolFamily;
@@ -31,23 +32,23 @@ import java.util.concurrent.Executor;
 public final class KQueueSocketChannel extends AbstractKQueueStreamChannel implements SocketChannel {
     private final KQueueSocketChannelConfig config;
 
-    public KQueueSocketChannel() {
-        super(null, BsdSocket.newSocketStream(), false);
+    public KQueueSocketChannel(EventLoop eventLoop) {
+        super(eventLoop, null, BsdSocket.newSocketStream(), false);
         config = new KQueueSocketChannelConfig(this);
     }
 
-    public KQueueSocketChannel(SocketProtocolFamily protocol) {
-        super(null, BsdSocket.newSocketStream(protocol), false);
+    public KQueueSocketChannel(EventLoop eventLoop, SocketProtocolFamily protocol) {
+        super(eventLoop, null, BsdSocket.newSocketStream(protocol), false);
         config = new KQueueSocketChannelConfig(this);
     }
 
-    public KQueueSocketChannel(int fd) {
-        super(new BsdSocket(fd));
+    public KQueueSocketChannel(EventLoop eventLoop, int fd) {
+        super(eventLoop, new BsdSocket(fd));
         config = new KQueueSocketChannelConfig(this);
     }
 
-    KQueueSocketChannel(Channel parent, BsdSocket fd, InetSocketAddress remoteAddress) {
-        super(parent, fd, remoteAddress);
+    KQueueSocketChannel(EventLoop eventLoop, Channel parent, BsdSocket fd, InetSocketAddress remoteAddress) {
+        super(eventLoop, parent, fd, remoteAddress);
         config = new KQueueSocketChannelConfig(this);
     }
 

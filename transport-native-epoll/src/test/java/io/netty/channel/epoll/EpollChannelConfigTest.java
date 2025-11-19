@@ -34,7 +34,7 @@ public class EpollChannelConfigTest {
     @Test
     public void testOptionGetThrowsChannelException() throws Exception {
         Epoll.ensureAvailability();
-        EpollSocketChannel channel = new EpollSocketChannel();
+        EpollSocketChannel channel = new EpollSocketChannel(EpollSocketTestPermutation.EPOLL_GROUP.next());
         channel.config().getSoLinger();
         channel.fd().close();
         try {
@@ -48,7 +48,7 @@ public class EpollChannelConfigTest {
     @Test
     public void testOptionSetThrowsChannelException() throws Exception {
         Epoll.ensureAvailability();
-        EpollSocketChannel channel = new EpollSocketChannel();
+        EpollSocketChannel channel = new EpollSocketChannel(EpollSocketTestPermutation.EPOLL_GROUP.next());
         channel.config().setKeepAlive(true);
         channel.fd().close();
         try {
@@ -62,7 +62,7 @@ public class EpollChannelConfigTest {
     @Test
     public void testIntegerOption() throws Exception {
         Epoll.ensureAvailability();
-        EpollSocketChannel channel = new EpollSocketChannel();
+        EpollSocketChannel channel = new EpollSocketChannel(EpollSocketTestPermutation.EPOLL_GROUP.next());
         IntegerUnixChannelOption opt = new IntegerUnixChannelOption("INT_OPT", 1, 2);
         Integer zero = 0;
         assertEquals(zero, channel.config().getOption(opt));
@@ -74,7 +74,7 @@ public class EpollChannelConfigTest {
     @Test
     public void testRawOption() throws Exception {
         Epoll.ensureAvailability();
-        EpollSocketChannel channel = new EpollSocketChannel();
+        EpollSocketChannel channel = new EpollSocketChannel(EpollSocketTestPermutation.EPOLL_GROUP.next());
         // Value for SOL_SOCKET and SO_REUSEADDR
         // See https://github.com/torvalds/linux/blob/v5.17/include/uapi/asm-generic/socket.h
         RawUnixChannelOption opt = new RawUnixChannelOption("RAW_OPT", 1, 2, 4);

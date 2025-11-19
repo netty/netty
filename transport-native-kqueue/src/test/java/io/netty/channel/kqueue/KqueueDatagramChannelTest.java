@@ -29,7 +29,7 @@ public class KqueueDatagramChannelTest {
 
     @Test
     public void testDefaultMaxMessagePerRead() {
-        KQueueDatagramChannel channel = new KQueueDatagramChannel();
+        KQueueDatagramChannel channel = new KQueueDatagramChannel(KQueueSocketTestPermutation.KQUEUE_GROUP.next());
         assertEquals(16, channel.config().getMaxMessagesPerRead());
         channel.unsafe().closeForcibly();
     }

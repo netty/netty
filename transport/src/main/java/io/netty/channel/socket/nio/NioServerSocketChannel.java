@@ -21,11 +21,14 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.AbstractNioMessageChannel;
+import io.netty.channel.nio.NioIoHandle;
 import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.NetUtil;
@@ -76,33 +79,39 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     private final ServerSocketChannelConfig config;
+    private final EventLoopGroup childEventLoopGroup;
 
     /**
      * Create a new instance
      */
-    public NioServerSocketChannel() {
-        this(DEFAULT_SELECTOR_PROVIDER);
+    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        this(eventLoop, childEventLoopGroup, DEFAULT_SELECTOR_PROVIDER);
     }
 
     /**
      * Create a new instance using the given {@link SelectorProvider}.
      */
-    public NioServerSocketChannel(SelectorProvider provider) {
-        this(provider, (SocketProtocolFamily) null);
+    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                  SelectorProvider provider) {
+        this(eventLoop, childEventLoopGroup, provider, (SocketProtocolFamily) null);
     }
 
     /**
      * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
      */
-    public NioServerSocketChannel(SelectorProvider provider, SocketProtocolFamily family) {
-        this(newChannel(provider, family));
+    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                  SelectorProvider provider, SocketProtocolFamily family) {
+        this(eventLoop, childEventLoopGroup, newChannel(provider, family));
     }
 
     /**
      * Create a new instance using the given {@link ServerSocketChannel}.
      */
-    public NioServerSocketChannel(ServerSocketChannel channel) {
-        super(null, channel, SelectionKey.OP_ACCEPT);
+    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                  ServerSocketChannel channel) {
+        super(eventLoop, null, channel, SelectionKey.OP_ACCEPT);
+        this.childEventLoopGroup = validateEventLoopGroup(
+                childEventLoopGroup, "childEventLoopGroup", NioIoHandle.class);
         config = new NioServerSocketChannelConfig(this, channel);
     }
 
@@ -112,8 +121,14 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      *
      * @param family the {@link SocketProtocolFamily} to use or {@code null} if the default should be used.
      */
-    public NioServerSocketChannel(SocketProtocolFamily family) {
-        this(DEFAULT_SELECTOR_PROVIDER, family);
+    public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                  SocketProtocolFamily family) {
+        this(eventLoop, childEventLoopGroup, DEFAULT_SELECTOR_PROVIDER, family);
+    }
+
+    @Override
+    public EventLoopGroup childEventExecutorGroup() {
+        return childEventLoopGroup;
     }
 
     @Override
@@ -175,7 +190,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
 
         try {
             if (ch != null) {
-                buf.add(new NioSocketChannel(this, ch));
+                buf.add(new NioSocketChannel(childEventLoopGroup.next(), this, ch));
                 return 1;
             }
         } catch (Throwable t) {

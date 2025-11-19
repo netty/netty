@@ -50,12 +50,12 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
     // The configured buffer ring if any
     private IoUringBufferRing bufferRing;
 
-    AbstractIoUringStreamChannel(Channel parent, LinuxSocket socket, boolean active) {
-        super(parent, socket, active);
+    AbstractIoUringStreamChannel(EventLoop eventLoop, Channel parent, LinuxSocket socket, boolean active) {
+        super(eventLoop, parent, socket, active);
     }
 
-    AbstractIoUringStreamChannel(Channel parent, LinuxSocket socket, SocketAddress remote) {
-        super(parent, socket, remote);
+    AbstractIoUringStreamChannel(EventLoop eventLoop, Channel parent, LinuxSocket socket, SocketAddress remote) {
+        super(eventLoop, parent, socket, remote);
     }
 
     @Override

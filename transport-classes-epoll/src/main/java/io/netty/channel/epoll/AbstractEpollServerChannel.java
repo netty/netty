@@ -21,6 +21,8 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 
 import java.net.InetSocketAddress;
@@ -29,16 +31,26 @@ import java.net.SocketAddress;
 public abstract class AbstractEpollServerChannel extends AbstractEpollChannel implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
-    protected AbstractEpollServerChannel(int fd) {
-        this(new LinuxSocket(fd), false);
+    private final EventLoopGroup childEventLoopGroup;
+
+    protected AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
+        this(eventLoop, childEventLoopGroup, new LinuxSocket(fd), false);
     }
 
-    protected AbstractEpollServerChannel(LinuxSocket fd) {
-        this(fd, isSoErrorZero(fd));
+    protected AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket fd) {
+        this(eventLoop, childEventLoopGroup, fd, isSoErrorZero(fd));
     }
 
-    protected AbstractEpollServerChannel(LinuxSocket fd, boolean active) {
-        super(null, fd, active, EpollIoOps.valueOf(0));
+    protected AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                         LinuxSocket fd, boolean active) {
+        super(eventLoop, null, fd, active, EpollIoOps.valueOf(0));
+        this.childEventLoopGroup =
+                validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", EpollIoHandle.class);
+    }
+
+    @Override
+    public EventLoopGroup childEventExecutorGroup() {
+        return childEventLoopGroup;
     }
 
     @Override
@@ -66,7 +78,8 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
         throw new UnsupportedOperationException();
     }
 
-    protected abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;
+    protected abstract Channel newChildChannel(EventLoop eventLoop, int fd, byte[] remote, int offset, int len)
+            throws Exception;
 
     final class EpollServerSocketUnsafe extends AbstractEpollUnsafe {
         // Will hold the remote address after accept(...) was successful.
@@ -108,8 +121,8 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
                         allocHandle.incMessagesRead(1);
 
                         readPending = false;
-                        pipeline.fireChannelRead(newChildChannel(allocHandle.lastBytesRead(), acceptedAddress, 1,
-                                                                 acceptedAddress[0]));
+                        pipeline.fireChannelRead(newChildChannel(childEventExecutorGroup().next(),
+                                allocHandle.lastBytesRead(), acceptedAddress, 1, acceptedAddress[0]));
                     } while (allocHandle.continueReading());
                 } catch (Throwable t) {
                     exception = t;

@@ -21,6 +21,7 @@ import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -35,6 +36,8 @@ import java.nio.channels.NotYetConnectedException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
 
+import static java.util.Objects.requireNonNull;
+
 /**
  * A skeletal {@link Channel} implementation.
  */
@@ -47,10 +50,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Unsafe unsafe;
     private final DefaultChannelPipeline pipeline;
     private final CloseFuture closeFuture = new CloseFuture(this);
+    private final EventLoop eventLoop;
 
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
-    private volatile EventLoop eventLoop;
     private volatile boolean registered;
     private boolean closeInitiated;
     private Throwable initialCloseCause;
@@ -65,11 +68,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
-    protected AbstractChannel(Channel parent) {
-        this.parent = parent;
-        id = newId();
-        unsafe = newUnsafe();
-        pipeline = newChannelPipeline();
+    protected AbstractChannel(EventLoop eventLoop, Class<? extends IoHandle> handleType, Channel parent) {
+        this(eventLoop, handleType, parent, null);
     }
 
     /**
@@ -78,11 +78,32 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
-    protected AbstractChannel(Channel parent, ChannelId id) {
+    protected AbstractChannel(EventLoop eventLoop, Class<? extends IoHandle> handleType, Channel parent, ChannelId id) {
         this.parent = parent;
-        this.id = id;
+        this.eventLoop = validateEventLoopGroup(eventLoop, "eventLoop", handleType);
+        this.id = id == null ? DefaultChannelId.newInstance() : id;
         unsafe = newUnsafe();
         pipeline = newChannelPipeline();
+    }
+
+    /**
+     * Validate that the {@link EventLoopGroup} supports the given {@link Class channel type}.
+     * If validation fails this will throw a runtime exception.
+     *
+     * @param group         the group to check against
+     * @param name          the name of the param that is used when throwing an exception.
+     * @param handleType   the {@link Channel} type.
+     * @return              the group itself
+     * @param <T>           the concreate type of the {@link EventLoopGroup}.
+     */
+    protected static <T extends EventLoopGroup> T validateEventLoopGroup(
+            T group, String name, Class<? extends IoHandle> handleType) {
+        requireNonNull(group, name);
+        if (handleType != null && !group.isCompatible(handleType)) {
+            throw new IllegalArgumentException(group + " does not support IoHandle of type " +
+                    StringUtil.simpleClassName(handleType));
+        }
+        return group;
     }
 
     protected final int maxMessagesPerWrite() {
@@ -100,14 +121,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     @Override
     public final ChannelId id() {
         return id;
-    }
-
-    /**
-     * Returns a new {@link DefaultChannelId} instance. Subclasses may override this method to assign custom
-     * {@link ChannelId}s to {@link Channel}s that use the {@link AbstractChannel#AbstractChannel(Channel)} constructor.
-     */
-    protected ChannelId newId() {
-        return DefaultChannelId.newInstance();
     }
 
     /**
@@ -315,19 +328,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void register(EventLoop eventLoop, final ChannelPromise promise) {
-            ObjectUtil.checkNotNull(eventLoop, "eventLoop");
+        public final void register(final ChannelPromise promise) {
             if (isRegistered()) {
                 promise.setFailure(new IllegalStateException("registered to an event loop already"));
                 return;
             }
-            if (!isCompatible(eventLoop)) {
-                promise.setFailure(
-                        new IllegalStateException("incompatible event loop type: " + eventLoop.getClass().getName()));
-                return;
-            }
-
-            AbstractChannel.this.eventLoop = eventLoop;
 
             // Clear any cached executors from prior event loop registrations.
             AbstractChannelHandlerContext context = pipeline.tail;
@@ -912,11 +917,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return null;
         }
     }
-
-    /**
-     * Return {@code true} if the given {@link EventLoop} is compatible with this instance.
-     */
-    protected abstract boolean isCompatible(EventLoop loop);
 
     /**
      * Returns the {@link SocketAddress} which is bound locally.

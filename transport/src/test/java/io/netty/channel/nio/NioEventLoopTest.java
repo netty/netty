@@ -115,8 +115,8 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
         EventLoop loop = group.next();
 
         try {
-            Channel channel = new NioServerSocketChannel();
-            channel.register(loop).syncUninterruptibly();
+            Channel channel = new NioServerSocketChannel(loop, group);
+            channel.register().syncUninterruptibly();
             channel.bind(new InetSocketAddress(0)).syncUninterruptibly();
 
             SocketChannel selectableChannel = SocketChannel.open();

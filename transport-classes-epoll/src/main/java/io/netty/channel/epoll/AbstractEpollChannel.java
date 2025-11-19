@@ -82,8 +82,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     protected volatile boolean active;
 
-    AbstractEpollChannel(Channel parent, LinuxSocket fd, boolean active, EpollIoOps initialOps) {
-        super(parent);
+    AbstractEpollChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd, boolean active, EpollIoOps initialOps) {
+        super(eventLoop, EpollIoHandle.class, parent);
         this.socket = checkNotNull(fd, "fd");
         this.active = active;
         if (active) {
@@ -95,8 +95,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         this.ops = initialOps;
     }
 
-    AbstractEpollChannel(Channel parent, LinuxSocket fd, SocketAddress remote, EpollIoOps initialOps) {
-        super(parent);
+    AbstractEpollChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd,
+                         SocketAddress remote, EpollIoOps initialOps) {
+        super(eventLoop, EpollIoHandle.class, parent);
         this.socket = checkNotNull(fd, "fd");
         this.active = true;
         // Directly cache the remote and local addresses
@@ -233,11 +234,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             ops = inital;
             registration.cancel();
         }
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop.isCompatible(AbstractEpollUnsafe.class);
     }
 
     @Override

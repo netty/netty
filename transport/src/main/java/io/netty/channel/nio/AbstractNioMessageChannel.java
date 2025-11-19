@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
 
@@ -34,15 +35,14 @@ import java.util.List;
 public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     boolean inputShutdown;
 
-    /**
-     * @see AbstractNioChannel#AbstractNioChannel(Channel, SelectableChannel, int)
-     */
-    protected AbstractNioMessageChannel(Channel parent, SelectableChannel ch, int readInterestOp) {
-        super(parent, ch, readInterestOp);
+    protected AbstractNioMessageChannel(EventLoop eventLoop, Channel parent,
+                                        SelectableChannel ch, int readInterestOp) {
+        super(eventLoop, parent, ch, readInterestOp);
     }
 
-    protected AbstractNioMessageChannel(Channel parent, SelectableChannel ch, NioIoOps readOps) {
-        super(parent, ch, readOps);
+    protected AbstractNioMessageChannel(EventLoop eventLoop, Channel parent,
+                                        SelectableChannel ch, NioIoOps readOps) {
+        super(eventLoop, parent, ch, readOps);
     }
 
     @Override

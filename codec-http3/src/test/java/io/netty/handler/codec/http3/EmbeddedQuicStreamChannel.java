@@ -231,8 +231,8 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
                 }
 
                 @Override
-                public void register(EventLoop eventLoop, ChannelPromise promise) {
-                    superUnsafe.register(eventLoop, promise);
+                public void register(ChannelPromise promise) {
+                    superUnsafe.register(promise);
                 }
 
                 @Override

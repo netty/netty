@@ -16,6 +16,8 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketProtocolFamily;
 
@@ -39,28 +41,30 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     private final EpollServerSocketChannelConfig config;
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();
 
-    public EpollServerSocketChannel() {
-        this((SocketProtocolFamily) null);
+    public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        this(eventLoop, childEventLoopGroup, (SocketProtocolFamily) null);
     }
 
-    public EpollServerSocketChannel(SocketProtocolFamily protocol) {
-        super(newSocketStream(protocol), false);
+    public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                    SocketProtocolFamily protocol) {
+        super(eventLoop, childEventLoopGroup, newSocketStream(protocol), false);
         config = new EpollServerSocketChannelConfig(this);
     }
 
-    public EpollServerSocketChannel(int fd) {
+    public EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
         // Must call this constructor to ensure this object's local address is configured correctly.
         // The local address can only be obtained from a Socket object.
-        this(new LinuxSocket(fd));
+        this(eventLoop, childEventLoopGroup, new LinuxSocket(fd));
     }
 
-    EpollServerSocketChannel(LinuxSocket fd) {
-        super(fd);
+    EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, LinuxSocket fd) {
+        super(eventLoop, childEventLoopGroup, fd);
         config = new EpollServerSocketChannelConfig(this);
     }
 
-    EpollServerSocketChannel(LinuxSocket fd, boolean active) {
-        super(fd, active);
+    EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                             LinuxSocket fd, boolean active) {
+        super(eventLoop, childEventLoopGroup, fd, active);
         config = new EpollServerSocketChannelConfig(this);
     }
 
@@ -81,8 +85,10 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     }
 
     @Override
-    protected Channel newChildChannel(int fd, byte[] address, int offset, int len) throws Exception {
-        return new EpollSocketChannel(this, new LinuxSocket(fd), address(address, offset, len));
+    protected Channel newChildChannel(EventLoop eventLoop, int fd, byte[] address, int offset, int len)
+            throws Exception {
+        return new EpollSocketChannel(eventLoop, this,
+                new LinuxSocket(fd), address(address, offset, len));
     }
 
     Collection<InetAddress> tcpMd5SigAddresses() {

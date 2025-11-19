@@ -65,7 +65,6 @@ public class EmbeddedChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA_NO_DISCONNECT = new ChannelMetadata(false);
     private static final ChannelMetadata METADATA_DISCONNECT = new ChannelMetadata(true);
 
-    private final EmbeddedEventLoop loop;
     private final ChannelFutureListener recordExceptionListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) throws Exception {
@@ -216,8 +215,8 @@ public class EmbeddedChannel extends AbstractChannel {
      * @param builder The builder
      */
     protected EmbeddedChannel(Builder builder) {
-        super(builder.parent, builder.channelId);
-        loop = new EmbeddedEventLoop(builder.ticker == null ? new EmbeddedEventLoop.FreezableTicker() : builder.ticker);
+        super(new EmbeddedEventLoop(builder.ticker == null ? new EmbeddedEventLoop.FreezableTicker() : builder.ticker),
+                EmbeddedUnsafe.class, builder.parent, builder.channelId);
         metadata = metadata(builder.hasDisconnect);
         config = builder.config == null ? new DefaultChannelConfig(this) : builder.config;
         if (builder.handler == null) {
@@ -261,15 +260,14 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Register this {@code Channel} on its {@link EventLoop}.
      */
-    public void register() throws Exception {
+    public void registerNow() throws Exception {
         register0();
     }
 
     private void register0() {
         ChannelPromise promise = newPromise();
-        unsafe().register(embeddedEventLoop(), promise);
+        unsafe().register(promise);
         assert promise.isDone();
-
         Throwable cause = promise.cause();
         if (cause != null) {
             PlatformDependent.throwException(cause);
@@ -972,11 +970,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     private EmbeddedEventLoop embeddedEventLoop() {
-        if (isRegistered()) {
-            return (EmbeddedEventLoop) super.executor();
-        }
-
-        return loop;
+        return (EmbeddedEventLoop) super.executor();
     }
 
     /**
@@ -986,11 +980,6 @@ public class EmbeddedChannel extends AbstractChannel {
         if (!checkOpen(true)) {
             checkException();
         }
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof EmbeddedEventLoop;
     }
 
     @Override
@@ -1214,10 +1203,10 @@ public class EmbeddedChannel extends AbstractChannel {
             }
 
             @Override
-            public void register(EventLoop eventLoop, ChannelPromise promise) {
+            public void register(ChannelPromise promise) {
                 executingStackCnt++;
                 try {
-                    EmbeddedUnsafe.this.register(eventLoop, promise);
+                    EmbeddedUnsafe.this.register(promise);
                 } finally {
                     executingStackCnt--;
                     maybeRunPendingTasks();

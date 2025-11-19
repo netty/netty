@@ -18,6 +18,7 @@ package io.netty.channel.uring;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.SocketChannelConfig;
@@ -32,18 +33,18 @@ import static io.netty.channel.unix.Errors.ioResult;
 public final class IoUringSocketChannel extends AbstractIoUringStreamChannel implements SocketChannel {
     private final IoUringSocketChannelConfig config;
 
-    public IoUringSocketChannel() {
-       super(null, LinuxSocket.newSocketStream(), false);
+    public IoUringSocketChannel(EventLoop eventLoop) {
+       super(eventLoop, null, LinuxSocket.newSocketStream(), false);
        this.config = new IoUringSocketChannelConfig(this);
     }
 
-    IoUringSocketChannel(Channel parent, LinuxSocket fd) {
-        super(parent, fd, true);
+    IoUringSocketChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd) {
+        super(eventLoop, parent, fd, true);
         this.config = new IoUringSocketChannelConfig(this);
     }
 
-    IoUringSocketChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
-        super(parent, fd, remote);
+    IoUringSocketChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd, SocketAddress remote) {
+        super(eventLoop, parent, fd, remote);
         this.config = new IoUringSocketChannelConfig(this);
     }
 

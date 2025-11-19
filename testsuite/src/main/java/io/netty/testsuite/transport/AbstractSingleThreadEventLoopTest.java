@@ -78,8 +78,8 @@ public abstract class AbstractSingleThreadEventLoopTest {
         final SingleThreadEventLoop loop = (SingleThreadEventLoop) group.next();
 
         try {
-            final Channel ch1 = newChannel();
-            final Channel ch2 = newChannel();
+            final Channel ch1 = newChannel(loop);
+            final Channel ch2 = newChannel(loop);
 
             int rc = registeredChannels(loop);
             boolean channelCountSupported = rc != -1;
@@ -88,8 +88,8 @@ public abstract class AbstractSingleThreadEventLoopTest {
                 assertEquals(0, registeredChannels(loop));
             }
 
-            assertTrue(ch1.register(loop).syncUninterruptibly().isSuccess());
-            assertTrue(ch2.register(loop).syncUninterruptibly().isSuccess());
+            assertTrue(ch1.register().syncUninterruptibly().isSuccess());
+            assertTrue(ch2.register().syncUninterruptibly().isSuccess());
             if (channelCountSupported) {
                 checkNumRegisteredChannels(loop, 2);
             }
@@ -219,10 +219,10 @@ public abstract class AbstractSingleThreadEventLoopTest {
         EventLoopGroup group = newEventLoopGroup();
         final SingleThreadEventLoop loop = (SingleThreadEventLoop) group.next();
         try {
-            final Channel ch1 = newChannel();
-            final Channel ch2 = newChannel();
-            ch1.register(loop).syncUninterruptibly();
-            ch2.register(loop).syncUninterruptibly();
+            final Channel ch1 = newChannel(loop);
+            final Channel ch2 = newChannel(loop);
+            ch1.register().syncUninterruptibly();
+            ch2.register().syncUninterruptibly();
             assertEquals(2, registeredChannels(loop));
 
             runBlockingOn(loop, new Runnable() {
@@ -267,8 +267,8 @@ public abstract class AbstractSingleThreadEventLoopTest {
         final SingleThreadEventLoop loop = (SingleThreadEventLoop) group.next();
 
         try {
-            final Channel ch = newChannel();
-            ch.register(loop).syncUninterruptibly();
+            final Channel ch = newChannel(loop);
+            ch.register().syncUninterruptibly();
             assertEquals(1, registeredChannels(loop));
 
             runBlockingOn(loop, new Runnable() {
@@ -448,6 +448,6 @@ public abstract class AbstractSingleThreadEventLoopTest {
     }
     protected abstract EventLoopGroup newEventLoopGroup();
     protected abstract EventLoopGroup newAutoScalingEventLoopGroup();
-    protected abstract Channel newChannel();
+    protected abstract Channel newChannel(EventLoop loop);
     protected abstract Class<? extends ServerChannel> serverChannelClass();
 }

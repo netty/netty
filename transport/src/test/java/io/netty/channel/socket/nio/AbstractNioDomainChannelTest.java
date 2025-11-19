@@ -16,7 +16,10 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.AbstractNioChannel;
+import io.netty.channel.nio.NioIoHandler;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
@@ -31,7 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 public abstract class AbstractNioDomainChannelTest<T extends AbstractNioChannel> {
 
-    protected abstract T newNioChannel();
+    protected abstract T newNioChannel(EventLoopGroup group);
 
     protected abstract NetworkChannel jdkChannel(T channel);
 
@@ -39,7 +42,8 @@ public abstract class AbstractNioDomainChannelTest<T extends AbstractNioChannel>
 
     @Test
     public void testNioChannelOption() throws IOException {
-        T channel = newNioChannel();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        T channel = newNioChannel(group);
         try {
             NetworkChannel jdkChannel = jdkChannel(channel);
             ChannelOption<Integer> option = NioChannelOption.of(StandardSocketOptions.SO_RCVBUF);
@@ -55,28 +59,33 @@ public abstract class AbstractNioDomainChannelTest<T extends AbstractNioChannel>
             assertNotEquals(value1, value4);
         } finally {
             channel.unsafe().closeForcibly();
+            group.shutdownGracefully();
         }
     }
 
     @Test
     public void testInvalidNioChannelOption() {
-        T channel = newNioChannel();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        T channel = newNioChannel(group);
         try {
             ChannelOption<Object> option = (ChannelOption) NioChannelOption.of(newInvalidOption());
             assertFalse(channel.config().setOption(option, ""));
             assertNull(channel.config().getOption(option));
         } finally {
             channel.unsafe().closeForcibly();
+            group.shutdownGracefully();
         }
     }
 
     @Test
     public void testGetOptions()  {
-        T channel = newNioChannel();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        T channel = newNioChannel(group);
         try {
             channel.config().getOptions();
         } finally {
             channel.unsafe().closeForcibly();
+            group.shutdownGracefully();
         }
     }
 }

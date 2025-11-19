@@ -81,10 +81,10 @@ public class ChannelInitializerTest {
         final Exception exception = new Exception();
         final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
 
-        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
 
         if (registerFirst) {
-            pipeline.channel().register(group.next()).syncUninterruptibly();
+            pipeline.channel().register().syncUninterruptibly();
         }
         pipeline.addFirst(new ChannelInitializer<Channel>() {
             @Override
@@ -100,7 +100,7 @@ public class ChannelInitializerTest {
         });
 
         if (!registerFirst) {
-            pipeline.channel().register(group.next()).syncUninterruptibly();
+            pipeline.channel().register().syncUninterruptibly();
         }
         pipeline.channel().close().syncUninterruptibly();
         pipeline.channel().closeFuture().syncUninterruptibly();

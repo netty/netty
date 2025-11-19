@@ -26,6 +26,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
@@ -329,7 +330,7 @@ public class BootstrapTest {
                 .group(groupA)
                 .channelFactory(new ChannelFactory<Channel>() {
             @Override
-            public Channel newChannel() {
+            public Channel newChannel(EventLoop eventLoop) {
                 throw exception;
             }
         });
@@ -367,8 +368,8 @@ public class BootstrapTest {
                 .group(groupA)
                 .channelFactory(new ChannelFactory<Channel>() {
                     @Override
-                    public Channel newChannel() {
-                        return new LocalChannel() {
+                    public Channel newChannel(EventLoop eventLoop) {
+                        return new LocalChannel(eventLoop) {
                             private ChannelConfigValidator config;
                             @Override
                             public synchronized ChannelConfig config() {

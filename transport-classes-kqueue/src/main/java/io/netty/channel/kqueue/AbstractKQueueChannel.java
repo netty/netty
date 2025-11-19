@@ -79,8 +79,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    AbstractKQueueChannel(Channel parent, BsdSocket fd, boolean active) {
-        super(parent);
+    AbstractKQueueChannel(EventLoop eventLoop, Channel parent, BsdSocket fd, boolean active) {
+        super(eventLoop, KQueueIoHandle.class, parent);
         socket = checkNotNull(fd, "fd");
         this.active = active;
         if (active) {
@@ -91,19 +91,14 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
-    AbstractKQueueChannel(Channel parent, BsdSocket fd, SocketAddress remote) {
-        super(parent);
+    AbstractKQueueChannel(EventLoop eventLoop, Channel parent, BsdSocket fd, SocketAddress remote) {
+        super(eventLoop, KQueueIoHandle.class, parent);
         socket = checkNotNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses
         // See https://github.com/netty/netty/issues/2359
         this.remote = remote;
         local = fd.localAddress();
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop.isCompatible(AbstractKQueueUnsafe.class);
     }
 
     static boolean isSoErrorZero(BsdSocket fd) {

@@ -15,10 +15,13 @@
  */
 package io.netty.bootstrap;
 
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.ServerChannelFactory;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.StringUtil;
 
@@ -31,6 +34,13 @@ public final class ServerBootstrapConfig extends AbstractBootstrapConfig<ServerB
 
     ServerBootstrapConfig(ServerBootstrap bootstrap) {
         super(bootstrap);
+    }
+
+    /**
+     * Returns the configured {@link ServerChannelFactory} or {@code null} if non is configured yet.
+     */
+    public ServerChannelFactory<? extends ServerChannel> channelFactory() {
+        return bootstrap.channelFactory();
     }
 
     /**
@@ -93,6 +103,14 @@ public final class ServerBootstrapConfig extends AbstractBootstrapConfig<ServerB
             buf.append(childHandler);
             buf.append(", ");
         }
+
+        ServerChannelFactory<? extends ServerChannel> factory = channelFactory();
+        if (factory != null) {
+            buf.append("channelFactory: ")
+                    .append(factory)
+                    .append(", ");
+        }
+
         if (buf.charAt(buf.length() - 1) == '(') {
             buf.append(')');
         } else {

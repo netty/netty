@@ -19,6 +19,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.ServerDomainSocketChannel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -38,8 +40,8 @@ public final class IoUringServerDomainSocketChannel extends AbstractIoUringServe
 
     private volatile DomainSocketAddress local;
 
-    public IoUringServerDomainSocketChannel() {
-        super(LinuxSocket.newSocketDomain(), false);
+    public IoUringServerDomainSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        super(eventLoop, childEventLoopGroup, LinuxSocket.newSocketDomain(), false);
         this.config = new IoUringServerSocketChannelConfig(this);
         this.closeFuture().addListener(new ChannelFutureListener() {
             @Override
@@ -57,8 +59,8 @@ public final class IoUringServerDomainSocketChannel extends AbstractIoUringServe
     }
 
     @Override
-    Channel newChildChannel(int fd, ByteBuffer acceptedAddressMemory) throws Exception {
-        return new IoUringDomainSocketChannel(this, new LinuxSocket(fd));
+    Channel newChildChannel(EventLoop eventLoop, int fd, ByteBuffer acceptedAddressMemory) throws Exception {
+        return new IoUringDomainSocketChannel(eventLoop, this, new LinuxSocket(fd));
     }
 
     @Override

@@ -20,6 +20,7 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -195,17 +196,12 @@ public class ChannelOutboundBufferTest {
         private final ChannelConfig config = new DefaultChannelConfig(this);
 
         TestChannel() {
-            super(null);
+            super(Mockito.mock(EventLoop.class), null, null);
         }
 
         @Override
         protected AbstractUnsafe newUnsafe() {
             return new TestUnsafe();
-        }
-
-        @Override
-        protected boolean isCompatible(EventLoop loop) {
-            return false;
         }
 
         @Override
