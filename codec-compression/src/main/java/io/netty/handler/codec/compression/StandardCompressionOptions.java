@@ -71,7 +71,7 @@ public final class StandardCompressionOptions {
     /**
      * Default implementation of {@link ZstdOptions} with{compressionLevel(int)} set to
      * {@link ZstdConstants#DEFAULT_COMPRESSION_LEVEL},{@link ZstdConstants#DEFAULT_BLOCK_SIZE},
-     * {@link ZstdConstants#MAX_BLOCK_SIZE}
+     * {@link ZstdConstants#DEFAULT_MAX_ENCODE_SIZE}
      */
     public static ZstdOptions zstd() {
         return ZstdOptions.DEFAULT;
