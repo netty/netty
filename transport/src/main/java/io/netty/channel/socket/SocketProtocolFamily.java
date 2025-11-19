@@ -49,9 +49,7 @@ public enum SocketProtocolFamily implements ProtocolFamily {
             case INET6:
                 return StandardProtocolFamily.INET6;
             case UNIX:
-                // Just use valueOf as we compile with Java11. If the JDK does not support unix domain sockets, this
-                // will throw.
-                return StandardProtocolFamily.valueOf("UNIX");
+                return StandardProtocolFamily.UNIX;
             default:
                 throw new UnsupportedOperationException(
                         "ProtocolFamily cant be converted to something that is known by the JDKi: " + this);
@@ -71,12 +69,9 @@ public enum SocketProtocolFamily implements ProtocolFamily {
                 case INET:
                     return INET;
                 case INET6:
-                    return INET6;
+                case UNIX:
+                    return UNIX;
                 default:
-                    // Just compare the name as we compile with Java11
-                    if (UNIX.name().equals(family.name())) {
-                        return UNIX;
-                    }
                     // Fall-through
             }
         } else if (family instanceof SocketProtocolFamily) {

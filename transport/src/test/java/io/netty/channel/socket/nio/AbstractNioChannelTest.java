@@ -62,8 +62,8 @@ public abstract class AbstractNioChannelTest<T extends AbstractNioChannel> {
     public void testInvalidNioChannelOption() {
         T channel = newNioChannel();
         try {
-            ChannelOption<?> option = NioChannelOption.of(newInvalidOption());
-            assertFalse(channel.config().setOption(option, null));
+            ChannelOption<Object> option = (ChannelOption) NioChannelOption.of(newInvalidOption());
+            assertFalse(channel.config().setOption(option, ""));
             assertNull(channel.config().getOption(option));
         } finally {
             channel.unsafe().closeForcibly();
