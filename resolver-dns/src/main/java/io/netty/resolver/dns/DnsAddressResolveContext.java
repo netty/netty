@@ -84,12 +84,12 @@ final class DnsAddressResolveContext extends DnsResolveContext<InetAddress> {
     void cache(String hostname, DnsRecord[] additionals,
                DnsRecord result, InetAddress convertedResult) {
         resolveCache.cache(hostname, additionals, convertedResult, result.timeToLive(),
-                channel().eventLoop());
+                channel().executor());
     }
 
     @Override
     void cache(String hostname, DnsRecord[] additionals, UnknownHostException cause) {
-        resolveCache.cache(hostname, additionals, cause, channel().eventLoop());
+        resolveCache.cache(hostname, additionals, cause, channel().executor());
     }
 
     @Override

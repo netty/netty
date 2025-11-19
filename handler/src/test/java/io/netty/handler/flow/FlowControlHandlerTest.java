@@ -248,7 +248,7 @@ public class FlowControlHandlerTest {
             // We should receive 3 messages
             assertTrue(latch.await(1L, SECONDS));
 
-            assertTrue(peer.eventLoop().submit(new Callable<Boolean>() {
+            assertTrue(peer.executor().submit(new Callable<Boolean>() {
                 @Override
                 public Boolean call() {
                     return flow.isQueueEmpty();
@@ -335,7 +335,7 @@ public class FlowControlHandlerTest {
             setAutoReadLatch2.countDown();
             assertTrue(msgRcvLatch3.await(1L, SECONDS));
 
-            assertTrue(peer.eventLoop().submit(new Callable<Boolean>() {
+            assertTrue(peer.executor().submit(new Callable<Boolean>() {
                 @Override
                 public Boolean call() {
                     return flow.isQueueEmpty();
@@ -397,7 +397,7 @@ public class FlowControlHandlerTest {
             peer.read();
             assertTrue(msgRcvLatch3.await(1L, SECONDS));
 
-            assertTrue(peer.eventLoop().submit(new Callable<Boolean>() {
+            assertTrue(peer.executor().submit(new Callable<Boolean>() {
                 @Override
                 public Boolean call() {
                     return flow.isQueueEmpty();
@@ -450,7 +450,7 @@ public class FlowControlHandlerTest {
             // channelRead(1)
             peer.read();
             assertTrue(msgRcvLatch1.await(1L, SECONDS));
-            assertFalse(peer.eventLoop().submit(new Callable<Boolean>() {
+            assertFalse(peer.executor().submit(new Callable<Boolean>() {
                 @Override
                 public Boolean call() {
                     return flow.isQueueEmpty();
@@ -469,7 +469,7 @@ public class FlowControlHandlerTest {
             peer.read();
             assertTrue(msgRcvLatch3.await(1L, SECONDS));
 
-            assertTrue(peer.eventLoop().submit(new Callable<Boolean>() {
+            assertTrue(peer.executor().submit(new Callable<Boolean>() {
                 @Override
                 public Boolean call() {
                     return flow.isQueueEmpty();
@@ -520,7 +520,7 @@ public class FlowControlHandlerTest {
             peer.read();
             assertTrue(latch.await(1L, SECONDS));
 
-            assertTrue(peer.eventLoop().submit(new Callable<Boolean>() {
+            assertTrue(peer.executor().submit(new Callable<Boolean>() {
                 @Override
                 public Boolean call() {
                     return flow.isQueueEmpty();
@@ -623,7 +623,7 @@ public class FlowControlHandlerTest {
                 if (num >= 3) {
                     //We have received 3 messages. Remove myself later
                     final ChannelHandler handler = this;
-                    ctx.channel().eventLoop().execute(new Runnable() {
+                    ctx.channel().executor().execute(new Runnable() {
                         @Override
                         public void run() {
                             ctx.pipeline().remove(handler);
@@ -651,7 +651,7 @@ public class FlowControlHandlerTest {
 
             // We should receive 3 messages
             assertTrue(latch.await(1L, SECONDS));
-            assertTrue(peer.eventLoop().submit(new Callable<Boolean>() {
+            assertTrue(peer.executor().submit(new Callable<Boolean>() {
                 @Override
                 public Boolean call() {
                     return flow.isQueueEmpty();

@@ -36,8 +36,8 @@ final class QpackAttributes {
     QpackAttributes(QuicChannel channel, boolean disableDynamicTable) {
         this.channel = channel;
         dynamicTableDisabled = disableDynamicTable;
-        encoderStreamPromise = dynamicTableDisabled ? null : channel.eventLoop().newPromise();
-        decoderStreamPromise = dynamicTableDisabled ? null : channel.eventLoop().newPromise();
+        encoderStreamPromise = dynamicTableDisabled ? null : channel.executor().newPromise();
+        decoderStreamPromise = dynamicTableDisabled ? null : channel.executor().newPromise();
     }
 
     boolean dynamicTableDisabled() {
@@ -75,7 +75,7 @@ final class QpackAttributes {
     }
 
     void decoderStream(QuicStreamChannel decoderStream) {
-        assert channel.eventLoop().inEventLoop();
+        assert channel.executor().inEventLoop();
         assert !dynamicTableDisabled;
         assert decoderStreamPromise != null;
         assert this.decoderStream == null;
@@ -84,7 +84,7 @@ final class QpackAttributes {
     }
 
     void encoderStream(QuicStreamChannel encoderStream) {
-        assert channel.eventLoop().inEventLoop();
+        assert channel.executor().inEventLoop();
         assert !dynamicTableDisabled;
         assert encoderStreamPromise != null;
         assert this.encoderStream == null;
@@ -93,14 +93,14 @@ final class QpackAttributes {
     }
 
     void encoderStreamInactive(Throwable cause) {
-        assert channel.eventLoop().inEventLoop();
+        assert channel.executor().inEventLoop();
         assert !dynamicTableDisabled;
         assert encoderStreamPromise != null;
         encoderStreamPromise.tryFailure(cause);
     }
 
     void decoderStreamInactive(Throwable cause) {
-        assert channel.eventLoop().inEventLoop();
+        assert channel.executor().inEventLoop();
         assert !dynamicTableDisabled;
         assert decoderStreamPromise != null;
         decoderStreamPromise.tryFailure(cause);

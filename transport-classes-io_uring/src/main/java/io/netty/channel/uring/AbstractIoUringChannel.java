@@ -168,15 +168,15 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         if (registration == null || !registration.isValid()) {
             return;
         }
-        if (eventLoop().inEventLoop()) {
+        if (executor().inEventLoop()) {
             clearRead();
         } else {
-            eventLoop().execute(this::clearRead);
+            executor().execute(this::clearRead);
         }
     }
 
     private void clearRead() {
-        assert eventLoop().inEventLoop();
+        assert executor().inEventLoop();
         readPending = false;
         IoRegistration registration = this.registration;
         if (registration == null || !registration.isValid()) {
@@ -906,7 +906,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 // Note this method is invoked by the event loop only if the connection attempt was
                 // neither cancelled nor timed out.
 
-                assert eventLoop().inEventLoop();
+                assert executor().inEventLoop();
 
                 boolean connectStillInProgress = false;
                 try {
@@ -1138,7 +1138,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             // Schedule connect timeout.
             int connectTimeoutMillis = config().getConnectTimeoutMillis();
             if (connectTimeoutMillis > 0) {
-                connectTimeoutFuture = eventLoop().schedule(new Runnable() {
+                connectTimeoutFuture = executor().schedule(new Runnable() {
                     @Override
                     public void run() {
                         ChannelPromise connectPromise = AbstractIoUringChannel.this.connectPromise;
@@ -1209,7 +1209,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected void doRegister(ChannelPromise promise) {
-        IoEventLoop eventLoop = (IoEventLoop) eventLoop();
+        IoEventLoop eventLoop = (IoEventLoop) executor();
         eventLoop.register(ioUringUnsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();

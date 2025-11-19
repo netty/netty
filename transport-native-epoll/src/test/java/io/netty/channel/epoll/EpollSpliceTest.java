@@ -75,7 +75,7 @@ public class EpollSpliceTest {
                 bs.option(EpollChannelOption.EPOLL_MODE, EpollMode.LEVEL_TRIGGERED);
 
                 bs.channel(EpollSocketChannel.class);
-                bs.group(ctx.channel().eventLoop()).handler(new ChannelInboundHandlerAdapter() {
+                bs.group(ctx.channel().executor()).handler(new ChannelInboundHandlerAdapter() {
                     @Override
                     public void channelActive(ChannelHandlerContext context) throws Exception {
                         final EpollSocketChannel ch = (EpollSocketChannel) ctx.channel();

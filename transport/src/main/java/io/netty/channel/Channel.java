@@ -84,7 +84,8 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     /**
      * Return the {@link EventLoop} this {@link Channel} was registered to.
      */
-    EventLoop eventLoop();
+    @Override
+    EventLoop executor();
 
     /**
      * Returns the parent of this channel.

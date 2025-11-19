@@ -123,7 +123,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
     @Override
     public final void handlerAdded0(ChannelHandlerContext ctx) throws Exception {
-        if (ctx.executor() != ctx.channel().eventLoop()) {
+        if (ctx.executor() != ctx.channel().executor()) {
             throw new IllegalStateException("EventExecutor must be EventLoop of Channel");
         }
         this.ctx = ctx;
@@ -179,7 +179,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 } else {
                     streamChannel = new Http2MultiplexCodecStreamChannel(stream, inboundStreamHandler);
                 }
-                ChannelFuture future = ctx.channel().eventLoop().register(streamChannel);
+                ChannelFuture future = ctx.channel().executor().register(streamChannel);
                 if (future.isDone()) {
                     Http2MultiplexHandler.registerDone(future);
                 } else {

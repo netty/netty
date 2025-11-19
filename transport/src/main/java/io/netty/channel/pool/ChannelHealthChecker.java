@@ -32,7 +32,7 @@ public interface ChannelHealthChecker {
     ChannelHealthChecker ACTIVE = new ChannelHealthChecker() {
         @Override
         public Future<Boolean> isHealthy(Channel channel) {
-            EventLoop loop = channel.eventLoop();
+            EventLoop loop = channel.executor();
             return channel.isActive()? loop.newSucceededFuture(Boolean.TRUE) : loop.newSucceededFuture(Boolean.FALSE);
         }
     };

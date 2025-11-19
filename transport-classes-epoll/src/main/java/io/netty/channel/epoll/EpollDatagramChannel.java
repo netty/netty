@@ -196,10 +196,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
 
-        if (eventLoop().inEventLoop()) {
+        if (executor().inEventLoop()) {
             joinGroup0(multicastAddress, networkInterface, source, promise);
         } else {
-            eventLoop().execute(new Runnable() {
+            executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     joinGroup0(multicastAddress, networkInterface, source, promise);
@@ -212,7 +212,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     private void joinGroup0(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
             final InetAddress source, final ChannelPromise promise) {
-        assert eventLoop().inEventLoop();
+        assert executor().inEventLoop();
 
         try {
             socket.joinGroup(multicastAddress, networkInterface, source);
@@ -264,10 +264,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
 
-        if (eventLoop().inEventLoop()) {
+        if (executor().inEventLoop()) {
             leaveGroup0(multicastAddress, networkInterface, source, promise);
         } else {
-            eventLoop().execute(new Runnable() {
+            executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     leaveGroup0(multicastAddress, networkInterface, source, promise);
@@ -280,7 +280,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     private void leaveGroup0(
             final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
             final ChannelPromise promise) {
-        assert eventLoop().inEventLoop();
+        assert executor().inEventLoop();
 
         try {
             socket.leaveGroup(multicastAddress, networkInterface, source);
@@ -523,7 +523,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
         @Override
         void epollInReady() {
-            assert eventLoop().inEventLoop();
+            assert executor().inEventLoop();
             EpollDatagramChannelConfig config = config();
             if (shouldBreakEpollInReady(config)) {
                 clearEpollIn0();

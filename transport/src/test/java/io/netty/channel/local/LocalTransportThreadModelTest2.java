@@ -77,7 +77,7 @@ public class LocalTransportThreadModelTest2 {
 
     public void close(final Channel localChannel, final LocalHandler localRegistrationHandler) {
         // we want to make sure we actually shutdown IN the event loop
-        if (localChannel.eventLoop().inEventLoop()) {
+        if (localChannel.executor().inEventLoop()) {
             // Wait until all messages are flushed before closing the channel.
             if (localRegistrationHandler.lastWriteFuture != null) {
                 localRegistrationHandler.lastWriteFuture.awaitUninterruptibly();
@@ -87,7 +87,7 @@ public class LocalTransportThreadModelTest2 {
             return;
         }
 
-        localChannel.eventLoop().execute(new Runnable() {
+        localChannel.executor().execute(new Runnable() {
             @Override
             public void run() {
                 close(localChannel, localRegistrationHandler);

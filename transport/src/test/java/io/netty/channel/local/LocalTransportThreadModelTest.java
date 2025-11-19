@@ -273,7 +273,7 @@ public class LocalTransportThreadModelTest {
                 final int end = i + ELEMS_PER_ROUNDS;
                 i = end;
 
-                ch.eventLoop().execute(new Runnable() {
+                ch.executor().execute(new Runnable() {
                     @Override
                     public void run() {
                         for (int j = start; j < end; j ++) {

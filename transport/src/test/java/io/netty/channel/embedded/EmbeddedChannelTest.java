@@ -136,7 +136,7 @@ public class EmbeddedChannelTest {
     public void testScheduling() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
         final CountDownLatch latch = new CountDownLatch(2);
-        Future future = ch.eventLoop().schedule(new Runnable() {
+        Future future = ch.executor().schedule(new Runnable() {
             @Override
             public void run() {
                 latch.countDown();
@@ -160,7 +160,7 @@ public class EmbeddedChannelTest {
     @Test
     public void testScheduledCancelled() throws Exception {
         EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter());
-        Future<?> future = ch.eventLoop().schedule(new Runnable() {
+        Future<?> future = ch.executor().schedule(new Runnable() {
             @Override
             public void run() { }
         }, 1, TimeUnit.DAYS);
@@ -646,7 +646,7 @@ public class EmbeddedChannelTest {
         }
 
         final CountDownLatch taskLatch = new CountDownLatch(1);
-        channel.eventLoop().execute(new Runnable() {
+        channel.executor().execute(new Runnable() {
             @Override
             public void run() {
                 taskLatch.countDown();
@@ -689,8 +689,8 @@ public class EmbeddedChannelTest {
             public void run() {
             }
         };
-        ScheduledFuture<?> future10 = channel.eventLoop().schedule(runnable, 10, TimeUnit.MINUTES);
-        ScheduledFuture<?> future20 = channel.eventLoop().schedule(runnable, 20, TimeUnit.MINUTES);
+        ScheduledFuture<?> future10 = channel.executor().schedule(runnable, 10, TimeUnit.MINUTES);
+        ScheduledFuture<?> future20 = channel.executor().schedule(runnable, 20, TimeUnit.MINUTES);
 
         channel.runPendingTasks();
         assertFalse(future10.isDone());
@@ -714,12 +714,12 @@ public class EmbeddedChannelTest {
 
         channel.freezeTime();
         // this future will complete after 10min
-        ScheduledFuture<?> future10 = channel.eventLoop().schedule(runnable, 10, TimeUnit.MINUTES);
+        ScheduledFuture<?> future10 = channel.executor().schedule(runnable, 10, TimeUnit.MINUTES);
         // this future will complete after 10min + 1ns
-        ScheduledFuture<?> future101 = channel.eventLoop().schedule(runnable,
+        ScheduledFuture<?> future101 = channel.executor().schedule(runnable,
                 TimeUnit.MINUTES.toNanos(10) + 1, TimeUnit.NANOSECONDS);
         // this future will complete after 20min
-        ScheduledFuture<?> future20 = channel.eventLoop().schedule(runnable, 20, TimeUnit.MINUTES);
+        ScheduledFuture<?> future20 = channel.executor().schedule(runnable, 20, TimeUnit.MINUTES);
 
         channel.runPendingTasks();
         assertFalse(future10.isDone());
@@ -750,12 +750,12 @@ public class EmbeddedChannelTest {
         };
 
         // this future will complete after 10min
-        ScheduledFuture<?> future10 = channel.eventLoop().schedule(runnable, 10, TimeUnit.MINUTES);
+        ScheduledFuture<?> future10 = channel.executor().schedule(runnable, 10, TimeUnit.MINUTES);
         // this future will complete after 10min + 1ns
-        ScheduledFuture<?> future101 = channel.eventLoop().schedule(runnable,
+        ScheduledFuture<?> future101 = channel.executor().schedule(runnable,
                 TimeUnit.MINUTES.toNanos(10) + 1, TimeUnit.NANOSECONDS);
         // this future will complete after 20min
-        ScheduledFuture<?> future20 = channel.eventLoop().schedule(runnable, 20, TimeUnit.MINUTES);
+        ScheduledFuture<?> future20 = channel.executor().schedule(runnable, 20, TimeUnit.MINUTES);
 
         channel.runPendingTasks();
         assertFalse(future10.isDone());
@@ -776,7 +776,7 @@ public class EmbeddedChannelTest {
 
     @Test
     void testDefaultTickerCannotSleep() {
-        Ticker ticker = new EmbeddedChannel().eventLoop().ticker();
+        Ticker ticker = new EmbeddedChannel().executor().ticker();
         Assertions.assertThrows(UnsupportedOperationException.class, () -> ticker.sleep(1, TimeUnit.SECONDS));
     }
 
@@ -792,13 +792,13 @@ public class EmbeddedChannelTest {
 
         // simple execute
         assertFalse(channel.hasPendingTasks());
-        channel.eventLoop().execute(runnable);
+        channel.executor().execute(runnable);
         assertTrue(channel.hasPendingTasks());
         channel.runPendingTasks();
         assertFalse(channel.hasPendingTasks());
 
         // schedule in the future (note: time is frozen above)
-        channel.eventLoop().schedule(runnable, 1, TimeUnit.SECONDS);
+        channel.executor().schedule(runnable, 1, TimeUnit.SECONDS);
         assertFalse(channel.hasPendingTasks());
         channel.runPendingTasks();
         assertFalse(channel.hasPendingTasks());

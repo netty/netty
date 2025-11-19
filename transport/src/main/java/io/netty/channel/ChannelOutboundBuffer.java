@@ -653,7 +653,7 @@ public final class ChannelOutboundBuffer {
                     }
                 };
             }
-            channel.eventLoop().execute(task);
+            channel.executor().execute(task);
         } else {
             pipeline.fireChannelWritabilityChanged();
         }
@@ -698,7 +698,7 @@ public final class ChannelOutboundBuffer {
 
     void close(final Throwable cause, final boolean allowChannelOpen) {
         if (inFail) {
-            channel.eventLoop().execute(new Runnable() {
+            channel.executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     close(cause, allowChannelOpen);

@@ -99,7 +99,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected void doRegister(ChannelPromise promise) {
-        EventLoop loop = eventLoop();
+        EventLoop loop = executor();
         if (loop instanceof IoEventLoop) {
             assert registration == null;
             ((IoEventLoop) loop).register((LocalServerUnsafe) unsafe()).addListener(f -> {
@@ -141,7 +141,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        EventLoop loop = eventLoop();
+        EventLoop loop = executor();
         if (loop instanceof IoEventLoop) {
             IoRegistration registration = this.registration;
             if (registration != null) {
@@ -170,10 +170,10 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     LocalChannel serve(final LocalChannel peer) {
         final LocalChannel child = newLocalChannel(peer);
-        if (eventLoop().inEventLoop()) {
+        if (executor().inEventLoop()) {
             serve0(child);
         } else {
-            eventLoop().execute(new Runnable() {
+            executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     serve0(child);
@@ -238,12 +238,12 @@ public class LocalServerChannel extends AbstractServerChannel {
 
         @Override
         public void registered() {
-            ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+            ((SingleThreadEventExecutor) executor()).addShutdownHook(shutdownHook);
         }
 
         @Override
         public void unregistered() {
-            ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+            ((SingleThreadEventExecutor) executor()).removeShutdownHook(shutdownHook);
         }
 
         @Override

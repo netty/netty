@@ -231,7 +231,7 @@ public class SimpleChannelPoolTest {
         Channel channel1 = pool.acquire().syncUninterruptibly().getNow();
         channel1.close().syncUninterruptibly();
         Future<Void> releaseFuture =
-                pool.release(channel1, channel1.eventLoop().<Void>newPromise()).syncUninterruptibly();
+                pool.release(channel1, channel1.executor().<Void>newPromise()).syncUninterruptibly();
         assertTrue(releaseFuture.isSuccess());
 
         Channel channel2 = pool.acquire().syncUninterruptibly().getNow();

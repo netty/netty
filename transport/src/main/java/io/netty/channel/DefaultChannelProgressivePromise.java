@@ -57,7 +57,7 @@ public class DefaultChannelProgressivePromise
     protected EventExecutor executor() {
         EventExecutor e = super.executor();
         if (e == null) {
-            return channel().eventLoop();
+            return channel().executor();
         } else {
             return e;
         }

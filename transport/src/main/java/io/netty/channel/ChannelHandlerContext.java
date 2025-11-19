@@ -92,11 +92,6 @@ public interface ChannelHandlerContext extends AttributeMap, ChannelInboundInvok
     Channel channel();
 
     /**
-     * Returns the {@link EventExecutor} which is used to execute an arbitrary task.
-     */
-    EventExecutor executor();
-
-    /**
      * The unique name of the {@link ChannelHandlerContext}.The name was used when then {@link ChannelHandler}
      * was added to the {@link ChannelPipeline}. This name can also be used to access the registered
      * {@link ChannelHandler} from the {@link ChannelPipeline}.

@@ -163,7 +163,7 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doRegister(ChannelPromise promise) {
-        EventLoop loop = eventLoop();
+        EventLoop loop = executor();
         if (loop instanceof IoEventLoop) {
             assert registration == null;
             ((IoEventLoop) loop).register((LocalUnsafe) unsafe()).addListener(f -> {
@@ -186,7 +186,7 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        EventLoop loop = eventLoop();
+        EventLoop loop = executor();
         if (loop instanceof IoEventLoop) {
             IoRegistration registration = this.registration;
             if (registration != null) {
@@ -247,7 +247,7 @@ public class LocalChannel extends AbstractChannel {
                 // Always call peer.eventLoop().execute() even if peer.eventLoop().inEventLoop() is true.
                 // This ensures that if both channels are on the same event loop, the peer's channelInActive
                 // event is triggered *after* this peer's channelInActive event
-                EventLoop peerEventLoop = peer.eventLoop();
+                EventLoop peerEventLoop = peer.executor();
                 final boolean peerIsActive = peer.isActive();
                 try {
                     peerEventLoop.execute(new Runnable() {
@@ -350,7 +350,7 @@ public class LocalChannel extends AbstractChannel {
             }
         } else {
             try {
-                eventLoop().execute(readTask);
+                executor().execute(readTask);
             } catch (Throwable cause) {
                 logger.warn("Closing Local channels {}-{} because exception occurred!", this, peer, cause);
                 close();
@@ -412,7 +412,7 @@ public class LocalChannel extends AbstractChannel {
 
     private void finishPeerRead(final LocalChannel peer) {
         // If the peer is also writing, then we must schedule the event on the event loop to preserve read order.
-        if (peer.eventLoop() == eventLoop() && !peer.writeInProgress) {
+        if (peer.executor() == executor() && !peer.writeInProgress) {
             finishPeerRead0(peer);
         } else {
             runFinishPeerReadTask(peer);
@@ -430,9 +430,9 @@ public class LocalChannel extends AbstractChannel {
         };
         try {
             if (peer.writeInProgress) {
-                peer.finishReadFuture = peer.eventLoop().submit(finishPeerReadTask);
+                peer.finishReadFuture = peer.executor().submit(finishPeerReadTask);
             } else {
-                peer.eventLoop().execute(finishPeerReadTask);
+                peer.executor().execute(finishPeerReadTask);
             }
         } catch (Throwable cause) {
             logger.warn("Closing Local channels {}-{} because exception occurred!", this, peer, cause);
@@ -443,7 +443,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     private void releaseInboundBuffers() {
-        assert eventLoop() == null || eventLoop().inEventLoop();
+        assert executor() == null || executor().inEventLoop();
         readInProgress = false;
         Queue<Object> inboundBuffer = this.inboundBuffer;
         Object msg;
@@ -503,7 +503,7 @@ public class LocalChannel extends AbstractChannel {
                 // This ensures that if both channels are on the same event loop, the peer's channelActive
                 // event is triggered *after* this channel's channelRegistered event, so that this channel's
                 // pipeline is fully initialized by ChannelInitializer before any channelRead events.
-                peer.eventLoop().execute(new Runnable() {
+                peer.executor().execute(new Runnable() {
                     @Override
                     public void run() {
                         ChannelPromise promise = peer.connectPromise;
@@ -516,13 +516,13 @@ public class LocalChannel extends AbstractChannel {
                     }
                 });
             }
-            ((SingleThreadEventExecutor) eventLoop()).addShutdownHook(shutdownHook);
+            ((SingleThreadEventExecutor) executor()).addShutdownHook(shutdownHook);
         }
 
         @Override
         public void unregistered() {
             // Just remove the shutdownHook as this Channel may be closed later or registered to another EventLoop
-            ((SingleThreadEventExecutor) eventLoop()).removeShutdownHook(shutdownHook);
+            ((SingleThreadEventExecutor) executor()).removeShutdownHook(shutdownHook);
         }
 
         @Override

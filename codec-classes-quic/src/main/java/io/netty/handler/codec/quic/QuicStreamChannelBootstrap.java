@@ -111,7 +111,7 @@ public final class QuicStreamChannelBootstrap {
      * @return  the {@link Future} that is notified once the operation completes.
      */
     public Future<QuicStreamChannel> create() {
-        return create(parent.eventLoop().newPromise());
+        return create(parent.executor().newPromise());
     }
 
     /**

@@ -110,7 +110,7 @@ public class HttpServerUpgradeHandlerTest {
                 // make sure the pipeline was reformed irrespective of the flush completing.
                 assertTrue(inReadCall);
                 writeUpgradeMessage = true;
-                ctx.channel().eventLoop().execute(new Runnable() {
+                ctx.channel().executor().execute(new Runnable() {
                     @Override
                     public void run() {
                         ctx.write(msg, promise);

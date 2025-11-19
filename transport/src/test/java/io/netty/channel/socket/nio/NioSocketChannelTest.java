@@ -226,7 +226,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                                  @Override
                                  public void operationComplete(ChannelFuture cf) {
                                      Channel channel = cf.channel();
-                                     assertNotSame(loop, channel.eventLoop());
+                                     assertNotSame(loop, channel.executor());
                                      group.next().register(channel);
                                  }
                              });

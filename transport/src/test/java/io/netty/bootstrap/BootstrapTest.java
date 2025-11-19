@@ -216,7 +216,7 @@ public class BootstrapTest {
             future.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    queue.add(future.channel().eventLoop().inEventLoop(Thread.currentThread()));
+                    queue.add(future.channel().executor().inEventLoop(Thread.currentThread()));
                     queue.add(future.isSuccess());
                 }
             });
@@ -265,7 +265,7 @@ public class BootstrapTest {
             future.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture future) throws Exception {
-                    queue.add(future.channel().eventLoop().inEventLoop(Thread.currentThread()));
+                    queue.add(future.channel().executor().inEventLoop(Thread.currentThread()));
                     queue.add(future.isSuccess());
                 }
             });

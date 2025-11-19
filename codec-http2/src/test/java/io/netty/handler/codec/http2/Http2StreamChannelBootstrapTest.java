@@ -104,7 +104,7 @@ public class Http2StreamChannelBootstrapTest {
             });
 
             Http2StreamChannelBootstrap bootstrap = new Http2StreamChannelBootstrap(clientChannel);
-            final Promise<Http2StreamChannel> promise = clientChannel.eventLoop().newPromise();
+            final Promise<Http2StreamChannel> promise = clientChannel.executor().newPromise();
             bootstrap.open(promise);
             assertFalse(promise.isDone());
             closeLatch.countDown();

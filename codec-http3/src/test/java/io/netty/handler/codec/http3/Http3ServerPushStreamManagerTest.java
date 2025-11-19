@@ -170,7 +170,7 @@ public class Http3ServerPushStreamManagerTest {
                                                                  long pushId)
             throws Exception {
         return newPushStream(() -> {
-            final Promise<QuicStreamChannel> promise = channel.eventLoop().newPromise();
+            final Promise<QuicStreamChannel> promise = channel.executor().newPromise();
             manager.newPushStream(pushId, pushStreamHandler, identity(), promise);
             return (EmbeddedQuicStreamChannel) promise.get();
         });

@@ -56,7 +56,6 @@ import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -523,7 +522,7 @@ public class DefaultChannelPipelineTest {
 
             // Add handler.
             p.addFirst(handler.name, handler);
-            self.eventLoop().execute(new Runnable() {
+            self.executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     // Validate handler life-cycle methods called.
@@ -546,7 +545,7 @@ public class DefaultChannelPipelineTest {
         for (final LifeCycleAwareTestHandler handler : handlers) {
             assertSame(handler, p.remove(handler.name));
 
-            self.eventLoop().execute(new Runnable() {
+            self.executor().execute(new Runnable() {
                 @Override
                 public void run() {
                     // Validate handler life-cycle methods called.
@@ -566,7 +565,7 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1, handler2);
 
-        self.eventLoop().submit(new Runnable() {
+        self.executor().submit(new Runnable() {
             @Override
             public void run() {
                 ChannelPipeline p = self.pipeline();
@@ -588,7 +587,7 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1, handler2);
 
-        self.eventLoop().submit(new Runnable() {
+        self.executor().submit(new Runnable() {
             @Override
             public void run() {
                 ChannelPipeline p = self.pipeline();
@@ -610,7 +609,7 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1);
 
-        self.eventLoop().submit(new Runnable() {
+        self.executor().submit(new Runnable() {
             @Override
             public void run() {
                 ChannelPipeline p = self.pipeline();
@@ -631,7 +630,7 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1);
 
-        self.eventLoop().submit(new Runnable() {
+        self.executor().submit(new Runnable() {
             @Override
             public void run() {
                 ChannelPipeline p = self.pipeline();
@@ -659,7 +658,7 @@ public class DefaultChannelPipelineTest {
 
         setUp(handler1, handler2, handler3);
 
-        self.eventLoop().submit(new Runnable() {
+        self.executor().submit(new Runnable() {
             @Override
             public void run() {
                 ChannelPipeline p = self.pipeline();
@@ -1396,7 +1395,7 @@ public class DefaultChannelPipelineTest {
                 pipeline.channel().closeFuture().syncUninterruptibly();
 
                 // Schedule something on the EventLoop to ensure all other scheduled tasks had a chance to complete.
-                pipeline.channel().eventLoop().submit(new Runnable() {
+                pipeline.channel().executor().submit(new Runnable() {
                     @Override
                     public void run() {
                         // NOOP
@@ -1939,7 +1938,7 @@ public class DefaultChannelPipelineTest {
         };
 
         if (executeInEventLoop) {
-            pipeline.channel().eventLoop().execute(r);
+            pipeline.channel().executor().execute(r);
         } else {
             r.run();
         }

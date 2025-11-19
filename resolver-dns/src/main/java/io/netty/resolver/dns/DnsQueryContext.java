@@ -196,7 +196,7 @@ abstract class DnsQueryContext {
                     // This query was failed due a timeout or cancellation. Let's delay the removal of the id to reduce
                     // the risk of reusing the same id again while the remote nameserver might send the response after
                     // the timeout.
-                    channel.eventLoop().schedule(new Runnable() {
+                    channel.executor().schedule(new Runnable() {
                         @Override
                         public void run() {
                             removeFromContextManager(nameServerAddr);
@@ -270,7 +270,7 @@ abstract class DnsQueryContext {
 
         // Schedule a query timeout task if necessary.
         if (queryTimeoutMillis > 0) {
-            timeoutFuture = channel.eventLoop().schedule(new Runnable() {
+            timeoutFuture = channel.executor().schedule(new Runnable() {
                 @Override
                 public void run() {
                     if (promise.isDone()) {
@@ -371,7 +371,7 @@ abstract class DnsQueryContext {
                 }
                 final Channel tcpCh = future.channel();
                 Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise =
-                        tcpCh.eventLoop().newPromise();
+                        tcpCh.executor().newPromise();
                 final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(tcpCh,
                         (InetSocketAddress) tcpCh.remoteAddress(), queryContextManager, queryLifecycleObserver, 0,
                         recursionDesired, queryTimeoutMillis, question(), additionals, promise);
