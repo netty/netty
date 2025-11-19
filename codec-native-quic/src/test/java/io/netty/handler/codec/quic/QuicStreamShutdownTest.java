@@ -173,7 +173,7 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
             server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(),
                     new ChannelInboundHandlerAdapter() {
                         @Override
-                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             QuicStreamChannel streamChannel = (QuicStreamChannel) ctx.channel();
                             ByteBuf buffer = (ByteBuf) msg;
                             buffer.release();

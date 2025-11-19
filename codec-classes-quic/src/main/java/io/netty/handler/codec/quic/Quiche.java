@@ -30,6 +30,8 @@ import javax.net.ssl.SSLHandshakeException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
+import static io.netty.handler.codec.quic.QuicheError.STREAM_RESET;
+
 final class Quiche {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Quiche.class);
     private static final boolean TRACE_LOGGING_ENABLED = logger.isTraceEnabled();
@@ -401,7 +403,8 @@ final class Quiche {
     static native byte[] quiche_conn_destination_id(long connAddr);
 
     /**
-     * See <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L258">quiche_conn_stream_recv</a>.
+     * See <a href="https://github.com/cloudflare/quiche/blob/0.24.5/quiche/include/quiche.h#L397">
+     *     quiche_conn_stream_recv</a>.
      */
     static native int quiche_conn_stream_recv(long connAddr, long streamId, long outAddr, int bufLen, long finAddr,
                                               long outErrorCodeAddr);
@@ -896,7 +899,7 @@ final class Quiche {
     }
 
     static Exception convertToException(int result) {
-        return convertToException(result, -1L);
+        return convertToException(result, -1);
     }
 
     static Exception convertToException(int result, long code) {
@@ -904,13 +907,10 @@ final class Quiche {
         if (holder == null) {
             // There is no mapping to a transport error, it's something internal so throw it directly.
             QuicheError error = QuicheError.valueOf(result);
-            switch (error) {
-                case STREAM_RESET:
-                    return new QuicStreamResetException(error.message(), code);
-                case STREAM_STOPPED:
-                    return new QuicStreamException(error.message());
-                default:
-                    return new QuicException(error.message());
+            if (error == STREAM_RESET) {
+                return new QuicStreamResetException(error.message(), code);
+            } else {
+                return new QuicException(error.message());
             }
         }
         Exception exception = new QuicException(holder.error + ": " + holder.quicheErrorName, holder.error);

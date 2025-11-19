@@ -18,7 +18,7 @@ package io.netty.handler.codec.quic;
 /**
  * Signals a stream reset.
  */
-public final class QuicStreamResetException extends QuicStreamException {
+public final class QuicStreamResetException extends QuicException {
 
     private final long applicationProtocolCode;
 
