@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.DefaultEventExecutorGroup;
@@ -74,7 +73,7 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEcho(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, false, true);
+        testSimpleEcho0(sb, cb, true);
     }
 
     @Test
@@ -89,67 +88,24 @@ public class SocketEchoTest extends AbstractSocketTest {
     }
 
     public void testSimpleEchoNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, false, false);
-    }
-
-    @Test
-    public void testSimpleEchoWithAdditionalExecutor(TestInfo testInfo) throws Throwable {
-        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
-            @Override
-            public void run(ServerBootstrap sb1, Bootstrap cb1) throws Throwable {
-                testSimpleEchoWithAdditionalExecutor(sb1, cb1);
-            }
-        });
-    }
-
-    public void testSimpleEchoWithAdditionalExecutor(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, true, true);
-    }
-
-    @Test
-    public void testSimpleEchoWithAdditionalExecutorNotAutoRead(TestInfo testInfo) throws Throwable {
-        run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
-            @Override
-            public void run(ServerBootstrap sb1, Bootstrap cb1) throws Throwable {
-                testSimpleEchoWithAdditionalExecutorNotAutoRead(sb1, cb1);
-            }
-        });
-    }
-
-    public void testSimpleEchoWithAdditionalExecutorNotAutoRead(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        testSimpleEcho0(sb, cb, true, false);
+        testSimpleEcho0(sb, cb, false);
     }
 
     private static void testSimpleEcho0(
-            ServerBootstrap sb, Bootstrap cb, boolean additionalExecutor, boolean autoRead)
+            ServerBootstrap sb, Bootstrap cb, boolean autoRead)
             throws Throwable {
 
         final EchoHandler sh = new EchoHandler(autoRead);
         final EchoHandler ch = new EchoHandler(autoRead);
 
-        if (additionalExecutor) {
-            sb.childHandler(new ChannelInitializer<Channel>() {
-                @Override
-                protected void initChannel(Channel c) throws Exception {
-                    c.pipeline().addLast(group, sh);
-                }
-            });
-            cb.handler(new ChannelInitializer<Channel>() {
-                @Override
-                protected void initChannel(Channel c) throws Exception {
-                    c.pipeline().addLast(group, ch);
-                }
-            });
-        } else {
-            sb.childHandler(sh);
-            sb.handler(new ChannelInboundHandlerAdapter() {
-                @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                    cause.printStackTrace();
-                }
-            });
-            cb.handler(ch);
-        }
+        sb.childHandler(sh);
+        sb.handler(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                cause.printStackTrace();
+            }
+        });
+        cb.handler(ch);
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 

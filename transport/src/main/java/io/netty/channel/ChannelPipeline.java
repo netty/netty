@@ -222,23 +222,6 @@ public interface ChannelPipeline
     ChannelPipeline addFirst(String name, ChannelHandler handler);
 
     /**
-     * Inserts a {@link ChannelHandler} at the first position of this pipeline.
-     *
-     * @param group    the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
-     *                 methods
-     * @param name     the name of the handler to insert first
-     * @param handler  the handler to insert first
-     *
-     * @throws IllegalArgumentException
-     *         if there's an entry with the same name already in the pipeline
-     * @throws NullPointerException
-     *         if the specified handler is {@code null}
-     * @deprecated use {@link #addFirst(String, ChannelHandler)}
-     */
-    @Deprecated
-    ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler);
-
-    /**
      * Appends a {@link ChannelHandler} at the last position of this pipeline.
      *
      * @param name     the name of the handler to append
@@ -250,23 +233,6 @@ public interface ChannelPipeline
      *         if the specified handler is {@code null}
      */
     ChannelPipeline addLast(String name, ChannelHandler handler);
-
-    /**
-     * Appends a {@link ChannelHandler} at the last position of this pipeline.
-     *
-     * @param group    the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
-     *                 methods
-     * @param name     the name of the handler to append
-     * @param handler  the handler to append
-     *
-     * @throws IllegalArgumentException
-     *         if there's an entry with the same name already in the pipeline
-     * @throws NullPointerException
-     *         if the specified handler is {@code null}
-     * @deprecated use {@link #addLast(String, ChannelHandler)}
-     */
-    @Deprecated
-    ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler);
 
     /**
      * Inserts a {@link ChannelHandler} before an existing handler of this
@@ -286,27 +252,6 @@ public interface ChannelPipeline
     ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler);
 
     /**
-     * Inserts a {@link ChannelHandler} before an existing handler of this
-     * pipeline.
-     *
-     * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
-     *                  methods
-     * @param baseName  the name of the existing handler
-     * @param name      the name of the handler to insert before
-     * @param handler   the handler to insert before
-     *
-     * @throws NoSuchElementException
-     *         if there's no such entry with the specified {@code baseName}
-     * @throws IllegalArgumentException
-     *         if there's an entry with the same name already in the pipeline
-     * @throws NullPointerException
-     *         if the specified baseName or handler is {@code null}
-     * @deprecated use {@link #addBefore(String, String, ChannelHandler)}
-     */
-    @Deprecated
-    ChannelPipeline addBefore(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
-
-    /**
      * Inserts a {@link ChannelHandler} after an existing handler of this
      * pipeline.
      *
@@ -324,27 +269,6 @@ public interface ChannelPipeline
     ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler);
 
     /**
-     * Inserts a {@link ChannelHandler} after an existing handler of this
-     * pipeline.
-     *
-     * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}
-     *                  methods
-     * @param baseName  the name of the existing handler
-     * @param name      the name of the handler to insert after
-     * @param handler   the handler to insert after
-     *
-     * @throws NoSuchElementException
-     *         if there's no such entry with the specified {@code baseName}
-     * @throws IllegalArgumentException
-     *         if there's an entry with the same name already in the pipeline
-     * @throws NullPointerException
-     *         if the specified baseName or handler is {@code null}
-     * @deprecated use {@link #addAfter(String, String, ChannelHandler)}
-     */
-    @Deprecated
-    ChannelPipeline addAfter(EventExecutorGroup group, String baseName, String name, ChannelHandler handler);
-
-    /**
      * Inserts {@link ChannelHandler}s at the first position of this pipeline.
      *
      * @param handlers  the handlers to insert first
@@ -353,34 +277,12 @@ public interface ChannelPipeline
     ChannelPipeline addFirst(ChannelHandler... handlers);
 
     /**
-     * Inserts {@link ChannelHandler}s at the first position of this pipeline.
-     *
-     * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}s
-     *                  methods.
-     * @param handlers  the handlers to insert first
-     * @deprecated use {@link #addFirst(String, ChannelHandler)}
-     */
-    @Deprecated
-    ChannelPipeline addFirst(EventExecutorGroup group, ChannelHandler... handlers);
-
-    /**
      * Inserts {@link ChannelHandler}s at the last position of this pipeline.
      *
      * @param handlers  the handlers to insert last
      *
      */
     ChannelPipeline addLast(ChannelHandler... handlers);
-
-    /**
-     * Inserts {@link ChannelHandler}s at the last position of this pipeline.
-     *
-     * @param group     the {@link EventExecutorGroup} which will be used to execute the {@link ChannelHandler}s
-     *                  methods.
-     * @param handlers  the handlers to insert last
-     * @deprecated use {@link #addLast(ChannelHandler...)}
-     */
-    @Deprecated
-    ChannelPipeline addLast(EventExecutorGroup group, ChannelHandler... handlers);
 
     /**
      * Removes the specified {@link ChannelHandler} from this pipeline.

@@ -23,7 +23,6 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.OrderedEventExecutor;
 import io.netty.util.internal.ObjectPool.Handle;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PromiseNotificationUtil;
@@ -85,12 +84,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private final DefaultChannelPipeline pipeline;
     private final String name;
-    private final boolean ordered;
     private final int executionMask;
 
-    // Will be set to null if no child executor should be used, otherwise it will be set to the
-    // child executor.
-    final EventExecutor childExecutor;
     // Cache the concrete value for the executor() method. This method is in the hot-path,
     // and it's a profitable optimisation to avoid as many dependent-loads as possible.
     // It does not need to be volatile, because it's always the same value for a given context,
@@ -104,14 +99,11 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private volatile int handlerState = INIT;
 
-    AbstractChannelHandlerContext(DefaultChannelPipeline pipeline, EventExecutor executor,
+    AbstractChannelHandlerContext(DefaultChannelPipeline pipeline,
                                   String name, Class<? extends ChannelHandler> handlerClass) {
         this.name = ObjectUtil.checkNotNull(name, "name");
         this.pipeline = pipeline;
-        childExecutor = executor;
         executionMask = mask(handlerClass);
-        // Its ordered if its driven by the EventLoop or the given Executor is an instanceof OrderedEventExecutor.
-        ordered = executor == null || executor instanceof OrderedEventExecutor;
     }
 
     @Override
@@ -133,7 +125,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     public EventExecutor executor() {
         EventExecutor ex = contextExecutor;
         if (ex == null) {
-            contextExecutor = ex = childExecutor != null ? childExecutor : channel().executor();
+            ex = contextExecutor = channel().executor();
         }
         return ex;
     }
@@ -1013,7 +1005,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     boolean invokeHandler() {
         // Store in local variable to reduce volatile reads.
         int handlerState = this.handlerState;
-        return handlerState == ADD_COMPLETE || (!ordered && handlerState == ADD_PENDING);
+        return handlerState == ADD_COMPLETE;
     }
 
     @Override

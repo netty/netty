@@ -17,24 +17,11 @@ package io.netty.handler.codec.http;
 
 import com.aayushatharva.brotli4j.decoder.DecoderJNI;
 import com.aayushatharva.brotli4j.decoder.DirectDecompress;
-import io.netty.bootstrap.Bootstrap;
-import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultEventLoopGroup;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.local.LocalAddress;
-import io.netty.channel.local.LocalChannel;
-import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.compression.Brotli;
@@ -42,11 +29,6 @@ import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-
-import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -58,7 +40,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -417,104 +398,6 @@ public class HttpContentCompressorTest {
         last.release();
 
         assertNull(ch.readOutbound());
-    }
-
-    @Test
-    public void testExecutorPreserveOrdering() throws Exception {
-        final EventLoopGroup compressorGroup = new DefaultEventLoopGroup(1);
-        EventLoopGroup localGroup = new DefaultEventLoopGroup(1);
-        Channel server = null;
-        Channel client = null;
-        try {
-            ServerBootstrap bootstrap = new ServerBootstrap()
-                .channel(LocalServerChannel.class)
-                .group(localGroup)
-                .childHandler(new ChannelInitializer<LocalChannel>() {
-                @Override
-                protected void initChannel(LocalChannel ch) throws Exception {
-                    ch.pipeline()
-                        .addLast(new HttpServerCodec())
-                        .addLast(new HttpObjectAggregator(1024))
-                        .addLast(compressorGroup, new HttpContentCompressor())
-                        .addLast(new ChannelOutboundHandlerAdapter() {
-                            @Override
-                            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)
-                                throws Exception {
-                                super.write(ctx, msg, promise);
-                            }
-                        })
-                        .addLast(new ChannelInboundHandlerAdapter() {
-                            @Override
-                            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                                if (msg instanceof FullHttpRequest) {
-                                    FullHttpResponse res =
-                                        new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK,
-                                            Unpooled.copiedBuffer("Hello, World", CharsetUtil.US_ASCII));
-                                    ctx.writeAndFlush(res);
-                                    ReferenceCountUtil.release(msg);
-                                    return;
-                                }
-                                super.channelRead(ctx, msg);
-                            }
-                        });
-                }
-            });
-
-            LocalAddress address = new LocalAddress(UUID.randomUUID().toString());
-            server = bootstrap.bind(address).sync().channel();
-
-            final BlockingQueue<HttpObject> responses = new LinkedBlockingQueue<HttpObject>();
-
-            client = new Bootstrap()
-                .channel(LocalChannel.class)
-                .remoteAddress(address)
-                .group(localGroup)
-                .handler(new ChannelInitializer<LocalChannel>() {
-                @Override
-                protected void initChannel(LocalChannel ch) throws Exception {
-                    ch.pipeline().addLast(new HttpClientCodec()).addLast(new ChannelInboundHandlerAdapter() {
-                        @Override
-                        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                            if (msg instanceof HttpObject) {
-                                responses.put((HttpObject) msg);
-                                return;
-                            }
-                            super.channelRead(ctx, msg);
-                        }
-                    });
-                }
-            }).connect().sync().channel();
-
-            client.writeAndFlush(newRequest()).sync();
-
-            assertEncodedResponse((HttpResponse) responses.poll(1, TimeUnit.SECONDS));
-            HttpContent c = (HttpContent) responses.poll(1, TimeUnit.SECONDS);
-            assertNotNull(c);
-            assertEquals("1f8b0800000000000000f248cdc9c9d75108cf2fca4901000000ffff",
-                    ByteBufUtil.hexDump(c.content()));
-            c.release();
-
-            c = (HttpContent) responses.poll(1, TimeUnit.SECONDS);
-            assertNotNull(c);
-            assertEquals("0300c6865b260c000000", ByteBufUtil.hexDump(c.content()));
-            c.release();
-
-            LastHttpContent last = (LastHttpContent) responses.poll(1, TimeUnit.SECONDS);
-            assertNotNull(last);
-            assertEquals(0, last.content().readableBytes());
-            last.release();
-
-            assertNull(responses.poll(1, TimeUnit.SECONDS));
-        } finally {
-            if (client != null) {
-                client.close().sync();
-            }
-            if (server != null) {
-                server.close().sync();
-            }
-            compressorGroup.shutdownGracefully();
-            localGroup.shutdownGracefully();
-        }
     }
 
     /**

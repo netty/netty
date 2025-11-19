@@ -18,12 +18,8 @@ package io.netty.channel;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.DefaultEventExecutorGroup;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -38,39 +34,6 @@ import java.util.function.Function;
 import static org.junit.jupiter.api.Assertions.*;
 
 public abstract class AbstractEventLoopTest {
-
-    /**
-     * Test for https://github.com/netty/netty/issues/803
-     */
-    @Test
-    public void testReregister() {
-        EventLoopGroup group = newEventLoopGroup();
-        EventLoopGroup group2 = newEventLoopGroup();
-        final EventExecutorGroup eventExecutorGroup = new DefaultEventExecutorGroup(2);
-
-        ServerBootstrap bootstrap = new ServerBootstrap();
-        ChannelFuture future = bootstrap.channel(newChannel()).group(group)
-                .childHandler(new ChannelInitializer<SocketChannel>() {
-                    @Override
-                    public void initChannel(SocketChannel ch) {
-                    }
-                }).handler(new ChannelInitializer<ServerSocketChannel>() {
-                    @Override
-                    public void initChannel(ServerSocketChannel ch) {
-                        ch.pipeline().addLast(new TestChannelHandler());
-                        ch.pipeline().addLast(eventExecutorGroup, new TestChannelHandler2());
-                    }
-                })
-                .bind(0).awaitUninterruptibly();
-
-        EventExecutor executor = future.channel().pipeline().context(TestChannelHandler2.class).executor();
-        EventExecutor executor1 = future.channel().pipeline().context(TestChannelHandler.class).executor();
-        future.channel().deregister().awaitUninterruptibly();
-        Channel channel = group2.register(future.channel()).awaitUninterruptibly().channel();
-        EventExecutor executorNew = channel.pipeline().context(TestChannelHandler.class).executor();
-        assertNotSame(executor1, executorNew);
-        assertSame(executor, future.channel().pipeline().context(TestChannelHandler2.class).executor());
-    }
 
     /**
      * Test for https://github.com/netty/netty/issues/14923

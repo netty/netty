@@ -19,7 +19,6 @@ import io.netty.channel.Channel.Unsafe;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.EventExecutorGroup;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
@@ -28,7 +27,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -67,7 +65,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final ChannelFuture succeededFuture;
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
-    private Map<EventExecutorGroup, EventExecutor> childExecutors;
     private volatile MessageSizeEstimator.Handle estimatorHandle;
     private boolean firstRegistration = true;
 
@@ -113,31 +110,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return touch ? ReferenceCountUtil.touch(msg, next) : msg;
     }
 
-    private AbstractChannelHandlerContext newContext(EventExecutorGroup group, String name, ChannelHandler handler) {
-        return new DefaultChannelHandlerContext(this, childExecutor(group), name, handler);
-    }
-
-    private EventExecutor childExecutor(EventExecutorGroup group) {
-        if (group == null) {
-            return null;
-        }
-        Boolean pinEventExecutor = channel.config().getOption(ChannelOption.SINGLE_EVENTEXECUTOR_PER_GROUP);
-        if (pinEventExecutor != null && !pinEventExecutor) {
-            return group.next();
-        }
-        Map<EventExecutorGroup, EventExecutor> childExecutors = this.childExecutors;
-        if (childExecutors == null) {
-            // Use size of 4 as most people only use one extra EventExecutor.
-            childExecutors = this.childExecutors = new IdentityHashMap<EventExecutorGroup, EventExecutor>(4);
-        }
-        // Pin one of the child executors once and remember it so that the same child executor
-        // is used to fire events for the same channel.
-        EventExecutor childExecutor = childExecutors.get(group);
-        if (childExecutor == null) {
-            childExecutor = group.next();
-            childExecutors.put(group, childExecutor);
-        }
-        return childExecutor;
+    private AbstractChannelHandlerContext newContext(String name, ChannelHandler handler) {
+        return new DefaultChannelHandlerContext(this, name, handler);
     }
 
     @Override
@@ -152,7 +126,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addFirst(String name, ChannelHandler handler) {
-        return addFirst(null, name, handler);
+        return internalAdd(name, handler, null, AddStrategy.ADD_FIRST);
     }
 
     private enum AddStrategy {
@@ -162,7 +136,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         ADD_AFTER;
     }
 
-    private ChannelPipeline internalAdd(EventExecutorGroup group, String name,
+    private ChannelPipeline internalAdd(String name,
                                         ChannelHandler handler, String baseName,
                                         AddStrategy addStrategy) {
         final AbstractChannelHandlerContext newCtx;
@@ -170,7 +144,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             checkMultiplicity(handler);
             name = filterName(name, handler);
 
-            newCtx = newContext(group, name, handler);
+            newCtx = newContext(name, handler);
 
             switch (addStrategy) {
                 case ADD_FIRST:
@@ -208,11 +182,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return this;
     }
 
-    @Override
-    public final ChannelPipeline addFirst(EventExecutorGroup group, String name, ChannelHandler handler) {
-        return internalAdd(group, name, handler, null, AddStrategy.ADD_FIRST);
-    }
-
     private void addFirst0(AbstractChannelHandlerContext newCtx) {
         AbstractChannelHandlerContext nextCtx = head.next;
         newCtx.prev = head;
@@ -223,12 +192,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addLast(String name, ChannelHandler handler) {
-        return addLast(null, name, handler);
-    }
-
-    @Override
-    public final ChannelPipeline addLast(EventExecutorGroup group, String name, ChannelHandler handler) {
-        return internalAdd(group, name, handler, null, AddStrategy.ADD_LAST);
+        return internalAdd(name, handler, null, AddStrategy.ADD_LAST);
     }
 
     private void addLast0(AbstractChannelHandlerContext newCtx) {
@@ -241,13 +205,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addBefore(String baseName, String name, ChannelHandler handler) {
-        return addBefore(null, baseName, name, handler);
-    }
-
-    @Override
-    public final ChannelPipeline addBefore(
-            EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
-        return internalAdd(group, name, handler, baseName, AddStrategy.ADD_BEFORE);
+        return internalAdd(name, handler, baseName, AddStrategy.ADD_BEFORE);
     }
 
     private static void addBefore0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
@@ -267,13 +225,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addAfter(String baseName, String name, ChannelHandler handler) {
-        return addAfter(null, baseName, name, handler);
-    }
-
-    @Override
-    public final ChannelPipeline addAfter(
-            EventExecutorGroup group, String baseName, String name, ChannelHandler handler) {
-        return internalAdd(group, name, handler, baseName, AddStrategy.ADD_AFTER);
+        return internalAdd(name, handler, baseName, AddStrategy.ADD_AFTER);
     }
 
     private static void addAfter0(AbstractChannelHandlerContext ctx, AbstractChannelHandlerContext newCtx) {
@@ -289,11 +241,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addFirst(ChannelHandler... handlers) {
-        return addFirst(null, handlers);
-    }
-
-    @Override
-    public final ChannelPipeline addFirst(EventExecutorGroup executor, ChannelHandler... handlers) {
         ObjectUtil.checkNotNull(handlers, "handlers");
         if (handlers.length == 0 || handlers[0] == null) {
             return this;
@@ -308,7 +255,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         for (int i = size - 1; i >= 0; i --) {
             ChannelHandler h = handlers[i];
-            addFirst(executor, null, h);
+            internalAdd(null, h, null, AddStrategy.ADD_FIRST);
         }
 
         return this;
@@ -320,18 +267,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     @Override
     public final ChannelPipeline addLast(ChannelHandler... handlers) {
-        return addLast(null, handlers);
-    }
-
-    @Override
-    public final ChannelPipeline addLast(EventExecutorGroup executor, ChannelHandler... handlers) {
         ObjectUtil.checkNotNull(handlers, "handlers");
 
         for (ChannelHandler h: handlers) {
             if (h == null) {
                 break;
             }
-            addLast(executor, null, h);
+            internalAdd(null, h, null, AddStrategy.ADD_LAST);
         }
 
         return this;
@@ -491,7 +433,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 }
             }
 
-            newCtx = newContext(ctx.childExecutor, newName, newHandler);
+            newCtx = newContext(newName, newHandler);
 
             replace0(ctx, newCtx);
 
@@ -1263,7 +1205,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     final class TailContext extends AbstractChannelHandlerContext implements ChannelInboundHandler {
 
         TailContext(DefaultChannelPipeline pipeline) {
-            super(pipeline, null, TAIL_NAME, TailContext.class);
+            super(pipeline, TAIL_NAME, TailContext.class);
             setAddComplete();
         }
 
@@ -1326,7 +1268,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         private final Unsafe unsafe;
 
         HeadContext(DefaultChannelPipeline pipeline) {
-            super(pipeline, null, HEAD_NAME, HeadContext.class);
+            super(pipeline, HEAD_NAME, HeadContext.class);
             unsafe = pipeline.channel().unsafe();
             setAddComplete();
         }
