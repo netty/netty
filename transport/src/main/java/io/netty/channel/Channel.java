@@ -353,11 +353,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
         return pipeline().newFailedFuture(cause);
     }
 
-    @Override
-    default ChannelPromise voidPromise() {
-        return pipeline().voidPromise();
-    }
-
     /**
      * <em>Unsafe</em> operations that should <em>never</em> be called from user-code. These methods
      * are only provided to implement the actual transport, and must be invoked from an I/O thread except for the
@@ -368,7 +363,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      *   <li>{@link #closeForcibly()}</li>
      *   <li>{@link #register(EventLoop, ChannelPromise)}</li>
      *   <li>{@link #deregister(ChannelPromise)}</li>
-     *   <li>{@link #voidPromise()}</li>
      * </ul>
      */
     interface Unsafe {
@@ -451,13 +445,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
          * Flush out all write operations scheduled via {@link #write(Object, ChannelPromise)}.
          */
         void flush();
-
-        /**
-         * Return a special ChannelPromise which can be reused and passed to the operations in {@link Unsafe}.
-         * It will never be notified of a success or error and so is only a placeholder for operations
-         * that take a {@link ChannelPromise} as argument but for which you not want to get notified.
-         */
-        ChannelPromise voidPromise();
 
         /**
          * Returns the {@link ChannelOutboundBuffer} of the {@link Channel} where the pending write requests are stored.

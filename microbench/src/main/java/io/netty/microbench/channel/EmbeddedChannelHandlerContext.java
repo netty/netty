@@ -300,9 +300,4 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     public final ChannelFuture newFailedFuture(Throwable cause) {
         return channel().newFailedFuture(cause);
     }
-
-    @Override
-    public final ChannelPromise voidPromise() {
-        return channel().voidPromise();
-    }
 }

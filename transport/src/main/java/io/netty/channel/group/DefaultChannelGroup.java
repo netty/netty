@@ -53,7 +53,6 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
             remove(future.channel());
         }
     };
-    private final VoidChannelGroupFuture voidFuture = new VoidChannelGroupFuture(this);
     private final boolean stayClosed;
     private volatile boolean closed;
 
@@ -250,31 +249,16 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture write(Object message, ChannelMatcher matcher) {
-        return write(message, matcher, false);
-    }
-
-    @Override
-    public ChannelGroupFuture write(Object message, ChannelMatcher matcher, boolean voidPromise) {
         ObjectUtil.checkNotNull(message, "message");
         ObjectUtil.checkNotNull(matcher, "matcher");
 
-        final ChannelGroupFuture future;
-        if (voidPromise) {
-            for (Channel c: nonServerChannels.values()) {
-                if (matcher.matches(c)) {
-                    c.write(safeDuplicate(message), c.voidPromise());
-                }
+        Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(nonServerChannels.size());
+        for (Channel c: nonServerChannels.values()) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.write(safeDuplicate(message)));
             }
-            future = voidFuture;
-        } else {
-            Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(nonServerChannels.size());
-            for (Channel c: nonServerChannels.values()) {
-                if (matcher.matches(c)) {
-                    futures.put(c, c.write(safeDuplicate(message)));
-                }
-            }
-            future = new DefaultChannelGroupFuture(this, futures, executor);
         }
+        final ChannelGroupFuture future = new DefaultChannelGroupFuture(this, futures, executor);
         ReferenceCountUtil.release(message);
         return future;
     }
@@ -384,30 +368,15 @@ public class DefaultChannelGroup extends AbstractSet<Channel> implements Channel
 
     @Override
     public ChannelGroupFuture writeAndFlush(Object message, ChannelMatcher matcher) {
-        return writeAndFlush(message, matcher, false);
-    }
-
-    @Override
-    public ChannelGroupFuture writeAndFlush(Object message, ChannelMatcher matcher, boolean voidPromise) {
         ObjectUtil.checkNotNull(message, "message");
 
-        final ChannelGroupFuture future;
-        if (voidPromise) {
-            for (Channel c: nonServerChannels.values()) {
-                if (matcher.matches(c)) {
-                    c.writeAndFlush(safeDuplicate(message), c.voidPromise());
-                }
+        Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(nonServerChannels.size());
+        for (Channel c: nonServerChannels.values()) {
+            if (matcher.matches(c)) {
+                futures.put(c, c.writeAndFlush(safeDuplicate(message)));
             }
-            future = voidFuture;
-        } else {
-            Map<Channel, ChannelFuture> futures = new LinkedHashMap<Channel, ChannelFuture>(nonServerChannels.size());
-            for (Channel c: nonServerChannels.values()) {
-                if (matcher.matches(c)) {
-                    futures.put(c, c.writeAndFlush(safeDuplicate(message)));
-                }
-            }
-            future = new DefaultChannelGroupFuture(this, futures, executor);
         }
+        final ChannelGroupFuture future = new DefaultChannelGroupFuture(this, futures, executor);
         ReferenceCountUtil.release(message);
         return future;
     }

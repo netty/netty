@@ -248,7 +248,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe, NioIoHandle {
         @Override
         public void close() {
-            close(voidPromise());
+            close(newPromise());
         }
 
         @Override
@@ -309,7 +309,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                                         && connectPromise.tryFailure(new ConnectTimeoutException(
                                                 "connection timed out after " + connectTimeoutMillis + " ms: " +
                                                         remoteAddress))) {
-                                    close(voidPromise());
+                                    close(newPromise());
                                 }
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -325,7 +325,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                                     connectTimeoutFuture.cancel(false);
                                 }
                                 connectPromise = null;
-                                close(voidPromise());
+                                close(newPromise());
                             }
                         }
                     });
@@ -357,7 +357,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
             // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
             if (!promiseSet) {
-                close(voidPromise());
+                close(newPromise());
             }
         }
 
@@ -445,7 +445,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     read();
                 }
             } catch (CancelledKeyException ignored) {
-                close(voidPromise());
+                close(newPromise());
             }
         }
     }

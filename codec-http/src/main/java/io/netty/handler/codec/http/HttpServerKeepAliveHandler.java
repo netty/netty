@@ -82,7 +82,7 @@ public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
             }
         }
         if (msg instanceof LastHttpContent && !shouldKeepAlive()) {
-            promise = promise.unvoid().addListener(ChannelFutureListener.CLOSE);
+            promise.addListener(ChannelFutureListener.CLOSE);
         }
         super.write(ctx, msg, promise);
     }

@@ -693,26 +693,6 @@ public class Http3FrameToHttpObjectCodecTest {
         assertFalse(ch.finish());
     }
 
-    @Test
-    public void testEncodeVoidPromise() {
-        EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
-        ch.writeOneOutbound(new DefaultFullHttpRequest(
-                HttpVersion.HTTP_1_1, HttpMethod.POST, "/hello/world", Unpooled.wrappedBuffer(new byte[1])),
-                ch.voidPromise());
-        ch.flushOutbound();
-
-        Http3HeadersFrame headersFrame = ch.readOutbound();
-        Http3Headers headers = headersFrame.headers();
-        Http3DataFrame data = ch.readOutbound();
-data.release();
-        assertThat(headers.scheme().toString(), is("https"));
-        assertThat(headers.method().toString(), is("POST"));
-        assertThat(headers.path().toString(), is("/hello/world"));
-        assertTrue(ch.isOutputShutdown());
-
-        assertFalse(ch.finish());
-    }
-
     private static final class EncodeCombinationsArgumentsProvider implements ArgumentsProvider {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext extensionContext) {
@@ -721,11 +701,9 @@ data.release();
                 for (boolean last : new boolean[]{false, true}) {
                     for (boolean nonEmptyContent : new boolean[]{false, true}) {
                         for (boolean hasTrailers : new boolean[]{false, true}) {
-                            for (boolean voidPromise : new boolean[]{false, true}) {
-                                // this test goes through all the branches of Http3FrameToHttpObjectCodec
-                                // and ensures right functionality
-                                arguments.add(Arguments.of(headers, last, nonEmptyContent, hasTrailers, voidPromise));
-                            }
+                            // this test goes through all the branches of Http3FrameToHttpObjectCodec
+                            // and ensures right functionality
+                            arguments.add(Arguments.of(headers, last, nonEmptyContent, hasTrailers));
                         }
                     }
                 }
@@ -734,14 +712,13 @@ data.release();
         }
     }
 
-    @ParameterizedTest(name = "headers: {0}, last: {1}, nonEmptyContent: {2}, hasTrailers: {3}, voidPromise: {4}")
+    @ParameterizedTest(name = "headers: {0}, last: {1}, nonEmptyContent: {2}, hasTrailers: {3}")
     @ArgumentsSource(value = EncodeCombinationsArgumentsProvider.class)
     public void testEncodeCombination(
             boolean headers,
             boolean last,
             boolean nonEmptyContent,
-            boolean hasTrailers,
-            boolean voidPromise
+            boolean hasTrailers
     ) {
         ByteBuf content = nonEmptyContent ? Unpooled.wrappedBuffer(new byte[1]) : Unpooled.EMPTY_BUFFER;
         HttpHeaders trailers = new DefaultHttpHeaders();
@@ -781,13 +758,13 @@ data.release();
                     @Override
                     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
                         framePromises.add(promise);
-                        ctx.write(msg, ctx.voidPromise());
+                        ctx.write(msg, ctx.newPromise());
                     }
                 },
                 new Http3FrameToHttpObjectCodec(false)
         );
 
-        ChannelFuture fullPromise = ch.writeOneOutbound(msg, voidPromise ? ch.voidPromise() : ch.newPromise());
+        ChannelFuture fullPromise = ch.writeOneOutbound(msg, ch.newPromise());
         ch.flushOutbound();
 
         if (headers) {
@@ -810,9 +787,7 @@ data.release();
             dataFrame.release();
         }
 
-        if (!voidPromise) {
-            assertFalse(fullPromise.isDone());
-        }
+        assertFalse(fullPromise.isDone());
 
         assertFalse(ch.isOutputShutdown());
         for (ChannelPromise framePromise : framePromises) {
@@ -823,9 +798,7 @@ data.release();
         } else {
             assertFalse(ch.isOutputShutdown());
         }
-        if (!voidPromise) {
-            assertTrue(fullPromise.isDone());
-        }
+        assertTrue(fullPromise.isDone());
         assertFalse(ch.finish());
     }
 
@@ -1003,10 +976,10 @@ data.release();
                                     if (msg instanceof Http3HeadersFrame) {
                                         DefaultHttp3HeadersFrame responseHeaders = new DefaultHttp3HeadersFrame();
                                         responseHeaders.headers().status(HttpResponseStatus.OK.codeAsText());
-                                        ctx.write(responseHeaders, ctx.voidPromise());
+                                        ctx.write(responseHeaders, ctx.newPromise());
                                         ctx.write(new DefaultHttp3DataFrame(ByteBufUtil.encodeString(
                                                 ctx.alloc(), CharBuffer.wrap("foo"), CharsetUtil.UTF_8)),
-                                                ctx.voidPromise());
+                                                ctx.newPromise());
                                         // send a fin, this also flushes
                                         ((DuplexChannel) ctx.channel()).shutdownOutput();
                                     } else {

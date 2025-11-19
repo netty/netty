@@ -65,7 +65,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     private final Channel channel;
     private final ChannelFuture succeededFuture;
-    private final VoidChannelPromise voidPromise;
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
     private Map<EventExecutorGroup, EventExecutor> childExecutors;
@@ -91,7 +90,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     protected DefaultChannelPipeline(Channel channel) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
         succeededFuture = new SucceededChannelFuture(channel, null);
-        voidPromise = new VoidChannelPromise(channel, true);
 
         tail = new TailContext(this);
         head = new HeadContext(this);
@@ -1070,11 +1068,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     @Override
     public final ChannelFuture newFailedFuture(Throwable cause) {
         return new FailedChannelFuture(channel, null, cause);
-    }
-
-    @Override
-    public final ChannelPromise voidPromise() {
-        return voidPromise;
     }
 
     private void checkDuplicateName(String name) {

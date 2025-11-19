@@ -125,23 +125,10 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
             if (size == 1) {
                 ctx.write(out.get(0), promise);
             } else if (size > 1) {
-                // Check if we can use a voidPromise for our extra writes to reduce GC-Pressure
-                // See https://github.com/netty/netty/issues/2525
-                if (promise == ctx.voidPromise()) {
-                    writeVoidPromise(ctx, out);
-                } else {
-                    writePromiseCombiner(ctx, out, promise);
-                }
+                writePromiseCombiner(ctx, out, promise);
             }
         } finally {
             out.clear();
-        }
-    }
-
-    private static void writeVoidPromise(ChannelHandlerContext ctx, List<Object> out) {
-        final ChannelPromise voidPromise = ctx.voidPromise();
-        for (int i = 0; i < out.size(); i++) {
-            ctx.write(out.get(i), voidPromise);
         }
     }
 

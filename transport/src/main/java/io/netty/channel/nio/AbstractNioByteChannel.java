@@ -105,7 +105,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                     shutdownInput();
                     pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
-                    close(voidPromise());
+                    close(newPromise());
                 }
             } else if (!inputClosedSeenErrorOnRead) {
                 inputClosedSeenErrorOnRead = true;

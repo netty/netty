@@ -460,7 +460,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public ChannelFuture bind(final SocketAddress localAddress, final ChannelPromise promise) {
         ObjectUtil.checkNotNull(localAddress, "localAddress");
-        if (isNotValidPromise(promise, false)) {
+        if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
         }
@@ -515,7 +515,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
         ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
 
-        if (isNotValidPromise(promise, false)) {
+        if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
         }
@@ -567,7 +567,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             // So far, UDP/IP is the only transport that has such behavior.
             return close(promise);
         }
-        if (isNotValidPromise(promise, false)) {
+        if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
         }
@@ -614,7 +614,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelFuture close(final ChannelPromise promise) {
-        if (isNotValidPromise(promise, false)) {
+        if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
         }
@@ -662,7 +662,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelFuture deregister(final ChannelPromise promise) {
-        if (isNotValidPromise(promise, false)) {
+        if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
         }
@@ -764,7 +764,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             if (tasks == null) {
                 next.invokeTasks = tasks = new Tasks(next);
             }
-            safeExecute(executor, tasks.invokeFlushTask, channel().voidPromise(), null, false);
+            safeExecute(executor, tasks.invokeFlushTask, channel().newPromise(), null, false);
         }
 
         return this;
@@ -853,7 +853,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private boolean validateWrite(Object msg, ChannelPromise promise) {
         ObjectUtil.checkNotNull(msg, "msg");
         try {
-            if (isNotValidPromise(promise, true)) {
+            if (isNotValidPromise(promise)) {
                 ReferenceCountUtil.release(msg);
                 return false; // cancelled
             }
@@ -872,7 +872,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private static void notifyOutboundHandlerException(Throwable cause, ChannelPromise promise) {
         // Only log if the given promise is not of type VoidChannelPromise as tryFailure(...) is expected to return
         // false.
-        PromiseNotificationUtil.tryFailure(promise, cause, promise instanceof VoidChannelPromise ? null : logger);
+        PromiseNotificationUtil.tryFailure(promise, cause, logger);
     }
 
     @Override
@@ -899,7 +899,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return new FailedChannelFuture(channel(), executor(), cause);
     }
 
-    private boolean isNotValidPromise(ChannelPromise promise, boolean allowVoidPromise) {
+    private boolean isNotValidPromise(ChannelPromise promise) {
         ObjectUtil.checkNotNull(promise, "promise");
 
         if (promise.isDone()) {
@@ -920,11 +920,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
         if (promise.getClass() == DefaultChannelPromise.class) {
             return false;
-        }
-
-        if (!allowVoidPromise && promise instanceof VoidChannelPromise) {
-            throw new IllegalArgumentException(
-                    StringUtil.simpleClassName(VoidChannelPromise.class) + " not allowed for this operation");
         }
 
         if (promise instanceof AbstractChannel.CloseFuture) {
@@ -961,11 +956,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 //
                 // See https://github.com/netty/netty/issues/10067
                 (ctx.executor() == currentExecutor && (ctx.executionMask & mask) == 0);
-    }
-
-    @Override
-    public ChannelPromise voidPromise() {
-        return channel().voidPromise();
     }
 
     final void setRemoved() {

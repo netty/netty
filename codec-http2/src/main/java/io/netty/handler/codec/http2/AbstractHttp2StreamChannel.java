@@ -34,7 +34,6 @@ import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.VoidChannelPromise;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.ChannelOutputShutdownEvent;
@@ -152,7 +151,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
             // Notify the child-channel and close it.
             streamChannel.pipeline().fireExceptionCaught(cause);
-            streamChannel.unsafe().close(streamChannel.unsafe().voidPromise());
+            streamChannel.unsafe().close(streamChannel.newPromise());
         }
     }
 
@@ -559,11 +558,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     @Override
-    public ChannelPromise voidPromise() {
-        return pipeline().voidPromise();
-    }
-
-    @Override
     public int hashCode() {
         return id().hashCode();
     }
@@ -627,12 +621,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
     final void closeWithError(Http2Error error) {
         assert executor().inEventLoop();
-        unsafe.close(unsafe.voidPromise(), error);
+        unsafe.close(newPromise(), error);
     }
 
     private final class Http2ChannelUnsafe implements Unsafe {
-        private final VoidChannelPromise unsafeVoidPromise =
-                new VoidChannelPromise(AbstractHttp2StreamChannel.this, false);
         @SuppressWarnings("deprecation")
         private RecvByteBufAllocator.Handle recvHandle;
         private boolean writeDoneAndNoFlush;
@@ -716,7 +708,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 if (closePromise.isDone()) {
                     // Closed already.
                     promise.setSuccess();
-                } else if (!(promise instanceof VoidChannelPromise)) { // Only needed if no VoidChannelPromise.
+                } else {
                     // This means close() was called before so we just register a listener and return
                     closePromise.addListener(new ChannelFutureListener() {
                         @Override
@@ -744,13 +736,13 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 if (error == null) {
                     if (!readEOS && !(receivedEndOfStream && sentEndOfStream)) {
                         Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(Http2Error.CANCEL).stream(stream());
-                        write(resetFrame, unsafe().voidPromise());
+                        write(resetFrame, newPromise());
                         flush();
                     }
                 } else {
                     // Close was triggered by a stream error, in this case we always want to send a RST frame.
                     Http2StreamFrame resetFrame = new DefaultHttp2ResetFrame(error).stream(stream());
-                    write(resetFrame, unsafe().voidPromise());
+                    write(resetFrame, newPromise());
                     flush();
                 }
             }
@@ -771,12 +763,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             closePromise.setSuccess();
             promise.setSuccess();
 
-            fireChannelInactiveAndDeregister(voidPromise(), wasActive);
+            fireChannelInactiveAndDeregister(newPromise(), wasActive);
         }
 
         @Override
         public void closeForcibly() {
-            close(unsafe().voidPromise());
+            close(newPromise());
         }
 
         @Override
@@ -820,7 +812,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         private void safeSetSuccess(ChannelPromise promise) {
-            if (!(promise instanceof VoidChannelPromise) && !promise.trySuccess()) {
+            if (!promise.trySuccess()) {
                 logger.warn("{} Failed to mark a promise as success because it is done already: {}",
                         promise.channel(), promise);
             }
@@ -1192,11 +1184,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // that are explicit flushed.
             writeDoneAndNoFlush = false;
             flush0(parentContext());
-        }
-
-        @Override
-        public ChannelPromise voidPromise() {
-            return unsafeVoidPromise;
         }
 
         @Override

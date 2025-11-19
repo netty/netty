@@ -446,7 +446,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
         @Override
         public void close() {
-            close(voidPromise());
+            close(newPromise());
         }
 
         @Override
@@ -534,7 +534,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 clearFlag(Native.EPOLLRDHUP);
             } catch (IOException e) {
                 pipeline().fireExceptionCaught(e);
-                close(voidPromise());
+                close(newPromise());
             }
         }
 
@@ -560,7 +560,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                     }
                     pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
                 } else {
-                    close(voidPromise());
+                    close(newPromise());
                     return;
                 }
             }
@@ -573,7 +573,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
         private void fireEventAndClose(Object evt) {
             pipeline().fireUserEventTriggered(evt);
-            close(voidPromise());
+            close(newPromise());
         }
 
         @Override
@@ -629,7 +629,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 // When this happens there is something completely wrong with either the filedescriptor or epoll,
                 // so fire the exception through the pipeline and close the Channel.
                 pipeline().fireExceptionCaught(e);
-                unsafe().close(unsafe().voidPromise());
+                unsafe().close(newPromise());
             }
         }
 
@@ -665,7 +665,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                                         && connectPromise.tryFailure(new ConnectTimeoutException(
                                                 "connection timed out after " + connectTimeoutMillis + " ms: " +
                                                         remoteAddress))) {
-                                    close(voidPromise());
+                                    close(newPromise());
                                 }
                             }
                         }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
@@ -681,7 +681,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                                     connectTimeoutFuture.cancel(false);
                                 }
                                 connectPromise = null;
-                                close(voidPromise());
+                                close(newPromise());
                             }
                         }
                     });
@@ -714,7 +714,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
             // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
             if (!promiseSet) {
-                close(voidPromise());
+                close(newPromise());
             }
         }
 

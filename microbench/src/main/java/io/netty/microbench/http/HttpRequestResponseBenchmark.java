@@ -243,7 +243,7 @@ public class HttpRequestResponseBenchmark extends AbstractMicrobenchmark {
                 headers.set(SERVER_ENTITY, SERVER_NAME);
                 headers.set(DATE_ENTITY, date);
                 headers.set(CONTENT_LENGTH_ENTITY, contentLength);
-                ctx.write(response, ctx.voidPromise());
+                ctx.write(response, ctx.newPromise());
             }
         };
         if (websocket) {

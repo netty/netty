@@ -47,7 +47,7 @@ public class LocalServerChannel extends AbstractServerChannel {
     private final Runnable shutdownHook = new Runnable() {
         @Override
         public void run() {
-            unsafe().close(unsafe().voidPromise());
+            unsafe().close(newPromise());
         }
     };
 
@@ -223,7 +223,7 @@ public class LocalServerChannel extends AbstractServerChannel {
     private class LocalServerUnsafe extends AbstractUnsafe implements LocalIoHandle {
         @Override
         public void close() {
-            close(voidPromise());
+            close(newPromise());
         }
 
         @Override
@@ -248,7 +248,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
         @Override
         public void closeNow() {
-            close(voidPromise());
+            close(newPromise());
         }
     }
 }

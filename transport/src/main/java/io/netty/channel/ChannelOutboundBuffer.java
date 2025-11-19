@@ -256,7 +256,7 @@ public final class ChannelOutboundBuffer {
         assert p != null;
         final Class<?> promiseClass = p.getClass();
         // fast-path to save O(n) ChannelProgressivePromise's type check on OpenJDK
-        if (promiseClass == VoidChannelPromise.class || promiseClass == DefaultChannelPromise.class) {
+        if (promiseClass == DefaultChannelPromise.class) {
             return;
         }
         // this is going to save from type pollution due to https://bugs.openjdk.org/browse/JDK-8180450
@@ -742,15 +742,11 @@ public final class ChannelOutboundBuffer {
     }
 
     private static void safeSuccess(ChannelPromise promise) {
-        // Only log if the given promise is not of type VoidChannelPromise as trySuccess(...) is expected to return
-        // false.
-        PromiseNotificationUtil.trySuccess(promise, null, promise instanceof VoidChannelPromise ? null : logger);
+        PromiseNotificationUtil.trySuccess(promise, null, logger);
     }
 
     private static void safeFail(ChannelPromise promise, Throwable cause) {
-        // Only log if the given promise is not of type VoidChannelPromise as tryFailure(...) is expected to return
-        // false.
-        PromiseNotificationUtil.tryFailure(promise, cause, promise instanceof VoidChannelPromise ? null : logger);
+        PromiseNotificationUtil.tryFailure(promise, cause, logger);
     }
 
     @Deprecated

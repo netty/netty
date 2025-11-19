@@ -274,7 +274,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
                 public void write(Object msg, ChannelPromise promise) {
                     if (msg instanceof QuicStreamFrame && ((QuicStreamFrame) msg).hasFin()) {
                         // Mimic the API.
-                        promise = promise.unvoid().addListener(f -> outputShutdown = 0);
+                        promise.addListener(f -> outputShutdown = 0);
                     }
                     superUnsafe.write(msg, promise);
                 }
@@ -282,11 +282,6 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
                 @Override
                 public void flush() {
                     superUnsafe.flush();
-                }
-
-                @Override
-                public ChannelPromise voidPromise() {
-                    return superUnsafe.voidPromise();
                 }
 
                 @Override

@@ -112,7 +112,7 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
                 if (closed) {
                     inputShutdown = true;
                     if (isOpen()) {
-                        close(voidPromise());
+                        close(newPromise());
                     }
                 }
             } finally {
