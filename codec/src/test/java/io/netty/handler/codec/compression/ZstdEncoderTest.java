@@ -49,6 +49,14 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
     }
 
+    public static ByteBuf[] hugeData() {
+        final byte[] bytesHuge = new byte[36 * 1024 * 1024];
+        ByteBuf heap = Unpooled.wrappedBuffer(bytesHuge);
+        ByteBuf direct = Unpooled.directBuffer(bytesHuge.length);
+        direct.writeBytes(bytesHuge);
+        return new ByteBuf[] {heap, direct};
+    }
+
     @Override
     public EmbeddedChannel createChannel() {
         return new EmbeddedChannel(new ZstdEncoder());
@@ -57,6 +65,16 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     @ParameterizedTest
     @MethodSource("largeData")
     public void testCompressionOfLargeBatchedFlow(final ByteBuf data) throws Exception {
+        testCompressionOfLargeDataBatchedFlow(data);
+    }
+
+    @ParameterizedTest
+    @MethodSource("hugeData")
+    public void testCompressionOfHugeBatchedFlow(final ByteBuf data) throws Exception {
+        testCompressionOfLargeDataBatchedFlow(data);
+    }
+
+    private void testCompressionOfLargeDataBatchedFlow(final ByteBuf data) throws Exception {
         final int dataLength = data.readableBytes();
         int written = 0;
 
