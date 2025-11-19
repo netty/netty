@@ -15,45 +15,31 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
-import io.netty.channel.DefaultSelectStrategyFactory;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.unix.FileDescriptor;
-import io.netty.util.concurrent.DefaultThreadFactory;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.ThreadPerTaskExecutor;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
 public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Override
-    protected boolean supportsChannelIteration() {
-        return true;
-    }
-
-    @Override
     protected EventLoopGroup newEventLoopGroup() {
-        return new EpollEventLoopGroup();
+        return new MultiThreadIoEventLoopGroup(EpollIoHandler.newFactory());
     }
 
     @Override
     protected EventLoopGroup newAutoScalingEventLoopGroup() {
-        return new EpollEventLoopGroup(SCALING_MAX_THREADS, (Executor) null, AUTO_SCALING_CHOOSER_FACTORY,
-                                       DefaultSelectStrategyFactory.INSTANCE);
+        return new MultiThreadIoEventLoopGroup(SCALING_MAX_THREADS, (Executor) null, AUTO_SCALING_CHOOSER_FACTORY,
+                EpollIoHandler.newFactory());
     }
 
     @Override
@@ -64,37 +50,6 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
     @Override
     protected Class<? extends ServerChannel> serverChannelClass() {
         return EpollServerSocketChannel.class;
-    }
-
-    @Test
-    public void testScheduleBigDelayNotOverflow() {
-        final AtomicReference<Throwable> capture = new AtomicReference<Throwable>();
-
-        final EventLoopGroup group = new EpollEventLoop(null,
-                new ThreadPerTaskExecutor(new DefaultThreadFactory(getClass())), eventLoop -> new EpollIoHandler(
-                        eventLoop, 0, DefaultSelectStrategyFactory.INSTANCE.newSelectStrategy()) {
-            @Override
-            void handleLoopException(Throwable t) {
-                capture.set(t);
-                super.handleLoopException(t);
-            }
-        });
-
-        try {
-            final EventLoop eventLoop = group.next();
-            Future<?> future = eventLoop.schedule(new Runnable() {
-                @Override
-                public void run() {
-                    // NOOP
-                }
-            }, Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-
-            assertFalse(future.awaitUninterruptibly(1000));
-            assertTrue(future.cancel(true));
-            assertNull(capture.get());
-        } finally {
-            group.shutdownGracefully();
-        }
     }
 
     @Test

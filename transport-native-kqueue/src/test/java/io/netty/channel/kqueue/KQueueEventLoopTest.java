@@ -15,9 +15,9 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
@@ -33,19 +33,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Override
-    protected boolean supportsChannelIteration() {
-        return true;
-    }
-
-    @Override
     protected EventLoopGroup newEventLoopGroup() {
-        return new KQueueEventLoopGroup();
+        return new MultiThreadIoEventLoopGroup(1, KQueueIoHandler.newFactory());
     }
 
     @Override
     protected EventLoopGroup newAutoScalingEventLoopGroup() {
-        return new KQueueEventLoopGroup(SCALING_MAX_THREADS, (Executor) null, AUTO_SCALING_CHOOSER_FACTORY,
-                                        DefaultSelectStrategyFactory.INSTANCE);
+        return new MultiThreadIoEventLoopGroup(SCALING_MAX_THREADS, (Executor) null, AUTO_SCALING_CHOOSER_FACTORY,
+                KQueueIoHandler.newFactory());
     }
 
     @Override
@@ -60,7 +55,7 @@ public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
 
     @Test
     public void testScheduleBigDelayNotOverflow() {
-        EventLoopGroup group = new KQueueEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, KQueueIoHandler.newFactory());
 
         final EventLoop el = group.next();
         Future<?> future = el.schedule(new Runnable() {

@@ -18,6 +18,7 @@ package io.netty.channel.epoll;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SelectStrategy;
 import io.netty.channel.SelectStrategyFactory;
 import io.netty.testsuite.transport.TestsuitePermutation;
@@ -38,8 +39,8 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
 
     @BeforeAll
     public static void setup() throws Exception {
-        EPOLL_LOOP = new EpollEventLoopGroup(2, new DefaultThreadFactory("testsuite-epoll-busy-wait", true),
-                new SelectStrategyFactory() {
+        EPOLL_LOOP = new MultiThreadIoEventLoopGroup(2, new DefaultThreadFactory("testsuite-epoll-busy-wait", true),
+                EpollIoHandler.newFactory(1024, new SelectStrategyFactory() {
                     @Override
                     public SelectStrategy newSelectStrategy() {
                         return new SelectStrategy() {
@@ -49,7 +50,7 @@ public class EpollSocketStringEchoBusyWaitTest extends SocketStringEchoTest {
                             }
                         };
                     }
-                });
+                }));
     }
 
     @AfterAll

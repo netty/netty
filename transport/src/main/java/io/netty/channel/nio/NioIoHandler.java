@@ -234,7 +234,7 @@ public final class NioIoHandler implements IoHandler {
     }
 
     /**
-     * Returns the {@link SelectorProvider} used by this {@link NioEventLoop} to obtain the {@link Selector}.
+     * Returns the {@link SelectorProvider} used by this {@link NioIoHandler} to obtain the {@link Selector}.
      */
     public SelectorProvider selectorProvider() {
         return provider;
