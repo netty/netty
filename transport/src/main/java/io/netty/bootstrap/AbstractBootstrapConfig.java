@@ -16,6 +16,7 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -47,7 +48,6 @@ public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C>,
     /**
      * Returns the configured {@link ChannelFactory} or {@code null} if non is configured yet.
      */
-    @SuppressWarnings("deprecation")
     public final ChannelFactory<? extends C> channelFactory() {
         return bootstrap.channelFactory();
     }
