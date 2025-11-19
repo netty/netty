@@ -22,13 +22,17 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -73,6 +77,18 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     @MethodSource("smallData")
     public void testCompressionOfSmallBatchedFlow(final ByteBuf data) throws Exception {
         testCompressionOfBatchedFlow(data);
+    }
+
+    @Test
+    public void testCompressionOfTinyData() throws Exception {
+        ByteBuf data = Unpooled.copiedBuffer("Hello, World", CharsetUtil.UTF_8);
+        assertTrue(channel.writeOutbound(data));
+        assertTrue(channel.finish());
+
+        ByteBuf out = channel.readOutbound();
+        assertThat(out.readableBytes()).isPositive();
+        out.release();
+        assertNull(channel.readOutbound());
     }
 
     @Override
