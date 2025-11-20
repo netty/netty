@@ -107,7 +107,7 @@ OpenSslCredential ecdsaCred = buildEcdsaCredential();
 
 SslContext ctx = SslContextBuilder.forServer(rsaKey, rsaCert)
     .sslProvider(SslProvider.OPENSSL_REFCNT)
-    .credential(ecdsaCred)  // NEW!
+    .credential(ecdsaCred)
     .build();
 ```
 
