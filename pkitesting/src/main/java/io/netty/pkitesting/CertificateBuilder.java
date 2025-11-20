@@ -445,6 +445,25 @@ public final class CertificateBuilder {
     }
 
     /**
+     * Set the key algorithm by name. Supported values are "RSA" and "EC".
+     * This is a convenience method for tests that allows specifying algorithm by string.
+     *
+     * @param algorithmName the key algorithm name ("RSA" or "EC")
+     * @return This certificate builder.
+     */
+    public CertificateBuilder keyAlgorithm(String algorithmName) {
+        requireNonNull(algorithmName, "algorithmName");
+        if ("RSA".equalsIgnoreCase(algorithmName)) {
+            return algorithm(Algorithm.rsa2048);
+        } else if ("EC".equalsIgnoreCase(algorithmName)) {
+            return algorithm(Algorithm.ecp256);
+        } else {
+            throw new IllegalArgumentException("Unsupported key algorithm: " + algorithmName +
+                    ". Supported values are 'RSA' and 'EC'");
+        }
+    }
+
+    /**
      * Instruct the certificate builder to not generate its own key pair, but to instead create a certificate that
      * uses the given public key.
      * <p>

@@ -201,6 +201,7 @@ public final class SslContextBuilder {
     private PrivateKey key;
     private String keyPassword;
     private KeyManagerFactory keyManagerFactory;
+    private List<OpenSslCredential> credentials;
     private Iterable<String> ciphers;
     private CipherSuiteFilter cipherFilter = IdentityCipherSuiteFilter.INSTANCE;
     private ApplicationProtocolConfig apn;
@@ -498,6 +499,74 @@ public final class SslContextBuilder {
     }
 
     /**
+     * Adds a single {@link OpenSslCredential} to this context.
+     *
+     * <p>Credentials provide a more flexible alternative to traditional certificate/key configuration,
+     * supporting features like multiple credentials per context (e.g., RSA + ECDSA),
+     * OCSP stapling, SCT, and more.
+     *
+     * <p>This is a BoringSSL-specific feature and only works with {@link SslProvider#OPENSSL}
+     * or {@link SslProvider#OPENSSL_REFCNT}.
+     *
+     * @param credential the credential to add
+     * @return this builder for chaining
+     * @see OpenSslCredentialBuilder
+     */
+    public SslContextBuilder credential(OpenSslCredential credential) {
+        if (this.credentials == null) {
+            this.credentials = new ArrayList<>();
+        }
+        this.credentials.add(requireNonNull(credential, "credential"));
+        return this;
+    }
+
+    /**
+     * Adds multiple {@link OpenSslCredential}s to this context.
+     *
+     * <p>This is useful for multi-certificate scenarios, such as serving both RSA and ECDSA
+     * certificates to support different client capabilities.
+     *
+     * <p>This is a BoringSSL-specific feature and only works with {@link SslProvider#OPENSSL}
+     * or {@link SslProvider#OPENSSL_REFCNT}.
+     *
+     * @param credentials the credentials to add
+     * @return this builder for chaining
+     * @see OpenSslCredentialBuilder
+     */
+    public SslContextBuilder credentials(OpenSslCredential... credentials) {
+        requireNonNull(credentials, "credentials");
+        if (this.credentials == null) {
+            this.credentials = new ArrayList<>(credentials.length);
+        }
+        for (OpenSslCredential credential : credentials) {
+            this.credentials.add(requireNonNull(credential, "credential"));
+        }
+        return this;
+    }
+
+    /**
+     * Adds multiple {@link OpenSslCredential}s to this context.
+     *
+     * <p>This is a BoringSSL-specific feature and only works with {@link SslProvider#OPENSSL}
+     * or {@link SslProvider#OPENSSL_REFCNT}.
+     *
+     * @param credentials the credentials to add
+     * @return this builder for chaining
+     * @see OpenSslCredentialBuilder
+     */
+    public SslContextBuilder credentials(Iterable<? extends OpenSslCredential> credentials) {
+        requireNonNull(credentials, "credentials");
+        if (this.credentials == null) {
+            this.credentials = new ArrayList<>();
+        }
+        for (OpenSslCredential credential : credentials) {
+            this.credentials.add(requireNonNull(credential, "credential"));
+        }
+        return this;
+    }
+
+
+    /**
      * A single key manager managing the identity information of this host.
      * This is helpful when custom implementation of {@link KeyManager} is needed.
      * Internally, a wrapper of {@link KeyManagerFactory} that only produces this specified
@@ -674,13 +743,15 @@ public final class SslContextBuilder {
             return SslContext.newServerContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, secureRandom, keyStoreType, toArray(options.entrySet(), EMPTY_ENTRIES));
+                enableOcsp, secureRandom, keyStoreType, toArray(options.entrySet(), EMPTY_ENTRIES),
+                credentials);
         } else {
             return SslContext.newClientContextInternal(provider, sslContextProvider, trustCertCollection,
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize,
                     sessionTimeout, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
-                    serverNames, toArray(options.entrySet(), EMPTY_ENTRIES));
+                    serverNames, toArray(options.entrySet(), EMPTY_ENTRIES),
+                    credentials);
         }
     }
 
