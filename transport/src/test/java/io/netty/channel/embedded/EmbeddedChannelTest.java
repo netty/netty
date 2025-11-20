@@ -633,7 +633,7 @@ public class EmbeddedChannelTest {
         channel.deregister().addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {
-                embeddedEventLoop.register(channel);
+                channel.register(embeddedEventLoop);
             }
         });
 

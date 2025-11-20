@@ -16,6 +16,7 @@
 package io.netty.channel;
 
 import io.netty.util.concurrent.EventExecutorGroup;
+import io.netty.util.concurrent.Future;
 
 /**
  * Special {@link EventExecutorGroup} which allows registering {@link Channel}s that get
@@ -30,23 +31,34 @@ public interface EventLoopGroup extends EventExecutorGroup {
     EventLoop next();
 
     /**
-     * Register a {@link Channel} with this {@link EventLoop}. The returned {@link ChannelFuture}
-     * will get notified once the registration was complete.
-     */
-    ChannelFuture register(Channel channel);
-
-    /**
-     * Register a {@link Channel} with this {@link EventLoop} using a {@link ChannelFuture}. The passed
-     * {@link ChannelFuture} will get notified once the registration was complete and also will get returned.
-     */
-    ChannelFuture register(ChannelPromise promise);
-
-    /**
-     * Register a {@link Channel} with this {@link EventLoop}. The passed {@link ChannelFuture}
-     * will get notified once the registration was complete and also will get returned.
+     * Register the {@link IoHandle} to the {@link EventLoop} for I/O processing.
      *
-     * @deprecated Use {@link #register(ChannelPromise)} instead.
+     * @param handle        the {@link IoHandle} to register.
+     * @return              the {@link Future} that is notified once the operations completes.
      */
-    @Deprecated
-    ChannelFuture register(Channel channel, ChannelPromise promise);
+    default Future<IoRegistration> register(IoHandle handle) {
+        return next().register(handle);
+    }
+
+    /**
+     * Returns {@code true} if the given type is compatible with this {@link EventLoopGroup} and so can be registered
+     * to the contained {@link EventLoop}s, {@code false} otherwise.
+     *
+     * @param handleType    the type of the {@link IoHandle}.
+     * @return              if compatible of not.
+     */
+    default boolean isCompatible(Class<? extends IoHandle> handleType) {
+        return next().isCompatible(handleType);
+    }
+
+    /**
+     * Returns {@code true} if the given {@link IoHandler} type is used by this {@link EventLoopGroup},
+     * {@code false} otherwise.
+     *
+     * @param handlerType the type of the {@link IoHandler}.
+     * @return            if used or not.
+     */
+    default boolean isIoType(Class<? extends IoHandler> handlerType) {
+        return next().isIoType(handlerType);
+    }
 }

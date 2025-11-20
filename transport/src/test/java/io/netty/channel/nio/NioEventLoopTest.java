@@ -19,8 +19,6 @@ import io.netty.channel.AbstractEventLoopTest;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.IoEventLoop;
-import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -113,12 +111,12 @@ public class NioEventLoopTest extends AbstractEventLoopTest {
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
     public void testSelectableChannel() throws Exception {
-        IoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
-        IoEventLoop loop = group.next();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        EventLoop loop = group.next();
 
         try {
             Channel channel = new NioServerSocketChannel();
-            loop.register(channel).syncUninterruptibly();
+            channel.register(loop).syncUninterruptibly();
             channel.bind(new InetSocketAddress(0)).syncUninterruptibly();
 
             SocketChannel selectableChannel = SocketChannel.open();

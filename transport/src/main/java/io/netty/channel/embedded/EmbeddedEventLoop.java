@@ -15,12 +15,11 @@
  */
 package io.netty.channel.embedded;
 
-import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoHandle;
+import io.netty.channel.IoHandler;
+import io.netty.channel.IoRegistration;
 import io.netty.util.concurrent.AbstractScheduledEventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.MockTicker;
@@ -138,22 +137,18 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     }
 
     @Override
-    public ChannelFuture register(Channel channel) {
-        return register(new DefaultChannelPromise(channel, this));
+    public Future<IoRegistration> register(IoHandle handle) {
+        return null;
     }
 
     @Override
-    public ChannelFuture register(ChannelPromise promise) {
-        ObjectUtil.checkNotNull(promise, "promise");
-        promise.channel().unsafe().register(this, promise);
-        return promise;
+    public boolean isCompatible(Class<? extends IoHandle> handleType) {
+        return handleType == EmbeddedChannel.EmbeddedUnsafe.class;
     }
 
-    @Deprecated
     @Override
-    public ChannelFuture register(Channel channel, ChannelPromise promise) {
-        channel.unsafe().register(this, promise);
-        return promise;
+    public boolean isIoType(Class<? extends IoHandler> handlerType) {
+        return false;
     }
 
     @Override

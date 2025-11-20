@@ -18,10 +18,11 @@ package io.netty.channel.pool;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.DefaultEventLoop;
-import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
@@ -42,16 +43,16 @@ public class FixedChannelPoolMapDeadlockTest {
     @Test
     public void testDeadlockOnAcquire() throws Exception {
 
-        final EventLoop threadA1 = new DefaultEventLoop();
+        final EventLoopGroup threadA1 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         final Bootstrap bootstrapA1 = new Bootstrap()
                 .channel(LocalChannel.class).group(threadA1).localAddress(new LocalAddress("A1"));
-        final EventLoop threadA2 = new DefaultEventLoop();
+        final EventLoopGroup threadA2 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         final Bootstrap bootstrapA2 = new Bootstrap()
                 .channel(LocalChannel.class).group(threadA2).localAddress(new LocalAddress("A2"));
-        final EventLoop threadB1 = new DefaultEventLoop();
+        final EventLoopGroup threadB1 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         final Bootstrap bootstrapB1 = new Bootstrap()
                 .channel(LocalChannel.class).group(threadB1).localAddress(new LocalAddress("B1"));
-        final EventLoop threadB2 = new DefaultEventLoop();
+        final EventLoopGroup threadB2 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         final Bootstrap bootstrapB2 = new Bootstrap()
                 .channel(LocalChannel.class).group(threadB2).localAddress(new LocalAddress("B2"));
 
@@ -78,22 +79,22 @@ public class FixedChannelPoolMapDeadlockTest {
                 // Thread B2 gets a new pool on eventexecutor thread A2
 
                 if ("A".equals(key)) {
-                    if (threadA1.inEventLoop()) {
+                    if (threadA1.next().inEventLoop()) {
                         // Thread A1 gets pool A with thread A1
                         await(arrivalBarrier);
                         return poolA1;
-                    } else if (threadA2.inEventLoop()) {
+                    } else if (threadA2.next().inEventLoop()) {
                         // Thread A2 gets pool A with thread B2, but only after A1 won
                         await(arrivalBarrier);
                         await(releaseBarrier);
                         return poolA2;
                     }
                 } else if ("B".equals(key)) {
-                    if (threadB1.inEventLoop()) {
+                    if (threadB1.next().inEventLoop()) {
                         // Thread B1 gets pool with thread B1
                         await(arrivalBarrier);
                         return poolB1;
-                    } else if (threadB2.inEventLoop()) {
+                    } else if (threadB2.next().inEventLoop()) {
                         // Thread B2 gets pool with thread A2
                         await(arrivalBarrier);
                         await(releaseBarrier);
@@ -176,10 +177,10 @@ public class FixedChannelPoolMapDeadlockTest {
     @Test
     public void testDeadlockOnRemove() throws Exception {
 
-        final EventLoop thread1 = new DefaultEventLoop();
+        final EventLoopGroup thread1 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         final Bootstrap bootstrap1 = new Bootstrap()
                 .channel(LocalChannel.class).group(thread1).localAddress(new LocalAddress("#1"));
-        final EventLoop thread2 = new DefaultEventLoop();
+        final EventLoopGroup thread2 = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         final Bootstrap bootstrap2 = new Bootstrap()
                 .channel(LocalChannel.class).group(thread2).localAddress(new LocalAddress("#2"));
 
@@ -249,8 +250,8 @@ public class FixedChannelPoolMapDeadlockTest {
         }
     }
 
-    private static void shutdown(EventLoop... eventLoops) {
-        for (EventLoop eventLoop : eventLoops) {
+    private static void shutdown(EventLoopGroup... eventLoops) {
+        for (EventLoopGroup eventLoop : eventLoops) {
             eventLoop.shutdownGracefully(0, 0, TimeUnit.SECONDS);
         }
     }

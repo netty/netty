@@ -327,8 +327,9 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
         }
 
-        final ChannelFuture regFuture = config().group().register(channel);
-        if (regFuture.cause() != null) {
+        EventLoop loop = config().group().next();
+        ChannelFuture reqFut = channel.register(loop);
+        if (reqFut.cause() != null) {
             if (channel.isRegistered()) {
                 channel.close();
             } else {
@@ -345,7 +346,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         //         because bind() or connect() will be executed *after* the scheduled registration task is executed
         //         because register(), bind(), and connect() are all bound to the same thread.
 
-        return regFuture;
+        return reqFut;
     }
 
     abstract void init(Channel channel) throws Exception;

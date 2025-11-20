@@ -22,14 +22,11 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
-import io.netty.channel.IoEventLoop;
-import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
-import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.net.SocketAddress;
@@ -88,8 +85,7 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof SingleThreadEventLoop ||
-                (loop instanceof IoEventLoopGroup && ((IoEventLoopGroup) loop).isCompatible(LocalServerUnsafe.class));
+        return loop.isCompatible(LocalServerUnsafe.class);
     }
 
     @Override
@@ -100,25 +96,15 @@ public class LocalServerChannel extends AbstractServerChannel {
     @Override
     protected void doRegister(ChannelPromise promise) {
         EventLoop loop = executor();
-        if (loop instanceof IoEventLoop) {
-            assert registration == null;
-            ((IoEventLoop) loop).register((LocalServerUnsafe) unsafe()).addListener(f -> {
-                if (f.isSuccess()) {
-                    registration = (IoRegistration) f.getNow();
-                    promise.setSuccess();
-                } else {
-                    promise.setFailure(f.cause());
-                }
-            });
-        } else {
-            try {
-                ((LocalServerUnsafe) unsafe()).registered();
-            } catch (Throwable cause) {
-                promise.setFailure(cause);
-                return;
+        assert registration == null;
+        loop.register((LocalServerUnsafe) unsafe()).addListener(f -> {
+            if (f.isSuccess()) {
+                registration = (IoRegistration) f.getNow();
+                promise.setSuccess();
+            } else {
+                promise.setFailure(f.cause());
             }
-            promise.setSuccess();
-        }
+        });
     }
 
     @Override
@@ -141,15 +127,10 @@ public class LocalServerChannel extends AbstractServerChannel {
 
     @Override
     protected void doDeregister() throws Exception {
-        EventLoop loop = executor();
-        if (loop instanceof IoEventLoop) {
-            IoRegistration registration = this.registration;
-            if (registration != null) {
-                this.registration = null;
-                registration.cancel();
-            }
-        } else {
-            ((LocalServerUnsafe) unsafe()).unregistered();
+        IoRegistration registration = this.registration;
+        if (registration != null) {
+            this.registration = null;
+            registration.cancel();
         }
     }
 

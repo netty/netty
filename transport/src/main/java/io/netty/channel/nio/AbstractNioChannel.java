@@ -28,8 +28,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
-import io.netty.channel.IoEventLoop;
-import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.IoRegistration;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
@@ -452,14 +450,14 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof IoEventLoop && ((IoEventLoopGroup) loop).isCompatible(AbstractNioUnsafe.class);
+        return loop.isCompatible(AbstractNioUnsafe.class);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     protected void doRegister(ChannelPromise promise) {
         assert registration == null;
-        ((IoEventLoop) executor()).register((AbstractNioUnsafe) unsafe()).addListener(f -> {
+        executor().register((AbstractNioUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
                 promise.setSuccess();

@@ -18,7 +18,7 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 import org.junit.jupiter.api.Assertions;
@@ -44,7 +44,7 @@ public class IoUringAutoReadTest {
     @Test
     @Timeout(value = 1, unit = TimeUnit.MINUTES)
     public void testLateAutoRead() throws Exception {
-        IoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
         try {
             ServerSocketChannel server = (ServerSocketChannel) new ServerBootstrap()
                     .group(group)

@@ -186,7 +186,7 @@ public final class Http2StreamChannelBootstrap {
             return;
         }
 
-        ChannelFuture future = ctx.channel().executor().register(streamChannel);
+        ChannelFuture future = streamChannel.register(ctx.channel().executor());
         future.addListener(new ChannelFutureListener() {
             @Override
             public void operationComplete(ChannelFuture future) {

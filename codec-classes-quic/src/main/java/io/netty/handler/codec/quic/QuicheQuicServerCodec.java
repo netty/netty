@@ -273,7 +273,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
 
         addChannel(channel);
 
-        ctx.channel().executor().register(channel);
+        channel.register(ctx.channel().executor());
         return channel;
     }
 

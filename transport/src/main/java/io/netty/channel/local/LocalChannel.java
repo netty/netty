@@ -26,11 +26,9 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
-import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
@@ -147,8 +145,7 @@ public class LocalChannel extends AbstractChannel {
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof SingleThreadEventLoop ||
-                (loop instanceof IoEventLoop && ((IoEventLoop) loop).isCompatible(LocalUnsafe.class));
+        return loop.isCompatible(LocalUnsafe.class);
     }
 
     @Override
@@ -164,37 +161,24 @@ public class LocalChannel extends AbstractChannel {
     @Override
     protected void doRegister(ChannelPromise promise) {
         EventLoop loop = executor();
-        if (loop instanceof IoEventLoop) {
-            assert registration == null;
-            ((IoEventLoop) loop).register((LocalUnsafe) unsafe()).addListener(f -> {
-               if (f.isSuccess()) {
-                   registration = (IoRegistration) f.getNow();
-                   promise.setSuccess();
-               } else {
-                   promise.setFailure(f.cause());
-               }
-            });
-        } else {
-            try {
-                ((LocalUnsafe) unsafe()).registered();
-            } catch (Throwable cause) {
-                promise.setFailure(cause);
+        assert registration == null;
+        loop.register((LocalUnsafe) unsafe()).addListener(f -> {
+            if (f.isSuccess()) {
+                registration = (IoRegistration) f.getNow();
+                promise.setSuccess();
+            } else {
+                promise.setFailure(f.cause());
             }
-            promise.setSuccess();
-        }
+        });
     }
 
     @Override
     protected void doDeregister() throws Exception {
         EventLoop loop = executor();
-        if (loop instanceof IoEventLoop) {
-            IoRegistration registration = this.registration;
-            if (registration != null) {
-                this.registration = null;
-                registration.cancel();
-            }
-        } else {
-            ((LocalUnsafe) unsafe()).unregistered();
+        IoRegistration registration = this.registration;
+        if (registration != null) {
+            this.registration = null;
+            registration.cancel();
         }
     }
 

@@ -435,7 +435,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 if (msg instanceof QuicStreamChannel) {
                     QuicStreamChannel channel = (QuicStreamChannel) msg;
                     Quic.setupChannel(channel, streamOptionsArray, streamAttrsArray, streamHandler, logger);
-                    ctx.channel().executor().register(channel);
+                    channel.register(ctx.channel().executor());
                 } else {
                     super.onUnhandledInboundMessage(ctx, msg);
                 }
@@ -1499,7 +1499,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             if (handler != null) {
                 streamChannel.pipeline().addLast(handler);
             }
-            executor().register(streamChannel).addListener((ChannelFuture f) -> {
+            streamChannel.register(executor()).addListener((ChannelFuture f) -> {
                 if (f.isSuccess()) {
                     promise.setSuccess(streamChannel);
                 } else {

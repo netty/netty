@@ -20,20 +20,19 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.channel.DefaultEventLoop;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.IoHandle;
+import io.netty.channel.IoHandler;
+import io.netty.channel.IoOps;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
-import io.netty.channel.ServerChannel;
+import io.netty.channel.SingleThreadEventLoop;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
@@ -46,6 +45,7 @@ import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -53,7 +53,6 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.net.ConnectException;
 import java.net.SocketAddress;
-import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -62,9 +61,8 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -202,83 +200,6 @@ public class BootstrapTest {
 
         for (Future<?> f: bindFutures) {
             f.sync();
-        }
-    }
-
-    @Test
-    public void testLateRegisterSuccess() throws Exception {
-        TestEventLoopGroup group = new TestEventLoopGroup();
-        try {
-            ServerBootstrap bootstrap = new ServerBootstrap();
-            bootstrap.group(group);
-            bootstrap.channel(LocalServerChannel.class);
-            bootstrap.childHandler(new DummyHandler());
-            bootstrap.localAddress(new LocalAddress("1"));
-            ChannelFuture future = bootstrap.bind();
-            assertFalse(future.isDone());
-            group.promise.setSuccess();
-            final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<Boolean>();
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    queue.add(future.channel().executor().inEventLoop(Thread.currentThread()));
-                    queue.add(future.isSuccess());
-                }
-            });
-            assertTrue(queue.take());
-            assertTrue(queue.take());
-        } finally {
-            group.shutdownGracefully();
-            group.terminationFuture().sync();
-        }
-    }
-
-    @Test
-    public void testLateRegisterSuccessBindFailed() throws Exception {
-        TestEventLoopGroup group = new TestEventLoopGroup();
-        try {
-            ServerBootstrap bootstrap = new ServerBootstrap();
-            bootstrap.group(group);
-            bootstrap.channelFactory(new ChannelFactory<ServerChannel>() {
-                @Override
-                public ServerChannel newChannel() {
-                    return new LocalServerChannel() {
-                        @Override
-                        public ChannelFuture bind(SocketAddress localAddress) {
-                            // Close the Channel to emulate what NIO and others impl do on bind failure
-                            // See https://github.com/netty/netty/issues/2586
-                            close();
-                            return newFailedFuture(new SocketException());
-                        }
-
-                        @Override
-                        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-                            // Close the Channel to emulate what NIO and others impl do on bind failure
-                            // See https://github.com/netty/netty/issues/2586
-                            close();
-                            return promise.setFailure(new SocketException());
-                        }
-                    };
-                }
-            });
-            bootstrap.childHandler(new DummyHandler());
-            bootstrap.localAddress(new LocalAddress("1"));
-            ChannelFuture future = bootstrap.bind();
-            assertFalse(future.isDone());
-            group.promise.setSuccess();
-            final BlockingQueue<Boolean> queue = new LinkedBlockingQueue<Boolean>();
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    queue.add(future.channel().executor().inEventLoop(Thread.currentThread()));
-                    queue.add(future.isSuccess());
-                }
-            });
-            assertTrue(queue.take());
-            assertFalse(queue.take());
-        } finally {
-            group.shutdownGracefully();
-            group.terminationFuture().sync();
         }
     }
 
@@ -490,48 +411,75 @@ public class BootstrapTest {
         expectedChannel.close().sync();
     }
 
-    private static final class DelayedEventLoopGroup extends DefaultEventLoop {
+    private static final class DelayedEventLoopGroup extends TestEventLoop {
+
         @Override
-        public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
+        public Future<IoRegistration> register(IoHandle handle) {
+            Promise<IoRegistration> promise = newPromise();
             // Delay registration
             execute(new Runnable() {
                 @Override
                 public void run() {
-                    DelayedEventLoopGroup.super.register(channel, promise);
+                    PromiseNotifier.cascade(DelayedEventLoopGroup.super.register(handle), promise);
                 }
             });
             return promise;
         }
     }
 
-    private static final class TestEventLoopGroup extends MultithreadEventLoopGroup {
+    private static class TestEventLoop extends SingleThreadEventLoop {
 
-        ChannelPromise promise;
+        TestEventLoop() {
+            super(null, Executors.defaultThreadFactory(), true);
+        }
+        @Override
+        protected void run() {
+            for (;;) {
+                Runnable task = takeTask();
+                if (task != null) {
+                    runTask(task);
+                    updateLastExecutionTime();
+                }
 
-        TestEventLoopGroup() {
-            super(1, (ThreadFactory) null);
+                if (confirmShutdown()) {
+                    break;
+                }
+            }
         }
 
         @Override
-        public ChannelFuture register(Channel channel) {
-            super.register(channel).syncUninterruptibly();
-            promise = channel.newPromise();
-            return promise;
+        public Future<IoRegistration> register(IoHandle handle) {
+            return newSucceededFuture(new IoRegistration() {
+                @Override
+                public <T> T attachment() {
+                    return null;
+                }
+
+                @Override
+                public long submit(IoOps ops) {
+                    return 0;
+                }
+
+                @Override
+                public boolean isValid() {
+                    return false;
+                }
+
+                @Override
+                public boolean cancel() {
+                    return false;
+                }
+            });
         }
 
         @Override
-        public ChannelFuture register(ChannelPromise promise) {
-            throw new UnsupportedOperationException();
+        public boolean isCompatible(Class<? extends IoHandle> handleType) {
+            return true;
         }
 
         @Override
-        public ChannelFuture register(Channel channel, final ChannelPromise promise) {
-            throw new UnsupportedOperationException();
-        }
-
-        @Override
-        protected EventLoop newChild(Executor executor, Object... args) throws Exception {
-            return new DefaultEventLoop(executor);
+        public boolean isIoType(Class<? extends IoHandler> handlerType) {
+            return true;
         }
     }
 

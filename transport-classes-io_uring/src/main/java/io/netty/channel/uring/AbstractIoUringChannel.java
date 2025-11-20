@@ -31,7 +31,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
-import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
@@ -221,7 +220,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected boolean isCompatible(final EventLoop loop) {
-        return loop instanceof IoEventLoop && ((IoEventLoop) loop).isCompatible(AbstractUringUnsafe.class);
+        return loop.isCompatible(AbstractUringUnsafe.class);
     }
 
     protected final ByteBuf newDirectBuffer(ByteBuf buf) {
@@ -1209,7 +1208,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected void doRegister(ChannelPromise promise) {
-        IoEventLoop eventLoop = (IoEventLoop) executor();
+        EventLoop eventLoop = executor();
         eventLoop.register(ioUringUnsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();

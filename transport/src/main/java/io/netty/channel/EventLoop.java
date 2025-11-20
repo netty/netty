@@ -15,6 +15,7 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.OrderedEventExecutor;
 
 /**
@@ -27,4 +28,15 @@ import io.netty.util.concurrent.OrderedEventExecutor;
 public interface EventLoop extends OrderedEventExecutor, EventLoopGroup {
     @Override
     EventLoopGroup parent();
+
+    // Force sub-classes to implement.
+    @Override
+    Future<IoRegistration> register(IoHandle handle);
+
+    @Override
+    boolean isCompatible(Class<? extends IoHandle> handleType);
+
+    // Force sub-classes to implement.
+    @Override
+    boolean isIoType(Class<? extends IoHandler> handlerType);
 }

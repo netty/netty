@@ -26,10 +26,11 @@ import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -62,7 +63,7 @@ public class Http2MultiplexCodecBuilderTest {
 
     @BeforeAll
     public static void init() {
-        group = new DefaultEventLoop();
+        group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
     }
 
     @BeforeEach

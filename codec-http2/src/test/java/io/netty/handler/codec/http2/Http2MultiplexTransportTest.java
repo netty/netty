@@ -28,12 +28,12 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.DefaultEventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -770,7 +770,7 @@ public class Http2MultiplexTransportTest {
         try {
             final CountDownLatch clientReceivedResponseLatch = new CountDownLatch(1);
             final CountDownLatch resetFrameLatch = new CountDownLatch(1);
-            group = new DefaultEventLoop();
+            group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
             LocalAddress serverAddress = new LocalAddress(getClass().getName());
             ServerBootstrap sb = new ServerBootstrap()
                     .channel(LocalServerChannel.class)

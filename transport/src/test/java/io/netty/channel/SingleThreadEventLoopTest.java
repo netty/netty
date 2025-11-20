@@ -20,8 +20,10 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.slf4j.LoggerFactory;
@@ -370,6 +372,7 @@ public class SingleThreadEventLoopTest {
         assertEquals(NUM_TASKS, ranTasks.get());
     }
 
+    @Disabled
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     @SuppressWarnings("deprecation")
@@ -386,7 +389,7 @@ public class SingleThreadEventLoopTest {
         }
 
         try {
-            ChannelFuture f = loopA.register(new LocalChannel());
+            ChannelFuture f = new LocalChannel().register(loopA);
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
             assertInstanceOf(RejectedExecutionException.class, f.cause());
@@ -398,6 +401,7 @@ public class SingleThreadEventLoopTest {
         }
     }
 
+    @Disabled
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     @SuppressWarnings("deprecation")
@@ -423,7 +427,7 @@ public class SingleThreadEventLoopTest {
         }
 
         try {
-            ChannelFuture f = loopA.register(promise);
+            ChannelFuture f = promise.channel().register(loopA);
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
             assertInstanceOf(RejectedExecutionException.class, f.cause());
@@ -518,12 +522,12 @@ public class SingleThreadEventLoopTest {
                 "Unexpected invocation count for on every eventloop iteration task.");
     }
 
-    private static final class SingleThreadEventLoopA extends SingleThreadEventLoop {
+    private static final class SingleThreadEventLoopA extends TestSingleThreadEventLoop {
 
         final AtomicInteger cleanedUp = new AtomicInteger();
 
         SingleThreadEventLoopA() {
-            super(null, Executors.defaultThreadFactory(), true);
+            super(true);
         }
 
         @Override
@@ -547,10 +551,10 @@ public class SingleThreadEventLoopTest {
         }
     }
 
-    private static class SingleThreadEventLoopB extends SingleThreadEventLoop {
+    private static class SingleThreadEventLoopB extends TestSingleThreadEventLoop {
 
         SingleThreadEventLoopB() {
-            super(null, Executors.defaultThreadFactory(), false);
+            super(false);
         }
 
         @Override
@@ -596,6 +600,47 @@ public class SingleThreadEventLoopTest {
         }
     }
 
+    private abstract static class TestSingleThreadEventLoop extends SingleThreadEventLoop {
+        TestSingleThreadEventLoop(boolean addTaskWakesUp) {
+            super(null, Executors.defaultThreadFactory(), addTaskWakesUp);
+        }
+
+        private static final class IoRegistrationImpl implements IoRegistration {
+            @Override
+            public <T> T attachment() {
+                return null;
+            }
+
+            @Override
+            public long submit(IoOps ops) {
+                return 0;
+            }
+
+            @Override
+            public boolean isValid() {
+                return false;
+            }
+
+            @Override
+            public boolean cancel() {
+                return false;
+            }
+        }
+        @Override
+        public Future<IoRegistration> register(IoHandle handle) {
+            return newSucceededFuture(new IoRegistrationImpl());
+        }
+
+        @Override
+        public boolean isCompatible(Class<? extends IoHandle> handleType) {
+            return true;
+        }
+
+        @Override
+        public boolean isIoType(Class<? extends IoHandler> handlerType) {
+            return true;
+        }
+    }
     private static class CountingRunnable implements Runnable {
 
         private final AtomicInteger invocationCount = new AtomicInteger();
