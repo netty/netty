@@ -28,10 +28,11 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.DefaultMaxMessagesRecvByteBufAllocator;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
@@ -49,6 +50,7 @@ import java.net.ConnectException;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -73,9 +75,9 @@ public class LocalChannelTest {
 
     @BeforeAll
     public static void beforeClass() {
-        group1 = new DefaultEventLoopGroup(2);
-        group2 = new DefaultEventLoopGroup(2);
-        sharedGroup = new DefaultEventLoopGroup(1);
+        group1 = new MultiThreadIoEventLoopGroup(2, LocalIoHandler.newFactory());
+        group2 = new MultiThreadIoEventLoopGroup(2, LocalIoHandler.newFactory());
+        sharedGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
     }
 
     @AfterAll
@@ -228,7 +230,7 @@ public class LocalChannelTest {
     @Test
     public void localChannelRaceCondition() throws Exception {
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        final EventLoopGroup clientGroup = new DefaultEventLoopGroup(1) {
+        final EventLoopGroup clientGroup = new MultithreadEventLoopGroup(1, (ThreadFactory) null) {
             @Override
             protected EventLoop newChild(Executor threadFactory, Object... args)
                     throws Exception {

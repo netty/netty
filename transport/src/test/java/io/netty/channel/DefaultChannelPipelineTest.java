@@ -58,7 +58,6 @@ import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -1162,7 +1161,7 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline1 = new LocalChannel().pipeline();
         ChannelPipeline pipeline2 = new LocalChannel().pipeline();
 
-        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(2);
+        EventLoopGroup defaultGroup = new MultiThreadIoEventLoopGroup(2, LocalIoHandler.newFactory());
         try {
             EventLoop eventLoop1 = defaultGroup.next();
             EventLoop eventLoop2 = defaultGroup.next();
@@ -1260,7 +1259,7 @@ public class DefaultChannelPipelineTest {
     public void testUnorderedEventExecutor() throws Throwable {
         ChannelPipeline pipeline1 = new LocalChannel().pipeline();
         EventExecutorGroup eventExecutors = new UnorderedThreadPoolEventExecutor(2);
-        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(1);
+        EventLoopGroup defaultGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         try {
             EventLoop eventLoop1 = defaultGroup.next();
             eventLoop1.register(pipeline1.channel()).syncUninterruptibly();
@@ -1330,7 +1329,7 @@ public class DefaultChannelPipelineTest {
     public void testVoidPromiseNotify() {
         ChannelPipeline pipeline1 = new LocalChannel().pipeline();
 
-        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(1);
+        EventLoopGroup defaultGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         EventLoop eventLoop1 = defaultGroup.next();
         final Promise<Throwable> promise = eventLoop1.newPromise();
         final Exception exception = new IllegalArgumentException();
