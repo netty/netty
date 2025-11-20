@@ -19,6 +19,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
 
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -37,7 +38,7 @@ public class KQueueServerSocketChannelConfigTest {
 
     @BeforeAll
     public static void before() {
-        group = new KQueueEventLoopGroup(1);
+        group = new MultiThreadIoEventLoopGroup(1, KQueueIoHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
         ch = (KQueueServerSocketChannel) bootstrap.group(group)
                 .channel(KQueueServerSocketChannel.class)

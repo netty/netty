@@ -21,7 +21,7 @@ import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_COMPRESSI
 import static io.netty.handler.codec.compression.ZstdConstants.MIN_COMPRESSION_LEVEL;
 import static io.netty.handler.codec.compression.ZstdConstants.MAX_COMPRESSION_LEVEL;
 import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_BLOCK_SIZE;
-import static io.netty.handler.codec.compression.ZstdConstants.MAX_BLOCK_SIZE;
+import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_MAX_ENCODE_SIZE;
 
 /**
  * {@link ZstdOptions} holds compressionLevel for
@@ -36,9 +36,10 @@ public class ZstdOptions implements CompressionOptions {
     /**
      * Default implementation of {@link ZstdOptions} with{compressionLevel(int)} set to
      * {@link ZstdConstants#DEFAULT_COMPRESSION_LEVEL},{@link ZstdConstants#DEFAULT_BLOCK_SIZE},
-     * {@link ZstdConstants#MAX_BLOCK_SIZE}
+     * {@link ZstdConstants#DEFAULT_MAX_ENCODE_SIZE}
      */
-    static final ZstdOptions DEFAULT = new ZstdOptions(DEFAULT_COMPRESSION_LEVEL, DEFAULT_BLOCK_SIZE, MAX_BLOCK_SIZE);
+    static final ZstdOptions DEFAULT = new ZstdOptions(DEFAULT_COMPRESSION_LEVEL, DEFAULT_BLOCK_SIZE,
+            DEFAULT_MAX_ENCODE_SIZE);
 
     /**
      * Create a new {@link ZstdOptions}

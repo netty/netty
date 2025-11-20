@@ -1186,11 +1186,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private void submitConnect(DomainSocketAddress unixDomainSocketAddress) {
         cleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_SOCKADDR_UN);
         remoteAddressMemory = cleanable.buffer();
-        SockaddrIn.setUds(remoteAddressMemory, unixDomainSocketAddress);
+        int addrLen = SockaddrIn.setUds(remoteAddressMemory, unixDomainSocketAddress);
         int fd = fd().intValue();
         IoRegistration registration = registration();
         long addr = Buffer.memoryAddress(remoteAddressMemory);
-        IoUringIoOps ops = IoUringIoOps.newConnect(fd, (byte) 0, addr, Native.SIZEOF_SOCKADDR_UN, nextOpsId());
+        IoUringIoOps ops = IoUringIoOps.newConnect(fd, (byte) 0, addr, addrLen, nextOpsId());
         connectId = registration.submit(ops);
         if (connectId == 0) {
             // Directly release the memory if submitting failed.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 The Netty Project
+ * Copyright 2025 The Netty Project
  *
  * The Netty Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,23 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.handler.codec.compression;
+package io.netty.channel.uring;
 
-import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.testsuite.transport.TestsuitePermutation;
 
-import static io.netty.handler.codec.compression.ZstdConstants.DEFAULT_MAX_ENCODE_SIZE;
+import java.net.SocketAddress;
+import java.util.List;
 
-public class ZstdIntegrationTest extends AbstractIntegrationTest {
-
-    private static final int BLOCK_SIZE = 1 << 20;
-
+public class IoUringDomainSocketAbstractEchoTest extends IoUringSocketEchoTest {
     @Override
-    protected EmbeddedChannel createEncoder() {
-        return new EmbeddedChannel(new ZstdEncoder(BLOCK_SIZE, DEFAULT_MAX_ENCODE_SIZE));
+    protected SocketAddress newSocketAddress() {
+        return IoUringSocketTestPermutation.newAbstractSocketAddress();
     }
 
     @Override
-    protected EmbeddedChannel createDecoder() {
-        return new EmbeddedChannel(new ZstdDecoder());
+    protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
+        return IoUringSocketTestPermutation.INSTANCE.domainSocket();
     }
 }
