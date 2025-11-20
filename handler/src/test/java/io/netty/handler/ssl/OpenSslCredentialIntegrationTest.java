@@ -13,11 +13,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.handler.ssl;
+package io.netty.handler.ssl;
 
-import io.netty5.handler.ssl.util.InsecureTrustManagerFactory;
-import io.netty5.pkitesting.CertificateBuilder;
-import io.netty5.pkitesting.X509Bundle;
+import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -29,7 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty5.buffer.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty.buffer.DefaultBufferAllocators.offHeapAllocator;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -82,13 +82,13 @@ public class OpenSslCredentialIntegrationTest {
     @Test
     public void testHandshakeWithMultipleCredentials() throws Exception {
         // Create both RSA and ECDSA credentials
-        OpenSslCredential rsaCredential = OpenSslCredentialBuilder.newX509()
+        OpenSslCredential rsaCredential = OpenSslCredentialBuilder.forX509()
                 .privateKey(rsaCert.getKeyPair().getPrivate())
                 .certificateChain(rsaCert.getCertificate())
                 .build();
         credentialsToRelease.add(rsaCredential);
 
-        OpenSslCredential ecdsaCredential = OpenSslCredentialBuilder.newX509()
+        OpenSslCredential ecdsaCredential = OpenSslCredentialBuilder.forX509()
                 .privateKey(ecdsaCert.getKeyPair().getPrivate())
                 .certificateChain(ecdsaCert.getCertificate())
                 .build();
@@ -123,7 +123,7 @@ public class OpenSslCredentialIntegrationTest {
 
     @Test
     public void testEngineAddCredential() throws Exception {
-        OpenSslCredential credential = OpenSslCredentialBuilder.newX509()
+        OpenSslCredential credential = OpenSslCredentialBuilder.forX509()
                 .privateKey(rsaCert.getKeyPair().getPrivate())
                 .certificateChain(rsaCert.getCertificate())
                 .build();

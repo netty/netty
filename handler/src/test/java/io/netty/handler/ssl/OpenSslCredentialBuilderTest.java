@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.handler.ssl;
+package io.netty.handler.ssl;
 
-import io.netty5.pkitesting.CertificateBuilder;
-import io.netty5.pkitesting.X509Bundle;
+import io.netty.pkitesting.CertificateBuilder;
+import io.netty.pkitesting.X509Bundle;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
@@ -45,23 +45,12 @@ public class OpenSslCredentialBuilderTest {
 
     @Test
     public void testBuildWithAllOptions() throws Exception {
-        byte[] mockOcsp = new byte[]{0x30, 0x03, 0x0a, 0x01, 0x00};
-        byte[] mockSct = new byte[]{0x00, 0x01, 0x02, 0x03};
-        byte[] mockProps = new byte[]{0x00, 0x00};
         byte[] mockTrustAnchor = new byte[]{0x01, 0x02};
-        int[] sigAlgPrefs = new int[]{0x0804, 0x0403};
-        byte[] mockDc = new byte[]{0x00, 0x01, 0x02, 0x03}; // Mock delegated credential
 
-
-        OpenSslCredential credential = OpenSslCredentialBuilder.newX509()
+        OpenSslCredential credential = OpenSslCredentialBuilder.forX509()
                 .privateKey(cert.getKeyPair().getPrivate())
                 .certificateChain(cert.getCertificate())
-                .ocspResponse(mockOcsp)
-                .signedCertificateTimestamps(mockSct)
-                .signingAlgorithmPreferences(sigAlgPrefs)
-                .certificateProperties(mockProps)
                 .trustAnchorId(mockTrustAnchor)
-                .delegatedCredential(mockDc)
                 .mustMatchIssuer(true)
                 .build();
 
@@ -74,7 +63,7 @@ public class OpenSslCredentialBuilderTest {
         // Building without a private key should throw
         Exception exception = assertThrows(
                 IllegalStateException.class,
-                () -> OpenSslCredentialBuilder.newX509()
+                () -> OpenSslCredentialBuilder.forX509()
                         .certificateChain(cert.getCertificate())
                         .build()
         );
@@ -86,7 +75,7 @@ public class OpenSslCredentialBuilderTest {
         // Building without a cert chain should throw
         Exception exception = assertThrows(
                 IllegalStateException.class,
-                () -> OpenSslCredentialBuilder.newX509()
+                () -> OpenSslCredentialBuilder.forX509()
                         .privateKey(cert.getKeyPair().getPrivate())
                         .build()
         );

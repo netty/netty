@@ -36,21 +36,16 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  *
  * <p>This builder provides a fluent API for configuring SSL credentials with support for:
  * <ul>
- *   <li>X.509 and delegated credentials</li>
+ *   <li>X.509 credentials</li>
  *   <li>Certificate chains and private keys</li>
- *   <li>OCSP stapling</li>
- *   <li>Signed Certificate Timestamps (SCT)</li>
- *   <li>Signing algorithm preferences</li>
- *   <li>Trust anchor identifiers</li>
- *   <li>Certificate properties</li>
+ *   <li>Trust anchor identifiers (optional)</li>
  * </ul>
  *
  * <p>Example usage:
  * <pre>
- * OpenSslCredential credential = OpenSslCredentialBuilder.newX509()
+ * OpenSslCredential credential = OpenSslCredentialBuilder.forX509()
  *     .privateKey(privateKey)
  *     .certificateChain(cert1, cert2, cert3)
- *     .ocspResponse(ocspBytes)
  *     .build();
  * </pre>
  *
@@ -58,20 +53,13 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  */
 public final class OpenSslCredentialBuilder {
 
-    private final CredentialType type;
     private PrivateKey privateKey;
     private OpenSslPrivateKey openSslPrivateKey;
     private X509Certificate[] certificateChain;
-    private byte[] ocspResponse;
-    private byte[] signedCertificateTimestamps;
-    private int[] signingAlgorithmPrefs;
-    private byte[] certificateProperties;
     private byte[] trustAnchorId;
     private boolean mustMatchIssuer;
-    private byte[] delegatedCredential;
 
-    private OpenSslCredentialBuilder(CredentialType type) {
-        this.type = type;
+    private OpenSslCredentialBuilder() {
     }
 
     /**
@@ -79,18 +67,8 @@ public final class OpenSslCredentialBuilder {
      *
      * @return a new builder instance
      */
-    public static OpenSslCredentialBuilder newX509() {
-        return new OpenSslCredentialBuilder(CredentialType.X509);
-    }
-
-    /**
-     * Creates a new builder for a delegated credential.
-     *
-     * @return a new builder instance
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc9345">RFC 9345 - Delegated Credentials for TLS</a>
-     */
-    public static OpenSslCredentialBuilder newDelegated() {
-        return new OpenSslCredentialBuilder(CredentialType.DELEGATED);
+    public static OpenSslCredentialBuilder forX509() {
+        return new OpenSslCredentialBuilder();
     }
 
     /**
@@ -130,52 +108,6 @@ public final class OpenSslCredentialBuilder {
     }
 
     /**
-     * Sets the OCSP response to be stapled with this credential.
-     *
-     * @param ocspResponse the DER-encoded OCSP response
-     * @return this builder for chaining
-     */
-    public OpenSslCredentialBuilder ocspResponse(byte[] ocspResponse) {
-        this.ocspResponse = checkNotNull(ocspResponse, "ocspResponse").clone();
-        return this;
-    }
-
-    /**
-     * Sets the Signed Certificate Timestamp list for this credential.
-     *
-     * @param scts the encoded SCT list
-     * @return this builder for chaining
-     */
-    public OpenSslCredentialBuilder signedCertificateTimestamps(byte[] scts) {
-        this.signedCertificateTimestamps = checkNotNull(scts, "scts").clone();
-        return this;
-    }
-
-    /**
-     * Sets the signing algorithm preferences for this credential.
-     *
-     * @param prefs the signing algorithm identifiers (TLS 1.3 signature scheme values)
-     * @return this builder for chaining
-     * @see <a href="https://www.iana.org/assignments/tls-parameters/tls-parameters.xhtml#tls-signaturescheme">
-     *      TLS SignatureScheme Registry</a>
-     */
-    public OpenSslCredentialBuilder signingAlgorithmPreferences(int... prefs) {
-        this.signingAlgorithmPrefs = checkNotNull(prefs, "prefs").clone();
-        return this;
-    }
-
-    /**
-     * Sets the certificate properties for this credential.
-     *
-     * @param properties the encoded certificate properties
-     * @return this builder for chaining
-     */
-    public OpenSslCredentialBuilder certificateProperties(byte[] properties) {
-        this.certificateProperties = checkNotNull(properties, "properties").clone();
-        return this;
-    }
-
-    /**
      * Sets the trust anchor identifier for this credential.
      *
      * @param trustAnchorId the trust anchor identifier
@@ -194,17 +126,6 @@ public final class OpenSslCredentialBuilder {
      */
     public OpenSslCredentialBuilder mustMatchIssuer(boolean mustMatchIssuer) {
         this.mustMatchIssuer = mustMatchIssuer;
-        return this;
-    }
-
-    /**
-     * Sets the delegated credential for this credential.
-     *
-     * @param delegatedCredential the encoded delegated credential
-     * @return this builder for chaining
-     */
-    public OpenSslCredentialBuilder delegatedCredential(byte[] delegatedCredential) {
-        this.delegatedCredential = checkNotNull(delegatedCredential, "delegatedCredential").clone();
         return this;
     }
 
@@ -258,22 +179,6 @@ public final class OpenSslCredentialBuilder {
             }
 
             // Set optional properties
-            if (ocspResponse != null) {
-                SSLCredential.setOcspResponse(credentialPtr, ocspResponse);
-            }
-
-            if (signedCertificateTimestamps != null) {
-                SSLCredential.setSignedCertTimestampList(credentialPtr, signedCertificateTimestamps);
-            }
-
-            if (signingAlgorithmPrefs != null) {
-                SSLCredential.setSigningAlgorithmPrefs(credentialPtr, signingAlgorithmPrefs);
-            }
-
-            if (certificateProperties != null) {
-                SSLCredential.setCertificateProperties(credentialPtr, certificateProperties);
-            }
-
             if (trustAnchorId != null) {
                 SSLCredential.setTrustAnchorId(credentialPtr, trustAnchorId);
             }
@@ -282,14 +187,10 @@ public final class OpenSslCredentialBuilder {
                 SSLCredential.setMustMatchIssuer(credentialPtr, true);
             }
 
-            if (delegatedCredential != null) {
-                SSLCredential.setDelegatedCredential(credentialPtr, delegatedCredential);
-            }
-
             // Success - create the wrapper object
             long finalPtr = credentialPtr;
             credentialPtr = 0; // Don't free on cleanup
-            return new DefaultOpenSslCredential(finalPtr, type);
+            return new DefaultOpenSslCredential(finalPtr, CredentialType.X509);
 
         } catch (Exception e) {
             throw new IllegalStateException("Failed to build SSL credential", e);
@@ -313,14 +214,7 @@ public final class OpenSslCredentialBuilder {
     }
 
     private long createCredential() throws Exception {
-        switch (type) {
-            case X509:
-                return SSLCredential.newX509();
-            case DELEGATED:
-                return SSLCredential.newDelegated();
-            default:
-                throw new IllegalStateException("Unknown credential type: " + type);
-        }
+        return SSLCredential.newX509();
     }
 
     private long getPrivateKeyPointer() throws Exception {
