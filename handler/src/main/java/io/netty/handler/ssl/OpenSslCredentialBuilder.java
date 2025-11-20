@@ -167,13 +167,13 @@ public final class OpenSslCredentialBuilder {
             credentialPtr = createCredential();
 
             // Set private key if provided
-            if (privateKey != null || openSslPrivateKey != null) {
+            if (hasPrivateKey) {
                 privateKeyPtr = getPrivateKeyPointer();
                 SSLCredential.setPrivateKey(credentialPtr, privateKeyPtr);
             }
 
             // Set certificate chain if provided
-            if (certificateChain != null && certificateChain.length > 0) {
+            if (hasCertChain) {
                 certChainPtr = createCertChainPointer();
                 SSLCredential.setCertChain(credentialPtr, certChainPtr);
             }
@@ -237,10 +237,6 @@ public final class OpenSslCredentialBuilder {
     }
 
     private long createCertChainPointer() throws Exception {
-        if (certificateChain == null || certificateChain.length == 0) {
-            throw new IllegalStateException("No certificate chain specified");
-        }
-
         // Convert certificate chain to PEM format and parse
         try {
             long bio = ReferenceCountedOpenSslContext.toBIO(
