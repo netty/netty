@@ -15,7 +15,6 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -40,7 +39,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
                 InetAddress.getByAddress("ns1", new byte[] { 10, 0, 0, 1 }), 53);
         InetSocketAddress resolved2 = new InetSocketAddress(
                 InetAddress.getByAddress("ns2", new byte[] { 10, 0, 0, 2 }), 53);
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
         try {
             EventLoop loop = group.next();
@@ -154,7 +153,7 @@ public class DefaultAuthoritativeDnsServerCacheTest {
         InetSocketAddress unresolved = InetSocketAddress.createUnresolved("ns1", 53);
         InetSocketAddress resolved = new InetSocketAddress(
                 InetAddress.getByAddress("ns2", new byte[] { 10, 0, 0, 2 }), 53);
-        EventLoopGroup group = new DefaultEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
 
         try {
             EventLoop loop = group.next();

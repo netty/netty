@@ -21,11 +21,12 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import org.junit.jupiter.api.Test;
 
@@ -44,7 +45,7 @@ public class HAProxyIntegrationTest {
         final AtomicReference<HAProxyMessage> msgHolder = new AtomicReference<HAProxyMessage>();
         LocalAddress localAddress = new LocalAddress("HAProxyIntegrationTest");
 
-        EventLoopGroup group = new DefaultEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
         ServerBootstrap sb = new ServerBootstrap();
         sb.channel(LocalServerChannel.class)
           .group(group)

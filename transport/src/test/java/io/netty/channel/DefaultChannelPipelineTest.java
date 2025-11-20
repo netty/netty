@@ -972,7 +972,7 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline1 = new LocalChannel().pipeline();
         ChannelPipeline pipeline2 = new LocalChannel().pipeline();
 
-        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(2);
+        EventLoopGroup defaultGroup = new MultiThreadIoEventLoopGroup(2, LocalIoHandler.newFactory());
         try {
             EventLoop eventLoop1 = defaultGroup.next();
             EventLoop eventLoop2 = defaultGroup.next();

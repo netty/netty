@@ -29,9 +29,10 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.codec.http2.Http2TestUtil.FrameCountDown;
 import io.netty.handler.codec.http2.Http2TestUtil.Http2Runnable;
@@ -1194,7 +1195,7 @@ public class Http2ConnectionRoundtripTest {
 
         final AtomicReference<Http2ConnectionHandler> serverHandlerRef = new AtomicReference<Http2ConnectionHandler>();
         final CountDownLatch serverInitLatch = new CountDownLatch(1);
-        sb.group(new DefaultEventLoopGroup());
+        sb.group(new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory()));
         sb.channel(LocalServerChannel.class);
         sb.childHandler(new ChannelInitializer<Channel>() {
             @Override
@@ -1214,7 +1215,7 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        cb.group(new DefaultEventLoopGroup());
+        cb.group(new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory()));
         cb.channel(LocalChannel.class);
         cb.handler(new ChannelInitializer<Channel>() {
             @Override
