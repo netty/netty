@@ -16,6 +16,7 @@
 package io.netty5.handler.ssl;
 
 import io.netty.internal.tcnative.SSL;
+import io.netty.internal.tcnative.SSLContext;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SNIServerName;
@@ -23,6 +24,7 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -35,6 +37,7 @@ import static io.netty5.handler.ssl.ReferenceCountedOpenSslClientContext.newSess
  */
 final class OpenSslClientContext extends OpenSslContext {
     private final OpenSslSessionContext sessionContext;
+    private final List<OpenSslCredential> credentials = new ArrayList<>();
 
     OpenSslClientContext(X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
                          X509Certificate[] keyCertChain, PrivateKey key, String keyPassword,
@@ -43,7 +46,8 @@ final class OpenSslClientContext extends OpenSslContext {
                          long sessionCacheSize, long sessionTimeout, boolean enableOcsp, String keyStore,
                          String endpointIdentificationAlgorithm, List<SNIServerName> serverName,
                          ResumptionController resumptionController,
-                         Map.Entry<SslContextOption<?>, Object>... options)
+                         Map.Entry<SslContextOption<?>, Object>[] options,
+                         List<OpenSslCredential> credentialList)
             throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_CLIENT, keyCertChain, ClientAuth.NONE, protocols, false,
                 enableOcsp, endpointIdentificationAlgorithm, serverName, resumptionController, options);
@@ -53,12 +57,41 @@ final class OpenSslClientContext extends OpenSslContext {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
                                                sessionCacheSize, sessionTimeout, resumptionController);
+
+            // Add credentials if provided
+            if (credentialList != null && !credentialList.isEmpty()) {
+                for (OpenSslCredential credential : credentialList) {
+                    addCredential(credential);
+                }
+            }
+
             success = true;
         } finally {
             if (!success) {
                 release();
             }
         }
+    }
+
+    private void addCredential(OpenSslCredential credential) throws SSLException {
+        try {
+            credential.retain();
+            credentials.add(credential);
+            SSLContext.addCredential(ctx, credential.credentialAddress());
+        } catch (Exception e) {
+            credential.release();
+            credentials.remove(credential);
+            throw new SSLException("Failed to add credential to SSL context", e);
+        }
+    }
+
+    @Override
+    protected void destroy() {
+        for (OpenSslCredential credential : credentials) {
+            credential.release();
+        }
+        credentials.clear();
+        super.destroy();
     }
 
     @Override

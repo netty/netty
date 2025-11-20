@@ -16,12 +16,15 @@
 package io.netty5.handler.ssl;
 
 import io.netty.internal.tcnative.SSL;
+import io.netty.internal.tcnative.SSLContext;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManagerFactory;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static io.netty5.handler.ssl.ReferenceCountedOpenSslServerContext.newSessionContext;
@@ -33,6 +36,7 @@ import static io.netty5.handler.ssl.ReferenceCountedOpenSslServerContext.newSess
  */
 final class OpenSslServerContext extends OpenSslContext {
     private final OpenSslServerSessionContext sessionContext;
+    private final List<OpenSslCredential> credentials = new ArrayList<>();
 
     OpenSslServerContext(
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
@@ -40,11 +44,12 @@ final class OpenSslServerContext extends OpenSslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, String keyStore, ResumptionController resumptionController,
-            Map.Entry<SslContextOption<?>, Object>... options)
+            Map.Entry<SslContextOption<?>, Object>[] options,
+            List<OpenSslCredential> credentialList)
             throws SSLException {
         this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
                 cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, keyStore, resumptionController, options);
+                enableOcsp, keyStore, resumptionController, options, credentialList);
     }
 
     @SuppressWarnings("deprecation")
@@ -54,7 +59,8 @@ final class OpenSslServerContext extends OpenSslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, String keyStore, ResumptionController resumptionController,
-            Map.Entry<SslContextOption<?>, Object>... options)
+            Map.Entry<SslContextOption<?>, Object>[] options,
+            List<OpenSslCredential> credentialList)
             throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_SERVER, keyCertChain,
                 clientAuth, protocols, startTls, enableOcsp, null, null, resumptionController, options);
@@ -65,12 +71,41 @@ final class OpenSslServerContext extends OpenSslContext {
             sessionContext = newSessionContext(this, ctx, engineMap, trustCertCollection, trustManagerFactory,
                                                keyCertChain, key, keyPassword, keyManagerFactory, keyStore,
                                                sessionCacheSize, sessionTimeout, resumptionController);
+
+            // Add credentials if provided
+            if (credentialList != null && !credentialList.isEmpty()) {
+                for (OpenSslCredential credential : credentialList) {
+                    addCredential(credential);
+                }
+            }
+
             success = true;
         } finally {
             if (!success) {
                 release();
             }
         }
+    }
+
+    private void addCredential(OpenSslCredential credential) throws SSLException {
+        try {
+            credential.retain();
+            credentials.add(credential);
+            SSLContext.addCredential(ctx, credential.credentialAddress());
+        } catch (Exception e) {
+            credential.release();
+            credentials.remove(credential);
+            throw new SSLException("Failed to add credential to SSL context", e);
+        }
+    }
+
+    @Override
+    protected void destroy() {
+        for (OpenSslCredential credential : credentials) {
+            credential.release();
+        }
+        credentials.clear();
+        super.destroy();
     }
 
     @Override

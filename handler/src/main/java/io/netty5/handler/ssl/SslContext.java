@@ -444,7 +444,7 @@ public abstract class SslContext {
                                             toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter, apn,
                                             sessionCacheSize, sessionTimeout, ClientAuth.NONE, null,
-                                            false, false, null, keyStore);
+                                            false, false, null, keyStore, null, null);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -461,7 +461,8 @@ public abstract class SslContext {
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, SecureRandom secureRandom, String keyStoreType,
-            Map.Entry<SslContextOption<?>, Object>... ctxOptions)
+            Map.Entry<SslContextOption<?>, Object>[] ctxOptions,
+            List<OpenSslCredential> credentials)
             throws SSLException {
 
         if (provider == null) {
@@ -490,13 +491,15 @@ public abstract class SslContext {
             return new OpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions);
+                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions,
+                    credentials);
         case OPENSSL_REFCNT:
             verifyNullSslContextProvider(provider, sslContextProvider);
             return new ReferenceCountedOpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions);
+                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions,
+                    credentials);
         default:
             throw new Error(provider.toString());
         }
@@ -813,7 +816,7 @@ public abstract class SslContext {
                                             toX509Certificates(keyCertChainFile), toPrivateKey(keyFile, keyPassword),
                                             keyPassword, keyManagerFactory, ciphers, cipherFilter,
                                             apn, null, sessionCacheSize, sessionTimeout, false,
-                                            null, KeyStore.getDefaultType(), "HTTPS", null);
+                                            null, KeyStore.getDefaultType(), "HTTPS", null, null, null);
         } catch (Exception e) {
             if (e instanceof SSLException) {
                 throw (SSLException) e;
@@ -831,7 +834,8 @@ public abstract class SslContext {
             long sessionCacheSize, long sessionTimeout, boolean enableOcsp,
             SecureRandom secureRandom, String keyStoreType, String endpointIdentificationAlgorithm,
             List<SNIServerName> serverNames,
-            Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
+            Map.Entry<SslContextOption<?>, Object>[] options,
+            List<OpenSslCredential> credentials) throws SSLException {
         if (provider == null) {
             provider = defaultClientProvider();
         }
@@ -861,7 +865,7 @@ public abstract class SslContext {
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
                         enableOcsp, keyStoreType, endpointIdentificationAlgorithm, serverNames, resumptionController,
-                        options);
+                        options, credentials);
             case OPENSSL_REFCNT:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 OpenSsl.ensureAvailability();
@@ -869,7 +873,7 @@ public abstract class SslContext {
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
                         enableOcsp, keyStoreType, endpointIdentificationAlgorithm, serverNames, resumptionController,
-                        options);
+                        options, credentials);
             default:
                 throw new Error(provider.toString());
         }

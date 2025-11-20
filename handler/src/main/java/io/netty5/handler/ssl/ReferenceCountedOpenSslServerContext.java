@@ -32,6 +32,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static java.util.Objects.requireNonNull;
@@ -48,6 +50,7 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
     private static final Logger logger = LoggerFactory.getLogger(ReferenceCountedOpenSslServerContext.class);
     private static final byte[] ID = {'n', 'e', 't', 't', 'y'};
     private final OpenSslServerSessionContext sessionContext;
+    private final List<OpenSslCredential> credentials = new ArrayList<>();
 
     ReferenceCountedOpenSslServerContext(
             X509Certificate[] trustCertCollection, TrustManagerFactory trustManagerFactory,
@@ -55,10 +58,11 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, ApplicationProtocolConfig apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, String keyStore, ResumptionController resumptionController,
-            Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
+            Map.Entry<SslContextOption<?>, Object>[] options,
+            List<OpenSslCredential> credentials) throws SSLException {
         this(trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory, ciphers,
                 cipherFilter, toNegotiator(apn), sessionCacheSize, sessionTimeout, clientAuth, protocols, startTls,
-                enableOcsp, keyStore, resumptionController, options);
+                enableOcsp, keyStore, resumptionController, options, credentials);
     }
 
     ReferenceCountedOpenSslServerContext(
@@ -67,7 +71,8 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             Iterable<String> ciphers, CipherSuiteFilter cipherFilter, OpenSslApplicationProtocolNegotiator apn,
             long sessionCacheSize, long sessionTimeout, ClientAuth clientAuth, String[] protocols, boolean startTls,
             boolean enableOcsp, String keyStore, ResumptionController resumptionController,
-            Map.Entry<SslContextOption<?>, Object>... options) throws SSLException {
+            Map.Entry<SslContextOption<?>, Object>[] options,
+            List<OpenSslCredential> credentials) throws SSLException {
         super(ciphers, cipherFilter, apn, SSL.SSL_MODE_SERVER, keyCertChain,
                 clientAuth, protocols, startTls,
                 enableOcsp, true,
@@ -83,12 +88,43 @@ public final class ReferenceCountedOpenSslServerContext extends ReferenceCounted
             if (SERVER_ENABLE_SESSION_TICKET) {
                 sessionContext.setTicketKeys();
             }
+
+            // Add credentials if provided
+            if (credentials != null && !credentials.isEmpty()) {
+                for (OpenSslCredential credential : credentials) {
+                    addCredential(credential);
+                }
+            }
+
             success = true;
         } finally {
             if (!success) {
                 release();
             }
         }
+    }
+
+    private void addCredential(OpenSslCredential credential) throws SSLException {
+        try {
+            // Retain the credential for the lifetime of this context
+            credential.retain();
+            credentials.add(credential);
+            SSLContext.addCredential(ctx, credential.credentialAddress());
+        } catch (Exception e) {
+            credential.release();
+            credentials.remove(credential);
+            throw new SSLException("Failed to add credential to SSL context", e);
+        }
+    }
+
+    @Override
+    protected void destroy() {
+        // Release all credentials
+        for (OpenSslCredential credential : credentials) {
+            credential.release();
+        }
+        credentials.clear();
+        super.destroy();
     }
 
     @Override
