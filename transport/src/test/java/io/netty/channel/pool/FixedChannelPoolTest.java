@@ -21,10 +21,11 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.pool.FixedChannelPool.AcquireTimeoutAction;
 import io.netty.util.concurrent.Future;
@@ -57,7 +58,7 @@ public class FixedChannelPoolTest {
 
     @BeforeAll
     public static void createEventLoop() {
-        group = new DefaultEventLoopGroup();
+        group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
     }
 
     @AfterAll

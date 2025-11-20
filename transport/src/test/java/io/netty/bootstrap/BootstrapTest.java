@@ -29,11 +29,14 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultEventLoop;
-import io.netty.channel.DefaultEventLoopGroup;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.resolver.AbstractAddressResolver;
 import io.netty.resolver.AddressResolver;
@@ -59,7 +62,9 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -73,8 +78,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class BootstrapTest {
 
-    private static final EventLoopGroup groupA = new DefaultEventLoopGroup(1);
-    private static final EventLoopGroup groupB = new DefaultEventLoopGroup(1);
+    private static final EventLoopGroup groupA = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
+    private static final EventLoopGroup groupB = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
     private static final ChannelInboundHandler dummyHandler = new DummyHandler();
 
     @AfterAll
@@ -499,12 +504,12 @@ public class BootstrapTest {
         }
     }
 
-    private static final class TestEventLoopGroup extends DefaultEventLoopGroup {
+    private static final class TestEventLoopGroup extends MultithreadEventLoopGroup {
 
         ChannelPromise promise;
 
         TestEventLoopGroup() {
-            super(1);
+            super(1, (ThreadFactory) null);
         }
 
         @Override
@@ -522,6 +527,11 @@ public class BootstrapTest {
         @Override
         public ChannelFuture register(Channel channel, final ChannelPromise promise) {
             throw new UnsupportedOperationException();
+        }
+
+        @Override
+        protected EventLoop newChild(Executor executor, Object... args) throws Exception {
+            return new DefaultEventLoop(executor);
         }
     }
 
