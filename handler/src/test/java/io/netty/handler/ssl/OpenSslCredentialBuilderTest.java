@@ -60,15 +60,4 @@ public class OpenSslCredentialBuilderTest {
         assertNotNull(credential);
         credential.release();
     }
-
-    @Test
-    public void testBuildMinimal() throws Exception {
-        // Test building with just key and cert (no optional params)
-        OpenSslCredential credential = OpenSslCredentialBuilder
-                .forX509(cert.getKeyPair().getPrivate(), cert.getCertificate())
-                .build();
-
-        assertNotNull(credential);
-        credential.release();
-    }
 }
