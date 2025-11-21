@@ -342,7 +342,7 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
     private static void verifyStandardSetting(long key, Long value) {
         checkNotNull(value, "value");
 
-        if(Http3SettingIdentifier.fromId(key) == null) {
+        if (Http3SettingIdentifier.fromId(key) == null) {
             return;
         }
 
