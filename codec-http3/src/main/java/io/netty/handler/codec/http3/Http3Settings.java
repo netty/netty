@@ -353,7 +353,9 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
             case HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL:
             case HTTP3_SETTINGS_H3_DATAGRAM:
                 if (value != 0L && value != 1L) {
-                    throw new IllegalArgumentException("Invalid: " + value + "for " + Http3SettingIdentifier.valueOf(String.valueOf(key))
+                    throw new IllegalArgumentException(
+                            "Invalid: " + value + "for "
+                                    + Http3SettingIdentifier.valueOf(String.valueOf(key))
                             + " (expected 0 or 1)");
                 }
                 break;

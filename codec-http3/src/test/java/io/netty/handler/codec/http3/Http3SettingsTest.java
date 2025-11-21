@@ -259,7 +259,6 @@ public class Http3SettingsTest {
         assertThrows(NullPointerException.class, () -> settings.put(1, null));
     }
 
-
     @Test
     void testCopyFromNullThrows() {
         Http3Settings settings = new Http3Settings();
