@@ -467,12 +467,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (executor.inEventLoop()) {
             next.invokeRegister(promise);
         } else {
-            safeExecute(executor, new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeRegister(promise);
-                }
-            }, promise, null, false);
+            safeExecute(executor, () -> next.invokeRegister(promise), promise, null, false);
         }
 
         return promise;
