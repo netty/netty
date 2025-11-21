@@ -1300,7 +1300,26 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
-            unsafe.register(promise);
+            ChannelPromise registerPromise = newPromise();
+            registerPromise.addListener(f -> {
+                if (f.isSuccess()) {
+                    // Clear any cached executors from prior event loop registrations.
+                    AbstractChannelHandlerContext context = tail;
+                    do {
+                        context.contextExecutor = null;
+                        context = context.prev;
+                    } while (context != null);
+
+                    // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
+                    // user may already fire events through the pipeline in the ChannelFutureListener that the user
+                    // attached the the original promise.
+                    invokeHandlerAddedIfNeeded();
+                    promise.setSuccess();
+                } else {
+                    promise.setFailure(f.cause());
+                }
+            });
+            unsafe.register(registerPromise);
         }
 
         @Override
