@@ -85,50 +85,54 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
 
     /**
      * Create a new instance
+     *
+     * @param eventLoop the {@link EventLoop} to use for the {@link Channel}
      */
-    public NioSocketChannel() {
-        this(DEFAULT_SELECTOR_PROVIDER);
+    public NioSocketChannel(EventLoop eventLoop) {
+        this(eventLoop, DEFAULT_SELECTOR_PROVIDER);
     }
 
     /**
      * Create a new instance using the given {@link SelectorProvider}.
      */
-    public NioSocketChannel(SelectorProvider provider) {
-        this(provider, (SocketProtocolFamily) null);
+    public NioSocketChannel(EventLoop eventLoop, SelectorProvider provider) {
+        this(eventLoop, provider, (SocketProtocolFamily) null);
     }
 
     /**
      * Create a new instance using the given {@link SelectorProvider} and protocol family (supported only since JDK 15).
      */
-    public NioSocketChannel(SelectorProvider provider, SocketProtocolFamily family) {
-        this(newChannel(provider, family));
+    public NioSocketChannel(EventLoop eventLoop, SelectorProvider provider, SocketProtocolFamily family) {
+        this(eventLoop, newChannel(provider, family));
     }
 
     /**
      * Create a new instance using the given {@link SocketChannel}.
      */
-    public NioSocketChannel(SocketChannel socket) {
-        this(null, socket);
+    public NioSocketChannel(EventLoop eventLoop, SocketChannel socket) {
+        this(eventLoop, null, socket);
     }
 
     /**
      * Create a new instance using the given {@link SocketProtocolFamily}. If {@code null} is used it will depend
      * on the Operation Systems default which will be chosen.
      *
-     * @param family the {@link SocketProtocolFamily} to use or {@code null} if the default should be used.
+     * @param eventLoop the {@link EventLoop} to use for the {@link Channel}
+     * @param family    the {@link SocketProtocolFamily} to use or {@code null} if the default should be used.
      */
-    public NioSocketChannel(SocketProtocolFamily family) {
-        this(newChannel(DEFAULT_SELECTOR_PROVIDER, family));
+    public NioSocketChannel(EventLoop eventLoop, SocketProtocolFamily family) {
+        this(eventLoop, newChannel(DEFAULT_SELECTOR_PROVIDER, family));
     }
     /**
      * Create a new instance
      *
+     * @param eventLoop the {@link EventLoop} to use for the {@link Channel}
      * @param parent    the {@link Channel} which created this instance or {@code null} if it was created by the user
-     * @param socket    the {@link SocketChannel} which will be used
+     * @param channel   the {@link SocketChannel} which will be used
      */
-    public NioSocketChannel(Channel parent, SocketChannel socket) {
-        super(parent, socket);
-        config = new NioSocketChannelConfig(this, socket);
+    protected NioSocketChannel(EventLoop eventLoop, Channel parent, SocketChannel channel) {
+        super(eventLoop, parent, channel);
+        config = new NioSocketChannelConfig(this, channel);
     }
 
     @Override

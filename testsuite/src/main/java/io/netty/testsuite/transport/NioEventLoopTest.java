@@ -16,6 +16,7 @@
 package io.netty.testsuite.transport;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.ServerChannel;
@@ -39,8 +40,8 @@ public class NioEventLoopTest extends AbstractSingleThreadEventLoopTest {
     }
 
     @Override
-    protected Channel newChannel() {
-        return new NioSocketChannel();
+    protected Channel newChannel(EventLoop eventLoop) {
+        return new NioSocketChannel(eventLoop);
     }
 
     @Override

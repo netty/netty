@@ -37,10 +37,10 @@ public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServer
     @Test
     public void testCloseOnError() throws Exception {
         ServerSocketChannel jdkChannel = ServerSocketChannel.open();
-        NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel(jdkChannel);
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel(group.next(), group, jdkChannel);
         try {
-            serverSocketChannel.register(group.next()).syncUninterruptibly();
+            serverSocketChannel.register().syncUninterruptibly();
             serverSocketChannel.bind(new InetSocketAddress(0)).syncUninterruptibly();
             assertFalse(serverSocketChannel.closeOnReadError(new IOException()));
             assertTrue(serverSocketChannel.closeOnReadError(new IllegalArgumentException()));
@@ -52,10 +52,10 @@ public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServer
 
     @Test
     public void testIsActiveFalseAfterClose()  {
-        NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel();
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel(group.next(), group);
         try {
-            serverSocketChannel.register(group.next()).syncUninterruptibly();
+            serverSocketChannel.register().syncUninterruptibly();
             Channel channel = serverSocketChannel.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
             assertTrue(channel.isActive());
             assertTrue(channel.isOpen());
@@ -68,8 +68,8 @@ public class NioServerSocketChannelTest extends AbstractNioChannelTest<NioServer
     }
 
     @Override
-    protected NioServerSocketChannel newNioChannel() {
-        return new NioServerSocketChannel();
+    protected NioServerSocketChannel newNioChannel(EventLoopGroup eventLoopGroup) {
+        return new NioServerSocketChannel(eventLoopGroup.next(), eventLoopGroup);
     }
 
     @Override

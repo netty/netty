@@ -21,6 +21,8 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.unix.Buffer;
@@ -62,10 +64,14 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         }
     }
     private final AcceptedAddressMemory acceptedAddressMemory;
+    private final EventLoopGroup childEventLoopGroup;
     private long acceptId;
 
-    protected AbstractIoUringServerChannel(LinuxSocket socket, boolean active) {
-        super(null, socket, active);
+    protected AbstractIoUringServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                           LinuxSocket socket, boolean active) {
+        super(eventLoop, null, socket, active);
+        this.childEventLoopGroup =
+                validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", IoUringIoHandle.class);
 
         // We can only depend on the accepted address if multi-shot is not used.
         // From the manpage:
@@ -87,6 +93,11 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         } else {
             acceptedAddressMemory = new AcceptedAddressMemory();
         }
+    }
+
+    @Override
+    public EventLoopGroup childEventExecutorGroup() {
+        return childEventLoopGroup;
     }
 
     @Override
@@ -127,7 +138,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     }
 
     abstract Channel newChildChannel(
-            int fd, ByteBuffer acceptedAddressMemory) throws Exception;
+            EventLoop eventLoop, int fd, ByteBuffer acceptedAddressMemory) throws Exception;
 
     private final class UringServerChannelUnsafe extends AbstractIoUringChannel.AbstractUringUnsafe {
 
@@ -234,7 +245,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
                     acceptedAddressBuffer = acceptedAddressMemory.acceptedAddressMemory;
                 }
                 try {
-                    Channel channel = newChildChannel(res, acceptedAddressBuffer);
+                    Channel channel = newChildChannel(childEventExecutorGroup().next(), res, acceptedAddressBuffer);
                     pipeline.fireChannelRead(channel);
 
                     if (allocHandle.continueReading() &&

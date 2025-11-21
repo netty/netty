@@ -24,14 +24,14 @@ import java.lang.reflect.Constructor;
 /**
  * A {@link ChannelFactory} that instantiates a new {@link Channel} by invoking its default constructor reflectively.
  */
-public class ReflectiveChannelFactory<T extends Channel> implements ChannelFactory<T> {
+public class ReflectiveServerChannelFactory<T extends ServerChannel> implements ServerChannelFactory<T> {
 
     private final Constructor<? extends T> constructor;
 
-    public ReflectiveChannelFactory(Class<? extends T> clazz) {
+    public ReflectiveServerChannelFactory(Class<? extends T> clazz) {
         ObjectUtil.checkNotNull(clazz, "clazz");
         try {
-            this.constructor = clazz.getConstructor(EventLoop.class);
+            this.constructor = clazz.getConstructor(EventLoop.class, EventLoopGroup.class);
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("Class " + StringUtil.simpleClassName(clazz) +
                     " does not have a public non-arg constructor", e);
@@ -39,17 +39,18 @@ public class ReflectiveChannelFactory<T extends Channel> implements ChannelFacto
     }
 
     @Override
-    public T newChannel(EventLoop eventLoop) {
+    public T newChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
         try {
-            return constructor.newInstance(eventLoop);
+            return constructor.newInstance(eventLoop, childEventLoopGroup);
         } catch (Throwable t) {
-            throw new ChannelException("Unable to create Channel from class " + constructor.getDeclaringClass(), t);
+            throw new ChannelException(
+                    "Unable to create ServerChannel from class " + constructor.getDeclaringClass(), t);
         }
     }
 
     @Override
     public String toString() {
-        return StringUtil.simpleClassName(ReflectiveChannelFactory.class) +
+        return StringUtil.simpleClassName(ReflectiveServerChannelFactory.class) +
                 '(' + StringUtil.simpleClassName(constructor.getDeclaringClass()) + ".class)";
     }
 }

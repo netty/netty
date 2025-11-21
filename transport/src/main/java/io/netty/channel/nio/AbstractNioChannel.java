@@ -76,16 +76,17 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     /**
      * Create a new instance
      *
+     * @param eventLoop         the {@link EventLoop} to use for the {@link Channel}
      * @param parent            the parent {@link Channel} by which this instance was created. May be {@code null}
      * @param ch                the underlying {@link SelectableChannel} on which it operates
      * @param readOps           the ops to set to receive data from the {@link SelectableChannel}
      */
-    protected AbstractNioChannel(Channel parent, SelectableChannel ch, int readOps) {
-        this(parent, ch, NioIoOps.valueOf(readOps));
+    protected AbstractNioChannel(EventLoop eventLoop, Channel parent, SelectableChannel ch, int readOps) {
+        this(eventLoop, parent, ch, NioIoOps.valueOf(readOps));
     }
 
-    protected AbstractNioChannel(Channel parent, SelectableChannel ch, NioIoOps readOps) {
-        super(parent);
+    protected AbstractNioChannel(EventLoop eventLoop, Channel parent, SelectableChannel ch, NioIoOps readOps) {
+        super(eventLoop, NioIoHandle.class, parent);
         this.ch = ch;
         this.readInterestOp = ObjectUtil.checkNotNull(readOps, "readOps").value;
         this.readOps = readOps;
@@ -446,11 +447,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 close(newPromise());
             }
         }
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop.isCompatible(AbstractNioUnsafe.class);
     }
 
     @SuppressWarnings("unchecked")

@@ -491,17 +491,12 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         @Override
-        public void register(EventLoop eventLoop, ChannelPromise promise) {
-            assert eventLoop.inEventLoop();
+        public void register(ChannelPromise promise) {
             if (!promise.setUncancellable()) {
                 return;
             }
             if (registered) {
                 promise.setFailure(new IllegalStateException());
-                return;
-            }
-            if (eventLoop != parent.executor()) {
-                promise.setFailure(new IllegalArgumentException());
                 return;
             }
             registered = true;

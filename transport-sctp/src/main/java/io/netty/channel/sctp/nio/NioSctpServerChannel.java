@@ -22,7 +22,10 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.AbstractNioMessageChannel;
+import io.netty.channel.nio.NioIoHandle;
 import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
 import io.netty.channel.sctp.SctpServerChannelConfig;
 
@@ -58,13 +61,20 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     private final SctpServerChannelConfig config;
-
+    private final EventLoopGroup childEventLoopGroup;
     /**
      * Create a new instance
      */
-    public NioSctpServerChannel() {
-        super(null, newSocket(), SelectionKey.OP_ACCEPT);
+    public NioSctpServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        super(eventLoop, null, newSocket(), SelectionKey.OP_ACCEPT);
+        this.childEventLoopGroup =
+                validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", NioIoHandle.class);
         config = new NioSctpServerChannelConfig(this, javaChannel());
+    }
+
+    @Override
+    public EventLoopGroup childEventExecutorGroup() {
+        return childEventLoopGroup;
     }
 
     @Override
@@ -140,7 +150,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         if (ch == null) {
             return 0;
         }
-        buf.add(new NioSctpChannel(this, ch));
+        buf.add(new NioSctpChannel(childEventLoopGroup.next(), this, ch));
         return 1;
     }
 

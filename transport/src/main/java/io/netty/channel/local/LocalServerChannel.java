@@ -16,11 +16,13 @@
 package io.netty.channel.local;
 
 import io.netty.channel.AbstractServerChannel;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.PreferHeapByteBufAllocator;
@@ -54,7 +56,14 @@ public class LocalServerChannel extends AbstractServerChannel {
     private volatile LocalAddress localAddress;
     private volatile boolean acceptInProgress;
 
-    public LocalServerChannel() {
+    /**
+     * Create a new instance.
+     *
+     * @param eventLoop             the {@link EventLoop} to use for the {@link ServerChannel}
+     * @param childEventLoopGroup   the {@link EventLoopGroup} that is used for the child {@link Channel}s.
+     */
+    public LocalServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
+        super(eventLoop, childEventLoopGroup, LocalIoHandle.class);
         config().setAllocator(new PreferHeapByteBufAllocator(config.getAllocator()));
     }
 
@@ -81,11 +90,6 @@ public class LocalServerChannel extends AbstractServerChannel {
     @Override
     public boolean isActive() {
         return state == 1;
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop.isCompatible(LocalServerUnsafe.class);
     }
 
     @Override
@@ -184,7 +188,7 @@ public class LocalServerChannel extends AbstractServerChannel {
      * to create custom instances of {@link LocalChannel}s.
      */
     protected LocalChannel newLocalChannel(LocalChannel peer) {
-        return new LocalChannel(this, peer);
+        return new LocalChannel(childEventExecutorGroup().next(), this, peer);
     }
 
     private void serve0(final LocalChannel child) {

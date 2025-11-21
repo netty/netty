@@ -90,13 +90,18 @@ public class LocalChannel extends AbstractChannel {
     private volatile boolean writeInProgress;
     private volatile Future<?> finishReadFuture;
 
-    public LocalChannel() {
-        super(null);
+    /**
+     * Create a new instance.
+     *
+     * @param eventLoop             the {@link EventLoop} to use for the {@link LocalChannel}
+     */
+    public LocalChannel(EventLoop eventLoop) {
+        super(eventLoop, LocalIoHandle.class, null);
         config().setAllocator(new PreferHeapByteBufAllocator(config.getAllocator()));
     }
 
-    protected LocalChannel(LocalServerChannel parent, LocalChannel peer) {
-        super(parent);
+    protected LocalChannel(EventLoop eventLoop, LocalServerChannel parent, LocalChannel peer) {
+        super(eventLoop, LocalIoHandle.class, parent);
         config().setAllocator(new PreferHeapByteBufAllocator(config.getAllocator()));
         this.peer = peer;
         localAddress = parent.localAddress();
@@ -143,12 +148,6 @@ public class LocalChannel extends AbstractChannel {
         return new LocalUnsafe();
     }
 
-    @Override
-    protected boolean isCompatible(EventLoop loop) {
-        return loop.isCompatible(LocalUnsafe.class);
-    }
-
-    @Override
     protected SocketAddress localAddress0() {
         return localAddress;
     }

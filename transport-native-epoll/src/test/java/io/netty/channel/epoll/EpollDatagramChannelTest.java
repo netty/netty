@@ -46,22 +46,25 @@ public class EpollDatagramChannelTest {
 
     @Test
     public void testDefaultMaxMessagePerRead() {
-        EpollDatagramChannel channel = new EpollDatagramChannel();
+        EpollDatagramChannel channel = new EpollDatagramChannel(EpollSocketTestPermutation.EPOLL_GROUP.next());
         assertEquals(16, channel.config().getMaxMessagesPerRead());
         channel.unsafe().closeForcibly();
     }
 
     @Test
     public void testNotActiveNoLocalRemoteAddress() throws IOException {
-        checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel());
-        checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(SocketProtocolFamily.INET));
-        checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(SocketProtocolFamily.INET6));
+        checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(EpollSocketTestPermutation.EPOLL_GROUP.next()));
+        checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(EpollSocketTestPermutation.EPOLL_GROUP.next(),
+                SocketProtocolFamily.INET));
+        checkNotActiveNoLocalRemoteAddress(new EpollDatagramChannel(EpollSocketTestPermutation.EPOLL_GROUP.next(),
+                SocketProtocolFamily.INET6));
     }
 
     @Test
     public void testActiveHasLocalAddress() throws IOException {
         Socket socket = Socket.newSocketDgram();
-        EpollDatagramChannel channel = new EpollDatagramChannel(socket.intValue());
+        EpollDatagramChannel channel = new EpollDatagramChannel(EpollSocketTestPermutation.EPOLL_GROUP.next(),
+                socket.intValue());
         InetSocketAddress localAddress = channel.localAddress();
         assertTrue(channel.active);
         assertNotNull(localAddress);

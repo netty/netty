@@ -249,7 +249,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
                         } else {
                             ch = new Http2MultiplexHandlerStreamChannel(stream, inboundStreamHandler);
                         }
-                        ChannelFuture future = ch.register(ctx.channel().executor());
+                        ChannelFuture future = ch.register();
                         if (future.isDone()) {
                             registerDone(future);
                         } else {

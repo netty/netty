@@ -76,7 +76,7 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 // Create new channel and obtain a file descriptor from it.
-                final IoUringDomainSocketChannel ch = new IoUringDomainSocketChannel();
+                final IoUringDomainSocketChannel ch = new IoUringDomainSocketChannel(ctx.channel().executor());
 
                 ctx.writeAndFlush(ch.fd()).addListener(new ChannelFutureListener() {
                     @Override

@@ -15,6 +15,9 @@
  */
 package io.netty.channel.socket.nio;
 
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
@@ -26,10 +29,15 @@ import java.nio.channels.spi.SelectorProvider;
 class NioDomainSocketChannelTest {
     @Test
     void accessParent() throws IOException {
-        NioServerSocketChannel parent = new NioServerSocketChannel();
-        SocketChannel ch = SelectorProvider.provider().openSocketChannel(StandardProtocolFamily.UNIX);
-        NioSocketChannel child = new NioSocketChannel(parent, ch);
-        Assertions.assertSame(parent, child.parent());
-        ch.close();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        try {
+            NioServerSocketChannel parent = new NioServerSocketChannel(group.next(), group.next());
+            SocketChannel ch = SelectorProvider.provider().openSocketChannel(StandardProtocolFamily.UNIX);
+            NioSocketChannel child = new NioSocketChannel(group.next(), parent, ch);
+            Assertions.assertSame(parent, child.parent());
+            ch.close();
+        } finally {
+            group.shutdownGracefully();
+        }
     }
 }

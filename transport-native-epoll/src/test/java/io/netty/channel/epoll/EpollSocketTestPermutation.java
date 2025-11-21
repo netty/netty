@@ -20,6 +20,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.socket.SocketProtocolFamily;
@@ -145,8 +146,8 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                     public Bootstrap newInstance() {
                         return new Bootstrap().group(NIO_GROUP).channelFactory(new ChannelFactory<Channel>() {
                             @Override
-                            public Channel newChannel() {
-                                return new NioDatagramChannel(family);
+                            public Channel newChannel(EventLoop eventLoop) {
+                                return new NioDatagramChannel(eventLoop, family);
                             }
 
                             @Override
@@ -161,8 +162,8 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
                     public Bootstrap newInstance() {
                         return new Bootstrap().group(EPOLL_GROUP).channelFactory(new ChannelFactory<Channel>() {
                             @Override
-                            public Channel newChannel() {
-                                return new EpollDatagramChannel(family);
+                            public Channel newChannel(EventLoop eventLoop) {
+                                return new EpollDatagramChannel(eventLoop, family);
                             }
 
                             @Override
@@ -188,8 +189,8 @@ class EpollSocketTestPermutation extends SocketTestPermutation {
             public Bootstrap newInstance() {
                 return new Bootstrap().group(EPOLL_GROUP).channelFactory(new ChannelFactory<Channel>() {
                     @Override
-                    public Channel newChannel() {
-                        return new EpollDatagramChannel(family);
+                    public Channel newChannel(EventLoop eventLoop) {
+                        return new EpollDatagramChannel(eventLoop, family);
                     }
 
                     @Override

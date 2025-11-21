@@ -46,11 +46,11 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
     public void testCloseOnError() throws Exception {
         ServerSocketChannel jdkChannel = SelectorProvider.provider()
                 .openServerSocketChannel(StandardProtocolFamily.UNIX);
-        NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel(jdkChannel);
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+        NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel(group.next(), group, jdkChannel);
         File file = newRandomTmpFile();
         try {
-            serverSocketChannel.register(group.next()).syncUninterruptibly();
+            serverSocketChannel.register().syncUninterruptibly();
             serverSocketChannel.bind(UnixDomainSocketAddress.of(file.getAbsolutePath()))
                     .syncUninterruptibly();
             assertFalse(serverSocketChannel.closeOnReadError(new IOException()));
@@ -63,12 +63,13 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
 
     @Test
     public void testIsActiveFalseAfterClose() throws Exception {
-        io.netty.channel.socket.ServerSocketChannel serverSocketChannel =
-                new NioServerSocketChannel(SelectorProvider.provider(), SocketProtocolFamily.UNIX);
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
+
+        io.netty.channel.socket.ServerSocketChannel serverSocketChannel =
+                new NioServerSocketChannel(group.next(), group, SelectorProvider.provider(), SocketProtocolFamily.UNIX);
         File file = newRandomTmpFile();
         try {
-            serverSocketChannel.register(group.next()).syncUninterruptibly();
+            serverSocketChannel.register().syncUninterruptibly();
             Channel channel = serverSocketChannel.bind(
                     UnixDomainSocketAddress.of(file.getAbsolutePath()))
                     .syncUninterruptibly().channel();
@@ -95,8 +96,8 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
             if (bindJdkChannel) {
                 jdkChannel.bind(localAddress);
             }
-            NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel(jdkChannel);
-            serverSocketChannel.register(group.next()).syncUninterruptibly();
+            NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel(group.next(), group, jdkChannel);
+            serverSocketChannel.register().syncUninterruptibly();
             assertTrue(serverSocketChannel.isOpen());
 
             assertEquals(bindJdkChannel, serverSocketChannel.isActive());
@@ -111,8 +112,8 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
     }
 
     @Override
-    protected NioServerSocketChannel newNioChannel() {
-        return new NioServerSocketChannel();
+    protected NioServerSocketChannel newNioChannel(EventLoopGroup group) {
+        return new NioServerSocketChannel(group.next(), group);
     }
 
     @Override

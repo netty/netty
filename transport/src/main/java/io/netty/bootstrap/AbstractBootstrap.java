@@ -17,7 +17,6 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
@@ -26,7 +25,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.util.AttributeKey;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -59,7 +57,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     private static final Map.Entry<AttributeKey<?>, Object>[] EMPTY_ATTRIBUTE_ARRAY = new Map.Entry[0];
 
     volatile EventLoopGroup group;
-    private volatile ChannelFactory<? extends C> channelFactory;
     private volatile SocketAddress localAddress;
 
     // The order in which ChannelOptions are applied is important they may depend on each other for validation
@@ -75,7 +72,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
     AbstractBootstrap(AbstractBootstrap<B, C> bootstrap) {
         group = bootstrap.group;
-        channelFactory = bootstrap.channelFactory;
         handler = bootstrap.handler;
         localAddress = bootstrap.localAddress;
         synchronized (bootstrap.options) {
@@ -101,34 +97,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     @SuppressWarnings("unchecked")
     private B self() {
         return (B) this;
-    }
-
-    /**
-     * The {@link Class} which is used to create {@link Channel} instances from.
-     * You either use this or {@link #channelFactory(io.netty.channel.ChannelFactory)} if your
-     * {@link Channel} implementation has no no-args constructor.
-     */
-    public B channel(Class<? extends C> channelClass) {
-        return channelFactory(new ReflectiveChannelFactory<C>(
-                ObjectUtil.checkNotNull(channelClass, "channelClass")
-        ));
-    }
-
-    /**
-     * {@link io.netty.channel.ChannelFactory} which is used to create {@link Channel} instances from
-     * when calling {@link #bind()}. This method is usually only used if {@link #channel(Class)}
-     * is not working for you because of some more complex needs. If your {@link Channel} implementation
-     * has a no-args constructor, its highly recommend to just use {@link #channel(Class)} to
-     * simplify your code.
-     */
-    public B channelFactory(ChannelFactory<? extends C> channelFactory) {
-        ObjectUtil.checkNotNull(channelFactory, "channelFactory");
-        if (this.channelFactory != null) {
-            throw new IllegalStateException("channelFactory set already");
-        }
-
-        this.channelFactory = channelFactory;
-        return self();
     }
 
     /**
@@ -210,9 +178,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     public B validate() {
         if (group == null) {
             throw new IllegalStateException("group not set");
-        }
-        if (channelFactory == null) {
-            throw new IllegalStateException("channel or channelFactory not set");
         }
         return self();
     }
@@ -311,24 +276,25 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         }
     }
 
+    protected abstract Channel newChannel(EventLoop loop);
+
     final ChannelFuture initAndRegister() {
         Channel channel = null;
+        EventLoop loop = config().group().next();
+
         try {
-            channel = channelFactory.newChannel();
+            channel = newChannel(loop);
             init(channel);
         } catch (Throwable t) {
             if (channel != null) {
                 // channel can be null if newChannel crashed (eg SocketException("too many open files"))
                 channel.unsafe().closeForcibly();
-                // as the Channel is not registered yet we need to force the usage of the GlobalEventExecutor
-                return new DefaultChannelPromise(channel, GlobalEventExecutor.INSTANCE).setFailure(t);
+                return channel.newPromise().setFailure(t);
             }
-            // as the Channel is not registered yet we need to force the usage of the GlobalEventExecutor
-            return new DefaultChannelPromise(new FailedChannel(), GlobalEventExecutor.INSTANCE).setFailure(t);
+            return new FailedChannel(group.next()).newFailedFuture(t);
         }
 
-        EventLoop loop = config().group().next();
-        ChannelFuture reqFut = channel.register(loop);
+        ChannelFuture reqFut = channel.register();
         if (reqFut.cause() != null) {
             if (channel.isRegistered()) {
                 channel.close();
@@ -429,11 +395,6 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
     final SocketAddress localAddress() {
         return localAddress;
-    }
-
-    @SuppressWarnings("deprecation")
-    final ChannelFactory<? extends C> channelFactory() {
-        return channelFactory;
     }
 
     final ChannelHandler handler() {

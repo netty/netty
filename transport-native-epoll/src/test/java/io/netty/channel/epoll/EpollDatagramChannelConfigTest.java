@@ -25,7 +25,7 @@ public class EpollDatagramChannelConfigTest {
     @Test
     public void testIpFreeBind() throws Exception {
         Epoll.ensureAvailability();
-        EpollDatagramChannel channel = new EpollDatagramChannel();
+        EpollDatagramChannel channel = new EpollDatagramChannel(EpollSocketTestPermutation.EPOLL_GROUP.next());
         assertTrue(channel.config().setOption(EpollChannelOption.IP_FREEBIND, true));
         assertTrue(channel.config().getOption(EpollChannelOption.IP_FREEBIND));
         channel.fd().close();

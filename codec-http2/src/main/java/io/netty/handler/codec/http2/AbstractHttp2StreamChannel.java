@@ -663,7 +663,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         @Override
-        public void register(EventLoop eventLoop, ChannelPromise promise) {
+        public void register(ChannelPromise promise) {
             if (!promise.setUncancellable()) {
                 return;
             }

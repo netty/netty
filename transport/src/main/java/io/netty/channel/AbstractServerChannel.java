@@ -31,11 +31,20 @@ import java.net.SocketAddress;
 public abstract class AbstractServerChannel extends AbstractChannel implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
+    private final EventLoopGroup childEventLoopGroup;
+
     /**
      * Creates a new instance.
      */
-    protected AbstractServerChannel() {
-        super(null);
+    protected AbstractServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
+                                    Class<? extends IoHandle> handleType) {
+        super(eventLoop, handleType, null);
+        this.childEventLoopGroup = validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", handleType);
+    }
+
+    @Override
+    public EventLoopGroup childEventExecutorGroup() {
+        return childEventLoopGroup;
     }
 
     @Override

@@ -20,6 +20,8 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 
 import java.net.InetSocketAddress;
@@ -28,12 +30,21 @@ import java.net.SocketAddress;
 public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel implements ServerChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
-    AbstractKQueueServerChannel(BsdSocket fd) {
-        this(fd, isSoErrorZero(fd));
+    private final EventLoopGroup childEventLoopGroup;
+
+    AbstractKQueueServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd) {
+        this(eventLoop, childEventLoopGroup, fd, isSoErrorZero(fd));
     }
 
-    AbstractKQueueServerChannel(BsdSocket fd, boolean active) {
-        super(null, fd, active);
+    AbstractKQueueServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd, boolean active) {
+        super(eventLoop, null, fd, active);
+        this.childEventLoopGroup =
+                validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", KQueueIoHandle.class);
+    }
+
+    @Override
+    public EventLoopGroup childEventExecutorGroup() {
+        return childEventLoopGroup;
     }
 
     @Override
@@ -61,7 +72,7 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
         throw new UnsupportedOperationException();
     }
 
-    abstract Channel newChildChannel(int fd, byte[] remote, int offset, int len) throws Exception;
+    abstract Channel newChildChannel(EventLoop loop, int fd, byte[] remote, int offset, int len) throws Exception;
 
     @Override
     protected boolean doConnect(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
@@ -100,8 +111,8 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
                         allocHandle.incMessagesRead(1);
 
                         readPending = false;
-                        pipeline.fireChannelRead(newChildChannel(acceptFd, acceptedAddress, 1,
-                                                                 acceptedAddress[0]));
+                        pipeline.fireChannelRead(newChildChannel(childEventExecutorGroup().next(),
+                                acceptFd, acceptedAddress, 1, acceptedAddress[0]));
                     } while (allocHandle.continueReading());
                 } catch (Throwable t) {
                     exception = t;

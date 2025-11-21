@@ -46,13 +46,6 @@ public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C>,
     }
 
     /**
-     * Returns the configured {@link ChannelFactory} or {@code null} if non is configured yet.
-     */
-    public final ChannelFactory<? extends C> channelFactory() {
-        return bootstrap.channelFactory();
-    }
-
-    /**
      * Returns the configured {@link ChannelHandler} or {@code null} if non is configured yet.
      */
     public final ChannelHandler handler() {
@@ -92,13 +85,7 @@ public abstract class AbstractBootstrapConfig<B extends AbstractBootstrap<B, C>,
                     .append(StringUtil.simpleClassName(group))
                     .append(", ");
         }
-        @SuppressWarnings("deprecation")
-        ChannelFactory<? extends C> factory = channelFactory();
-        if (factory != null) {
-            buf.append("channelFactory: ")
-                    .append(factory)
-                    .append(", ");
-        }
+
         SocketAddress localAddress = localAddress();
         if (localAddress != null) {
             buf.append("localAddress: ")

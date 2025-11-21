@@ -16,12 +16,14 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ReflectiveChannelFactory;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.DefaultAddressResolverGroup;
@@ -53,6 +55,7 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     private ExternalAddressResolver externalResolver;
     private volatile boolean disableResolver;
     private volatile SocketAddress remoteAddress;
+    volatile ChannelFactory<? extends Channel> channelFactory;
 
     public Bootstrap() { }
 
@@ -61,6 +64,34 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
         externalResolver = bootstrap.externalResolver;
         disableResolver = bootstrap.disableResolver;
         remoteAddress = bootstrap.remoteAddress;
+        channelFactory = bootstrap.channelFactory;
+    }
+
+    /**
+     * The {@link Class} which is used to create {@link Channel} instances from.
+     * You either use this or {@link #channelFactory(io.netty.channel.ChannelFactory)} if your
+     * {@link Channel} implementation has no no-args constructor.
+     */
+    public Bootstrap channel(Class<? extends Channel> channelClass) {
+        ObjectUtil.checkNotNull(channelClass, "channelClass");
+        return channelFactory(new ReflectiveChannelFactory<>(channelClass));
+    }
+
+    /**
+     * {@link io.netty.channel.ChannelFactory} which is used to create {@link Channel} instances from
+     * when calling {@link #bind()}. This method is usually only used if {@link #channel(Class)}
+     * is not working for you because of some more complex needs. If your {@link Channel} implementation
+     * has a no-args constructor, its highly recommend to just use {@link #channel(Class)} to
+     * simplify your code.
+     */
+    public Bootstrap channelFactory(ChannelFactory<? extends Channel> channelFactory) {
+        ObjectUtil.checkNotNull(channelFactory, "channelFactory");
+        if (this.channelFactory != null) {
+            throw new IllegalStateException("channelFactory set already");
+        }
+
+        this.channelFactory = channelFactory;
+        return this;
     }
 
     /**
@@ -290,10 +321,18 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
     }
 
     @Override
+    protected Channel newChannel(EventLoop eventLoop) {
+        return channelFactory.newChannel(eventLoop);
+    }
+
+    @Override
     public Bootstrap validate() {
         super.validate();
         if (config.handler() == null) {
             throw new IllegalStateException("handler not set");
+        }
+        if (channelFactory == null) {
+            throw new IllegalStateException("channel or channelFactory not set");
         }
         return this;
     }
@@ -329,6 +368,10 @@ public class Bootstrap extends AbstractBootstrap<Bootstrap, Channel> {
             return null;
         }
         return ExternalAddressResolver.getOrDefault(externalResolver);
+    }
+
+    final ChannelFactory<? extends Channel> channelFactory() {
+        return channelFactory;
     }
 
     /* Holder to avoid NoClassDefFoundError in case netty-resolver dependency is excluded

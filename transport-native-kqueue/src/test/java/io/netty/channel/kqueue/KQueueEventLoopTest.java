@@ -44,8 +44,8 @@ public class KQueueEventLoopTest extends AbstractSingleThreadEventLoopTest {
     }
 
     @Override
-    protected ServerSocketChannel newChannel() {
-        return new KQueueServerSocketChannel();
+    protected ServerSocketChannel newChannel(EventLoop eventLoop) {
+        return new KQueueServerSocketChannel(eventLoop, eventLoop);
     }
 
     @Override

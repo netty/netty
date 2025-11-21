@@ -36,7 +36,7 @@ public class IoUringChannelConfigTest {
 
     @Test
     public void testIntegerOption() throws Exception {
-        IoUringSocketChannel channel = new IoUringSocketChannel();
+        IoUringSocketChannel channel = new IoUringSocketChannel(IoUringSocketTestPermutation.IO_URING_GROUP.next());
         IntegerUnixChannelOption opt = new IntegerUnixChannelOption("INT_OPT", 1, 2);
         Integer zero = 0;
         assertEquals(zero, channel.config().getOption(opt));
@@ -47,7 +47,7 @@ public class IoUringChannelConfigTest {
 
     @Test
     public void testRawOption() throws Exception {
-        IoUringSocketChannel channel = new IoUringSocketChannel();
+        IoUringSocketChannel channel = new IoUringSocketChannel(IoUringSocketTestPermutation.IO_URING_GROUP.next());
         // Value for SOL_SOCKET and SO_REUSEADDR
         // See https://github.com/torvalds/linux/blob/v5.17/include/uapi/asm-generic/socket.h
         RawUnixChannelOption opt = new RawUnixChannelOption("RAW_OPT", 1, 2, 4);

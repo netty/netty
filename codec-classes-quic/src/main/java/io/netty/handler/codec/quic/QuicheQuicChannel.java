@@ -30,7 +30,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultChannelPipeline;
-import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.ssl.SniCompletionEvent;
@@ -188,7 +187,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                               @Nullable Executor sslTaskExecutor,
                               @Nullable QuicConnectionIdGenerator connectionIdAddressGenerator,
                               @Nullable QuicResetTokenGenerator resetTokenGenerator) {
-        super(parent);
+        super(parent.executor(), null, parent);
         config = new QuicheQuicChannelConfig(this);
         this.freeTask = freeTask;
         this.server = server;
@@ -435,7 +434,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 if (msg instanceof QuicStreamChannel) {
                     QuicStreamChannel channel = (QuicStreamChannel) msg;
                     Quic.setupChannel(channel, streamOptionsArray, streamAttrsArray, streamHandler, logger);
-                    channel.register(ctx.channel().executor());
+                    channel.register();
                 } else {
                     super.onUnhandledInboundMessage(ctx, msg);
                 }
@@ -506,11 +505,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     @Override
     protected AbstractUnsafe newUnsafe() {
         return new QuicChannelUnsafe();
-    }
-
-    @Override
-    protected boolean isCompatible(EventLoop eventLoop) {
-        return parent().executor() == eventLoop;
     }
 
     @Override
@@ -1499,7 +1493,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             if (handler != null) {
                 streamChannel.pipeline().addLast(handler);
             }
-            streamChannel.register(executor()).addListener((ChannelFuture f) -> {
+            streamChannel.register().addListener((ChannelFuture f) -> {
                 if (f.isSuccess()) {
                     promise.setSuccess(streamChannel);
                 } else {

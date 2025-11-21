@@ -68,8 +68,8 @@ public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramCh
     }
 
     @Override
-    protected NioDatagramChannel newNioChannel() {
-        return new NioDatagramChannel();
+    protected NioDatagramChannel newNioChannel(EventLoopGroup eventLoopGroup) {
+        return new NioDatagramChannel(eventLoopGroup.next());
     }
 
     @Override

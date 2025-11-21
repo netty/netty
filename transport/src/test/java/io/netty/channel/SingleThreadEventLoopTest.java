@@ -389,7 +389,7 @@ public class SingleThreadEventLoopTest {
         }
 
         try {
-            ChannelFuture f = new LocalChannel().register(loopA);
+            ChannelFuture f = new LocalChannel(loopA).register();
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
             assertInstanceOf(RejectedExecutionException.class, f.cause());
@@ -408,7 +408,7 @@ public class SingleThreadEventLoopTest {
     public void testRegistrationAfterShutdown2() throws Exception {
         loopA.shutdown();
         final CountDownLatch latch = new CountDownLatch(1);
-        Channel ch = new LocalChannel();
+        Channel ch = new LocalChannel(loopA);
         ChannelPromise promise = ch.newPromise();
         promise.addListener(new ChannelFutureListener() {
             @Override
@@ -427,7 +427,7 @@ public class SingleThreadEventLoopTest {
         }
 
         try {
-            ChannelFuture f = promise.channel().register(loopA);
+            ChannelFuture f = promise.channel().register();
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
             assertInstanceOf(RejectedExecutionException.class, f.cause());

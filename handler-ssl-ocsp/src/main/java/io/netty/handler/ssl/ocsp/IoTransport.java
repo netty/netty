@@ -43,14 +43,14 @@ public final class IoTransport {
             new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory()).next(),
             new ChannelFactory<SocketChannel>() {
                 @Override
-                public SocketChannel newChannel() {
-                    return new NioSocketChannel();
+                public SocketChannel newChannel(EventLoop eventLoop) {
+                    return new NioSocketChannel(eventLoop);
                 }
             },
             new ChannelFactory<DatagramChannel>() {
                 @Override
-                public DatagramChannel newChannel() {
-                    return new NioDatagramChannel();
+                public DatagramChannel newChannel(EventLoop eventLoop) {
+                    return new NioDatagramChannel(eventLoop);
                 }
             });
 

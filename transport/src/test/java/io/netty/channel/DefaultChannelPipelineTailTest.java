@@ -49,15 +49,13 @@ public class DefaultChannelPipelineTailTest {
     @Test
     public void testOnUnhandledInboundChannelActive() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        MyChannel myChannel = new MyChannel() {
-            @Override
-            protected void onUnhandledInboundChannelActive() {
-                latch.countDown();
-            }
-        };
-
         Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
+                .channelFactory(e -> new MyChannel(e) {
+                    @Override
+                    protected void onUnhandledInboundChannelActive() {
+                        latch.countDown();
+                    }
+                })
                 .group(GROUP)
                 .handler(new ChannelInboundHandlerAdapter())
                 .remoteAddress(new InetSocketAddress(0));
@@ -75,15 +73,13 @@ public class DefaultChannelPipelineTailTest {
     @Test
     public void testOnUnhandledInboundChannelInactive() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        MyChannel myChannel = new MyChannel() {
-            @Override
-            protected void onUnhandledInboundChannelInactive() {
-                latch.countDown();
-            }
-        };
-
         Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
+                .channelFactory(e -> new MyChannel(e) {
+                    @Override
+                    protected void onUnhandledInboundChannelInactive() {
+                        latch.countDown();
+                    }
+                })
                 .group(GROUP)
                 .handler(new ChannelInboundHandlerAdapter())
                 .remoteAddress(new InetSocketAddress(0));
@@ -100,16 +96,14 @@ public class DefaultChannelPipelineTailTest {
     public void testOnUnhandledInboundException() throws Exception {
         final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
         final CountDownLatch latch = new CountDownLatch(1);
-        MyChannel myChannel = new MyChannel() {
-            @Override
-            protected void onUnhandledInboundException(Throwable cause) {
-                causeRef.set(cause);
-                latch.countDown();
-            }
-        };
-
         Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
+                .channelFactory(e -> new MyChannel(e) {
+                    @Override
+                    protected void onUnhandledInboundException(Throwable cause) {
+                        causeRef.set(cause);
+                        latch.countDown();
+                    }
+                })
                 .group(GROUP)
                 .handler(new ChannelInboundHandlerAdapter())
                 .remoteAddress(new InetSocketAddress(0));
@@ -130,15 +124,13 @@ public class DefaultChannelPipelineTailTest {
     @Test
     public void testOnUnhandledInboundMessage() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        MyChannel myChannel = new MyChannel() {
-            @Override
-            protected void onUnhandledInboundMessage(Object msg) {
-                latch.countDown();
-            }
-        };
-
         Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
+                .channelFactory(e -> new MyChannel(e) {
+                    @Override
+                    protected void onUnhandledInboundMessage(Object msg) {
+                        latch.countDown();
+                    }
+                })
                 .group(GROUP)
                 .handler(new ChannelInboundHandlerAdapter())
                 .remoteAddress(new InetSocketAddress(0));
@@ -157,15 +149,13 @@ public class DefaultChannelPipelineTailTest {
     @Test
     public void testOnUnhandledInboundReadComplete() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        MyChannel myChannel = new MyChannel() {
-            @Override
-            protected void onUnhandledInboundReadComplete() {
-                latch.countDown();
-            }
-        };
-
         Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
+                .channelFactory(e -> new MyChannel(e) {
+                    @Override
+                    protected void onUnhandledInboundReadComplete() {
+                        latch.countDown();
+                    }
+                })
                 .group(GROUP)
                 .handler(new ChannelInboundHandlerAdapter())
                 .remoteAddress(new InetSocketAddress(0));
@@ -184,15 +174,13 @@ public class DefaultChannelPipelineTailTest {
     @Test
     public void testOnUnhandledInboundUserEventTriggered() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        MyChannel myChannel = new MyChannel() {
-            @Override
-            protected void onUnhandledInboundUserEventTriggered(Object evt) {
-                latch.countDown();
-            }
-        };
-
         Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
+                .channelFactory(e -> new MyChannel(e) {
+                    @Override
+                    protected void onUnhandledInboundUserEventTriggered(Object evt) {
+                        latch.countDown();
+                    }
+                })
                 .group(GROUP)
                 .handler(new ChannelInboundHandlerAdapter())
                 .remoteAddress(new InetSocketAddress(0));
@@ -211,15 +199,13 @@ public class DefaultChannelPipelineTailTest {
     @Test
     public void testOnUnhandledInboundWritabilityChanged() throws Exception {
         final CountDownLatch latch = new CountDownLatch(1);
-        MyChannel myChannel = new MyChannel() {
-            @Override
-            protected void onUnhandledInboundWritabilityChanged() {
-                latch.countDown();
-            }
-        };
-
         Bootstrap bootstrap = new Bootstrap()
-                .channelFactory(new MyChannelFactory(myChannel))
+                .channelFactory(e -> new MyChannel(e) {
+                    @Override
+                    protected void onUnhandledInboundWritabilityChanged() {
+                        latch.countDown();
+                    }
+                })
                 .group(GROUP)
                 .handler(new ChannelInboundHandlerAdapter())
                 .remoteAddress(new InetSocketAddress(0));
@@ -235,19 +221,6 @@ public class DefaultChannelPipelineTailTest {
         }
     }
 
-    private static class MyChannelFactory implements ChannelFactory<MyChannel> {
-        private final MyChannel channel;
-
-        MyChannelFactory(MyChannel channel) {
-            this.channel = channel;
-        }
-
-        @Override
-        public MyChannel newChannel() {
-            return channel;
-        }
-    }
-
     private abstract static class MyChannel extends AbstractChannel {
         private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
@@ -256,8 +229,8 @@ public class DefaultChannelPipelineTailTest {
         private boolean active;
         private boolean closed;
 
-        protected MyChannel() {
-            super(null);
+        protected MyChannel(EventLoop eventLoop) {
+            super(eventLoop, null, null);
         }
 
         @Override
@@ -288,11 +261,6 @@ public class DefaultChannelPipelineTailTest {
         @Override
         protected AbstractUnsafe newUnsafe() {
             return new MyUnsafe();
-        }
-
-        @Override
-        protected boolean isCompatible(EventLoop loop) {
-            return true;
         }
 
         @Override

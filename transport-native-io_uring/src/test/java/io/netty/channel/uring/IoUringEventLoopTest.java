@@ -59,8 +59,8 @@ public class IoUringEventLoopTest extends AbstractSingleThreadEventLoopTest {
     }
 
     @Override
-    protected Channel newChannel() {
-        return new IoUringServerSocketChannel();
+    protected Channel newChannel(EventLoop eventLoop) {
+        return new IoUringServerSocketChannel(eventLoop, eventLoop);
     }
 
     @Override

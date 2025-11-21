@@ -132,8 +132,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    AbstractIoUringChannel(final Channel parent, LinuxSocket socket, boolean active) {
-        super(parent);
+    AbstractIoUringChannel(EventLoop eventLoop, Channel parent, LinuxSocket socket, boolean active) {
+        super(eventLoop, IoUringIoHandle.class, parent);
         this.socket = checkNotNull(socket, "fd");
 
         if (active) {
@@ -147,8 +147,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         logger.trace("Create {} Socket: {}", this instanceof ServerChannel ? "Server" : "Channel", socket.intValue());
     }
 
-    AbstractIoUringChannel(Channel parent, LinuxSocket fd, SocketAddress remote) {
-        super(parent);
+    AbstractIoUringChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd, SocketAddress remote) {
+        super(eventLoop, IoUringIoHandle.class, parent);
         this.socket = checkNotNull(fd, "fd");
         this.active = true;
 
@@ -200,6 +200,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         return id;
     }
 
+    @Override
     public final boolean isOpen() {
         return socket.isOpen();
     }
@@ -216,11 +217,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     private AbstractUringUnsafe ioUringUnsafe() {
         return (AbstractUringUnsafe) unsafe();
-    }
-
-    @Override
-    protected boolean isCompatible(final EventLoop loop) {
-        return loop.isCompatible(AbstractUringUnsafe.class);
     }
 
     protected final ByteBuf newDirectBuffer(ByteBuf buf) {

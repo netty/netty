@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
@@ -56,22 +57,22 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     private volatile boolean connected;
     private final KQueueDatagramChannelConfig config;
 
-    public KQueueDatagramChannel() {
-        super(null, newSocketDgram(), false);
+    public KQueueDatagramChannel(EventLoop eventLoop) {
+        super(eventLoop, null, newSocketDgram(), false);
         config = new KQueueDatagramChannelConfig(this);
     }
 
-    public KQueueDatagramChannel(SocketProtocolFamily protocol) {
-        super(null, newSocketDgram(protocol), false);
+    public KQueueDatagramChannel(EventLoop eventLoop, SocketProtocolFamily protocol) {
+        super(eventLoop, null, newSocketDgram(protocol), false);
         config = new KQueueDatagramChannelConfig(this);
     }
 
-    public KQueueDatagramChannel(int fd) {
-        this(new BsdSocket(fd), true);
+    public KQueueDatagramChannel(EventLoop eventLoop, int fd) {
+        this(eventLoop, new BsdSocket(fd), true);
     }
 
-    KQueueDatagramChannel(BsdSocket socket, boolean active) {
-        super(null, socket, active);
+    KQueueDatagramChannel(EventLoop eventLoop, BsdSocket socket, boolean active) {
+        super(eventLoop, null, socket, active);
         config = new KQueueDatagramChannelConfig(this);
     }
 

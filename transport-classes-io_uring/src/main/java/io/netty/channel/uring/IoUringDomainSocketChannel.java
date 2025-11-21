@@ -21,6 +21,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.DomainSocketChannel;
@@ -43,17 +44,17 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
     private volatile DomainSocketAddress local;
     private volatile DomainSocketAddress remote;
 
-    public IoUringDomainSocketChannel() {
-        super(null, LinuxSocket.newSocketDomain(), false);
+    public IoUringDomainSocketChannel(EventLoop eventLoop) {
+        super(eventLoop, null, LinuxSocket.newSocketDomain(), false);
         config = new IoUringDomainSocketChannelConfig(this);
     }
 
-    IoUringDomainSocketChannel(Channel parent, FileDescriptor fd) {
-        this(parent, new LinuxSocket(fd.intValue()));
+    IoUringDomainSocketChannel(EventLoop eventLoop, Channel parent, FileDescriptor fd) {
+        this(eventLoop, parent, new LinuxSocket(fd.intValue()));
     }
 
-    IoUringDomainSocketChannel(Channel parent, LinuxSocket fd) {
-        super(parent, fd, true);
+    IoUringDomainSocketChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd) {
+        super(eventLoop, parent, fd, true);
         local = fd.localDomainSocketAddress();
         remote = fd.remoteDomainSocketAddress();
         config = new IoUringDomainSocketChannelConfig(this);

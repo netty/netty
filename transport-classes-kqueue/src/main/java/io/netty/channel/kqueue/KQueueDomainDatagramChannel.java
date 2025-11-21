@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.DefaultAddressedEnvelope;
+import io.netty.channel.EventLoop;
 import io.netty.channel.unix.DomainDatagramChannel;
 import io.netty.channel.unix.DomainDatagramChannelConfig;
 import io.netty.channel.unix.DomainDatagramPacket;
@@ -54,16 +55,16 @@ public final class KQueueDomainDatagramChannel extends AbstractKQueueDatagramCha
 
     private final KQueueDomainDatagramChannelConfig config;
 
-    public KQueueDomainDatagramChannel() {
-        this(newSocketDomainDgram(), false);
+    public KQueueDomainDatagramChannel(EventLoop eventLoop) {
+        this(eventLoop, newSocketDomainDgram(), false);
     }
 
-    public KQueueDomainDatagramChannel(int fd) {
-        this(new BsdSocket(fd), true);
+    public KQueueDomainDatagramChannel(EventLoop eventLoop, int fd) {
+        this(eventLoop, new BsdSocket(fd), true);
     }
 
-    private KQueueDomainDatagramChannel(BsdSocket socket, boolean active) {
-        super(null, socket, active);
+    private KQueueDomainDatagramChannel(EventLoop eventLoop, BsdSocket socket, boolean active) {
+        super(eventLoop, null, socket, active);
         config = new KQueueDomainDatagramChannelConfig(this);
     }
 

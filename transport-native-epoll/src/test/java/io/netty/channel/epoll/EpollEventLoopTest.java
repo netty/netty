@@ -15,6 +15,7 @@
  */
 package io.netty.channel.epoll;
 
+import io.netty.channel.EventLoop;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.testsuite.transport.AbstractSingleThreadEventLoopTest;
 import io.netty.channel.EventLoopGroup;
@@ -43,8 +44,8 @@ public class EpollEventLoopTest extends AbstractSingleThreadEventLoopTest {
     }
 
     @Override
-    protected ServerSocketChannel newChannel() {
-        return new EpollServerSocketChannel();
+    protected ServerSocketChannel newChannel(EventLoop eventLoop) {
+        return new EpollServerSocketChannel(eventLoop, eventLoop);
     }
 
     @Override

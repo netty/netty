@@ -27,7 +27,9 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ReflectiveServerChannelFactory;
 import io.netty.channel.ServerChannel;
+import io.netty.channel.ServerChannelFactory;
 import io.netty.util.AttributeKey;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -55,17 +57,46 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     private final ServerBootstrapConfig config = new ServerBootstrapConfig(this);
     private volatile EventLoopGroup childGroup;
     private volatile ChannelHandler childHandler;
+    volatile ServerChannelFactory<? extends ServerChannel> channelFactory;
 
     public ServerBootstrap() { }
 
     private ServerBootstrap(ServerBootstrap bootstrap) {
         super(bootstrap);
+        channelFactory = bootstrap.channelFactory;
         childGroup = bootstrap.childGroup;
         childHandler = bootstrap.childHandler;
         synchronized (bootstrap.childOptions) {
             childOptions.putAll(bootstrap.childOptions);
         }
         childAttrs.putAll(bootstrap.childAttrs);
+    }
+
+    /**
+     * The {@link Class} which is used to create {@link Channel} instances from.
+     * You either use this or {@link #channelFactory(io.netty.channel.ServerChannelFactory)} if your
+     * {@link Channel} implementation has no no-args constructor.
+     */
+    public ServerBootstrap channel(Class<? extends ServerChannel> channelClass) {
+        ObjectUtil.checkNotNull(channelClass, "channelClass");
+        return channelFactory(new ReflectiveServerChannelFactory<>(channelClass));
+    }
+
+    /**
+     * {@link io.netty.channel.ServerChannelFactory} which is used to create {@link ServerChannel} instances from
+     * when calling {@link #bind()}. This method is usually only used if {@link #channel(Class)}
+     * is not working for you because of some more complex needs. If your {@link ServerChannel} implementation
+     * has a no-args constructor, its highly recommend to just use {@link #channel(Class)} to
+     * simplify your code.
+     */
+    public ServerBootstrap channelFactory(ServerChannelFactory<? extends ServerChannel> channelFactory) {
+        ObjectUtil.checkNotNull(channelFactory, "channelFactory");
+        if (this.channelFactory != null) {
+            throw new IllegalStateException("channelFactory set already");
+        }
+
+        this.channelFactory = channelFactory;
+        return this;
     }
 
     /**
@@ -133,6 +164,11 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     }
 
     @Override
+    protected Channel newChannel(EventLoop eventLoop) {
+        return channelFactory.newChannel(eventLoop, childGroup);
+    }
+
+    @Override
     void init(Channel channel) {
         setChannelOptions(channel, newOptionsArray(), logger);
         setAttributes(channel, newAttributesArray());
@@ -185,6 +221,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         if (childGroup == null) {
             logger.warn("childGroup is not set. Using parentGroup instead.");
             childGroup = config.group();
+        }
+        if (channelFactory == null) {
+            throw new IllegalStateException("channel or channelFactory not set");
         }
         return this;
     }
@@ -242,10 +281,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             }
 
             try {
-                // TODO: This is just a hack for now and will be replaced on the follow PR that will change
-                //  Unsafe interface.
-                EventLoop loop = childGroup.next();
-                child.register(loop).addListener(new ChannelFutureListener() {
+                child.register().addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture future) throws Exception {
                         if (!future.isSuccess()) {
@@ -297,6 +333,10 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
     final ChannelHandler childHandler() {
         return childHandler;
+    }
+
+    final ServerChannelFactory<? extends ServerChannel> channelFactory() {
+        return channelFactory;
     }
 
     final Map<ChannelOption<?>, Object> childOptions() {

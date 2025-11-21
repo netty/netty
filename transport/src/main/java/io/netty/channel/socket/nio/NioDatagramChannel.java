@@ -27,6 +27,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.DefaultChannelConfig;
+import io.netty.channel.EventLoop;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
@@ -126,24 +127,24 @@ public final class NioDatagramChannel
     /**
      * Create a new instance which will use the Operation Systems default {@link SocketProtocolFamily}.
      */
-    public NioDatagramChannel() {
-        this(newSocket(DEFAULT_SELECTOR_PROVIDER));
+    public NioDatagramChannel(EventLoop eventLoop) {
+        this(eventLoop, newSocket(DEFAULT_SELECTOR_PROVIDER));
     }
 
     /**
      * Create a new instance using the given {@link SelectorProvider}
      * which will use the Operation Systems default {@link SocketProtocolFamily}.
      */
-    public NioDatagramChannel(SelectorProvider provider) {
-        this(newSocket(provider));
+    public NioDatagramChannel(EventLoop eventLoop, SelectorProvider provider) {
+        this(eventLoop, newSocket(provider));
     }
 
     /**
      * Create a new instance using the given {@link SocketProtocolFamily}. If {@code null} is used it will depend
      * on the Operation Systems default which will be chosen.
      */
-    public NioDatagramChannel(SocketProtocolFamily protocolFamily) {
-        this(newSocket(DEFAULT_SELECTOR_PROVIDER, protocolFamily));
+    public NioDatagramChannel(EventLoop eventLoop, SocketProtocolFamily protocolFamily) {
+        this(eventLoop, newSocket(DEFAULT_SELECTOR_PROVIDER, protocolFamily));
     }
 
     /**
@@ -151,16 +152,19 @@ public final class NioDatagramChannel
      * If {@link SocketProtocolFamily} is {@code null} it will depend on the Operation Systems default
      * which will be chosen.
      */
-    public NioDatagramChannel(SelectorProvider provider, SocketProtocolFamily protocolFamily) {
-        this(newSocket(provider, protocolFamily));
+    public NioDatagramChannel(EventLoop eventLoop, SelectorProvider provider, SocketProtocolFamily protocolFamily) {
+        this(eventLoop, newSocket(provider, protocolFamily));
     }
 
     /**
      * Create a new instance from the given {@link DatagramChannel}.
+     *
+     * @param eventLoop     the {@link EventLoop} to use for the {@link Channel}
+     * @param channel       the underlying {@link DatagramChannel}.
      */
-    public NioDatagramChannel(DatagramChannel socket) {
-        super(null, socket, SelectionKey.OP_READ);
-        config = new NioDatagramChannelConfig(this, socket);
+    public NioDatagramChannel(EventLoop eventLoop, DatagramChannel channel) {
+        super(eventLoop, null, channel, SelectionKey.OP_READ);
+        config = new NioDatagramChannelConfig(this, channel);
     }
 
     @Override
