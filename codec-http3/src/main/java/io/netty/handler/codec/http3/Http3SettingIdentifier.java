@@ -1,3 +1,18 @@
+/*
+ * Copyright 2025 The Netty Project
+ *
+ * The Netty Project licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
 package io.netty.handler.codec.http3;
 
 import javax.annotation.Nullable;
@@ -54,6 +69,16 @@ public enum Http3SettingIdentifier {
      */
     HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL(0x8),
 
+    /**
+     * ENABLE_H3_DATAGRAM setting identifier (<b>0x8</b>).
+     * <p>
+     * Defined and registered in <a href="https://datatracker.ietf.org/doc/html/rfc9297#name-http-3-setting">
+     * RFC 9220, Section 5 (IANA Considerations)</a> and registered in
+     * the <a href="https://www.iana.org/assignments/http3-parameters/http3-parameters.xhtml#settings">
+     * HTTP/3 SETTINGS registry (IANA)</a>.
+     * <br>
+     * Enables use of the CONNECT protocol in HTTP/3 when set to 1; disabled when 0.
+     */
     HTTP3_SETTINGS_H3_DATAGRAM(0x33);
 
     private final long id;
