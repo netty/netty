@@ -42,9 +42,12 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  *
  * <p>Example usage:
  * <pre>
- * OpenSslCredential credential = OpenSslCredentialBuilder.forX509()
- *     .privateKey(privateKey)
- *     .certificateChain(cert1, cert2, cert3)
+ * // Create credential with trust anchor (optional)
+ * ASN1ObjectIdentifier oid = new ASN1ObjectIdentifier("1.3.6.1.4.1.11129.9.10"); // Google's taiWE1
+ * byte[] trustAnchorBytes = oid.getEncoded();
+ *
+ * OpenSslCredential credential = OpenSslCredentialBuilder.forX509(privateKey, cert1, cert2, cert3)
+ *     .trustAnchorId(trustAnchorBytes)  // optional
  *     .build();
  * </pre>
  *
@@ -58,58 +61,42 @@ public final class OpenSslCredentialBuilder {
     private byte[] trustAnchorId;
     private boolean mustMatchIssuer;
 
-    private OpenSslCredentialBuilder() {
-    }
-
-    /**
-     * Creates a new builder for an X.509 credential.
-     *
-     * @return a new builder instance
-     */
-    public static OpenSslCredentialBuilder forX509() {
-        return new OpenSslCredentialBuilder();
-    }
-
-    /**
-     * Sets the private key for this credential.
-     *
-     * @param privateKey the private key
-     * @return this builder for chaining
-     */
-    public OpenSslCredentialBuilder privateKey(PrivateKey privateKey) {
+    private OpenSslCredentialBuilder(PrivateKey privateKey, X509Certificate[] certificateChain) {
         this.privateKey = checkNotNull(privateKey, "privateKey");
-        this.openSslPrivateKey = null;
-        return this;
-    }
-
-    /**
-     * Sets the private key for this credential using an OpenSSL-specific key.
-     *
-     * @param privateKey the OpenSSL private key
-     * @return this builder for chaining
-     */
-    public OpenSslCredentialBuilder privateKey(OpenSslPrivateKey privateKey) {
-        this.openSslPrivateKey = checkNotNull(privateKey, "privateKey");
-        this.privateKey = null;
-        return this;
-    }
-
-    /**
-     * Sets the certificate chain for this credential.
-     *
-     * @param certificateChain the certificate chain, starting with the leaf certificate
-     * @return this builder for chaining
-     */
-    public OpenSslCredentialBuilder certificateChain(X509Certificate... certificateChain) {
         this.certificateChain = checkNotNull(certificateChain, "certificateChain").clone();
         ObjectUtil.checkNonEmpty(this.certificateChain, "certificateChain");
-        return this;
+    }
+
+    private OpenSslCredentialBuilder(OpenSslPrivateKey openSslPrivateKey, X509Certificate[] certificateChain) {
+        this.openSslPrivateKey = checkNotNull(openSslPrivateKey, "privateKey");
+        this.certificateChain = checkNotNull(certificateChain, "certificateChain").clone();
+        ObjectUtil.checkNonEmpty(this.certificateChain, "certificateChain");
+    }
+
+    /**
+     * Creates a new builder for an X.509 credential with a Java PrivateKey.
+     *
+     * @param privateKey the private key (required)
+     * @param certificateChain the certificate chain, starting with the leaf certificate (required)
+     * @return a new builder instance
+     */
+    public static OpenSslCredentialBuilder forX509(PrivateKey privateKey, X509Certificate... certificateChain) {
+        return new OpenSslCredentialBuilder(privateKey, certificateChain);
     }
 
     /**
      * Sets the trust anchor identifier for this credential.
      *
-     * @param trustAnchorId the trust anchor identifier
+     * <p>The trust anchor identifier should be ASN.1 DER encoded bytes.
+     * To convert from an OID string, use BouncyCastle's ASN1Encodable:
+     * <pre>
+     * // Example: Google's taiWE1 OID from https://pki.goog/oids/index.html
+     * ASN1ObjectIdentifier oid = new ASN1ObjectIdentifier("1.3.6.1.4.1.11129.9.10");
+     * byte[] encoded = oid.getEncoded();
+     * credential.trustAnchorId(encoded);
+     * </pre>
+     *
+     * @param trustAnchorId the trust anchor identifier as ASN.1 DER encoded bytes
      * @return this builder for chaining
      */
     public OpenSslCredentialBuilder trustAnchorId(byte[] trustAnchorId) {
@@ -132,29 +119,13 @@ public final class OpenSslCredentialBuilder {
      * Builds the {@link OpenSslCredential} instance.
      *
      * @return a new credential instance
-     * @throws IllegalStateException if required parameters are missing or if an error occurs
+     * @throws IllegalStateException if an error occurs during credential creation
      */
     public OpenSslCredential build() {
         OpenSsl.ensureAvailability();
 
         if (!OpenSsl.isBoringSSL()) {
             throw new UnsupportedOperationException("SSL_CREDENTIAL API is only supported with BoringSSL");
-        }
-
-        // Validate that cert and key are both present or both absent
-        boolean hasPrivateKey = privateKey != null || openSslPrivateKey != null;
-        boolean hasCertChain = certificateChain != null && certificateChain.length > 0;
-
-        if (hasCertChain && !hasPrivateKey) {
-            throw new IllegalStateException(
-                    "Certificate chain provided without private key. " +
-                    "SSL credentials require both certificate and private key to be set together.");
-        }
-
-        if (hasPrivateKey && !hasCertChain) {
-            throw new IllegalStateException(
-                    "Private key provided without certificate chain. " +
-                    "SSL credentials require both certificate and private key to be set together.");
         }
 
         long credentialPtr = 0;
@@ -165,17 +136,13 @@ public final class OpenSslCredentialBuilder {
             // Create the credential
             credentialPtr = createCredential();
 
-            // Set private key if provided
-            if (hasPrivateKey) {
-                privateKeyPtr = getPrivateKeyPointer();
-                SSLCredential.setPrivateKey(credentialPtr, privateKeyPtr);
-            }
+            // Set private key (guaranteed to be present via constructor)
+            privateKeyPtr = getPrivateKeyPointer();
+            SSLCredential.setPrivateKey(credentialPtr, privateKeyPtr);
 
-            // Set certificate chain if provided
-            if (hasCertChain) {
-                certChainPtr = createCertChainPointer();
-                SSLCredential.setCertChain(credentialPtr, certChainPtr);
-            }
+            // Set certificate chain (guaranteed to be present via constructor)
+            certChainPtr = createCertChainPointer();
+            SSLCredential.setCertChain(credentialPtr, certChainPtr);
 
             // Set optional properties
             if (trustAnchorId != null) {
