@@ -682,7 +682,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
     // IMPORTANT: This method must only be called from either the constructor or the finalizer as a user MUST never
     //            get access to an OpenSslSessionContext after this method was called to prevent the user from
     //            producing a segfault.
-    private void destroy() {
+    protected void destroy() {
         Lock writerLock = ctxLock.writeLock();
         writerLock.lock();
         try {

@@ -13,14 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.handler.ssl;
+package io.netty.handler.ssl;
 
-import io.netty5.internal.tcnative.SSLCredential;
-import io.netty5.util.AbstractReferenceCounted;
-import io.netty5.util.IllegalReferenceCountException;
-import io.netty5.util.ResourceLeakDetector;
-import io.netty5.util.ResourceLeakDetectorFactory;
-import io.netty5.util.ResourceLeakTracker;
+import io.netty.internal.tcnative.SSLCredential;
+import io.netty.util.AbstractReferenceCounted;
+import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.ResourceLeakDetector;
+import io.netty.util.ResourceLeakDetectorFactory;
+import io.netty.util.ResourceLeakTracker;
 
 /**
  * Default implementation of {@link OpenSslCredential}.

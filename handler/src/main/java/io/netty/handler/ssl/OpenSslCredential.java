@@ -13,10 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.handler.ssl;
+package io.netty.handler.ssl;
 
-import io.netty5.util.IllegalReferenceCountException;
-import io.netty5.util.ReferenceCounted;
+import io.netty.util.IllegalReferenceCountException;
+import io.netty.util.ReferenceCounted;
 
 /**
  * Represents an OpenSSL/BoringSSL {@code SSL_CREDENTIAL} object.

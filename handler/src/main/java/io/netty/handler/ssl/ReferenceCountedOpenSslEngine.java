@@ -2319,7 +2319,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      */
     public void addCredential(OpenSslCredential credential) throws SSLException {
         synchronized (this) {
-            if (isDestroyed()) {
+            if (destroyed) {
                 throw new IllegalStateException("Engine is destroyed");
             }
             if (handshakeState != HandshakeState.NOT_STARTED) {
@@ -2349,7 +2349,7 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
      */
     public OpenSslCredential getSelectedCredential() throws SSLException {
         synchronized (this) {
-            if (isDestroyed()) {
+            if (destroyed) {
                 return null;
             }
             try {
@@ -2357,10 +2357,8 @@ public class ReferenceCountedOpenSslEngine extends SSLEngine implements Referenc
                 if (credPtr == 0) {
                     return null;
                 }
-                // Note: We can't easily wrap this in an OpenSslCredential because we don't
-                // own the lifetime of the credential pointer - it's owned by OpenSSL.
-                // For now, return null. A future enhancement could create a non-owning wrapper.
-                return null;
+                // Return a non-owning wrapper since OpenSSL manages the credential's lifetime
+                return new NonOwnedOpenSslCredential(credPtr, OpenSslCredential.CredentialType.X509);
             } catch (Exception e) {
                 throw new SSLException("Failed to get selected credential", e);
             }

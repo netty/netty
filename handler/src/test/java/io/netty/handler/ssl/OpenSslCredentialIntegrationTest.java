@@ -29,7 +29,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-import static io.netty.buffer.DefaultBufferAllocators.offHeapAllocator;
+import static io.netty.buffer.UnpooledByteBufAllocator.DEFAULT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -95,7 +95,8 @@ public class OpenSslCredentialIntegrationTest {
         credentialsToRelease.add(ecdsaCredential);
 
         // Server context with both credentials
-        SslContext serverContext = SslContextBuilder.forServer(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+        SslContext serverContext = SslContextBuilder.forServer(rsaCert.getKeyPair().getPrivate(),
+                        rsaCert.getCertificate())
                 .sslProvider(SslProvider.OPENSSL_REFCNT)
                 .credentials(rsaCredential, ecdsaCredential)
                 .build();
@@ -107,14 +108,30 @@ public class OpenSslCredentialIntegrationTest {
                 .build();
         contextsToRelease.add(clientContext);
 
-        SSLEngine serverEngine = serverContext.newEngine(offHeapAllocator());
-        SSLEngine clientEngine = clientContext.newEngine(offHeapAllocator());
+        ReferenceCountedOpenSslEngine serverEngine =
+                (ReferenceCountedOpenSslEngine) serverContext.newEngine(DEFAULT);
+        SSLEngine clientEngine = clientContext.newEngine(DEFAULT);
 
         try {
             performHandshake(clientEngine, serverEngine);
 
             // Handshake should succeed with either credential
             assertTrue(serverEngine.getSession().isValid());
+
+            // Verify we can get the selected credential
+            OpenSslCredential selectedCredential = serverEngine.getSelectedCredential();
+            assertNotNull(selectedCredential, "Selected credential should not be null after handshake");
+            assertEquals(OpenSslCredential.CredentialType.X509, selectedCredential.type(),
+                    "Selected credential should be X509 type");
+
+            // Verify the selected credential pointer matches one of our configured credentials
+            long selectedPtr = selectedCredential.credentialAddress();
+            long rsaPtr = rsaCredential.credentialAddress();
+            long ecdsaPtr = ecdsaCredential.credentialAddress();
+
+            assertTrue(selectedPtr == rsaPtr || selectedPtr == ecdsaPtr,
+                    "Selected credential should match either RSA or ECDSA credential. " +
+                    "Selected: " + selectedPtr + ", RSA: " + rsaPtr + ", ECDSA: " + ecdsaPtr);
         } finally {
             serverEngine.closeOutbound();
             clientEngine.closeOutbound();
@@ -129,13 +146,14 @@ public class OpenSslCredentialIntegrationTest {
                 .build();
         credentialsToRelease.add(credential);
 
-        SslContext serverContext = SslContextBuilder.forServer(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+        SslContext serverContext = SslContextBuilder.forServer(rsaCert.getKeyPair().getPrivate(),
+                        rsaCert.getCertificate())
                 .sslProvider(SslProvider.OPENSSL_REFCNT)
                 .build();
         contextsToRelease.add(serverContext);
 
         ReferenceCountedOpenSslEngine serverEngine =
-                (ReferenceCountedOpenSslEngine) serverContext.newEngine(offHeapAllocator());
+                (ReferenceCountedOpenSslEngine) serverContext.newEngine(DEFAULT);
 
         // Add credential at engine level
         serverEngine.addCredential(credential);
@@ -146,7 +164,7 @@ public class OpenSslCredentialIntegrationTest {
                 .build();
         contextsToRelease.add(clientContext);
 
-        SSLEngine clientEngine = clientContext.newEngine(offHeapAllocator());
+        SSLEngine clientEngine = clientContext.newEngine(DEFAULT);
 
         try {
             performHandshake(clientEngine, serverEngine);

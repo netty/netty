@@ -13,17 +13,16 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty5.handler.ssl;
+package io.netty.handler.ssl;
 
-import io.netty5.buffer.ByteBuf;
-import io.netty5.buffer.ByteBufAllocator;
-import io.netty5.buffer.Unpooled;
-import io.netty5.buffer.UnpooledByteBufAllocator;
-import io.netty5.internal.tcnative.Buffer;
-import io.netty5.internal.tcnative.SSL;
-import io.netty5.internal.tcnative.SSLContext;
-import io.netty5.internal.tcnative.SSLCredential;
-import io.netty5.util.internal.ObjectUtil;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.Unpooled;
+import io.netty.buffer.UnpooledByteBufAllocator;
+import io.netty.internal.tcnative.SSL;
+import io.netty.internal.tcnative.SSLContext;
+import io.netty.internal.tcnative.SSLCredential;
+import io.netty.util.internal.ObjectUtil;
 
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
@@ -232,7 +231,7 @@ public final class OpenSslCredentialBuilder {
         try {
             return SSL.parsePrivateKey(bio, null);
         } finally {
-            Buffer.freeBIO(bio);
+            SSL.freeBIO(bio);
         }
     }
 
@@ -244,7 +243,7 @@ public final class OpenSslCredentialBuilder {
             try {
                 return SSL.parseX509Chain(bio);
             } finally {
-                Buffer.freeBIO(bio);
+                SSL.freeBIO(bio);
             }
         } catch (Exception e) {
             throw new IllegalStateException("Failed to encode certificate chain", e);

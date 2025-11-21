@@ -516,7 +516,7 @@ public final class SslContextBuilder {
         if (this.credentials == null) {
             this.credentials = new ArrayList<>();
         }
-        this.credentials.add(requireNonNull(credential, "credential"));
+        this.credentials.add(checkNotNull(credential, "credential"));
         return this;
     }
 
@@ -534,12 +534,12 @@ public final class SslContextBuilder {
      * @see OpenSslCredentialBuilder
      */
     public SslContextBuilder credentials(OpenSslCredential... credentials) {
-        requireNonNull(credentials, "credentials");
+        checkNotNull(credentials, "credentials");
         if (this.credentials == null) {
             this.credentials = new ArrayList<>(credentials.length);
         }
         for (OpenSslCredential credential : credentials) {
-            this.credentials.add(requireNonNull(credential, "credential"));
+            this.credentials.add(checkNotNull(credential, "credential"));
         }
         return this;
     }
@@ -555,16 +555,15 @@ public final class SslContextBuilder {
      * @see OpenSslCredentialBuilder
      */
     public SslContextBuilder credentials(Iterable<? extends OpenSslCredential> credentials) {
-        requireNonNull(credentials, "credentials");
+        checkNotNull(credentials, "credentials");
         if (this.credentials == null) {
             this.credentials = new ArrayList<>();
         }
         for (OpenSslCredential credential : credentials) {
-            this.credentials.add(requireNonNull(credential, "credential"));
+            this.credentials.add(checkNotNull(credential, "credential"));
         }
         return this;
     }
-
 
     /**
      * A single key manager managing the identity information of this host.

@@ -483,11 +483,15 @@ public abstract class SslContext {
                     clientAuth, protocols, startTls, secureRandom, keyStoreType, resumptionController);
         case OPENSSL:
             verifyNullSslContextProvider(provider, sslContextProvider);
+            if (credentials != null && !credentials.isEmpty()) {
+                throw new IllegalArgumentException(
+                        "OpenSslCredential is not supported with SslProvider.OPENSSL. " +
+                        "Use SslProvider.OPENSSL_REFCNT instead.");
+            }
             return new OpenSslServerContext(
                     trustCertCollection, trustManagerFactory, keyCertChain, key, keyPassword,
                     keyManagerFactory, ciphers, cipherFilter, apn, sessionCacheSize, sessionTimeout,
-                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions,
-                    credentials);
+                    clientAuth, protocols, startTls, enableOcsp, keyStoreType, resumptionController, ctxOptions);
         case OPENSSL_REFCNT:
             verifyNullSslContextProvider(provider, sslContextProvider);
             return new ReferenceCountedOpenSslServerContext(
@@ -852,11 +856,16 @@ public abstract class SslContext {
             case OPENSSL:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 OpenSsl.ensureAvailability();
+                if (credentials != null && !credentials.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "OpenSslCredential is not supported with SslProvider.OPENSSL. " +
+                            "Use SslProvider.OPENSSL_REFCNT instead.");
+                }
                 return new OpenSslClientContext(
                         trustCert, trustManagerFactory, keyCertChain, key, keyPassword,
                         keyManagerFactory, ciphers, cipherFilter, apn, protocols, sessionCacheSize, sessionTimeout,
                         enableOcsp, keyStoreType, endpointIdentificationAlgorithm, serverNames, resumptionController,
-                        options, credentials);
+                        options);
             case OPENSSL_REFCNT:
                 verifyNullSslContextProvider(provider, sslContextProvider);
                 OpenSsl.ensureAvailability();
