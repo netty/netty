@@ -84,7 +84,7 @@ public class ChannelInitializerTest {
         ChannelPipeline pipeline = new LocalChannel().pipeline();
 
         if (registerFirst) {
-            group.register(pipeline.channel()).syncUninterruptibly();
+            pipeline.channel().register(group.next()).syncUninterruptibly();
         }
         pipeline.addFirst(new ChannelInitializer<Channel>() {
             @Override
@@ -100,7 +100,7 @@ public class ChannelInitializerTest {
         });
 
         if (!registerFirst) {
-            group.register(pipeline.channel()).syncUninterruptibly();
+            pipeline.channel().register(group.next()).syncUninterruptibly();
         }
         pipeline.channel().close().syncUninterruptibly();
         pipeline.channel().closeFuture().syncUninterruptibly();

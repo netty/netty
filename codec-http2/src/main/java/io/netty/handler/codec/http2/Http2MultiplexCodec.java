@@ -179,7 +179,7 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
                 } else {
                     streamChannel = new Http2MultiplexCodecStreamChannel(stream, inboundStreamHandler);
                 }
-                ChannelFuture future = ctx.channel().executor().register(streamChannel);
+                ChannelFuture future = streamChannel.register(ctx.channel().executor());
                 if (future.isDone()) {
                     Http2MultiplexHandler.registerDone(future);
                 } else {

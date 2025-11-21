@@ -21,7 +21,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.NetUtil;
@@ -78,7 +77,7 @@ public class SocketMultipleConnectTest extends AbstractSocketTest {
         for (TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap> comboFactory
                 : SocketTestPermutation.INSTANCE.socketWithFastOpen()) {
             EventLoopGroup group = comboFactory.newClientInstance().config().group();
-            if (group instanceof IoEventLoopGroup && ((IoEventLoopGroup) group).isIoType(NioIoHandler.class)) {
+            if (group.isIoType(NioIoHandler.class)) {
                 factories.add(comboFactory);
             }
         }

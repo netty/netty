@@ -108,27 +108,6 @@ public abstract class SingleThreadEventLoop extends SingleThreadEventExecutor im
         return (EventLoop) super.next();
     }
 
-    @Override
-    public ChannelFuture register(Channel channel) {
-        return register(new DefaultChannelPromise(channel, this));
-    }
-
-    @Override
-    public ChannelFuture register(final ChannelPromise promise) {
-        ObjectUtil.checkNotNull(promise, "promise");
-        promise.channel().unsafe().register(this, promise);
-        return promise;
-    }
-
-    @Deprecated
-    @Override
-    public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
-        ObjectUtil.checkNotNull(promise, "promise");
-        ObjectUtil.checkNotNull(channel, "channel");
-        channel.unsafe().register(this, promise);
-        return promise;
-    }
-
     /**
      * Adds a task to be run once at the end of next (or current) {@code eventloop} iteration.
      *

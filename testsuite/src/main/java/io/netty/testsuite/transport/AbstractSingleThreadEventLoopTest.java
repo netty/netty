@@ -88,8 +88,8 @@ public abstract class AbstractSingleThreadEventLoopTest {
                 assertEquals(0, registeredChannels(loop));
             }
 
-            assertTrue(loop.register(ch1).syncUninterruptibly().isSuccess());
-            assertTrue(loop.register(ch2).syncUninterruptibly().isSuccess());
+            assertTrue(ch1.register(loop).syncUninterruptibly().isSuccess());
+            assertTrue(ch2.register(loop).syncUninterruptibly().isSuccess());
             if (channelCountSupported) {
                 checkNumRegisteredChannels(loop, 2);
             }
@@ -221,8 +221,8 @@ public abstract class AbstractSingleThreadEventLoopTest {
         try {
             final Channel ch1 = newChannel();
             final Channel ch2 = newChannel();
-            loop.register(ch1).syncUninterruptibly();
-            loop.register(ch2).syncUninterruptibly();
+            ch1.register(loop).syncUninterruptibly();
+            ch2.register(loop).syncUninterruptibly();
             assertEquals(2, registeredChannels(loop));
 
             runBlockingOn(loop, new Runnable() {
@@ -268,7 +268,7 @@ public abstract class AbstractSingleThreadEventLoopTest {
 
         try {
             final Channel ch = newChannel();
-            loop.register(ch).syncUninterruptibly();
+            ch.register(loop).syncUninterruptibly();
             assertEquals(1, registeredChannels(loop));
 
             runBlockingOn(loop, new Runnable() {

@@ -27,7 +27,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.IoEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioIoHandler;
@@ -66,12 +66,10 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
         run(testInfo, new Runner<ServerBootstrap, Bootstrap>() {
             @Override
             public void run(ServerBootstrap serverBootstrap, Bootstrap bootstrap) throws Throwable {
-                if (bootstrap.config().group() instanceof IoEventLoopGroup) {
-                    IoEventLoopGroup group = (IoEventLoopGroup) bootstrap.config().group();
-                    if (group.isIoType(NioIoHandler.class)) {
-                        logger.debug("Ignoring test for incompatible NioHandler");
-                        return;
-                    }
+                EventLoopGroup group = bootstrap.config().group();
+                if (group.isIoType(NioIoHandler.class)) {
+                    logger.debug("Ignoring test for incompatible NioHandler");
+                    return;
                 }
                 allDataReadEventTriggeredAfterHalfClosure(serverBootstrap, bootstrap);
             }

@@ -25,14 +25,14 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadFactory;
 
 /**
- * {@link IoEventLoopGroup} implementation that will handle its tasks with multiple threads.
+ * {@link EventLoopGroup} implementation that will handle its tasks with multiple threads.
  * <p>
  * This group supports advanced thread management strategies, such as dynamic auto-scaling,
  * by providing a custom {@link EventExecutorChooserFactory}. To enable utilization-based
  * auto-scaling, pass an instance of
  * {@link io.netty.util.concurrent.AutoScalingEventExecutorChooserFactory}.
  */
-public class MultiThreadIoEventLoopGroup extends MultithreadEventLoopGroup implements IoEventLoopGroup {
+public class MultiThreadIoEventLoopGroup extends MultithreadEventLoopGroup {
 
     /**
      * Creates a new instance of the {@link MultiThreadIoEventLoopGroup} using the default number
@@ -110,7 +110,7 @@ public class MultiThreadIoEventLoopGroup extends MultithreadEventLoopGroup imple
      * @param nThreads          the number of threads and so {@link EventLoop}s that are created.
      * @param executor          the {@link Executor} that is used.
      * @param chooserFactory    the {@link EventExecutorChooserFactory} that is used to choose the
-     *                          {@link IoEventLoop} when {@link MultiThreadIoEventLoopGroup#next()} is
+     *                          {@link EventLoop} when {@link MultiThreadIoEventLoopGroup#next()} is
      *                          called.
      * @param ioHandlerFactory  the {@link IoHandlerFactory} that will be used to create {@link IoHandler} for handling
      *                          IO.
@@ -199,22 +199,17 @@ public class MultiThreadIoEventLoopGroup extends MultithreadEventLoopGroup imple
     }
 
     /**
-     * Creates a new {@link IoEventLoop} to use with the given {@link Executor} and {@link IoHandler}.
+     * Creates a new {@link EventLoop} to use with the given {@link Executor} and {@link IoHandler}.
      *
      * @param executor              the {@link Executor} that should be used to handle execution of tasks and IO.
      * @param ioHandlerFactory      the {@link IoHandlerFactory} that should be used to obtain {@link IoHandler} to
      *                              handle IO.
      * @param args                  extra arguments that are based by the constructor.
-     * @return                      the created {@link IoEventLoop}.
+     * @return                      the created {@link EventLoop}.
      */
-    protected IoEventLoop newChild(Executor executor, IoHandlerFactory ioHandlerFactory,
+    protected EventLoop newChild(Executor executor, IoHandlerFactory ioHandlerFactory,
                                    @SuppressWarnings("unused") Object... args) {
         return new SingleThreadIoEventLoop(this, executor, ioHandlerFactory);
-    }
-
-    @Override
-    public IoEventLoop next() {
-        return (IoEventLoop) super.next();
     }
 
     private static Object[] combine(IoHandlerFactory handlerFactory, Object... args) {

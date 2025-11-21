@@ -160,7 +160,7 @@ public abstract class AbstractEventLoopTest {
             };
             ChannelFutureListener reregisteringListener = deregister -> {
                 deregister.channel().pipeline().fireUserEventTriggered("Unregistered user event");
-                newLoop.register(deregister.channel()).addListener(pipelieModifyingListener);
+                deregister.channel().register(newLoop).addListener(pipelieModifyingListener);
             };
             method.apply(outCtx).addListener(reregisteringListener);
         }

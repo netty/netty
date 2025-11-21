@@ -39,15 +39,15 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * {@link IoEventLoop} implementation that is owned by the user and so needs to be driven by the user manually with the
+ * {@link EventLoop} implementation that is owned by the user and so needs to be driven by the user manually with the
  * given {@link Thread}. This means that the user is responsible to call either {@link #runNow()} or {@link #run(long)}
- * to execute IO and tasks that were submitted to this {@link IoEventLoop}.
+ * to execute IO and tasks that were submitted to this {@link EventLoop}.
  * <p>
  * This is for <strong>advanced use-cases only</strong>, where the user wants to own the {@link Thread} that drives the
- * {@link IoEventLoop} to also do other work. Care must be taken that the {@link #runNow() or
+ * {@link EventLoop} to also do other work. Care must be taken that the {@link #runNow() or
  * {@link #waitAndRun()}} methods are called in a timely fashion.
  */
-public final class ManualIoEventLoop extends AbstractScheduledEventExecutor implements IoEventLoop {
+public final class ManualIoEventLoop extends AbstractScheduledEventExecutor implements EventLoop {
     private static final int ST_STARTED = 0;
     private static final int ST_SHUTTING_DOWN = 1;
     private static final int ST_SHUTDOWN = 2;
@@ -76,7 +76,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         }
     };
     private final BlockingIoHandlerContext blockingContext = new BlockingIoHandlerContext();
-    private final IoEventLoopGroup parent;
+    private final EventLoopGroup parent;
     private final AtomicReference<Thread> owningThread;
     private final IoHandler handler;
     private final Ticker ticker;
@@ -88,54 +88,54 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     private boolean initialized;
 
     /**
-     * Create a new {@link IoEventLoop} that is owned by the user and so needs to be driven by the user with the given
+     * Create a new {@link EventLoop} that is owned by the user and so needs to be driven by the user with the given
      * {@link Thread}. This means that the user is responsible to call either {@link #runNow()} or
-     * {@link #run(long)} to execute IO or tasks that were submitted to this {@link IoEventLoop}.
+     * {@link #run(long)} to execute IO or tasks that were submitted to this {@link EventLoop}.
      *
-     * @param owningThread      the {@link Thread} that executes the IO and tasks for this {@link IoEventLoop}. The
+     * @param owningThread      the {@link Thread} that executes the IO and tasks for this {@link EventLoop}. The
      *                          user will use this {@link Thread} to call {@link #runNow()} or {@link #run(long)} to
      *                          make progress.
      * @param factory           the {@link IoHandlerFactory} that will be used to create the {@link IoHandler} that is
-     *                          used by this {@link IoEventLoop}.
+     *                          used by this {@link EventLoop}.
      */
     public ManualIoEventLoop(Thread owningThread, IoHandlerFactory factory) {
         this(null, owningThread, factory);
     }
 
     /**
-     * Create a new {@link IoEventLoop} that is owned by the user and so needs to be driven by the user with the given
+     * Create a new {@link EventLoop} that is owned by the user and so needs to be driven by the user with the given
      * {@link Thread}. This means that the user is responsible to call either {@link #runNow()} or
-     * {@link #run(long)} to execute IO or tasks that were submitted to this {@link IoEventLoop}.
+     * {@link #run(long)} to execute IO or tasks that were submitted to this {@link EventLoop}.
      *
-     * @param parent            the parent {@link IoEventLoopGroup} or {@code null} if no parent.
-     * @param owningThread      the {@link Thread} that executes the IO and tasks for this {@link IoEventLoop}. The
+     * @param parent            the parent {@link EventLoopGroup} or {@code null} if no parent.
+     * @param owningThread      the {@link Thread} that executes the IO and tasks for this {@link EventLoop}. The
      *                          user will use this {@link Thread} to call {@link #runNow()} or {@link #run(long)} to
      *                          make progress. If {@code null}, must be set later using
      *                          {@link #setOwningThread(Thread)}.
      * @param factory           the {@link IoHandlerFactory} that will be used to create the {@link IoHandler} that is
-     *                          used by this {@link IoEventLoop}.
+     *                          used by this {@link EventLoop}.
      */
-    public ManualIoEventLoop(IoEventLoopGroup parent, Thread owningThread, IoHandlerFactory factory) {
+    public ManualIoEventLoop(EventLoopGroup parent, Thread owningThread, IoHandlerFactory factory) {
         this(parent, owningThread, factory, Ticker.systemTicker());
     }
 
     /**
-     * Create a new {@link IoEventLoop} that is owned by the user and so needs to be driven by the user with the given
+     * Create a new {@link EventLoop} that is owned by the user and so needs to be driven by the user with the given
      * {@link Thread}. This means that the user is responsible to call either {@link #runNow()} or
-     * {@link #run(long)} to execute IO or tasks that were submitted to this {@link IoEventLoop}.
+     * {@link #run(long)} to execute IO or tasks that were submitted to this {@link EventLoop}.
      *
-     * @param parent            the parent {@link IoEventLoopGroup} or {@code null} if no parent.
-     * @param owningThread      the {@link Thread} that executes the IO and tasks for this {@link IoEventLoop}. The
+     * @param parent            the parent {@link EventLoopGroup} or {@code null} if no parent.
+     * @param owningThread      the {@link Thread} that executes the IO and tasks for this {@link EventLoop}. The
      *                          user will use this {@link Thread} to call {@link #runNow()} or {@link #run(long)} to
      *                          make progress. If {@code null}, must be set later using
      *                          {@link #setOwningThread(Thread)}.
      * @param factory           the {@link IoHandlerFactory} that will be used to create the {@link IoHandler} that is
-     *                          used by this {@link IoEventLoop}.
+     *                          used by this {@link EventLoop}.
      * @param ticker            The {@link #ticker()} to use for this event loop. Note that the {@link IoHandler} does
      *                          not use the ticker, so if the ticker advances faster than system time, you may have to
      *                          {@link #wakeup()} this event loop manually.
      */
-    public ManualIoEventLoop(IoEventLoopGroup parent, Thread owningThread, IoHandlerFactory factory, Ticker ticker) {
+    public ManualIoEventLoop(EventLoopGroup parent, Thread owningThread, IoHandlerFactory factory, Ticker ticker) {
         this.parent = parent;
         this.owningThread = new AtomicReference<>(owningThread);
         this.handler = factory.newHandler(this);
@@ -254,7 +254,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     }
 
     /**
-     * Executes all ready IO and tasks for this {@link IoEventLoop}.
+     * Executes all ready IO and tasks for this {@link EventLoop}.
      * This methods will <strong>NOT</strong> block and wait for IO / tasks to be ready, it will just
      * return directly if there is nothing to do.
      * <p>
@@ -272,7 +272,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     }
 
     /**
-     * Run all ready IO and tasks for this {@link IoEventLoop}.
+     * Run all ready IO and tasks for this {@link EventLoop}.
      * This methods will <strong>NOT</strong> block and wait for IO / tasks to be ready, it will just
      * return directly if there is nothing to do.
      * <p>
@@ -286,7 +286,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     }
 
     /**
-     * Run all ready IO and tasks for this {@link IoEventLoop}.
+     * Run all ready IO and tasks for this {@link EventLoop}.
      * This methods will block and wait for IO / tasks to be ready if there is nothing to process atm for the given
      * {@code waitNanos}.
      * <p>
@@ -313,7 +313,7 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     }
 
     /**
-     * Run all ready IO and tasks for this {@link IoEventLoop}.
+     * Run all ready IO and tasks for this {@link EventLoop}.
      * This methods will block and wait for IO / tasks to be ready if there is nothing to process atm for the given
      * {@code waitNanos}.
      * <p>
@@ -350,22 +350,8 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     }
 
     @Override
-    public IoEventLoopGroup parent() {
+    public EventLoopGroup parent() {
         return parent;
-    }
-
-    @Deprecated
-    @Override
-    public ChannelFuture register(Channel channel) {
-        return register(new DefaultChannelPromise(channel, this));
-    }
-
-    @Deprecated
-    @Override
-    public ChannelFuture register(final ChannelPromise promise) {
-        ObjectUtil.checkNotNull(promise, "promise");
-        promise.channel().unsafe().register(this, promise);
-        return promise;
     }
 
     @Override
@@ -390,15 +376,6 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
             return;
         }
         promise.setSuccess(registration);
-    }
-
-    @Deprecated
-    @Override
-    public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
-        ObjectUtil.checkNotNull(promise, "promise");
-        ObjectUtil.checkNotNull(channel, "channel");
-        channel.unsafe().register(this, promise);
-        return promise;
     }
 
     @Override

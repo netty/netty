@@ -31,7 +31,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
-import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
@@ -238,7 +237,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof IoEventLoop && ((IoEventLoop) loop).isCompatible(AbstractEpollUnsafe.class);
+        return loop.isCompatible(AbstractEpollUnsafe.class);
     }
 
     @Override
@@ -293,7 +292,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected void doRegister(ChannelPromise promise) {
-        ((IoEventLoop) executor()).register((AbstractEpollUnsafe) unsafe()).addListener(f -> {
+        executor().register((AbstractEpollUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
                 registration.submit(ops);

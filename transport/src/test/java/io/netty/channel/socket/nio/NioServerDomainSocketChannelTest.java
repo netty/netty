@@ -50,7 +50,7 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         File file = newRandomTmpFile();
         try {
-            group.register(serverSocketChannel).syncUninterruptibly();
+            serverSocketChannel.register(group.next()).syncUninterruptibly();
             serverSocketChannel.bind(UnixDomainSocketAddress.of(file.getAbsolutePath()))
                     .syncUninterruptibly();
             assertFalse(serverSocketChannel.closeOnReadError(new IOException()));
@@ -68,7 +68,7 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         File file = newRandomTmpFile();
         try {
-            group.register(serverSocketChannel).syncUninterruptibly();
+            serverSocketChannel.register(group.next()).syncUninterruptibly();
             Channel channel = serverSocketChannel.bind(
                     UnixDomainSocketAddress.of(file.getAbsolutePath()))
                     .syncUninterruptibly().channel();
@@ -96,7 +96,7 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
                 jdkChannel.bind(localAddress);
             }
             NioServerSocketChannel serverSocketChannel = new NioServerSocketChannel(jdkChannel);
-            group.register(serverSocketChannel).syncUninterruptibly();
+            serverSocketChannel.register(group.next()).syncUninterruptibly();
             assertTrue(serverSocketChannel.isOpen());
 
             assertEquals(bindJdkChannel, serverSocketChannel.isActive());

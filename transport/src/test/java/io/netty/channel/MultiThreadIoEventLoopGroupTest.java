@@ -90,7 +90,7 @@ public class MultiThreadIoEventLoopGroupTest {
     private static class TestableIoEventLoop extends SingleThreadIoEventLoop {
         private final AtomicBoolean simulateWorkload = new AtomicBoolean(false);
 
-        TestableIoEventLoop(IoEventLoopGroup parent, Executor executor, IoHandlerFactory ioHandlerFactory) {
+        TestableIoEventLoop(EventLoopGroup parent, Executor executor, IoHandlerFactory ioHandlerFactory) {
             super(parent, executor, ioHandlerFactory);
         }
 
@@ -136,7 +136,7 @@ public class MultiThreadIoEventLoopGroupTest {
         }
 
         @Override
-        protected IoEventLoop newChild(Executor executor, IoHandlerFactory ioHandlerFactory, Object... args) {
+        protected EventLoop newChild(Executor executor, IoHandlerFactory ioHandlerFactory, Object... args) {
             return new TestableIoEventLoop(this, executor, ioHandlerFactory);
         }
     }

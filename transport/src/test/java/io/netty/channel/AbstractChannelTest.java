@@ -19,8 +19,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.Executors;
 
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
@@ -151,7 +153,58 @@ public class AbstractChannelTest {
             }
         };
 
-        EventLoop loop = new DefaultEventLoop();
+        EventLoop loop = new SingleThreadEventLoop(null, Executors.defaultThreadFactory(), true) {
+
+            @Override
+            protected void run() {
+                for (;;) {
+                    Runnable task = takeTask();
+                    if (task != null) {
+                        runTask(task);
+                        updateLastExecutionTime();
+                    }
+
+                    if (confirmShutdown()) {
+                        break;
+                    }
+                }
+            }
+
+            @Override
+            public Future<IoRegistration> register(IoHandle handle) {
+                return newSucceededFuture(new IoRegistration() {
+                    @Override
+                    public <T> T attachment() {
+                        return null;
+                    }
+
+                    @Override
+                    public long submit(IoOps ops) {
+                        return 0;
+                    }
+
+                    @Override
+                    public boolean isValid() {
+                        return false;
+                    }
+
+                    @Override
+                    public boolean cancel() {
+                        return false;
+                    }
+                });
+            }
+
+            @Override
+            public boolean isCompatible(Class<? extends IoHandle> handleType) {
+                return true;
+            }
+
+            @Override
+            public boolean isIoType(Class<? extends IoHandler> handlerType) {
+                return true;
+            }
+        };
         try {
             registerChannel(loop, channel);
             channel.connect(new InetSocketAddress(NetUtil.LOCALHOST, 8888)).sync();

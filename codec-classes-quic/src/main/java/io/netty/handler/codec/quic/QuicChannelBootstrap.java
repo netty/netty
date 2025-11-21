@@ -227,7 +227,7 @@ public final class QuicChannelBootstrap {
 
         Quic.setupChannel(channel, Quic.toOptionsArray(options), Quic.toAttributesArray(attrs), handler, logger);
         EventLoop eventLoop = parent.executor();
-        eventLoop.register(channel).addListener((ChannelFuture future) -> {
+        channel.register(eventLoop).addListener((ChannelFuture future) -> {
             Throwable cause = future.cause();
             if (cause != null) {
                 promise.setFailure(cause);

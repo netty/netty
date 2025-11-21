@@ -31,6 +31,9 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoEvent;
+import io.netty.channel.IoHandle;
+import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Ticker;
@@ -243,8 +246,7 @@ public class EmbeddedChannel extends AbstractChannel {
             }
         });
         if (register) {
-            ChannelFuture future = loop.register(this);
-            assert future.isDone();
+            register0();
         }
     }
 
@@ -252,8 +254,7 @@ public class EmbeddedChannel extends AbstractChannel {
         ChannelPipeline p = pipeline();
         p.addLast(handler);
         if (register) {
-            ChannelFuture future = loop.register(this);
-            assert future.isDone();
+            register0();
         }
     }
 
@@ -261,9 +262,15 @@ public class EmbeddedChannel extends AbstractChannel {
      * Register this {@code Channel} on its {@link EventLoop}.
      */
     public void register() throws Exception {
-        ChannelFuture future = loop.register(this);
-        assert future.isDone();
-        Throwable cause = future.cause();
+        register0();
+    }
+
+    private void register0() {
+        ChannelPromise promise = newPromise();
+        unsafe().register(embeddedEventLoop(), promise);
+        assert promise.isDone();
+
+        Throwable cause = promise.cause();
         if (cause != null) {
             PlatformDependent.throwException(cause);
         }
@@ -1186,7 +1193,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     }
 
-    private final class EmbeddedUnsafe extends AbstractUnsafe {
+    final class EmbeddedUnsafe extends AbstractUnsafe implements IoHandle {
 
         // Delegates to the EmbeddedUnsafe instance but ensures runPendingTasks() is called after each operation
         // that may change the state of the Channel and may schedule tasks for later execution.
@@ -1325,6 +1332,16 @@ public class EmbeddedChannel extends AbstractChannel {
         @Override
         public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
             safeSetSuccess(promise);
+        }
+
+        @Override
+        public void handle(IoRegistration registration, IoEvent ioEvent) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void close() {
+            // NOOP
         }
     }
 

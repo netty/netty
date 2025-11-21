@@ -37,7 +37,7 @@ public class SingleThreadIoEventLoopTest {
             }
         }
 
-        IoEventLoopGroup group = new SingleThreadIoEventLoop(null,
+        EventLoopGroup group = new SingleThreadIoEventLoop(null,
                 Executors.defaultThreadFactory(), TestIoHandler::new);
         assertTrue(group.isIoType(TestIoHandler.class));
         assertFalse(group.isIoType(TestIoHandler2.class));
@@ -59,7 +59,7 @@ public class SingleThreadIoEventLoopTest {
     void testIsCompatible() {
 
         IoHandle handle = new TestIoHandle() { };
-        IoEventLoopGroup group = new SingleThreadIoEventLoop(null,
+        EventLoopGroup group = new SingleThreadIoEventLoop(null,
                 Executors.defaultThreadFactory(), CompatibleTestIoHandler::new);
         assertTrue(group.isCompatible(TestIoHandle.class));
         assertFalse(group.isCompatible(handle.getClass()));
@@ -80,7 +80,7 @@ public class SingleThreadIoEventLoopTest {
     @Test
     void testSuspendingWhileRegistrationActive() throws Exception {
         TestThreadFactory threadFactory = new TestThreadFactory();
-        IoEventLoop loop = new SingleThreadIoEventLoop(null, threadFactory,
+        EventLoop loop = new SingleThreadIoEventLoop(null, threadFactory,
                 eventLoop -> new TestIoHandler(eventLoop) {
             @Override
             public boolean isCompatible(Class<? extends IoHandle> handleType) {

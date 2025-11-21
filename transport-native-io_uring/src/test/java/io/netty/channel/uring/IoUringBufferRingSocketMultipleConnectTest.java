@@ -19,7 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.IoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.SocketMultipleConnectTest;
@@ -44,11 +43,8 @@ public class IoUringBufferRingSocketMultipleConnectTest extends SocketMultipleCo
         for (TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap> comboFactory
                 : IoUringSocketTestPermutation.INSTANCE.socket()) {
             EventLoopGroup group = comboFactory.newClientInstance().config().group();
-            if (group instanceof IoEventLoopGroup) {
-                IoEventLoopGroup ioGroup = (IoEventLoopGroup) group;
-                if (ioGroup.isIoType(NioIoHandler.class) || ioGroup.isIoType(IoUringIoHandler.class)) {
-                    factories.add(comboFactory);
-                }
+            if (group.isIoType(NioIoHandler.class) || group.isIoType(IoUringIoHandler.class)) {
+                factories.add(comboFactory);
             }
         }
         return factories;

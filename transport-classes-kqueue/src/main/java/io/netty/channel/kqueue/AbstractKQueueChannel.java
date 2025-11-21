@@ -31,7 +31,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
-import io.netty.channel.IoEventLoop;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
@@ -104,7 +103,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     @Override
     protected boolean isCompatible(EventLoop loop) {
-        return loop instanceof IoEventLoop && ((IoEventLoop) loop).isCompatible(AbstractKQueueUnsafe.class);
+        return loop.isCompatible(AbstractKQueueUnsafe.class);
     }
 
     static boolean isSoErrorZero(BsdSocket fd) {
@@ -200,7 +199,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     @Override
     protected void doRegister(ChannelPromise promise) {
-        ((IoEventLoop) executor()).register((AbstractKQueueUnsafe) unsafe()).addListener(f -> {
+        executor().register((AbstractKQueueUnsafe) unsafe()).addListener(f -> {
             if (f.isSuccess()) {
                 this.registration = (IoRegistration) f.getNow();
                 // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old
