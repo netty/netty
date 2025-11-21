@@ -34,7 +34,7 @@ public class ReflectiveServerChannelFactory<T extends ServerChannel> implements 
             this.constructor = clazz.getConstructor(EventLoop.class, EventLoopGroup.class);
         } catch (NoSuchMethodException e) {
             throw new IllegalArgumentException("Class " + StringUtil.simpleClassName(clazz) +
-                    " does not have a public non-arg constructor", e);
+                    " does not have a public constructor(EventLoop, EventLoopGroup)", e);
         }
     }
 
