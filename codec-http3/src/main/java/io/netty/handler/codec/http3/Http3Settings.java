@@ -332,14 +332,19 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
     }
 
     /**
-     * Validates a setting key and value pair against HTTP/3 and HTTP/2 constraints.
-     *
+     * Validates a setting key and value pair against HTTP/3.
+     * Note that it can only validate the valid HTTP/3 settings
+     * Does not validate non-standard settings
      * @param key the setting identifier
      * @param value the setting value
      * @throws IllegalArgumentException if the key or value violates the protocol specification
      */
     private static void verifyStandardSetting(long key, Long value) {
         checkNotNull(value, "value");
+
+        if(Http3SettingIdentifier.fromId(key) == null) {
+            return;
+        }
 
         switch (Http3SettingIdentifier.fromId(key)) {
             case HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY:

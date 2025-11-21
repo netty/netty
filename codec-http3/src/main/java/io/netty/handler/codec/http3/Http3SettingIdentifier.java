@@ -87,10 +87,22 @@ public enum Http3SettingIdentifier {
         this.id = id;
     }
 
+    /**
+     * Returns the Identifier of {@link Http3SettingIdentifier}
+     * for example:
+     * SETTINGS_QPACK_MAX_TABLE_CAPACITY = 0x1 = 1 in the settings frame
+     * <br>
+     * @return long(represented as hexadecimal above) value of the Identifier
+     */
     public long id() {
         return id;
     }
 
+    /**
+     * Returns {@link Http3SettingIdentifier}
+     * @param id
+     * @return {@link Http3SettingIdentifier} enum which represents @param id, null otherwise
+     */
     @Nullable
     public static Http3SettingIdentifier fromId(long id) {
         for (Http3SettingIdentifier s : values()) {
