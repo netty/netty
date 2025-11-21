@@ -448,6 +448,11 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
+        public ChannelFuture register() {
+            return ctx.register();
+        }
+
+        @Override
         public ChannelFuture bind(SocketAddress localAddress) {
             return ctx.bind(localAddress);
         }
@@ -475,6 +480,11 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         @Override
         public ChannelFuture deregister() {
             return ctx.deregister();
+        }
+
+        @Override
+        public ChannelFuture register(ChannelPromise promise) {
+            return ctx.register(promise);
         }
 
         @Override

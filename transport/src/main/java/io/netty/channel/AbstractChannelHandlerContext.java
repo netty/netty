@@ -51,6 +51,7 @@ import static io.netty.channel.ChannelHandlerMask.MASK_FLUSH;
 import static io.netty.channel.ChannelHandlerMask.MASK_ONLY_INBOUND;
 import static io.netty.channel.ChannelHandlerMask.MASK_ONLY_OUTBOUND;
 import static io.netty.channel.ChannelHandlerMask.MASK_READ;
+import static io.netty.channel.ChannelHandlerMask.MASK_REGISTER;
 import static io.netty.channel.ChannelHandlerMask.MASK_USER_EVENT_TRIGGERED;
 import static io.netty.channel.ChannelHandlerMask.MASK_WRITE;
 import static io.netty.channel.ChannelHandlerMask.mask;
@@ -420,6 +421,11 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
+    public ChannelFuture register() {
+        return register(newPromise());
+    }
+
+    @Override
     public ChannelFuture bind(SocketAddress localAddress) {
         return bind(localAddress, newPromise());
     }
@@ -447,6 +453,54 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     @Override
     public ChannelFuture deregister() {
         return deregister(newPromise());
+    }
+
+    @Override
+    public ChannelFuture register(final ChannelPromise promise) {
+        if (isNotValidPromise(promise)) {
+            // cancelled
+            return promise;
+        }
+
+        final AbstractChannelHandlerContext next = findContextOutbound(MASK_REGISTER);
+        EventExecutor executor = next.executor();
+        if (executor.inEventLoop()) {
+            next.invokeRegister(promise);
+        } else {
+            safeExecute(executor, new Runnable() {
+                @Override
+                public void run() {
+                    next.invokeRegister(promise);
+                }
+            }, promise, null, false);
+        }
+
+        return promise;
+    }
+
+    private void invokeRegister(ChannelPromise promise) {
+        if (invokeHandler()) {
+            try {
+                // DON'T CHANGE
+                // Duplex handlers implements both out/in interfaces causing a scalability issue
+                // see https://bugs.openjdk.org/browse/JDK-8180450
+                final ChannelHandler handler = handler();
+                final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
+                if (handler == headContext) {
+                    headContext.register(this, promise);
+                } else if (handler instanceof ChannelDuplexHandler) {
+                    ((ChannelDuplexHandler) handler).register(this, promise);
+                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
+                    ((ChannelOutboundHandlerAdapter) handler).register(this, promise);
+                } else {
+                    ((ChannelOutboundHandler) handler).register(this, promise);
+                }
+            } catch (Throwable t) {
+                notifyOutboundHandlerException(t, promise);
+            }
+        } else {
+            register(promise);
+        }
     }
 
     @Override

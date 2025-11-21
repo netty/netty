@@ -603,6 +603,11 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     }
 
     @Override
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+        ctx.register(promise);
+    }
+
+    @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
         ctx.bind(localAddress, promise);
     }

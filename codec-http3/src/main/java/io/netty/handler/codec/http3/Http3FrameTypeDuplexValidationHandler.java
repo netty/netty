@@ -55,6 +55,11 @@ class Http3FrameTypeDuplexValidationHandler<T extends Http3Frame> extends Http3F
     }
 
     @Override
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+        ctx.register(promise);
+    }
+
+    @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
         ctx.bind(localAddress, promise);
     }

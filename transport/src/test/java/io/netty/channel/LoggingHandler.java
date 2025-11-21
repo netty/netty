@@ -23,11 +23,17 @@ final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHand
 
     enum Event { WRITE, FLUSH, BIND, CONNECT, DISCONNECT, CLOSE, DEREGISTER, READ, WRITABILITY,
         HANDLER_ADDED, HANDLER_REMOVED, EXCEPTION, READ_COMPLETE, REGISTERED, UNREGISTERED, ACTIVE, INACTIVE,
-        USER }
+        USER, REGISTER }
 
     private StringBuilder log = new StringBuilder();
 
     private final EnumSet<Event> interest = EnumSet.allOf(Event.class);
+
+    @Override
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        log(Event.REGISTER);
+        ctx.register(promise);
+    }
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {

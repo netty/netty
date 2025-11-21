@@ -265,6 +265,15 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             final Channel child = (Channel) msg;
 
+            EventLoop loop = child.executor();
+            if (loop.inEventLoop()) {
+                initChildChannel(child);
+            } else {
+                loop.execute(() -> initChildChannel(child));
+            }
+        }
+
+        private void initChildChannel(Channel child) {
             child.pipeline().addLast(childHandler);
 
             setChannelOptions(child, childOptions, logger);

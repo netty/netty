@@ -261,6 +261,11 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
     }
 
     @Override
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.register(promise);
+    }
+
+    @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
         ctx.bind(localAddress, promise);
     }

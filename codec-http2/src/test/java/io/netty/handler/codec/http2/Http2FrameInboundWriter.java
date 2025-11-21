@@ -226,6 +226,16 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
+        public ChannelFuture register(ChannelPromise promise) {
+            return channel.register(promise);
+        }
+
+        @Override
+        public ChannelFuture register() {
+            return channel.register();
+        }
+
+        @Override
         public ChannelFuture bind(SocketAddress localAddress) {
             return channel.bind(localAddress);
         }
