@@ -24,7 +24,8 @@ public enum Http3ErrorCode {
      * Datagram or Capsule Protocol parse error
      * <a href="https://www.rfc-editor.org/rfc/rfc9297.html#name-http-3-error-code">rfc9297</a>
      * registered in IANA http3
-     * <a href="http://www.iana.org/assignments/http3-parameters/http3-parameters.xhtml#http3-parameters-error-codes">
+     * <a href="https://www.iana.org/assignments/http3-parameters/http3-parameters.xhtml#http3-parameters-error-codes"
+     * >
      *     IANA Http3 Error Codes</a>
      */
     H3_DATAGRAM_ERROR(0x33),
