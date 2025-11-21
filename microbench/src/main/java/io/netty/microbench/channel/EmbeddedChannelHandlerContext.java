@@ -168,6 +168,16 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
+    public ChannelFuture register(ChannelPromise promise) {
+        return channel.register(promise);
+    }
+
+    @Override
+    public ChannelFuture register() {
+        return channel.register();
+    }
+
+    @Override
     public final ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
         try {
             channel().bind(localAddress, promise);

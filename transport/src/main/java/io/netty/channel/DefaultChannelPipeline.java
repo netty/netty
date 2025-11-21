@@ -900,6 +900,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public final ChannelFuture register() {
+        return tail.register();
+    }
+
+    @Override
     public final ChannelFuture bind(SocketAddress localAddress) {
         return tail.bind(localAddress);
     }
@@ -933,6 +938,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     public final ChannelPipeline flush() {
         tail.flush();
         return this;
+    }
+
+    @Override
+    public final ChannelFuture register(ChannelPromise promise) {
+        return tail.register(promise);
     }
 
     @Override
@@ -1286,6 +1296,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void handlerRemoved(ChannelHandlerContext ctx) {
             // NOOP
+        }
+
+        @Override
+        public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            unsafe.register(promise);
         }
 
         @Override

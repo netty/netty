@@ -353,17 +353,14 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
         return pipeline().newFailedFuture(cause);
     }
 
-    // These are just added for now and will be removed in the followup PR.
+    @Override
     default ChannelFuture register() {
-        DefaultChannelPromise promise = new DefaultChannelPromise(this, executor());
-        register(promise);
-        return promise;
+        return pipeline().register();
     }
 
-    // These are just added for now and will be removed in the followup PR.
+    @Override
     default ChannelFuture register(ChannelPromise promise) {
-        unsafe().register(promise);
-        return promise;
+        return pipeline().register(promise);
     }
 
     /**

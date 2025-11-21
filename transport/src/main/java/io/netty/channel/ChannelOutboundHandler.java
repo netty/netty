@@ -21,6 +21,16 @@ import java.net.SocketAddress;
  * {@link ChannelHandler} which will get notified for IO-outbound-operations.
  */
 public interface ChannelOutboundHandler extends ChannelHandler {
+
+    /**
+     * Called once a register operation is made for an {@link EventLoop}.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     * @throws Exception        thrown if an error occurs
+     */
+    void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+
     /**
      * Called once a bind operation is made.
      *

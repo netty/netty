@@ -300,6 +300,11 @@ public final class HttpProxyHandler extends ProxyHandler {
         }
 
         @Override
+        public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            codec.register(ctx, promise);
+        }
+
+        @Override
         public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
                          ChannelPromise promise) throws Exception {
             codec.bind(ctx, localAddress, promise);

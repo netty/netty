@@ -1144,6 +1144,12 @@ public class DefaultChannelPipelineTest {
                 errorRef = new AssertionError("Method should never been called");
             }
 
+            @Override
+            public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+                fail();
+                ctx.register(promise);
+            }
+
             @Skip
             @Override
             public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {

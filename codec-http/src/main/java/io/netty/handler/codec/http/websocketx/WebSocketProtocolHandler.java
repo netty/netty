@@ -155,6 +155,11 @@ abstract class WebSocketProtocolHandler extends MessageToMessageDecoder<WebSocke
     }
 
     @Override
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        ctx.register(promise);
+    }
+
+    @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
                      ChannelPromise promise) throws Exception {
         ctx.bind(localAddress, promise);
