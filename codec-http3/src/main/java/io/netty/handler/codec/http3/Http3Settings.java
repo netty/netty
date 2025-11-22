@@ -368,7 +368,8 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
                 break;
             default:
                 if (value < 0) {
-                    throw new IllegalArgumentException("Setting 0x" + toHexString(identifier.id()) + " invalid: " + value);
+                    throw new IllegalArgumentException("Setting 0x"
+                            + toHexString(identifier.id()) + " invalid: " + value);
                 }
         }
     }
