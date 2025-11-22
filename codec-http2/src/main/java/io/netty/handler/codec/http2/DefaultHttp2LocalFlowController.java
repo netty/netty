@@ -263,7 +263,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
     @Override
     public void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding,
-                                           boolean endOfStream) throws Http2Exception {
+            boolean endOfStream) throws Http2Exception {
         assert ctx != null && ctx.executor().inEventLoop();
         int dataLength = data.readableBytes() + padding;
 
