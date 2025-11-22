@@ -95,13 +95,15 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
             throw new IllegalArgumentException("Setting is reserved for HTTP/2: " + key);
         }
 
+        Http3SettingIdentifier identifier = Http3SettingIdentifier.fromId(key);
+
         // When Non-Standard/Unknown settings identifier identifier present - Ignore
-        if (Http3SettingIdentifier.fromId(key) == null) {
+        if (identifier == null) {
             return value;
         }
 
         //Validation
-        verifyStandardSetting(key, value);
+        verifyStandardSetting(identifier, value);
 
         return settings.put(key, value);
     }
@@ -332,26 +334,26 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
     }
 
     /**
-     * Validates a setting key and value pair against HTTP/3.
+     * Validates a setting identifier and value pair against HTTP/3.
      * Note that it can only validate the valid HTTP/3 settings
      * Does not validate non-standard settings
-     * @param key the setting identifier
+     * @param identifier the setting identifier
      * @param value the setting value
-     * @throws IllegalArgumentException if the key or value violates the protocol specification
+     * @throws IllegalArgumentException if the identifier or value violates the protocol specification
      */
-    private static void verifyStandardSetting(long key, Long value) {
+    private static void verifyStandardSetting(Http3SettingIdentifier identifier, Long value) {
         checkNotNull(value, "value");
 
-        if (Http3SettingIdentifier.fromId(key) == null) {
+        if (identifier == null) {
             return;
         }
 
-        switch (Http3SettingIdentifier.fromId(key)) {
+        switch (identifier) {
             case HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY:
             case HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS:
             case HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE:
                 if (value < 0) {
-                    throw new IllegalArgumentException("Setting 0x" + toHexString(key)
+                    throw new IllegalArgumentException("Setting 0x" + toHexString(identifier.id())
                             + " invalid: " + value + " (must be >= 0)");
                 }
                 break;
@@ -360,13 +362,13 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
                 if (value != 0L && value != 1L) {
                     throw new IllegalArgumentException(
                             "Invalid: " + value + "for "
-                                    + Http3SettingIdentifier.valueOf(String.valueOf(key))
+                                    + Http3SettingIdentifier.valueOf(String.valueOf(identifier))
                             + " (expected 0 or 1)");
                 }
                 break;
             default:
                 if (value < 0) {
-                    throw new IllegalArgumentException("Setting 0x" + toHexString(key) + " invalid: " + value);
+                    throw new IllegalArgumentException("Setting 0x" + toHexString(identifier.id()) + " invalid: " + value);
                 }
         }
     }
