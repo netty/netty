@@ -103,10 +103,11 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
             public void onStreamClosed(Http2Stream stream) {
                 try {
                     // When a stream is closed, consume any remaining bytes so that they
-                    // are restored to the connection window.
+                    // are restored to the connection window. Do not attempt this for the
+                    // connection stream
                     FlowState state = state(stream);
                     int unconsumedBytes = state.unconsumedBytes();
-                    if (ctx != null && unconsumedBytes > 0) {
+                    if (ctx != null && unconsumedBytes > 0 && stream.id() != CONNECTION_STREAM_ID) {
                         if (consumeAllBytes(state, unconsumedBytes)) {
                             // As the user has no real control on when this callback is used we should better
                             // call flush() if we produced any window update to ensure we not stale.
@@ -262,7 +263,7 @@ public class DefaultHttp2LocalFlowController implements Http2LocalFlowController
 
     @Override
     public void receiveFlowControlledFrame(Http2Stream stream, ByteBuf data, int padding,
-            boolean endOfStream) throws Http2Exception {
+                                           boolean endOfStream) throws Http2Exception {
         assert ctx != null && ctx.executor().inEventLoop();
         int dataLength = data.readableBytes() + padding;
 

@@ -21,6 +21,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
@@ -98,6 +99,21 @@ public class DefaultHttp2LocalFlowControllerTest {
             });
         }
         when(ctx.executor()).thenReturn(executor);
+    }
+
+    @Test
+    public void connectionStreamCloseShouldNotThrowWhenUnconsumedBytesPresent() throws Http2Exception {
+        int dataSize = (int) (DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_UPDATE_RATIO) + 1;
+
+        // Receive data on a child stream so the connection-level state has unconsumed bytes.
+        receiveFlowControlledFrame(STREAM_ID, dataSize, 0, false);
+        assertTrue(controller.unconsumedBytes(connection.connectionStream()) > 0);
+        reset(frameWriter);
+
+        assertDoesNotThrow(() -> connection.listeners.get(0).onStreamClosed(connection.connectionStream()));
+        // No WINDOW_UPDATE should be written for the connection stream as a result of closing it.
+        verifyWindowUpdateNotSent(CONNECTION_STREAM_ID);
+        verifyNoMoreInteractions(frameWriter);
     }
 
     @Test
