@@ -47,7 +47,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final Channel parent;
     private final ChannelId id;
     private final Unsafe unsafe;
-    private final DefaultChannelPipeline pipeline;
+    private final ChannelPipeline pipeline;
     private final CloseFuture closeFuture = new CloseFuture(this);
     private final EventLoop eventLoop;
 
@@ -123,9 +123,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     /**
-     * Returns a new {@link DefaultChannelPipeline} instance.
+     * Returns a new {@link ChannelPipeline} instance.
      */
-    protected DefaultChannelPipeline newChannelPipeline() {
+    protected ChannelPipeline newChannelPipeline() {
         return new DefaultChannelPipeline(this);
     }
 
@@ -295,12 +295,21 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         private volatile ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(AbstractChannel.this);
         private RecvByteBufAllocator.Handle recvHandle;
+        private MessageSizeEstimator.Handle estimatorHandle;
+
         private boolean inFlush0;
         /** true if the channel has never been registered, false otherwise */
         private boolean neverRegistered = true;
 
         private void assertEventLoop() {
             assert !registered || eventLoop.inEventLoop();
+        }
+
+        MessageSizeEstimator.Handle estimatorHandle() {
+            if (estimatorHandle == null) {
+                estimatorHandle = config().getMessageSizeEstimator().newHandle();
+            }
+            return estimatorHandle;
         }
 
         @Override
@@ -332,13 +341,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 promise.setFailure(new IllegalStateException("registered to an event loop already"));
                 return;
             }
-
-            // Clear any cached executors from prior event loop registrations.
-            AbstractChannelHandlerContext context = pipeline.tail;
-            do {
-                context.contextExecutor = null;
-                context = context.prev;
-            } while (context != null);
 
             if (eventLoop.inEventLoop()) {
                 register0(promise);
@@ -375,10 +377,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     if (future.isSuccess()) {
                         neverRegistered = false;
                         registered = true;
-
-                        // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
-                        // user may already fire events through the pipeline in the ChannelFutureListener.
-                        pipeline.invokeHandlerAddedIfNeeded();
 
                         safeSetSuccess(promise);
                         pipeline.fireChannelRegistered();
@@ -735,7 +733,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             int size;
             try {
                 msg = filterOutboundMessage(msg);
-                size = pipeline.estimatorHandle().size(msg);
+                size = estimatorHandle().size(msg);
                 if (size < 0) {
                     size = 0;
                 }
