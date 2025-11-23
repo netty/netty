@@ -19,7 +19,6 @@ import io.netty.buffer.AbstractReferenceCountedByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.ReferenceCountUtil;
@@ -103,7 +102,7 @@ public final class ChannelOutboundBuffer {
 
     private volatile Runnable fireChannelWritabilityChangedTask;
 
-    ChannelOutboundBuffer(AbstractChannel channel) {
+    ChannelOutboundBuffer(Channel channel) {
         this.channel = channel;
     }
 
@@ -408,7 +407,6 @@ public final class ChannelOutboundBuffer {
      * <p>
      * Note that the returned array is reused and thus should not escape
      * {@link AbstractChannel#doWrite(ChannelOutboundBuffer)}.
-     * Refer to {@link NioSocketChannel#doWrite(ChannelOutboundBuffer)} for an example.
      * </p>
      */
     public ByteBuffer[] nioBuffers() {
@@ -422,7 +420,6 @@ public final class ChannelOutboundBuffer {
      * <p>
      * Note that the returned array is reused and thus should not escape
      * {@link AbstractChannel#doWrite(ChannelOutboundBuffer)}.
-     * Refer to {@link NioSocketChannel#doWrite(ChannelOutboundBuffer)} for an example.
      * </p>
      * @param maxCount The maximum amount of buffers that will be added to the return value.
      * @param maxBytes A hint toward the maximum number of bytes to include as part of the return value. Note that this
