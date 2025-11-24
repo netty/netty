@@ -47,7 +47,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@link IoEventLoop} to also do other work. Care must be taken that the {@link #runNow() or
  * {@link #waitAndRun()}} methods are called in a timely fashion.
  */
-public final class ManualIoEventLoop extends AbstractScheduledEventExecutor implements IoEventLoop {
+public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements IoEventLoop {
     private static final int ST_STARTED = 0;
     private static final int ST_SHUTTING_DOWN = 1;
     private static final int ST_SHUTDOWN = 2;
@@ -86,6 +86,14 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
     private long gracefulShutdownStartTime;
     private long lastExecutionTime;
     private boolean initialized;
+
+    /**
+     * This allows to specify additional blocking conditions which will be used by the {@link IoHandler} to decide
+     * whether it is allowed to block or not.
+     */
+    protected boolean canBlock() {
+        return true;
+    }
 
     /**
      * Create a new {@link IoEventLoop} that is owned by the user and so needs to be driven by the user with the given
@@ -461,6 +469,9 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         }
 
         if (wakeup) {
+            // same as AbstractScheduledEventExecutor.WAKEUP_TASK
+            taskQueue.offer(() -> {
+            });
             handler.wakeup();
         }
     }
@@ -632,13 +643,14 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         }
     }
 
-    private final class BlockingIoHandlerContext implements IoHandlerContext {
+    private class BlockingIoHandlerContext implements IoHandlerContext {
+        // this is a positive amount of nanos or Long.MAX_VALUE for no limit
         long maxBlockingNanos = Long.MAX_VALUE;
 
         @Override
         public boolean canBlock() {
             assert inEventLoop();
-            return !hasTasks() && !hasScheduledTasks();
+            return !hasTasks() && !hasScheduledTasks() && ManualIoEventLoop.this.canBlock();
         }
 
         @Override
@@ -651,11 +663,16 @@ public final class ManualIoEventLoop extends AbstractScheduledEventExecutor impl
         public long deadlineNanos() {
             assert inEventLoop();
             long next = nextScheduledTaskDeadlineNanos();
-            long maxDeadlineNanos = ticker.nanoTime() + maxBlockingNanos;
-            if (next == -1) {
-                return maxDeadlineNanos;
+            if (maxBlockingNanos == Long.MAX_VALUE) {
+                // next == -1? -1 : next i.e. return next
+                return next;
             }
-            return Math.min(next, maxDeadlineNanos);
+            long now = ticker.nanoTime();
+            // we cannot just check Math.min as nanoTime can be negative or wrap around!
+            if (next == -1 || next - now > maxBlockingNanos) {
+                return now + maxBlockingNanos;
+            }
+            return next;
         }
-    };
+    }
 }
