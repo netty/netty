@@ -34,7 +34,6 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoRegistration;
-import io.netty.channel.RecvByteBufAllocator;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Ticker;
 import io.netty.util.internal.PlatformDependent;
@@ -1187,20 +1186,6 @@ public class EmbeddedChannel extends AbstractChannel {
         // Delegates to the EmbeddedUnsafe instance but ensures runPendingTasks() is called after each operation
         // that may change the state of the Channel and may schedule tasks for later execution.
         final Unsafe wrapped = new Unsafe() {
-            @Override
-            public RecvByteBufAllocator.Handle recvBufAllocHandle() {
-                return EmbeddedUnsafe.this.recvBufAllocHandle();
-            }
-
-            @Override
-            public SocketAddress localAddress() {
-                return EmbeddedUnsafe.this.localAddress();
-            }
-
-            @Override
-            public SocketAddress remoteAddress() {
-                return EmbeddedUnsafe.this.remoteAddress();
-            }
 
             @Override
             public void register(ChannelPromise promise) {
@@ -1251,17 +1236,6 @@ public class EmbeddedChannel extends AbstractChannel {
                 executingStackCnt++;
                 try {
                     EmbeddedUnsafe.this.close(promise);
-                } finally {
-                    executingStackCnt--;
-                    maybeRunPendingTasks();
-                }
-            }
-
-            @Override
-            public void closeForcibly() {
-                executingStackCnt++;
-                try {
-                    EmbeddedUnsafe.this.closeForcibly();
                 } finally {
                     executingStackCnt--;
                     maybeRunPendingTasks();

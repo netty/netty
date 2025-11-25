@@ -1569,7 +1569,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                             if (connectPromise != null && !f.isSuccess()) {
                                 connectPromise.tryFailure(f.cause());
                                 // close everything after notify about failure.
-                                unsafe().closeForcibly();
+                                unsafe().close(newPromise());
                             }
                         });
                 return;

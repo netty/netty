@@ -148,11 +148,7 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
         // childChannel.
         if (!future.isSuccess()) {
             Channel childChannel = future.channel();
-            if (childChannel.isRegistered()) {
-                childChannel.close();
-            } else {
-                childChannel.unsafe().closeForcibly();
-            }
+            childChannel.close();
         }
     }
 

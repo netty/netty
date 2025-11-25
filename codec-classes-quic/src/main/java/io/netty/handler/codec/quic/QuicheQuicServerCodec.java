@@ -241,12 +241,12 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
         Quic.setupChannel(channel, optionsArray, attrsArray, handler, LOGGER);
         QuicSslEngine engine = sslEngineProvider.apply(channel);
         if (!(engine instanceof QuicheQuicSslEngine)) {
-            channel.unsafe().closeForcibly();
+            channel.unsafe().close(channel.newPromise());
             throw new IllegalArgumentException("QuicSslEngine is not of type "
                     + QuicheQuicSslEngine.class.getSimpleName());
         }
         if (engine.getUseClientMode()) {
-            channel.unsafe().closeForcibly();
+            channel.unsafe().close(channel.newPromise());
             throw new IllegalArgumentException("QuicSslEngine is not created in server mode");
         }
 
@@ -264,7 +264,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
                     config.nativeAddress(), ssl, true);
         });
         if (connection  == null) {
-            channel.unsafe().closeForcibly();
+            channel.unsafe().close(channel.newPromise());
             LOGGER.debug("quiche_accept failed");
             return null;
         }

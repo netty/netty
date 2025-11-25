@@ -229,9 +229,7 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
                 // Only reset if we don't use multi-shot or we need to re-arm because the multi-shot was cancelled.
                 acceptId = 0;
             }
-            final IoUringRecvByteAllocatorHandle allocHandle =
-                    (IoUringRecvByteAllocatorHandle) unsafe()
-                            .recvBufAllocHandle();
+            final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
             final ChannelPipeline pipeline = pipeline();
             allocHandle.lastBytesRead(res);
 

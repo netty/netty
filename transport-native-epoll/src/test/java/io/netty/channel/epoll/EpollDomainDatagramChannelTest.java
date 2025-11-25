@@ -32,6 +32,6 @@ public class EpollDomainDatagramChannelTest {
         EpollDomainDatagramChannel channel = new EpollDomainDatagramChannel(
                 EpollSocketTestPermutation.EPOLL_GROUP.next());
         assertEquals(16, channel.config().getMaxMessagesPerRead());
-        channel.unsafe().closeForcibly();
+        channel.close();
     }
 }

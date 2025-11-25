@@ -643,23 +643,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             promise.setFailure(new UnsupportedOperationException());
         }
 
-        @Override
         public RecvByteBufAllocator.Handle recvBufAllocHandle() {
             if (recvHandle == null) {
                 recvHandle = config().getRecvByteBufAllocator().newHandle();
                 recvHandle.reset(config());
             }
             return recvHandle;
-        }
-
-        @Override
-        public SocketAddress localAddress() {
-            return parent().unsafe().localAddress();
-        }
-
-        @Override
-        public SocketAddress remoteAddress() {
-            return parent().unsafe().remoteAddress();
         }
 
         @Override
@@ -767,11 +756,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         @Override
-        public void closeForcibly() {
-            close(newPromise());
-        }
-
-        @Override
         public void deregister(ChannelPromise promise) {
             fireChannelInactiveAndDeregister(promise, false);
         }
@@ -867,7 +851,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 if (readEOS && (inboundBuffer == null || inboundBuffer.isEmpty())) {
                     // Double check there is nothing left to flush such as a window update frame.
                     flush();
-                    unsafe.closeForcibly();
+                    unsafe.close(newPromise());
                 }
             } else {
                 do { // Process messages until there are none left (or the user stopped requesting) and also handle EOS.
@@ -876,7 +860,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                         // Double check there is nothing left to flush such as a window update frame.
                         flush();
                         if (readEOS) {
-                            unsafe.closeForcibly();
+                            unsafe.close(newPromise());
                         }
                         break;
                     }
@@ -950,7 +934,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // rely upon flush occurring in channelReadComplete on the parent channel.
             flush();
             if (readEOS) {
-                unsafe.closeForcibly();
+                unsafe.close(newPromise());
             }
         }
 
@@ -1126,7 +1110,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 promise.setSuccess();
             } else {
                 // If the first write fails there is not much we can do, just close
-                closeForcibly();
+                unsafe.close(newPromise());
                 promise.setFailure(wrapStreamClosedError(cause));
             }
         }
@@ -1141,7 +1125,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 if (error instanceof IOException) {
                     if (config.isAutoClose()) {
                         // Close channel if needed.
-                        closeForcibly();
+                        unsafe.close(newPromise());
                     } else {
                         // TODO: Once Http2StreamChannel extends DuplexChannel we should call shutdownOutput(...)
                         outboundClosed = true;

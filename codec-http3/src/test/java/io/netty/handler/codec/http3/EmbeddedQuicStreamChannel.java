@@ -23,7 +23,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
-import io.netty.channel.EventLoop;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
@@ -215,20 +214,6 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
         if (unsafe == null) {
             Unsafe superUnsafe = super.unsafe();
             unsafe = new Unsafe() {
-                @Override
-                public RecvByteBufAllocator.Handle recvBufAllocHandle() {
-                    return superUnsafe.recvBufAllocHandle();
-                }
-
-                @Override
-                public SocketAddress localAddress() {
-                    return superUnsafe.localAddress();
-                }
-
-                @Override
-                public SocketAddress remoteAddress() {
-                    return superUnsafe.remoteAddress();
-                }
 
                 @Override
                 public void register(ChannelPromise promise) {
@@ -253,11 +238,6 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
                 @Override
                 public void close(ChannelPromise promise) {
                     superUnsafe.close(promise);
-                }
-
-                @Override
-                public void closeForcibly() {
-                    superUnsafe.closeForcibly();
                 }
 
                 @Override
