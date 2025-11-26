@@ -258,6 +258,8 @@ public final class NonStickyEventExecutorGroup implements EventExecutorGroup {
                             executor.execute(this);
                             return; // done
                         } catch (Throwable ignore) {
+                            // Restore executingThread since we're continuing to execute tasks.
+                            executingThread.set(current);
                             // Reset the state back to running as we will keep on executing tasks.
                             state.set(RUNNING);
                             // if an error happened we should just ignore it and let the loop run again as there is not

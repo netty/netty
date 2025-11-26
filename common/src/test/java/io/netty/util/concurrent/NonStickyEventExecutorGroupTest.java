@@ -24,13 +24,17 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -126,6 +130,153 @@ public class NonStickyEventExecutorGroupTest {
             }
         } finally {
             nonStickyGroup.shutdownGracefully();
+        }
+    }
+
+    @Test
+    public void testInEventLoopAfterReschedulingFailure() throws Exception {
+        final UnorderedThreadPoolEventExecutor underlying = new UnorderedThreadPoolEventExecutor(1);
+        final AtomicInteger executeCount = new AtomicInteger();
+
+        final EventExecutorGroup wrapper = new AbstractEventExecutorGroup() {
+            @Override
+            public void shutdown() {
+                shutdownGracefully();
+            }
+
+            private final EventExecutor executor = new AbstractEventExecutor(this) {
+                @Override
+                public boolean inEventLoop(Thread thread) {
+                    return underlying.inEventLoop(thread);
+                }
+
+                @Override
+                public void shutdown() {
+                    shutdownGracefully();
+                }
+
+                @Override
+                public void execute(Runnable command) {
+                    // Reject the 2nd execute() call (the reschedule attempt)
+                    // 1st call: initial task submission
+                    // 2nd call: reschedule after maxTaskExecutePerRun
+                    if (executeCount.incrementAndGet() == 2) {
+                        throw new RejectedExecutionException("Simulated queue full");
+                    }
+                    underlying.execute(command);
+                }
+
+                @Override
+                public boolean isShuttingDown() {
+                    return underlying.isShuttingDown();
+                }
+
+                @Override
+                public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+                    return underlying.shutdownGracefully(quietPeriod, timeout, unit);
+                }
+
+                @Override
+                public Future<?> terminationFuture() {
+                    return underlying.terminationFuture();
+                }
+
+                @Override
+                public boolean isShutdown() {
+                    return underlying.isShutdown();
+                }
+
+                @Override
+                public boolean isTerminated() {
+                    return underlying.isTerminated();
+                }
+
+                @Override
+                public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+                    return underlying.awaitTermination(timeout, unit);
+                }
+            };
+
+            @Override
+            public EventExecutor next() {
+                return executor;
+            }
+
+            @Override
+            public Iterator<EventExecutor> iterator() {
+                return Collections.singletonList(executor).iterator();
+            }
+
+            @Override
+            public boolean isShuttingDown() {
+                return underlying.isShuttingDown();
+            }
+
+            @Override
+            public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+                return underlying.shutdownGracefully(quietPeriod, timeout, unit);
+            }
+
+            @Override
+            public Future<?> terminationFuture() {
+                return underlying.terminationFuture();
+            }
+
+            @Override
+            public boolean isShutdown() {
+                return underlying.isShutdown();
+            }
+
+            @Override
+            public boolean isTerminated() {
+                return underlying.isTerminated();
+            }
+
+            @Override
+            public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+                return underlying.awaitTermination(timeout, unit);
+            }
+        };
+
+        // Use maxTaskExecutePerRun=1 so reschedule happens after first task
+        NonStickyEventExecutorGroup nonStickyGroup = new NonStickyEventExecutorGroup(wrapper, 1);
+
+        try {
+            final EventExecutor executor = nonStickyGroup.next();
+
+            final CountDownLatch latch = new CountDownLatch(1);
+            final AtomicReference<Boolean> inEventLoopResult = new AtomicReference<Boolean>();
+
+            // Submit 2 tasks:
+            // Task 1: completes, triggers reschedule which will be rejected
+            // Task 2: verifies inEventLoop() still works after failed reschedule
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    // First task - will trigger reschedule attempt that fails
+                }
+            });
+
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    // This runs AFTER the failed rescheduling
+                    // WITHOUT line 262 fix: executingThread is null, inEventLoop() returns false
+                    // WITH line 262 fix: executingThread restored, inEventLoop() returns true
+                    inEventLoopResult.set(executor.inEventLoop());
+                    latch.countDown();
+                }
+            });
+
+            assertTrue(latch.await(5, TimeUnit.SECONDS), "Tasks should complete");
+            Boolean result = inEventLoopResult.get();
+            assertNotNull(result, "inEventLoop() should have been called");
+            assertTrue(result,
+                "inEventLoop() should return true even after failed reschedule attempt. " +
+                "This indicates executingThread was properly restored in the exception handler.");
+        } finally {
+            nonStickyGroup.shutdownGracefully();
+            underlying.shutdownGracefully();
         }
     }
 
