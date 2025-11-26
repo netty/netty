@@ -33,10 +33,8 @@ abstract class PendingBytesTracker implements MessageSizeEstimator.Handle {
     public abstract void decrementPendingOutboundBytes(long bytes);
 
     static PendingBytesTracker newTracker(Channel channel) {
-        if (channel.pipeline() instanceof DefaultChannelPipeline) {
-            return new DefaultChannelPipelinePendingBytesTracker((DefaultChannelPipeline) channel.pipeline());
-        } else {
-            ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
+        if (channel instanceof AbstractChannel) {
+            ChannelOutboundBuffer buffer = ((AbstractChannel) channel).outboundBuffer();
             MessageSizeEstimator.Handle handle = channel.config().getMessageSizeEstimator().newHandle();
             // We need to guard against null as channel.unsafe().outboundBuffer() may returned null
             // if the channel was already closed when constructing the PendingBytesTracker.
@@ -44,6 +42,11 @@ abstract class PendingBytesTracker implements MessageSizeEstimator.Handle {
             return buffer == null ?
                     new NoopPendingBytesTracker(handle) : new ChannelOutboundBufferPendingBytesTracker(buffer, handle);
         }
+        if (channel.pipeline() instanceof DefaultChannelPipeline) {
+            return new DefaultChannelPipelinePendingBytesTracker((DefaultChannelPipeline) channel.pipeline());
+        }
+        MessageSizeEstimator.Handle handle = channel.config().getMessageSizeEstimator().newHandle();
+        return new NoopPendingBytesTracker(handle);
     }
 
     private static final class DefaultChannelPipelinePendingBytesTracker extends PendingBytesTracker {

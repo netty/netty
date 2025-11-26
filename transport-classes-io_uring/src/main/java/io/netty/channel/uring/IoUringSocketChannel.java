@@ -136,7 +136,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
 
         @Override
         boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
-            ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+            ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
             if (op == Native.IORING_OP_SEND_ZC || op == Native.IORING_OP_SENDMSG_ZC) {
                 return handleWriteCompleteZeroCopy(op, channelOutboundBuffer, res, flags);
             }

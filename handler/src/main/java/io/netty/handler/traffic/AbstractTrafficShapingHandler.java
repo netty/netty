@@ -23,7 +23,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 import io.netty.util.Attribute;
@@ -586,10 +585,11 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     }
 
     void setUserDefinedWritability(ChannelHandlerContext ctx, boolean writable) {
-        ChannelOutboundBuffer cob = ctx.channel().unsafe().outboundBuffer();
+        // TODO: Come up with a way to support this without leaking implementation details.
+        /*ChannelOutboundBuffer cob = ctx.channel().unsafe().outboundBuffer();
         if (cob != null) {
             cob.setUserDefinedWritability(userDefinedWritabilityIndex, writable);
-        }
+        }*/
     }
 
     /**

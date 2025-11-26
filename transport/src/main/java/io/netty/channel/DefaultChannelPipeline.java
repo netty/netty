@@ -1198,17 +1198,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     protected void incrementPendingOutboundBytes(long size) {
-        ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
-        if (buffer != null) {
-            buffer.incrementPendingOutboundBytes(size);
-        }
+       // NOOP
     }
 
     protected void decrementPendingOutboundBytes(long size) {
-        ChannelOutboundBuffer buffer = channel.unsafe().outboundBuffer();
-        if (buffer != null) {
-            buffer.decrementPendingOutboundBytes(size);
-        }
+        // NOOP
     }
 
     // A special catch-all handler that handles both bytes and messages.

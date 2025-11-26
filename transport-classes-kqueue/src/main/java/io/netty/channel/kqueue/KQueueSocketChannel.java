@@ -65,7 +65,7 @@ public final class KQueueSocketChannel extends AbstractKQueueStreamChannel imple
     @Override
     protected boolean doConnect0(SocketAddress remoteAddress, SocketAddress localAddress) throws Exception {
         if (config.isTcpFastOpenConnect()) {
-            ChannelOutboundBuffer outbound = unsafe().outboundBuffer();
+            ChannelOutboundBuffer outbound = outboundBuffer();
             outbound.addFlush();
             Object curr;
             if ((curr = outbound.current()) instanceof ByteBuf) {

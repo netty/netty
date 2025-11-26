@@ -154,6 +154,14 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     ChannelFuture closeFuture();
 
     /**
+     * Returns {@code true} if this {@link Channel} has any pending bytes stored that were not written
+     * to the underlying transport yet, {@code false} otherwise.
+     *
+     * @return  if there are any pending bytes.
+     */
+    boolean hasPendingBytes();
+
+    /**
      * Returns {@code true} if and only if the I/O thread will perform the
      * requested write operation immediately.  Any write requests made when
      * this method returns {@code false} are queued until the I/O thread is
@@ -162,10 +170,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      * {@link WriteBufferWaterMark} can be used to configure on which condition
      * the write buffer would cause this channel to change writability.
      */
-    default boolean isWritable() {
-        ChannelOutboundBuffer buf = unsafe().outboundBuffer();
-        return buf != null && buf.isWritable();
-    }
+    boolean isWritable();
 
     /**
      * Get how many bytes can be written until {@link #isWritable()} returns {@code false}.
@@ -173,12 +178,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      *
      * {@link WriteBufferWaterMark} can be used to define writability settings.
      */
-    default long bytesBeforeUnwritable() {
-        ChannelOutboundBuffer buf = unsafe().outboundBuffer();
-        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
-        // We should be consistent with that here.
-        return buf != null ? buf.bytesBeforeUnwritable() : 0;
-    }
+    long bytesBeforeUnwritable();
 
     /**
      * Get how many bytes must be drained from underlying buffers until {@link #isWritable()} returns {@code true}.
@@ -186,12 +186,7 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      *
      * {@link WriteBufferWaterMark} can be used to define writability settings.
      */
-    default long bytesBeforeWritable() {
-        ChannelOutboundBuffer buf = unsafe().outboundBuffer();
-        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
-        // We should be consistent with that here.
-        return buf != null ? buf.bytesBeforeWritable() : Long.MAX_VALUE;
-    }
+    long bytesBeforeWritable();
 
     /**
      * Returns an <em>internal-use-only</em> object that provides unsafe operations.
@@ -428,10 +423,5 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
          * Flush out all write operations scheduled via {@link #write(Object, ChannelPromise)}.
          */
         void flush();
-
-        /**
-         * Returns the {@link ChannelOutboundBuffer} of the {@link Channel} where the pending write requests are stored.
-         */
-        ChannelOutboundBuffer outboundBuffer();
     }
 }

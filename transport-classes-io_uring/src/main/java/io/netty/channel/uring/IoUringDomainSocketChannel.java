@@ -142,7 +142,7 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 try {
                     int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring sendmsg", res);
                     if (nativeCallResult >= 0) {
-                        ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+                        ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
                         channelOutboundBuffer.remove();
                     }
                 } catch (Throwable throwable) {

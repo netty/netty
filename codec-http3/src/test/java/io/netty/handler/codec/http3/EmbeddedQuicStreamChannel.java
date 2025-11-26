@@ -263,11 +263,6 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
                 public void flush() {
                     superUnsafe.flush();
                 }
-
-                @Override
-                public ChannelOutboundBuffer outboundBuffer() {
-                    return superUnsafe.outboundBuffer();
-                }
             };
         }
         return unsafe;

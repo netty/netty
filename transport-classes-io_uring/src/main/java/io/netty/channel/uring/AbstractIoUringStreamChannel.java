@@ -588,7 +588,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 writeId = 0;
                 writeOpCode = 0;
             }
-            ChannelOutboundBuffer channelOutboundBuffer = unsafe().outboundBuffer();
+            ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
             Object current = channelOutboundBuffer.current();
             if (current instanceof IoUringFileRegion) {
                 IoUringFileRegion fileRegion = (IoUringFileRegion) current;

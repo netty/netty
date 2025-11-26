@@ -334,6 +334,12 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             pipeline.fireChannelWritabilityChanged();
         }
     }
+
+    @Override
+    public boolean hasPendingBytes() {
+        return false;
+    }
+
     @Override
     public Http2FrameStream stream() {
         return stream;
@@ -1168,12 +1174,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             // that are explicit flushed.
             writeDoneAndNoFlush = false;
             flush0(parentContext());
-        }
-
-        @Override
-        public ChannelOutboundBuffer outboundBuffer() {
-            // Always return null as we not use the ChannelOutboundBuffer and not even support it.
-            return null;
         }
     }
 
