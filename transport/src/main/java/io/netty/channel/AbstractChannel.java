@@ -153,7 +153,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         SocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
             try {
-                this.localAddress = localAddress = unsafe().localAddress();
+                this.localAddress = localAddress = localAddress0();
             } catch (Error e) {
                 throw e;
             } catch (Throwable t) {
@@ -177,7 +177,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         SocketAddress remoteAddress = this.remoteAddress;
         if (remoteAddress == null) {
             try {
-                this.remoteAddress = remoteAddress = unsafe().remoteAddress();
+                this.remoteAddress = remoteAddress = remoteAddress0();
             } catch (Error e) {
                 throw e;
             } catch (Throwable t) {
@@ -312,7 +312,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return estimatorHandle;
         }
 
-        @Override
         public RecvByteBufAllocator.Handle recvBufAllocHandle() {
             if (recvHandle == null) {
                 recvHandle = config().getRecvByteBufAllocator().newHandle();
@@ -323,16 +322,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public final ChannelOutboundBuffer outboundBuffer() {
             return outboundBuffer;
-        }
-
-        @Override
-        public final SocketAddress localAddress() {
-            return localAddress0();
-        }
-
-        @Override
-        public final SocketAddress remoteAddress() {
-            return remoteAddress0();
         }
 
         @Override
@@ -356,7 +345,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     logger.warn(
                             "Force-closing a channel whose registration task was not accepted by an event loop: {}",
                             AbstractChannel.this, t);
-                    closeForcibly();
+                    close(newPromise());
                     closeFuture.setClosed();
                     safeSetFailure(promise, t);
                 }
@@ -395,7 +384,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         }
                     } else {
                         // Close the channel directly to avoid FD leak.
-                        closeForcibly();
+                        close(newPromise());
                         closeFuture.setClosed();
                         safeSetFailure(promise, future.cause());
                     }
@@ -629,17 +618,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         private void fireChannelInactiveAndDeregister(final boolean wasActive) {
             deregister(newPromise(), wasActive && !isActive());
-        }
-
-        @Override
-        public final void closeForcibly() {
-            assertEventLoop();
-
-            try {
-                doClose();
-            } catch (Exception e) {
-                logger.warn("Failed to close a channel.", e);
-            }
         }
 
         @Override

@@ -48,7 +48,7 @@ public class EpollDatagramChannelTest {
     public void testDefaultMaxMessagePerRead() {
         EpollDatagramChannel channel = new EpollDatagramChannel(EpollSocketTestPermutation.EPOLL_GROUP.next());
         assertEquals(16, channel.config().getMaxMessagesPerRead());
-        channel.unsafe().closeForcibly();
+        channel.close();
     }
 
     @Test

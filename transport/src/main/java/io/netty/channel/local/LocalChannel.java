@@ -273,7 +273,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     private void readInbound() {
-        RecvByteBufAllocator.Handle handle = unsafe().recvBufAllocHandle();
+        RecvByteBufAllocator.Handle handle = ((AbstractUnsafe) unsafe()).recvBufAllocHandle();
         handle.reset(config());
         ChannelPipeline pipeline = pipeline();
         do {

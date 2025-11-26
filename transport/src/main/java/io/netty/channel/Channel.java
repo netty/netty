@@ -368,32 +368,11 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
      * are only provided to implement the actual transport, and must be invoked from an I/O thread except for the
      * following methods:
      * <ul>
-     *   <li>{@link #localAddress()}</li>
-     *   <li>{@link #remoteAddress()}</li>
-     *   <li>{@link #closeForcibly()}</li>
      *   <li>{@link #register(ChannelPromise)}</li>
      *   <li>{@link #deregister(ChannelPromise)}</li>
      * </ul>
      */
     interface Unsafe {
-
-        /**
-         * Return the assigned {@link RecvByteBufAllocator.Handle} which will be used to allocate {@link ByteBuf}'s when
-         * receiving data.
-         */
-        RecvByteBufAllocator.Handle recvBufAllocHandle();
-
-        /**
-         * Return the {@link SocketAddress} to which is bound local or
-         * {@code null} if none.
-         */
-        SocketAddress localAddress();
-
-        /**
-         * Return the {@link SocketAddress} to which is bound remote or
-         * {@code null} if none is bound yet.
-         */
-        SocketAddress remoteAddress();
 
         /**
          * Register the {@link Channel} of the {@link ChannelPromise} and notify
@@ -427,12 +406,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
          * operation was complete.
          */
         void close(ChannelPromise promise);
-
-        /**
-         * Closes the {@link Channel} immediately without firing any events.  Probably only useful
-         * when registration attempt failed.
-         */
-        void closeForcibly();
 
         /**
          * Deregister the {@link Channel} of the {@link ChannelPromise} from {@link EventLoop} and notify the

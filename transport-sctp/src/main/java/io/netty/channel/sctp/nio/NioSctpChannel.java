@@ -27,7 +27,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.nio.NioIoOps;
@@ -267,7 +266,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     protected int doReadMessages(List<Object> buf) throws Exception {
         SctpChannel ch = javaChannel();
 
-        RecvByteBufAllocator.Handle allocHandle = unsafe().recvBufAllocHandle();
+        RecvByteBufAllocator.Handle allocHandle = ((AbstractUnsafe) unsafe()).recvBufAllocHandle();
         ByteBuf buffer = allocHandle.allocate(config().getAllocator());
         boolean free = true;
         try {

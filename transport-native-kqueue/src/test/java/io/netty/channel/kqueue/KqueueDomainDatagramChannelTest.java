@@ -32,6 +32,6 @@ public class KqueueDomainDatagramChannelTest {
         KQueueDomainDatagramChannel channel = new KQueueDomainDatagramChannel(
                 KQueueSocketTestPermutation.KQUEUE_GROUP.next());
         assertEquals(16, channel.config().getMaxMessagesPerRead());
-        channel.unsafe().closeForcibly();
+        channel.close();
     }
 }

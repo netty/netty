@@ -181,7 +181,7 @@ public final class Http2StreamChannelBootstrap {
         try {
             init(streamChannel);
         } catch (Exception e) {
-            streamChannel.unsafe().closeForcibly();
+            streamChannel.unsafe().close(streamChannel.newPromise());
             promise.setFailure(e);
             return;
         }
@@ -195,12 +195,7 @@ public final class Http2StreamChannelBootstrap {
                 } else if (future.isCancelled()) {
                     promise.cancel(false);
                 } else {
-                    if (streamChannel.isRegistered()) {
-                        streamChannel.close();
-                    } else {
-                        streamChannel.unsafe().closeForcibly();
-                    }
-
+                    streamChannel.close();
                     promise.setFailure(future.cause());
                 }
             }

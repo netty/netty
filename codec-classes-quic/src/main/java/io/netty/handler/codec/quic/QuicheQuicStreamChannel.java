@@ -472,22 +472,11 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         @SuppressWarnings("deprecation")
-        @Override
         public RecvByteBufAllocator.Handle recvBufAllocHandle() {
             if (recvHandle == null) {
                 recvHandle = config.getRecvByteBufAllocator().newHandle();
             }
             return recvHandle;
-        }
-
-        @Override
-        public SocketAddress localAddress() {
-            return address;
-        }
-
-        @Override
-        public SocketAddress remoteAddress() {
-            return address;
         }
 
         @Override
@@ -621,12 +610,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             } catch (RejectedExecutionException e) {
                 LOGGER.warn("Can't invoke task later as EventLoop rejected it", e);
             }
-        }
-
-        @Override
-        public void closeForcibly() {
-            assert executor().inEventLoop();
-            close(newPromise());
         }
 
         @Override

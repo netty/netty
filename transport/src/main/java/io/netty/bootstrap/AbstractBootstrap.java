@@ -288,7 +288,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         } catch (Throwable t) {
             if (channel != null) {
                 // channel can be null if newChannel crashed (eg SocketException("too many open files"))
-                channel.unsafe().closeForcibly();
+                channel.close();
                 return channel.newPromise().setFailure(t);
             }
             return new FailedChannel(group.next()).newFailedFuture(t);
@@ -296,11 +296,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
         ChannelFuture reqFut = channel.register();
         if (reqFut.cause() != null) {
-            if (channel.isRegistered()) {
-                channel.close();
-            } else {
-                channel.unsafe().closeForcibly();
-            }
+            channel.close();
         }
 
         // If we are here and the promise is not failed, it's one of the following cases:
