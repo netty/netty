@@ -15,7 +15,14 @@
  */
 package io.netty.handler.codec.http3;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public enum Http3SettingIdentifier {
 
@@ -83,6 +90,14 @@ public enum Http3SettingIdentifier {
 
     private final long id;
 
+    private static final Map<Long, Http3SettingIdentifier> LOOKUP =
+            Arrays.stream(values())
+                    .collect(Collectors.toMap(
+                            Http3SettingIdentifier::id,
+                            Function.identity()
+                    ));
+
+
     Http3SettingIdentifier(long id) {
         this.id = id;
     }
@@ -105,11 +120,6 @@ public enum Http3SettingIdentifier {
      */
     @Nullable
     public static Http3SettingIdentifier fromId(long id) {
-        for (Http3SettingIdentifier s : values()) {
-            if (s.id == id) {
-                return s;
-            }
-        }
-        return null; // unknown setting → ignored when receiving
+        return LOOKUP.get(id);
     }
 }
