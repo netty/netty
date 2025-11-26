@@ -982,7 +982,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
                 // If we could write all and we did not schedule a pollout yet let us try to write again
                 if (writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
-                    scheduleWriteIfNeeded(unsafe().outboundBuffer(), false);
+                    scheduleWriteIfNeeded(outboundBuffer(), false);
                 }
             }
         }
@@ -1088,7 +1088,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     ByteBuf initialData = null;
                     if (IoUring.isTcpFastOpenClientSideAvailable() &&
                         config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT) == Boolean.TRUE) {
-                        ChannelOutboundBuffer outbound = unsafe().outboundBuffer();
+                        ChannelOutboundBuffer outbound = outboundBuffer();
                         outbound.addFlush();
                         Object curr;
                         if ((curr = outbound.current()) instanceof ByteBuf) {

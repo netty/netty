@@ -109,7 +109,6 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         }
     };
 
-    private final boolean observeOutput;
     private final long readerIdleTimeNanos;
     private final long writerIdleTimeNanos;
     private final long allIdleTimeNanos;
@@ -132,11 +131,6 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     private static final byte ST_DESTROYED = 2;
 
     private boolean reading;
-
-    private long lastChangeCheckTimeStamp;
-    private int lastMessageHashCode;
-    private long lastPendingWriteBytes;
-    private long lastFlushProgress;
 
     /**
      * Creates a new instance firing {@link IdleStateEvent}s.
@@ -164,20 +158,8 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     }
 
     /**
-     * @see #IdleStateHandler(boolean, long, long, long, TimeUnit)
-     */
-    public IdleStateHandler(
-            long readerIdleTime, long writerIdleTime, long allIdleTime,
-            TimeUnit unit) {
-        this(false, readerIdleTime, writerIdleTime, allIdleTime, unit);
-    }
-
-    /**
      * Creates a new instance firing {@link IdleStateEvent}s.
-     *
-     * @param observeOutput
-     *        whether or not the consumption of {@code bytes} should be taken into
-     *        consideration when assessing write idleness. The default is {@code false}.
+
      * @param readerIdleTime
      *        an {@link IdleStateEvent} whose state is {@link IdleState#READER_IDLE}
      *        will be triggered when no read was performed for the specified
@@ -194,12 +176,9 @@ public class IdleStateHandler extends ChannelDuplexHandler {
      *        the {@link TimeUnit} of {@code readerIdleTime},
      *        {@code writeIdleTime}, and {@code allIdleTime}
      */
-    public IdleStateHandler(boolean observeOutput,
-            long readerIdleTime, long writerIdleTime, long allIdleTime,
+    public IdleStateHandler(long readerIdleTime, long writerIdleTime, long allIdleTime,
             TimeUnit unit) {
         ObjectUtil.checkNotNull(unit, "unit");
-
-        this.observeOutput = observeOutput;
 
         if (readerIdleTime <= 0) {
             readerIdleTimeNanos = 0;
@@ -343,7 +322,6 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         }
 
         state = ST_INITIALIZED;
-        initOutputChanged(ctx);
 
         lastReadTime = lastWriteTime = ticker.nanoTime();
         if (readerIdleTimeNanos > 0) {
@@ -406,75 +384,6 @@ public class IdleStateHandler extends ChannelDuplexHandler {
             default:
                 throw new IllegalArgumentException("Unhandled: state=" + state + ", first=" + first);
         }
-    }
-
-    /**
-     * @see #hasOutputChanged(ChannelHandlerContext, boolean)
-     */
-    private void initOutputChanged(ChannelHandlerContext ctx) {
-        if (observeOutput) {
-            Channel channel = ctx.channel();
-            Unsafe unsafe = channel.unsafe();
-            ChannelOutboundBuffer buf = unsafe.outboundBuffer();
-
-            if (buf != null) {
-                lastMessageHashCode = System.identityHashCode(buf.current());
-                lastPendingWriteBytes = buf.totalPendingWriteBytes();
-                lastFlushProgress = buf.currentProgress();
-            }
-        }
-    }
-
-    /**
-     * Returns {@code true} if and only if the {@link IdleStateHandler} was constructed
-     * with {@link #observeOutput} enabled and there has been an observed change in the
-     * {@link ChannelOutboundBuffer} between two consecutive calls of this method.
-     *
-     * https://github.com/netty/netty/issues/6150
-     */
-    private boolean hasOutputChanged(ChannelHandlerContext ctx, boolean first) {
-        if (observeOutput) {
-
-            // We can take this shortcut if the ChannelPromises that got passed into write()
-            // appear to complete. It indicates "change" on message level and we simply assume
-            // that there's change happening on byte level. If the user doesn't observe channel
-            // writability events then they'll eventually OOME and there's clearly a different
-            // problem and idleness is least of their concerns.
-            if (lastChangeCheckTimeStamp != lastWriteTime) {
-                lastChangeCheckTimeStamp = lastWriteTime;
-
-                // But this applies only if it's the non-first call.
-                if (!first) {
-                    return true;
-                }
-            }
-
-            Channel channel = ctx.channel();
-            Unsafe unsafe = channel.unsafe();
-            ChannelOutboundBuffer buf = unsafe.outboundBuffer();
-
-            if (buf != null) {
-                int messageHashCode = System.identityHashCode(buf.current());
-                long pendingWriteBytes = buf.totalPendingWriteBytes();
-
-                if (messageHashCode != lastMessageHashCode || pendingWriteBytes != lastPendingWriteBytes) {
-                    lastMessageHashCode = messageHashCode;
-                    lastPendingWriteBytes = pendingWriteBytes;
-
-                    if (!first) {
-                        return true;
-                    }
-                }
-
-                long flushProgress = buf.currentProgress();
-                if (flushProgress != lastFlushProgress) {
-                    lastFlushProgress = flushProgress;
-                    return !first;
-                }
-            }
-        }
-
-        return false;
     }
 
     private abstract static class AbstractIdleTask implements Runnable {
@@ -549,10 +458,6 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 firstWriterIdleEvent = false;
 
                 try {
-                    if (hasOutputChanged(ctx, first)) {
-                        return;
-                    }
-
                     IdleStateEvent event = newIdleStateEvent(IdleState.WRITER_IDLE, first);
                     channelIdle(ctx, event);
                 } catch (Throwable t) {
@@ -587,10 +492,6 @@ public class IdleStateHandler extends ChannelDuplexHandler {
                 firstAllIdleEvent = false;
 
                 try {
-                    if (hasOutputChanged(ctx, first)) {
-                        return;
-                    }
-
                     IdleStateEvent event = newIdleStateEvent(IdleState.ALL_IDLE, first);
                     channelIdle(ctx, event);
                 } catch (Throwable t) {

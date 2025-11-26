@@ -22,7 +22,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelMetadata;
-import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
@@ -75,6 +74,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     private volatile boolean outputShutdown;
     private volatile QuicStreamPriority priority;
     private volatile long capacity;
+    private volatile boolean hasPending;
 
     QuicheQuicStreamChannel(QuicheQuicChannel parent, long streamId) {
         this.parent = parent;
@@ -92,6 +92,11 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         if (parent.streamType(streamId) == QuicStreamType.UNIDIRECTIONAL && parent.isStreamLocalCreated(streamId)) {
             inputShutdown = true;
         }
+    }
+
+    @Override
+    public boolean hasPendingBytes() {
+        return hasPending;
     }
 
     @Override
@@ -686,6 +691,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 }
                 return written;
             } finally {
+                updateHasPending();
                 closeIfNeeded(wasFinSent);
                 inWriteQueued = false;
             }
@@ -718,7 +724,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 // Touch the message to make things easier in terms of debugging buffer leaks.
                 ReferenceCountUtil.touch(msg);
                 queue.add(msg, promise);
-
+                updateHasPending();
                 // Try again to write queued messages.
                 writeQueued();
             } else {
@@ -732,7 +738,13 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             ReferenceCountUtil.touch(msg);
 
             queue.add(msg, promise);
+            updateHasPending();
             queue.removeAndFailAll(cause);
+            updateHasPending();
+        }
+
+        private void updateHasPending() {
+            hasPending = queue.bytes() > 0;
         }
 
         private Object filterMsg(Object msg) {
@@ -864,12 +876,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         public void flush() {
             assert executor().inEventLoop();
             // NOOP.
-        }
-
-        @Override
-        @Nullable
-        public ChannelOutboundBuffer outboundBuffer() {
-            return null;
         }
 
         private void closeOnRead(ChannelPipeline pipeline, boolean readFrames) {

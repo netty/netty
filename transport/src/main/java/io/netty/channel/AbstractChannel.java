@@ -118,6 +118,34 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     @Override
+    public boolean hasPendingBytes() {
+        ChannelOutboundBuffer buf = outboundBuffer();
+        return buf != null && buf.totalPendingWriteBytes() > 0;
+    }
+
+    @Override
+    public boolean isWritable() {
+        ChannelOutboundBuffer buf = outboundBuffer();
+        return buf != null && buf.isWritable();
+    }
+
+    @Override
+    public long bytesBeforeUnwritable() {
+        ChannelOutboundBuffer buf = outboundBuffer();
+        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
+        // We should be consistent with that here.
+        return buf != null ? buf.bytesBeforeUnwritable() : 0;
+    }
+
+    @Override
+    public long bytesBeforeWritable() {
+        ChannelOutboundBuffer buf = outboundBuffer();
+        // isWritable() is currently assuming if there is no outboundBuffer then the channel is not writable.
+        // We should be consistent with that here.
+        return buf != null ? buf.bytesBeforeWritable() : Long.MAX_VALUE;
+    }
+
+    @Override
     public final ChannelId id() {
         return id;
     }
@@ -126,7 +154,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Returns a new {@link ChannelPipeline} instance.
      */
     protected ChannelPipeline newChannelPipeline() {
-        return new DefaultChannelPipeline(this);
+        return new DefaultAbstractChannelPipeline(this);
     }
 
     @Override
@@ -288,12 +316,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return strVal;
     }
 
+    private volatile ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(AbstractChannel.this);
+
+    protected final ChannelOutboundBuffer outboundBuffer() {
+        return outboundBuffer;
+    }
+
     /**
      * {@link Unsafe} implementation which sub-classes must extend and use.
      */
     protected abstract class AbstractUnsafe implements Unsafe {
 
-        private volatile ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(AbstractChannel.this);
         private RecvByteBufAllocator.Handle recvHandle;
         private MessageSizeEstimator.Handle estimatorHandle;
 
@@ -317,11 +350,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 recvHandle = config().getRecvByteBufAllocator().newHandle();
             }
             return recvHandle;
-        }
-
-        @Override
-        public final ChannelOutboundBuffer outboundBuffer() {
-            return outboundBuffer;
         }
 
         @Override
@@ -496,12 +524,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
             if (outboundBuffer == null) {
                 promise.setFailure(new ClosedChannelException());
                 return;
             }
-            this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
+            AbstractChannel.this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
 
             final Throwable shutdownCause = cause == null ?
                     new ChannelOutputShutdownException("Channel output shutdown") :
@@ -555,8 +583,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             closeInitiated = true;
 
             final boolean wasActive = isActive();
-            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
-            this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
+            final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
+            AbstractChannel.this.outboundBuffer = null; // Disallow adding any messages and flushes to outboundBuffer.
             Executor closeExecutor = prepareToClose();
             if (closeExecutor != null) {
                 closeExecutor.execute(new Runnable() {
@@ -692,7 +720,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public final void write(Object msg, ChannelPromise promise) {
             assertEventLoop();
 
-            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
             if (outboundBuffer == null) {
                 try {
                     // release message now to prevent resource-leak
@@ -731,7 +759,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public final void flush() {
             assertEventLoop();
 
-            ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
             if (outboundBuffer == null) {
                 return;
             }
@@ -747,7 +775,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             }
 
-            final ChannelOutboundBuffer outboundBuffer = this.outboundBuffer;
+            final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
             if (outboundBuffer == null || outboundBuffer.isEmpty()) {
                 return;
             }
@@ -1060,6 +1088,29 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public Throwable fillInStackTrace() {
             return this;
+        }
+    }
+
+    protected class DefaultAbstractChannelPipeline extends DefaultChannelPipeline {
+
+        protected DefaultAbstractChannelPipeline(AbstractChannel channel) {
+            super(channel);
+        }
+
+        @Override
+        protected final void incrementPendingOutboundBytes(long size) {
+            ChannelOutboundBuffer buffer = outboundBuffer();
+            if (buffer != null) {
+                buffer.incrementPendingOutboundBytes(size);
+            }
+        }
+
+        @Override
+        protected final void decrementPendingOutboundBytes(long size) {
+            ChannelOutboundBuffer buffer = outboundBuffer();
+            if (buffer != null) {
+                buffer.decrementPendingOutboundBytes(size);
+            }
         }
     }
 }

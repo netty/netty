@@ -2181,8 +2181,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             // If we weren't able to include client_hello in the TCP SYN (e.g. no token, disabled at the OS) we have to
             // flush pending data in the outbound buffer later in channelActive().
             final ChannelOutboundBuffer outboundBuffer;
-            if (fastOpen && ((outboundBuffer = channel.unsafe().outboundBuffer()) == null ||
-                    outboundBuffer.totalPendingWriteBytes() > 0)) {
+            if (fastOpen && channel.hasPendingBytes()) {
                 setState(STATE_NEEDS_FLUSH);
             }
         }

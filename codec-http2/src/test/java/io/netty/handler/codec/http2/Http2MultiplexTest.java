@@ -90,7 +90,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
             .method(HttpMethod.GET.asciiName()).scheme(HttpScheme.HTTPS.name())
             .authority(new AsciiString("example.org")).path(new AsciiString("/foo"));
 
-    private EmbeddedChannel parentChannel;
+    private ParentChannel parentChannel;
     private Http2FrameWriter frameWriter;
     private Http2FrameInboundWriter frameInboundWriter;
     private TestChannelInitializer childChannelInitializer;
@@ -104,7 +104,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     @BeforeEach
     public void setUp() {
         childChannelInitializer = new TestChannelInitializer();
-        parentChannel = new EmbeddedChannel();
+        parentChannel = new ParentChannel();
         frameInboundWriter = new Http2FrameInboundWriter(parentChannel);
         parentChannel.connect(new InetSocketAddress(0));
         frameWriter = Http2TestUtil.mockedFrameWriter();
@@ -1136,8 +1136,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // Add something to the ChannelOutboundBuffer of the parent to simulate queuing in the parents channel buffer
         // and verify that this only affect the writability of the parent channel while the child stays writable
         // until it used all of its credits.
-        parentChannel.unsafe().outboundBuffer().addMessage(
-                Unpooled.buffer().writeZero(800), 800, parentChannel.newPromise());
+        parentChannel.addBuffer(Unpooled.buffer().writeZero(800));
         assertFalse(parentChannel.isWritable());
 
         assertTrue(childChannel.isWritable());
@@ -1723,5 +1722,12 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
     private static int eqStreamId(Http2StreamChannel channel) {
         return eq(channel.stream().id());
+    }
+
+    private static final class ParentChannel extends EmbeddedChannel {
+
+        void addBuffer(ByteBuf buf) {
+            outboundBuffer().addMessage(buf, buf.readableBytes(), newPromise());
+        }
     }
 }
