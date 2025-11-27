@@ -31,7 +31,6 @@ public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Ma
      */
     @Deprecated
     long HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY = Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id();
-            ;
 
     /**
      * @deprecated Use {@link Http3SettingIdentifier#HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS} instead.
