@@ -59,7 +59,7 @@ public class ManualEventLoopTest {
         racyOtherSubmissionMissWakeup(EpollIoHandler.newFactory(), 2);
     }
 
-    void racySubmissionMissWakeup(IoHandlerFactory handlerFactory, long canBlockAttempt)
+    private void racySubmissionMissWakeup(IoHandlerFactory handlerFactory, long canBlockAttempt)
             throws Exception {
         CyclicBarrier waitBeforeSubmittingTask = new CyclicBarrier(2);
         CountDownLatch taskSubmitted = new CountDownLatch(1);
@@ -93,7 +93,7 @@ public class ManualEventLoopTest {
         group.shutdownGracefully(0, 0, TimeUnit.SECONDS).get();
     }
 
-    void racyOtherSubmissionMissWakeup(IoHandlerFactory handlerFactory, long canBlockAttempt)
+    private void racyOtherSubmissionMissWakeup(IoHandlerFactory handlerFactory, long canBlockAttempt)
             throws Exception {
         CyclicBarrier waitBeforeSubmittingTask = new CyclicBarrier(2);
         CountDownLatch taskSubmitted = new CountDownLatch(1);
