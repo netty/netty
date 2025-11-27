@@ -48,6 +48,9 @@ import java.util.concurrent.atomic.AtomicReference;
  * {@link #waitAndRun()}} methods are called in a timely fashion.
  */
 public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements IoEventLoop {
+    private static final Runnable WAKEUP_TASK = () -> {
+        // NOOP
+    };
     private static final int ST_STARTED = 0;
     private static final int ST_SHUTTING_DOWN = 1;
     private static final int ST_SHUTDOWN = 2;
@@ -470,8 +473,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
 
         if (wakeup) {
             // same as AbstractScheduledEventExecutor.WAKEUP_TASK
-            taskQueue.offer(() -> {
-            });
+            taskQueue.offer(WAKEUP_TASK);
             handler.wakeup();
         }
     }
