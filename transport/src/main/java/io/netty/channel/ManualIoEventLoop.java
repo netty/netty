@@ -608,7 +608,8 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
     }
 
     @Override
-    public final <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
+    public final <T> T invokeAny(Collection<? extends Callable<T>> tasks)
+            throws InterruptedException, ExecutionException {
         // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
         throwIfInEventLoop("invokeAny");
         return super.invokeAny(tasks);
