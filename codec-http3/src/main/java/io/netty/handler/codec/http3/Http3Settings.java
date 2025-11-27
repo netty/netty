@@ -343,10 +343,7 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
      */
     private static void verifyStandardSetting(Http3SettingIdentifier identifier, Long value) {
         checkNotNull(value, "value");
-
-        if (identifier == null) {
-            return;
-        }
+        checkNotNull(identifier, "identifier");
 
         switch (identifier) {
             case HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY:
