@@ -155,7 +155,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
     }
 
     @Override
-    public Ticker ticker() {
+    public final Ticker ticker() {
         return ticker;
     }
 
@@ -165,7 +165,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
      *
      * @param timeoutNanos the maximum time in nanoseconds to run tasks.
      */
-    public int runNonBlockingTasks(long timeoutNanos) {
+    public final int runNonBlockingTasks(long timeoutNanos) {
         return runAllTasks(timeoutNanos, true);
     }
 
@@ -277,7 +277,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
      * @return the number of IO and tasks executed.
      * @throws IllegalStateException if the method is not called from the owning {@link Thread}.
      */
-    public int runNow(long runAllTasksTimeoutNanos) {
+    public final int runNow(long runAllTasksTimeoutNanos) {
         checkCurrentThread();
         return run(nonBlockingContext, runAllTasksTimeoutNanos);
     }
@@ -291,7 +291,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
      *
      * @return the number of IO and tasks executed.
      */
-    public int runNow() {
+    public final int runNow() {
         checkCurrentThread();
         return run(nonBlockingContext, 0);
     }
@@ -310,7 +310,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
      *                  if there is nothing to run (like {@link #runNow()}).
      * @return          the number of IO and tasks executed.
      */
-    public int run(long waitNanos, long runAllTasksTimeoutNanos) {
+    public final int run(long waitNanos, long runAllTasksTimeoutNanos) {
         checkCurrentThread();
 
         final IoHandlerContext context;
@@ -335,7 +335,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
      *                  if there is nothing to run (like {@link #runNow()}).
      * @return          the number of IO and tasks executed.
      */
-    public int run(long waitNanos) {
+    public final int run(long waitNanos) {
         return run(waitNanos, 0);
     }
 
@@ -348,7 +348,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
     /**
      * Force a wakeup and so the {@link #run(long)} method will unblock and return even if there was nothing to do.
      */
-    public void wakeup() {
+    public final void wakeup() {
         if (isShuttingDown()) {
             return;
         }
@@ -356,31 +356,31 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
     }
 
     @Override
-    public ManualIoEventLoop next() {
+    public final ManualIoEventLoop next() {
         return this;
     }
 
     @Override
-    public IoEventLoopGroup parent() {
+    public final IoEventLoopGroup parent() {
         return parent;
     }
 
     @Deprecated
     @Override
-    public ChannelFuture register(Channel channel) {
+    public final ChannelFuture register(Channel channel) {
         return register(new DefaultChannelPromise(channel, this));
     }
 
     @Deprecated
     @Override
-    public ChannelFuture register(final ChannelPromise promise) {
+    public final ChannelFuture register(final ChannelPromise promise) {
         ObjectUtil.checkNotNull(promise, "promise");
         promise.channel().unsafe().register(this, promise);
         return promise;
     }
 
     @Override
-    public Future<IoRegistration> register(final IoHandle handle) {
+    public final Future<IoRegistration> register(final IoHandle handle) {
         Promise<IoRegistration> promise = newPromise();
         if (inEventLoop()) {
             registerForIo0(handle, promise);
@@ -405,7 +405,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
 
     @Deprecated
     @Override
-    public ChannelFuture register(final Channel channel, final ChannelPromise promise) {
+    public final ChannelFuture register(final Channel channel, final ChannelPromise promise) {
         ObjectUtil.checkNotNull(promise, "promise");
         ObjectUtil.checkNotNull(channel, "channel");
         channel.unsafe().register(this, promise);
@@ -413,17 +413,17 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
     }
 
     @Override
-    public boolean isCompatible(Class<? extends IoHandle> handleType) {
+    public final boolean isCompatible(Class<? extends IoHandle> handleType) {
         return handler.isCompatible(handleType);
     }
 
     @Override
-    public boolean isIoType(Class<? extends IoHandler> handlerType) {
+    public final boolean isIoType(Class<? extends IoHandler> handlerType) {
         return handler.getClass().equals(handlerType);
     }
 
     @Override
-    public boolean inEventLoop(Thread thread) {
+    public final boolean inEventLoop(Thread thread) {
         return this.owningThread.get() == thread;
     }
 
@@ -433,7 +433,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
      *
      * @param owningThread The owning thread
      */
-    public void setOwningThread(Thread owningThread) {
+    public final void setOwningThread(Thread owningThread) {
         Objects.requireNonNull(owningThread, "owningThread");
         if (!this.owningThread.compareAndSet(null, owningThread)) {
             throw new IllegalStateException("Owning thread already set");
@@ -479,7 +479,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
     }
 
     @Override
-    public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
+    public final Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
         ObjectUtil.checkPositiveOrZero(quietPeriod, "quietPeriod");
         if (timeout < quietPeriod) {
             throw new IllegalArgumentException(
@@ -493,37 +493,37 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
 
     @Override
     @Deprecated
-    public void shutdown() {
+    public final void shutdown() {
         shutdown0(-1, -1, ST_SHUTDOWN);
     }
 
     @Override
-    public Future<?> terminationFuture() {
+    public final Future<?> terminationFuture() {
         return terminationFuture;
     }
 
     @Override
-    public boolean isShuttingDown() {
+    public final boolean isShuttingDown() {
         return state.get() >= ST_SHUTTING_DOWN;
     }
 
     @Override
-    public boolean isShutdown() {
+    public final boolean isShutdown() {
         return state.get() >= ST_SHUTDOWN;
     }
 
     @Override
-    public boolean isTerminated() {
+    public final boolean isTerminated() {
         return state.get() == ST_TERMINATED;
     }
 
     @Override
-    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+    public final boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
         return terminationFuture.await(timeout, unit);
     }
 
     @Override
-    public void execute(Runnable command) {
+    public final void execute(Runnable command) {
         Objects.requireNonNull(command, "command");
         boolean inEventLoop = inEventLoop();
         if (inEventLoop) {
@@ -608,14 +608,14 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
     }
 
     @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
+    public final <T> T invokeAny(Collection<? extends Callable<T>> tasks) throws InterruptedException, ExecutionException {
         // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
         throwIfInEventLoop("invokeAny");
         return super.invokeAny(tasks);
     }
 
     @Override
-    public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
+    public final <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
             throws InterruptedException, ExecutionException, TimeoutException {
         // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
         throwIfInEventLoop("invokeAny");
@@ -623,7 +623,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
     }
 
     @Override
-    public <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
+    public final <T> List<java.util.concurrent.Future<T>> invokeAll(Collection<? extends Callable<T>> tasks)
             throws InterruptedException {
         // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
         throwIfInEventLoop("invokeAll");
@@ -631,7 +631,7 @@ public class ManualIoEventLoop extends AbstractScheduledEventExecutor implements
     }
 
     @Override
-    public <T> List<java.util.concurrent.Future<T>> invokeAll(
+    public final <T> List<java.util.concurrent.Future<T>> invokeAll(
             Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit) throws InterruptedException {
         // We need to check if the method was called from within the EventLoop as this would cause a deadlock.
         throwIfInEventLoop("invokeAll");
