@@ -632,18 +632,29 @@ public final class NioIoHandler implements IoHandler {
         try {
             int selectCnt = 0;
             long currentTimeNanos = System.nanoTime();
-            long selectDeadLineNanos = currentTimeNanos + runner.delayNanos(currentTimeNanos);
-
+            final long delayNanos = runner.delayNanos(currentTimeNanos);
+            // that's some special value which is used to indicate that no scheduled task is present.
+            // we set the deadline to a bogus (unused) value for us to represent infinity
+            long selectDeadLineNanos = Long.MAX_VALUE;
+            if (delayNanos != Long.MAX_VALUE) {
+                selectDeadLineNanos = currentTimeNanos + runner.delayNanos(currentTimeNanos);
+            }
             for (;;) {
-                long timeoutMillis = (selectDeadLineNanos - currentTimeNanos + 500000L) / 1000000L;
-                if (timeoutMillis <= 0) {
-                    if (selectCnt == 0) {
-                        selector.selectNow();
-                        selectCnt = 1;
+                final long timeoutMillis;
+                if (delayNanos != Long.MAX_VALUE) {
+                    long millisBeforeDeadline = millisBeforeDeadline(selectDeadLineNanos, currentTimeNanos);
+                    if (millisBeforeDeadline <= 0) {
+                        if (selectCnt == 0) {
+                            selector.selectNow();
+                            selectCnt = 1;
+                        }
+                        break;
                     }
-                    break;
+                    timeoutMillis = millisBeforeDeadline;
+                } else {
+                    // in NIO this means to block without any deadline
+                    timeoutMillis = 0;
                 }
-
                 // If a task was submitted when wakenUp value was true, the task didn't get a chance to call
                 // Selector#wakeup. So we need to check task queue again before executing select operation.
                 // If we don't, the task might be pended until select operation was timed out.
@@ -708,6 +719,18 @@ public final class NioIoHandler implements IoHandler {
             }
             // Harmless exception - log anyway
         }
+    }
+
+    private static long millisBeforeDeadline(long selectDeadLineNanos, long currentTimeNanos) {
+        assert selectDeadLineNanos != Long.MAX_VALUE;
+        long nanosBeforeDeadline = selectDeadLineNanos - currentTimeNanos;
+        // Prevent overflow when adding the rounding bias:
+        // if we don't do this, it would appear as the deadline is already reached!
+        if (nanosBeforeDeadline >= Long.MAX_VALUE - 500_000L) {
+            return Long.MAX_VALUE / 1_000_000L;
+        }
+        // Add 500_000 to round up to the nearest millisecond.
+        return (nanosBeforeDeadline + 500_000L) / 1_000_000L;
     }
 
     int selectNow() throws IOException {
