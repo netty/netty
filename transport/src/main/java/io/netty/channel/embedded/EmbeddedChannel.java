@@ -1190,6 +1190,11 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     }
 
+    @Override
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        promise.setSuccess();
+    }
+
     final class EmbeddedUnsafe extends AbstractUnsafe implements IoHandle {
 
         // Delegates to the EmbeddedUnsafe instance but ensures runPendingTasks() is called after each operation
@@ -1297,11 +1302,6 @@ public class EmbeddedChannel extends AbstractChannel {
                 }
             }
         };
-
-        @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            safeSetSuccess(promise);
-        }
 
         @Override
         public void handle(IoRegistration registration, IoEvent ioEvent) {

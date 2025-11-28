@@ -31,10 +31,13 @@ import java.net.InetSocketAddress;
 import java.net.NoRouteToHostException;
 import java.net.SocketAddress;
 import java.net.SocketException;
+import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 
 import static java.util.Objects.requireNonNull;
 
@@ -58,6 +61,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile boolean registered;
     private boolean closeInitiated;
     private Throwable initialCloseCause;
+
+    /**
+     * The future of the current connection attempt.  If not null, subsequent
+     * connection attempts will fail.
+     */
+    private ChannelPromise connectPromise;
+    private Future<?> connectTimeoutFuture;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -85,6 +95,19 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.id = id == null ? DefaultChannelId.newInstance() : id;
         unsafe = newUnsafe();
         pipeline = newChannelPipeline();
+        closeFuture.addListener(f -> {
+            ChannelPromise connectPromise = this.connectPromise;
+            if (connectPromise != null) {
+                // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+                connectPromise.tryFailure(new ClosedChannelException());
+            }
+
+            Future<?> future = connectTimeoutFuture;
+            if (future != null) {
+                future.cancel(false);
+                connectTimeoutFuture = null;
+            }
+        });
     }
 
     /**
@@ -325,7 +348,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     /**
      * {@link Unsafe} implementation which sub-classes must extend and use.
      */
-    protected abstract class AbstractUnsafe implements Unsafe {
+    protected class AbstractUnsafe implements Unsafe {
 
         private RecvByteBufAllocator.Handle recvHandle;
         private MessageSizeEstimator.Handle estimatorHandle;
@@ -438,6 +461,94 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 safeCascade(f, promise);
             });
             doBind(localAddress, bindPromise);
+        }
+
+        @Override
+        public final void connect(
+                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+            // Don't mark the connect promise as uncancellable as in fact we can cancel it as it is using
+            // non-blocking io.
+            if (promise.isDone() || !ensureOpen(promise)) {
+                return;
+            }
+            if (connectPromise != null) {
+                if (!connectPromise.isDone()) {
+                    // Already a connect in process.
+                    promise.setFailure(new ConnectionPendingException());
+                } else if (connectPromise.isSuccess()) {
+                    promise.setFailure(new AlreadyConnectedException());
+                } else {
+                    promise.setFailure(connectPromise.cause());
+                }
+                return;
+            }
+
+            boolean wasActive = isActive();
+            connectPromise = promise;
+
+            ChannelPromise p = newPromise();
+            p.addListener(f -> {
+                if  (f.isSuccess()) {
+                    fulfillConnectPromise(connectPromise, wasActive);
+                } else {
+                    fulfillConnectPromise(promise, f.cause(), remoteAddress);
+                }
+            });
+            doConnect(remoteAddress, localAddress, p);
+            if (!p.isDone()) {
+                // Schedule connect timeout.
+                final int connectTimeoutMillis = config().getConnectTimeoutMillis();
+                if (connectTimeoutMillis > 0) {
+                    connectTimeoutFuture = executor().schedule(new Runnable() {
+                        @Override
+                        public void run() {
+                            ChannelPromise connectPromise = AbstractChannel.this.connectPromise;
+                            if (connectPromise != null && !connectPromise.isDone()
+                                    && connectPromise.tryFailure(new ConnectTimeoutException(
+                                    "connection timed out after " + connectTimeoutMillis + " ms: " +
+                                            remoteAddress))) {
+                                close(newPromise());
+                            }
+                        }
+                    }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
+                }
+            }
+        }
+
+        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
+            if (promise == null) {
+                // Closed via cancellation and the promise has been notified already.
+                return;
+            }
+
+            // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
+            // We still need to ensure we call fireChannelActive() in this case.
+            boolean active = isActive();
+
+            // trySuccess() will return false if a user cancelled the connection attempt.
+            boolean promiseSet = promise.trySuccess();
+
+            // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
+            // because what happened is what happened.
+            if (!wasActive && active) {
+                pipeline().fireChannelActive();
+            }
+
+            // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
+            if (!promiseSet) {
+                close(newPromise());
+            }
+        }
+
+        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause, SocketAddress remoteAddress) {
+            if (promise == null) {
+                // Closed via cancellation and the promise has been notified already.
+                return;
+            }
+
+            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+            promise.tryFailure(annotateConnectException(cause, remoteAddress));
+            closeIfClosed();
         }
 
         @Override
@@ -908,6 +1019,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Bind the {@link Channel} to the {@link SocketAddress}
      */
     protected abstract void doBind(SocketAddress localAddress, ChannelPromise promise);
+
+    /**
+     * Connect this {@link Channel} to its remote peer
+     */
+    protected abstract void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
 
     /**
      * Disconnect this {@link Channel} from its remote peer

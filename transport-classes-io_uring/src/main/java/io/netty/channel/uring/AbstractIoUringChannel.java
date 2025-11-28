@@ -23,12 +23,9 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoRegistration;
@@ -59,8 +56,6 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
-import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.unix.Errors.ERRNO_EINPROGRESS_NEGATIVE;
 import static io.netty.channel.unix.Errors.ERROR_EALREADY_NEGATIVE;
@@ -110,7 +105,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
      * The future of the current connection attempt.  If not null, subsequent connection attempts will fail.
      */
     private ChannelPromise connectPromise;
-    private ScheduledFuture<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
     private CleanableDirectBuffer cleanable;
     private ByteBuffer remoteAddressMemory;
@@ -308,11 +302,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 if (connectPromise != null) {
                     // Use tryFailure() instead of setFailure() to avoid the race against cancel().
                     connectPromise.tryFailure(new ClosedChannelException());
-                    AbstractIoUringChannel.this.connectPromise = null;
                     cancelConnect = true;
                 }
-
-                cancelConnectTimeoutFuture();
             } finally {
                 // It's important we cancel all outstanding connect, write and read operations now so
                 // we will be able to process a delayed close if needed.
@@ -611,51 +602,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             }
         }
 
-        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
-            if (promise == null) {
-                // Closed via cancellation and the promise has been notified already.
-                return;
-            }
-
-            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-            promise.tryFailure(cause);
-            closeIfClosed();
-        }
-
-        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
-            if (promise == null) {
-                // Closed via cancellation and the promise has been notified already.
-                return;
-            }
-            active = true;
-
-            if (local == null) {
-                local = socket.localAddress();
-            }
-            computeRemote();
-
-            // Register POLLRDHUP
-            schedulePollRdHup();
-
-            // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
-            // We still need to ensure we call fireChannelActive() in this case.
-            boolean active = isActive();
-
-            // trySuccess() will return false if a user cancelled the connection attempt.
-            boolean promiseSet = promise.trySuccess();
-
-            // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
-            // because what happened is what happened.
-            if (!wasActive && active) {
-                pipeline().fireChannelActive();
-            }
-
-            // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
-            if (!promiseSet) {
-                close(newPromise());
-            }
-        }
-
         @Override
         public final IoUringRecvByteAllocatorHandle recvBufAllocHandle() {
             if (allocHandle == null) {
@@ -883,33 +829,35 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 return;
             }
             // pending connect
-            if (connectPromise != null) {
+            if (connectPromise != null && !connectPromise.isDone()) {
                 // Note this method is invoked by the event loop only if the connection attempt was
                 // neither cancelled nor timed out.
-
                 assert executor().inEventLoop();
 
-                boolean connectStillInProgress = false;
+                ChannelPromise promise = connectPromise;
+                final boolean connected;
                 try {
-                    boolean wasActive = isActive();
-                    if (!socket.finishConnect()) {
-                        connectStillInProgress = true;
-                        return;
+                    connected = socket.finishConnect();
+                } catch (Throwable cause) {
+                    connectPromise = null;
+                    promise.setFailure(cause);
+                    return;
+                }
+                if (connected) {
+                    connectPromise = null;
+                    active = true;
+                    if (local == null) {
+                        local = socket.localAddress();
                     }
-                    fulfillConnectPromise(connectPromise, wasActive);
-                } catch (Throwable t) {
-                    fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
-                } finally {
-                    if (!connectStillInProgress) {
-                        // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0
-                        // is used
-                        // See https://github.com/netty/netty/issues/1770
-                        cancelConnectTimeoutFuture();
-                        connectPromise = null;
-                    } else {
-                        // The connect was not done yet, register for POLLOUT again
-                        schedulePollOut();
-                    }
+                    computeRemote();
+
+                    // Register POLLRDHUP
+                    schedulePollRdHup();
+
+                    promise.setSuccess();
+                } else {
+                    // The connect was not done yet, register for POLLOUT again
+                    schedulePollOut();
                 }
             } else if (!socket.isOutputShutdown()) {
                 // Try writing again
@@ -1004,147 +952,117 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
          */
         void connectComplete(byte op, int res, int flags, short data) {
             ioState &= ~CONNECT_SCHEDULED;
+            assert connectPromise != null;
             freeRemoteAddressMemory();
 
             if (res == ERRNO_EINPROGRESS_NEGATIVE || res == ERROR_EALREADY_NEGATIVE) {
                 // connect not complete yet need to wait for poll_out event
                 schedulePollOut();
             } else {
-                try {
-                    if (res == 0) {
-                        fulfillConnectPromise(connectPromise, active);
-                        if (readPending) {
-                            doBeginReadNow();
-                        }
-                    } else {
-                        try {
-                            Errors.throwConnectException("io_uring connect", res);
-                        } catch (Throwable cause) {
-                            fulfillConnectPromise(connectPromise, cause);
-                        }
+                ChannelPromise promise = connectPromise;
+                connectPromise = null;
+                if (res == 0) {
+                    active = true;
+                    if (local == null) {
+                        local = socket.localAddress();
                     }
-                } finally {
-                    // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is
-                    // used
-                    // See https://github.com/netty/netty/issues/1770
-                    cancelConnectTimeoutFuture();
-                    connectPromise = null;
-                }
-            }
-        }
+                    computeRemote();
 
-        @Override
-        public void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-            // Don't mark the connect promise as uncancellable as in fact we can cancel it as it is using
-            // non-blocking io.
-            if (promise.isDone() || !ensureOpen(promise)) {
-                return;
-            }
+                    // Register POLLRDHUP
+                    schedulePollRdHup();
 
-            if (delayedClose != null) {
-                promise.tryFailure(annotateConnectException(new ClosedChannelException(), remoteAddress));
-                return;
-            }
-            try {
-                if (connectPromise != null) {
-                    throw new ConnectionPendingException();
-                }
-                if (localAddress instanceof InetSocketAddress) {
-                    checkResolvable((InetSocketAddress) localAddress);
-                }
-
-                if (remoteAddress instanceof InetSocketAddress) {
-                    checkResolvable((InetSocketAddress) remoteAddress);
-                }
-
-                if (remote != null) {
-                    // Check if already connected before trying to connect. This is needed as connect(...) will not#
-                    // return -1 and set errno to EISCONN if a previous connect(...) attempt was setting errno to
-                    // EINPROGRESS and finished later.
-                    throw new AlreadyConnectedException();
-                }
-
-                if (localAddress != null) {
-                    socket.bind(localAddress);
-                }
-
-                if (remoteAddress instanceof InetSocketAddress) {
-                    InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
-                    ByteBuf initialData = null;
-                    if (IoUring.isTcpFastOpenClientSideAvailable() &&
-                        config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT) == Boolean.TRUE) {
-                        ChannelOutboundBuffer outbound = outboundBuffer();
-                        outbound.addFlush();
-                        Object curr;
-                        if ((curr = outbound.current()) instanceof ByteBuf) {
-                            initialData = (ByteBuf) curr;
-                        }
+                    promise.setSuccess();
+                    if (readPending) {
+                        doBeginReadNow();
                     }
-                    if (initialData != null) {
-                        msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
-                        MsgHdrMemory hdr = msgHdrMemoryArray.hdr(0);
-                        hdr.set(socket, inetSocketAddress, IoUring.memoryAddress(initialData),
-                                initialData.readableBytes(), (short) 0);
-
-                        int fd = fd().intValue();
-                        IoRegistration registration = registration();
-                        IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
-                                hdr.address(), hdr.idx());
-                        connectId = registration.submit(ops);
-                        if (connectId == 0) {
-                            // Directly release the memory if submitting failed.
-                            freeMsgHdrArray();
-                        }
-                    } else {
-                        submitConnect(inetSocketAddress);
-                    }
-                } else if (remoteAddress instanceof DomainSocketAddress) {
-                    DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) remoteAddress;
-                    submitConnect(unixDomainSocketAddress);
-                } else {
-                    throw new Error("Unexpected SocketAddress implementation " + className(remoteAddress));
-                }
-
-                if (connectId != 0) {
-                    ioState |= CONNECT_SCHEDULED;
-                }
-            } catch (Throwable t) {
-                closeIfClosed();
-                promise.tryFailure(annotateConnectException(t, remoteAddress));
-                return;
-            }
-            connectPromise = promise;
-            requestedRemoteAddress = remoteAddress;
-            // Schedule connect timeout.
-            int connectTimeoutMillis = config().getConnectTimeoutMillis();
-            if (connectTimeoutMillis > 0) {
-                connectTimeoutFuture = executor().schedule(new Runnable() {
-                    @Override
-                    public void run() {
-                        ChannelPromise connectPromise = AbstractIoUringChannel.this.connectPromise;
-                        if (connectPromise != null && !connectPromise.isDone() &&
-                                connectPromise.tryFailure(new ConnectTimeoutException(
-                                        "connection timed out: " + remoteAddress))) {
-                            close(newPromise());
-                        }
-                    }
-                }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
-            }
-
-            promise.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    // If the connect future is cancelled we also cancel the timeout and close the
-                    // underlying socket.
-                    if (future.isCancelled()) {
-                        cancelConnectTimeoutFuture();
+                } else if (!promise.isDone()) {
+                    try {
+                        Errors.throwConnectException("io_uring connect", res);
+                    } catch (Throwable cause) {
                         connectPromise = null;
-                        close(newPromise());
+                        promise.setFailure(cause);
                     }
                 }
-            });
+            }
         }
+    }
+
+    @Override
+    protected void doConnect(
+            final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+        if (delayedClose != null) {
+            promise.tryFailure(new ClosedChannelException());
+            return;
+        }
+        try {
+            if (connectPromise != null) {
+                throw new ConnectionPendingException();
+            }
+            if (localAddress instanceof InetSocketAddress) {
+                checkResolvable((InetSocketAddress) localAddress);
+            }
+
+            if (remoteAddress instanceof InetSocketAddress) {
+                checkResolvable((InetSocketAddress) remoteAddress);
+            }
+
+            if (remote != null) {
+                // Check if already connected before trying to connect. This is needed as connect(...) will not#
+                // return -1 and set errno to EISCONN if a previous connect(...) attempt was setting errno to
+                // EINPROGRESS and finished later.
+                throw new AlreadyConnectedException();
+            }
+
+            if (localAddress != null) {
+                socket.bind(localAddress);
+            }
+
+            if (remoteAddress instanceof InetSocketAddress) {
+                InetSocketAddress inetSocketAddress = (InetSocketAddress) remoteAddress;
+                ByteBuf initialData = null;
+                if (IoUring.isTcpFastOpenClientSideAvailable() &&
+                        config().getOption(ChannelOption.TCP_FASTOPEN_CONNECT) == Boolean.TRUE) {
+                    ChannelOutboundBuffer outbound = outboundBuffer();
+                    outbound.addFlush();
+                    Object curr;
+                    if ((curr = outbound.current()) instanceof ByteBuf) {
+                        initialData = (ByteBuf) curr;
+                    }
+                }
+                if (initialData != null) {
+                    msgHdrMemoryArray = new MsgHdrMemoryArray((short) 1);
+                    MsgHdrMemory hdr = msgHdrMemoryArray.hdr(0);
+                    hdr.set(socket, inetSocketAddress, IoUring.memoryAddress(initialData),
+                            initialData.readableBytes(), (short) 0);
+
+                    int fd = fd().intValue();
+                    IoRegistration registration = registration();
+                    IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, Native.MSG_FASTOPEN,
+                            hdr.address(), hdr.idx());
+                    connectId = registration.submit(ops);
+                    if (connectId == 0) {
+                        // Directly release the memory if submitting failed.
+                        freeMsgHdrArray();
+                    }
+                } else {
+                    submitConnect(inetSocketAddress);
+                }
+            } else if (remoteAddress instanceof DomainSocketAddress) {
+                DomainSocketAddress unixDomainSocketAddress = (DomainSocketAddress) remoteAddress;
+                submitConnect(unixDomainSocketAddress);
+            } else {
+                throw new Error("Unexpected SocketAddress implementation " + className(remoteAddress));
+            }
+
+            if (connectId != 0) {
+                ioState |= CONNECT_SCHEDULED;
+            }
+        } catch (Throwable t) {
+            promise.tryFailure(t);
+            return;
+        }
+        connectPromise = promise;
+        requestedRemoteAddress = remoteAddress;
     }
 
     private void submitConnect(InetSocketAddress inetSocketAddress) {
@@ -1242,13 +1160,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private static boolean isAllowHalfClosure(ChannelConfig config) {
         return config instanceof SocketChannelConfig &&
                ((SocketChannelConfig) config).isAllowHalfClosure();
-    }
-
-    private void cancelConnectTimeoutFuture() {
-        if (connectTimeoutFuture != null) {
-            connectTimeoutFuture.cancel(false);
-            connectTimeoutFuture = null;
-        }
     }
 
     private void computeRemote() {

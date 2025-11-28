@@ -265,7 +265,7 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected void doClose0(ChannelPromise promise) {
+    protected void doClose(ChannelPromise promise) {
         try {
             javaChannel().close();
         } catch (Throwable cause) {

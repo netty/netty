@@ -275,18 +275,17 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
         }
 
         @Override
-        public void connect(final SocketAddress remoteAddress, final SocketAddress localAddress,
-                            final ChannelPromise promise) {
-            promise.setFailure(new UnsupportedOperationException());
-        }
-
-        @Override
         public void unregistered() {
             super.unregistered();
             if (acceptedAddressMemory != null) {
                 acceptedAddressMemory.free();
             }
         }
+    }
+
+    @Override
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

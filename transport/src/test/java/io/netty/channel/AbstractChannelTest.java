@@ -175,14 +175,13 @@ public class AbstractChannelTest {
 
             @Override
             protected AbstractUnsafe newUnsafe() {
-                return new AbstractUnsafe() {
-                    @Override
-                    public void connect(
-                            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                        active = true;
-                        promise.setSuccess();
-                    }
-                };
+                return new AbstractUnsafe() { };
+            }
+
+            @Override
+            protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+                active = true;
+                promise.setSuccess();
             }
 
             @Override
@@ -266,12 +265,7 @@ public class AbstractChannelTest {
 
         @Override
         protected AbstractUnsafe newUnsafe() {
-            return new AbstractUnsafe() {
-                @Override
-                public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                    promise.setFailure(new UnsupportedOperationException());
-                }
-            };
+            return new AbstractUnsafe() { };
         }
 
         @Override
@@ -297,6 +291,11 @@ public class AbstractChannelTest {
         @Override
         protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
             promise.setSuccess();
+        }
+
+        @Override
+        protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            promise.setFailure(new UnsupportedOperationException());
         }
 
         @Override

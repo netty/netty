@@ -180,7 +180,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected void doClose0(ChannelPromise promise) {
+    protected void doClose(ChannelPromise promise) {
         SocketAddress localAddress = localAddress0();
         try {
             try {

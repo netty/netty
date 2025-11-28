@@ -230,6 +230,11 @@ public class ChannelOutboundBufferTest {
         }
 
         @Override
+        protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            promise.setFailure(new UnsupportedOperationException());
+        }
+
+        @Override
         protected void doDisconnect(ChannelPromise promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
@@ -270,10 +275,6 @@ public class ChannelOutboundBufferTest {
         }
 
         final class TestUnsafe extends AbstractUnsafe {
-            @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                throw new UnsupportedOperationException();
-            }
         }
     }
 
