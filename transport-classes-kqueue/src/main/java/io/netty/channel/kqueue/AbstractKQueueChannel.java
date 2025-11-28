@@ -130,17 +130,23 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose(ChannelPromise promise) {
         active = false;
         // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
         // socket which has not even been connected yet. This has been observed to block during unit tests.
         inputClosedSeenErrorOnRead = true;
-        socket.close();
+        try {
+            socket.close();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        doClose();
+    protected void doDisconnect(ChannelPromise promise)  {
+        doClose(promise);
     }
 
     void resetCachedAddresses() {
@@ -154,18 +160,27 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    protected void doDeregister(ChannelPromise promise) {
         // As unregisteredFilters() may have not been called because isOpen() returned false we just set both filters
         // to false to ensure a consistent state in all cases.
         // Make sure we unregister our filters from kqueue!
-        readFilter(false);
-        writeFilter(false);
+        try {
+            readFilter(false);
+        } catch (IOException ignore) {
+            // ignore
+        }
+        try {
+            writeFilter(false);
+        } catch (IOException ignore) {
+            // ignore
+        }
         clearRdHup0();
 
         IoRegistration registration = this.registration;
         if (registration != null) {
             registration.cancel();
         }
+        promise.setSuccess();
     }
 
     private void clearRdHup0() {
@@ -684,12 +699,18 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     @Override
-    protected void doBind(SocketAddress local) throws Exception {
-        if (local instanceof InetSocketAddress) {
-            checkResolvable((InetSocketAddress) local);
+    protected void doBind(SocketAddress local, ChannelPromise promise) {
+        try {
+            if (local instanceof InetSocketAddress) {
+                checkResolvable((InetSocketAddress) local);
+            }
+            socket.bind(local);
+            this.local = socket.localAddress();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
         }
-        socket.bind(local);
-        this.local = socket.localAddress();
+        promise.setSuccess();
     }
 
     /**
@@ -740,7 +761,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             return connected;
         } finally {
             if (!success) {
-                doClose();
+                doClose(newPromise());
             }
         }
     }

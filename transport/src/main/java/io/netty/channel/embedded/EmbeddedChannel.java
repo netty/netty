@@ -992,25 +992,34 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doRegister() throws Exception {
+    protected void doDeregister(ChannelPromise promise) {
+        promise.setSuccess();
+    }
+
+    @Override
+    protected void doRegister(ChannelPromise promise) {
         state = State.ACTIVE;
+        promise.setSuccess();
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        // NOOP
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        promise.setSuccess();
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
+    protected void doDisconnect(ChannelPromise promise) {
         if (!metadata.hasDisconnect()) {
-            doClose();
+            doClose(promise);
+        } else {
+            promise.setSuccess();
         }
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose(ChannelPromise promise)  {
         state = State.CLOSED;
+        promise.setSuccess();
     }
 
     @Override
@@ -1029,7 +1038,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in) {
         for (;;) {
             Object msg = in.current();
             if (msg == null) {
@@ -1187,11 +1196,13 @@ public class EmbeddedChannel extends AbstractChannel {
         // that may change the state of the Channel and may schedule tasks for later execution.
         final Unsafe wrapped = new Unsafe() {
 
+            private final ChannelFutureListener futureListener = f ->  maybeRunPendingTasks();
+
             @Override
             public void register(ChannelPromise promise) {
                 executingStackCnt++;
                 try {
-                    EmbeddedUnsafe.this.register(promise);
+                    EmbeddedUnsafe.this.register(promise.addListener(futureListener));
                 } finally {
                     executingStackCnt--;
                     maybeRunPendingTasks();
@@ -1202,7 +1213,7 @@ public class EmbeddedChannel extends AbstractChannel {
             public void bind(SocketAddress localAddress, ChannelPromise promise) {
                 executingStackCnt++;
                 try {
-                    EmbeddedUnsafe.this.bind(localAddress, promise);
+                    EmbeddedUnsafe.this.bind(localAddress, promise.addListener(futureListener));
                 } finally {
                     executingStackCnt--;
                     maybeRunPendingTasks();
@@ -1213,7 +1224,7 @@ public class EmbeddedChannel extends AbstractChannel {
             public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
                 executingStackCnt++;
                 try {
-                    EmbeddedUnsafe.this.connect(remoteAddress, localAddress, promise);
+                    EmbeddedUnsafe.this.connect(remoteAddress, localAddress, promise.addListener(futureListener));
                 } finally {
                     executingStackCnt--;
                     maybeRunPendingTasks();
@@ -1224,7 +1235,7 @@ public class EmbeddedChannel extends AbstractChannel {
             public void disconnect(ChannelPromise promise) {
                 executingStackCnt++;
                 try {
-                    EmbeddedUnsafe.this.disconnect(promise);
+                    EmbeddedUnsafe.this.disconnect(promise.addListener(futureListener));
                 } finally {
                     executingStackCnt--;
                     maybeRunPendingTasks();
@@ -1235,7 +1246,7 @@ public class EmbeddedChannel extends AbstractChannel {
             public void close(ChannelPromise promise) {
                 executingStackCnt++;
                 try {
-                    EmbeddedUnsafe.this.close(promise);
+                    EmbeddedUnsafe.this.close(promise.addListener(futureListener));
                 } finally {
                     executingStackCnt--;
                     maybeRunPendingTasks();
@@ -1246,7 +1257,7 @@ public class EmbeddedChannel extends AbstractChannel {
             public void deregister(ChannelPromise promise) {
                 executingStackCnt++;
                 try {
-                    EmbeddedUnsafe.this.deregister(promise);
+                    EmbeddedUnsafe.this.deregister(promise.addListener(futureListener));
                 } finally {
                     executingStackCnt--;
                     maybeRunPendingTasks();
@@ -1268,7 +1279,7 @@ public class EmbeddedChannel extends AbstractChannel {
             public void write(Object msg, ChannelPromise promise) {
                 executingStackCnt++;
                 try {
-                    EmbeddedUnsafe.this.write(msg, promise);
+                    EmbeddedUnsafe.this.write(msg, promise.addListener(futureListener));
                 } finally {
                     executingStackCnt--;
                     maybeRunPendingTasks();

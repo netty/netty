@@ -300,7 +300,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
         if (localAddress instanceof InetSocketAddress) {
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
             if (socketAddress.getAddress().isAnyLocalAddress() &&
@@ -310,8 +310,14 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 }
             }
         }
-        super.doBind(localAddress);
-        active = true;
+        super.doBind(localAddress, newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                active = true;
+                promise.setSuccess();
+            } else {
+                promise.setFailure(f.cause());
+            }
+        }));
     }
 
     private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
@@ -360,18 +366,30 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        // TODO: use io_uring for this too...
-        socket.disconnect();
-        connected = active = false;
+    protected void doDisconnect(ChannelPromise promise) {
+        try {
+            // TODO: use io_uring for this too...
+            socket.disconnect();
+            connected = active = false;
 
-        resetCachedAddresses();
+            resetCachedAddresses();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override
-    protected void doClose() throws Exception {
-        super.doClose();
-        connected = false;
+    protected void doClose(ChannelPromise promise) {
+        super.doClose(newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                connected = false;
+                promise.setSuccess();
+            } else {
+                promise.setFailure(f.cause());
+            }
+        }));
     }
 
     private final class IoUringDatagramChannelUnsafe extends AbstractUringUnsafe {

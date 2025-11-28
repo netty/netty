@@ -106,11 +106,6 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     }
 
     @Override
-    protected final void doClose() throws Exception {
-        super.doClose();
-    }
-
-    @Override
     protected final AbstractUringUnsafe newUnsafe() {
         return new UringServerChannelUnsafe();
     }

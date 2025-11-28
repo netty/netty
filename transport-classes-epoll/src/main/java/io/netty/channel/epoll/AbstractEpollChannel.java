@@ -167,48 +167,61 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected void doClose() throws Exception {
-        active = false;
-        // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt on a
-        // socket which has not even been connected yet. This has been observed to block during unit tests.
-        inputClosedSeenErrorOnRead = true;
-        try {
-            ChannelPromise promise = connectPromise;
-            if (promise != null) {
-                // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                promise.tryFailure(new ClosedChannelException());
-                connectPromise = null;
-            }
+    protected void doClose(ChannelPromise promise) {
+        ChannelPromise connectPromise = this.connectPromise;
+        if (connectPromise != null) {
+            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+            promise.tryFailure(new ClosedChannelException());
+            this.connectPromise = null;
+        }
 
-            Future<?> future = connectTimeoutFuture;
-            if (future != null) {
-                future.cancel(false);
-                connectTimeoutFuture = null;
-            }
+        Future<?> future = connectTimeoutFuture;
+        if (future != null) {
+            future.cancel(false);
+            connectTimeoutFuture = null;
+        }
 
-            if (isRegistered()) {
-                // Need to check if we are on the EventLoop as doClose() may be triggered by the GlobalEventExecutor
-                // if SO_LINGER is used.
-                //
-                // See https://github.com/netty/netty/issues/7159
-                EventLoop loop = executor();
-                if (loop.inEventLoop()) {
-                    doDeregister();
-                } else {
-                    loop.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                doDeregister();
-                            } catch (Throwable cause) {
-                                pipeline().fireExceptionCaught(cause);
-                            }
-                        }
-                    });
+        if (isRegistered()) {
+            // Need to check if we are on the EventLoop as doClose() may be triggered by the GlobalEventExecutor
+            // if SO_LINGER is used.
+            //
+            // See https://github.com/netty/netty/issues/7159
+            EventLoop loop = executor();
+            ChannelPromise deregisterPromise = newPromise();
+            deregisterPromise.addListener(f -> {
+                active = false;
+                // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read
+                // attempt on a socket which has not even been connected yet. This has been observed to block during
+                // unit tests.
+                inputClosedSeenErrorOnRead = true;
+                try {
+                    socket.close();
+                } catch (Throwable cause) {
+                    promise.setFailure(cause);
                 }
+                promise.setSuccess();
+            });
+            if (loop.inEventLoop()) {
+                doDeregister(deregisterPromise);
+            } else {
+                loop.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        doDeregister(deregisterPromise);
+                    }
+                });
             }
-        } finally {
-            socket.close();
+        } else {
+            active = false;
+            // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read attempt
+            // on a socket which has not even been connected yet. This has been observed to block during unit tests.
+            inputClosedSeenErrorOnRead = true;
+            try {
+                socket.close();
+            } catch (Throwable cause) {
+                promise.setFailure(cause);
+            }
+            promise.setSuccess();
         }
     }
 
@@ -218,8 +231,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        doClose();
+    protected void doDisconnect(ChannelPromise promise) {
+        doClose(promise);
     }
 
     @Override
@@ -228,12 +241,13 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    protected void doDeregister(ChannelPromise promise) {
         IoRegistration registration = this.registration;
         if (registration != null) {
             ops = inital;
             registration.cancel();
         }
+        promise.setSuccess();
     }
 
     @Override
@@ -771,12 +785,18 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected void doBind(SocketAddress local) throws Exception {
-        if (local instanceof InetSocketAddress) {
-            checkResolvable((InetSocketAddress) local);
+    protected void doBind(SocketAddress local, ChannelPromise promise) {
+        try {
+            if (local instanceof InetSocketAddress) {
+                checkResolvable((InetSocketAddress) local);
+            }
+            socket.bind(local);
+            this.local = socket.localAddress();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
         }
-        socket.bind(local);
-        this.local = socket.localAddress();
+        promise.setSuccess();
     }
 
     /**
@@ -827,7 +847,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             return connected;
         } finally {
             if (!success) {
-                doClose();
+                doClose(newPromise());
             }
         }
     }

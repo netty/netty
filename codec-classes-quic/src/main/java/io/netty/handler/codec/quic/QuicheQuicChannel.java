@@ -549,17 +549,27 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    protected void doBind(SocketAddress socketAddress) {
-        throw new UnsupportedOperationException();
+    protected void doRegister(ChannelPromise promise) {
+        promise.setSuccess();
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        doClose();
+    protected void doDeregister(ChannelPromise promise) {
+        promise.setSuccess();
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doBind(SocketAddress socketAddress, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
+    }
+
+    @Override
+    protected void doDisconnect(ChannelPromise promise) {
+        doClose(promise);
+    }
+
+    @Override
+    protected void doClose(ChannelPromise promise) {
         if (state == ChannelState.CLOSED) {
             return;
         }
@@ -572,6 +582,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 closeData = null;
             }
             failPendingConnectPromise();
+            promise.setSuccess();
             return;
         }
 
@@ -597,7 +608,8 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             int res = Quiche.quiche_conn_close(conn.address(), app, err,
                     Quiche.readerMemoryAddress(reason), reason.readableBytes());
             if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
-                throw Quiche.convertToException(res);
+                promise.setFailure(Quiche.convertToException(res));
+                return;
             }
             // As we called quiche_conn_close(...) we need to ensure we will call quiche_conn_send(...) either
             // now or we will do so once we see the channelReadComplete event.
@@ -607,7 +619,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 sendResult = SendResult.SOME;
             }
         } finally {
-
             // making sure that connection statistics is available
             // even after channel is closed
             statsAtClose = collectStats0(conn, executor().newPromise());
@@ -638,6 +649,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                 local = null;
                 remote = null;
+                promise.setSuccess();
             }
         }
     }

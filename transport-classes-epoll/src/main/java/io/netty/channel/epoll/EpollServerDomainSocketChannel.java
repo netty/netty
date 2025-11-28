@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.unix.DomainSocketAddress;
@@ -70,18 +71,22 @@ public final class EpollServerDomainSocketChannel extends AbstractEpollServerCha
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        socket.bind(localAddress);
-        socket.listen(config.getBacklog());
-        local = (DomainSocketAddress) localAddress;
-        active = true;
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        try {
+            socket.bind(localAddress);
+            socket.listen(config.getBacklog());
+            local = (DomainSocketAddress) localAddress;
+            active = true;
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override
-    protected void doClose() throws Exception {
-        try {
-            super.doClose();
-        } finally {
+    protected void doClose(ChannelPromise promise) {
+        super.doClose(promise.addListener(f -> {
             DomainSocketAddress local = this.local;
             if (local != null) {
                 // Delete the socket file if possible.
@@ -91,7 +96,7 @@ public final class EpollServerDomainSocketChannel extends AbstractEpollServerCha
                     logger.debug("Failed to delete a domain socket file: {}", local.path());
                 }
             }
-        }
+        }));
     }
 
     @Override

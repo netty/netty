@@ -378,8 +378,14 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
 
     @UnstableApi
     @Override
-    protected final void doShutdownOutput() throws Exception {
-        socket.shutdown(false, true);
+    protected final void doShutdownOutput(ChannelPromise promise) {
+        try {
+            socket.shutdown(false, true);
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override

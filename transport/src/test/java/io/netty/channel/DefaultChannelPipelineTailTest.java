@@ -274,16 +274,29 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected void doBind(SocketAddress localAddress) {
+        protected void doDeregister(ChannelPromise promise) {
+            promise.setSuccess();
         }
 
         @Override
-        protected void doDisconnect() {
+        protected void doRegister(ChannelPromise promise) {
+            promise.setSuccess();
         }
 
         @Override
-        protected void doClose() {
+        protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+            promise.setSuccess();
+        }
+
+        @Override
+        protected void doDisconnect(ChannelPromise promise) {
+            promise.setSuccess();
+        }
+
+        @Override
+        protected void doClose(ChannelPromise promise) {
             closed = true;
+            promise.setSuccess();
         }
 
         @Override
