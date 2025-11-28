@@ -944,8 +944,8 @@
         <version>1.0.3</version>
       </dependency>
       <dependency>
-          <groupId>at.yawk.lz4</groupId>
-          <artifactId>lz4-java</artifactId>
+        <groupId>at.yawk.lz4</groupId>
+        <artifactId>lz4-java</artifactId>
         <version>1.9.0</version>
       </dependency>
       <dependency>
