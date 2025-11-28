@@ -1368,6 +1368,21 @@
                   <new>class io.netty.channel.ManualIoEventLoop</new>
                   <justification>ManualIoEventLoop was made non-final to allow subclassing.</justification>
                 </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.nowFinal</code>
+                  <classQualifiedName>io.netty.channel.ManualIoEventLoop</classQualifiedName>
+                  <justification>Several methods were intentionally made final; these API changes are acceptable for
+                   this class.
+                  </justification>
+                </item>
+                <item>
+                  <ignore>true</ignore>
+                  <code>java.method.finalMethodAddedToNonFinalClass</code>
+                  <classQualifiedName>io.netty.channel.ManualIoEventLoop</classQualifiedName>
+                  <justification>Final methods added to an inheritable class are intentional and safe in this context.
+                  </justification>
+                </item>
               </differences>
             </revapi.differences>
           </analysisConfiguration>
