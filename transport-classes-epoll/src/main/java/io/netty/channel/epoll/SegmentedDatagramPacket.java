@@ -17,7 +17,7 @@ package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
 
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 /**
  * @deprecated use {@link io.netty.channel.unix.SegmentedDatagramPacket}.
@@ -32,7 +32,7 @@ public final class SegmentedDatagramPacket extends io.netty.channel.unix.Segment
      * @param segmentSize   the segment size.
      * @param recipient     the recipient.
      */
-    public SegmentedDatagramPacket(ByteBuf data, int segmentSize, InetSocketAddress recipient) {
+    public SegmentedDatagramPacket(ByteBuf data, int segmentSize, SocketAddress recipient) {
         super(data, segmentSize, recipient);
         checkIsSupported();
     }
@@ -45,7 +45,7 @@ public final class SegmentedDatagramPacket extends io.netty.channel.unix.Segment
      * @param recipient     the recipient.
      */
     public SegmentedDatagramPacket(ByteBuf data, int segmentSize,
-                                   InetSocketAddress recipient, InetSocketAddress sender) {
+                                   SocketAddress recipient, SocketAddress sender) {
         super(data, segmentSize, recipient, sender);
         checkIsSupported();
     }

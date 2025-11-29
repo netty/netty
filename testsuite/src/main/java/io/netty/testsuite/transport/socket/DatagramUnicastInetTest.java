@@ -79,7 +79,7 @@ public class DatagramUnicastInetTest extends DatagramUnicastTest {
 
                     InetSocketAddress localAddress = (InetSocketAddress) ctx.channel().localAddress();
                     if (localAddress.getAddress().isAnyLocalAddress()) {
-                        assertEquals(localAddress.getPort(), msg.recipient().getPort());
+                        assertEquals(localAddress.getPort(), ((InetSocketAddress) msg.recipient()).getPort());
                     } else {
                         // Test that the channel's localAddress is equal to the message's recipient
                         assertEquals(localAddress, msg.recipient());
@@ -114,7 +114,7 @@ public class DatagramUnicastInetTest extends DatagramUnicastTest {
                             } else {
                                 InetSocketAddress senderAddress = (InetSocketAddress) sender;
                                 if (senderAddress.getAddress().isAnyLocalAddress()) {
-                                    assertEquals(senderAddress.getPort(), msg.sender().getPort());
+                                    assertEquals(senderAddress.getPort(), ((InetSocketAddress) msg.sender()).getPort());
                                 } else {
                                     assertEquals(sender, msg.sender());
                                 }

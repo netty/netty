@@ -29,10 +29,6 @@ import java.net.NetworkInterface;
 public interface DatagramChannel extends Channel {
     @Override
     DatagramChannelConfig config();
-    @Override
-    InetSocketAddress localAddress();
-    @Override
-    InetSocketAddress remoteAddress();
 
     /**
      * Return {@code true} if the {@link DatagramChannel} is connected to the remote peer.

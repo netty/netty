@@ -20,6 +20,7 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 /**
  * Allows to use <a href="https://blog.cloudflare.com/accelerating-udp-packet-transmission-for-quic/">GSO</a>
@@ -36,7 +37,7 @@ public class SegmentedDatagramPacket extends DatagramPacket {
      * @param segmentSize   the segment size.
      * @param recipient     the recipient.
      */
-    public SegmentedDatagramPacket(ByteBuf data, int segmentSize, InetSocketAddress recipient) {
+    public SegmentedDatagramPacket(ByteBuf data, int segmentSize, SocketAddress recipient) {
         super(data, recipient);
         this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
     }
@@ -49,7 +50,7 @@ public class SegmentedDatagramPacket extends DatagramPacket {
      * @param recipient     the recipient.
      */
     public SegmentedDatagramPacket(ByteBuf data, int segmentSize,
-                                   InetSocketAddress recipient, InetSocketAddress sender) {
+                                   SocketAddress recipient, SocketAddress sender) {
         super(data, recipient, sender);
         this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
     }

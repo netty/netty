@@ -20,6 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageDecoder;
 
+import java.net.InetSocketAddress;
 import java.util.List;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
@@ -53,7 +54,8 @@ public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPac
                 new DnsMessageUtil.DnsQueryFactory() {
             @Override
             public DnsQuery newQuery(int id, DnsOpCode dnsOpCode) {
-                return new DatagramDnsQuery(packet.sender(), packet.recipient(), id, dnsOpCode);
+                return new DatagramDnsQuery((InetSocketAddress) packet.sender(),
+                        (InetSocketAddress) packet.recipient(), id, dnsOpCode);
             }
         });
         out.add(query);

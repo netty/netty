@@ -128,16 +128,6 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
     public ChannelMetadata metadata() {
         return METADATA;
     }
@@ -162,7 +152,8 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         try {
             return joinGroup(
                     multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
+                    NetworkInterface.getByInetAddress(
+                            ((InetSocketAddress) localAddress()).getAddress()), null, promise);
         } catch (IOException e) {
             promise.setFailure(e);
         }
@@ -214,7 +205,8 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise promise) {
         try {
             return leaveGroup(
-                    multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
+                    multicastAddress, NetworkInterface.getByInetAddress(
+                            ((InetSocketAddress) localAddress()).getAddress()), null, promise);
         } catch (IOException e) {
             promise.setFailure(e);
         }
@@ -286,7 +278,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         try {
             return block(
                     multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
+                    NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress()),
                     sourceToBlock, promise);
         } catch (Throwable e) {
             promise.setFailure(e);

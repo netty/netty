@@ -380,16 +380,6 @@ public final class NioDatagramChannel
     }
 
     @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
     public ChannelFuture joinGroup(InetAddress multicastAddress) {
         return joinGroup(multicastAddress, newPromise());
     }
@@ -399,7 +389,7 @@ public final class NioDatagramChannel
         try {
             NetworkInterface iface = config.getNetworkInterface();
             if (iface == null) {
-                iface = NetworkInterface.getByInetAddress(localAddress().getAddress());
+                iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
             }
             return joinGroup(
                     multicastAddress, iface, null, promise);
@@ -475,7 +465,8 @@ public final class NioDatagramChannel
     public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise promise) {
         try {
             return leaveGroup(
-                    multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
+                    multicastAddress, NetworkInterface.getByInetAddress(
+                            ((InetSocketAddress) localAddress()).getAddress()), null, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
@@ -595,7 +586,7 @@ public final class NioDatagramChannel
         try {
             return block(
                     multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
+                    NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress()),
                     sourceToBlock, promise);
         } catch (SocketException e) {
             promise.setFailure(e);

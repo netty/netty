@@ -1368,16 +1368,6 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public InetSocketAddress localAddress() {
-            return (InetSocketAddress) super.localAddress();
-        }
-
-        @Override
-        public InetSocketAddress remoteAddress() {
-            return (InetSocketAddress) super.remoteAddress();
-        }
-
-        @Override
         protected SocketAddress localAddress0() {
             return local;
         }
