@@ -250,12 +250,6 @@ public class CorsHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        discardNextEmptyLast = false;
-        super.channelInactive(ctx);
-    }
-
-    @Override
     public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
             throws Exception {
         if (config != null && config.isCorsSupportEnabled() && msg instanceof HttpResponse) {
