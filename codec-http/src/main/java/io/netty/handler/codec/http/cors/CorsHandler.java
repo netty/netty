@@ -29,6 +29,8 @@ import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -58,6 +60,7 @@ public class CorsHandler extends ChannelDuplexHandler {
     private HttpRequest request;
     private final List<CorsConfig> configList;
     private final boolean isShortCircuit;
+    private boolean discardNextEmptyLast;
 
     /**
      * Creates a new instance with a single {@link CorsConfig}.
@@ -87,6 +90,8 @@ public class CorsHandler extends ChannelDuplexHandler {
             config = getForOrigin(origin);
             if (isPreflightRequest(request)) {
                 handlePreflight(ctx, request);
+                // Expect an EmptyLastHttpContent next from HttpServerCodec, mark to discard.
+                discardNextEmptyLast = true;
                 return;
             }
             if (isShortCircuit && !(origin == null || config != null)) {
@@ -94,6 +99,18 @@ public class CorsHandler extends ChannelDuplexHandler {
                 return;
             }
         }
+
+        if (discardNextEmptyLast && msg instanceof LastHttpContent) {
+            discardNextEmptyLast = false;
+            if (config != null && config.isDiscardNextEmptyLast()) {
+                LastHttpContent last = (LastHttpContent) msg;
+                if (last == LastHttpContent.EMPTY_LAST_CONTENT) {
+                    ReferenceCountUtil.release(last);
+                    return;
+                }
+            }
+        }
+
         ctx.fireChannelRead(msg);
     }
 
@@ -230,6 +247,12 @@ public class CorsHandler extends ChannelDuplexHandler {
                 response.headers().set(HttpHeaderNames.ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK, "false");
             }
         }
+    }
+
+    @Override
+    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        discardNextEmptyLast = false;
+        super.channelInactive(ctx);
     }
 
     @Override

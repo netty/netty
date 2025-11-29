@@ -141,4 +141,16 @@ public class CorsConfigTest {
         final CorsConfig cors = forOrigin("http://localhost:8080").shortCircuit().build();
         assertTrue(cors.isShortCircuit());
     }
+
+    @Test
+    public void allowPrivateNetwork(){
+        final CorsConfig cors = forOrigin("http://localhost:8080").allowPrivateNetwork().build();
+        assertTrue(cors.isPrivateNetworkAllowed());
+    }
+
+    @Test
+    public void discardNextEmptyLast(){
+        final CorsConfig cors = forOrigin("http://localhost:8080").discardNextEmptyLast().build();
+        assertTrue(cors.isDiscardNextEmptyLast());
+    }
 }
