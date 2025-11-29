@@ -441,6 +441,11 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
     }
 
+    @Override
+    protected final boolean isWriteFlushedScheduled() {
+        return isFlagSet(Native.EPOLLOUT);
+    }
+
     protected abstract class AbstractEpollUnsafe extends AbstractUnsafe implements EpollIoHandle {
         boolean readPending;
         private EpollRecvByteAllocatorHandle allocHandle;
@@ -602,16 +607,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             return new EpollRecvByteAllocatorHandle(handle);
         }
 
-        @Override
-        protected final void flush0() {
-            // Flush immediately only when there's no pending flush.
-            // If there's a pending flush operation, event loop will call forceFlush() later,
-            // and thus there's no need to call it now.
-            if (!isFlagSet(Native.EPOLLOUT)) {
-                super.flush0();
-            }
-        }
-
         /**
          * Called once a EPOLLOUT event is ready to be processed
          */
@@ -621,7 +616,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 finishConnect();
             } else if (!socket.isOutputShutdown()) {
                 // directly call super.flush0() to force a flush now
-                super.flush0();
+                writeFlushedNow();
             }
         }
 

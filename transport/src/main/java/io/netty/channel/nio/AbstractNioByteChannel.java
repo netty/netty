@@ -53,9 +53,9 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     private final Runnable flushTask = new Runnable() {
         @Override
         public void run() {
-            // Calling flush0 directly to ensure we not try to flush messages that were added via write(...) in the
-            // meantime.
-            ((AbstractNioUnsafe) unsafe()).flush0();
+            // Calling writeFlushed() directly to ensure we not try to flush messages that were added via write(...)
+            // in the meantime.
+            writeFlushed();
         }
     };
     private boolean inputClosedSeenErrorOnRead;

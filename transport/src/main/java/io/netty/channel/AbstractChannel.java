@@ -50,7 +50,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private final Channel parent;
     private final ChannelId id;
-    private final Unsafe unsafe;
+    private final AbstractUnsafe unsafe;
     private final ChannelPipeline pipeline;
     private final CloseFuture closeFuture = new CloseFuture(this);
     private final EventLoop eventLoop;
@@ -61,6 +61,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile boolean registered;
     private boolean closeInitiated;
     private Throwable initialCloseCause;
+    private boolean inWriteFlushed;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -353,13 +354,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         private RecvByteBufAllocator.Handle recvHandle;
         private MessageSizeEstimator.Handle estimatorHandle;
 
-        private boolean inFlush0;
         /** true if the channel has never been registered, false otherwise */
         private boolean neverRegistered = true;
-
-        private void assertEventLoop() {
-            assert !registered || eventLoop.inEventLoop();
-        }
 
         MessageSizeEstimator.Handle estimatorHandle() {
             if (estimatorHandle == null) {
@@ -798,8 +794,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     // need to fail the future right away. If it is not null the handling of the rest
                     // will be done in flush0()
                     // See https://github.com/netty/netty/issues/2362
-                    safeSetFailure(promise,
-                            newClosedChannelException(initialCloseCause, "write(Object, ChannelPromise)"));
+                    safeSetFailure(promise, newClosedChannelException(
+                            AbstractUnsafe.class, initialCloseCause, "write(Object, ChannelPromise)"));
                 }
                 return;
             }
@@ -833,48 +829,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             outboundBuffer.addFlush();
-            flush0();
-        }
-
-        @SuppressWarnings("deprecation")
-        protected void flush0() {
-            if (inFlush0) {
-                // Avoid re-entrance
-                return;
-            }
-
-            final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
-            if (outboundBuffer == null || outboundBuffer.isEmpty()) {
-                return;
-            }
-
-            inFlush0 = true;
-
-            // Mark all pending write requests as failure if the channel is inactive.
-            if (!isActive()) {
-                try {
-                    // Check if we need to generate the exception at all.
-                    if (!outboundBuffer.isEmpty()) {
-                        if (isOpen()) {
-                            outboundBuffer.failFlushed(new NotYetConnectedException(), true);
-                        } else {
-                            // Do not trigger channelWritabilityChanged because the channel is closed already.
-                            outboundBuffer.failFlushed(newClosedChannelException(initialCloseCause, "flush0()"), false);
-                        }
-                    }
-                } finally {
-                    inFlush0 = false;
-                }
-                return;
-            }
-
-            try {
-                doWrite(outboundBuffer);
-            } catch (Throwable t) {
-                handleWriteError(t);
-            } finally {
-                inFlush0 = false;
-            }
+            writeFlushed();
         }
 
         protected final void handleWriteError(Throwable t) {
@@ -888,20 +843,20 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                  * may still return {@code true} even if the channel should be closed as result of the exception.
                  */
                 initialCloseCause = t;
-                close(newPromise(), t, newClosedChannelException(t, "flush0()"));
+                close(newPromise(), t, newClosedChannelException(AbstractUnsafe.class, t, "handleWriteError()"));
             } else {
                 try {
                     shutdownOutput(newPromise(), t);
                 } catch (Throwable t2) {
                     initialCloseCause = t;
-                    close(newPromise(), t2, newClosedChannelException(t, "flush0()"));
+                    close(newPromise(), t2, newClosedChannelException(AbstractUnsafe.class, t, "handleWriteError()"));
                 }
             }
         }
 
-        private ClosedChannelException newClosedChannelException(Throwable cause, String method) {
+        private ClosedChannelException newClosedChannelException(Class<?> clazz, Throwable cause, String method) {
             ClosedChannelException exception =
-                    StacklessClosedChannelException.newInstance(AbstractChannel.AbstractUnsafe.class, method);
+                    StacklessClosedChannelException.newInstance(clazz, method);
             if (cause != null) {
                 exception.initCause(cause);
             }
@@ -913,7 +868,8 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return true;
             }
 
-            safeSetFailure(promise, newClosedChannelException(initialCloseCause, "ensureOpen(ChannelPromise)"));
+            safeSetFailure(promise, newClosedChannelException(
+                    AbstractUnsafe.class, initialCloseCause, "ensureOpen(ChannelPromise)"));
             return false;
         }
 
@@ -994,6 +950,80 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
          */
         protected Executor prepareToClose() {
             return null;
+        }
+    }
+
+    private void assertEventLoop() {
+        assert !registered || eventLoop.inEventLoop();
+    }
+
+    /**
+     * Returns {@code true} if flushed messages should not be tried to write when calling {@link #flush()}. Instead
+     * these will be written once {@link #writeFlushedNow()} is called, which is typically done once the underlying
+     * transport becomes writable again.
+     *
+     * @return {@code true} if write will be done later on by calling {@link #writeFlushedNow()},
+     * {@code false} otherwise.
+     */
+    protected boolean isWriteFlushedScheduled() {
+        return false;
+    }
+
+    /**
+     * Writing previous flushed messages if {@link #isWriteFlushedScheduled()} returns {@code false}, otherwise
+     * do nothing.
+     */
+    protected final void writeFlushed() {
+        assertEventLoop();
+
+        if (isWriteFlushedScheduled()) {
+            return;
+        }
+        writeFlushedNow();
+    }
+
+    /**
+     * Writing previous flushed messages now.
+     */
+    protected final void writeFlushedNow() {
+        assertEventLoop();
+        if (inWriteFlushed) {
+            // Avoid re-entrance
+            return;
+        }
+
+        final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
+        if (outboundBuffer == null || outboundBuffer.isEmpty()) {
+            return;
+        }
+
+        inWriteFlushed = true;
+
+        // Mark all pending write requests as failure if the channel is inactive.
+        if (!isActive()) {
+            try {
+                // Check if we need to generate the exception at all.
+                if (!outboundBuffer.isEmpty()) {
+                    if (isOpen()) {
+                        outboundBuffer.failFlushed(new NotYetConnectedException(), true);
+                    } else {
+                        // Do not trigger channelWritabilityChanged because the channel is closed already.
+                        outboundBuffer.failFlushed(unsafe.newClosedChannelException(
+                                AbstractChannel.class, initialCloseCause, "writeFlushedNow()"), false);
+                    }
+                }
+            } finally {
+                inWriteFlushed = false;
+            }
+            return;
+        }
+
+        try {
+            doWrite(outboundBuffer);
+        } catch (Throwable t) {
+            unsafe.handleWriteError(t);
+        } finally {
+            inWriteFlushed = false;
         }
     }
 

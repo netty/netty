@@ -247,6 +247,13 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
     }
 
+    @Override
+    protected final boolean isWriteFlushedScheduled() {
+        IoRegistration registration = registration();
+        return registration.isValid() && NioIoOps.WRITE.isIncludedIn((
+                (SelectionKey) registration.attachment()).interestOps());
+    }
+
     protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe, NioIoHandle {
         @Override
         public void close() {
@@ -297,25 +304,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
 
         @Override
-        protected final void flush0() {
-            // Flush immediately only when there's no pending flush.
-            // If there's a pending flush operation, event loop will call forceFlush() later,
-            // and thus there's no need to call it now.
-            if (!isFlushPending()) {
-                super.flush0();
-            }
-        }
-
-        @Override
         public final void forceFlush() {
             // directly call super.flush0() to force a flush now
-            super.flush0();
-        }
-
-        private boolean isFlushPending() {
-            IoRegistration registration = registration();
-            return registration.isValid() && NioIoOps.WRITE.isIncludedIn((
-                    (SelectionKey) registration.attachment()).interestOps());
+            writeFlushedNow();
         }
 
         @Override

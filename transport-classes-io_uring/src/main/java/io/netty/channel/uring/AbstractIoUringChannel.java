@@ -448,6 +448,11 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         remote = socket.remoteAddress();
     }
 
+    @Override
+    protected final boolean isWriteFlushedScheduled() {
+        return (ioState & POLL_OUT_SCHEDULED) != 0;
+    }
+
     protected abstract class AbstractUringUnsafe extends AbstractUnsafe implements IoUringIoHandle {
         private IoUringRecvByteAllocatorHandle allocHandle;
         private boolean closed;
@@ -590,16 +595,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         protected boolean canCloseNow0() {
             return true;
-        }
-
-        @Override
-        protected final void flush0() {
-            // Flush immediately only when there's no pending flush.
-            // If there's a pending flush operation, event loop will call forceFlush() later,
-            // and thus there's no need to call it now.
-            if ((ioState & POLL_OUT_SCHEDULED) == 0) {
-                super.flush0();
-            }
         }
 
         @Override
@@ -861,7 +856,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 }
             } else if (!socket.isOutputShutdown()) {
                 // Try writing again
-                super.flush0();
+                writeFlushedNow();
             }
         }
 
