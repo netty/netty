@@ -143,13 +143,13 @@ public class CorsConfigTest {
     }
 
     @Test
-    public void allowPrivateNetwork(){
+    public void allowPrivateNetwork() {
         final CorsConfig cors = forOrigin("http://localhost:8080").allowPrivateNetwork().build();
         assertTrue(cors.isPrivateNetworkAllowed());
     }
 
     @Test
-    public void discardNextEmptyLast(){
+    public void discardNextEmptyLast() {
         final CorsConfig cors = forOrigin("http://localhost:8080").discardNextEmptyLast().build();
         assertTrue(cors.isDiscardNextEmptyLast());
     }
