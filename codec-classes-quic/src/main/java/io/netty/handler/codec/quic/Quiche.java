@@ -708,6 +708,13 @@ final class Quiche {
 
     /**
      * See
+     * <a href="https://docs.rs/quiche/latest/quiche/struct.Config.html#method.discover_pmtu">
+     *     quiche_config_discover_pmtu</a>.
+     */
+    static native void quiche_config_discover_pmtu(long configAddr, boolean value);
+
+    /**
+     * See
      * <a href="https://github.com/cloudflare/quiche/blob/0.6.0/include/quiche.h#L187">
      *     quiche_config_enable_dgram</a>.
      */
