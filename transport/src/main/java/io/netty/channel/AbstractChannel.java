@@ -194,10 +194,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public EventLoop executor() {
-        EventLoop eventLoop = this.eventLoop;
-        if (eventLoop == null) {
-            throw new IllegalStateException("channel not registered to an event loop");
-        }
         return eventLoop;
     }
 
