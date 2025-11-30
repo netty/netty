@@ -47,6 +47,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     private Long maxAckDelay;
     private Boolean disableActiveMigration;
     private Boolean enableHystart;
+    private Boolean discoverPmtu;
     private QuicCongestionControlAlgorithm congestionControlAlgorithm;
     private Integer initialCongestionWindowPackets;
     private int localConnIdLength;
@@ -86,6 +87,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
         this.maxAckDelay = builder.maxAckDelay;
         this.disableActiveMigration = builder.disableActiveMigration;
         this.enableHystart = builder.enableHystart;
+        this.discoverPmtu = builder.discoverPmtu;
         this.congestionControlAlgorithm = builder.congestionControlAlgorithm;
         this.initialCongestionWindowPackets = builder.initialCongestionWindowPackets;
         this.localConnIdLength = builder.localConnIdLength;
@@ -355,6 +357,23 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
     }
 
     /**
+     * See
+     * <a href="https://docs.rs/quiche/latest/quiche/struct.Config.html#method.discover_pmtu">
+     *     discover_pmtu</a>.
+     *
+     * Configures whether to do path MTU discovery.
+     *
+     * The default value is {@code false}.
+     *
+     * @param enable  {@code true} if path MTU discovery should be enabled.
+     * @return        the instance itself.
+     */
+    public final B discoverPmtu(boolean enable) {
+        this.discoverPmtu = enable;
+        return self();
+    }
+
+    /**
      * Sets the local connection id length that is used.
      *
      * The default is 20, which is also the maximum that is supported.
@@ -467,7 +486,7 @@ public abstract class QuicCodecBuilder<B extends QuicCodecBuilder<B>> {
                 maxIdleTimeout, maxSendUdpPayloadSize, maxRecvUdpPayloadSize, initialMaxData,
                 initialMaxStreamDataBidiLocal, initialMaxStreamDataBidiRemote,
                 initialMaxStreamDataUni, initialMaxStreamsBidi, initialMaxStreamsUni,
-                ackDelayExponent, maxAckDelay, disableActiveMigration, enableHystart,
+                ackDelayExponent, maxAckDelay, disableActiveMigration, enableHystart, discoverPmtu,
                 congestionControlAlgorithm, initialCongestionWindowPackets, recvQueueLen, sendQueueLen,
                 activeConnectionIdLimit, statelessResetToken);
     }
