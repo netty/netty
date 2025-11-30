@@ -504,11 +504,8 @@ public class LocalChannel extends AbstractChannel {
                     @Override
                     public void run() {
                         ChannelPromise promise = peer.connectPromise;
-
-                        // Only trigger fireChannelActive() if the promise was not null and was not completed yet.
-                        // connectPromise may be set to null if doClose() was called in the meantime.
-                        if (promise != null && promise.trySuccess()) {
-                            peer.pipeline().fireChannelActive();
+                        if (promise != null) {
+                            promise.trySuccess();
                         }
                     }
                 });
@@ -526,54 +523,47 @@ public class LocalChannel extends AbstractChannel {
         public void closeNow() {
             close(newPromise());
         }
+    }
 
-        @Override
-        public void connect(final SocketAddress remoteAddress,
-                SocketAddress localAddress, final ChannelPromise promise) {
-            if (!promise.setUncancellable() || !ensureOpen(promise)) {
-                return;
-            }
-
-            if (state == State.CONNECTED) {
-                Exception cause = new AlreadyConnectedException();
-                safeSetFailure(promise, cause);
-                pipeline().fireExceptionCaught(cause);
-                return;
-            }
-
-            if (connectPromise != null) {
-                throw new ConnectionPendingException();
-            }
-
-            connectPromise = promise;
-
-            if (state != State.BOUND) {
-                // Not bound yet and no localAddress specified - get one.
-                if (localAddress == null) {
-                    localAddress = new LocalAddress(LocalChannel.this);
-                }
-            }
-
-            if (localAddress != null) {
-                try {
-                    doBind0(localAddress);
-                } catch (Throwable t) {
-                    safeSetFailure(promise, t);
-                    close(newPromise());
-                    return;
-                }
-            }
-
-            Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
-            if (!(boundChannel instanceof LocalServerChannel)) {
-                Exception cause = new ConnectException("connection refused: " + remoteAddress);
-                safeSetFailure(promise, cause);
-                close(newPromise());
-                return;
-            }
-
-            LocalServerChannel serverChannel = (LocalServerChannel) boundChannel;
-            peer = serverChannel.serve(LocalChannel.this);
+    @Override
+    protected void doConnect(final SocketAddress remoteAddress,
+                        SocketAddress localAddress, final ChannelPromise promise) {
+        if (state == State.CONNECTED) {
+            Exception cause = new AlreadyConnectedException();
+            promise.setFailure(cause);
+            return;
         }
+
+        if (connectPromise != null) {
+            promise.setFailure(new ConnectionPendingException());
+            return;
+        }
+
+        if (state != State.BOUND) {
+            // Not bound yet and no localAddress specified - get one.
+            if (localAddress == null) {
+                localAddress = new LocalAddress(LocalChannel.this);
+            }
+        }
+
+        if (localAddress != null) {
+            try {
+                doBind0(localAddress);
+            } catch (Throwable t) {
+                promise.setFailure(t);
+                return;
+            }
+        }
+
+        Channel boundChannel = LocalChannelRegistry.get(remoteAddress);
+        if (!(boundChannel instanceof LocalServerChannel)) {
+            Exception cause = new ConnectException("connection refused: " + remoteAddress);
+            promise.setFailure(cause);
+            return;
+        }
+
+        LocalServerChannel serverChannel = (LocalServerChannel) boundChannel;
+        peer = serverChannel.serve(LocalChannel.this);
+        connectPromise = promise;
     }
 }

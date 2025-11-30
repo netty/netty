@@ -28,7 +28,6 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramPacket;
@@ -143,7 +142,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private ByteBuf finBuffer;
     private ByteBuf outErrorCodeBuffer;
     private ChannelPromise connectPromise;
-    private ScheduledFuture<?> connectTimeoutFuture;
     private QuicConnectionAddress connectAddress;
     private CloseData closeData;
     private QuicConnectionCloseEvent connectionCloseEvent;
@@ -1489,6 +1487,44 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
+    @Override
+    protected void doConnect(SocketAddress remote, SocketAddress local, ChannelPromise channelPromise) {
+        assert executor().inEventLoop();
+        if (server) {
+            channelPromise.setFailure(new UnsupportedOperationException());
+            return;
+        }
+
+        if (connectPromise != null) {
+            channelPromise.setFailure(new ConnectionPendingException());
+            return;
+        }
+
+        if (remote instanceof QuicConnectionAddress) {
+            if (!sourceConnectionIds.isEmpty()) {
+                // If a key is assigned we know this channel was already connected.
+                channelPromise.setFailure(new AlreadyConnectedException());
+                return;
+            }
+
+            connectAddress = (QuicConnectionAddress) remote;
+            connectPromise = channelPromise;
+
+            parent().connect(new QuicheQuicChannelAddress(QuicheQuicChannel.this))
+                    .addListener(f -> {
+                        ChannelPromise connectPromise = QuicheQuicChannel.this.connectPromise;
+                        if (connectPromise != null && !f.isSuccess()) {
+                            connectPromise.tryFailure(f.cause());
+                            // close everything after notify about failure.
+                            unsafe().close(newPromise());
+                        }
+                    });
+            return;
+        }
+
+        channelPromise.setFailure(new UnsupportedOperationException());
+    }
+
     private final class QuicChannelUnsafe extends AbstractChannel.AbstractUnsafe {
 
         void connectStream(QuicStreamType type, @Nullable ChannelHandler handler,
@@ -1524,70 +1560,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                     streams.remove(streamId);
                 }
             });
-        }
-
-        @Override
-        public void connect(SocketAddress remote, SocketAddress local, ChannelPromise channelPromise) {
-            assert executor().inEventLoop();
-            if (!channelPromise.setUncancellable()) {
-                return;
-            }
-            if (server) {
-                channelPromise.setFailure(new UnsupportedOperationException());
-                return;
-            }
-
-            if (connectPromise != null) {
-                channelPromise.setFailure(new ConnectionPendingException());
-                return;
-            }
-
-            if (remote instanceof QuicConnectionAddress) {
-                if (!sourceConnectionIds.isEmpty()) {
-                    // If a key is assigned we know this channel was already connected.
-                    channelPromise.setFailure(new AlreadyConnectedException());
-                    return;
-                }
-
-                connectAddress = (QuicConnectionAddress) remote;
-                connectPromise = channelPromise;
-
-                // Schedule connect timeout.
-                int connectTimeoutMillis = config().getConnectTimeoutMillis();
-                if (connectTimeoutMillis > 0) {
-                    connectTimeoutFuture = executor().schedule(() -> {
-                        ChannelPromise connectPromise = QuicheQuicChannel.this.connectPromise;
-                        if (connectPromise != null && !connectPromise.isDone()
-                                && connectPromise.tryFailure(new ConnectTimeoutException(
-                                "connection timed out: " + remote))) {
-                            close(newPromise());
-                        }
-                    }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
-                }
-
-                connectPromise.addListener((ChannelFuture future) -> {
-                    if (future.isCancelled()) {
-                        if (connectTimeoutFuture != null) {
-                            connectTimeoutFuture.cancel(false);
-                        }
-                        connectPromise = null;
-                        close(newPromise());
-                    }
-                });
-
-                parent().connect(new QuicheQuicChannelAddress(QuicheQuicChannel.this))
-                        .addListener(f -> {
-                            ChannelPromise connectPromise = QuicheQuicChannel.this.connectPromise;
-                            if (connectPromise != null && !f.isSuccess()) {
-                                connectPromise.tryFailure(f.cause());
-                                // close everything after notify about failure.
-                                unsafe().close(newPromise());
-                            }
-                        });
-                return;
-            }
-
-            channelPromise.setFailure(new UnsupportedOperationException());
         }
 
         private void fireConnectCloseEventIfNeeded(QuicheQuicConnection conn) {
@@ -1941,7 +1913,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 state = ChannelState.ACTIVE;
 
                 boolean promiseSet = promise.trySuccess();
-                pipeline().fireChannelActive();
                 notifyAboutHandshakeCompletionIfNeeded(conn, null);
                 fireDatagramExtensionEvent(conn);
                 if (!promiseSet) {

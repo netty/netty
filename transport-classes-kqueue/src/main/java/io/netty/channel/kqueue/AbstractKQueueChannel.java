@@ -23,12 +23,9 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ConnectTimeoutException;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoRegistration;
@@ -39,7 +36,6 @@ import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
 import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
@@ -48,10 +44,8 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AlreadyConnectedException;
-import java.nio.channels.ConnectionPendingException;
 import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
-import java.util.concurrent.TimeUnit;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
@@ -65,7 +59,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
      * connection attempts will fail.
      */
     private ChannelPromise connectPromise;
-    private Future<?> connectTimeoutFuture;
     private SocketAddress requestedRemoteAddress;
 
     final BsdSocket socket;
@@ -378,6 +371,24 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
+    @Override
+    protected void doConnect(
+            final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+        final boolean connected;
+        requestedRemoteAddress = remoteAddress;
+        try {
+            connected = doConnect(remoteAddress, localAddress);
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        if (connected) {
+            promise.setSuccess();
+        } else {
+            connectPromise = promise;
+        }
+    }
+
     @UnstableApi
     public abstract class AbstractKQueueUnsafe extends AbstractUnsafe implements KQueueIoHandle {
         boolean readPending;
@@ -560,127 +571,25 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             close(newPromise());
         }
 
-        @Override
-        public void connect(
-                final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
-            // Don't mark the connect promise as uncancellable as in fact we can cancel it as it is using
-            // non-blocking io.
-            if (promise.isDone() || !ensureOpen(promise)) {
-                return;
-            }
-
-            try {
-                if (connectPromise != null) {
-                    throw new ConnectionPendingException();
-                }
-
-                boolean wasActive = isActive();
-                if (doConnect(remoteAddress, localAddress)) {
-                    fulfillConnectPromise(promise, wasActive);
-                } else {
-                    connectPromise = promise;
-                    requestedRemoteAddress = remoteAddress;
-
-                    // Schedule connect timeout.
-                    final int connectTimeoutMillis = config().getConnectTimeoutMillis();
-                    if (connectTimeoutMillis > 0) {
-                        connectTimeoutFuture = executor().schedule(new Runnable() {
-                            @Override
-                            public void run() {
-                                ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
-                                if (connectPromise != null && !connectPromise.isDone()
-                                        && connectPromise.tryFailure(new ConnectTimeoutException(
-                                                "connection timed out after " + connectTimeoutMillis + " ms: " +
-                                                        remoteAddress))) {
-                                    close(newPromise());
-                                }
-                            }
-                        }, connectTimeoutMillis, TimeUnit.MILLISECONDS);
-                    }
-
-                    promise.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) {
-                            // If the connect future is cancelled we also cancel the timeout and close the
-                            // underlying socket.
-                            if (future.isCancelled()) {
-                                if (connectTimeoutFuture != null) {
-                                    connectTimeoutFuture.cancel(false);
-                                }
-                                connectPromise = null;
-                                close(newPromise());
-                            }
-                        }
-                    });
-                }
-            } catch (Throwable t) {
-                closeIfClosed();
-                promise.tryFailure(annotateConnectException(t, remoteAddress));
-            }
-        }
-
-        private void fulfillConnectPromise(ChannelPromise promise, boolean wasActive) {
-            if (promise == null) {
-                // Closed via cancellation and the promise has been notified already.
-                return;
-            }
-            active = true;
-
-            // Get the state as trySuccess() may trigger an ChannelFutureListener that will close the Channel.
-            // We still need to ensure we call fireChannelActive() in this case.
-            boolean active = isActive();
-
-            // trySuccess() will return false if a user cancelled the connection attempt.
-            boolean promiseSet = promise.trySuccess();
-
-            // Regardless if the connection attempt was cancelled, channelActive() event should be triggered,
-            // because what happened is what happened.
-            if (!wasActive && active) {
-                pipeline().fireChannelActive();
-            }
-
-            // If a user cancelled the connection attempt, close the channel, which is followed by channelInactive().
-            if (!promiseSet) {
-                close(newPromise());
-            }
-        }
-
-        private void fulfillConnectPromise(ChannelPromise promise, Throwable cause) {
-            if (promise == null) {
-                // Closed via cancellation and the promise has been notified already.
-                return;
-            }
-
-            // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-            promise.tryFailure(cause);
-            closeIfClosed();
-        }
-
         private void finishConnect() {
             // Note this method is invoked by the event loop only if the connection attempt was
             // neither cancelled nor timed out.
 
             assert executor().inEventLoop();
-
-            boolean connectStillInProgress = false;
+            assert connectPromise != null;
+            ChannelPromise promise = connectPromise;
+            final boolean connected;
             try {
-                boolean wasActive = isActive();
-                if (!doFinishConnect()) {
-                    connectStillInProgress = true;
-                    return;
-                }
-                fulfillConnectPromise(connectPromise, wasActive);
-            } catch (Throwable t) {
-                fulfillConnectPromise(connectPromise, annotateConnectException(t, requestedRemoteAddress));
-            } finally {
-                if (!connectStillInProgress) {
-                    // Check for null as the connectTimeoutFuture is only created if a connectTimeoutMillis > 0 is used
-                    // See https://github.com/netty/netty/issues/1770
-                    if (connectTimeoutFuture != null) {
-                        connectTimeoutFuture.cancel(false);
-                    }
-                    connectPromise = null;
-                }
+                connected = doFinishConnect();
+            } catch (Throwable cause) {
+                connectPromise = null;
+                promise.setFailure(cause);
+                return;
+            }
+            if (connected) {
+                active = true;
+                connectPromise = null;
+                promise.setSuccess();
             }
         }
 
@@ -742,6 +651,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         if (connected) {
             remote = remoteSocketAddr == null?
                     remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
+            active = true;
         }
         // We always need to set the localAddress even if not connected yet as the bind already took place.
         //

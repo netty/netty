@@ -81,17 +81,17 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     protected abstract Channel newChildChannel(EventLoop eventLoop, int fd, byte[] remote, int offset, int len)
             throws Exception;
 
+    @Override
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        // Connect not supported by ServerChannel implementations
+        promise.setFailure(new UnsupportedOperationException());
+    }
+
     final class EpollServerSocketUnsafe extends AbstractEpollUnsafe {
         // Will hold the remote address after accept(...) was successful.
         // We need 24 bytes for the address as maximum + 1 byte for storing the length.
         // So use 26 bytes as it's a power of two.
         private final byte[] acceptedAddress = new byte[26];
-
-        @Override
-        public void connect(SocketAddress socketAddress, SocketAddress socketAddress2, ChannelPromise channelPromise) {
-            // Connect not supported by ServerChannel implementations
-            channelPromise.setFailure(new UnsupportedOperationException());
-        }
 
         @Override
         void epollInReady() {

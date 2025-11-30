@@ -289,6 +289,15 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
+        protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            if (!active) {
+                active = true;
+            }
+
+            promise.setSuccess();
+        }
+
+        @Override
         protected void doDisconnect(ChannelPromise promise) {
             promise.setSuccess();
         }
@@ -330,19 +339,6 @@ public class DefaultChannelPipelineTailTest {
         }
 
         private class MyUnsafe extends AbstractUnsafe {
-            @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                if (!ensureOpen(promise)) {
-                    return;
-                }
-
-                if (!active) {
-                    active = true;
-                    pipeline().fireChannelActive();
-                }
-
-                promise.setSuccess();
-            }
         }
 
         private class MyChannelPipeline extends DefaultChannelPipeline {

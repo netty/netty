@@ -220,26 +220,6 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
         }
 
         @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            // Make sure to assign local/remote first before triggering the callback, to prevent potential NPE issues.
-            ChannelPromise channelPromise = newPromise().addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
-                    if (future.isSuccess()) {
-                        local = localAddress != null
-                                ? (DomainSocketAddress) localAddress
-                                : socket.localDomainSocketAddress();
-                        remote = (DomainSocketAddress) remoteAddress;
-                        promise.setSuccess();
-                    } else {
-                        promise.setFailure(future.cause());
-                    }
-                }
-            });
-            super.connect(remoteAddress, localAddress, channelPromise);
-        }
-
-        @Override
         public void unregistered() {
             super.unregistered();
             if (readMsgHdrMemory != null) {
@@ -251,6 +231,26 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
                 writeMsgHdrMemory = null;
             }
         }
+    }
+
+    @Override
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        // Make sure to assign local/remote first before triggering the callback, to prevent potential NPE issues.
+        ChannelPromise channelPromise = newPromise().addListener(new ChannelFutureListener() {
+            @Override
+            public void operationComplete(ChannelFuture future) throws Exception {
+                if (future.isSuccess()) {
+                    local = localAddress != null
+                            ? (DomainSocketAddress) localAddress
+                            : socket.localDomainSocketAddress();
+                    remote = (DomainSocketAddress) remoteAddress;
+                    promise.setSuccess();
+                } else {
+                    promise.setFailure(future.cause());
+                }
+            }
+        });
+        super.doConnect(remoteAddress, localAddress, channelPromise);
     }
 
     @Override

@@ -225,11 +225,6 @@ public class LocalServerChannel extends AbstractServerChannel {
         }
 
         @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            safeSetFailure(promise, new UnsupportedOperationException());
-        }
-
-        @Override
         public void registered() {
             ((SingleThreadEventExecutor) executor()).addShutdownHook(shutdownHook);
         }

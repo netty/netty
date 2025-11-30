@@ -35,7 +35,7 @@ final class FailedChannel extends AbstractChannel {
 
     @Override
     protected AbstractUnsafe newUnsafe() {
-        return new FailedChannelUnsafe();
+        return new AbstractUnsafe() { };
     }
 
     @Override
@@ -60,6 +60,11 @@ final class FailedChannel extends AbstractChannel {
 
     @Override
     protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
+    }
+
+    @Override
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -101,12 +106,5 @@ final class FailedChannel extends AbstractChannel {
     @Override
     public ChannelMetadata metadata() {
         return METADATA;
-    }
-
-    private final class FailedChannelUnsafe extends AbstractUnsafe {
-        @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-            promise.setFailure(new UnsupportedOperationException());
-        }
     }
 }
