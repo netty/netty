@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.DomainSocketChannel;
@@ -74,9 +75,15 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        socket.bind(localAddress);
-        local = (DomainSocketAddress) localAddress;
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        try {
+            socket.bind(localAddress);
+            local = (DomainSocketAddress) localAddress;
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override

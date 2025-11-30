@@ -21,6 +21,7 @@ import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.EventLoop;
 import io.netty.channel.unix.DomainDatagramChannel;
@@ -78,18 +79,30 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        super.doBind(localAddress);
-        local = (DomainSocketAddress) localAddress;
-        active = true;
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        super.doBind(localAddress, newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                local = (DomainSocketAddress) localAddress;
+                active = true;
+                promise.setSuccess();
+            } else {
+                promise.setFailure(f.cause());
+            }
+        }));
     }
 
     @Override
-    protected void doClose() throws Exception {
-        super.doClose();
-        connected = active = false;
-        local = null;
-        remote = null;
+    protected void doClose(ChannelPromise promise) {
+        super.doClose(newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                connected = active = false;
+                local = null;
+                remote = null;
+                promise.setSuccess();
+            } else {
+                promise.setSuccess();
+            }
+        }));
     }
 
     @Override
@@ -106,8 +119,8 @@ public final class EpollDomainDatagramChannel extends AbstractEpollChannel imple
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        doClose();
+    protected void doDisconnect(ChannelPromise promise) {
+        doClose(promise);
     }
 
     @Override

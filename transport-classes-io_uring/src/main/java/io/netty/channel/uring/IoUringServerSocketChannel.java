@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -68,15 +69,26 @@ public final class IoUringServerSocketChannel extends AbstractIoUringServerChann
     }
 
     @Override
-    public void doBind(SocketAddress localAddress) throws Exception {
-        super.doBind(localAddress);
-        if (IoUring.isTcpFastOpenServerSideAvailable()) {
-            Integer fastOpen = config().getOption(ChannelOption.TCP_FASTOPEN);
-            if (fastOpen != null && fastOpen > 0) {
-                socket.setTcpFastOpen(fastOpen);
+    public void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        super.doBind(localAddress, newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                try {
+                    if (IoUring.isTcpFastOpenServerSideAvailable()) {
+                        Integer fastOpen = config().getOption(ChannelOption.TCP_FASTOPEN);
+                        if (fastOpen != null && fastOpen > 0) {
+                            socket.setTcpFastOpen(fastOpen);
+                        }
+                    }
+                    socket.listen(config.getBacklog());
+                    active = true;
+                } catch (Throwable cause) {
+                    promise.setFailure(cause);
+                    return;
+                }
+                promise.setSuccess();
+            } else {
+                promise.setFailure(f.cause());
             }
-        }
-        socket.listen(config.getBacklog());
-        active = true;
+        }));
     }
 }

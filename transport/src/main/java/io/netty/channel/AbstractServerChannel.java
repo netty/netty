@@ -63,8 +63,8 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        throw new UnsupportedOperationException();
+    protected void doDisconnect(ChannelPromise promise)  {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
@@ -73,7 +73,7 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected void doWrite(ChannelOutboundBuffer in) throws Exception {
+    protected void doWrite(ChannelOutboundBuffer in)  {
         throw new UnsupportedOperationException();
     }
 

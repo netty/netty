@@ -464,12 +464,13 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    protected void doDeregister(ChannelPromise promise) {
         IoRegistration registration = this.registration;
         if (registration != null) {
             this.registration = null;
             registration.cancel();
         }
+        promise.setSuccess();
     }
 
     @Override
@@ -565,12 +566,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doClose() throws Exception {
-        ChannelPromise promise = connectPromise;
-        if (promise != null) {
+    protected final void doClose(ChannelPromise promise) {
+        ChannelPromise connectPromise = this.connectPromise;
+        if (connectPromise != null) {
             // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-            promise.tryFailure(new ClosedChannelException());
-            connectPromise = null;
+            connectPromise.tryFailure(new ClosedChannelException());
+            this.connectPromise = null;
         }
 
         Future<?> future = connectTimeoutFuture;
@@ -578,5 +579,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             future.cancel(false);
             connectTimeoutFuture = null;
         }
+        doClose0(promise);
     }
+
+    protected abstract void doClose0(ChannelPromise promise);
 }

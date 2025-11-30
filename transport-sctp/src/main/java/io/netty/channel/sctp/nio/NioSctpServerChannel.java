@@ -135,13 +135,25 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        javaChannel().bind(localAddress, config.getBacklog());
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        try {
+            javaChannel().bind(localAddress, config.getBacklog());
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override
-    protected void doClose() throws Exception {
-        javaChannel().close();
+    protected void doClose0(ChannelPromise promise) {
+        try {
+            javaChannel().close();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override
@@ -222,8 +234,8 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        throw new UnsupportedOperationException();
+    protected void doDisconnect(ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

@@ -173,8 +173,14 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected final void doShutdownOutput() throws Exception {
-        javaChannel().shutdownOutput();
+    protected final void doShutdownOutput(ChannelPromise promise) {
+        try {
+            javaChannel().shutdownOutput();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override
@@ -300,8 +306,14 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        doBind0(localAddress);
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        try {
+            doBind0(localAddress);
+        } catch (Throwable t) {
+            promise.setFailure(t);
+            return;
+        }
+        promise.setSuccess();
     }
 
     private void doBind0(SocketAddress localAddress) throws Exception {
@@ -324,7 +336,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             return connected;
         } finally {
             if (!success) {
-                doClose();
+                doClose(newPromise());
             }
         }
     }
@@ -337,14 +349,19 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        doClose();
+    protected void doDisconnect(ChannelPromise promise) {
+        doClose(promise);
     }
 
     @Override
-    protected void doClose() throws Exception {
-        super.doClose();
-        javaChannel().close();
+    protected void doClose0(ChannelPromise promise) {
+        try {
+            javaChannel().close();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override
@@ -456,7 +473,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     // because we try to read or write until the actual close happens which may be later due
                     // SO_LINGER handling.
                     // See https://github.com/netty/netty/issues/4449
-                    doDeregister();
+                    doDeregister(newPromise());
                     return GlobalEventExecutor.INSTANCE;
                 }
             } catch (Throwable ignore) {

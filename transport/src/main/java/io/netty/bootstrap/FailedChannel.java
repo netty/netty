@@ -49,18 +49,28 @@ final class FailedChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) {
-        throw new UnsupportedOperationException();
+    protected void doDeregister(ChannelPromise promise) {
+        promise.setSuccess();
     }
 
     @Override
-    protected void doDisconnect() {
-        throw new UnsupportedOperationException();
+    protected void doRegister(ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
-    protected void doClose() {
-        throw new UnsupportedOperationException();
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
+    }
+
+    @Override
+    protected void doDisconnect(ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
+    }
+
+    @Override
+    protected void doClose(ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

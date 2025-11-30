@@ -215,8 +215,14 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        doBind0(localAddress);
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        try {
+            doBind0(localAddress);
+        } catch (Throwable t) {
+            promise.setFailure(t);
+            return;
+        }
+        promise.setSuccess();
     }
 
     private void doBind0(SocketAddress localAddress) throws Exception {
@@ -237,7 +243,7 @@ public final class NioDatagramChannel
             return true;
         } finally {
             if (!success) {
-                doClose();
+                doClose(newPromise());
             }
         }
     }
@@ -248,13 +254,25 @@ public final class NioDatagramChannel
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        javaChannel().disconnect();
+    protected void doDisconnect(ChannelPromise promise) {
+        try {
+            javaChannel().disconnect();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override
-    protected void doClose() throws Exception {
-        javaChannel().close();
+    protected void doClose0(ChannelPromise promise) {
+        try {
+            javaChannel().close();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override

@@ -103,18 +103,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private boolean inReadComplete;
     private boolean socketHasMoreData;
 
-    private static final class DelayedClose {
-        private final ChannelPromise promise;
-        private final Throwable cause;
-        private final ClosedChannelException closeCause;
-
-        DelayedClose(ChannelPromise promise, Throwable cause, ClosedChannelException closeCause) {
-            this.promise = promise;
-            this.cause = cause;
-            this.closeCause = closeCause;
-        }
-    }
-    private DelayedClose delayedClose;
+    private ChannelPromise delayedClose;
     private boolean inputClosedSeenErrorOnRead;
 
     /**
@@ -273,7 +262,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     protected abstract void cancelOutstandingWrites(IoRegistration registration, int numOutstandingWrites);
 
     @Override
-    protected void doDisconnect() throws Exception {
+    protected void doDisconnect(ChannelPromise promise) {
+        doClose(promise);
     }
 
     private void freeRemoteAddressMemory() {
@@ -292,19 +282,62 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected void doClose() throws Exception {
-        active = false;
-
+    protected void doClose(ChannelPromise promise) {
         if (registration != null) {
+            if (delayedClose == null) {
+                // We have a write operation pending that should be completed asap.
+                // We will do the actual close operation one this write result is returned as otherwise
+                // we may get into trouble as we may close the fd while we did not process the write yet.
+                delayedClose = newPromise();
+                delayedClose.addListener(f -> {
+                    if (delayedClose.isSuccess()) {
+                        active = false;
+                        promise.setSuccess();
+                    } else {
+                        promise.setFailure(f.cause());
+                    }
+                });
+            } else {
+                delayedClose.addListener(new PromiseNotifier<>(false, promise));
+                return;
+            }
+
+            boolean cancelConnect = false;
+            try {
+                ChannelPromise connectPromise = AbstractIoUringChannel.this.connectPromise;
+                if (connectPromise != null) {
+                    // Use tryFailure() instead of setFailure() to avoid the race against cancel().
+                    connectPromise.tryFailure(new ClosedChannelException());
+                    AbstractIoUringChannel.this.connectPromise = null;
+                    cancelConnect = true;
+                }
+
+                cancelConnectTimeoutFuture();
+            } finally {
+                // It's important we cancel all outstanding connect, write and read operations now so
+                // we will be able to process a delayed close if needed.
+                ioUringUnsafe().cancelOps(cancelConnect);
+            }
+
             if (socket.markClosed()) {
                 int fd = fd().intValue();
                 IoUringIoOps ops = IoUringIoOps.newClose(fd, (byte) 0, nextOpsId());
-                registration.submit(ops);
+                if (registration.submit(ops) != 0) {
+                    return;
+                }
             }
+            delayedClose.setFailure(new ClosedChannelException());
         } else {
-            // This one was never registered just use a syscall to close.
-            socket.close();
-            ioUringUnsafe().unregistered();
+            try {
+                // This one was never registered just use a syscall to close.
+                socket.close();
+                ioUringUnsafe().unregistered();
+            } catch (Throwable cause) {
+                promise.setFailure(cause);
+                return;
+            }
+            active = false;
+            promise.setSuccess();
         }
     }
 
@@ -479,9 +512,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                     break;
                 case Native.IORING_OP_CLOSE:
                     if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
-                        if (delayedClose != null) {
-                            delayedClose.promise.setSuccess();
-                        }
                         closed = true;
                     }
                     break;
@@ -507,7 +537,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         private void handleDelayedClosed() {
             if (delayedClose != null && canCloseNow()) {
-                closeNow();
+                delayedClose.trySuccess();
             }
         }
 
@@ -526,46 +556,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         @Override
         public final void close() throws Exception {
             close(newPromise());
-        }
-
-        @Override
-        protected void close(ChannelPromise promise, Throwable cause, ClosedChannelException closeCause) {
-            if (closeFuture().isDone()) {
-                // Closed already before.
-                safeSetSuccess(promise);
-                return;
-            }
-            if (delayedClose == null) {
-                // We have a write operation pending that should be completed asap.
-                // We will do the actual close operation one this write result is returned as otherwise
-                // we may get into trouble as we may close the fd while we did not process the write yet.
-                delayedClose = new DelayedClose(promise, cause, closeCause);
-            } else {
-                delayedClose.promise.addListener(new PromiseNotifier<>(false, promise));
-                return;
-            }
-
-            boolean cancelConnect = false;
-            try {
-                ChannelPromise connectPromise = AbstractIoUringChannel.this.connectPromise;
-                if (connectPromise != null) {
-                    // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-                    connectPromise.tryFailure(new ClosedChannelException());
-                    AbstractIoUringChannel.this.connectPromise = null;
-                    cancelConnect = true;
-                }
-
-                cancelConnectTimeoutFuture();
-            } finally {
-                // It's important we cancel all outstanding connect, write and read operations now so
-                // we will be able to process a delayed close if needed.
-                cancelOps(cancelConnect);
-            }
-
-            if (canCloseNow()) {
-                // Currently there are is no WRITE and READ scheduled so we can start to teardown the channel.
-                closeNow();
-            }
         }
 
         private void cancelOps(boolean cancelConnect) {
@@ -609,10 +599,6 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
         protected boolean canCloseNow0() {
             return true;
-        }
-
-        private void closeNow() {
-            super.close(newPromise(), delayedClose.cause, delayedClose.closeCause);
         }
 
         @Override
@@ -1216,18 +1202,25 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected final void doDeregister() {
+    protected final void doDeregister(ChannelPromise promise) {
         // Cancel all previous submitted ops.
         ioUringUnsafe().cancelOps(connectPromise != null);
+        promise.setSuccess();
     }
 
     @Override
-    protected void doBind(final SocketAddress local) throws Exception {
-        if (local instanceof InetSocketAddress) {
-            checkResolvable((InetSocketAddress) local);
+    protected void doBind(final SocketAddress local, ChannelPromise promise) {
+        try {
+            if (local instanceof InetSocketAddress) {
+                checkResolvable((InetSocketAddress) local);
+            }
+            socket.bind(local);
+            this.local = socket.localAddress();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
         }
-        socket.bind(local);
-        this.local = socket.localAddress();
+        promise.setSuccess();
     }
 
     protected static void checkResolvable(InetSocketAddress addr) {

@@ -237,9 +237,15 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        super.doBind(localAddress);
-        active = true;
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        super.doBind(localAddress, newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                active = true;
+                promise.setSuccess();
+            } else {
+                promise.setFailure(f.cause());
+            }
+        }));
     }
 
     @Override
@@ -343,10 +349,16 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        socket.disconnect();
+    protected void doDisconnect(ChannelPromise promise) {
+        try {
+            socket.disconnect();
+        } catch (Throwable t) {
+            promise.setFailure(t);
+            return;
+        }
         connected = active = false;
         resetCachedAddresses();
+        promise.setSuccess();
     }
 
     @Override
@@ -359,8 +371,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     }
 
     @Override
-    protected void doClose() throws Exception {
-        super.doClose();
+    protected void doClose(ChannelPromise promise) {
+        super.doClose(promise);
         connected = false;
     }
 

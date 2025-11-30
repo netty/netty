@@ -16,6 +16,7 @@
 package io.netty.channel.kqueue;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -50,13 +51,22 @@ public final class KQueueServerSocketChannel extends AbstractKQueueServerChannel
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        super.doBind(localAddress);
-        socket.listen(config.getBacklog());
-        if (config.isTcpFastOpen()) {
-            socket.setTcpFastOpen(true);
-        }
-        active = true;
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        super.doBind(localAddress, newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                try {
+                    socket.listen(config.getBacklog());
+                    if (config.isTcpFastOpen()) {
+                        socket.setTcpFastOpen(true);
+                    }
+                    active = true;
+                } catch (Throwable cause) {
+                    promise.setFailure(cause);
+                    return;
+                }
+                promise.setSuccess();
+            }
+        }));
     }
 
     @Override

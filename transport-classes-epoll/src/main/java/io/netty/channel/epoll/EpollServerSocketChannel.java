@@ -16,6 +16,7 @@
 package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
@@ -69,14 +70,25 @@ public final class EpollServerSocketChannel extends AbstractEpollServerChannel i
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        super.doBind(localAddress);
-        final int tcpFastopen;
-        if (IS_SUPPORTING_TCP_FASTOPEN_SERVER && (tcpFastopen = config.getTcpFastopen()) > 0) {
-            socket.setTcpFastOpen(tcpFastopen);
-        }
-        socket.listen(config.getBacklog());
-        active = true;
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        super.doBind(localAddress, newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                try {
+                    final int tcpFastopen;
+                    if (IS_SUPPORTING_TCP_FASTOPEN_SERVER && (tcpFastopen = config.getTcpFastopen()) > 0) {
+                        socket.setTcpFastOpen(tcpFastopen);
+                    }
+                    socket.listen(config.getBacklog());
+                    active = true;
+                } catch (Throwable cause) {
+                    promise.setFailure(cause);
+                    return;
+                }
+                promise.setSuccess();
+            } else {
+                promise.setFailure(f.cause());
+            }
+        }));
     }
 
     @Override

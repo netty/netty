@@ -220,8 +220,14 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        javaChannel().bind(localAddress);
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        try {
+            javaChannel().bind(localAddress);
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override
@@ -240,7 +246,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
             return connected;
         } finally {
             if (!success) {
-                doClose();
+                doClose(newPromise());
             }
         }
     }
@@ -253,13 +259,19 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        doClose();
+    protected void doDisconnect(ChannelPromise promise)  {
+        doClose(promise);
     }
 
     @Override
-    protected void doClose() throws Exception {
-        javaChannel().close();
+    protected void doClose0(ChannelPromise promise) {
+        try {
+            javaChannel().close();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override

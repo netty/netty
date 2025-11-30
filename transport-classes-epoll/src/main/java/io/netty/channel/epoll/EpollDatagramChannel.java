@@ -335,7 +335,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
         if (localAddress instanceof InetSocketAddress) {
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
             if (socketAddress.getAddress().isAnyLocalAddress() &&
@@ -345,8 +345,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 }
             }
         }
-        super.doBind(localAddress);
-        active = true;
+        super.doBind(localAddress, newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                active = true;
+                promise.setSuccess();
+            } else {
+                promise.setFailure(f.cause());
+            }
+        }));
     }
 
     @Override
@@ -499,10 +505,16 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        socket.disconnect();
-        connected = active = false;
-        resetCachedAddresses();
+    protected void doDisconnect(ChannelPromise promise) {
+        try {
+            socket.disconnect();
+            connected = active = false;
+            resetCachedAddresses();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override
@@ -515,9 +527,15 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    protected void doClose() throws Exception {
-        super.doClose();
-        connected = false;
+    protected void doClose(ChannelPromise promise) {
+        super.doClose(newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                connected = false;
+                promise.setSuccess();
+            } else {
+                promise.setFailure(f.cause());
+            }
+        }));
     }
 
     final class EpollDatagramChannelUnsafe extends AbstractEpollUnsafe {

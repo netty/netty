@@ -20,6 +20,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -168,18 +169,33 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        javaChannel().bind(localAddress, config.getBacklog());
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        try {
+            javaChannel().bind(localAddress, config.getBacklog());
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose0(ChannelPromise promise) {
         SocketAddress localAddress = localAddress0();
-        javaChannel().close();
-        if (localAddress instanceof UnixDomainSocketAddress) {
-            Path path = ((UnixDomainSocketAddress) localAddress).getPath();
-            if (path != null) {
-                path.toFile().delete();
+        try {
+            try {
+                javaChannel().close();
+            } catch (Throwable cause) {
+                promise.setFailure(cause);
+                return;
+            }
+            promise.setSuccess();
+        } finally {
+            if (localAddress instanceof UnixDomainSocketAddress) {
+                Path path = ((UnixDomainSocketAddress) localAddress).getPath();
+                if (path != null) {
+                    path.toFile().delete();
+                }
             }
         }
     }
@@ -224,8 +240,8 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected void doDisconnect() throws Exception {
-        throw new UnsupportedOperationException();
+    protected void doDisconnect(ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

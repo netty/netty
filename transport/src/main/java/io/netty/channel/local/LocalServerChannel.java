@@ -112,13 +112,19 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress) throws Exception {
-        this.localAddress = LocalChannelRegistry.register(this, this.localAddress, localAddress);
+    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        try {
+            this.localAddress = LocalChannelRegistry.register(this, this.localAddress, localAddress);
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
         state = 1;
+        promise.setSuccess();
     }
 
     @Override
-    protected void doClose() throws Exception {
+    protected void doClose(ChannelPromise promise) {
         if (state <= 1) {
             // Update all internal state before the closeFuture is notified.
             if (localAddress != null) {
@@ -127,15 +133,17 @@ public class LocalServerChannel extends AbstractServerChannel {
             }
             state = 2;
         }
+        promise.setSuccess();
     }
 
     @Override
-    protected void doDeregister() throws Exception {
+    protected void doDeregister(ChannelPromise promise) {
         IoRegistration registration = this.registration;
         if (registration != null) {
             this.registration = null;
             registration.cancel();
         }
+        promise.setSuccess();
     }
 
     @Override
