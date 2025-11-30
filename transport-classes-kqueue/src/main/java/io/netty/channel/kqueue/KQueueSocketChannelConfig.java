@@ -22,6 +22,9 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.SocketProtocolFamily;
+import io.netty.channel.unix.DomainSocketReadMode;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -37,14 +40,17 @@ import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.ChannelOption.TCP_NODELAY;
 import static io.netty.channel.kqueue.KQueueChannelOption.SO_SNDLOWAT;
 import static io.netty.channel.kqueue.KQueueChannelOption.TCP_NOPUSH;
+import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
-public final class KQueueSocketChannelConfig extends KQueueChannelConfig implements SocketChannelConfig {
+class KQueueSocketChannelConfig extends KQueueChannelConfig implements SocketChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
+    private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
 
-    KQueueSocketChannelConfig(KQueueSocketChannel channel) {
+    KQueueSocketChannelConfig(AbstractKQueueChannel channel) {
         super(channel);
-        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+        if (channel.socket.protocolFamily() != SocketProtocolFamily.UNIX &&
+                PlatformDependent.canEnableTcpNoDelayByDefault()) {
             setTcpNoDelay(true);
         }
         calculateMaxBytesPerGatheringWrite();
@@ -52,10 +58,23 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(
+        Map<ChannelOption<?>, Object> options = getOptions(
                 super.getOptions(),
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
                 ALLOW_HALF_CLOSURE, SO_SNDLOWAT, TCP_NOPUSH);
+        if (((AbstractKQueueChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return getOptions(options, DOMAIN_SOCKET_READ_MODE);
+        }
+        return options;
+    }
+
+    KQueueSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
+        this.mode = ObjectUtil.checkNotNull(mode, "mode");
+        return this;
+    }
+
+    DomainSocketReadMode getReadMode() {
+        return mode;
     }
 
     @SuppressWarnings("unchecked")
@@ -94,6 +113,10 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
         if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
             return (T) Boolean.valueOf(isTcpFastOpenConnect());
         }
+        if (option == DOMAIN_SOCKET_READ_MODE &&
+                ((AbstractKQueueChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return (T) getReadMode();
+        }
         return super.getOption(option);
     }
 
@@ -123,6 +146,9 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
             setTcpNoPush((Boolean) value);
         } else if (option == ChannelOption.TCP_FASTOPEN_CONNECT) {
             setTcpFastOpenConnect((Boolean) value);
+        } else if (option == DOMAIN_SOCKET_READ_MODE &&
+                ((AbstractKQueueChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            setReadMode((DomainSocketReadMode) value);
         } else {
             return super.setOption(option, value);
         }
@@ -133,7 +159,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public int getReceiveBufferSize() {
         try {
-            return ((KQueueSocketChannel) channel).socket.getReceiveBufferSize();
+            return ((AbstractKQueueChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -142,7 +168,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public int getSendBufferSize() {
         try {
-            return ((KQueueSocketChannel) channel).socket.getSendBufferSize();
+            return ((AbstractKQueueChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -151,7 +177,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public int getSoLinger() {
         try {
-            return ((KQueueSocketChannel) channel).socket.getSoLinger();
+            return ((AbstractKQueueChannel) channel).socket.getSoLinger();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -160,7 +186,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public int getTrafficClass() {
         try {
-            return ((KQueueSocketChannel) channel).socket.getTrafficClass();
+            return ((AbstractKQueueChannel) channel).socket.getTrafficClass();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -169,7 +195,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public boolean isKeepAlive() {
         try {
-            return ((KQueueSocketChannel) channel).socket.isKeepAlive();
+            return ((AbstractKQueueChannel) channel).socket.isKeepAlive();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -178,7 +204,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public boolean isReuseAddress() {
         try {
-            return ((KQueueSocketChannel) channel).socket.isReuseAddress();
+            return ((AbstractKQueueChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -187,7 +213,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public boolean isTcpNoDelay() {
         try {
-            return ((KQueueSocketChannel) channel).socket.isTcpNoDelay();
+            return ((AbstractKQueueChannel) channel).socket.isTcpNoDelay();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -195,7 +221,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
 
     public int getSndLowAt() {
         try {
-            return ((KQueueSocketChannel) channel).socket.getSndLowAt();
+            return ((AbstractKQueueChannel) channel).socket.getSndLowAt();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -203,7 +229,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
 
     public void setSndLowAt(int sndLowAt)  {
         try {
-            ((KQueueSocketChannel) channel).socket.setSndLowAt(sndLowAt);
+            ((AbstractKQueueChannel) channel).socket.setSndLowAt(sndLowAt);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -211,7 +237,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
 
     public boolean isTcpNoPush() {
         try {
-            return ((KQueueSocketChannel) channel).socket.isTcpNoPush();
+            return ((AbstractKQueueChannel) channel).socket.isTcpNoPush();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -219,7 +245,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
 
     public void setTcpNoPush(boolean tcpNoPush)  {
         try {
-            ((KQueueSocketChannel) channel).socket.setTcpNoPush(tcpNoPush);
+            ((AbstractKQueueChannel) channel).socket.setTcpNoPush(tcpNoPush);
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -228,7 +254,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public KQueueSocketChannelConfig setKeepAlive(boolean keepAlive) {
         try {
-            ((KQueueSocketChannel) channel).socket.setKeepAlive(keepAlive);
+            ((AbstractKQueueChannel) channel).socket.setKeepAlive(keepAlive);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -238,7 +264,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public KQueueSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
-            ((KQueueSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
+            ((AbstractKQueueChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -248,7 +274,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public KQueueSocketChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
-            ((KQueueSocketChannel) channel).socket.setReuseAddress(reuseAddress);
+            ((AbstractKQueueChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -258,7 +284,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public KQueueSocketChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
-            ((KQueueSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
+            ((AbstractKQueueChannel) channel).socket.setSendBufferSize(sendBufferSize);
             calculateMaxBytesPerGatheringWrite();
             return this;
         } catch (IOException e) {
@@ -269,7 +295,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public KQueueSocketChannelConfig setSoLinger(int soLinger) {
         try {
-            ((KQueueSocketChannel) channel).socket.setSoLinger(soLinger);
+            ((AbstractKQueueChannel) channel).socket.setSoLinger(soLinger);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -279,7 +305,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public KQueueSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
         try {
-            ((KQueueSocketChannel) channel).socket.setTcpNoDelay(tcpNoDelay);
+            ((AbstractKQueueChannel) channel).socket.setTcpNoDelay(tcpNoDelay);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -289,7 +315,7 @@ public final class KQueueSocketChannelConfig extends KQueueChannelConfig impleme
     @Override
     public KQueueSocketChannelConfig setTrafficClass(int trafficClass) {
         try {
-            ((KQueueSocketChannel) channel).socket.setTrafficClass(trafficClass);
+            ((AbstractKQueueChannel) channel).socket.setTrafficClass(trafficClass);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);

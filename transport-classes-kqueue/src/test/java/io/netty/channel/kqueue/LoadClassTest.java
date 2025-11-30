@@ -31,10 +31,6 @@ public class LoadClassTest {
         classes.add(KQueueServerSocketChannel.class);
         classes.add(KQueueDatagramChannel.class);
 
-        classes.add(KQueueDomainSocketChannel.class);
-        classes.add(KQueueServerDomainSocketChannel.class);
-        classes.add(KQueueDomainDatagramChannel.class);
-
         classes.add(KQueueIoHandler.class);
 
         return classes.toArray(new Class<?>[0]);

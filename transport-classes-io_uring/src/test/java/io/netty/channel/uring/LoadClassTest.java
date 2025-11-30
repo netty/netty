@@ -38,9 +38,6 @@ public class LoadClassTest {
         classes.add(IoUringServerSocketChannel.class);
         classes.add(IoUringDatagramChannel.class);
 
-        classes.add(IoUringDomainSocketChannel.class);
-        classes.add(IoUringServerDomainSocketChannel.class);
-
         classes.add(IoUringIoHandler.class);
 
         return classes.toArray(new Class<?>[0]);

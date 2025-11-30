@@ -22,13 +22,23 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.ServerSocketChannelConfig;
+import io.netty.util.NetUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Map;
 
-public final class EpollServerSocketChannelConfig extends EpollServerChannelConfig
+import static io.netty.channel.ChannelOption.SO_BACKLOG;
+import static io.netty.channel.ChannelOption.SO_RCVBUF;
+import static io.netty.channel.ChannelOption.SO_REUSEADDR;
+import static io.netty.channel.ChannelOption.TCP_FASTOPEN;
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
+
+final class EpollServerSocketChannelConfig extends EpollChannelConfig
         implements ServerSocketChannelConfig {
+
+    private volatile int backlog = NetUtil.SOMAXCONN;
+    private volatile int pendingFastOpenRequestsThreshold;
 
     EpollServerSocketChannelConfig(EpollServerSocketChannel channel) {
         super(channel);
@@ -41,13 +51,26 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(super.getOptions(), EpollChannelOption.SO_REUSEPORT, EpollChannelOption.IP_FREEBIND,
+        return getOptions(super.getOptions(), SO_RCVBUF, SO_REUSEADDR, SO_BACKLOG, EpollChannelOption.TCP_FASTOPEN,
+                EpollChannelOption.SO_REUSEPORT, EpollChannelOption.IP_FREEBIND,
             EpollChannelOption.IP_TRANSPARENT, EpollChannelOption.TCP_DEFER_ACCEPT);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
+        if (option == SO_RCVBUF) {
+            return (T) Integer.valueOf(getReceiveBufferSize());
+        }
+        if (option == SO_REUSEADDR) {
+            return (T) Boolean.valueOf(isReuseAddress());
+        }
+        if (option == SO_BACKLOG) {
+            return (T) Integer.valueOf(getBacklog());
+        }
+        if (option == TCP_FASTOPEN) {
+            return (T) Integer.valueOf(getTcpFastopen());
+        }
         if (option == EpollChannelOption.SO_REUSEPORT) {
             return (T) Boolean.valueOf(isReusePort());
         }
@@ -79,6 +102,14 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
             setTcpMd5Sig(m);
         } else if (option == EpollChannelOption.TCP_DEFER_ACCEPT) {
             setTcpDeferAccept((Integer) value);
+        } else if (option == SO_RCVBUF) {
+            setReceiveBufferSize((Integer) value);
+        } else if (option == SO_REUSEADDR) {
+            setReuseAddress((Boolean) value);
+        } else if (option == SO_BACKLOG) {
+            setBacklog((Integer) value);
+        } else if (option == TCP_FASTOPEN) {
+            setTcpFastopen((Integer) value);
         } else {
             return super.setOption(option, value);
         }
@@ -87,25 +118,79 @@ public final class EpollServerSocketChannelConfig extends EpollServerChannelConf
     }
 
     @Override
+    public boolean isReuseAddress() {
+        try {
+            return ((AbstractEpollChannel) channel).socket.isReuseAddress();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
     public EpollServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
-        super.setReuseAddress(reuseAddress);
-        return this;
+        try {
+            ((AbstractEpollChannel) channel).socket.setReuseAddress(reuseAddress);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    public int getReceiveBufferSize() {
+        try {
+            return ((AbstractEpollChannel) channel).socket.getReceiveBufferSize();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 
     @Override
     public EpollServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
-        super.setReceiveBufferSize(receiveBufferSize);
+        try {
+            ((AbstractEpollChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    @Override
+    public ServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
         return this;
     }
 
     @Override
-    public EpollServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
-        return this;
+    public int getBacklog() {
+        return backlog;
     }
 
     @Override
     public EpollServerSocketChannelConfig setBacklog(int backlog) {
-        super.setBacklog(backlog);
+        checkPositiveOrZero(backlog, "backlog");
+        this.backlog = backlog;
+        return this;
+    }
+
+    /**
+     * Returns threshold value of number of pending for fast open connect.
+     *
+     * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
+     */
+    public int getTcpFastopen() {
+        return pendingFastOpenRequestsThreshold;
+    }
+
+    /**
+     * Enables tcpFastOpen on the server channel. If the underlying os doesn't support TCP_FASTOPEN setting this has no
+     * effect. This has to be set before doing listen on the socket otherwise this takes no effect.
+     *
+     * @param pendingFastOpenRequestsThreshold number of requests to be pending for fastopen at a given point in time
+     * for security.
+     *
+     * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
+     */
+    public EpollServerSocketChannelConfig setTcpFastopen(int pendingFastOpenRequestsThreshold) {
+        this.pendingFastOpenRequestsThreshold = checkPositiveOrZero(pendingFastOpenRequestsThreshold,
+                "pendingFastOpenRequestsThreshold");
         return this;
     }
 

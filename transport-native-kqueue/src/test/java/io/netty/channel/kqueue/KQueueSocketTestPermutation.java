@@ -181,7 +181,8 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                     @Override
                     public ServerBootstrap newInstance() {
                         return new ServerBootstrap().group(KQUEUE_GROUP)
-                                .channel(KQueueServerDomainSocketChannel.class);
+                                .channelFactory((e, c) ->
+                                        new KQueueServerSocketChannel(e, c, SocketProtocolFamily.UNIX));
                     }
                 }
         );
@@ -192,7 +193,8 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(KQUEUE_GROUP).channel(KQueueDomainSocketChannel.class);
+                        return new Bootstrap().group(KQUEUE_GROUP).channelFactory(
+                                e -> new KQueueSocketChannel(e, SocketProtocolFamily.UNIX));
                     }
                 }
         );
@@ -219,7 +221,8 @@ class KQueueSocketTestPermutation extends SocketTestPermutation {
                 new BootstrapFactory<Bootstrap>() {
                     @Override
                     public Bootstrap newInstance() {
-                        return new Bootstrap().group(KQUEUE_GROUP).channel(KQueueDomainDatagramChannel.class);
+                        return new Bootstrap().group(KQUEUE_GROUP).channelFactory(
+                                e -> new KQueueDatagramChannel(e, SocketProtocolFamily.UNIX));
                     }
                 }
         );

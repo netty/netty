@@ -33,10 +33,13 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.SocketProtocolFamily;
+import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 
 import java.io.IOException;
@@ -144,9 +147,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    public abstract EpollChannelConfig config();
-
-    @Override
     public boolean isActive() {
         return active;
     }
@@ -252,9 +252,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     private static boolean isAllowHalfClosure(ChannelConfig config) {
-        if (config instanceof EpollDomainSocketChannelConfig) {
-            return ((EpollDomainSocketChannelConfig) config).isAllowHalfClosure();
-        }
         return config instanceof SocketChannelConfig &&
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
@@ -388,7 +385,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
      * Write bytes to the socket, with or without a remote address.
      * Used for datagram and TCP client fast open writes.
      */
-    final long doWriteOrSendBytes(ByteBuf data, InetSocketAddress remoteAddress, boolean fastOpen)
+    final long doWriteOrSendBytes(ByteBuf data, SocketAddress remoteAddress, boolean fastOpen)
             throws IOException {
         assert !(fastOpen && remoteAddress == null) : "fastOpen requires a remote address";
         if (data.hasMemoryAddress()) {
@@ -396,8 +393,13 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             if (remoteAddress == null) {
                 return socket.sendAddress(memoryAddress, data.readerIndex(), data.writerIndex());
             }
+            if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+                return socket.sendToAddressDomainSocket(memoryAddress, data.readerIndex(), data.writerIndex(),
+                        ((DomainSocketAddress) remoteAddress).path().getBytes(CharsetUtil.UTF_8));
+            }
+            InetSocketAddress address = (InetSocketAddress) remoteAddress;
             return socket.sendToAddress(memoryAddress, data.readerIndex(), data.writerIndex(),
-                    remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
+                    address.getAddress(), address.getPort(), fastOpen);
         }
 
         if (data.nioBufferCount() > 1) {
@@ -409,16 +411,26 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             if (remoteAddress == null) {
                 return socket.writevAddresses(array.memoryAddress(0), cnt);
             }
+            if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+                return socket.sendToAddressesDomainSocket(array.memoryAddress(0), cnt,
+                        ((DomainSocketAddress) remoteAddress).path().getBytes(CharsetUtil.UTF_8));
+            }
+            InetSocketAddress address = (InetSocketAddress) remoteAddress;
             return socket.sendToAddresses(array.memoryAddress(0), cnt,
-                    remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
+                    address.getAddress(), address.getPort(), fastOpen);
         }
 
         ByteBuffer nioData = data.internalNioBuffer(data.readerIndex(), data.readableBytes());
         if (remoteAddress == null) {
             return socket.send(nioData, nioData.position(), nioData.limit());
         }
+        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return socket.sendToDomainSocket(nioData, nioData.position(), nioData.limit(),
+                    ((DomainSocketAddress) remoteAddress).path().getBytes(CharsetUtil.UTF_8));
+        }
+        InetSocketAddress address = (InetSocketAddress) remoteAddress;
         return socket.sendTo(nioData, nioData.position(), nioData.limit(),
-                remoteAddress.getAddress(), remoteAddress.getPort(), fastOpen);
+                address.getAddress(), address.getPort(), fastOpen);
     }
 
     @Override
@@ -658,7 +670,10 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         if (socket.finishConnect()) {
             clearFlag(Native.EPOLLOUT);
             if (requestedRemoteAddress instanceof InetSocketAddress) {
-                remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+                remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress,
+                        (InetSocketAddress) socket.remoteAddress());
+            } else {
+                remote = requestedRemoteAddress;
             }
             requestedRemoteAddress = null;
             active = true;
@@ -712,7 +727,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         boolean connected = doConnect0(remoteAddress);
         if (connected) {
             remote = remoteSocketAddr == null ?
-                    remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
+                    remoteAddress : computeRemoteAddr(remoteSocketAddr, (InetSocketAddress) socket.remoteAddress());
             active = true;
         }
         // We always need to set the localAddress even if not connected yet as the bind already took place.

@@ -74,8 +74,8 @@ public class KQueueSocketChannelConfigTest {
         final int expected = Math.min(BSD_SND_LOW_AT_MAX, Math.abs(rand.nextInt()));
         final int actual;
         try {
-            ch.config().setSndLowAt(expected);
-            actual = ch.config().getSndLowAt();
+            ch.config().setOption(KQueueChannelOption.SO_SNDLOWAT, expected);
+            actual = ch.config().getOption(KQueueChannelOption.SO_SNDLOWAT);
         } catch (RuntimeException e) {
             throw new TestAbortedException("assumeNoException", e);
         }
@@ -85,7 +85,7 @@ public class KQueueSocketChannelConfigTest {
     @Test
     public void testInvalidHighSndLowAt() {
         try {
-            ch.config().setSndLowAt(Integer.MIN_VALUE);
+            ch.config().setOption(KQueueChannelOption.SO_SNDLOWAT, Integer.MIN_VALUE);
         } catch (ChannelException e) {
             return;
         } catch (RuntimeException e) {
@@ -96,10 +96,10 @@ public class KQueueSocketChannelConfigTest {
 
     @Test
     public void testTcpNoPush() {
-        ch.config().setTcpNoPush(false);
-        assertFalse(ch.config().isTcpNoPush());
-        ch.config().setTcpNoPush(true);
-        assertTrue(ch.config().isTcpNoPush());
+        ch.config().setOption(KQueueChannelOption.TCP_NOPUSH, false);
+        assertFalse(ch.config().getOption(KQueueChannelOption.TCP_NOPUSH));
+        ch.config().setOption(KQueueChannelOption.TCP_NOPUSH, true);
+        assertTrue(ch.config().getOption(KQueueChannelOption.TCP_NOPUSH));
     }
 
     @Test
