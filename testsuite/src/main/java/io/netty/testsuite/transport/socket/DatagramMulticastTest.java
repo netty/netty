@@ -100,7 +100,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
             assertEquals(iface, sc.config().getNetworkInterface());
             assertInterfaceAddress(iface, sc.config().getInterface());
 
-            InetSocketAddress addr = sc.localAddress();
+            InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
             cb.localAddress(addr.getPort());
             clientFuture = cb.bind().await();
         } while (!clientFuture.isSuccess() && --attempts > 0);
@@ -108,7 +108,8 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         assertEquals(iface, cc.config().getNetworkInterface());
         assertInterfaceAddress(iface, cc.config().getInterface());
 
-        InetSocketAddress groupAddress = SocketUtils.socketAddress(groupAddress(), sc.localAddress().getPort());
+        InetSocketAddress groupAddress = SocketUtils.socketAddress(groupAddress(),
+                ((InetSocketAddress) sc.localAddress()).getPort());
 
         cc.joinGroup(groupAddress, iface).sync();
 

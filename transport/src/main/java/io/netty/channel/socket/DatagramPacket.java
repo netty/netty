@@ -19,18 +19,18 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.DefaultAddressedEnvelope;
 
-import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 
 /**
  * The message container that is used for {@link DatagramChannel} to communicate with the remote peer.
  */
 public class DatagramPacket
-        extends DefaultAddressedEnvelope<ByteBuf, InetSocketAddress> implements ByteBufHolder {
+        extends DefaultAddressedEnvelope<ByteBuf, SocketAddress> implements ByteBufHolder {
 
     /**
      * Create a new instance with the specified packet {@code data} and {@code recipient} address.
      */
-    public DatagramPacket(ByteBuf data, InetSocketAddress recipient) {
+    public DatagramPacket(ByteBuf data, SocketAddress recipient) {
         super(data, recipient);
     }
 
@@ -38,7 +38,7 @@ public class DatagramPacket
      * Create a new instance with the specified packet {@code data}, {@code recipient} address, and {@code sender}
      * address.
      */
-    public DatagramPacket(ByteBuf data, InetSocketAddress recipient, InetSocketAddress sender) {
+    public DatagramPacket(ByteBuf data, SocketAddress recipient, SocketAddress sender) {
         super(data, recipient, sender);
     }
 

@@ -77,16 +77,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     }
 
     @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
     @SuppressWarnings("deprecation")
     public boolean isActive() {
         return socket.isOpen() && (config.getActiveOnOpen() && isRegistered() || active);
@@ -107,7 +97,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         try {
             NetworkInterface iface = config().getNetworkInterface();
             if (iface == null) {
-                iface = NetworkInterface.getByInetAddress(localAddress().getAddress());
+                iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
             }
             return joinGroup(multicastAddress, iface, null, promise);
         } catch (SocketException e) {
@@ -156,7 +146,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise promise) {
         try {
             return leaveGroup(
-                    multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
+                    multicastAddress, NetworkInterface.getByInetAddress(
+                            ((InetSocketAddress) localAddress()).getAddress()), null, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
@@ -223,7 +214,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         try {
             return block(
                     multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
+                    NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress()),
                     sourceToBlock, promise);
         } catch (Throwable e) {
             promise.setFailure(e);

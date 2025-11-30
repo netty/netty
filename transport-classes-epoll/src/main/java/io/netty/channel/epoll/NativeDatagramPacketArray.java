@@ -129,7 +129,8 @@ final class NativeDatagramPacketArray {
                         segmentSize = seg;
                     }
                 }
-                added = add0(buf, buf.readerIndex(), buf.readableBytes(), segmentSize, packet.recipient());
+                added = add0(buf, buf.readerIndex(), buf.readableBytes(), segmentSize,
+                        (InetSocketAddress) packet.recipient());
             } else if (msg instanceof ByteBuf && connected) {
                 ByteBuf buf = (ByteBuf) msg;
                 added = add0(buf, buf.readerIndex(), buf.readableBytes(), 0, null);

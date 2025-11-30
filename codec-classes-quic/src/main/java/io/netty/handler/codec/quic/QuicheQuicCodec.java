@@ -183,12 +183,13 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
                 ByteBuf direct = ctx.alloc().directBuffer(buffer.readableBytes());
                 try {
                     direct.writeBytes(buffer, buffer.readerIndex(), buffer.readableBytes());
-                    handleQuicPacket(packet.sender(), packet.recipient(), direct);
+                    handleQuicPacket((InetSocketAddress) packet.sender(),
+                            (InetSocketAddress) packet.recipient(), direct);
                 } finally {
                     direct.release();
                 }
             } else {
-                handleQuicPacket(packet.sender(), packet.recipient(), buffer);
+                handleQuicPacket((InetSocketAddress) packet.sender(), (InetSocketAddress) packet.recipient(), buffer);
             }
         } finally {
             packet.release();

@@ -63,6 +63,7 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
     }
 
     protected DnsResponse decodeResponse(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
-        return responseDecoder.decode(packet.sender(), packet.recipient(), packet.content());
+        return responseDecoder.decode((InetSocketAddress) packet.sender(),
+                (InetSocketAddress) packet.recipient(), packet.content());
     }
 }

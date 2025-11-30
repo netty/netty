@@ -127,16 +127,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    public InetSocketAddress remoteAddress() {
-        return (InetSocketAddress) super.remoteAddress();
-    }
-
-    @Override
-    public InetSocketAddress localAddress() {
-        return (InetSocketAddress) super.localAddress();
-    }
-
-    @Override
     public ChannelMetadata metadata() {
         return METADATA;
     }
@@ -161,7 +151,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         try {
             NetworkInterface iface = config().getNetworkInterface();
             if (iface == null) {
-                iface = NetworkInterface.getByInetAddress(localAddress().getAddress());
+                iface = NetworkInterface.getByInetAddress(
+                        ((InetSocketAddress) localAddress()).getAddress());
             }
             return joinGroup(multicastAddress, iface, null, promise);
         } catch (IOException e) {
@@ -232,7 +223,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise promise) {
         try {
             return leaveGroup(
-                    multicastAddress, NetworkInterface.getByInetAddress(localAddress().getAddress()), null, promise);
+                    multicastAddress, NetworkInterface.getByInetAddress(
+                            ((InetSocketAddress) localAddress()).getAddress()), null, promise);
         } catch (IOException e) {
             promise.setFailure(e);
         }
@@ -321,7 +313,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         try {
             return block(
                     multicastAddress,
-                    NetworkInterface.getByInetAddress(localAddress().getAddress()),
+                    NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress()),
                     sourceToBlock, promise);
         } catch (Throwable e) {
             promise.setFailure(e);
@@ -667,8 +659,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             io.netty.channel.unix.SegmentedDatagramPacket segmentedDatagramPacket =
                     (io.netty.channel.unix.SegmentedDatagramPacket) packet;
             ByteBuf content = segmentedDatagramPacket.content();
-            InetSocketAddress recipient = segmentedDatagramPacket.recipient();
-            InetSocketAddress sender = segmentedDatagramPacket.sender();
+            InetSocketAddress recipient = (InetSocketAddress) segmentedDatagramPacket.recipient();
+            InetSocketAddress sender = (InetSocketAddress) segmentedDatagramPacket.sender();
             int segmentSize = segmentedDatagramPacket.segmentSize();
             do {
                 out.add(new DatagramPacket(content.readRetainedSlice(Math.min(content.readableBytes(),
@@ -729,7 +721,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 return false;
             }
             byteBuf.writerIndex(bytesReceived);
-            InetSocketAddress local = localAddress();
+            InetSocketAddress local = (InetSocketAddress) localAddress();
             DatagramPacket packet = msg.newDatagramPacket(byteBuf, local);
             if (!(packet instanceof io.netty.channel.unix.SegmentedDatagramPacket)) {
                 processPacket(pipeline(), allocHandle, bytesReceived, packet);
@@ -772,7 +764,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 return false;
             }
 
-            InetSocketAddress local = localAddress();
+            InetSocketAddress local = (InetSocketAddress) localAddress();
 
             // Set the writerIndex too the maximum number of bytes we might have read.
             int bytesReceived = received * datagramSize;

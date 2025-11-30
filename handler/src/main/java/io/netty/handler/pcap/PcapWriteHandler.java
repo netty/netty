@@ -485,8 +485,8 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
                 }
 
                 DatagramPacket datagramPacket = ((DatagramPacket) msg).duplicate();
-                InetSocketAddress srcAddr = datagramPacket.sender();
-                InetSocketAddress dstAddr = datagramPacket.recipient();
+                InetSocketAddress srcAddr = (InetSocketAddress) datagramPacket.sender();
+                InetSocketAddress dstAddr = (InetSocketAddress) datagramPacket.recipient();
 
                 // If `datagramPacket.sender()` is `null` then DatagramPacket is initialized
                 // `sender` (local) address. In this case, we'll get source address from Channel.
