@@ -35,7 +35,6 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
@@ -520,96 +519,124 @@ public class CorsHandlerTest {
 
     @Test
     public void preflightEmptyLastDiscarded() {
-        CorsConfig config = forOrigin("http://allowed")
-                .build();
-        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config), new CaptureHandler());
+        CorsConfig config = forOrigin("http://allowed").build();
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
+
         FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/test");
         preflight.headers().set(ORIGIN, "http://allowed");
         preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
 
         assertFalse(ch.writeInbound(preflight));
-        assertNotNull(ch.readOutbound()); // preflight response
+
+        Object outbound = ch.readOutbound();
+        assertNotNull(outbound); // preflight response
+        ReferenceCountUtil.release(outbound);
 
         LastHttpContent lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
         assertFalse(ch.writeInbound(lastHttpContent));
-        CaptureHandler cap = ch.pipeline().get(CaptureHandler.class);
-        assertTrue(cap.messages.isEmpty(), "Should have been discarded");
+        ReferenceCountUtil.release(lastHttpContent); // safe release
+
+        // Nothing should have been forwarded
+        assertNull(ch.readInbound());
+
         assertFalse(ch.finish());
     }
 
     @Test
     public void preflightSecondEmptyLastForwardedAfterFirstDiscard() {
         CorsConfig config = forOrigin("http://allowed").build();
-        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config), new CaptureHandler());
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
+
         FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/test");
         preflight.headers().set(ORIGIN, "http://allowed");
         preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
 
         assertFalse(ch.writeInbound(preflight));
-        assertNotNull(ch.readOutbound());
+        ReferenceCountUtil.release(ch.readOutbound());
 
-        assertFalse(ch.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
-        assertFalse(ch.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        LastHttpContent first = LastHttpContent.EMPTY_LAST_CONTENT;
+        LastHttpContent second = LastHttpContent.EMPTY_LAST_CONTENT;
 
-        CaptureHandler cap = ch.pipeline().get(CaptureHandler.class);
-        assertTrue(cap.messages.isEmpty(), "Should have been discarded");
+        assertFalse(ch.writeInbound(first));
+        ReferenceCountUtil.release(first);
+
+        // second one should still be discarded because preflight sets discardNextEmptyLast only for next content
+        assertFalse(ch.writeInbound(second));
+        ReferenceCountUtil.release(second);
+
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
     @Test
     public void preflightNonEmptyLastForwarded() {
         CorsConfig config = forOrigin("http://allowed").build();
-        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config), new CaptureHandler());
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
+
         FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/x");
         preflight.headers().set(ORIGIN, "http://allowed");
         preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
 
         assertFalse(ch.writeInbound(preflight));
-        assertNotNull(ch.readOutbound());
+        ReferenceCountUtil.release(ch.readOutbound());
 
         LastHttpContent nonEmpty = new DefaultLastHttpContent(Unpooled.copiedBuffer("x", CharsetUtil.UTF_8));
         assertFalse(ch.writeInbound(nonEmpty));
-        CaptureHandler cap = ch.pipeline().get(CaptureHandler.class);
-        assertTrue(cap.messages.isEmpty(), "Should have been discarded");
+
+        Object inbound = ch.readInbound();
+        assertNull(inbound);
+
         assertFalse(ch.finish());
     }
 
     @Test
     public void testNormalRequestForwarded() {
         CorsConfig config = forOrigin("http://allowed").build();
-        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config), new CaptureHandler());
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
 
         FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, GET, "/test");
         req.headers().set(ORIGIN, "http://allowed");
 
-        assertFalse(ch.writeInbound(req));
+        assertTrue(ch.writeInbound(req));
 
         LastHttpContent last = LastHttpContent.EMPTY_LAST_CONTENT;
-        assertFalse(ch.writeInbound(last));
+        assertTrue(ch.writeInbound(last));
 
-        CaptureHandler cap = ch.pipeline().get(CaptureHandler.class);
-        assertEquals(2, cap.messages.size());
+        Object firstInbound = ch.readInbound();
+        Object secondInbound = ch.readInbound();
 
+        assertNotNull(firstInbound);
+        ReferenceCountUtil.release(firstInbound);
+
+        assertNotNull(secondInbound);
+        ReferenceCountUtil.release(secondInbound);
+
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
     @Test
     public void testContentForwardedWhenNoDiscard() {
         CorsConfig config = forOrigin("http://allowed").build();
-        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config), new CaptureHandler());
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
 
-        // Normal request
         FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, GET, "/test");
         req.headers().set(ORIGIN, "http://allowed");
-
-        ch.writeInbound(req);
+        assertTrue(ch.writeInbound(req));
 
         HttpContent content = new DefaultHttpContent(Unpooled.copiedBuffer("test message", CharsetUtil.UTF_8));
-        assertFalse(ch.writeInbound(content));
+        assertTrue(ch.writeInbound(content));
 
-        CaptureHandler cap = ch.pipeline().get(CaptureHandler.class);
-        assertEquals(2, cap.messages.size());
+        Object first = ch.readInbound();
+        Object second = ch.readInbound();
 
+        assertNotNull(first);
+        ReferenceCountUtil.release(first);
+
+        assertNotNull(second);
+        ReferenceCountUtil.release(second);
+
+        assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
 
@@ -670,14 +697,6 @@ public class CorsHandlerTest {
         }
 
         return httpRequest;
-    }
-
-    private static class CaptureHandler extends SimpleChannelInboundHandler<Object> {
-        final List<Object> messages = new ArrayList<>();
-        @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Object msg) {
-            messages.add(msg);
-        }
     }
 
     private static FullHttpRequest createHttpRequest(HttpMethod method) {
