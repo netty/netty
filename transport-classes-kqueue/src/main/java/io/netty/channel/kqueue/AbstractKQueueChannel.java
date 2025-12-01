@@ -389,6 +389,11 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
+    @Override
+    protected boolean isWriteFlushedScheduled() {
+        return writeFilterEnabled;
+    }
+
     @UnstableApi
     public abstract class AbstractKQueueUnsafe extends AbstractUnsafe implements KQueueIoHandle {
         boolean readPending;
@@ -470,8 +475,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 // pending connect which is now complete so handle it.
                 finishConnect();
             } else if (!socket.isOutputShutdown()) {
-                // directly call super.flush0() to force a flush now
-                super.flush0();
+                // directly call writeFlushedNow() to force a flush now
+                writeFlushedNow();
             }
         }
 
@@ -541,16 +546,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                         (RecvByteBufAllocator.ExtendedHandle) super.recvBufAllocHandle());
             }
             return allocHandle;
-        }
-
-        @Override
-        protected final void flush0() {
-            // Flush immediately only when there's no pending flush.
-            // If there's a pending flush operation, event loop will call forceFlush() later,
-            // and thus there's no need to call it now.
-            if (!writeFilterEnabled) {
-                super.flush0();
-            }
         }
 
         protected final void clearReadFilter0() {
