@@ -46,7 +46,6 @@ public final class CorsConfig {
     private final Map<CharSequence, Callable<?>> preflightHeaders;
     private final boolean shortCircuit;
     private final boolean allowPrivateNetwork;
-    private final boolean discardNextEmptyLast;
 
     CorsConfig(final CorsConfigBuilder builder) {
         origins = new LinkedHashSet<String>(builder.origins);
@@ -61,7 +60,6 @@ public final class CorsConfig {
         preflightHeaders = builder.preflightHeaders;
         shortCircuit = builder.shortCircuit;
         allowPrivateNetwork = builder.allowPrivateNetwork;
-        discardNextEmptyLast = builder.discardNextEmptyLast;
     }
 
     /**
@@ -125,25 +123,6 @@ public final class CorsConfig {
      */
     public boolean isPrivateNetworkAllowed() {
         return allowPrivateNetwork;
-    }
-
-    /**
-     * Enables discarding of the next synthetic {@code EmptyLastHttpContent} that follows a handled CORS preflight.
-     * <p>
-     * When {@link io.netty.handler.codec.http.HttpServerCodec} processes an {@code OPTIONS} preflight request,
-     * it emits a synthetic tail object ({@code LastHttpContent.EMPTY_LAST_CONTENT}) after the preflight response.
-     * If this empty tail is propagated downstream, subsequent handlers may only receive the empty content and
-     * lose access to the original {@link io.netty.handler.codec.http.HttpRequest}, which can break request
-     * processing logic.
-     * <p>
-     * By enabling this flag in {@link CorsConfig}, the {@code CorsHandler} can be instructed to consume
-     * (release) the next empty last content without forwarding it via {@code ctx.fireChannelRead(...)},
-     * preventing downstream handlers from seeing an orphaned empty tail.
-     *
-     * @return {@code true} if discard next empty last http content.
-     */
-    public boolean isDiscardNextEmptyLast() {
-        return discardNextEmptyLast;
     }
 
     /**

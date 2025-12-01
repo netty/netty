@@ -102,12 +102,10 @@ public class CorsHandler extends ChannelDuplexHandler {
 
         if (discardNextEmptyLast && msg instanceof LastHttpContent) {
             discardNextEmptyLast = false;
-            if (config != null && config.isDiscardNextEmptyLast()) {
-                LastHttpContent last = (LastHttpContent) msg;
-                if (last == LastHttpContent.EMPTY_LAST_CONTENT) {
-                    ReferenceCountUtil.release(last);
-                    return;
-                }
+            LastHttpContent last = (LastHttpContent) msg;
+            if (last == LastHttpContent.EMPTY_LAST_CONTENT) {
+                ReferenceCountUtil.release(last);
+                return;
             }
         }
 

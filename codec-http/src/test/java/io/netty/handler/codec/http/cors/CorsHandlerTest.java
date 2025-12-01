@@ -519,7 +519,6 @@ public class CorsHandlerTest {
     @Test
     public void preflightEmptyLastDiscarded() {
         CorsConfig config = forOrigin("http://allowed")
-                .discardNextEmptyLast()
                 .build();
         EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config), new CaptureHandler());
         FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/test");
@@ -537,61 +536,27 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void preflightEmptyLastForwardedWhenConfigNotEnabled() {
-        CorsConfig config = forOrigin("http://allowed").build(); // no discard
-        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config), new CaptureHandler());
-        FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/test");
-        preflight.headers().set(ORIGIN, "http://allowed");
-        preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
-
-        assertFalse(ch.writeInbound(preflight));
-        assertNotNull(ch.readOutbound());
-
-        assertFalse(ch.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
-        CaptureHandler cap = ch.pipeline().get(CaptureHandler.class);
-        assertEquals(1, cap.messages.size());
-        assertFalse(ch.finish());
-    }
-
-    @Test
     public void preflightSecondEmptyLastForwardedAfterFirstDiscard() {
-        CorsConfig config = forOrigin("http://allowed").discardNextEmptyLast().build();
-        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config), new CaptureHandler());
-        FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/test");
-        preflight.headers().set(ORIGIN, "http://allowed");
-        preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
-
-        assertFalse(ch.writeInbound(preflight));
-        assertNotNull(ch.readOutbound());
-
-        assertFalse(ch.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
-        assertFalse(ch.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
-
-        CaptureHandler cap = ch.pipeline().get(CaptureHandler.class);
-        assertEquals(1, cap.messages.size());
-        assertFalse(ch.finish());
-    }
-
-    @Test
-    public void preflightEmptyLastForwardedWhenConfigNull() {
         CorsConfig config = forOrigin("http://allowed").build();
         EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config), new CaptureHandler());
         FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/test");
-        preflight.headers().set(ORIGIN, "http://example.com");
+        preflight.headers().set(ORIGIN, "http://allowed");
         preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
 
         assertFalse(ch.writeInbound(preflight));
         assertNotNull(ch.readOutbound());
 
         assertFalse(ch.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertFalse(ch.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
+
         CaptureHandler cap = ch.pipeline().get(CaptureHandler.class);
         assertEquals(1, cap.messages.size());
         assertFalse(ch.finish());
     }
 
     @Test
-    public void preflightNonEmptyLastForwardedWhenDiscardEnabled() {
-        CorsConfig config = forOrigin("http://allowed").discardNextEmptyLast().build();
+    public void preflightNonEmptyLastForwarded() {
+        CorsConfig config = forOrigin("http://allowed").build();
         EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config), new CaptureHandler());
         FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/x");
         preflight.headers().set(ORIGIN, "http://allowed");

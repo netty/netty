@@ -78,7 +78,6 @@ public final class CorsConfigBuilder {
     private boolean noPreflightHeaders;
     boolean shortCircuit;
     boolean allowPrivateNetwork;
-    boolean discardNextEmptyLast;
 
     /**
      * Creates a new Builder instance with the origin passed in.
@@ -364,26 +363,6 @@ public final class CorsConfigBuilder {
      */
     public CorsConfigBuilder allowPrivateNetwork() {
         allowPrivateNetwork = true;
-        return this;
-    }
-
-    /**
-     * Enables discarding of the next synthetic {@code EmptyLastHttpContent} that follows a handled CORS preflight.
-     * <p>
-     * When {@link io.netty.handler.codec.http.HttpServerCodec} processes an {@code OPTIONS} preflight request,
-     * it emits a synthetic tail object ({@code LastHttpContent.EMPTY_LAST_CONTENT}) after the preflight response.
-     * If this empty tail is propagated downstream, subsequent handlers may only receive the empty content and
-     * lose access to the original {@link io.netty.handler.codec.http.HttpRequest}, which can break request
-     * processing logic.
-     * <p>
-     * By enabling this flag in {@link CorsConfig}, the {@code CorsHandler} can be instructed to consume
-     * (release) the next empty last content without forwarding it via {@code ctx.fireChannelRead(...)},
-     * preventing downstream handlers from seeing an orphaned empty tail.
-     *
-     * @return {@link CorsConfigBuilder} to support method chaining.
-     */
-    public CorsConfigBuilder discardNextEmptyLast() {
-        discardNextEmptyLast = true;
         return this;
     }
 
