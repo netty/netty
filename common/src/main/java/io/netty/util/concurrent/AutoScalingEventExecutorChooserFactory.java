@@ -20,9 +20,12 @@ import io.netty.util.internal.ObjectUtil;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * A factory that creates auto-scaling {@link EventExecutorChooser} instances.
@@ -90,6 +93,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
     private final int maxRampUpStep;
     private final int maxRampDownStep;
     private final int scalingPatienceCycles;
+    private final int singleRefreshThresholdCount;
 
     /**
      * Creates a new factory for a scaling-enabled {@link EventExecutorChooser}.
@@ -107,7 +111,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
     public AutoScalingEventExecutorChooserFactory(int minThreads, int maxThreads, long utilizationWindow,
                                                   TimeUnit windowUnit, double scaleDownThreshold,
                                                   double scaleUpThreshold, int maxRampUpStep, int maxRampDownStep,
-                                                  int scalingPatienceCycles) {
+                                                  int scalingPatienceCycles, int singleRefreshThresholdCount) {
         minChildren = ObjectUtil.checkPositiveOrZero(minThreads, "minThreads");
         maxChildren = ObjectUtil.checkPositive(maxThreads, "maxThreads");
         if (minThreads > maxThreads) {
@@ -127,6 +131,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
         this.maxRampUpStep = ObjectUtil.checkPositive(maxRampUpStep, "maxRampUpStep");
         this.maxRampDownStep = ObjectUtil.checkPositive(maxRampDownStep, "maxRampDownStep");
         this.scalingPatienceCycles = ObjectUtil.checkPositiveOrZero(scalingPatienceCycles, "scalingPatienceCycles");
+        this.singleRefreshThresholdCount = ObjectUtil.checkPositive(singleRefreshThresholdCount, "singleRefreshThresholdCount");
     }
 
     @Override
@@ -157,6 +162,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
         private final EventExecutorChooser allExecutorsChooser;
         private final AtomicReference<AutoScalingState> state;
         private final List<AutoScalingUtilizationMetric> utilizationMetrics;
+        private final UtilizationMonitor utilizationMonitor;
 
         AutoScalingEventExecutorChooser(EventExecutor[] executors) {
             this.executors = executors;
@@ -165,13 +171,14 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                 metrics.add(new AutoScalingUtilizationMetric(executor));
             }
             utilizationMetrics = Collections.unmodifiableList(metrics);
-            allExecutorsChooser = DefaultEventExecutorChooserFactory.INSTANCE.newChooser(executors);
+            utilizationMonitor = new UtilizationMonitor();
+            allExecutorsChooser = new UtilizationAwareEventExecutorChooser(executors);
 
             AutoScalingState initialState = new AutoScalingState(maxChildren, 0L, executors);
             state = new AtomicReference<>(initialState);
 
             ScheduledFuture<?> utilizationMonitoringTask = GlobalEventExecutor.INSTANCE.scheduleAtFixedRate(
-                    new UtilizationMonitor(), utilizationCheckPeriodNanos, utilizationCheckPeriodNanos,
+                    utilizationMonitor, utilizationCheckPeriodNanos, utilizationCheckPeriodNanos,
                     TimeUnit.NANOSECONDS);
 
             if (executors.length > 0) {
@@ -417,5 +424,75 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                 }
             }
         }
+        private final class UtilizationAwareEventExecutorChooser implements EventExecutorChooser {
+
+            private final EventExecutor[] executors;
+            private volatile List<Integer> awareIds;
+
+            private long lastRefreshTimeNanos = 0;
+            private final AtomicInteger cycleCount = new AtomicInteger();
+            private final AtomicLong idx = new AtomicLong();
+            private final ReentrantLock lock = new ReentrantLock();
+            private final long refreshThresholdCount;
+
+            UtilizationAwareEventExecutorChooser(EventExecutor[] executors ){
+                this.executors = executors;
+                refreshThresholdCount = executors.length * singleRefreshThresholdCount;
+                awareIds = new ArrayList<>();
+            }
+
+            @Override
+            public EventExecutor next() {
+
+                refreshAwareIds();
+                if (cycleCount.getAndIncrement() > refreshThresholdCount) {
+                    return executors[(int) Math.abs(idx.getAndIncrement() % executors.length)];
+                }
+
+                List<Integer> idList = awareIds;
+                int randomIdx = ThreadLocalRandom.current().nextInt(idList.size());
+
+                return executors[idList.get(randomIdx)];
+            }
+
+            private void refreshAwareIds() {
+
+                if (lastRefreshTimeNanos < utilizationMonitor.lastCheckTimeNanos) {
+                    lock.lock();
+                    try{
+                        if (lastRefreshTimeNanos < utilizationMonitor.lastCheckTimeNanos) {
+                            List<Integer> newAwareIds = new ArrayList<>();
+
+                            lastRefreshTimeNanos = utilizationMonitor.lastCheckTimeNanos;
+                            for (int i = 0; i < this.executors.length; i++) {
+                                AutoScalingUtilizationMetric metric = utilizationMetrics.get(i);
+                                if (!(metric.executor instanceof SingleThreadEventExecutor)) {
+                                    newAwareIds.add(i);
+                                    continue;
+                                }
+                                double utilization = metric.utilization();
+                                if (utilization < scaleDownThreshold) {
+                                    scaleRadio(newAwareIds, i, 4);
+                                } else if (utilization > scaleUpThreshold) {
+                                    newAwareIds.add(i);
+                                } else {
+                                    scaleRadio(newAwareIds, i, 2);
+                                }
+                            }
+                            awareIds = Collections.unmodifiableList(newAwareIds);
+                            cycleCount.set(0);
+                        }
+                    }finally {
+                        lock.unlock();
+                    }
+                }
+            }
+            private void scaleRadio(List<Integer> radioList, int index, int scaleNum) {
+                for(int i = 0; i < scaleNum; i++){
+                    radioList.add(index);
+                }
+            }
+        }
     }
+
 }
