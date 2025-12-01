@@ -98,7 +98,6 @@ public enum Http3SettingIdentifier {
                     ))
     );
             
-
     Http3SettingIdentifier(long id) {
         this.id = id;
     }
