@@ -429,7 +429,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
             private final EventExecutor[] executors;
             private volatile List<Integer> awareIds;
 
-            private long lastRefreshTimeNanos = 0L;
+            private long lastRefreshTimeNanos;
             private final AtomicInteger cycleCount = new AtomicInteger();
             private final AtomicLong idx = new AtomicLong();
             private final ReentrantLock lock = new ReentrantLock();
