@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -29,7 +30,6 @@ import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
-import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -60,7 +60,7 @@ public class CorsHandler extends ChannelDuplexHandler {
     private HttpRequest request;
     private final List<CorsConfig> configList;
     private final boolean isShortCircuit;
-    private boolean discardNextEmptyLast;
+    private boolean consumeContent;
 
     /**
      * Creates a new instance with a single {@link CorsConfig}.
@@ -91,22 +91,24 @@ public class CorsHandler extends ChannelDuplexHandler {
             if (isPreflightRequest(request)) {
                 handlePreflight(ctx, request);
                 // Expect an EmptyLastHttpContent next from HttpServerCodec, mark to discard.
-                discardNextEmptyLast = true;
+                consumeContent = true;
                 return;
             }
             if (isShortCircuit && !(origin == null || config != null)) {
                 forbidden(ctx, request);
+                consumeContent = true;
                 return;
             }
+
+            // This request is forwarded, stop discarding
+            consumeContent = false;
+            ctx.fireChannelRead(msg);
+            return;
         }
 
-        if (discardNextEmptyLast && msg instanceof LastHttpContent) {
-            discardNextEmptyLast = false;
-            LastHttpContent last = (LastHttpContent) msg;
-            if (last == LastHttpContent.EMPTY_LAST_CONTENT) {
-                ReferenceCountUtil.release(last);
-                return;
-            }
+        if (consumeContent && (msg instanceof HttpContent)) {
+            ReferenceCountUtil.release(msg);
+            return;
         }
 
         ctx.fireChannelRead(msg);

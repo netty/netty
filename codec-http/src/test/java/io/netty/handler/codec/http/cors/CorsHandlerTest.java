@@ -24,6 +24,8 @@ import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
@@ -550,7 +552,7 @@ public class CorsHandlerTest {
         assertFalse(ch.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
 
         CaptureHandler cap = ch.pipeline().get(CaptureHandler.class);
-        assertEquals(1, cap.messages.size());
+        assertTrue(cap.messages.isEmpty(), "Should have been discarded");
         assertFalse(ch.finish());
     }
 
@@ -568,7 +570,46 @@ public class CorsHandlerTest {
         LastHttpContent nonEmpty = new DefaultLastHttpContent(Unpooled.copiedBuffer("x", CharsetUtil.UTF_8));
         assertFalse(ch.writeInbound(nonEmpty));
         CaptureHandler cap = ch.pipeline().get(CaptureHandler.class);
-        assertEquals(1, cap.messages.size());
+        assertTrue(cap.messages.isEmpty(), "Should have been discarded");
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testNormalRequestForwarded() {
+        CorsConfig config = forOrigin("http://allowed").build();
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config), new CaptureHandler());
+
+        FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, GET, "/test");
+        req.headers().set(ORIGIN, "http://allowed");
+
+        assertFalse(ch.writeInbound(req));
+
+        LastHttpContent last = LastHttpContent.EMPTY_LAST_CONTENT;
+        assertFalse(ch.writeInbound(last));
+
+        CaptureHandler cap = ch.pipeline().get(CaptureHandler.class);
+        assertEquals(2, cap.messages.size());
+
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testContentForwardedWhenNoDiscard() {
+        CorsConfig config = forOrigin("http://allowed").build();
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config), new CaptureHandler());
+
+        // Normal request
+        FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, GET, "/test");
+        req.headers().set(ORIGIN, "http://allowed");
+
+        ch.writeInbound(req);
+
+        HttpContent content = new DefaultHttpContent(Unpooled.copiedBuffer("test message", CharsetUtil.UTF_8));
+        assertFalse(ch.writeInbound(content));
+
+        CaptureHandler cap = ch.pipeline().get(CaptureHandler.class);
+        assertEquals(2, cap.messages.size());
+
         assertFalse(ch.finish());
     }
 
