@@ -560,7 +560,6 @@ public class CorsHandlerTest {
         assertFalse(ch.writeInbound(first));
         ReferenceCountUtil.release(first);
 
-        // second one should still be discarded because preflight sets discardNextEmptyLast only for next content
         assertFalse(ch.writeInbound(second));
         ReferenceCountUtil.release(second);
 
@@ -578,7 +577,9 @@ public class CorsHandlerTest {
         preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
 
         assertFalse(ch.writeInbound(preflight));
-        ReferenceCountUtil.release(ch.readOutbound());
+        Object outbound = ch.releaseOutbound();
+        assertNotNull(outbound);
+        ReferenceCountUtil.release(outbound);
 
         LastHttpContent nonEmpty = new DefaultLastHttpContent(Unpooled.copiedBuffer("x", CharsetUtil.UTF_8));
         assertFalse(ch.writeInbound(nonEmpty));
