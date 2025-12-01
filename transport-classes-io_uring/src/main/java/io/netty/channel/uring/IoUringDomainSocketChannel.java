@@ -41,6 +41,9 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
 
     private final IoUringDomainSocketChannelConfig config;
 
+    private MsgHdrMemory writeMsgHdrMemory;
+    private MsgHdrMemory readMsgHdrMemory;
+
     private volatile DomainSocketAddress local;
     private volatile DomainSocketAddress remote;
 
@@ -92,144 +95,133 @@ public final class IoUringDomainSocketChannel extends AbstractIoUringStreamChann
     }
 
     @Override
-    protected AbstractUringUnsafe newUnsafe() {
-        return new IoUringDomainSocketUnsafe();
-    }
-
-    @Override
     protected boolean allowMultiShotPollIn() {
         // UNIX domain sockets do not support IORING_CQE_F_SOCK_NONEMPTY and POLL_ADD_MULTI is edge-triggered
         // so we should disable it
         return false;
     }
 
-    private final class IoUringDomainSocketUnsafe extends IoUringStreamUnsafe {
-
-        private MsgHdrMemory writeMsgHdrMemory;
-        private MsgHdrMemory readMsgHdrMemory;
-
-        @Override
-        protected int scheduleWriteSingle(Object msg) {
-            if (msg instanceof FileDescriptor) {
-                // we can reuse the same memory for any fd
-                // because we never have more than a single outstanding write.
-                if (writeMsgHdrMemory == null) {
-                    writeMsgHdrMemory = new MsgHdrMemory();
-                }
-                IoRegistration registration = registration();
-                IoUringIoOps ioUringIoOps = prepSendFdIoOps((FileDescriptor) msg, writeMsgHdrMemory);
-                writeId = registration.submit(ioUringIoOps);
-                writeOpCode = Native.IORING_OP_SENDMSG;
-                if (writeId == 0) {
-                    MsgHdrMemory memory = writeMsgHdrMemory;
-                    writeMsgHdrMemory = null;
-                    memory.release();
-                    return 0;
-                }
-                return 1;
-            }
-            return super.scheduleWriteSingle(msg);
-        }
-
-        @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
-            if (op == Native.IORING_OP_SENDMSG) {
-                writeId = 0;
-                writeOpCode = 0;
-                if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                    return true;
-                }
-                try {
-                    int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring sendmsg", res);
-                    if (nativeCallResult >= 0) {
-                        ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
-                        channelOutboundBuffer.remove();
-                    }
-                } catch (Throwable throwable) {
-                   handleWriteError(throwable);
-                }
-                return true;
-            }
-            return super.writeComplete0(op, res, flags, data, outstanding);
-        }
-
-        private IoUringIoOps prepSendFdIoOps(FileDescriptor fileDescriptor, MsgHdrMemory msgHdrMemory) {
-            msgHdrMemory.setScmRightsFd(fileDescriptor.intValue());
-            return IoUringIoOps.newSendmsg(
-                    fd().intValue(), (byte) 0, 0, msgHdrMemory.address(), msgHdrMemory.idx());
-        }
-
-        @Override
-        protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
-            DomainSocketReadMode readMode = config.getReadMode();
-            switch (readMode) {
-                case FILE_DESCRIPTORS:
-                    return scheduleRecvReadFd();
-                case BYTES:
-                    return super.scheduleRead0(first, socketIsEmpty);
-                default:
-                    throw new Error("Unexpected read mode: " + readMode);
-            }
-        }
-
-        private int scheduleRecvReadFd() {
+    @Override
+    protected int scheduleWriteSingle(Object msg) {
+        if (msg instanceof FileDescriptor) {
             // we can reuse the same memory for any fd
-            // because we only submit one outstanding read
-            if (readMsgHdrMemory == null) {
-                readMsgHdrMemory = new MsgHdrMemory();
+            // because we never have more than a single outstanding write.
+            if (writeMsgHdrMemory == null) {
+                writeMsgHdrMemory = new MsgHdrMemory();
             }
-            readMsgHdrMemory.prepRecvReadFd();
             IoRegistration registration = registration();
-            IoUringIoOps ioUringIoOps = IoUringIoOps.newRecvmsg(
-                    fd().intValue(), (byte) 0, 0, readMsgHdrMemory.address(), readMsgHdrMemory.idx());
-            readId = registration.submit(ioUringIoOps);
-            readOpCode = Native.IORING_OP_RECVMSG;
-            if (readId == 0) {
-                MsgHdrMemory memory = readMsgHdrMemory;
-                readMsgHdrMemory = null;
+            IoUringIoOps ioUringIoOps = prepSendFdIoOps((FileDescriptor) msg, writeMsgHdrMemory);
+            writeId = registration.submit(ioUringIoOps);
+            writeOpCode = Native.IORING_OP_SENDMSG;
+            if (writeId == 0) {
+                MsgHdrMemory memory = writeMsgHdrMemory;
+                writeMsgHdrMemory = null;
                 memory.release();
                 return 0;
             }
             return 1;
         }
+        return super.scheduleWriteSingle(msg);
+    }
 
-        @Override
-        protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
-            if (op == Native.IORING_OP_RECVMSG) {
-                readId = 0;
-                if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                    return;
+    @Override
+    boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        if (op == Native.IORING_OP_SENDMSG) {
+            writeId = 0;
+            writeOpCode = 0;
+            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+                return true;
+            }
+            try {
+                int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring sendmsg", res);
+                if (nativeCallResult >= 0) {
+                    ChannelOutboundBuffer channelOutboundBuffer = outboundBuffer();
+                    channelOutboundBuffer.remove();
                 }
-                final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-                final ChannelPipeline pipeline = pipeline();
-                try {
-                    int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring recvmsg", res);
-                    int nativeFd = readMsgHdrMemory.getScmRightsFd();
-                    allocHandle.lastBytesRead(nativeFd);
-                    allocHandle.incMessagesRead(1);
-                    pipeline.fireChannelRead(new FileDescriptor(nativeFd));
-                } catch (Throwable throwable) {
-                    handleReadException(pipeline, null, throwable, false, allocHandle);
-                } finally {
-                    allocHandle.readComplete();
-                    pipeline.fireChannelReadComplete();
-                }
+            } catch (Throwable throwable) {
+               handleWriteError(throwable);
+            }
+            return true;
+        }
+        return super.writeComplete0(op, res, flags, data, outstanding);
+    }
+
+    private IoUringIoOps prepSendFdIoOps(FileDescriptor fileDescriptor, MsgHdrMemory msgHdrMemory) {
+        msgHdrMemory.setScmRightsFd(fileDescriptor.intValue());
+        return IoUringIoOps.newSendmsg(
+                fd().intValue(), (byte) 0, 0, msgHdrMemory.address(), msgHdrMemory.idx());
+    }
+
+    @Override
+    protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
+        DomainSocketReadMode readMode = config.getReadMode();
+        switch (readMode) {
+            case FILE_DESCRIPTORS:
+                return scheduleRecvReadFd();
+            case BYTES:
+                return super.scheduleRead0(first, socketIsEmpty);
+            default:
+                throw new Error("Unexpected read mode: " + readMode);
+        }
+    }
+
+    private int scheduleRecvReadFd() {
+        // we can reuse the same memory for any fd
+        // because we only submit one outstanding read
+        if (readMsgHdrMemory == null) {
+            readMsgHdrMemory = new MsgHdrMemory();
+        }
+        readMsgHdrMemory.prepRecvReadFd();
+        IoRegistration registration = registration();
+        IoUringIoOps ioUringIoOps = IoUringIoOps.newRecvmsg(
+                fd().intValue(), (byte) 0, 0, readMsgHdrMemory.address(), readMsgHdrMemory.idx());
+        readId = registration.submit(ioUringIoOps);
+        readOpCode = Native.IORING_OP_RECVMSG;
+        if (readId == 0) {
+            MsgHdrMemory memory = readMsgHdrMemory;
+            readMsgHdrMemory = null;
+            memory.release();
+            return 0;
+        }
+        return 1;
+    }
+
+    @Override
+    protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
+        if (op == Native.IORING_OP_RECVMSG) {
+            readId = 0;
+            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
                 return;
             }
-            super.readComplete0(op, res, flags, data, outstanding);
+            final IoUringRecvByteAllocatorHandle allocHandle = (IoUringRecvByteAllocatorHandle) recvBufAllocHandle();
+            final ChannelPipeline pipeline = pipeline();
+            try {
+                int nativeCallResult = res >= 0 ? res : Errors.ioResult("io_uring recvmsg", res);
+                int nativeFd = readMsgHdrMemory.getScmRightsFd();
+                allocHandle.lastBytesRead(nativeFd);
+                allocHandle.incMessagesRead(1);
+                pipeline.fireChannelRead(new FileDescriptor(nativeFd));
+            } catch (Throwable throwable) {
+                handleReadException(pipeline, null, throwable, false, allocHandle);
+            } finally {
+                allocHandle.readComplete();
+                pipeline.fireChannelReadComplete();
+            }
+            return;
         }
+        super.readComplete0(op, res, flags, data, outstanding);
+    }
 
-        @Override
-        public void unregistered() {
-            super.unregistered();
-            if (readMsgHdrMemory != null) {
-                readMsgHdrMemory.release();
-                readMsgHdrMemory = null;
-            }
-            if (writeMsgHdrMemory != null) {
-                writeMsgHdrMemory.release();
-                writeMsgHdrMemory = null;
-            }
+    @Override
+    protected void unregistered() {
+        super.unregistered();
+        if (readMsgHdrMemory != null) {
+            readMsgHdrMemory.release();
+            readMsgHdrMemory = null;
+        }
+        if (writeMsgHdrMemory != null) {
+            writeMsgHdrMemory.release();
+            writeMsgHdrMemory = null;
         }
     }
 

@@ -42,7 +42,7 @@ public class SocketCloseForciblyTest extends AbstractSocketTest {
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 SocketChannel childChannel = (SocketChannel) msg;
                 childChannel.config().setSoLinger(0);
-                childChannel.unsafe().close(childChannel.newPromise());
+                childChannel.close(childChannel.newPromise());
             }
         }).childHandler(new ChannelInboundHandlerAdapter());
 

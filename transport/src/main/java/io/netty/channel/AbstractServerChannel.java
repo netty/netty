@@ -73,11 +73,6 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new AbstractUnsafe();
-    }
-
-    @Override
     protected void doWrite(ChannelOutboundBuffer in)  {
         throw new UnsupportedOperationException();
     }

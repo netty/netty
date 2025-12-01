@@ -82,6 +82,9 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     private final MsgHdrMemoryArray sendmsgHdrs = new MsgHdrMemoryArray((short) 256);
     private final int[] sendmsgResArray = new int[sendmsgHdrs.capacity()];
 
+    private final WriteProcessor writeProcessor = new WriteProcessor();
+    private ByteBuf readBuffer;
+
     /**
      * Create a new instance which selects the {@link SocketProtocolFamily} to use depending
      * on the Operation Systems default which will be chosen.
@@ -287,11 +290,6 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new IoUringDatagramChannelUnsafe();
-    }
-
-    @Override
     protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
         if (localAddress instanceof InetSocketAddress) {
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
@@ -384,276 +382,270 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }));
     }
 
-    private final class IoUringDatagramChannelUnsafe extends AbstractUringUnsafe {
-        private final WriteProcessor writeProcessor = new WriteProcessor();
-
-        private ByteBuf readBuffer;
-
-        private final class WriteProcessor implements ChannelOutboundBuffer.MessageProcessor {
-            private int written;
-            @Override
-            public boolean processMessage(Object msg) {
-                if (scheduleWrite(msg, written == 0)) {
-                    written++;
-                    return true;
-                }
-                return false;
+    private final class WriteProcessor implements ChannelOutboundBuffer.MessageProcessor {
+        private int written;
+        @Override
+        public boolean processMessage(Object msg) {
+            if (scheduleWrite(msg, written == 0)) {
+                written++;
+                return true;
             }
-
-            int write(ChannelOutboundBuffer in) {
-                written = 0;
-                try {
-                    in.forEachFlushedMessage(this);
-                } catch (Exception e) {
-                    // This should never happen as our processMessage(...) never throws.
-                    throw new IllegalStateException(e);
-                }
-                return written;
-            }
+            return false;
         }
 
-        @Override
-        protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
-            assert outstanding != -1 : "multi-shot not implemented yet";
-
-            final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            final ChannelPipeline pipeline = pipeline();
-            ByteBuf byteBuf = this.readBuffer;
-            assert byteBuf != null;
+        int write(ChannelOutboundBuffer in) {
+            written = 0;
             try {
-                recvmsgComplete(pipeline, allocHandle, byteBuf, res, flags, data, outstanding);
-            } catch (Throwable t) {
-                Throwable e = (connected && t instanceof NativeIoException) ?
-                  translateForConnected((NativeIoException) t) : t;
-                pipeline.fireExceptionCaught(e);
+                in.forEachFlushedMessage(this);
+            } catch (Exception e) {
+                // This should never happen as our processMessage(...) never throws.
+                throw new IllegalStateException(e);
+            }
+            return written;
+        }
+    }
+
+    @Override
+    protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
+        assert outstanding != -1 : "multi-shot not implemented yet";
+
+        final IoUringRecvByteAllocatorHandle allocHandle = (IoUringRecvByteAllocatorHandle) recvBufAllocHandle();
+        final ChannelPipeline pipeline = pipeline();
+        ByteBuf byteBuf = this.readBuffer;
+        assert byteBuf != null;
+        try {
+            recvmsgComplete(pipeline, allocHandle, byteBuf, res, flags, data, outstanding);
+        } catch (Throwable t) {
+            Throwable e = (connected && t instanceof NativeIoException) ?
+              translateForConnected((NativeIoException) t) : t;
+            pipeline.fireExceptionCaught(e);
+        }
+    }
+
+    private void recvmsgComplete(ChannelPipeline pipeline, IoUringRecvByteAllocatorHandle allocHandle,
+                                  ByteBuf byteBuf, int res, int flags, int idx, int outstanding)
+            throws IOException {
+        MsgHdrMemory hdr = recvmsgHdrs.hdr(idx);
+        if (res < 0) {
+            if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
+                // If res is negative we should pass it to ioResult(...) which will either throw
+                // or convert it to 0 if we could not read because the socket was not readable.
+                allocHandle.lastBytesRead(ioResult("io_uring recvmsg", res));
+            }
+        } else {
+            allocHandle.lastBytesRead(res);
+            if (hdr.hasPort(IoUringDatagramChannel.this)) {
+                allocHandle.incMessagesRead(1);
+                DatagramPacket packet = hdr.get(
+                        IoUringDatagramChannel.this, registration().attachment(), byteBuf, res);
+                pipeline.fireChannelRead(packet);
             }
         }
 
-        private void recvmsgComplete(ChannelPipeline pipeline, IoUringRecvByteAllocatorHandle allocHandle,
-                                      ByteBuf byteBuf, int res, int flags, int idx, int outstanding)
-                throws IOException {
-            MsgHdrMemory hdr = recvmsgHdrs.hdr(idx);
-            if (res < 0) {
-                if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
-                    // If res is negative we should pass it to ioResult(...) which will either throw
-                    // or convert it to 0 if we could not read because the socket was not readable.
-                    allocHandle.lastBytesRead(ioResult("io_uring recvmsg", res));
-                }
-            } else {
-                allocHandle.lastBytesRead(res);
-                if (hdr.hasPort(IoUringDatagramChannel.this)) {
-                    allocHandle.incMessagesRead(1);
-                    DatagramPacket packet = hdr.get(
-                            IoUringDatagramChannel.this, registration().attachment(), byteBuf, res);
-                    pipeline.fireChannelRead(packet);
-                }
-            }
+        // Reset the id as this read was completed and so don't need to be cancelled later.
+        recvmsgHdrs.setId(idx, MsgHdrMemoryArray.NO_ID);
+        if (outstanding == 0) {
+            // There are no outstanding completion events, release the readBuffer and see if we need to schedule
+            // another one or if the user will do it.
+            this.readBuffer.release();
+            this.readBuffer = null;
+            recvmsgHdrs.clear();
 
-            // Reset the id as this read was completed and so don't need to be cancelled later.
-            recvmsgHdrs.setId(idx, MsgHdrMemoryArray.NO_ID);
-            if (outstanding == 0) {
-                // There are no outstanding completion events, release the readBuffer and see if we need to schedule
-                // another one or if the user will do it.
-                this.readBuffer.release();
-                this.readBuffer = null;
-                recvmsgHdrs.clear();
-
-                if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
-                    if (allocHandle.lastBytesRead() > 0 &&
-                            allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER) &&
-                            // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
-                            // trying to schedule a read. If it's supported and not part of the flags we know for sure
-                            // that the next read (which would be using Native.MSG_DONTWAIT) will complete without
-                            // be able to read any data. This is useless work and we can skip it.
-                            (!IoUring.isCqeFSockNonEmptySupported() ||
-                                    (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0)) {
-                        // Let's schedule another read.
-                        scheduleRead(false);
-                    } else {
-                        // the read was completed with EAGAIN.
-                        allocHandle.readComplete();
-                        pipeline.fireChannelReadComplete();
-                    }
-                }
-            }
-        }
-
-        @Override
-        protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
-            final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            ByteBuf byteBuf = allocHandle.allocate(alloc());
-            assert readBuffer == null;
-            readBuffer = byteBuf;
-
-            int writable = byteBuf.writableBytes();
-            allocHandle.attemptedBytesRead(writable);
-            int datagramSize = ((IoUringDatagramChannelConfig) config()).getMaxDatagramPayloadSize();
-
-            int numDatagram = datagramSize == 0 ? 1 : Math.max(1, byteBuf.writableBytes() / datagramSize);
-
-            int scheduled = scheduleRecvmsg(byteBuf, numDatagram, datagramSize);
-            if (scheduled == 0) {
-                // We could not schedule any recvmmsg so we need to release the buffer as there will be no
-                // completion event.
-                readBuffer = null;
-                byteBuf.release();
-            }
-            return scheduled;
-        }
-
-        private int scheduleRecvmsg(ByteBuf byteBuf, int numDatagram, int datagramSize) {
-            int writable = byteBuf.writableBytes();
-            long bufferAddress = IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex();
-            if (numDatagram <= 1) {
-                return scheduleRecvmsg0(bufferAddress, writable, true) ? 1 : 0;
-            }
-            int i = 0;
-            // Add multiple IORING_OP_RECVMSG to the submission queue. This basically emulates recvmmsg(...)
-            for (; i < numDatagram && writable >= datagramSize; i++) {
-                if (!scheduleRecvmsg0(bufferAddress, datagramSize, i == 0)) {
-                    break;
-                }
-                bufferAddress += datagramSize;
-                writable -= datagramSize;
-            }
-            return i;
-        }
-
-        private boolean scheduleRecvmsg0(long bufferAddress, int bufferLength, boolean first) {
-            MsgHdrMemory msgHdrMemory = recvmsgHdrs.nextHdr();
-            if (msgHdrMemory == null) {
-                // We can not continue reading before we did not submit the recvmsg(s) and received the results.
-                return false;
-            }
-            msgHdrMemory.set(socket, null, bufferAddress, bufferLength, (short) 0);
-
-            int fd = fd().intValue();
-            int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
-            IoRegistration registration = registration();
-            // We always use idx here so we can detect if no idx was used by checking if data < 0 in
-            // readComplete0(...)
-            IoUringIoOps ops = IoUringIoOps.newRecvmsg(
-                    fd, (byte) 0, msgFlags, msgHdrMemory.address(), msgHdrMemory.idx());
-            long id = registration.submit(ops);
-            if (id == 0) {
-                // Submission failed we don't used the MsgHdrMemory and so should give it back.
-                recvmsgHdrs.restoreNextHdr(msgHdrMemory);
-                return false;
-            }
-            recvmsgHdrs.setId(msgHdrMemory.idx(), id);
-            return true;
-        }
-
-        @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
-            ChannelOutboundBuffer outboundBuffer = outboundBuffer();
-
-            // Reset the id as this write was completed and so don't need to be cancelled later.
-            sendmsgHdrs.setId(data, MsgHdrMemoryArray.NO_ID);
-            sendmsgResArray[data] = res;
-            // Store the result so we can handle it as soon as we have no outstanding writes anymore.
-            if (outstanding == 0) {
-                // All writes are done as part of a batch. Let's remove these from the ChannelOutboundBuffer
-                boolean writtenSomething = false;
-                int numWritten = sendmsgHdrs.length();
-                sendmsgHdrs.clear();
-                for (int i = 0; i < numWritten; i++) {
-                    writtenSomething |= removeFromOutboundBuffer(
-                            outboundBuffer, sendmsgResArray[i], "io_uring sendmsg");
-                }
-                return writtenSomething;
-            }
-            return true;
-        }
-
-        private boolean removeFromOutboundBuffer(ChannelOutboundBuffer outboundBuffer, int res, String errormsg) {
-            if (res >= 0) {
-                // When using Datagram we should consider the message written as long as res is not negative.
-                return outboundBuffer.remove();
-            }
-            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                return false;
-            }
-            try {
-                return ioResult(errormsg, res) != 0;
-            } catch (Throwable cause) {
-                return outboundBuffer.remove(cause);
-            }
-        }
-
-        @Override
-        void connectComplete(byte op, int res, int flags, short data) {
-            if (res >= 0) {
-                connected = true;
-            }
-            super.connectComplete(op, res, flags, data);
-        }
-
-        @Override
-        protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
-            return writeProcessor.write(in);
-        }
-
-        @Override
-        protected int scheduleWriteSingle(Object msg) {
-            return scheduleWrite(msg, true) ? 1 : 0;
-        }
-
-        private boolean scheduleWrite(Object msg, boolean first) {
-            final ByteBuf data;
-            final InetSocketAddress remoteAddress;
-            final int segmentSize;
-            if (msg instanceof AddressedEnvelope) {
-                @SuppressWarnings("unchecked")
-                AddressedEnvelope<ByteBuf, InetSocketAddress> envelope =
-                        (AddressedEnvelope<ByteBuf, InetSocketAddress>) msg;
-                data = envelope.content();
-                remoteAddress = envelope.recipient();
-                if (msg instanceof SegmentedDatagramPacket) {
-                    segmentSize = ((SegmentedDatagramPacket) msg).segmentSize();
+            if (res != Native.ERRNO_ECANCELED_NEGATIVE) {
+                if (allocHandle.lastBytesRead() > 0 &&
+                        allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER) &&
+                        // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
+                        // trying to schedule a read. If it's supported and not part of the flags we know for sure
+                        // that the next read (which would be using Native.MSG_DONTWAIT) will complete without
+                        // be able to read any data. This is useless work and we can skip it.
+                        (!IoUring.isCqeFSockNonEmptySupported() ||
+                                (flags & Native.IORING_CQE_F_SOCK_NONEMPTY) != 0)) {
+                    // Let's schedule another read.
+                    scheduleRead(false);
                 } else {
-                    segmentSize = 0;
+                    // the read was completed with EAGAIN.
+                    allocHandle.readComplete();
+                    pipeline.fireChannelReadComplete();
                 }
+            }
+        }
+    }
+
+    @Override
+    protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
+        final IoUringRecvByteAllocatorHandle allocHandle = (IoUringRecvByteAllocatorHandle) recvBufAllocHandle();
+        ByteBuf byteBuf = allocHandle.allocate(alloc());
+        assert readBuffer == null;
+        readBuffer = byteBuf;
+
+        int writable = byteBuf.writableBytes();
+        allocHandle.attemptedBytesRead(writable);
+        int datagramSize = ((IoUringDatagramChannelConfig) config()).getMaxDatagramPayloadSize();
+
+        int numDatagram = datagramSize == 0 ? 1 : Math.max(1, byteBuf.writableBytes() / datagramSize);
+
+        int scheduled = scheduleRecvmsg(byteBuf, numDatagram, datagramSize);
+        if (scheduled == 0) {
+            // We could not schedule any recvmmsg so we need to release the buffer as there will be no
+            // completion event.
+            readBuffer = null;
+            byteBuf.release();
+        }
+        return scheduled;
+    }
+
+    private int scheduleRecvmsg(ByteBuf byteBuf, int numDatagram, int datagramSize) {
+        int writable = byteBuf.writableBytes();
+        long bufferAddress = IoUring.memoryAddress(byteBuf) + byteBuf.writerIndex();
+        if (numDatagram <= 1) {
+            return scheduleRecvmsg0(bufferAddress, writable, true) ? 1 : 0;
+        }
+        int i = 0;
+        // Add multiple IORING_OP_RECVMSG to the submission queue. This basically emulates recvmmsg(...)
+        for (; i < numDatagram && writable >= datagramSize; i++) {
+            if (!scheduleRecvmsg0(bufferAddress, datagramSize, i == 0)) {
+                break;
+            }
+            bufferAddress += datagramSize;
+            writable -= datagramSize;
+        }
+        return i;
+    }
+
+    private boolean scheduleRecvmsg0(long bufferAddress, int bufferLength, boolean first) {
+        MsgHdrMemory msgHdrMemory = recvmsgHdrs.nextHdr();
+        if (msgHdrMemory == null) {
+            // We can not continue reading before we did not submit the recvmsg(s) and received the results.
+            return false;
+        }
+        msgHdrMemory.set(socket, null, bufferAddress, bufferLength, (short) 0);
+
+        int fd = fd().intValue();
+        int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
+        IoRegistration registration = registration();
+        // We always use idx here so we can detect if no idx was used by checking if data < 0 in
+        // readComplete0(...)
+        IoUringIoOps ops = IoUringIoOps.newRecvmsg(
+                fd, (byte) 0, msgFlags, msgHdrMemory.address(), msgHdrMemory.idx());
+        long id = registration.submit(ops);
+        if (id == 0) {
+            // Submission failed we don't used the MsgHdrMemory and so should give it back.
+            recvmsgHdrs.restoreNextHdr(msgHdrMemory);
+            return false;
+        }
+        recvmsgHdrs.setId(msgHdrMemory.idx(), id);
+        return true;
+    }
+
+    @Override
+    boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        ChannelOutboundBuffer outboundBuffer = outboundBuffer();
+
+        // Reset the id as this write was completed and so don't need to be cancelled later.
+        sendmsgHdrs.setId(data, MsgHdrMemoryArray.NO_ID);
+        sendmsgResArray[data] = res;
+        // Store the result so we can handle it as soon as we have no outstanding writes anymore.
+        if (outstanding == 0) {
+            // All writes are done as part of a batch. Let's remove these from the ChannelOutboundBuffer
+            boolean writtenSomething = false;
+            int numWritten = sendmsgHdrs.length();
+            sendmsgHdrs.clear();
+            for (int i = 0; i < numWritten; i++) {
+                writtenSomething |= removeFromOutboundBuffer(
+                        outboundBuffer, sendmsgResArray[i], "io_uring sendmsg");
+            }
+            return writtenSomething;
+        }
+        return true;
+    }
+
+    private boolean removeFromOutboundBuffer(ChannelOutboundBuffer outboundBuffer, int res, String errormsg) {
+        if (res >= 0) {
+            // When using Datagram we should consider the message written as long as res is not negative.
+            return outboundBuffer.remove();
+        }
+        if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+            return false;
+        }
+        try {
+            return ioResult(errormsg, res) != 0;
+        } catch (Throwable cause) {
+            return outboundBuffer.remove(cause);
+        }
+    }
+
+    @Override
+    void connectComplete(byte op, int res, int flags, short data) {
+        if (res >= 0) {
+            connected = true;
+        }
+        super.connectComplete(op, res, flags, data);
+    }
+
+    @Override
+    protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
+        return writeProcessor.write(in);
+    }
+
+    @Override
+    protected int scheduleWriteSingle(Object msg) {
+        return scheduleWrite(msg, true) ? 1 : 0;
+    }
+
+    private boolean scheduleWrite(Object msg, boolean first) {
+        final ByteBuf data;
+        final InetSocketAddress remoteAddress;
+        final int segmentSize;
+        if (msg instanceof AddressedEnvelope) {
+            @SuppressWarnings("unchecked")
+            AddressedEnvelope<ByteBuf, InetSocketAddress> envelope =
+                    (AddressedEnvelope<ByteBuf, InetSocketAddress>) msg;
+            data = envelope.content();
+            remoteAddress = envelope.recipient();
+            if (msg instanceof SegmentedDatagramPacket) {
+                segmentSize = ((SegmentedDatagramPacket) msg).segmentSize();
             } else {
-                data = (ByteBuf) msg;
-                remoteAddress = (InetSocketAddress) remoteAddress();
                 segmentSize = 0;
             }
-
-            long bufferAddress = IoUring.memoryAddress(data);
-            return scheduleSendmsg(remoteAddress, bufferAddress, data.readableBytes(), segmentSize, first);
+        } else {
+            data = (ByteBuf) msg;
+            remoteAddress = (InetSocketAddress) remoteAddress();
+            segmentSize = 0;
         }
 
-        private boolean scheduleSendmsg(InetSocketAddress remoteAddress, long bufferAddress,
-                                        int bufferLength, int segmentSize, boolean first) {
-            MsgHdrMemory hdr = sendmsgHdrs.nextHdr();
-            if (hdr == null) {
-                // There is no MsgHdrMemory left to use. We need to submit and wait for the writes to complete
-                // before we can write again.
-                return false;
-            }
-            hdr.set(socket, remoteAddress, bufferAddress, bufferLength, (short) segmentSize);
+        long bufferAddress = IoUring.memoryAddress(data);
+        return scheduleSendmsg(remoteAddress, bufferAddress, data.readableBytes(), segmentSize, first);
+    }
 
-            int fd = fd().intValue();
-            int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
-            IoRegistration registration = registration();
-            IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, msgFlags, hdr.address(), hdr.idx());
-            long id = registration.submit(ops);
-            if (id == 0) {
-                // Submission failed we don't used the MsgHdrMemory and so should give it back.
-                sendmsgHdrs.restoreNextHdr(hdr);
-                return false;
-            }
-            sendmsgHdrs.setId(hdr.idx(), id);
-            return true;
+    private boolean scheduleSendmsg(InetSocketAddress remoteAddress, long bufferAddress,
+                                    int bufferLength, int segmentSize, boolean first) {
+        MsgHdrMemory hdr = sendmsgHdrs.nextHdr();
+        if (hdr == null) {
+            // There is no MsgHdrMemory left to use. We need to submit and wait for the writes to complete
+            // before we can write again.
+            return false;
         }
+        hdr.set(socket, remoteAddress, bufferAddress, bufferLength, (short) segmentSize);
 
-        @Override
-        public void unregistered() {
-            super.unregistered();
-            sendmsgHdrs.release();
-            recvmsgHdrs.release();
+        int fd = fd().intValue();
+        int msgFlags = first ? 0 : Native.MSG_DONTWAIT;
+        IoRegistration registration = registration();
+        IoUringIoOps ops = IoUringIoOps.newSendmsg(fd, (byte) 0, msgFlags, hdr.address(), hdr.idx());
+        long id = registration.submit(ops);
+        if (id == 0) {
+            // Submission failed we don't used the MsgHdrMemory and so should give it back.
+            sendmsgHdrs.restoreNextHdr(hdr);
+            return false;
         }
+        sendmsgHdrs.setId(hdr.idx(), id);
+        return true;
+    }
+
+    @Override
+    protected void unregistered() {
+        super.unregistered();
+        sendmsgHdrs.release();
+        recvmsgHdrs.release();
     }
 
     private static IOException translateForConnected(NativeIoException e) {

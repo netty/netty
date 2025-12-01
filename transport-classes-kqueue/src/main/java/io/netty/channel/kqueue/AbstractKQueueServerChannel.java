@@ -32,6 +32,11 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
 
     private final EventLoopGroup childEventLoopGroup;
 
+    // Will hold the remote address after accept(...) was successful.
+    // We need 24 bytes for the address as maximum + 1 byte for storing the capacity.
+    // So use 26 bytes as it's a power of two.
+    private final byte[] acceptedAddress = new byte[26];
+
     AbstractKQueueServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, BsdSocket fd) {
         this(eventLoop, childEventLoopGroup, fd, isSoErrorZero(fd));
     }
@@ -58,11 +63,6 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
     }
 
     @Override
-    protected AbstractKQueueUnsafe newUnsafe() {
-        return new KQueueServerSocketUnsafe();
-    }
-
-    @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
     }
@@ -79,54 +79,47 @@ public abstract class AbstractKQueueServerChannel extends AbstractKQueueChannel 
         throw new UnsupportedOperationException();
     }
 
-    final class KQueueServerSocketUnsafe extends AbstractKQueueUnsafe {
-        // Will hold the remote address after accept(...) was successful.
-        // We need 24 bytes for the address as maximum + 1 byte for storing the capacity.
-        // So use 26 bytes as it's a power of two.
-        private final byte[] acceptedAddress = new byte[26];
+    @Override
+    void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
+        assert executor().inEventLoop();
+        final ChannelConfig config = config();
+        if (shouldBreakReadReady(config)) {
+            clearReadFilter0();
+            return;
+        }
+        final ChannelPipeline pipeline = pipeline();
+        allocHandle.reset(config);
+        allocHandle.attemptedBytesRead(1);
 
-        @Override
-        void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
-            assert executor().inEventLoop();
-            final ChannelConfig config = config();
-            if (shouldBreakReadReady(config)) {
-                clearReadFilter0();
-                return;
-            }
-            final ChannelPipeline pipeline = pipeline();
-            allocHandle.reset(config);
-            allocHandle.attemptedBytesRead(1);
-
-            Throwable exception = null;
+        Throwable exception = null;
+        try {
             try {
-                try {
-                    do {
-                        int acceptFd = socket.accept(acceptedAddress);
-                        if (acceptFd == -1) {
-                            // this means everything was handled for now
-                            allocHandle.lastBytesRead(-1);
-                            break;
-                        }
-                        allocHandle.lastBytesRead(1);
-                        allocHandle.incMessagesRead(1);
+                do {
+                    int acceptFd = socket.accept(acceptedAddress);
+                    if (acceptFd == -1) {
+                        // this means everything was handled for now
+                        allocHandle.lastBytesRead(-1);
+                        break;
+                    }
+                    allocHandle.lastBytesRead(1);
+                    allocHandle.incMessagesRead(1);
 
-                        readPending = false;
-                        pipeline.fireChannelRead(newChildChannel(childEventExecutorGroup().next(),
-                                acceptFd, acceptedAddress, 1, acceptedAddress[0]));
-                    } while (allocHandle.continueReading());
-                } catch (Throwable t) {
-                    exception = t;
-                }
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
+                    readPending = false;
+                    pipeline.fireChannelRead(newChildChannel(childEventExecutorGroup().next(),
+                            acceptFd, acceptedAddress, 1, acceptedAddress[0]));
+                } while (allocHandle.continueReading());
+            } catch (Throwable t) {
+                exception = t;
+            }
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
 
-                if (exception != null) {
-                    pipeline.fireExceptionCaught(exception);
-                }
-            } finally {
-                if (shouldStopReading(config)) {
-                    clearReadFilter0();
-                }
+            if (exception != null) {
+                pipeline.fireExceptionCaught(exception);
+            }
+        } finally {
+            if (shouldStopReading(config)) {
+                clearReadFilter0();
             }
         }
     }

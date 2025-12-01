@@ -200,11 +200,6 @@ public class ChannelOutboundBufferTest {
         }
 
         @Override
-        protected AbstractUnsafe newUnsafe() {
-            return new TestUnsafe();
-        }
-
-        @Override
         protected SocketAddress localAddress0() {
             throw new UnsupportedOperationException();
         }
@@ -272,9 +267,6 @@ public class ChannelOutboundBufferTest {
         @Override
         public ChannelMetadata metadata() {
             return TEST_METADATA;
-        }
-
-        final class TestUnsafe extends AbstractUnsafe {
         }
     }
 

@@ -23,6 +23,7 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
 
 import java.net.InetSocketAddress;
@@ -32,6 +33,11 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private final EventLoopGroup childEventLoopGroup;
+
+    // Will hold the remote address after accept(...) was successful.
+    // We need 24 bytes for the address as maximum + 1 byte for storing the length.
+    // So use 26 bytes as it's a power of two.
+    private final byte[] acceptedAddress = new byte[26];
 
     protected AbstractEpollServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
         this(eventLoop, childEventLoopGroup, new LinuxSocket(fd), false);
@@ -64,11 +70,6 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     }
 
     @Override
-    protected AbstractEpollUnsafe newUnsafe() {
-        return new EpollServerSocketUnsafe();
-    }
-
-    @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {
         throw new UnsupportedOperationException();
     }
@@ -87,56 +88,49 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
         promise.setFailure(new UnsupportedOperationException());
     }
 
-    final class EpollServerSocketUnsafe extends AbstractEpollUnsafe {
-        // Will hold the remote address after accept(...) was successful.
-        // We need 24 bytes for the address as maximum + 1 byte for storing the length.
-        // So use 26 bytes as it's a power of two.
-        private final byte[] acceptedAddress = new byte[26];
+    @Override
+    void epollInReady() {
+        assert executor().inEventLoop();
+        final ChannelConfig config = config();
+        if (shouldBreakEpollInReady(config)) {
+            clearEpollIn0();
+            return;
+        }
+        final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
+        final ChannelPipeline pipeline = pipeline();
+        allocHandle.reset(config);
+        allocHandle.attemptedBytesRead(1);
 
-        @Override
-        void epollInReady() {
-            assert executor().inEventLoop();
-            final ChannelConfig config = config();
-            if (shouldBreakEpollInReady(config)) {
-                clearEpollIn0();
-                return;
-            }
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            final ChannelPipeline pipeline = pipeline();
-            allocHandle.reset(config);
-            allocHandle.attemptedBytesRead(1);
-
-            Throwable exception = null;
+        Throwable exception = null;
+        try {
             try {
-                try {
-                    do {
-                        // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
-                        // EpollRecvByteAllocatorHandle knows if it should try to read again or not when autoRead is
-                        // enabled.
-                        allocHandle.lastBytesRead(socket.accept(acceptedAddress));
-                        if (allocHandle.lastBytesRead() == -1) {
-                            // this means everything was handled for now
-                            break;
-                        }
-                        allocHandle.incMessagesRead(1);
+                do {
+                    // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
+                    // EpollRecvByteAllocatorHandle knows if it should try to read again or not when autoRead is
+                    // enabled.
+                    allocHandle.lastBytesRead(socket.accept(acceptedAddress));
+                    if (allocHandle.lastBytesRead() == -1) {
+                        // this means everything was handled for now
+                        break;
+                    }
+                    allocHandle.incMessagesRead(1);
 
-                        readPending = false;
-                        pipeline.fireChannelRead(newChildChannel(childEventExecutorGroup().next(),
-                                allocHandle.lastBytesRead(), acceptedAddress, 1, acceptedAddress[0]));
-                    } while (allocHandle.continueReading());
-                } catch (Throwable t) {
-                    exception = t;
-                }
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
+                    readPending = false;
+                    pipeline.fireChannelRead(newChildChannel(childEventExecutorGroup().next(),
+                            allocHandle.lastBytesRead(), acceptedAddress, 1, acceptedAddress[0]));
+                } while (allocHandle.continueReading());
+            } catch (Throwable t) {
+                exception = t;
+            }
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
 
-                if (exception != null) {
-                    pipeline.fireExceptionCaught(exception);
-                }
-            } finally {
-                if (shouldStopReading(config)) {
-                    clearEpollIn();
-                }
+            if (exception != null) {
+                pipeline.fireExceptionCaught(exception);
+            }
+        } finally {
+            if (shouldStopReading(config)) {
+                clearEpollIn();
             }
         }
     }

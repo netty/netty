@@ -181,7 +181,7 @@ public final class Http2StreamChannelBootstrap {
         try {
             init(streamChannel);
         } catch (Exception e) {
-            streamChannel.unsafe().close(streamChannel.newPromise());
+            streamChannel.close(streamChannel.newPromise());
             promise.setFailure(e);
             return;
         }

@@ -15,7 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.channel.Channel.Unsafe;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakDetector;
 import io.netty.util.concurrent.EventExecutor;
@@ -84,12 +83,12 @@ public class DefaultChannelPipeline implements ChannelPipeline {
      */
     private boolean registered;
 
-    protected DefaultChannelPipeline(Channel channel) {
+    protected DefaultChannelPipeline(Channel channel, IoTransport transport) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
         succeededFuture = new SucceededChannelFuture(channel, null);
 
         tail = new TailContext(this);
-        head = new HeadContext(this);
+        head = new HeadContext(this, ObjectUtil.checkNotNull(transport, "transport"));
 
         head.next = tail;
         tail.prev = head;
@@ -1269,11 +1268,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     final class HeadContext extends AbstractChannelHandlerContext
             implements ChannelOutboundHandler, ChannelInboundHandler {
 
-        private final Unsafe unsafe;
+        private final IoTransport transport;
 
-        HeadContext(DefaultChannelPipeline pipeline) {
+        HeadContext(DefaultChannelPipeline pipeline, IoTransport transport) {
             super(pipeline, HEAD_NAME, HeadContext.class);
-            unsafe = pipeline.channel().unsafe();
+            this.transport = transport;
             setAddComplete();
         }
 
@@ -1313,13 +1312,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     promise.setFailure(f.cause());
                 }
             });
-            unsafe.register(registerPromise);
+            transport.register(registerPromise);
         }
 
         @Override
         public void bind(
                 ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
-            unsafe.bind(localAddress, promise);
+            transport.bind(localAddress, promise);
         }
 
         @Override
@@ -1327,37 +1326,37 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 ChannelHandlerContext ctx,
                 SocketAddress remoteAddress, SocketAddress localAddress,
                 ChannelPromise promise) {
-            unsafe.connect(remoteAddress, localAddress, promise);
+            transport.connect(remoteAddress, localAddress, promise);
         }
 
         @Override
         public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
-            unsafe.disconnect(promise);
+            transport.disconnect(promise);
         }
 
         @Override
         public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
-            unsafe.close(promise);
+            transport.close(promise);
         }
 
         @Override
         public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
-            unsafe.deregister(promise);
+            transport.deregister(promise);
         }
 
         @Override
         public void read(ChannelHandlerContext ctx) {
-            unsafe.beginRead();
+            transport.read();
         }
 
         @Override
         public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-            unsafe.write(msg, promise);
+            transport.write(msg, promise);
         }
 
         @Override
         public void flush(ChannelHandlerContext ctx) {
-            unsafe.flush();
+            transport.flush();
         }
 
         @Override

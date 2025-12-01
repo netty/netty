@@ -278,7 +278,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     protected int doReadMessages(List<Object> buf) throws Exception {
         SctpChannel ch = javaChannel();
 
-        RecvByteBufAllocator.Handle allocHandle = ((AbstractUnsafe) unsafe()).recvBufAllocHandle();
+        RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
         ByteBuf buffer = allocHandle.allocate(config().getAllocator());
         boolean free = true;
         try {

@@ -81,11 +81,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     @Override
-    protected AbstractNioUnsafe newUnsafe() {
-        return new NioByteUnsafe();
-    }
-
-    @Override
     public ChannelMetadata metadata() {
         return METADATA;
     }
@@ -99,100 +94,97 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
 
-    protected class NioByteUnsafe extends AbstractNioUnsafe {
+    private void closeOnRead(ChannelPipeline pipeline) {
+        if (!isInputShutdown0()) {
+            if (isAllowHalfClosure(config())) {
+                shutdownInput();
+                pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+            } else {
+                close(newPromise());
+            }
+        } else if (!inputClosedSeenErrorOnRead) {
+            inputClosedSeenErrorOnRead = true;
+            pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+        }
+    }
 
-        private void closeOnRead(ChannelPipeline pipeline) {
-            if (!isInputShutdown0()) {
-                if (isAllowHalfClosure(config())) {
-                    shutdownInput();
-                    pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                } else {
-                    close(newPromise());
-                }
-            } else if (!inputClosedSeenErrorOnRead) {
-                inputClosedSeenErrorOnRead = true;
-                pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+    private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
+            RecvByteBufAllocator.Handle allocHandle) {
+        if (byteBuf != null) {
+            if (byteBuf.isReadable()) {
+                readPending = false;
+                pipeline.fireChannelRead(byteBuf);
+            } else {
+                byteBuf.release();
             }
         }
+        allocHandle.readComplete();
+        pipeline.fireChannelReadComplete();
+        pipeline.fireExceptionCaught(cause);
 
-        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
-                RecvByteBufAllocator.Handle allocHandle) {
-            if (byteBuf != null) {
-                if (byteBuf.isReadable()) {
-                    readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
-                } else {
+        // If oom will close the read event, release connection.
+        // See https://github.com/netty/netty/issues/10434
+        if (close ||
+                cause instanceof OutOfMemoryError ||
+                cause instanceof LeakPresenceDetector.AllocationProhibitedException ||
+                cause instanceof IOException) {
+            closeOnRead(pipeline);
+        }
+    }
+
+    @Override
+    protected final void readNow() {
+        final ChannelConfig config = config();
+        if (shouldBreakReadReady(config)) {
+            clearReadPending();
+            return;
+        }
+        final ChannelPipeline pipeline = pipeline();
+        final ByteBufAllocator allocator = config.getAllocator();
+        final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
+        allocHandle.reset(config);
+
+        ByteBuf byteBuf = null;
+        boolean close = false;
+        try {
+            do {
+                byteBuf = allocHandle.allocate(allocator);
+                allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                if (allocHandle.lastBytesRead() <= 0) {
+                    // nothing was read. release the buffer.
                     byteBuf.release();
+                    byteBuf = null;
+                    close = allocHandle.lastBytesRead() < 0;
+                    if (close) {
+                        // There is nothing left to read as we received an EOF.
+                        readPending = false;
+                    }
+                    break;
                 }
-            }
+
+                allocHandle.incMessagesRead(1);
+                readPending = false;
+                pipeline.fireChannelRead(byteBuf);
+                byteBuf = null;
+            } while (allocHandle.continueReading());
+
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
-            pipeline.fireExceptionCaught(cause);
 
-            // If oom will close the read event, release connection.
-            // See https://github.com/netty/netty/issues/10434
-            if (close ||
-                    cause instanceof OutOfMemoryError ||
-                    cause instanceof LeakPresenceDetector.AllocationProhibitedException ||
-                    cause instanceof IOException) {
+            if (close) {
                 closeOnRead(pipeline);
             }
-        }
-
-        @Override
-        public final void read() {
-            final ChannelConfig config = config();
-            if (shouldBreakReadReady(config)) {
-                clearReadPending();
-                return;
-            }
-            final ChannelPipeline pipeline = pipeline();
-            final ByteBufAllocator allocator = config.getAllocator();
-            final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
-            allocHandle.reset(config);
-
-            ByteBuf byteBuf = null;
-            boolean close = false;
-            try {
-                do {
-                    byteBuf = allocHandle.allocate(allocator);
-                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
-                    if (allocHandle.lastBytesRead() <= 0) {
-                        // nothing was read. release the buffer.
-                        byteBuf.release();
-                        byteBuf = null;
-                        close = allocHandle.lastBytesRead() < 0;
-                        if (close) {
-                            // There is nothing left to read as we received an EOF.
-                            readPending = false;
-                        }
-                        break;
-                    }
-
-                    allocHandle.incMessagesRead(1);
-                    readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
-                    byteBuf = null;
-                } while (allocHandle.continueReading());
-
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-
-                if (close) {
-                    closeOnRead(pipeline);
-                }
-            } catch (Throwable t) {
-                handleReadException(pipeline, byteBuf, t, close, allocHandle);
-            } finally {
-                // Check if there is a readPending which was not processed yet.
-                // This could be for two reasons:
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-                //
-                // See https://github.com/netty/netty/issues/2254
-                if (!readPending && !config.isAutoRead()) {
-                    removeReadOp();
-                }
+        } catch (Throwable t) {
+            handleReadException(pipeline, byteBuf, t, close, allocHandle);
+        } finally {
+            // Check if there is a readPending which was not processed yet.
+            // This could be for two reasons:
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+            //
+            // See https://github.com/netty/netty/issues/2254
+            if (!readPending && !config.isAutoRead()) {
+                removeReadOp();
             }
         }
     }

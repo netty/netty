@@ -29,12 +29,9 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultMaxMessagesRecvByteBufAllocator;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -49,8 +46,6 @@ import org.junit.jupiter.api.function.Executable;
 import java.net.ConnectException;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -182,7 +177,7 @@ public class LocalChannelTest {
                 // the ClosedChannelException has been created by AbstractUnsafe rather than transport implementations.
                 if (e.getStackTrace().length > 0) {
                    assertEquals(AbstractChannel.class.getName() +
-                           "$AbstractUnsafe", e.getStackTrace()[0].getClassName());
+                           "$IoTransportImpl", e.getStackTrace()[0].getClassName());
                 }
             }
         } finally {

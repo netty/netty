@@ -34,11 +34,6 @@ final class FailedChannel extends AbstractChannel {
     }
 
     @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new AbstractUnsafe() { };
-    }
-
-    @Override
     protected SocketAddress localAddress0() {
         return null;
     }

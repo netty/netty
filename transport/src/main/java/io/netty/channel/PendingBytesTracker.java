@@ -36,7 +36,7 @@ abstract class PendingBytesTracker implements MessageSizeEstimator.Handle {
         if (channel instanceof AbstractChannel) {
             ChannelOutboundBuffer buffer = ((AbstractChannel) channel).outboundBuffer();
             MessageSizeEstimator.Handle handle = channel.config().getMessageSizeEstimator().newHandle();
-            // We need to guard against null as channel.unsafe().outboundBuffer() may returned null
+            // We need to guard against null as channel.outboundBuffer() may returned null
             // if the channel was already closed when constructing the PendingBytesTracker.
             // See https://github.com/netty/netty/issues/3967
             return buffer == null ?

@@ -34,6 +34,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoRegistration;
+import io.netty.channel.IoTransport;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Ticker;
 import io.netty.util.internal.PlatformDependent;
@@ -57,6 +58,8 @@ public class EmbeddedChannel extends AbstractChannel {
     private static final SocketAddress REMOTE_ADDRESS = new EmbeddedSocketAddress();
 
     private static final ChannelHandler[] EMPTY_HANDLERS = new ChannelHandler[0];
+    private static final EmbeddedIoHandle IO_HANDLE = new EmbeddedIoHandle();
+
     private enum State { OPEN, ACTIVE, CLOSED }
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
@@ -215,7 +218,7 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     protected EmbeddedChannel(Builder builder) {
         super(new EmbeddedEventLoop(builder.ticker == null ? new EmbeddedEventLoop.FreezableTicker() : builder.ticker),
-                EmbeddedUnsafe.class, builder.parent, builder.channelId);
+                EmbeddedIoHandle.class, builder.parent, builder.channelId);
         metadata = metadata(builder.hasDisconnect);
         config = builder.config == null ? new DefaultChannelConfig(this) : builder.config;
         if (builder.handler == null) {
@@ -265,7 +268,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private void register0() {
         ChannelPromise promise = newPromise();
-        unsafe().register(promise);
+        ioTransport().register(promise);
         assert promise.isDone();
         Throwable cause = promise.cause();
         if (cause != null) {
@@ -1028,16 +1031,6 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new EmbeddedUnsafe();
-    }
-
-    @Override
-    public Unsafe unsafe() {
-        return ((EmbeddedUnsafe) super.unsafe()).wrapped;
-    }
-
-    @Override
     protected void doWrite(ChannelOutboundBuffer in) {
         for (;;) {
             Object msg = in.current();
@@ -1195,114 +1188,7 @@ public class EmbeddedChannel extends AbstractChannel {
         promise.setSuccess();
     }
 
-    final class EmbeddedUnsafe extends AbstractUnsafe implements IoHandle {
-
-        // Delegates to the EmbeddedUnsafe instance but ensures runPendingTasks() is called after each operation
-        // that may change the state of the Channel and may schedule tasks for later execution.
-        final Unsafe wrapped = new Unsafe() {
-
-            private final ChannelFutureListener futureListener = f ->  maybeRunPendingTasks();
-
-            @Override
-            public void register(ChannelPromise promise) {
-                executingStackCnt++;
-                try {
-                    EmbeddedUnsafe.this.register(promise.addListener(futureListener));
-                } finally {
-                    executingStackCnt--;
-                    maybeRunPendingTasks();
-                }
-            }
-
-            @Override
-            public void bind(SocketAddress localAddress, ChannelPromise promise) {
-                executingStackCnt++;
-                try {
-                    EmbeddedUnsafe.this.bind(localAddress, promise.addListener(futureListener));
-                } finally {
-                    executingStackCnt--;
-                    maybeRunPendingTasks();
-                }
-            }
-
-            @Override
-            public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                executingStackCnt++;
-                try {
-                    EmbeddedUnsafe.this.connect(remoteAddress, localAddress, promise.addListener(futureListener));
-                } finally {
-                    executingStackCnt--;
-                    maybeRunPendingTasks();
-                }
-            }
-
-            @Override
-            public void disconnect(ChannelPromise promise) {
-                executingStackCnt++;
-                try {
-                    EmbeddedUnsafe.this.disconnect(promise.addListener(futureListener));
-                } finally {
-                    executingStackCnt--;
-                    maybeRunPendingTasks();
-                }
-            }
-
-            @Override
-            public void close(ChannelPromise promise) {
-                executingStackCnt++;
-                try {
-                    EmbeddedUnsafe.this.close(promise.addListener(futureListener));
-                } finally {
-                    executingStackCnt--;
-                    maybeRunPendingTasks();
-                }
-            }
-
-            @Override
-            public void deregister(ChannelPromise promise) {
-                executingStackCnt++;
-                try {
-                    EmbeddedUnsafe.this.deregister(promise.addListener(futureListener));
-                } finally {
-                    executingStackCnt--;
-                    maybeRunPendingTasks();
-                }
-            }
-
-            @Override
-            public void beginRead() {
-                executingStackCnt++;
-                try {
-                    EmbeddedUnsafe.this.beginRead();
-                } finally {
-                    executingStackCnt--;
-                    maybeRunPendingTasks();
-                }
-            }
-
-            @Override
-            public void write(Object msg, ChannelPromise promise) {
-                executingStackCnt++;
-                try {
-                    EmbeddedUnsafe.this.write(msg, promise.addListener(futureListener));
-                } finally {
-                    executingStackCnt--;
-                    maybeRunPendingTasks();
-                }
-            }
-
-            @Override
-            public void flush() {
-                executingStackCnt++;
-                try {
-                    EmbeddedUnsafe.this.flush();
-                } finally {
-                    executingStackCnt--;
-                    maybeRunPendingTasks();
-                }
-            }
-        };
-
+    static final class EmbeddedIoHandle implements IoHandle {
         @Override
         public void handle(IoRegistration registration, IoEvent ioEvent) {
             throw new UnsupportedOperationException();
@@ -1314,9 +1200,117 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     }
 
-    private final class EmbeddedChannelPipeline extends DefaultAbstractChannelPipeline {
+    final class EmbeddedIoTransport implements IoTransport {
+        private final IoTransport transport;
+        private final ChannelFutureListener futureListener = f ->  maybeRunPendingTasks();
+
+        EmbeddedIoTransport(IoTransport transport) {
+            this.transport = transport;
+        }
+
+        @Override
+        public void register(ChannelPromise promise) {
+            executingStackCnt++;
+            try {
+                transport.register(promise.addListener(futureListener));
+            } finally {
+                executingStackCnt--;
+                maybeRunPendingTasks();
+            }
+        }
+
+        @Override
+        public void bind(SocketAddress localAddress, ChannelPromise promise) {
+            executingStackCnt++;
+            try {
+                transport.bind(localAddress, promise.addListener(futureListener));
+            } finally {
+                executingStackCnt--;
+                maybeRunPendingTasks();
+            }
+        }
+
+        @Override
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            executingStackCnt++;
+            try {
+                transport.connect(remoteAddress, localAddress, promise.addListener(futureListener));
+            } finally {
+                executingStackCnt--;
+                maybeRunPendingTasks();
+            }
+        }
+
+        @Override
+        public void disconnect(ChannelPromise promise) {
+            executingStackCnt++;
+            try {
+                transport.disconnect(promise.addListener(futureListener));
+            } finally {
+                executingStackCnt--;
+                maybeRunPendingTasks();
+            }
+        }
+
+        @Override
+        public void close(ChannelPromise promise) {
+            executingStackCnt++;
+            try {
+                transport.close(promise.addListener(futureListener));
+            } finally {
+                executingStackCnt--;
+                maybeRunPendingTasks();
+            }
+        }
+
+        @Override
+        public void deregister(ChannelPromise promise) {
+            executingStackCnt++;
+            try {
+                transport.deregister(promise.addListener(futureListener));
+            } finally {
+                executingStackCnt--;
+                maybeRunPendingTasks();
+            }
+        }
+
+        @Override
+        public void read() {
+            executingStackCnt++;
+            try {
+                transport.read();
+            } finally {
+                executingStackCnt--;
+                maybeRunPendingTasks();
+            }
+        }
+
+        @Override
+        public void write(Object msg, ChannelPromise promise) {
+            executingStackCnt++;
+            try {
+                transport.write(msg, promise.addListener(futureListener));
+            } finally {
+                executingStackCnt--;
+                maybeRunPendingTasks();
+            }
+        }
+
+        @Override
+        public void flush() {
+            executingStackCnt++;
+            try {
+                transport.flush();
+            } finally {
+                executingStackCnt--;
+                maybeRunPendingTasks();
+            }
+        }
+    }
+
+    private final class EmbeddedChannelPipeline extends DefaultChannelPipeline {
         EmbeddedChannelPipeline(EmbeddedChannel channel) {
-            super(channel);
+            super(channel, new EmbeddedIoTransport(channel.ioTransport()));
         }
 
         @Override

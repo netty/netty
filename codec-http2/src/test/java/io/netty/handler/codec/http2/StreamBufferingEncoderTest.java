@@ -90,9 +90,6 @@ public class StreamBufferingEncoderTest {
     private Channel channel;
 
     @Mock
-    private Channel.Unsafe unsafe;
-
-    @Mock
     private ChannelConfig config;
 
     @Mock
@@ -156,7 +153,6 @@ public class StreamBufferingEncoderTest {
         when(config.getMessageSizeEstimator()).thenReturn(DefaultMessageSizeEstimator.DEFAULT);
         ChannelMetadata metadata = new ChannelMetadata(false, 16);
         when(channel.metadata()).thenReturn(metadata);
-        when(channel.unsafe()).thenReturn(unsafe);
         handler.handlerAdded(ctx);
     }
 

@@ -60,11 +60,6 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
     }
 
     @Override
-    protected AbstractEpollUnsafe newUnsafe() {
-        return new EpollDomainUnsafe();
-    }
-
-    @Override
     protected DomainSocketAddress localAddress0() {
         return local;
     }
@@ -138,62 +133,60 @@ public final class EpollDomainSocketChannel extends AbstractEpollStreamChannel i
         return socket.getPeerCredentials();
     }
 
-    private final class EpollDomainUnsafe extends EpollStreamUnsafe {
-        @Override
-        void epollInReady() {
-            switch (config().getReadMode()) {
-                case BYTES:
-                    super.epollInReady();
-                    break;
-                case FILE_DESCRIPTORS:
-                    epollInReadFd();
-                    break;
-                default:
-                    throw new Error("Unexpected read mode: " + config().getReadMode());
-            }
+    @Override
+    void epollInReady() {
+        switch (config().getReadMode()) {
+            case BYTES:
+                super.epollInReady();
+                break;
+            case FILE_DESCRIPTORS:
+                epollInReadFd();
+                break;
+            default:
+                throw new Error("Unexpected read mode: " + config().getReadMode());
         }
+    }
 
-        private void epollInReadFd() {
-            if (socket.isInputShutdown()) {
-                clearEpollIn0();
-                return;
-            }
-            final ChannelConfig config = config();
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
+    private void epollInReadFd() {
+        if (socket.isInputShutdown()) {
+            clearEpollIn0();
+            return;
+        }
+        final ChannelConfig config = config();
+        final EpollRecvByteAllocatorHandle allocHandle = (EpollRecvByteAllocatorHandle) recvBufAllocHandle();
 
-            final ChannelPipeline pipeline = pipeline();
-            allocHandle.reset(config);
+        final ChannelPipeline pipeline = pipeline();
+        allocHandle.reset(config);
 
-            try {
-                readLoop: do {
-                    // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
-                    // EpollRecvByteAllocatorHandle knows if it should try to read again or not when autoRead is
-                    // enabled.
-                    allocHandle.lastBytesRead(socket.recvFd());
-                    switch(allocHandle.lastBytesRead()) {
-                    case 0:
-                        break readLoop;
-                    case -1:
-                        close(newPromise());
-                        return;
-                    default:
-                        allocHandle.incMessagesRead(1);
-                        readPending = false;
-                        pipeline.fireChannelRead(new FileDescriptor(allocHandle.lastBytesRead()));
-                        break;
-                    }
-                } while (allocHandle.continueReading());
-
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-            } catch (Throwable t) {
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-                pipeline.fireExceptionCaught(t);
-            } finally {
-                if (shouldStopReading(config)) {
-                    clearEpollIn();
+        try {
+            readLoop: do {
+                // lastBytesRead represents the fd. We use lastBytesRead because it must be set so that the
+                // EpollRecvByteAllocatorHandle knows if it should try to read again or not when autoRead is
+                // enabled.
+                allocHandle.lastBytesRead(socket.recvFd());
+                switch(allocHandle.lastBytesRead()) {
+                case 0:
+                    break readLoop;
+                case -1:
+                    close(newPromise());
+                    return;
+                default:
+                    allocHandle.incMessagesRead(1);
+                    readPending = false;
+                    pipeline.fireChannelRead(new FileDescriptor(allocHandle.lastBytesRead()));
+                    break;
                 }
+            } while (allocHandle.continueReading());
+
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+        } catch (Throwable t) {
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+            pipeline.fireExceptionCaught(t);
+        } finally {
+            if (shouldStopReading(config)) {
+                clearEpollIn();
             }
         }
     }

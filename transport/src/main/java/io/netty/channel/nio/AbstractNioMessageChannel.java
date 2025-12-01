@@ -33,6 +33,8 @@ import java.util.List;
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on messages.
  */
 public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
+    private final List<Object> readBuf = new ArrayList<Object>();
+
     boolean inputShutdown;
 
     protected AbstractNioMessageChannel(EventLoop eventLoop, Channel parent,
@@ -43,11 +45,6 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     protected AbstractNioMessageChannel(EventLoop eventLoop, Channel parent,
                                         SelectableChannel ch, NioIoOps readOps) {
         super(eventLoop, parent, ch, readOps);
-    }
-
-    @Override
-    protected AbstractNioUnsafe newUnsafe() {
-        return new NioMessageUnsafe();
     }
 
     @Override
@@ -62,72 +59,67 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
         return allocHandle.continueReading();
     }
 
-    private final class NioMessageUnsafe extends AbstractNioUnsafe {
+    @Override
+    protected void readNow() {
+        assert executor().inEventLoop();
+        final ChannelConfig config = config();
+        final ChannelPipeline pipeline = pipeline();
+        final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
+        allocHandle.reset(config);
 
-        private final List<Object> readBuf = new ArrayList<Object>();
-
-        @Override
-        public void read() {
-            assert executor().inEventLoop();
-            final ChannelConfig config = config();
-            final ChannelPipeline pipeline = pipeline();
-            final RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
-            allocHandle.reset(config);
-
-            boolean closed = false;
-            Throwable exception = null;
+        boolean closed = false;
+        Throwable exception = null;
+        try {
             try {
-                try {
-                    do {
-                        int localRead = doReadMessages(readBuf);
-                        if (localRead == 0) {
-                            break;
-                        }
-                        if (localRead < 0) {
-                            closed = true;
-                            break;
-                        }
-
-                        allocHandle.incMessagesRead(localRead);
-                    } while (continueReading(allocHandle));
-                } catch (Throwable t) {
-                    exception = t;
-                }
-
-                int size = readBuf.size();
-                for (int i = 0; i < size; i ++) {
-                    readPending = false;
-                    pipeline.fireChannelRead(readBuf.get(i));
-                }
-                readBuf.clear();
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-
-                if (exception != null) {
-                    closed = closeOnReadError(exception);
-
-                    pipeline.fireExceptionCaught(exception);
-                }
-
-                if (closed) {
-                    inputShutdown = true;
-                    if (isOpen()) {
-                        close(newPromise());
+                do {
+                    int localRead = doReadMessages(readBuf);
+                    if (localRead == 0) {
+                        break;
                     }
-                }
-            } finally {
-                // Check if there is a readPending which was not processed yet.
-                // This could be for two reasons:
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-                // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-                //
-                // See https://github.com/netty/netty/issues/2254
-                if (!readPending && !config.isAutoRead()) {
-                    removeReadOp();
+                    if (localRead < 0) {
+                        closed = true;
+                        break;
+                    }
+
+                    allocHandle.incMessagesRead(localRead);
+                } while (continueReading(allocHandle));
+            } catch (Throwable t) {
+                exception = t;
+            }
+
+            int size = readBuf.size();
+            for (int i = 0; i < size; i ++) {
+                readPending = false;
+                pipeline.fireChannelRead(readBuf.get(i));
+            }
+            readBuf.clear();
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                closed = closeOnReadError(exception);
+
+                pipeline.fireExceptionCaught(exception);
+            }
+
+            if (closed) {
+                inputShutdown = true;
+                if (isOpen()) {
+                    close(newPromise());
                 }
             }
+        } finally {
+            // Check if there is a readPending which was not processed yet.
+            // This could be for two reasons:
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+            // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+            //
+            // See https://github.com/netty/netty/issues/2254
+            if (!readPending && !config.isAutoRead()) {
+                removeReadOp();
+            }
         }
-    }
+}
 
     @Override
     protected void doWrite(ChannelOutboundBuffer in) throws Exception {

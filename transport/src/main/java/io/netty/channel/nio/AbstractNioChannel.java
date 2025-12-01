@@ -46,6 +46,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractNioChannel.class);
 
+    private final NioIoHandle ioHandle = new NioIoHandleImpl();
     private final SelectableChannel ch;
     protected final int readInterestOp;
     protected final NioIoOps readOps;
@@ -54,7 +55,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private final Runnable clearReadPendingRunnable = new Runnable() {
         @Override
         public void run() {
-            clearReadPending0();
+            setReadPending0(false);
         }
     };
 
@@ -116,11 +117,6 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     @Override
     public boolean isOpen() {
         return ch.isOpen();
-    }
-
-    @Override
-    public NioUnsafe unsafe() {
-        return (NioUnsafe) super.unsafe();
     }
 
     protected SelectableChannel javaChannel() {
@@ -185,7 +181,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         if (isRegistered()) {
             EventLoop eventLoop = executor();
             if (eventLoop.inEventLoop()) {
-                clearReadPending0();
+                setReadPending0(false);
             } else {
                 eventLoop.execute(clearReadPendingRunnable);
             }
@@ -200,35 +196,8 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     private void setReadPending0(boolean readPending) {
         this.readPending = readPending;
         if (!readPending) {
-            ((AbstractNioUnsafe) unsafe()).removeReadOp();
+            removeReadOp();
         }
-    }
-
-    private void clearReadPending0() {
-        readPending = false;
-        ((AbstractNioUnsafe) unsafe()).removeReadOp();
-    }
-
-    /**
-     * Special {@link Unsafe} sub-type which allows to access the underlying {@link SelectableChannel}
-     */
-    public interface NioUnsafe extends Unsafe {
-        /**
-         * Return underlying {@link SelectableChannel}
-         */
-        SelectableChannel ch();
-
-        /**
-         * Finish connect
-         */
-        void finishConnect();
-
-        /**
-         * Read from underlying {@link SelectableChannel}
-         */
-        void read();
-
-        void forceFlush();
     }
 
     @Override
@@ -254,59 +223,15 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                 (SelectionKey) registration.attachment()).interestOps());
     }
 
-    protected abstract class AbstractNioUnsafe extends AbstractUnsafe implements NioUnsafe, NioIoHandle {
+    private final class NioIoHandleImpl implements NioIoHandle {
         @Override
         public void close() {
-            close(newPromise());
+            ioTransport().close(newPromise());
         }
 
         @Override
         public SelectableChannel selectableChannel() {
-            return ch();
-        }
-
-        Channel channel() {
-            return AbstractNioChannel.this;
-        }
-
-        protected final void removeReadOp() {
-            IoRegistration registration = registration();
-            // Check first if the key is still valid as it may be canceled as part of the deregistration
-            // from the EventLoop
-            // See https://github.com/netty/netty/issues/2104
-            if (!registration.isValid()) {
-                return;
-            }
-            removeAndSubmit(readOps);
-        }
-
-        @Override
-        public final SelectableChannel ch() {
             return javaChannel();
-        }
-
-        @Override
-        public final void finishConnect() {
-            // Note this method is invoked by the event loop only if the connection attempt was
-            // neither cancelled nor timed out.
-
-            assert executor().inEventLoop();
-            assert pendingConnectPromise != null;
-            ChannelPromise promise = pendingConnectPromise;
-            pendingConnectPromise = null;
-            try {
-                doFinishConnect();
-            } catch (Throwable cause) {
-                promise.setFailure(cause);
-                return;
-            }
-            promise.setSuccess();
-        }
-
-        @Override
-        public final void forceFlush() {
-            // directly call super.flush0() to force a flush now
-            writeFlushedNow();
         }
 
         @Override
@@ -320,33 +245,62 @@ public abstract class AbstractNioChannel extends AbstractChannel {
                     // remove OP_CONNECT as otherwise Selector.select(..) will always return without blocking
                     // See https://github.com/netty/netty/issues/924
                     removeAndSubmit(NioIoOps.CONNECT);
-
-                    unsafe().finishConnect();
+                    finishConnect();
                 }
 
                 // Process OP_WRITE first as we may be able to write some queued buffers and so free memory.
                 if (nioReadyOps.contains(NioIoOps.WRITE)) {
-                    // Call forceFlush which will also take care of clear the OP_WRITE once there is nothing left to
-                    // write
-                    forceFlush();
+                    // Call writeFlushedNow which will also take care of clear the OP_WRITE once there is nothing left
+                    // to write
+                    writeFlushedNow();
                 }
 
                 // Also check for readOps of 0 to workaround possible JDK bug which may otherwise lead
                 // to a spin loop
                 if (nioReadyOps.contains(NioIoOps.READ_AND_ACCEPT) || nioReadyOps.equals(NioIoOps.NONE)) {
-                    read();
+                    readNow();
                 }
             } catch (CancelledKeyException ignored) {
-                close(newPromise());
+                ioTransport().close(newPromise());
             }
         }
+    }
+
+    protected abstract void readNow();
+
+    protected final void finishConnect() {
+        // Note this method is invoked by the event loop only if the connection attempt was
+        // neither cancelled nor timed out.
+
+        assert executor().inEventLoop();
+        assert pendingConnectPromise != null;
+        ChannelPromise promise = pendingConnectPromise;
+        pendingConnectPromise = null;
+        try {
+            doFinishConnect();
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
+    }
+
+    protected final void removeReadOp() {
+        IoRegistration registration = registration();
+        // Check first if the key is still valid as it may be canceled as part of the deregistration
+        // from the EventLoop
+        // See https://github.com/netty/netty/issues/2104
+        if (!registration.isValid()) {
+            return;
+        }
+        removeAndSubmit(readOps);
     }
 
     @SuppressWarnings("unchecked")
     @Override
     protected void doRegister(ChannelPromise promise) {
         assert registration == null;
-        executor().register((AbstractNioUnsafe) unsafe()).addListener(f -> {
+        executor().register(ioHandle).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
                 promise.setSuccess();

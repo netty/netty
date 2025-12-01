@@ -29,7 +29,6 @@ import io.netty.channel.IoEvent;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.group.ChannelGroup;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
@@ -40,7 +39,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.ConnectException;
 import java.net.SocketAddress;
-import java.nio.channels.AlreadyBoundException;
 import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ConnectionPendingException;
@@ -74,12 +72,7 @@ public class LocalChannel extends AbstractChannel {
         }
     };
 
-    private final Runnable shutdownHook = new Runnable() {
-        @Override
-        public void run() {
-            unsafe().close(newPromise());
-        }
-    };
+    private final LocalIoHandle ioHandle = new LocalIoHandleImpl();
 
     private IoRegistration registration;
 
@@ -145,11 +138,6 @@ public class LocalChannel extends AbstractChannel {
         return state == State.CONNECTED;
     }
 
-    @Override
-    protected AbstractUnsafe newUnsafe() {
-        return new LocalUnsafe();
-    }
-
     protected SocketAddress localAddress0() {
         return localAddress;
     }
@@ -163,7 +151,7 @@ public class LocalChannel extends AbstractChannel {
     protected void doRegister(ChannelPromise promise) {
         EventLoop loop = executor();
         assert registration == null;
-        loop.register((LocalUnsafe) unsafe()).addListener(f -> {
+        loop.register(ioHandle).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
                 promise.setSuccess();
@@ -280,14 +268,14 @@ public class LocalChannel extends AbstractChannel {
 
     private void tryClose(boolean isActive) {
         if (isActive) {
-            unsafe().close(newPromise());
+            ioTransport().close(newPromise());
         } else {
             releaseInboundBuffers();
         }
     }
 
     private void readInbound() {
-        RecvByteBufAllocator.Handle handle = ((AbstractUnsafe) unsafe()).recvBufAllocHandle();
+        RecvByteBufAllocator.Handle handle = recvBufAllocHandle();
         handle.reset(config());
         ChannelPipeline pipeline = pipeline();
         do {
@@ -468,11 +456,17 @@ public class LocalChannel extends AbstractChannel {
         }
     }
 
-    private class LocalUnsafe extends AbstractUnsafe implements LocalIoHandle {
+    private final class LocalIoHandleImpl implements LocalIoHandle {
+        private final Runnable shutdownHook = new Runnable() {
+            @Override
+            public void run() {
+                closeNow();
+            }
+        };
 
         @Override
         public void close() {
-            close(newPromise());
+            closeNow();
         }
 
         @Override
@@ -521,7 +515,7 @@ public class LocalChannel extends AbstractChannel {
 
         @Override
         public void closeNow() {
-            close(newPromise());
+           ioTransport().close(newPromise());
         }
     }
 

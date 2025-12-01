@@ -50,7 +50,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private final Channel parent;
     private final ChannelId id;
-    private final AbstractUnsafe unsafe;
+    private final IoTransportImpl ioTransport = new IoTransportImpl();
     private final ChannelPipeline pipeline;
     private final CloseFuture closeFuture = new CloseFuture(this);
     private final EventLoop eventLoop;
@@ -69,6 +69,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      */
     private ChannelPromise connectPromise;
     private Future<?> connectTimeoutFuture;
+
+    private RecvByteBufAllocator.Handle recvHandle;
+    private MessageSizeEstimator.Handle estimatorHandle;
 
     /** Cache for the string representation of this channel */
     private boolean strValActive;
@@ -94,7 +97,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.parent = parent;
         this.eventLoop = validateEventLoopGroup(eventLoop, "eventLoop", handleType);
         this.id = id == null ? DefaultChannelId.newInstance() : id;
-        unsafe = newUnsafe();
         pipeline = newChannelPipeline();
         closeFuture.addListener(f -> {
             ChannelPromise connectPromise = this.connectPromise;
@@ -256,15 +258,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return closeFuture;
     }
 
-    @Override
-    public Unsafe unsafe() {
-        return unsafe;
+    protected IoTransport ioTransport() {
+        return ioTransport;
     }
-
-    /**
-     * Create a new {@link AbstractUnsafe} instance which will be used for the life-time of the {@link Channel}
-     */
-    protected abstract AbstractUnsafe newUnsafe();
 
     /**
      * Returns the ID of this channel.
@@ -343,32 +339,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     }
 
     /**
-     * {@link Unsafe} implementation which sub-classes must extend and use.
+     * {@link IoTransport} implementation which sub-classes must extend and use.
      */
-    protected class AbstractUnsafe implements Unsafe {
-
-        private RecvByteBufAllocator.Handle recvHandle;
-        private MessageSizeEstimator.Handle estimatorHandle;
+    private final class IoTransportImpl implements IoTransport {
 
         /** true if the channel has never been registered, false otherwise */
         private boolean neverRegistered = true;
 
-        MessageSizeEstimator.Handle estimatorHandle() {
-            if (estimatorHandle == null) {
-                estimatorHandle = config().getMessageSizeEstimator().newHandle();
-            }
-            return estimatorHandle;
-        }
-
-        public RecvByteBufAllocator.Handle recvBufAllocHandle() {
-            if (recvHandle == null) {
-                recvHandle = config().getRecvByteBufAllocator().newHandle();
-            }
-            return recvHandle;
-        }
-
         @Override
-        public final void register(final ChannelPromise promise) {
+        public void register(final ChannelPromise promise) {
+            assertEventLoop();
+
             // check if the channel is still open as it could be closed in the mean time when the register
             // call was outside of the eventLoop
             if (!promise.setUncancellable() || !ensureOpen(promise)) {
@@ -400,7 +381,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                                 // begin read again so that we process inbound data.
                                 //
                                 // See https://github.com/netty/netty/issues/4805
-                                beginRead();
+                                read();
                             }
                         }
                     } else {
@@ -415,7 +396,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void bind(final SocketAddress localAddress, final ChannelPromise promise) {
+        public void bind(final SocketAddress localAddress, final ChannelPromise promise) {
             assertEventLoop();
 
             if (!promise.setUncancellable() || !ensureOpen(promise)) {
@@ -456,8 +437,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void connect(
+        public void connect(
                 final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+            assertEventLoop();
+
             // Don't mark the connect promise as uncancellable as in fact we can cancel it as it is using
             // non-blocking io.
             if (promise.isDone() || !ensureOpen(promise)) {
@@ -544,7 +527,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void disconnect(final ChannelPromise promise) {
+        public void disconnect(final ChannelPromise promise) {
             assertEventLoop();
 
             if (!promise.setUncancellable()) {
@@ -573,58 +556,12 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void close(final ChannelPromise promise) {
+        public void close(final ChannelPromise promise) {
             assertEventLoop();
 
             ClosedChannelException closedChannelException =
                     StacklessClosedChannelException.newInstance(AbstractChannel.class, "close(ChannelPromise)");
             close(promise, closedChannelException, closedChannelException);
-        }
-
-        /**
-         * Shutdown the output portion of the corresponding {@link Channel}.
-         * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
-         */
-        public final void shutdownOutput(final ChannelPromise promise) {
-            assertEventLoop();
-            shutdownOutput(promise, null);
-        }
-
-        /**
-         * Shutdown the output portion of the corresponding {@link Channel}.
-         * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
-         * @param cause The cause which may provide rational for the shutdown.
-         */
-        private void shutdownOutput(final ChannelPromise promise, Throwable cause) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
-
-            final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
-            if (outboundBuffer == null) {
-                promise.setFailure(new ClosedChannelException());
-                return;
-            }
-
-            final Throwable shutdownCause = cause == null ?
-                    new ChannelOutputShutdownException("Channel output shutdown") :
-                    new ChannelOutputShutdownException("Channel output shutdown", cause);
-
-            // When a side enables SO_LINGER and calls showdownOutput(...) to start TCP half-closure
-            // we can not call doDeregister here because we should ensure this side in fin_wait2 state
-            // can still receive and process the data which is send by another side in the close_wait state。
-            // See https://github.com/netty/netty/issues/11981
-
-            // The shutdown function does not block regardless of the SO_LINGER setting on the socket
-            // so we don't need to use GlobalEventExecutor to execute the shutdown
-            ChannelPromise shutdownPromise = newPromise().addListener(f -> {
-                // Disallow adding any messages and flushes to outboundBuffer.
-                AbstractChannel.this.outboundBuffer = null;
-
-                safeCascade(f, promise);
-                closeOutboundBufferForShutdown(pipeline, outboundBuffer, shutdownCause);
-            });
-            doShutdownOutput(shutdownPromise);
         }
 
         private void closeOutboundBufferForShutdown(
@@ -709,7 +646,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void deregister(final ChannelPromise promise) {
+        public void deregister(final ChannelPromise promise) {
             assertEventLoop();
 
             deregister(promise, false);
@@ -760,7 +697,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void beginRead() {
+        public void read() {
             assertEventLoop();
 
             try {
@@ -777,7 +714,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void write(Object msg, ChannelPromise promise) {
+        public void write(Object msg, ChannelPromise promise) {
             assertEventLoop();
 
             ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
@@ -791,7 +728,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     // will be done in flush0()
                     // See https://github.com/netty/netty/issues/2362
                     safeSetFailure(promise, newClosedChannelException(
-                            AbstractUnsafe.class, initialCloseCause, "write(Object, ChannelPromise)"));
+                            IoTransportImpl.class, initialCloseCause, "write(Object, ChannelPromise)"));
                 }
                 return;
             }
@@ -816,7 +753,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         @Override
-        public final void flush() {
+        public void flush() {
             assertEventLoop();
 
             ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
@@ -828,7 +765,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             writeFlushed();
         }
 
-        protected final void handleWriteError(Throwable t) {
+        private void handleWriteError(Throwable t) {
             if (t instanceof IOException && config().isAutoClose()) {
                 /**
                  * Just call {@link #close(ChannelPromise, Throwable, boolean)} here which will take care of
@@ -839,13 +776,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                  * may still return {@code true} even if the channel should be closed as result of the exception.
                  */
                 initialCloseCause = t;
-                close(newPromise(), t, newClosedChannelException(AbstractUnsafe.class, t, "handleWriteError()"));
+                close(newPromise(), t, newClosedChannelException(IoTransportImpl.class, t, "handleWriteError()"));
             } else {
                 try {
                     shutdownOutput(newPromise(), t);
                 } catch (Throwable t2) {
                     initialCloseCause = t;
-                    close(newPromise(), t2, newClosedChannelException(AbstractUnsafe.class, t, "handleWriteError()"));
+                    close(newPromise(), t2, newClosedChannelException(IoTransportImpl.class, t, "handleWriteError()"));
                 }
             }
         }
@@ -859,17 +796,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             return exception;
         }
 
-        protected final boolean ensureOpen(ChannelPromise promise) {
+        private boolean ensureOpen(ChannelPromise promise) {
             if (isOpen()) {
                 return true;
             }
 
             safeSetFailure(promise, newClosedChannelException(
-                    AbstractUnsafe.class, initialCloseCause, "ensureOpen(ChannelPromise)"));
+                    IoTransportImpl.class, initialCloseCause, "ensureOpen(ChannelPromise)"));
             return false;
         }
 
-        protected final void safeCascade(Future<?> future, ChannelPromise promise) {
+        private void safeCascade(Future<?> future, ChannelPromise promise) {
             if (future.isSuccess()) {
                 safeSetSuccess(promise);
             } else {
@@ -880,7 +817,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         /**
          * Marks the specified {@code promise} as success.  If the {@code promise} is done already, log a message.
          */
-        protected final void safeSetSuccess(ChannelPromise promise) {
+        private void safeSetSuccess(ChannelPromise promise) {
             if (!promise.trySuccess()) {
                 logger.warn("Failed to mark a promise as success because it is done already: {}", promise);
             }
@@ -889,13 +826,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         /**
          * Marks the specified {@code promise} as failure.  If the {@code promise} is done already, log a message.
          */
-        protected final void safeSetFailure(ChannelPromise promise, Throwable cause) {
+        private void safeSetFailure(ChannelPromise promise, Throwable cause) {
             if (!promise.tryFailure(cause)) {
                 logger.warn("Failed to mark a promise as failure because it's done already: {}", promise, cause);
             }
         }
 
-        protected final void closeIfClosed() {
+        private void closeIfClosed() {
             if (isOpen()) {
                 return;
             }
@@ -924,7 +861,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         /**
          * Appends the remote address to the message of the exceptions caused by connection attempt failure.
          */
-        protected final Throwable annotateConnectException(Throwable cause, SocketAddress remoteAddress) {
+        private Throwable annotateConnectException(Throwable cause, SocketAddress remoteAddress) {
             if (cause instanceof ConnectException) {
                 return new AnnotatedConnectException((ConnectException) cause, remoteAddress);
             }
@@ -937,16 +874,95 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             return cause;
         }
+    }
 
-        /**
-         * Prepares to close the {@link Channel}. If this method returns an {@link Executor}, the
-         * caller must call the {@link Executor#execute(Runnable)} method with a task that calls
-         * {@link #doClose(ChannelPromise)} on the returned {@link Executor}. If this method returns {@code null},
-         * {@link #doClose(ChannelPromise)} must be called from the caller thread. (i.e. {@link EventLoop})
-         */
-        protected Executor prepareToClose() {
-            return null;
+    protected final void handleWriteError(Throwable t) {
+        ioTransport.handleWriteError(t);
+    }
+
+    /**
+     * Prepares to close the {@link Channel}. If this method returns an {@link Executor}, the
+     * caller must call the {@link Executor#execute(Runnable)} method with a task that calls
+     * {@link #doClose(ChannelPromise)} on the returned {@link Executor}. If this method returns {@code null},
+     * {@link #doClose(ChannelPromise)} must be called from the caller thread. (i.e. {@link EventLoop})
+     */
+    protected Executor prepareToClose() {
+        return null;
+    }
+
+    /**
+     * Shutdown the output portion of the corresponding {@link Channel}.
+     * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
+     */
+    // TODO: Make this a concept of the Unsafe.
+    protected final void shutdownOutput0(final ChannelPromise promise) {
+        assertEventLoop();
+        shutdownOutput(promise, null);
+    }
+
+    /**
+     * Shutdown the output portion of the corresponding {@link Channel}.
+     * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
+     * @param cause The cause which may provide rational for the shutdown.
+     */
+    private void shutdownOutput(final ChannelPromise promise, Throwable cause) {
+        if (!promise.setUncancellable()) {
+            return;
         }
+
+        final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
+        if (outboundBuffer == null) {
+            promise.setFailure(new ClosedChannelException());
+            return;
+        }
+
+        final Throwable shutdownCause = cause == null ?
+                new ChannelOutputShutdownException("Channel output shutdown") :
+                new ChannelOutputShutdownException("Channel output shutdown", cause);
+
+        // When a side enables SO_LINGER and calls showdownOutput(...) to start TCP half-closure
+        // we can not call doDeregister here because we should ensure this side in fin_wait2 state
+        // can still receive and process the data which is send by another side in the close_wait state。
+        // See https://github.com/netty/netty/issues/11981
+
+        // The shutdown function does not block regardless of the SO_LINGER setting on the socket
+        // so we don't need to use GlobalEventExecutor to execute the shutdown
+        ChannelPromise shutdownPromise = newPromise().addListener(f -> {
+            // Disallow adding any messages and flushes to outboundBuffer.
+            AbstractChannel.this.outboundBuffer = null;
+
+            ioTransport.safeCascade(f, promise);
+            ioTransport.closeOutboundBufferForShutdown(pipeline, outboundBuffer, shutdownCause);
+        });
+        doShutdownOutput(shutdownPromise);
+    }
+
+    private MessageSizeEstimator.Handle estimatorHandle() {
+        if (estimatorHandle == null) {
+            estimatorHandle = config().getMessageSizeEstimator().newHandle();
+        }
+        return estimatorHandle;
+    }
+
+    /**
+     * Returns the {@link RecvByteBufAllocator.Handle} that should be used while reading from the transport.
+     *
+     * @return  handle
+     */
+    protected final RecvByteBufAllocator.Handle recvBufAllocHandle() {
+        if (recvHandle == null) {
+            recvHandle = newRecvBufAllocHandle();
+        }
+        return recvHandle;
+    }
+
+    /**
+     * Create a new {@link RecvByteBufAllocator.Handle} that will be used for reading.
+     *
+     * @return newHandle.
+     */
+    protected RecvByteBufAllocator.Handle newRecvBufAllocHandle() {
+        return config().getRecvByteBufAllocator().newHandle();
     }
 
     private void assertEventLoop() {
@@ -1004,7 +1020,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                         outboundBuffer.failFlushed(new NotYetConnectedException(), true);
                     } else {
                         // Do not trigger channelWritabilityChanged because the channel is closed already.
-                        outboundBuffer.failFlushed(unsafe.newClosedChannelException(
+                        outboundBuffer.failFlushed(ioTransport.newClosedChannelException(
                                 AbstractChannel.class, initialCloseCause, "writeFlushedNow()"), false);
                     }
                 }
@@ -1017,7 +1033,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         try {
             doWrite(outboundBuffer);
         } catch (Throwable t) {
-            unsafe.handleWriteError(t);
+            ioTransport.handleWriteError(t);
         } finally {
             inWriteFlushed = false;
         }
@@ -1094,7 +1110,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return msg;
     }
 
-    protected void validateFileRegion(DefaultFileRegion region, long position) throws IOException {
+    protected final void validateFileRegion(DefaultFileRegion region, long position) throws IOException {
         DefaultFileRegion.validate(region, position);
     }
 
@@ -1180,7 +1196,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected class DefaultAbstractChannelPipeline extends DefaultChannelPipeline {
 
         protected DefaultAbstractChannelPipeline(AbstractChannel channel) {
-            super(channel);
+            super(channel, channel.ioTransport);
         }
 
         @Override
