@@ -540,7 +540,6 @@ public class LocalChannel extends AbstractChannel {
             if (state == State.CONNECTED) {
                 Exception cause = new AlreadyConnectedException();
                 safeSetFailure(promise, cause);
-                pipeline().fireExceptionCaught(cause);
                 return;
             }
 
