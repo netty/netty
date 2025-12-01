@@ -16,7 +16,6 @@
 package io.netty.util.concurrent;
 
 import io.netty.util.internal.ObjectUtil;
-
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -131,7 +130,8 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
         this.maxRampUpStep = ObjectUtil.checkPositive(maxRampUpStep, "maxRampUpStep");
         this.maxRampDownStep = ObjectUtil.checkPositive(maxRampDownStep, "maxRampDownStep");
         this.scalingPatienceCycles = ObjectUtil.checkPositiveOrZero(scalingPatienceCycles, "scalingPatienceCycles");
-        this.singleRefreshThresholdCount = ObjectUtil.checkPositive(singleRefreshThresholdCount, "singleRefreshThresholdCount");
+        this.singleRefreshThresholdCount = ObjectUtil.checkPositive(singleRefreshThresholdCount,
+                "singleRefreshThresholdCount");
     }
 
     @Override
@@ -429,13 +429,13 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
             private final EventExecutor[] executors;
             private volatile List<Integer> awareIds;
 
-            private long lastRefreshTimeNanos = 0;
+            private long lastRefreshTimeNanos = 0L;
             private final AtomicInteger cycleCount = new AtomicInteger();
             private final AtomicLong idx = new AtomicLong();
             private final ReentrantLock lock = new ReentrantLock();
             private final long refreshThresholdCount;
 
-            UtilizationAwareEventExecutorChooser(EventExecutor[] executors ){
+            UtilizationAwareEventExecutorChooser(EventExecutor[] executors) {
                 this.executors = executors;
                 refreshThresholdCount = executors.length * singleRefreshThresholdCount;
                 awareIds = new ArrayList<>();
@@ -459,7 +459,7 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
 
                 if (lastRefreshTimeNanos < utilizationMonitor.lastCheckTimeNanos) {
                     lock.lock();
-                    try{
+                    try {
                         if (lastRefreshTimeNanos < utilizationMonitor.lastCheckTimeNanos) {
                             List<Integer> newAwareIds = new ArrayList<>();
 
@@ -482,17 +482,17 @@ public final class AutoScalingEventExecutorChooserFactory implements EventExecut
                             awareIds = Collections.unmodifiableList(newAwareIds);
                             cycleCount.set(0);
                         }
-                    }finally {
+                    } finally {
                         lock.unlock();
                     }
                 }
             }
+
             private void scaleRadio(List<Integer> radioList, int index, int scaleNum) {
-                for(int i = 0; i < scaleNum; i++){
+                for (int i = 0; i < scaleNum; i++) {
                     radioList.add(index);
                 }
             }
         }
     }
-
 }
