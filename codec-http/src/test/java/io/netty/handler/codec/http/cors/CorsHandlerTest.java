@@ -534,7 +534,6 @@ public class CorsHandlerTest {
 
         LastHttpContent lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
         assertFalse(ch.writeInbound(lastHttpContent));
-        ReferenceCountUtil.release(lastHttpContent); // safe release
 
         // Nothing should have been forwarded
         assertNull(ch.readInbound());
