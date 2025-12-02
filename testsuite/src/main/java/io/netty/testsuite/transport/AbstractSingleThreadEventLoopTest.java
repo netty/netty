@@ -67,10 +67,11 @@ public abstract class AbstractSingleThreadEventLoopTest {
     protected static final int SINGLE_REFRESH_THRESHOLD_COUNT = 1 << 10;
 
     protected static final EventExecutorChooserFactory AUTO_SCALING_CHOOSER_FACTORY =
-            new AutoScalingEventExecutorChooserFactory(SCALING_MIN_THREADS, SCALING_MAX_THREADS, SCALING_WINDOW_SECONDS,
-                                                       SCALING_WINDOW_UNIT, SCALEDOWN_THRESHOLD, SCALEUP_THRESHOLD,
-                                                       SCALING_MAX_THREADS, SCALING_MAX_THREADS, SCALING_PATIENCE_CYCLES,
-                                                       SINGLE_REFRESH_THRESHOLD_COUNT
+            new AutoScalingEventExecutorChooserFactory(
+                    SCALING_MIN_THREADS, SCALING_MAX_THREADS, SCALING_WINDOW_SECONDS,
+                    SCALING_WINDOW_UNIT, SCALEDOWN_THRESHOLD, SCALEUP_THRESHOLD,
+                    SCALING_MAX_THREADS, SCALING_MAX_THREADS, SCALING_PATIENCE_CYCLES,
+                    SINGLE_REFRESH_THRESHOLD_COUNT
     );
 
     @Test
