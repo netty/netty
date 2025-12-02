@@ -530,7 +530,6 @@ public class CorsHandlerTest {
 
         Object outbound = ch.readOutbound();
         assertNotNull(outbound); // preflight response
-        ReferenceCountUtil.release(outbound);
 
         LastHttpContent lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
         assertFalse(ch.writeInbound(lastHttpContent));
