@@ -530,11 +530,9 @@ public class CorsHandlerTest {
 
         Object outbound = ch.readOutbound();
         assertNotNull(outbound); // preflight response
-        ReferenceCountUtil.release(outbound);
 
         LastHttpContent lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
         assertFalse(ch.writeInbound(lastHttpContent));
-        ReferenceCountUtil.release(lastHttpContent); // safe release
 
         // Nothing should have been forwarded
         assertNull(ch.readInbound());
@@ -558,11 +556,31 @@ public class CorsHandlerTest {
         LastHttpContent second = LastHttpContent.EMPTY_LAST_CONTENT;
 
         assertFalse(ch.writeInbound(first));
-        ReferenceCountUtil.release(first);
 
         assertFalse(ch.writeInbound(second));
-        ReferenceCountUtil.release(second);
 
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void preflightSecondNonEmptyLastDiscarded() {
+        CorsConfig config = forOrigin("http://allowed").build();
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
+
+        FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/test");
+        preflight.headers().set(ORIGIN, "http://allowed");
+        preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
+
+        assertFalse(ch.writeInbound(preflight));
+        ReferenceCountUtil.release(ch.readOutbound());
+
+        LastHttpContent first = LastHttpContent.EMPTY_LAST_CONTENT;
+        LastHttpContent second = new DefaultLastHttpContent(
+                Unpooled.copiedBuffer("test message", CharsetUtil.UTF_8));
+
+        assertFalse(ch.writeInbound(first));
+        assertFalse(ch.writeInbound(second));
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
     }
@@ -579,7 +597,6 @@ public class CorsHandlerTest {
         assertFalse(ch.writeInbound(preflight));
         Object outbound = ch.releaseOutbound();
         assertNotNull(outbound);
-        ReferenceCountUtil.release(outbound);
 
         LastHttpContent nonEmpty = new DefaultLastHttpContent(Unpooled.copiedBuffer("x", CharsetUtil.UTF_8));
         assertFalse(ch.writeInbound(nonEmpty));
@@ -607,10 +624,7 @@ public class CorsHandlerTest {
         Object secondInbound = ch.readInbound();
 
         assertNotNull(firstInbound);
-        ReferenceCountUtil.release(firstInbound);
-
         assertNotNull(secondInbound);
-        ReferenceCountUtil.release(secondInbound);
 
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
@@ -632,10 +646,7 @@ public class CorsHandlerTest {
         Object second = ch.readInbound();
 
         assertNotNull(first);
-        ReferenceCountUtil.release(first);
-
         assertNotNull(second);
-        ReferenceCountUtil.release(second);
 
         assertNull(ch.readInbound());
         assertFalse(ch.finish());

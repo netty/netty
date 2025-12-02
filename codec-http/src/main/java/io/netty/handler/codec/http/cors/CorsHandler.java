@@ -90,7 +90,8 @@ public class CorsHandler extends ChannelDuplexHandler {
             config = getForOrigin(origin);
             if (isPreflightRequest(request)) {
                 handlePreflight(ctx, request);
-                // Expect an EmptyLastHttpContent next from HttpServerCodec, mark to discard.
+                // Enable consumeContent so that all following HttpContent
+                // for this request will be released and not propagated downstream.
                 consumeContent = true;
                 return;
             }
