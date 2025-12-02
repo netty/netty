@@ -259,11 +259,6 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected AbstractUnsafe newUnsafe() {
-            return new MyUnsafe();
-        }
-
-        @Override
         protected SocketAddress localAddress0() {
             return null;
         }
@@ -338,12 +333,9 @@ public class DefaultChannelPipelineTailTest {
         protected void onUnhandledInboundWritabilityChanged() {
         }
 
-        private class MyUnsafe extends AbstractUnsafe {
-        }
+        private class MyChannelPipeline extends DefaultAbstractChannelPipeline {
 
-        private class MyChannelPipeline extends DefaultChannelPipeline {
-
-            MyChannelPipeline(Channel channel) {
+            MyChannelPipeline(AbstractChannel channel) {
                 super(channel);
             }
 

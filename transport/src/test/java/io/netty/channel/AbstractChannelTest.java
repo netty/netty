@@ -74,7 +74,7 @@ public class AbstractChannelTest {
         channel.pipeline().addLast(handler);
 
         registerChannel(channel);
-        channel.unsafe().deregister(new DefaultChannelPromise(channel));
+        channel.deregister(new DefaultChannelPromise(channel));
 
         registerChannel(channel);
 
@@ -174,11 +174,6 @@ public class AbstractChannelTest {
             private boolean active;
 
             @Override
-            protected AbstractUnsafe newUnsafe() {
-                return new AbstractUnsafe() { };
-            }
-
-            @Override
             protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
                 active = true;
                 promise.setSuccess();
@@ -230,7 +225,7 @@ public class AbstractChannelTest {
 
     private static void registerChannel(Channel channel) throws Exception {
         DefaultChannelPromise future = new DefaultChannelPromise(channel);
-        channel.unsafe().register(future);
+        channel.register(future);
         future.sync(); // Cause any exceptions to be thrown
     }
 
@@ -261,11 +256,6 @@ public class AbstractChannelTest {
         @Override
         public ChannelMetadata metadata() {
             return TEST_METADATA;
-        }
-
-        @Override
-        protected AbstractUnsafe newUnsafe() {
-            return new AbstractUnsafe() { };
         }
 
         @Override

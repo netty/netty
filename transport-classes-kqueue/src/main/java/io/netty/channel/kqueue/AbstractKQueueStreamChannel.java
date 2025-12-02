@@ -43,7 +43,6 @@ import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.util.concurrent.Executor;
 
 import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD;
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
@@ -75,11 +74,6 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
 
     AbstractKQueueStreamChannel(EventLoop eventLoop, BsdSocket fd) {
         this(eventLoop, null, fd, isSoErrorZero(fd));
-    }
-
-    @Override
-    protected AbstractKQueueUnsafe newUnsafe() {
-        return new KQueueStreamUnsafe();
     }
 
     @Override
@@ -412,12 +406,12 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     public ChannelFuture shutdownOutput(final ChannelPromise promise) {
         EventLoop loop = executor();
         if (loop.inEventLoop()) {
-            ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
+            shutdownOutput0(promise);
         } else {
             loop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
+                    shutdownOutput0(promise);
                 }
             });
         }
@@ -508,102 +502,94 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         }
     }
 
-    class KQueueStreamUnsafe extends AbstractKQueueUnsafe {
-        // Overridden here just to be able to access this method from AbstractKQueueStreamChannel
-        @Override
-        protected Executor prepareToClose() {
-            return super.prepareToClose();
+    @Override
+    void readReady(final KQueueRecvByteAllocatorHandle allocHandle) {
+        final ChannelConfig config = config();
+        if (shouldBreakReadReady(config)) {
+            clearReadFilter0();
+            return;
         }
+        final ChannelPipeline pipeline = pipeline();
+        final ByteBufAllocator allocator = config.getAllocator();
+        allocHandle.reset(config);
 
-        @Override
-        void readReady(final KQueueRecvByteAllocatorHandle allocHandle) {
-            final ChannelConfig config = config();
-            if (shouldBreakReadReady(config)) {
-                clearReadFilter0();
-                return;
-            }
-            final ChannelPipeline pipeline = pipeline();
-            final ByteBufAllocator allocator = config.getAllocator();
-            allocHandle.reset(config);
-
-            ByteBuf byteBuf = null;
-            boolean close = false;
-            try {
-                do {
-                    // we use a direct buffer here as the native implementations only be able
-                    // to handle direct buffers.
-                    byteBuf = allocHandle.allocate(allocator);
-                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
-                    if (allocHandle.lastBytesRead() <= 0) {
-                        // nothing was read, release the buffer.
-                        byteBuf.release();
-                        byteBuf = null;
-                        close = allocHandle.lastBytesRead() < 0;
-                        if (close) {
-                            // There is nothing left to read as we received an EOF.
-                            readPending = false;
-                        }
-                        break;
-                    }
-                    allocHandle.incMessagesRead(1);
-                    readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
-                    byteBuf = null;
-
-                    if (shouldBreakReadReady(config)) {
-                        // We need to do this for two reasons:
-                        //
-                        // - If the input was shutdown in between (which may be the case when the user did it in the
-                        //   fireChannelRead(...) method we should not try to read again to not produce any
-                        //   miss-leading exceptions.
-                        //
-                        // - If the user closes the channel we need to ensure we not try to read from it again as
-                        //   the filedescriptor may be re-used already by the OS if the system is handling a lot of
-                        //   concurrent connections and so needs a lot of filedescriptors. If not do this we risk
-                        //   reading data from a filedescriptor that belongs to another socket then the socket that
-                        //   was "wrapped" by this Channel implementation.
-                        break;
-                    }
-                } while (allocHandle.continueReading());
-
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-
-                if (close) {
-                    shutdownInput(false);
-                }
-            } catch (Throwable t) {
-                handleReadException(pipeline, byteBuf, t, close, allocHandle);
-            } finally {
-                if (shouldStopReading(config)) {
-                    clearReadFilter0();
-                }
-            }
-        }
-
-        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
-                                         KQueueRecvByteAllocatorHandle allocHandle) {
-            if (byteBuf != null) {
-                if (byteBuf.isReadable()) {
-                    readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
-                } else {
+        ByteBuf byteBuf = null;
+        boolean close = false;
+        try {
+            do {
+                // we use a direct buffer here as the native implementations only be able
+                // to handle direct buffers.
+                byteBuf = allocHandle.allocate(allocator);
+                allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                if (allocHandle.lastBytesRead() <= 0) {
+                    // nothing was read, release the buffer.
                     byteBuf.release();
+                    byteBuf = null;
+                    close = allocHandle.lastBytesRead() < 0;
+                    if (close) {
+                        // There is nothing left to read as we received an EOF.
+                        readPending = false;
+                    }
+                    break;
                 }
-            }
-            if (!failConnectPromise(cause)) {
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-                pipeline.fireExceptionCaught(cause);
+                allocHandle.incMessagesRead(1);
+                readPending = false;
+                pipeline.fireChannelRead(byteBuf);
+                byteBuf = null;
 
-                // If oom will close the read event, release connection.
-                // See https://github.com/netty/netty/issues/10434
-                if (close ||
-                        cause instanceof OutOfMemoryError ||
-                        cause instanceof LeakPresenceDetector.AllocationProhibitedException ||
-                        cause instanceof IOException) {
-                    shutdownInput(false);
+                if (shouldBreakReadReady(config)) {
+                    // We need to do this for two reasons:
+                    //
+                    // - If the input was shutdown in between (which may be the case when the user did it in the
+                    //   fireChannelRead(...) method we should not try to read again to not produce any
+                    //   miss-leading exceptions.
+                    //
+                    // - If the user closes the channel we need to ensure we not try to read from it again as
+                    //   the filedescriptor may be re-used already by the OS if the system is handling a lot of
+                    //   concurrent connections and so needs a lot of filedescriptors. If not do this we risk
+                    //   reading data from a filedescriptor that belongs to another socket then the socket that
+                    //   was "wrapped" by this Channel implementation.
+                    break;
                 }
+            } while (allocHandle.continueReading());
+
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (close) {
+                shutdownInput(false);
+            }
+        } catch (Throwable t) {
+            handleReadException(pipeline, byteBuf, t, close, allocHandle);
+        } finally {
+            if (shouldStopReading(config)) {
+                clearReadFilter0();
+            }
+        }
+    }
+
+    private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause, boolean close,
+                                     KQueueRecvByteAllocatorHandle allocHandle) {
+        if (byteBuf != null) {
+            if (byteBuf.isReadable()) {
+                readPending = false;
+                pipeline.fireChannelRead(byteBuf);
+            } else {
+                byteBuf.release();
+            }
+        }
+        if (!failConnectPromise(cause)) {
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+            pipeline.fireExceptionCaught(cause);
+
+            // If oom will close the read event, release connection.
+            // See https://github.com/netty/netty/issues/10434
+            if (close ||
+                    cause instanceof OutOfMemoryError ||
+                    cause instanceof LeakPresenceDetector.AllocationProhibitedException ||
+                    cause instanceof IOException) {
+                shutdownInput(false);
             }
         }
     }

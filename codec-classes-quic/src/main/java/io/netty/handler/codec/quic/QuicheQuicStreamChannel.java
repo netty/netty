@@ -27,6 +27,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoTransport;
 import io.netty.channel.PendingWriteQueue;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
@@ -53,7 +54,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     private final QuicheQuicChannel parent;
     private final ChannelId id;
     private final ChannelPipeline pipeline;
-    private final QuicStreamChannelUnsafe unsafe;
+    private final QuicStreamIoTransport ioTransport;
     private final ChannelPromise closePromise;
     private final PendingWriteQueue queue;
 
@@ -79,8 +80,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     QuicheQuicStreamChannel(QuicheQuicChannel parent, long streamId) {
         this.parent = parent;
         this.id = DefaultChannelId.newInstance();
-        unsafe = new QuicStreamChannelUnsafe();
-        this.pipeline = new DefaultChannelPipeline(this) {
+        ioTransport = new QuicStreamIoTransport();
+        this.pipeline = new DefaultChannelPipeline(this, ioTransport) {
             // TODO: add some overrides maybe ?
         };
         config = new QuicheQuicStreamChannelConfig(this);
@@ -175,8 +176,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             return;
         }
         outputShutdown = true;
-        unsafe.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, promise);
-        unsafe.flush();
+        ioTransport.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, promise);
+        ioTransport.flush();
     }
 
     @Override
@@ -251,8 +252,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
         inputShutdown = true;
         outputShutdown = true;
-        unsafe.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, newPromise());
-        unsafe.flush();
+        ioTransport.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, newPromise());
+        ioTransport.flush();
         parent().streamShutdown(streamId(), true, false, 0, promise);
         closeIfDone();
     }
@@ -287,7 +288,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     private void closeIfDone() {
         if (finSent && (finReceived || type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated())) {
-            unsafe().close(newPromise());
+            ioTransport().close(newPromise());
         }
     }
 
@@ -371,9 +372,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         return 8;
     }
 
-    @Override
-    public QuicStreamChannelUnsafe unsafe() {
-        return unsafe;
+    QuicStreamIoTransport ioTransport() {
+        return ioTransport;
     }
 
     @Override
@@ -435,12 +435,12 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 }
                 // IF this error was not QUICHE_ERR_STREAM_STOPPED we should close the channel.
                 finSent = true;
-                unsafe().close(newPromise());
+                ioTransport().close(newPromise());
             }
             return false;
         }
         this.capacity = capacity;
-        boolean mayNeedWrite = unsafe().writeQueued();
+        boolean mayNeedWrite = ioTransport().writeQueued();
         // we need to re-read this.capacity as writeQueued() may update the capacity.
         updateWritabilityIfNeeded(this.capacity > 0);
         return mayNeedWrite;
@@ -461,11 +461,11 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         // Mark as readable and if a read is pending execute it.
         readable = true;
         if (readPending) {
-            unsafe().recv();
+            ioTransport().recv();
         }
     }
 
-    final class QuicStreamChannelUnsafe implements Unsafe {
+    final class QuicStreamIoTransport implements IoTransport {
 
         @SuppressWarnings("deprecation")
         private RecvByteBufAllocator.Handle recvHandle;
@@ -624,11 +624,11 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         @Override
-        public void beginRead() {
+        public void read() {
             assert executor().inEventLoop();
             readPending = true;
             if (readable) {
-                unsafe().recv();
+                ioTransport().recv();
 
                 // As the stream was readable, and we called recv() ourselves we also need to call
                 // connectionSendAndFlush(). This is needed as recv() might consume data and so a window update

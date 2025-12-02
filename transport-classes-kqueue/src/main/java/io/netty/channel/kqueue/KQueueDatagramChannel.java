@@ -223,11 +223,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
     }
 
     @Override
-    protected AbstractKQueueUnsafe newUnsafe() {
-        return new KQueueDatagramChannelUnsafe();
-    }
-
-    @Override
     protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
         super.doBind(localAddress, newPromise().addListener(f -> {
             if (f.isSuccess()) {
@@ -367,105 +362,102 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         connected = false;
     }
 
-    final class KQueueDatagramChannelUnsafe extends AbstractKQueueUnsafe {
+    @Override
+    void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
+        assert executor().inEventLoop();
+        final DatagramChannelConfig config = config();
+        if (shouldBreakReadReady(config)) {
+            clearReadFilter0();
+            return;
+        }
+        final ChannelPipeline pipeline = pipeline();
+        final ByteBufAllocator allocator = config.getAllocator();
+        allocHandle.reset(config);
 
-        @Override
-        void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
-            assert executor().inEventLoop();
-            final DatagramChannelConfig config = config();
-            if (shouldBreakReadReady(config)) {
-                clearReadFilter0();
-                return;
-            }
-            final ChannelPipeline pipeline = pipeline();
-            final ByteBufAllocator allocator = config.getAllocator();
-            allocHandle.reset(config);
-
-            Throwable exception = null;
+        Throwable exception = null;
+        try {
+            ByteBuf byteBuf = null;
             try {
-                ByteBuf byteBuf = null;
-                try {
-                    boolean connected = isConnected();
-                    do {
-                        byteBuf = allocHandle.allocate(allocator);
-                        allocHandle.attemptedBytesRead(byteBuf.writableBytes());
+                boolean connected = isConnected();
+                do {
+                    byteBuf = allocHandle.allocate(allocator);
+                    allocHandle.attemptedBytesRead(byteBuf.writableBytes());
 
-                        final DatagramPacket packet;
-                        if (connected) {
-                            try {
-                                allocHandle.lastBytesRead(doReadBytes(byteBuf));
-                            } catch (Errors.NativeIoException e) {
-                                // We need to correctly translate connect errors to match NIO behaviour.
-                                if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
-                                    PortUnreachableException error = new PortUnreachableException(e.getMessage());
-                                    error.initCause(e);
-                                    throw error;
-                                }
-                                throw e;
+                    final DatagramPacket packet;
+                    if (connected) {
+                        try {
+                            allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                        } catch (Errors.NativeIoException e) {
+                            // We need to correctly translate connect errors to match NIO behaviour.
+                            if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
+                                PortUnreachableException error = new PortUnreachableException(e.getMessage());
+                                error.initCause(e);
+                                throw error;
                             }
-                            if (allocHandle.lastBytesRead() <= 0) {
-                                // nothing was read, release the buffer.
-                                byteBuf.release();
-                                byteBuf = null;
-                                break;
-                            }
-                            packet = new DatagramPacket(byteBuf,
-                                    (InetSocketAddress) localAddress(), (InetSocketAddress) remoteAddress());
+                            throw e;
+                        }
+                        if (allocHandle.lastBytesRead() <= 0) {
+                            // nothing was read, release the buffer.
+                            byteBuf.release();
+                            byteBuf = null;
+                            break;
+                        }
+                        packet = new DatagramPacket(byteBuf,
+                                (InetSocketAddress) localAddress(), (InetSocketAddress) remoteAddress());
+                    } else {
+                        final DatagramSocketAddress remoteAddress;
+                        if (byteBuf.hasMemoryAddress()) {
+                            // has a memory address so use optimized call
+                            remoteAddress = socket.recvFromAddress(byteBuf.memoryAddress(), byteBuf.writerIndex(),
+                                    byteBuf.capacity());
                         } else {
-                            final DatagramSocketAddress remoteAddress;
-                            if (byteBuf.hasMemoryAddress()) {
-                                // has a memory address so use optimized call
-                                remoteAddress = socket.recvFromAddress(byteBuf.memoryAddress(), byteBuf.writerIndex(),
-                                        byteBuf.capacity());
-                            } else {
-                                ByteBuffer nioData = byteBuf.internalNioBuffer(
-                                        byteBuf.writerIndex(), byteBuf.writableBytes());
-                                remoteAddress = socket.recvFrom(nioData, nioData.position(), nioData.limit());
-                            }
-
-                            if (remoteAddress == null) {
-                                allocHandle.lastBytesRead(-1);
-                                byteBuf.release();
-                                byteBuf = null;
-                                break;
-                            }
-                            InetSocketAddress localAddress = remoteAddress.localAddress();
-                            if (localAddress == null) {
-                                localAddress = (InetSocketAddress) localAddress();
-                            }
-                            allocHandle.lastBytesRead(remoteAddress.receivedAmount());
-                            byteBuf.writerIndex(byteBuf.writerIndex() + allocHandle.lastBytesRead());
-
-                            packet = new DatagramPacket(byteBuf, localAddress, remoteAddress);
+                            ByteBuffer nioData = byteBuf.internalNioBuffer(
+                                    byteBuf.writerIndex(), byteBuf.writableBytes());
+                            remoteAddress = socket.recvFrom(nioData, nioData.position(), nioData.limit());
                         }
 
-                        allocHandle.incMessagesRead(1);
+                        if (remoteAddress == null) {
+                            allocHandle.lastBytesRead(-1);
+                            byteBuf.release();
+                            byteBuf = null;
+                            break;
+                        }
+                        InetSocketAddress localAddress = remoteAddress.localAddress();
+                        if (localAddress == null) {
+                            localAddress = (InetSocketAddress) localAddress();
+                        }
+                        allocHandle.lastBytesRead(remoteAddress.receivedAmount());
+                        byteBuf.writerIndex(byteBuf.writerIndex() + allocHandle.lastBytesRead());
 
-                        readPending = false;
-                        pipeline.fireChannelRead(packet);
-
-                        byteBuf = null;
-
-                    // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
-                    // as we read anything).
-                    } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
-                } catch (Throwable t) {
-                    if (byteBuf != null) {
-                        byteBuf.release();
+                        packet = new DatagramPacket(byteBuf, localAddress, remoteAddress);
                     }
-                    exception = t;
-                }
 
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
+                    allocHandle.incMessagesRead(1);
 
-                if (exception != null) {
-                    pipeline.fireExceptionCaught(exception);
+                    readPending = false;
+                    pipeline.fireChannelRead(packet);
+
+                    byteBuf = null;
+
+                // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
+                // as we read anything).
+                } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
+            } catch (Throwable t) {
+                if (byteBuf != null) {
+                    byteBuf.release();
                 }
-            } finally {
-                if (shouldStopReading(config)) {
-                    clearReadFilter0();
-                }
+                exception = t;
+            }
+
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                pipeline.fireExceptionCaught(exception);
+            }
+        } finally {
+            if (shouldStopReading(config)) {
+                clearReadFilter0();
             }
         }
     }

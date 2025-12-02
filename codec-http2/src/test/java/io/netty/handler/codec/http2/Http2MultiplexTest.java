@@ -1240,10 +1240,10 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
     public void callUnsafeCloseMultipleTimes() {
         LastInboundHandler inboundHandler = new LastInboundHandler();
         Http2StreamChannel childChannel = newInboundStream(3, false, inboundHandler);
-        childChannel.unsafe().close(childChannel.newPromise());
+        childChannel.close(childChannel.newPromise());
 
         ChannelPromise promise = childChannel.newPromise();
-        childChannel.unsafe().close(promise);
+        childChannel.close(promise);
         promise.syncUninterruptibly();
         childChannel.closeFuture().syncUninterruptibly();
     }

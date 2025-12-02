@@ -322,11 +322,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    protected AbstractEpollUnsafe newUnsafe() {
-        return new EpollDatagramChannelUnsafe();
-    }
-
-    @Override
     protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
         if (localAddress instanceof InetSocketAddress) {
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
@@ -530,75 +525,72 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }));
     }
 
-    final class EpollDatagramChannelUnsafe extends AbstractEpollUnsafe {
+    @Override
+    void epollInReady() {
+        assert executor().inEventLoop();
+        EpollDatagramChannelConfig config = config();
+        if (shouldBreakEpollInReady(config)) {
+            clearEpollIn0();
+            return;
+        }
+        final EpollRecvByteAllocatorHandle allocHandle = (EpollRecvByteAllocatorHandle) recvBufAllocHandle();
+        final ChannelPipeline pipeline = pipeline();
+        final ByteBufAllocator allocator = config.getAllocator();
+        allocHandle.reset(config);
 
-        @Override
-        void epollInReady() {
-            assert executor().inEventLoop();
-            EpollDatagramChannelConfig config = config();
-            if (shouldBreakEpollInReady(config)) {
-                clearEpollIn0();
-                return;
-            }
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            final ChannelPipeline pipeline = pipeline();
-            final ByteBufAllocator allocator = config.getAllocator();
-            allocHandle.reset(config);
-
-            Throwable exception = null;
+        Throwable exception = null;
+        try {
             try {
-                try {
-                    boolean connected = isConnected();
-                    do {
-                        final boolean read;
-                        int datagramSize = config().getMaxDatagramPayloadSize();
+                boolean connected = isConnected();
+                do {
+                    final boolean read;
+                    int datagramSize = config().getMaxDatagramPayloadSize();
 
-                        ByteBuf byteBuf = allocHandle.allocate(allocator);
-                        // Only try to use recvmmsg if its really supported by the running system.
-                        int numDatagram = Native.IS_SUPPORTING_RECVMMSG ?
-                                datagramSize == 0 ? 1 : byteBuf.writableBytes() / datagramSize :
-                                0;
-                        try {
-                            if (numDatagram <= 1) {
-                                if (!connected || config.isUdpGro()) {
-                                    read = recvmsg(allocHandle, cleanDatagramPacketArray(), byteBuf);
-                                } else {
-                                    read = connectedRead(allocHandle, byteBuf, datagramSize);
-                                }
+                    ByteBuf byteBuf = allocHandle.allocate(allocator);
+                    // Only try to use recvmmsg if its really supported by the running system.
+                    int numDatagram = Native.IS_SUPPORTING_RECVMMSG ?
+                            datagramSize == 0 ? 1 : byteBuf.writableBytes() / datagramSize :
+                            0;
+                    try {
+                        if (numDatagram <= 1) {
+                            if (!connected || config.isUdpGro()) {
+                                read = recvmsg(allocHandle, cleanDatagramPacketArray(), byteBuf);
                             } else {
-                                // Try to use scattering reads via recvmmsg(...) syscall.
-                                read = scatteringRead(allocHandle, cleanDatagramPacketArray(),
-                                        byteBuf, datagramSize, numDatagram);
+                                read = connectedRead(allocHandle, byteBuf, datagramSize);
                             }
-                        } catch (NativeIoException e) {
-                            if (connected) {
-                                throw translateForConnected(e);
-                            }
-                            throw e;
-                        }
-
-                        if (read) {
-                            readPending = false;
                         } else {
-                            break;
+                            // Try to use scattering reads via recvmmsg(...) syscall.
+                            read = scatteringRead(allocHandle, cleanDatagramPacketArray(),
+                                    byteBuf, datagramSize, numDatagram);
                         }
-                    // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
-                    // as we read anything).
-                    } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
-                } catch (Throwable t) {
-                    exception = t;
-                }
+                    } catch (NativeIoException e) {
+                        if (connected) {
+                            throw translateForConnected(e);
+                        }
+                        throw e;
+                    }
 
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
+                    if (read) {
+                        readPending = false;
+                    } else {
+                        break;
+                    }
+                // We use the TRUE_SUPPLIER as it is also ok to read less then what we did try to read (as long
+                // as we read anything).
+                } while (allocHandle.continueReading(UncheckedBooleanSupplier.TRUE_SUPPLIER));
+            } catch (Throwable t) {
+                exception = t;
+            }
 
-                if (exception != null) {
-                    pipeline.fireExceptionCaught(exception);
-                }
-            } finally {
-                if (shouldStopReading(config)) {
-                    clearEpollIn();
-                }
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+
+            if (exception != null) {
+                pipeline.fireExceptionCaught(exception);
+            }
+        } finally {
+            if (shouldStopReading(config)) {
+                clearEpollIn();
             }
         }
     }

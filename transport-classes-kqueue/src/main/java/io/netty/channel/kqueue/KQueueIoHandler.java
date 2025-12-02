@@ -15,7 +15,6 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.channel.Channel;
 import io.netty.channel.DefaultSelectStrategyFactory;
 import io.netty.channel.IoHandle;
 import io.netty.channel.IoHandler;
@@ -37,9 +36,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
@@ -78,7 +74,6 @@ public final class KQueueIoHandler implements IoHandler {
     private final ThreadAwareExecutor executor;
     private final Queue<DefaultKqueueIoRegistration> cancelledRegistrations = new ArrayDeque<>();
     private final LongObjectMap<DefaultKqueueIoRegistration> registrations = new LongObjectHashMap<>(4096);
-    private int numChannels;
     private long nextId;
 
     private volatile int wakenUp;
@@ -306,31 +301,8 @@ public final class KQueueIoHandler implements IoHandler {
             }
             DefaultKqueueIoRegistration removed = registrations.remove(cancelledRegistration.id);
             assert removed == cancelledRegistration;
-            if (removed.isHandleForChannel()) {
-                numChannels--;
-            }
             removed.handle.unregistered();
         }
-    }
-
-    int numRegisteredChannels() {
-        return numChannels;
-    }
-
-    List<Channel> registeredChannelsList() {
-        LongObjectMap<DefaultKqueueIoRegistration> ch = registrations;
-        if (ch.isEmpty()) {
-            return Collections.emptyList();
-        }
-
-        List<Channel> channels = new ArrayList<>(ch.size());
-
-        for (DefaultKqueueIoRegistration registration : ch.values()) {
-            if (registration.handle instanceof AbstractKQueueChannel.AbstractKQueueUnsafe) {
-                channels.add(((AbstractKQueueChannel.AbstractKQueueUnsafe) registration.handle).channel());
-            }
-        }
-        return Collections.unmodifiableList(channels);
     }
 
     private static void handleLoopException(Throwable t) {
@@ -395,9 +367,6 @@ public final class KQueueIoHandler implements IoHandler {
             registrations.put(old.id, old);
             throw new IllegalStateException();
         }
-        if (registration.isHandleForChannel()) {
-            numChannels++;
-        }
         handle.registered();
         return registration;
     }
@@ -434,10 +403,6 @@ public final class KQueueIoHandler implements IoHandler {
             this.executor = executor;
             this.handle = handle;
             id = generateNextId();
-        }
-
-        boolean isHandleForChannel() {
-            return handle instanceof AbstractKQueueChannel.AbstractKQueueUnsafe;
         }
 
         @SuppressWarnings("unchecked")

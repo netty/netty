@@ -25,13 +25,13 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.channel.IoTransport;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
@@ -151,7 +151,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
             // Notify the child-channel and close it.
             streamChannel.pipeline().fireExceptionCaught(cause);
-            streamChannel.unsafe().close(streamChannel.newPromise());
+            streamChannel.close(streamChannel.newPromise());
         }
     }
 
@@ -203,7 +203,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     /**
      * This variable represents if a read is in progress for the current channel or was requested.
      * Note that depending upon the {@link RecvByteBufAllocator} behavior a read may extend beyond the
-     * {@link Http2ChannelUnsafe#beginRead()} method scope. The {@link Http2ChannelUnsafe#beginRead()} loop may
+     * {@link Http2ChannelUnsafe#read()} method scope. The {@link Http2ChannelUnsafe#read()} loop may
      * drain all pending data, and then if the parent channel is reading this channel may still accept frames.
      */
     private ReadStatus readStatus = ReadStatus.IDLE;
@@ -217,7 +217,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     AbstractHttp2StreamChannel(DefaultHttp2FrameStream stream, int id, ChannelHandler inboundHandler) {
         this.stream = stream;
         stream.attachment = this;
-        pipeline = new DefaultChannelPipeline(this) {
+        pipeline = new DefaultChannelPipeline(this, unsafe) {
             @Override
             protected void incrementPendingOutboundBytes(long size) {
                 AbstractHttp2StreamChannel.this.incrementPendingOutboundBytes(size, true);
@@ -436,8 +436,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         return bytes <= 0 || isWritable() ? 0 : bytes;
     }
 
-    @Override
-    public Unsafe unsafe() {
+    IoTransport unsafe() {
         return unsafe;
     }
 
@@ -630,7 +629,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         unsafe.close(newPromise(), error);
     }
 
-    private final class Http2ChannelUnsafe implements Unsafe {
+    private final class Http2ChannelUnsafe implements IoTransport {
         @SuppressWarnings("deprecation")
         private RecvByteBufAllocator.Handle recvHandle;
         private boolean writeDoneAndNoFlush;
@@ -828,7 +827,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         @Override
-        public void beginRead() {
+        public void read() {
             if (!isActive()) {
                 return;
             }
@@ -1234,7 +1233,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
                 autoStreamFlowControl = (Boolean) value;
                 if (changed) {
                     if (channel.isRegistered()) {
-                        final Http2ChannelUnsafe unsafe = (Http2ChannelUnsafe) channel.unsafe();
+                        final Http2ChannelUnsafe unsafe = ((AbstractHttp2StreamChannel) channel).unsafe;
                         if (channel.executor().inEventLoop()) {
                             unsafe.updateLocalWindowIfNeededAndFlush();
                         } else {

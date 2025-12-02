@@ -19,8 +19,9 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelOutboundBuffer;
+import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.MessageSizeEstimator;
@@ -39,7 +40,6 @@ import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.AttributeKey;
 import org.jetbrains.annotations.Nullable;
 
-import java.net.SocketAddress;
 import java.util.Map;
 
 import static io.netty.handler.codec.http3.EmbeddedQuicChannel.prependChannelConsumer;
@@ -65,6 +65,16 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
                     channel.attr(streamTypeKey).set(type);
                     channel.attr(localCreatedKey).set(localCreated);
                 }, handlers));
+        pipeline().addFirst(new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                if (msg instanceof QuicStreamFrame && ((QuicStreamFrame) msg).hasFin()) {
+                    // Mimic the API.
+                    promise.addListener(f -> outputShutdown = 0);
+                }
+                super.write(ctx, msg, promise);
+            }
+        });
     }
 
     boolean writeInboundWithFin(Object... msgs) {
@@ -205,67 +215,6 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
 
     Integer inputShutdownError() {
         return inputShutdown;
-    }
-
-    private Unsafe unsafe;
-
-    @Override
-    public Unsafe unsafe() {
-        if (unsafe == null) {
-            Unsafe superUnsafe = super.unsafe();
-            unsafe = new Unsafe() {
-
-                @Override
-                public void register(ChannelPromise promise) {
-                    superUnsafe.register(promise);
-                }
-
-                @Override
-                public void bind(SocketAddress localAddress, ChannelPromise promise) {
-                    superUnsafe.bind(localAddress, promise);
-                }
-
-                @Override
-                public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-                    superUnsafe.connect(remoteAddress, localAddress, promise);
-                }
-
-                @Override
-                public void disconnect(ChannelPromise promise) {
-                    superUnsafe.disconnect(promise);
-                }
-
-                @Override
-                public void close(ChannelPromise promise) {
-                    superUnsafe.close(promise);
-                }
-
-                @Override
-                public void deregister(ChannelPromise promise) {
-                    superUnsafe.deregister(promise);
-                }
-
-                @Override
-                public void beginRead() {
-                    superUnsafe.beginRead();
-                }
-
-                @Override
-                public void write(Object msg, ChannelPromise promise) {
-                    if (msg instanceof QuicStreamFrame && ((QuicStreamFrame) msg).hasFin()) {
-                        // Mimic the API.
-                        promise.addListener(f -> outputShutdown = 0);
-                    }
-                    superUnsafe.write(msg, promise);
-                }
-
-                @Override
-                public void flush() {
-                    superUnsafe.flush();
-                }
-            };
-        }
-        return unsafe;
     }
 
     private static final class EmbeddedQuicStreamChannelConfig implements QuicStreamChannelConfig {

@@ -106,11 +106,6 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     }
 
     @Override
-    protected final AbstractUringUnsafe newUnsafe() {
-        return new UringServerChannelUnsafe();
-    }
-
-    @Override
     protected final void doWrite(ChannelOutboundBuffer in) {
         throw new UnsupportedOperationException();
     }
@@ -135,151 +130,148 @@ abstract class AbstractIoUringServerChannel extends AbstractIoUringChannel imple
     abstract Channel newChildChannel(
             EventLoop eventLoop, int fd, ByteBuffer acceptedAddressMemory) throws Exception;
 
-    private final class UringServerChannelUnsafe extends AbstractIoUringChannel.AbstractUringUnsafe {
+    @Override
+    protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
+        throw new UnsupportedOperationException();
+    }
 
-        @Override
-        protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
-            throw new UnsupportedOperationException();
-        }
+    @Override
+    protected int scheduleWriteSingle(Object msg) {
+        throw new UnsupportedOperationException();
+    }
 
-        @Override
-        protected int scheduleWriteSingle(Object msg) {
-            throw new UnsupportedOperationException();
-        }
+    @Override
+    boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
+        throw new UnsupportedOperationException();
+    }
 
-        @Override
-        boolean writeComplete0(byte op, int res, int flags, short data, int outstanding) {
-            throw new UnsupportedOperationException();
-        }
+    @Override
+    protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
+        assert acceptId == 0;
+        final IoUringRecvByteAllocatorHandle allocHandle = (IoUringRecvByteAllocatorHandle) recvBufAllocHandle();
+        allocHandle.attemptedBytesRead(1);
 
-        @Override
-        protected int scheduleRead0(boolean first, boolean socketIsEmpty) {
-            assert acceptId == 0;
-            final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            allocHandle.attemptedBytesRead(1);
+        int fd = fd().intValue();
+        IoRegistration registration = registration();
 
-            int fd = fd().intValue();
-            IoRegistration registration = registration();
+        final short ioPrio;
 
-            final short ioPrio;
-
-            final long acceptedAddressMemoryAddress;
-            final long acceptedAddressLengthMemoryAddress;
-            if (IoUring.isAcceptMultishotEnabled()) {
-                // Let's use multi-shot accept to reduce overhead.
-                ioPrio = Native.IORING_ACCEPT_MULTISHOT;
-                acceptedAddressMemoryAddress = 0;
-                acceptedAddressLengthMemoryAddress = 0;
+        final long acceptedAddressMemoryAddress;
+        final long acceptedAddressLengthMemoryAddress;
+        if (IoUring.isAcceptMultishotEnabled()) {
+            // Let's use multi-shot accept to reduce overhead.
+            ioPrio = Native.IORING_ACCEPT_MULTISHOT;
+            acceptedAddressMemoryAddress = 0;
+            acceptedAddressLengthMemoryAddress = 0;
+        } else {
+            // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
+            // attempt.
+            // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
+            //
+            // Depending on if this is the first read or not we will use Native.IORING_ACCEPT_DONT_WAIT.
+            // The idea is that if the socket is blocking we can do the first read in a blocking fashion
+            // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
+            // be possible directly we schedule these with Native.IORING_ACCEPT_DONT_WAIT. This allows us to still
+            // be able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
+            // transports.
+            //
+            // IORING_ACCEPT_POLL_FIRST and IORING_ACCEPT_DONTWAIT were added in the same release.
+            // We need to check if its supported as otherwise providing these would result in an -EINVAL.
+            if (IoUring.isAcceptNoWaitSupported()) {
+                if (first) {
+                    ioPrio = socketIsEmpty ? Native.IORING_ACCEPT_POLL_FIRST : 0;
+                } else {
+                    ioPrio = Native.IORING_ACCEPT_DONTWAIT;
+                }
             } else {
-                // Depending on if socketIsEmpty is true we will arm the poll upfront and skip the initial transfer
-                // attempt.
-                // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#socket-state
-                //
-                // Depending on if this is the first read or not we will use Native.IORING_ACCEPT_DONT_WAIT.
-                // The idea is that if the socket is blocking we can do the first read in a blocking fashion
-                // and so not need to also register POLLIN. As we can not 100 % sure if reads after the first will
-                // be possible directly we schedule these with Native.IORING_ACCEPT_DONT_WAIT. This allows us to still
-                // be able to signal the fireChannelReadComplete() in a timely manner and be consistent with other
-                // transports.
-                //
-                // IORING_ACCEPT_POLL_FIRST and IORING_ACCEPT_DONTWAIT were added in the same release.
-                // We need to check if its supported as otherwise providing these would result in an -EINVAL.
-                if (IoUring.isAcceptNoWaitSupported()) {
-                    if (first) {
-                        ioPrio = socketIsEmpty ? Native.IORING_ACCEPT_POLL_FIRST : 0;
-                    } else {
-                        ioPrio = Native.IORING_ACCEPT_DONTWAIT;
-                    }
-                } else {
-                    ioPrio = 0;
-                }
-
-                assert acceptedAddressMemory != null;
-                acceptedAddressMemoryAddress = acceptedAddressMemory.acceptedAddressMemoryAddress;
-                acceptedAddressLengthMemoryAddress = acceptedAddressMemory.acceptedAddressLengthMemoryAddress;
+                ioPrio = 0;
             }
 
-            // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10#improvements-for-accept
-            IoUringIoOps ops = IoUringIoOps.newAccept(fd, (byte) 0, 0, ioPrio,
-                    acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, nextOpsId());
-            acceptId = registration.submit(ops);
-            if (acceptId == 0) {
-                return 0;
-            }
-            if ((ioPrio & Native.IORING_ACCEPT_MULTISHOT) != 0) {
-                // Let's return -1 to signal that we used multi-shot.
-                return -1;
-            }
-            return 1;
+            assert acceptedAddressMemory != null;
+            acceptedAddressMemoryAddress = acceptedAddressMemory.acceptedAddressMemoryAddress;
+            acceptedAddressLengthMemoryAddress = acceptedAddressMemory.acceptedAddressLengthMemoryAddress;
         }
 
-        @Override
-        protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
-            if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
-                acceptId = 0;
-                return;
-            }
-            boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
-            if (rearm) {
-                // Only reset if we don't use multi-shot or we need to re-arm because the multi-shot was cancelled.
-                acceptId = 0;
-            }
-            final IoUringRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            final ChannelPipeline pipeline = pipeline();
-            allocHandle.lastBytesRead(res);
+        // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10#improvements-for-accept
+        IoUringIoOps ops = IoUringIoOps.newAccept(fd, (byte) 0, 0, ioPrio,
+                acceptedAddressMemoryAddress, acceptedAddressLengthMemoryAddress, nextOpsId());
+        acceptId = registration.submit(ops);
+        if (acceptId == 0) {
+            return 0;
+        }
+        if ((ioPrio & Native.IORING_ACCEPT_MULTISHOT) != 0) {
+            // Let's return -1 to signal that we used multi-shot.
+            return -1;
+        }
+        return 1;
+    }
 
-            if (res >= 0) {
-                allocHandle.incMessagesRead(1);
-                final ByteBuffer acceptedAddressBuffer;
-                final long acceptedAddressLengthMemoryAddress;
-                if (acceptedAddressMemory == null) {
-                    acceptedAddressBuffer = null;
-                } else {
-                    acceptedAddressBuffer = acceptedAddressMemory.acceptedAddressMemory;
-                }
-                try {
-                    Channel channel = newChildChannel(childEventExecutorGroup().next(), res, acceptedAddressBuffer);
-                    pipeline.fireChannelRead(channel);
+    @Override
+    protected void readComplete0(byte op, int res, int flags, short data, int outstanding) {
+        if (res == Native.ERRNO_ECANCELED_NEGATIVE) {
+            acceptId = 0;
+            return;
+        }
+        boolean rearm = (flags & Native.IORING_CQE_F_MORE) == 0;
+        if (rearm) {
+            // Only reset if we don't use multi-shot or we need to re-arm because the multi-shot was cancelled.
+            acceptId = 0;
+        }
+        final IoUringRecvByteAllocatorHandle allocHandle = (IoUringRecvByteAllocatorHandle) recvBufAllocHandle();
+        final ChannelPipeline pipeline = pipeline();
+        allocHandle.lastBytesRead(res);
 
-                    if (allocHandle.continueReading() &&
-                            // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
-                            // trying to schedule a read. If it's supported and not part of the flags we know for sure
-                            // that the next read (which would be using Native.IORING_ACCEPT_DONTWAIT) will complete
-                            // without be able to read any data. This is useless work and we can skip it.
-                            //
-                            // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10
-                            !socketIsEmpty(flags)) {
-                        if (rearm) {
-                            // We only should schedule another read if we need to rearm.
-                            // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#multi-shot
-                            scheduleRead(false);
-                        }
-                    } else {
-                        allocHandle.readComplete();
-                        pipeline.fireChannelReadComplete();
+        if (res >= 0) {
+            allocHandle.incMessagesRead(1);
+            final ByteBuffer acceptedAddressBuffer;
+            final long acceptedAddressLengthMemoryAddress;
+            if (acceptedAddressMemory == null) {
+                acceptedAddressBuffer = null;
+            } else {
+                acceptedAddressBuffer = acceptedAddressMemory.acceptedAddressMemory;
+            }
+            try {
+                Channel channel = newChildChannel(childEventExecutorGroup().next(), res, acceptedAddressBuffer);
+                pipeline.fireChannelRead(channel);
+
+                if (allocHandle.continueReading() &&
+                        // If IORING_CQE_F_SOCK_NONEMPTY is supported we should check for it first before
+                        // trying to schedule a read. If it's supported and not part of the flags we know for sure
+                        // that the next read (which would be using Native.IORING_ACCEPT_DONTWAIT) will complete
+                        // without be able to read any data. This is useless work and we can skip it.
+                        //
+                        // See https://github.com/axboe/liburing/wiki/What's-new-with-io_uring-in-6.10
+                        !socketIsEmpty(flags)) {
+                    if (rearm) {
+                        // We only should schedule another read if we need to rearm.
+                        // See https://github.com/axboe/liburing/wiki/io_uring-and-networking-in-2023#multi-shot
+                        scheduleRead(false);
                     }
-                } catch (Throwable cause) {
+                } else {
                     allocHandle.readComplete();
                     pipeline.fireChannelReadComplete();
-                    pipeline.fireExceptionCaught(cause);
                 }
-            } else {
+            } catch (Throwable cause) {
                 allocHandle.readComplete();
                 pipeline.fireChannelReadComplete();
-                // Check if we did fail because there was nothing to accept atm.
-                if (res != ERRNO_EAGAIN_NEGATIVE && res != ERRNO_EWOULDBLOCK_NEGATIVE) {
-                    // Something bad happened. Convert to an exception.
-                    pipeline.fireExceptionCaught(Errors.newIOException("io_uring accept", res));
-                }
+                pipeline.fireExceptionCaught(cause);
+            }
+        } else {
+            allocHandle.readComplete();
+            pipeline.fireChannelReadComplete();
+            // Check if we did fail because there was nothing to accept atm.
+            if (res != ERRNO_EAGAIN_NEGATIVE && res != ERRNO_EWOULDBLOCK_NEGATIVE) {
+                // Something bad happened. Convert to an exception.
+                pipeline.fireExceptionCaught(Errors.newIOException("io_uring accept", res));
             }
         }
+    }
 
-        @Override
-        public void unregistered() {
-            super.unregistered();
-            if (acceptedAddressMemory != null) {
-                acceptedAddressMemory.free();
-            }
+    @Override
+    protected void unregistered() {
+        super.unregistered();
+        if (acceptedAddressMemory != null) {
+            acceptedAddressMemory.free();
         }
     }
 

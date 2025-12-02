@@ -143,7 +143,7 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
 
     @Override
     public boolean isCompatible(Class<? extends IoHandle> handleType) {
-        return handleType == EmbeddedChannel.EmbeddedUnsafe.class;
+        return handleType == EmbeddedChannel.EmbeddedIoHandle.class;
     }
 
     @Override

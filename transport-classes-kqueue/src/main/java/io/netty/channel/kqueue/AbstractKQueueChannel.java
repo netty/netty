@@ -36,7 +36,6 @@ import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
 import java.net.ConnectException;
@@ -61,6 +60,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private ChannelPromise connectPromise;
     private SocketAddress requestedRemoteAddress;
 
+    private final KQueueIoHandle ioHandle = new KQueueIoHandleImpl();
     final BsdSocket socket;
     private IoRegistration registration;
     private boolean readFilterEnabled;
@@ -184,8 +184,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     @Override
     protected final void doBeginRead() throws Exception {
         // Channel.read() or ChannelHandlerContext.read() was called
-        final AbstractKQueueUnsafe unsafe = (AbstractKQueueUnsafe) unsafe();
-        unsafe.readPending = true;
+        readPending = true;
 
         // We must set the read flag here as it is possible the user didn't read in the last read loop, the
         // executeReadReadyRunnable could read nothing, and if the user doesn't explicitly call read they will
@@ -195,7 +194,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
     @Override
     protected void doRegister(ChannelPromise promise) {
-        executor().register((AbstractKQueueUnsafe) unsafe()).addListener(f -> {
+        executor().register(ioHandle).addListener(f -> {
             if (f.isSuccess()) {
                 this.registration = (IoRegistration) f.getNow();
                 // Just in case the previous EventLoop was shutdown abruptly, or an event is still pending on the old
@@ -218,9 +217,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             }
         });
     }
-
-    @Override
-    protected abstract AbstractKQueueUnsafe newUnsafe();
 
     @Override
     public abstract KQueueChannelConfig config();
@@ -278,7 +274,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     protected final int doReadBytes(ByteBuf byteBuf) throws Exception {
         int writerIndex = byteBuf.writerIndex();
         int localReadAmount;
-        ((AbstractUnsafe) unsafe()).recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
+        recvBufAllocHandle().attemptedBytesRead(byteBuf.writableBytes());
         if (byteBuf.hasMemoryAddress()) {
             localReadAmount = socket.readAddress(byteBuf.memoryAddress(), writerIndex, byteBuf.capacity());
         } else {
@@ -328,17 +324,16 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         // Only clear if registered with an EventLoop as otherwise
         if (isRegistered()) {
             final EventLoop loop = executor();
-            final AbstractKQueueUnsafe unsafe = (AbstractKQueueUnsafe) unsafe();
             if (loop.inEventLoop()) {
-                unsafe.clearReadFilter0();
+                clearReadFilter0();
             } else {
                 // schedule a task to clear the EPOLLIN as it is not safe to modify it directly
                 loop.execute(new Runnable() {
                     @Override
                     public void run() {
-                        if (!unsafe.readPending && !config().isAutoRead()) {
+                        if (!readPending && !config().isAutoRead()) {
                             // Still no read triggered so clear it now
-                            unsafe.clearReadFilter0();
+                            clearReadFilter0();
                         }
                     }
                 });
@@ -387,15 +382,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         return writeFilterEnabled;
     }
 
-    @UnstableApi
-    public abstract class AbstractKQueueUnsafe extends AbstractUnsafe implements KQueueIoHandle {
-        boolean readPending;
-        private KQueueRecvByteAllocatorHandle allocHandle;
-
-        Channel channel() {
-            return AbstractKQueueChannel.this;
-        }
-
+    private final class KQueueIoHandleImpl  implements KQueueIoHandle {
         @Override
         public int ident() {
             return fd().intValue();
@@ -403,7 +390,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
         @Override
         public void close() {
-            close(newPromise());
+            ioTransport().close(newPromise());
         }
 
         @Override
@@ -420,8 +407,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 writeReady();
             } else if (filter == Native.EVFILT_READ) {
                 // Check READ before EOF to ensure all data is read before shutting down the input.
-                KQueueRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-                readReady(allocHandle);
+                readReady();
             } else if (filter == Native.EVFILT_SOCK && (fflags & Native.NOTE_RDHUP) != 0) {
                 readEOF();
                 return;
@@ -434,158 +420,163 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
                 readEOF();
             }
         }
+    }
 
-        abstract void readReady(KQueueRecvByteAllocatorHandle allocHandle);
+    boolean readPending;
+    private KQueueRecvByteAllocatorHandle allocHandle;
 
-        final boolean shouldStopReading(ChannelConfig config) {
-            // Check if there is a readPending which was not processed yet.
-            // This could be for two reasons:
-            // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
-            // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
-            //
-            // See https://github.com/netty/netty/issues/2254
-            return !readPending && !config.isAutoRead();
-        }
+    final void readReady() {
+        // Check READ before EOF to ensure all data is read before shutting down the input.
+        KQueueRecvByteAllocatorHandle allocHandle = (KQueueRecvByteAllocatorHandle) recvBufAllocHandle();
+        readReady(allocHandle);
+    }
 
-        final boolean failConnectPromise(Throwable cause) {
-            if (connectPromise != null) {
-                // SO_ERROR has been shown to return 0 on macOS if detect an error via read() and the write filter was
-                // not set before calling connect. This means finishConnect will not detect any error and would
-                // successfully complete the connectPromise and update the channel state to active (which is incorrect).
-                ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
-                AbstractKQueueChannel.this.connectPromise = null;
-                if (connectPromise.tryFailure((cause instanceof ConnectException) ? cause
-                                : new ConnectException("failed to connect").initCause(cause))) {
-                    closeIfClosed();
-                    return true;
-                }
-            }
-            return false;
-        }
+    abstract void readReady(KQueueRecvByteAllocatorHandle allocHandle);
 
-        private void writeReady() {
-            if (connectPromise != null) {
-                // pending connect which is now complete so handle it.
-                finishConnect();
-            } else if (!socket.isOutputShutdown()) {
-                // directly call writeFlushedNow() to force a flush now
-                writeFlushedNow();
-            }
-        }
+    final boolean shouldStopReading(ChannelConfig config) {
+        // Check if there is a readPending which was not processed yet.
+        // This could be for two reasons:
+        // * The user called Channel.read() or ChannelHandlerContext.read() in channelRead(...) method
+        // * The user called Channel.read() or ChannelHandlerContext.read() in channelReadComplete(...) method
+        //
+        // See https://github.com/netty/netty/issues/2254
+        return !readPending && !config.isAutoRead();
+    }
 
-        /**
-         * Shutdown the input side of the channel.
-         */
-        void shutdownInput(boolean readEOF) {
-            // We need to take special care of calling finishConnect() if readEOF is true and we not
-            // fulfilled the connectPromise yet. If we fail to do so the connectPromise will be failed
-            // with a ClosedChannelException as a close() will happen and so the FD is closed before we
-            // have a chance to call finishConnect() later on. Calling finishConnect() here will ensure
-            // we observe the correct exception in case of a connect failure.
-            if (readEOF && connectPromise != null) {
-                finishConnect();
-            }
-            if (!socket.isInputShutdown()) {
-                if (isAllowHalfClosure(config())) {
-                    try {
-                        socket.shutdown(true, false);
-                    } catch (IOException ignored) {
-                        // We attempted to shutdown and failed, which means the input has already effectively been
-                        // shutdown.
-                        fireEventAndClose(ChannelInputShutdownEvent.INSTANCE);
-                        return;
-                    } catch (NotYetConnectedException ignore) {
-                        // We attempted to shutdown and failed, which means the input has already effectively been
-                        // shutdown.
-                    }
-                    if (shouldStopReading(config())) {
-                        clearReadFilter0();
-                    }
-                    pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                } else {
-                    close(newPromise());
-                    return;
-                }
-            }
-            if (!readEOF && !inputClosedSeenErrorOnRead) {
-                inputClosedSeenErrorOnRead = true;
-                pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
-            }
-        }
-
-        private void readEOF() {
-            // This must happen before we attempt to read. This will ensure reading continues until an error occurs.
-            final KQueueRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            allocHandle.readEOF();
-
-            if (isActive()) {
-                // If it is still active, we need to call readReady as otherwise we may miss to
-                // read pending data from the underlying file descriptor.
-                // See https://github.com/netty/netty/issues/3709
-                readReady(allocHandle);
-            } else {
-                // Just to be safe make sure the input marked as closed.
-                shutdownInput(true);
-            }
-
-            // Clear the RDHUP flag to prevent continuously getting woken up on this event.
-            clearRdHup0();
-        }
-
-        @Override
-        public KQueueRecvByteAllocatorHandle recvBufAllocHandle() {
-            if (allocHandle == null) {
-                allocHandle = new KQueueRecvByteAllocatorHandle(
-                        (RecvByteBufAllocator.ExtendedHandle) super.recvBufAllocHandle());
-            }
-            return allocHandle;
-        }
-
-        protected final void clearReadFilter0() {
-            assert executor().inEventLoop();
-            readPending = false;
-            readFilter(false);
-        }
-
-        private void fireEventAndClose(Object evt) {
-            pipeline().fireUserEventTriggered(evt);
-            close(newPromise());
-        }
-
-        private void finishConnect() {
-            // Note this method is invoked by the event loop only if the connection attempt was
-            // neither cancelled nor timed out.
-
-            assert executor().inEventLoop();
-            assert connectPromise != null;
-            ChannelPromise promise = connectPromise;
-            final boolean connected;
-            try {
-                connected = doFinishConnect();
-            } catch (Throwable cause) {
-                connectPromise = null;
-                promise.setFailure(cause);
-                return;
-            }
-            if (connected) {
-                active = true;
-                connectPromise = null;
-                promise.setSuccess();
-            }
-        }
-
-        private boolean doFinishConnect() throws Exception {
-            if (socket.finishConnect()) {
-                writeFilter(false);
-                if (requestedRemoteAddress instanceof InetSocketAddress) {
-                    remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
-                }
-                requestedRemoteAddress = null;
+    final boolean failConnectPromise(Throwable cause) {
+        if (connectPromise != null) {
+            // SO_ERROR has been shown to return 0 on macOS if detect an error via read() and the write filter was
+            // not set before calling connect. This means finishConnect will not detect any error and would
+            // successfully complete the connectPromise and update the channel state to active (which is incorrect).
+            ChannelPromise connectPromise = AbstractKQueueChannel.this.connectPromise;
+            AbstractKQueueChannel.this.connectPromise = null;
+            if (connectPromise.tryFailure((cause instanceof ConnectException) ? cause
+                            : new ConnectException("failed to connect").initCause(cause))) {
                 return true;
             }
-            writeFilter(true);
-            return false;
         }
+        return false;
+    }
+
+    private void writeReady() {
+        if (connectPromise != null) {
+            // pending connect which is now complete so handle it.
+            finishConnect();
+        } else if (!socket.isOutputShutdown()) {
+            // directly call writeFlushedNow() to force a flush now
+            writeFlushedNow();
+        }
+    }
+
+    /**
+     * Shutdown the input side of the channel.
+     */
+    void shutdownInput(boolean readEOF) {
+        // We need to take special care of calling finishConnect() if readEOF is true and we not
+        // fulfilled the connectPromise yet. If we fail to do so the connectPromise will be failed
+        // with a ClosedChannelException as a close() will happen and so the FD is closed before we
+        // have a chance to call finishConnect() later on. Calling finishConnect() here will ensure
+        // we observe the correct exception in case of a connect failure.
+        if (readEOF && connectPromise != null) {
+            finishConnect();
+        }
+        if (!socket.isInputShutdown()) {
+            if (isAllowHalfClosure(config())) {
+                try {
+                    socket.shutdown(true, false);
+                } catch (IOException ignored) {
+                    // We attempted to shutdown and failed, which means the input has already effectively been
+                    // shutdown.
+                    fireEventAndClose(ChannelInputShutdownEvent.INSTANCE);
+                    return;
+                } catch (NotYetConnectedException ignore) {
+                    // We attempted to shutdown and failed, which means the input has already effectively been
+                    // shutdown.
+                }
+                if (shouldStopReading(config())) {
+                    clearReadFilter0();
+                }
+                pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+            } else {
+                close(newPromise());
+                return;
+            }
+        }
+        if (!readEOF && !inputClosedSeenErrorOnRead) {
+            inputClosedSeenErrorOnRead = true;
+            pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+        }
+    }
+
+    private void readEOF() {
+        // This must happen before we attempt to read. This will ensure reading continues until an error occurs.
+        final KQueueRecvByteAllocatorHandle allocHandle = (KQueueRecvByteAllocatorHandle) recvBufAllocHandle();
+        allocHandle.readEOF();
+
+        if (isActive()) {
+            // If it is still active, we need to call readReady as otherwise we may miss to
+            // read pending data from the underlying file descriptor.
+            // See https://github.com/netty/netty/issues/3709
+            readReady(allocHandle);
+        } else {
+            // Just to be safe make sure the input marked as closed.
+            shutdownInput(true);
+        }
+
+        // Clear the RDHUP flag to prevent continuously getting woken up on this event.
+        clearRdHup0();
+    }
+
+    @Override
+    protected RecvByteBufAllocator.Handle newRecvBufAllocHandle() {
+        return new KQueueRecvByteAllocatorHandle(
+                (RecvByteBufAllocator.ExtendedHandle) super.newRecvBufAllocHandle());
+    }
+
+    protected final void clearReadFilter0() {
+        assert executor().inEventLoop();
+        readPending = false;
+        readFilter(false);
+    }
+
+    private void fireEventAndClose(Object evt) {
+        pipeline().fireUserEventTriggered(evt);
+        close(newPromise());
+    }
+
+    private void finishConnect() {
+        // Note this method is invoked by the event loop only if the connection attempt was
+        // neither cancelled nor timed out.
+
+        assert executor().inEventLoop();
+        assert connectPromise != null;
+        ChannelPromise promise = connectPromise;
+        final boolean connected;
+        try {
+            connected = doFinishConnect();
+        } catch (Throwable cause) {
+            connectPromise = null;
+            promise.setFailure(cause);
+            return;
+        }
+        if (connected) {
+            active = true;
+            connectPromise = null;
+            promise.setSuccess();
+        }
+    }
+
+    private boolean doFinishConnect() throws Exception {
+        if (socket.finishConnect()) {
+            writeFilter(false);
+            if (requestedRemoteAddress instanceof InetSocketAddress) {
+                remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+            }
+            requestedRemoteAddress = null;
+            return true;
+        }
+        writeFilter(true);
+        return false;
     }
 
     @Override

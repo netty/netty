@@ -279,7 +279,7 @@ public final class NioDatagramChannel
     protected int doReadMessages(List<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
         DatagramChannelConfig config = config();
-        RecvByteBufAllocator.Handle allocHandle = ((AbstractUnsafe) unsafe()).recvBufAllocHandle();
+        RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
 
         ByteBuf data = allocHandle.allocate(config.getAllocator());
         allocHandle.attemptedBytesRead(data.writableBytes());

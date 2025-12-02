@@ -95,11 +95,6 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     }
 
     @Override
-    protected AbstractEpollUnsafe newUnsafe() {
-        return new EpollStreamUnsafe();
-    }
-
-    @Override
     public ChannelMetadata metadata() {
         return METADATA;
     }
@@ -436,12 +431,12 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
     public ChannelFuture shutdownOutput(final ChannelPromise promise) {
         EventLoop loop = executor();
         if (loop.inEventLoop()) {
-            ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
+            shutdownOutput0(promise);
         } else {
             loop.execute(new Runnable() {
                 @Override
                 public void run() {
-                    ((AbstractUnsafe) unsafe()).shutdownOutput(promise);
+                    shutdownOutput0(promise);
                 }
             });
         }
@@ -456,7 +451,7 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
 
     @Override
     public ChannelFuture shutdownInput(final ChannelPromise promise) {
-        Executor closeExecutor = ((EpollStreamUnsafe) unsafe()).prepareToClose();
+        Executor closeExecutor = prepareToClose();
         if (closeExecutor != null) {
             closeExecutor.execute(new Runnable() {
                 @Override
@@ -533,106 +528,98 @@ public abstract class AbstractEpollStreamChannel extends AbstractEpollChannel im
         }
     }
 
-    class EpollStreamUnsafe extends AbstractEpollUnsafe {
-        // Overridden here just to be able to access this method from AbstractEpollStreamChannel
-        @Override
-        protected Executor prepareToClose() {
-            return super.prepareToClose();
-        }
-
-        private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause,
-                                         boolean allDataRead, EpollRecvByteAllocatorHandle allocHandle) {
-            if (byteBuf != null) {
-                if (byteBuf.isReadable()) {
-                    readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
-                } else {
-                    byteBuf.release();
-                }
+    private void handleReadException(ChannelPipeline pipeline, ByteBuf byteBuf, Throwable cause,
+                                     boolean allDataRead, EpollRecvByteAllocatorHandle allocHandle) {
+        if (byteBuf != null) {
+            if (byteBuf.isReadable()) {
+                readPending = false;
+                pipeline.fireChannelRead(byteBuf);
+            } else {
+                byteBuf.release();
             }
+        }
+        allocHandle.readComplete();
+        pipeline.fireChannelReadComplete();
+        pipeline.fireExceptionCaught(cause);
+
+        // If oom will close the read event, release connection.
+        // See https://github.com/netty/netty/issues/10434
+        if (allDataRead ||
+                cause instanceof OutOfMemoryError ||
+                cause instanceof LeakPresenceDetector.AllocationProhibitedException ||
+                cause instanceof IOException) {
+            shutdownInput(true);
+        }
+    }
+
+    @Override
+    EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.ExtendedHandle handle) {
+        return new EpollRecvByteAllocatorStreamingHandle(handle);
+    }
+
+    @Override
+    void epollInReady() {
+        final ChannelConfig config = config();
+        if (shouldBreakEpollInReady(config)) {
+            clearEpollIn0();
+            return;
+        }
+        final EpollRecvByteAllocatorHandle allocHandle = (EpollRecvByteAllocatorHandle) recvBufAllocHandle();
+        final ChannelPipeline pipeline = pipeline();
+        final ByteBufAllocator allocator = config.getAllocator();
+        allocHandle.reset(config);
+
+        ByteBuf byteBuf = null;
+        boolean allDataRead = false;
+        try {
+            do {
+                // we use a direct buffer here as the native implementations only be able
+                // to handle direct buffers.
+                byteBuf = allocHandle.allocate(allocator);
+                allocHandle.lastBytesRead(doReadBytes(byteBuf));
+                if (allocHandle.lastBytesRead() <= 0) {
+                    // nothing was read, release the buffer.
+                    byteBuf.release();
+                    byteBuf = null;
+                    allDataRead = allocHandle.lastBytesRead() < 0;
+                    if (allDataRead) {
+                        // There is nothing left to read as we received an EOF.
+                        readPending = false;
+                    }
+                    break;
+                }
+                allocHandle.incMessagesRead(1);
+                readPending = false;
+                pipeline.fireChannelRead(byteBuf);
+                byteBuf = null;
+
+                if (shouldBreakEpollInReady(config)) {
+                    // We need to do this for two reasons:
+                    //
+                    // - If the input was shutdown in between (which may be the case when the user did it in the
+                    //   fireChannelRead(...) method we should not try to read again to not produce any
+                    //   miss-leading exceptions.
+                    //
+                    // - If the user closes the channel we need to ensure we not try to read from it again as
+                    //   the filedescriptor may be re-used already by the OS if the system is handling a lot of
+                    //   concurrent connections and so needs a lot of filedescriptors. If not do this we risk
+                    //   reading data from a filedescriptor that belongs to another socket then the socket that
+                    //   was "wrapped" by this Channel implementation.
+                    break;
+                }
+            } while (allocHandle.continueReading());
+
             allocHandle.readComplete();
             pipeline.fireChannelReadComplete();
-            pipeline.fireExceptionCaught(cause);
 
-            // If oom will close the read event, release connection.
-            // See https://github.com/netty/netty/issues/10434
-            if (allDataRead ||
-                    cause instanceof OutOfMemoryError ||
-                    cause instanceof LeakPresenceDetector.AllocationProhibitedException ||
-                    cause instanceof IOException) {
+            if (allDataRead) {
                 shutdownInput(true);
             }
-        }
-
-        @Override
-        EpollRecvByteAllocatorHandle newEpollHandle(RecvByteBufAllocator.ExtendedHandle handle) {
-            return new EpollRecvByteAllocatorStreamingHandle(handle);
-        }
-
-        @Override
-        void epollInReady() {
-            final ChannelConfig config = config();
-            if (shouldBreakEpollInReady(config)) {
-                clearEpollIn0();
-                return;
-            }
-            final EpollRecvByteAllocatorHandle allocHandle = recvBufAllocHandle();
-            final ChannelPipeline pipeline = pipeline();
-            final ByteBufAllocator allocator = config.getAllocator();
-            allocHandle.reset(config);
-
-            ByteBuf byteBuf = null;
-            boolean allDataRead = false;
-            try {
-                do {
-                    // we use a direct buffer here as the native implementations only be able
-                    // to handle direct buffers.
-                    byteBuf = allocHandle.allocate(allocator);
-                    allocHandle.lastBytesRead(doReadBytes(byteBuf));
-                    if (allocHandle.lastBytesRead() <= 0) {
-                        // nothing was read, release the buffer.
-                        byteBuf.release();
-                        byteBuf = null;
-                        allDataRead = allocHandle.lastBytesRead() < 0;
-                        if (allDataRead) {
-                            // There is nothing left to read as we received an EOF.
-                            readPending = false;
-                        }
-                        break;
-                    }
-                    allocHandle.incMessagesRead(1);
-                    readPending = false;
-                    pipeline.fireChannelRead(byteBuf);
-                    byteBuf = null;
-
-                    if (shouldBreakEpollInReady(config)) {
-                        // We need to do this for two reasons:
-                        //
-                        // - If the input was shutdown in between (which may be the case when the user did it in the
-                        //   fireChannelRead(...) method we should not try to read again to not produce any
-                        //   miss-leading exceptions.
-                        //
-                        // - If the user closes the channel we need to ensure we not try to read from it again as
-                        //   the filedescriptor may be re-used already by the OS if the system is handling a lot of
-                        //   concurrent connections and so needs a lot of filedescriptors. If not do this we risk
-                        //   reading data from a filedescriptor that belongs to another socket then the socket that
-                        //   was "wrapped" by this Channel implementation.
-                        break;
-                    }
-                } while (allocHandle.continueReading());
-
-                allocHandle.readComplete();
-                pipeline.fireChannelReadComplete();
-
-                if (allDataRead) {
-                    shutdownInput(true);
-                }
-            } catch (Throwable t) {
-                handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
-            } finally {
-                if (shouldStopReading(config)) {
-                    clearEpollIn();
-                }
+        } catch (Throwable t) {
+            handleReadException(pipeline, byteBuf, t, allDataRead, allocHandle);
+        } finally {
+            if (shouldStopReading(config)) {
+                clearEpollIn();
             }
         }
     }
