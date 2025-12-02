@@ -556,7 +556,6 @@ public class CorsHandlerTest {
         LastHttpContent second = LastHttpContent.EMPTY_LAST_CONTENT;
 
         assertFalse(ch.writeInbound(first));
-        ReferenceCountUtil.release(first);
 
         assertFalse(ch.writeInbound(second));
         ReferenceCountUtil.release(second);
