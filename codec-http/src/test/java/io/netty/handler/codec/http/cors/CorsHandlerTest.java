@@ -558,7 +558,6 @@ public class CorsHandlerTest {
         assertFalse(ch.writeInbound(first));
 
         assertFalse(ch.writeInbound(second));
-        ReferenceCountUtil.release(second);
 
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
