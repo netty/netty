@@ -46,6 +46,7 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
 import java.net.ConnectException;
+import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -879,6 +880,48 @@ public class LocalChannelTest {
                 sb.connect(LocalAddress.ANY).syncUninterruptibly();
             }
         });
+    }
+
+    @Test
+    public void testConnectedAlready() throws Exception {
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
+        cb.group(group1)
+                .channel(LocalChannel.class)
+                .handler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        causeRef.set(cause);
+                    }
+                });
+
+        sb.group(group2)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    public void initChannel(LocalChannel ch) throws Exception {
+                        ch.pipeline().addLast(new TestHandler());
+                    }
+                });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
+
+            // Connect to the server
+            cc = cb.connect(sc.localAddress()).sync().channel();
+
+            ChannelFuture f = cc.connect(sc.localAddress()).awaitUninterruptibly();
+            assertInstanceOf(AlreadyConnectedException.class, f.cause());
+            cc.close().syncUninterruptibly();
+            assertNull(causeRef.get());
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
     }
 
     private static final class LatchChannelFutureListener extends CountDownLatch implements ChannelFutureListener {
