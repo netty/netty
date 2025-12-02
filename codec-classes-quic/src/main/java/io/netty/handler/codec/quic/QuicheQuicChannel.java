@@ -569,6 +569,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     @Override
     protected void doClose(ChannelPromise promise) {
         if (state == ChannelState.CLOSED) {
+            promise.setSuccess();
             return;
         }
         state = ChannelState.CLOSED;

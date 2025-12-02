@@ -181,6 +181,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                     socket.close();
                 } catch (Throwable cause) {
                     promise.setFailure(cause);
+                    return;
                 }
                 promise.setSuccess();
             });
@@ -203,6 +204,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 socket.close();
             } catch (Throwable cause) {
                 promise.setFailure(cause);
+                return;
             }
             promise.setSuccess();
         }

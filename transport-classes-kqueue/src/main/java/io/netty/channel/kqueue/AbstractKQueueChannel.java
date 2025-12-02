@@ -157,16 +157,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         // As unregisteredFilters() may have not been called because isOpen() returned false we just set both filters
         // to false to ensure a consistent state in all cases.
         // Make sure we unregister our filters from kqueue!
-        try {
-            readFilter(false);
-        } catch (IOException ignore) {
-            // ignore
-        }
-        try {
-            writeFilter(false);
-        } catch (IOException ignore) {
-            // ignore
-        }
+        readFilter(false);
+        writeFilter(false);
+
         clearRdHup0();
 
         IoRegistration registration = this.registration;
@@ -357,14 +350,14 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
-    void readFilter(boolean readFilterEnabled) throws IOException {
+    void readFilter(boolean readFilterEnabled) {
         if (this.readFilterEnabled != readFilterEnabled) {
             this.readFilterEnabled = readFilterEnabled;
             submit(readFilterEnabled ? Native.READ_ENABLED_OPS : Native.READ_DISABLED_OPS);
         }
     }
 
-    void writeFilter(boolean writeFilterEnabled) throws IOException {
+    void writeFilter(boolean writeFilterEnabled) {
         if (this.writeFilterEnabled != writeFilterEnabled) {
             this.writeFilterEnabled = writeFilterEnabled;
             submit(writeFilterEnabled ? Native.WRITE_ENABLED_OPS : Native.WRITE_DISABLED_OPS);
@@ -550,15 +543,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
 
         protected final void clearReadFilter0() {
             assert executor().inEventLoop();
-            try {
-                readPending = false;
-                readFilter(false);
-            } catch (IOException e) {
-                // When this happens there is something completely wrong with either the filedescriptor or epoll,
-                // so fire the exception through the pipeline and close the Channel.
-                pipeline().fireExceptionCaught(e);
-                unsafe().close(newPromise());
-            }
+            readPending = false;
+            readFilter(false);
         }
 
         private void fireEventAndClose(Object evt) {
