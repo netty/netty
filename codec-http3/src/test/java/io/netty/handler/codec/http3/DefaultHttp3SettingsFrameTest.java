@@ -41,19 +41,19 @@ class DefaultHttp3SettingsFrameTest {
 
         assertNotNull(frame.settings());
         assertFalse(frame.iterator().hasNext());
-        assertNull(frame.get(Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY));
+        assertNull(frame.get(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id()));
     }
 
     @Test
     void testPutAndGetDelegatesToSettings() {
         DefaultHttp3SettingsFrame frame = new DefaultHttp3SettingsFrame();
 
-        frame.put(Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 256L);
-        frame.put(Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 8L);
+        frame.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(), 256L);
+        frame.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(), 8L);
 
         assertEquals(256L, frame.settings().qpackMaxTableCapacity());
         assertEquals(8L, frame.settings().qpackBlockedStreams());
-        assertEquals(8L, frame.get(Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS));
+        assertEquals(8L, frame.get(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id()));
     }
 
     @Test
@@ -72,7 +72,7 @@ class DefaultHttp3SettingsFrameTest {
 
         // Modify settings externally and verify frame sees update
         settings.qpackBlockedStreams(3);
-        assertEquals(3L, frame.get(Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS));
+        assertEquals(3L, frame.get(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id()));
     }
 
     @Test
@@ -130,17 +130,17 @@ class DefaultHttp3SettingsFrameTest {
         assertEquals(original, copy);
 
         // Modify original and ensure copy remains unchanged
-        original.put(Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 5L);
+        original.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(), 5L);
         assertNotEquals(original, copy);
     }
 
     @Test
     void testDeprecatedMethodsStillWork() {
         DefaultHttp3SettingsFrame frame = new DefaultHttp3SettingsFrame();
-        frame.put(Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 5L);
+        frame.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(), 5L);
 
         // Uses old get() API
-        assertEquals(5L, frame.get(Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS));
+        assertEquals(5L, frame.get(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id()));
 
         // New typed accessor matches
         assertEquals(5L, frame.settings().qpackBlockedStreams());

@@ -25,36 +25,36 @@ import java.util.Map;
 public interface Http3SettingsFrame extends Http3ControlStreamFrame, Iterable<Map.Entry<Long, Long>> {
 
     /**
-     * @deprecated Use {@link Http3Settings#HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY} instead.
+     * @deprecated Use {@link Http3SettingIdentifier#HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY} instead.
      * See <a href="https://tools.ietf.org/html/draft-ietf-quic-qpack-19#section-5">
      * SETTINGS_QPACK_MAX_TABLE_CAPACITY</a>.
      */
     @Deprecated
-    long HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY = Http3Settings.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY;
+    long HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY = Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id();
 
     /**
-     * @deprecated Use {@link Http3Settings#HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS} instead.
+     * @deprecated Use {@link Http3SettingIdentifier#HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS} instead.
      * See <a href="https://tools.ietf.org/html/draft-ietf-quic-qpack-19#section-5">
      * SETTINGS_QPACK_BLOCKED_STREAMS</a>.
      */
     @Deprecated
-    long HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS = Http3Settings.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS;
+    long HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS = Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id();
 
     /**
-     * @deprecated Use {@link Http3Settings#HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL} instead.
+     * @deprecated Use {@link Http3SettingIdentifier#HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL} instead.
      * See <a href="https://www.rfc-editor.org/rfc/rfc9220.html#section-5">
      * SETTINGS_ENABLE_CONNECT_PROTOCOL</a>.
      */
     @Deprecated
-    long HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL = Http3Settings.HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL;
+    long HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL = Http3SettingIdentifier.HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL.id();
 
     /**
-     * @deprecated Use {@link Http3Settings#HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE} instead.
+     * @deprecated Use {@link Http3SettingIdentifier#HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE} instead.
      * See <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-7.2.4.1">
      * SETTINGS_MAX_FIELD_SECTION_SIZE</a>.
      */
     @Deprecated
-    long HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE = Http3Settings.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE;
+    long HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE = Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id();
 
     default Http3Settings settings() {
         throw new UnsupportedOperationException(
