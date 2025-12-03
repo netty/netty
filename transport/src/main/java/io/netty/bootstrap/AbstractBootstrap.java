@@ -32,6 +32,7 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 
 import java.net.InetAddress;
@@ -52,6 +53,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * transports such as datagram (UDP).</p>
  */
 public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
+
+    private static final boolean CLOSE_ON_SET_OPTION_FAILURE = SystemPropertyUtil.getBoolean(
+            "io.netty.bootstrap.closeOnSetOptionFailure", true);
     @SuppressWarnings("unchecked")
     private static final Map.Entry<ChannelOption<?>, Object>[] EMPTY_OPTION_ARRAY = new Map.Entry[0];
     @SuppressWarnings("unchecked")
@@ -492,7 +496,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             logger.warn(
                     "Failed to set channel option '{}' with value '{}' for channel '{}' of type '{}'",
                     option, value, channel, channel.getClass(), t);
-            throw t;
+            if (CLOSE_ON_SET_OPTION_FAILURE) {
+                // Only rethrow if we want to close the channel in case of a failure.
+                throw t;
+            }
         }
     }
 
