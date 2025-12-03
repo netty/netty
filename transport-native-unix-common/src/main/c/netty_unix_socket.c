@@ -137,7 +137,19 @@ static jobject createDomainDatagramSocketAddress(JNIEnv* env, const struct socka
     jclass domainDatagramSocketAddressClass = NULL;
     jobject obj  = NULL;
     struct sockaddr_un* s = (struct sockaddr_un*) addr;
+#ifdef __linux__
+    // Linux supports abstract domain sockets so we need to handle it.
+    // https://man7.org/linux/man-pages/man7/unix.7.html
+    int pathLength = 0;
+    if (s->sun_path[0] == '\0') {
+       // This is an abstract domain socket address
+       pathLength = strlen(&(s->sun_path[1])) + 1;
+    } else {
+       pathLength = strlen(s->sun_path);
+    }
+#else
     int pathLength = strlen(s->sun_path);
+#endif
     jbyteArray pathBytes = (*env)->NewByteArray(env, pathLength);
     if (pathBytes == NULL) {
         return NULL;
@@ -159,7 +171,19 @@ done:
 
 static jbyteArray netty_unix_socket_createDomainSocketAddressArray(JNIEnv* env, const struct sockaddr_storage* addr) {
     struct sockaddr_un* s = (struct sockaddr_un*) addr;
+#ifdef __linux__
+    // Linux supports abstract domain sockets so we need to handle it.
+    // https://man7.org/linux/man-pages/man7/unix.7.html
+    int pathLength = 0;
+    if (s->sun_path[0] == '\0') {
+       // This is an abstract domain socket address
+       pathLength = strlen(&(s->sun_path[1])) + 1;
+    } else {
+       pathLength = strlen(s->sun_path);
+    }
+#else
     int pathLength = strlen(s->sun_path);
+#endif
     jbyteArray pathBytes = (*env)->NewByteArray(env, pathLength);
     if (pathBytes == NULL) {
         return NULL;
