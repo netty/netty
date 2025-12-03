@@ -39,7 +39,7 @@ public class MessageAggregatorTest {
         int value;
 
         @Override
-        public void read(ChannelHandlerContext ctx) throws Exception {
+        public void read(ChannelHandlerContext ctx) {
             value++;
             ctx.read();
         }

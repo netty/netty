@@ -756,7 +756,7 @@ public class Http3FrameToHttpObjectCodecTest {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(
                 new ChannelOutboundHandlerAdapter() {
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                         framePromises.add(promise);
                         ctx.write(msg, ctx.newPromise());
                     }

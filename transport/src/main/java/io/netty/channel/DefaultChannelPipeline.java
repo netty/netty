@@ -1287,7 +1287,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
-        public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
             ChannelPromise registerPromise = newPromise();
             registerPromise.addListener(f -> {
                 if (f.isSuccess()) {

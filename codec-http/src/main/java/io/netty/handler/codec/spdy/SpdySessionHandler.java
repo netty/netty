@@ -428,12 +428,12 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
         sendGoAwayFrame(ctx, promise);
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (msg instanceof SpdyDataFrame ||
             msg instanceof SpdySynStreamFrame ||
             msg instanceof SpdySynReplyFrame ||
@@ -450,7 +450,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
         }
     }
 
-    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    private void handleOutboundMessage(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (msg instanceof SpdyDataFrame) {
 
             SpdyDataFrame spdyDataFrame = (SpdyDataFrame) msg;

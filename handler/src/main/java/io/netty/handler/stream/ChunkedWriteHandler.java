@@ -131,7 +131,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (!queueIsEmpty() || msg instanceof ChunkedInput) {
             allocateQueue();
             queue.add(new PendingWrite(msg, promise));
@@ -141,7 +141,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         doFlush(ctx);
     }
 

@@ -27,9 +27,8 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
-     * @throws Exception        thrown if an error occurs
      */
-    void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+    void register(ChannelHandlerContext ctx, ChannelPromise promise);
 
     /**
      * Called once a bind operation is made.
@@ -37,9 +36,8 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param ctx           the {@link ChannelHandlerContext} for which the bind operation is made
      * @param localAddress  the {@link SocketAddress} to which it should bound
      * @param promise       the {@link ChannelPromise} to notify once the operation completes
-     * @throws Exception    thrown if an error occurs
      */
-    void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) throws Exception;
+    void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise);
 
     /**
      * Called once a connect operation is made.
@@ -48,43 +46,39 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param remoteAddress     the {@link SocketAddress} to which it should connect
      * @param localAddress      the {@link SocketAddress} which is used as source on connect
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
-     * @throws Exception        thrown if an error occurs
      */
     void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelPromise promise) throws Exception;
+            SocketAddress localAddress, ChannelPromise promise);
 
     /**
      * Called once a disconnect operation is made.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the disconnect operation is made
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
-     * @throws Exception        thrown if an error occurs
      */
-    void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+    void disconnect(ChannelHandlerContext ctx, ChannelPromise promise);
 
     /**
      * Called once a close operation is made.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
-     * @throws Exception        thrown if an error occurs
      */
-    void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+    void close(ChannelHandlerContext ctx, ChannelPromise promise);
 
     /**
      * Called once a deregister operation is made from the current registered {@link EventLoop}.
      *
-     * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made
+     * @param ctx               the {@link ChannelHandlerContext} for which the deregister operation is made
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
-     * @throws Exception        thrown if an error occurs
      */
-    void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception;
+    void deregister(ChannelHandlerContext ctx, ChannelPromise promise);
 
     /**
      * Intercepts {@link ChannelHandlerContext#read()}.
      */
-    void read(ChannelHandlerContext ctx) throws Exception;
+    void read(ChannelHandlerContext ctx);
 
     /**
     * Called once a write operation is made. The write operation will write the messages through the
@@ -96,7 +90,7 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param promise           the {@link ChannelPromise} to notify once the operation completes
      * @throws Exception        thrown if an error occurs
      */
-    void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception;
+    void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise);
 
     /**
      * Called once a flush operation is made. The flush operation will try to flush out all previous written messages
@@ -105,5 +99,5 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @param ctx               the {@link ChannelHandlerContext} for which the flush operation is made
      * @throws Exception        thrown if an error occurs
      */
-    void flush(ChannelHandlerContext ctx) throws Exception;
+    void flush(ChannelHandlerContext ctx);
 }

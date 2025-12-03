@@ -170,7 +170,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     @Override
     public final void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelPromise promise) throws Exception {
+            ChannelPromise promise) {
 
         if (destinationAddress != null) {
             promise.setFailure(new ConnectionPendingException());
@@ -400,7 +400,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (finished) {
             writePendingWrites();
             ctx.write(msg, promise);
@@ -410,7 +410,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public final void flush(ChannelHandlerContext ctx) throws Exception {
+    public final void flush(ChannelHandlerContext ctx) {
         if (finished) {
             writePendingWrites();
             ctx.flush();

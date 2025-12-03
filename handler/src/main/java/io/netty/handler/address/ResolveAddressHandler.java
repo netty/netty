@@ -43,7 +43,7 @@ public class ResolveAddressHandler extends ChannelOutboundHandlerAdapter {
 
     @Override
     public void connect(final ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                        final SocketAddress localAddress, final ChannelPromise promise)  {
+                        final SocketAddress localAddress, final ChannelPromise promise) {
         AddressResolver<? extends SocketAddress> resolver = resolverGroup.getResolver(ctx.executor());
         if (resolver.isSupported(remoteAddress) && !resolver.isResolved(remoteAddress)) {
             resolver.resolve(remoteAddress).addListener(new FutureListener<SocketAddress>() {

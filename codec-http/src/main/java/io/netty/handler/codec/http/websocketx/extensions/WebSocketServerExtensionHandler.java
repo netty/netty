@@ -159,7 +159,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (msg != Unpooled.EMPTY_BUFFER && !(msg instanceof ByteBuf)) {
             if (msg instanceof DefaultHttpResponse) {
                 onHttpResponseWrite(ctx, (DefaultHttpResponse) msg, promise);
@@ -199,8 +199,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
      * <strong>IMPORTANT:</strong>
      * It already call {@code super.write(ctx, response, promise)} before returning.
      */
-    protected void onHttpResponseWrite(ChannelHandlerContext ctx, HttpResponse response, ChannelPromise promise)
-            throws Exception {
+    protected void onHttpResponseWrite(ChannelHandlerContext ctx, HttpResponse response, ChannelPromise promise) {
         List<WebSocketServerExtension> validExtensionsList = validExtensions.poll();
         // checking the status is faster than looking at headers so we do this first
         if (HttpResponseStatus.SWITCHING_PROTOCOLS.equals(response.status())) {

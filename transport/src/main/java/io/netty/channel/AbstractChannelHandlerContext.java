@@ -770,7 +770,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                         ((ChannelOutboundHandler) handler).read(next);
                     }
                 } catch (Throwable t) {
-                    invokeExceptionCaught(t);
+                    handleFatalOutboundHandlerException(t);
                 }
             } else {
                 next.read();
@@ -836,7 +836,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 ((ChannelOutboundHandler) handler).flush(this);
             }
         } catch (Throwable t) {
-            invokeExceptionCaught(t);
+            handleFatalOutboundHandlerException(t);
         }
     }
 
@@ -914,6 +914,15 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         // Only log if the given promise is not of type VoidChannelPromise as tryFailure(...) is expected to return
         // false.
         PromiseNotificationUtil.tryFailure(promise, cause, logger);
+    }
+
+    private void handleFatalOutboundHandlerException(Throwable cause) {
+        if (logger.isWarnEnabled()) {
+            logger.warn(
+                    "An exception was thrown by an ChannelOutboundHandler" +
+                            " which can't be handled, closing the channel.", cause);
+        }
+        close();
     }
 
     @Override

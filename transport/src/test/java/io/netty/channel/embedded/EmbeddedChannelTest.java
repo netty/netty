@@ -303,7 +303,7 @@ public class EmbeddedChannelTest {
     public void testHasNoDisconnectSkipDisconnect() throws InterruptedException {
         EmbeddedChannel channel = new EmbeddedChannel(false, new ChannelOutboundHandlerAdapter() {
             @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
                 promise.tryFailure(new Throwable());
             }
         });
@@ -395,8 +395,7 @@ public class EmbeddedChannelTest {
     public void testWriteLater() {
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
             @Override
-            public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
-                    throws Exception {
+            public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
                 ctx.executor().execute(new Runnable() {
                     @Override
                     public void run() {
@@ -418,8 +417,7 @@ public class EmbeddedChannelTest {
         final int delay = 500;
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
             @Override
-            public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise)
-                    throws Exception {
+            public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
                 ctx.executor().schedule(new Runnable() {
                     @Override
                     public void run() {
@@ -490,7 +488,7 @@ public class EmbeddedChannelTest {
         final CountDownLatch latch = new CountDownLatch(1);
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
             @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
+            public void flush(ChannelHandlerContext ctx) {
                 latch.countDown();
             }
         });
@@ -509,13 +507,13 @@ public class EmbeddedChannelTest {
 
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 ctx.write(msg, promise);
                 latch.countDown();
             }
 
             @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
+            public void flush(ChannelHandlerContext ctx) {
                 flushCount.incrementAndGet();
             }
         });
@@ -850,13 +848,13 @@ public class EmbeddedChannelTest {
         private final Queue<Integer> queue = new ArrayDeque<Integer>();
 
         @Override
-        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
             queue.add(DISCONNECT);
             promise.setSuccess();
         }
 
         @Override
-        public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+        public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
             queue.add(CLOSE);
             promise.setSuccess();
         }

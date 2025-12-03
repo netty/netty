@@ -133,7 +133,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
      * @throws Exception    is thrown if an error occurs
      */
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (!(msg instanceof HttpObject)) {
             throw new UnsupportedMessageTypeException(msg, HttpObject.class);
         }
@@ -261,7 +261,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.register(promise);
     }
 
@@ -292,7 +292,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         ctx.read();
     }
 }

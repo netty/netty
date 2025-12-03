@@ -66,7 +66,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
                 }, handlers));
         pipeline().addFirst(new ChannelOutboundHandlerAdapter() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 if (msg instanceof QuicStreamFrame && ((QuicStreamFrame) msg).hasFin()) {
                     // Mimic the API.
                     promise.addListener(f -> outputShutdown = 0);

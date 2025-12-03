@@ -277,7 +277,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise)  {
+    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         pendingPackets ++;
         int size = estimatorHandle.size(msg);
         if (size > 0) {
@@ -303,7 +303,7 @@ abstract class QuicheQuicCodec extends ChannelDuplexHandler {
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) throws Exception {
+                        ChannelPromise promise) {
         if (remoteAddress instanceof QuicheQuicChannelAddress) {
             QuicheQuicChannelAddress addr = (QuicheQuicChannelAddress) remoteAddress;
             QuicheQuicChannel channel = addr.channel;

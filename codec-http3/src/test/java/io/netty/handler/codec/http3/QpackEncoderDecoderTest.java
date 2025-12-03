@@ -525,15 +525,27 @@ public class QpackEncoderDecoderTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             if (msg instanceof ByteBuf) {
                 if (suspendQueue != null) {
                     suspendQueue.offer(() -> {
-                        other.channelRead(ctx, msg);
+                        try {
+                            other.channelRead(ctx, msg);
+                        } catch (Exception e) {
+                            promise.setFailure(e);
+                            return null;
+                        }
+                        promise.setSuccess();
                         return null;
                     });
                 } else {
-                    other.channelRead(ctx, msg);
+                    try {
+                        other.channelRead(ctx, msg);
+                    } catch (Exception e) {
+                        promise.setFailure(e);
+                        return;
+                    }
+                    promise.setSuccess();
                 }
             } else {
                 super.write(ctx, msg, promise);
