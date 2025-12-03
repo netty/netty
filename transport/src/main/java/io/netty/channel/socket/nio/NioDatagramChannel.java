@@ -17,7 +17,6 @@ package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
@@ -25,7 +24,6 @@ import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FixedRecvByteBufAllocator;
@@ -77,9 +75,8 @@ import static io.netty.channel.ChannelOption.SO_SNDBUF;
 
 /**
  * An NIO datagram {@link Channel} that sends and receives an
- * {@link AddressedEnvelope AddressedEnvelope<ByteBuf, SocketAddress>}.
+ * {@link DatagramPacket}.
  *
- * @see AddressedEnvelope
  * @see DatagramPacket
  */
 public final class NioDatagramChannel
@@ -89,9 +86,6 @@ public final class NioDatagramChannel
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
-            StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
-            StringUtil.simpleClassName(ByteBuf.class) + ", " +
-            StringUtil.simpleClassName(SocketAddress.class) + ">, " +
             StringUtil.simpleClassName(ByteBuf.class) + ')';
 
     private final DatagramChannelConfig config;
@@ -311,11 +305,10 @@ public final class NioDatagramChannel
     protected boolean doWriteMessage(Object msg, ChannelOutboundBuffer in) throws Exception {
         final SocketAddress remoteAddress;
         final ByteBuf data;
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<ByteBuf, SocketAddress> envelope = (AddressedEnvelope<ByteBuf, SocketAddress>) msg;
-            remoteAddress = envelope.recipient();
-            data = envelope.content();
+        if (msg instanceof DatagramPacket) {
+            DatagramPacket packet = (DatagramPacket) msg;
+            remoteAddress = packet.recipient();
+            data = packet.content();
         } else {
             data = (ByteBuf) msg;
             remoteAddress = null;
@@ -337,9 +330,9 @@ public final class NioDatagramChannel
         return writtenBytes > 0;
     }
 
-    private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
-        if (envelope.recipient() instanceof InetSocketAddress
-                && (((InetSocketAddress) envelope.recipient()).isUnresolved())) {
+    private static void checkUnresolved(SocketAddress address) {
+        if (address instanceof InetSocketAddress
+                && (((InetSocketAddress) address).isUnresolved())) {
             throw new UnresolvedAddressException();
         }
     }
@@ -348,7 +341,7 @@ public final class NioDatagramChannel
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof DatagramPacket) {
             DatagramPacket p = (DatagramPacket) msg;
-            checkUnresolved(p);
+            checkUnresolved(p.recipient());
             ByteBuf content = p.content();
             if (isSingleDirectBuffer(content)) {
                 return p;
@@ -362,19 +355,6 @@ public final class NioDatagramChannel
                 return buf;
             }
             return newDirectBuffer(buf);
-        }
-
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            checkUnresolved(e);
-            if (e.content() instanceof ByteBuf) {
-                ByteBuf content = (ByteBuf) e.content();
-                if (isSingleDirectBuffer(content)) {
-                    return e;
-                }
-                return new DefaultAddressedEnvelope<ByteBuf, SocketAddress>(newDirectBuffer(e, content), e.recipient());
-            }
         }
 
         throw new UnsupportedOperationException(

@@ -17,13 +17,11 @@ package io.netty.channel.kqueue;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramChannelConfig;
@@ -56,17 +54,6 @@ import static io.netty.channel.unix.Socket.isIPv6Preferred;
 public final class KQueueDatagramChannel extends AbstractKQueueChannel implements DatagramChannel {
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
-                    StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
-                    StringUtil.simpleClassName(ByteBuf.class) + ", " +
-                    StringUtil.simpleClassName(InetSocketAddress.class) + ">, " +
-                    StringUtil.simpleClassName(ByteBuf.class) + ')';
-
-    private static final String EXPECTED_TYPES_UNIX =
-            " (expected: " +
-                    StringUtil.simpleClassName(DatagramPacket.class) + ", " +
-                    StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
-                    StringUtil.simpleClassName(ByteBuf.class) + ", " +
-                    StringUtil.simpleClassName(DomainSocketAddress.class) + ">, " +
                     StringUtil.simpleClassName(ByteBuf.class) + ')';
 
     private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
@@ -345,12 +332,10 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     private boolean doWriteMessage(Object msg) throws Exception {
         final ByteBuf data;
         SocketAddress remoteAddress;
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<ByteBuf, SocketAddress> envelope =
-                    (AddressedEnvelope<ByteBuf, SocketAddress>) msg;
-            data = envelope.content();
-            remoteAddress = envelope.recipient();
+        if (msg instanceof DatagramPacket) {
+            DatagramPacket packet = (DatagramPacket) msg;
+            data = packet.content();
+            remoteAddress = packet.recipient();
         } else {
             data = (ByteBuf) msg;
             remoteAddress = null;
@@ -416,25 +401,10 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
         return writtenBytes > 0;
     }
 
-    private void checkEnvelope(AddressedEnvelope<?, ?> envelope) {
-        if (envelope == null) {
-            return;
-        }
-
-        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
-            if (!(envelope.content() instanceof ByteBuf) || !(envelope.recipient() instanceof DomainSocketAddress)) {
-                throw new UnsupportedOperationException(
-                        "unsupported message type: " + StringUtil.simpleClassName(envelope) + EXPECTED_TYPES_UNIX);
-            }
-        } else {
-            if (envelope.content() instanceof ByteBuf && envelope.recipient() instanceof InetSocketAddress) {
-                if (((InetSocketAddress) envelope.recipient()).isUnresolved()) {
-                    throw new UnresolvedAddressException();
-                }
-            } else {
-                throw new UnsupportedOperationException(
-                        "unsupported message type: " + StringUtil.simpleClassName(envelope) + EXPECTED_TYPES);
-            }
+    private static void checkUnresolved(SocketAddress address) {
+        if (address instanceof InetSocketAddress
+                && (((InetSocketAddress) address).isUnresolved())) {
+            throw new UnresolvedAddressException();
         }
     }
 
@@ -442,7 +412,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
-            checkEnvelope(packet);
+            checkUnresolved(packet.recipient());
             ByteBuf content = packet.content();
             return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
                     new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
@@ -452,19 +422,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
             ByteBuf buf = (ByteBuf) msg;
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf) ? newDirectBuffer(buf) : buf;
         }
-
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            checkEnvelope(e);
-            ByteBuf content = (ByteBuf) e.content();
-            return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
-                    new DefaultAddressedEnvelope<>(
-                            newDirectBuffer(e, content), e.recipient()) : e;
-        }
         throw new UnsupportedOperationException(
-                "unsupported message type: " + StringUtil.simpleClassName(msg) +
-                        (socket.protocolFamily() == SocketProtocolFamily.UNIX ? EXPECTED_TYPES_UNIX : EXPECTED_TYPES));
+                "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
 
     @Override

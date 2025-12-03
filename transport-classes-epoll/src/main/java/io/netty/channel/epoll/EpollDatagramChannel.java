@@ -18,19 +18,16 @@ package io.netty.channel.epoll;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainDatagramSocketAddress;
-import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.UnixChannelUtil;
@@ -67,18 +64,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
-            StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
-            StringUtil.simpleClassName(ByteBuf.class) + ", " +
-            StringUtil.simpleClassName(InetSocketAddress.class) + ">, " +
             StringUtil.simpleClassName(ByteBuf.class) + ')';
-
-    private static final String EXPECTED_TYPES_UNIX =
-            " (expected: " +
-                    StringUtil.simpleClassName(DatagramPacket.class) + ", " +
-                    StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
-                    StringUtil.simpleClassName(ByteBuf.class) + ", " +
-                    StringUtil.simpleClassName(DomainSocketAddress.class) + ">, " +
-                    StringUtil.simpleClassName(ByteBuf.class) + ')';
 
     private final EpollDatagramChannelConfig config;
     private volatile boolean connected;
@@ -461,12 +447,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     private boolean doWriteMessage(Object msg) throws Exception {
         final ByteBuf data;
         final SocketAddress remoteAddress;
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<ByteBuf, SocketAddress> envelope =
-                    (AddressedEnvelope<ByteBuf, SocketAddress>) msg;
-            data = envelope.content();
-            remoteAddress = envelope.recipient();
+        if (msg instanceof DatagramPacket) {
+            DatagramPacket packet = (DatagramPacket) msg;
+            data = packet.content();
+            remoteAddress = packet.recipient();
         } else {
             data = (ByteBuf) msg;
             remoteAddress = null;
@@ -480,25 +464,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         return doWriteOrSendBytes(data, remoteAddress, false) > 0;
     }
 
-    private void checkEnvelope(AddressedEnvelope<?, ?> envelope) {
-        if (envelope == null) {
-            return;
-        }
-
-        if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
-            if (!(envelope.content() instanceof ByteBuf) || !(envelope.recipient() instanceof DomainSocketAddress)) {
-                throw new UnsupportedOperationException(
-                        "unsupported message type: " + StringUtil.simpleClassName(envelope) + EXPECTED_TYPES_UNIX);
-            }
-        } else {
-            if (envelope.content() instanceof ByteBuf && envelope.recipient() instanceof InetSocketAddress) {
-                if (((InetSocketAddress) envelope.recipient()).isUnresolved()) {
-                    throw new UnresolvedAddressException();
-                }
-            } else {
-                throw new UnsupportedOperationException(
-                        "unsupported message type: " + StringUtil.simpleClassName(envelope) + EXPECTED_TYPES);
-            }
+    private static void checkUnresolved(SocketAddress address) {
+        if (address instanceof InetSocketAddress
+                && (((InetSocketAddress) address).isUnresolved())) {
+            throw new UnresolvedAddressException();
         }
     }
 
@@ -510,7 +479,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
             }
             io.netty.channel.unix.SegmentedDatagramPacket packet = (io.netty.channel.unix.SegmentedDatagramPacket) msg;
-            checkEnvelope(packet);
+            checkUnresolved(packet.recipient());
 
             ByteBuf content = packet.content();
             return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
@@ -518,7 +487,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
-            checkEnvelope(packet);
+            checkUnresolved(packet.recipient());
             ByteBuf content = packet.content();
             return UnixChannelUtil.isBufferCopyNeededForWrite(content) ?
                     new DatagramPacket(newDirectBuffer(packet, content), packet.recipient()) : msg;
@@ -528,20 +497,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             ByteBuf buf = (ByteBuf) msg;
             return UnixChannelUtil.isBufferCopyNeededForWrite(buf)? newDirectBuffer(buf) : buf;
         }
-
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            checkEnvelope(e);
-
-            ByteBuf content = (ByteBuf) e.content();
-            return UnixChannelUtil.isBufferCopyNeededForWrite(content)?
-                    new DefaultAddressedEnvelope<ByteBuf, InetSocketAddress>(
-                            newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;
-        }
         throw new UnsupportedOperationException(
-                "unsupported message type: " + StringUtil.simpleClassName(msg) +
-                        (socket.protocolFamily() == SocketProtocolFamily.UNIX ? EXPECTED_TYPES_UNIX : EXPECTED_TYPES));
+                "unsupported message type: " + StringUtil.simpleClassName(msg) + EXPECTED_TYPES);
     }
 
     @Override
