@@ -17,7 +17,6 @@ package io.netty.handler.codec.quic;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DuplexChannel;
 import org.jetbrains.annotations.Nullable;
@@ -119,11 +118,6 @@ public interface QuicStreamChannel extends DuplexChannel {
     @Override
     default ChannelPromise newPromise() {
         return pipeline().newPromise();
-    }
-
-    @Override
-    default ChannelProgressivePromise newProgressivePromise() {
-        return pipeline().newProgressivePromise();
     }
 
     @Override

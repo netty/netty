@@ -329,11 +329,6 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     @Override
-    default ChannelProgressivePromise newProgressivePromise() {
-        return pipeline().newProgressivePromise();
-    }
-
-    @Override
     default ChannelFuture newSucceededFuture() {
         return pipeline().newSucceededFuture();
     }
