@@ -149,11 +149,11 @@ public class OcspServerCertificateValidator extends ChannelInboundHandlerAdapter
 
                 ocspRespPromise.addListener(new GenericFutureListener<Future<BasicOCSPResp>>() {
                     @Override
-                    public void operationComplete(Future<BasicOCSPResp> future) throws Exception {
+                    public void operationComplete(Future<BasicOCSPResp> future) {
                         // If Future is success then we have successfully received OCSP response
                         // from OCSP responder. We will validate it now and process.
                         if (future.isSuccess()) {
-                            SingleResp response = future.get().getResponses()[0];
+                            SingleResp response = future.getNow().getResponses()[0];
 
                             Date current = new Date();
                             if (!(current.after(response.getThisUpdate()) &&

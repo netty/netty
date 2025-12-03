@@ -65,7 +65,7 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     private Future<?> connectTimeoutFuture;
     private final ChannelFutureListener writeListener = new ChannelFutureListener() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             if (!future.isSuccess()) {
                 setConnectFailure(future.cause());
             }

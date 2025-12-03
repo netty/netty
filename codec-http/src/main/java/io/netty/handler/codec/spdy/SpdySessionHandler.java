@@ -502,7 +502,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
                 final ChannelHandlerContext context = ctx;
                 ctx.write(partialDataFrame).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             issueSessionError(context, SpdySessionStatus.INTERNAL_ERROR);
                         }
@@ -519,7 +519,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
                 final ChannelHandlerContext context = ctx;
                 promise.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             issueSessionError(context, SpdySessionStatus.INTERNAL_ERROR);
                         }
@@ -779,7 +779,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
                 // Close the session on write failures that leave the transfer window in a corrupt state.
                 ctx.writeAndFlush(partialDataFrame).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             issueSessionError(ctx, SpdySessionStatus.INTERNAL_ERROR);
                         }
@@ -800,7 +800,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
                 // Close the session on write failures that leave the transfer window in a corrupt state.
                 ctx.writeAndFlush(spdyDataFrame, pendingWrite.promise).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             issueSessionError(ctx, SpdySessionStatus.INTERNAL_ERROR);
                         }
@@ -847,7 +847,7 @@ public class SpdySessionHandler extends ChannelDuplexHandler {
         }
 
         @Override
-        public void operationComplete(ChannelFuture sentGoAwayFuture) throws Exception {
+        public void operationComplete(ChannelFuture sentGoAwayFuture) {
             ctx.close(promise);
         }
     }

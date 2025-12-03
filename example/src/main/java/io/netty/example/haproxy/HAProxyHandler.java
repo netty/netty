@@ -38,7 +38,7 @@ public class HAProxyHandler extends ChannelOutboundHandlerAdapter {
         if (msg instanceof HAProxyMessage) {
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     if (future.isSuccess()) {
                         ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
                         ctx.pipeline().remove(HAProxyHandler.this);

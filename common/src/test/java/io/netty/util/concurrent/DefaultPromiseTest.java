@@ -252,25 +252,25 @@ public class DefaultPromiseTest {
                 final Promise<Void> promise = new DefaultPromise<Void>(executor);
                 final FutureListener<Void> listener1 = new FutureListener<Void>() {
                     @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
+                    public void operationComplete(Future<Void> future) {
                         listeners.add(this);
                     }
                 };
                 final FutureListener<Void> listener2 = new FutureListener<Void>() {
                     @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
+                    public void operationComplete(Future<Void> future) {
                         listeners.add(this);
                     }
                 };
                 final FutureListener<Void> listener4 = new FutureListener<Void>() {
                     @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
+                    public void operationComplete(Future<Void> future) {
                         listeners.add(this);
                     }
                 };
                 final FutureListener<Void> listener3 = new FutureListener<Void>() {
                     @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
+                    public void operationComplete(Future<Void> future) {
                         listeners.add(this);
                         future.addListener(listener4);
                     }
@@ -424,7 +424,7 @@ public class DefaultPromiseTest {
             p[i] = new DefaultPromise<Void>(executor);
             p[i].addListener(new FutureListener<Void>() {
                 @Override
-                public void operationComplete(Future<Void> future) throws Exception {
+                public void operationComplete(Future<Void> future) {
                     if (finalI + 1 < p.length) {
                         p[finalI + 1].setSuccess(null);
                     }
@@ -466,10 +466,10 @@ public class DefaultPromiseTest {
             p[i] = new DefaultPromise<Void>(executor);
             p[i].addListener(new FutureListener<Void>() {
                 @Override
-                public void operationComplete(Future<Void> future) throws Exception {
+                public void operationComplete(Future<Void> future) {
                     future.addListener(new FutureListener<Void>() {
                         @Override
-                        public void operationComplete(Future<Void> future) throws Exception {
+                        public void operationComplete(Future<Void> future) {
                             if (finalI + 1 < p.length) {
                                 p[finalI + 1].setSuccess(null);
                             }
@@ -504,7 +504,7 @@ public class DefaultPromiseTest {
             // Add a listener before completion so "lateListener" is used next time we add a listener.
             promise.addListener(new FutureListener<Void>() {
                 @Override
-                public void operationComplete(Future<Void> future) throws Exception {
+                public void operationComplete(Future<Void> future) {
                     assertTrue(state.compareAndSet(0, 1));
                 }
             });
@@ -519,7 +519,7 @@ public class DefaultPromiseTest {
             // Add a "late listener"
             promise.addListener(new FutureListener<Void>() {
                 @Override
-                public void operationComplete(Future<Void> future) throws Exception {
+                public void operationComplete(Future<Void> future) {
                     assertTrue(state.compareAndSet(1, 2));
                     latch1.countDown();
                 }
@@ -536,7 +536,7 @@ public class DefaultPromiseTest {
                 public void run() {
                     promise.addListener(new FutureListener<Void>() {
                         @Override
-                        public void operationComplete(Future<Void> future) throws Exception {
+                        public void operationComplete(Future<Void> future) {
                             assertTrue(state.compareAndSet(2, 3));
                             latch2.countDown();
                         }
@@ -565,10 +565,10 @@ public class DefaultPromiseTest {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
         promise.addListener(new FutureListener<Void>() {
             @Override
-            public void operationComplete(Future<Void> future) throws Exception {
+            public void operationComplete(Future<Void> future) {
                 promise.addListener(new FutureListener<Void>() {
                     @Override
-                    public void operationComplete(Future<Void> future) throws Exception {
+                    public void operationComplete(Future<Void> future) {
                         latch.countDown();
                     }
                 });
@@ -588,7 +588,7 @@ public class DefaultPromiseTest {
         final CountDownLatch latch = new CountDownLatch(expectedCount);
         final FutureListener<Void> listener = new FutureListener<Void>() {
             @Override
-            public void operationComplete(Future<Void> future) throws Exception {
+            public void operationComplete(Future<Void> future) {
                 latch.countDown();
             }
         };

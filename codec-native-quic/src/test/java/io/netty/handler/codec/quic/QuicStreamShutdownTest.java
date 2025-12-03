@@ -103,7 +103,7 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                             QuicStreamChannel streamChannel = (QuicStreamChannel) ctx.channel();
                             streamChannel.shutdownInput().addListener(new ChannelFutureListener() {
                                 @Override
-                                public void operationComplete(ChannelFuture f) throws Exception {
+                                public void operationComplete(ChannelFuture f) {
                                     ByteBuf buffer = (ByteBuf) msg;
                                     if (!f.isSuccess()) {
                                         errorRef.compareAndSet(null, f.cause());

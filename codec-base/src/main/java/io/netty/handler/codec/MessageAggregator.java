@@ -225,7 +225,7 @@ public abstract class MessageAggregator<I, S, C extends ByteBufHolder, O extends
                 if (listener == null) {
                     continueResponseWriteListener = listener = new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             if (!future.isSuccess()) {
                                 ctx.fireExceptionCaught(future.cause());
                             }

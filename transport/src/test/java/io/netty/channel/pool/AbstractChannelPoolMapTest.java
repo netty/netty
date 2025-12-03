@@ -160,7 +160,7 @@ public class AbstractChannelPoolMapTest {
             Future<Void> poolClose = super.closeAsync();
             poolClose.addListener(new GenericFutureListener<Future<? super Void>>() {
                 @Override
-                public void operationComplete(Future<? super Void> future) throws Exception {
+                public void operationComplete(Future<? super Void> future) {
                     if (future.isSuccess()) {
                         closeFuture.setSuccess(null);
                     } else {

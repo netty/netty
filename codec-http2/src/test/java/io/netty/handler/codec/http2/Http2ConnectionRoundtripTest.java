@@ -293,7 +293,7 @@ public class Http2ConnectionRoundtripTest {
                 http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, false, newPromise())
                         .addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         clientHeadersWriteException.set(future.cause());
                     }
                 });
@@ -301,7 +301,7 @@ public class Http2ConnectionRoundtripTest {
                 http2Client.encoder().writeData(ctx(), 3, Unpooled.buffer(), 0, true, newPromise())
                     .addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             clientDataWriteException.set(future.cause());
                             clientDataWrite.countDown();
                         }
@@ -335,7 +335,7 @@ public class Http2ConnectionRoundtripTest {
                 http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, true,
                         newPromise()).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         clientHeadersWriteException2.set(future.cause());
                         clientHeadersLatch.countDown();
                     }
@@ -559,7 +559,7 @@ public class Http2ConnectionRoundtripTest {
                 http2Server.encoder().writeHeaders(serverCtx(), streamId, headers, 0, true, serverNewPromise())
                         .addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
+                            public void operationComplete(ChannelFuture future) {
                                 serverWriteHeadersCauseRef.set(future.cause());
                                 serverWriteHeadersLatch.countDown();
                             }
@@ -589,7 +589,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch closeLatch = new CountDownLatch(1);
         clientChannel.closeFuture().addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 closeLatch.countDown();
             }
         });
@@ -635,7 +635,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch closeLatch = new CountDownLatch(1);
         clientChannel.closeFuture().addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 closeLatch.countDown();
             }
         });
@@ -794,7 +794,7 @@ public class Http2ConnectionRoundtripTest {
         final CountDownLatch closeLatch = new CountDownLatch(1);
         clientChannel.closeFuture().addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 closeLatch.countDown();
             }
         });
@@ -921,7 +921,7 @@ public class Http2ConnectionRoundtripTest {
                 http2Client.flush(ctx());
                 f.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         clientWriteAfterGoAwayLatch.countDown();
                     }
                 });

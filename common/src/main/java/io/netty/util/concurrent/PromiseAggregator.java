@@ -88,7 +88,7 @@ public class PromiseAggregator<V, F extends Future<V>> implements GenericFutureL
     }
 
     @Override
-    public synchronized void operationComplete(F future) throws Exception {
+    public synchronized void operationComplete(F future) {
         if (pendingPromises == null) {
             aggregatePromise.setSuccess(null);
         } else {

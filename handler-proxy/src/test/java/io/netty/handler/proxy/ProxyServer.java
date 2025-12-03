@@ -171,7 +171,7 @@ abstract class ProxyServer {
                 ChannelFuture f = connectToDestination(ctx.channel().executor(), new BackendHandler(ctx));
                 f.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             recordException(future.cause());
                             ctx.close();

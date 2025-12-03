@@ -412,7 +412,7 @@ public class SingleThreadEventLoopTest {
         ChannelPromise promise = ch.newPromise();
         promise.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 latch.countDown();
             }
         });

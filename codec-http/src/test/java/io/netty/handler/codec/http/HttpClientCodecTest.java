@@ -155,14 +155,14 @@ public class HttpClientCodecTest {
                             "Content-Type: text/html\r\n\r\n").getBytes(CharsetUtil.ISO_8859_1)))
                                     .addListener(new ChannelFutureListener() {
                                 @Override
-                                public void operationComplete(ChannelFuture future) throws Exception {
+                                public void operationComplete(ChannelFuture future) {
                                     assertTrue(future.isSuccess());
                                     sChannel.writeAndFlush(Unpooled.wrappedBuffer(
                                             "<html><body>hello half closed!</body></html>\r\n"
                                             .getBytes(CharsetUtil.ISO_8859_1)))
                                             .addListener(new ChannelFutureListener() {
                                         @Override
-                                        public void operationComplete(ChannelFuture future) throws Exception {
+                                        public void operationComplete(ChannelFuture future) {
                                             assertTrue(future.isSuccess());
                                             sChannel.shutdownOutput();
                                         }

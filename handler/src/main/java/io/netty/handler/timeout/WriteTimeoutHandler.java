@@ -214,7 +214,7 @@ public class WriteTimeoutHandler extends ChannelOutboundHandlerAdapter {
         }
 
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             // scheduledFuture has already be set when reaching here
             scheduledFuture.cancel(false);
 

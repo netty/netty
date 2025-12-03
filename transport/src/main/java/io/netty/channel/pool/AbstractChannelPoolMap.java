@@ -82,7 +82,7 @@ public abstract class AbstractChannelPoolMap<K, P extends ChannelPool>
             final Promise<Boolean> removePromise = GlobalEventExecutor.INSTANCE.newPromise();
             poolCloseAsyncIfSupported(pool).addListener(new GenericFutureListener<Future<? super Void>>() {
                 @Override
-                public void operationComplete(Future<? super Void> future) throws Exception {
+                public void operationComplete(Future<? super Void> future) {
                     if (future.isSuccess()) {
                         removePromise.setSuccess(Boolean.TRUE);
                     } else {

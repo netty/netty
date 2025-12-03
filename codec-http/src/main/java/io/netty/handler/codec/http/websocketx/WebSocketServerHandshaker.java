@@ -230,7 +230,7 @@ public abstract class WebSocketServerHandshaker {
         }
         channel.writeAndFlush(response).addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 if (future.isSuccess()) {
                     ChannelPipeline p = future.channel().pipeline();
                     p.remove(encoderName);

@@ -2318,7 +2318,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
         // Cancel the handshake timeout when handshake is finished.
         localHandshakePromise.addListener(new FutureListener<Channel>() {
             @Override
-            public void operationComplete(Future<Channel> f) throws Exception {
+            public void operationComplete(Future<Channel> f) {
                 timeoutFuture.cancel(false);
             }
         });
@@ -2414,7 +2414,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     // Do the close once the we received the close_notify.
                     sslClosePromise.addListener(new FutureListener<Channel>() {
                         @Override
-                        public void operationComplete(Future<Channel> future) throws Exception {
+                        public void operationComplete(Future<Channel> future) {
                             if (closeNotifyReadTimeoutFuture != null) {
                                 closeNotifyReadTimeoutFuture.cancel(false);
                             }

@@ -281,7 +281,7 @@ public class FixedChannelPoolTest {
         final ChannelPromise closePromise = sc.newPromise();
         pool.closeAsync().addListener(new GenericFutureListener<Future<? super Void>>() {
             @Override
-            public void operationComplete(Future<? super Void> future) throws Exception {
+            public void operationComplete(Future<? super Void> future) {
                 assertEquals(0, pool.acquiredChannelCount());
                 sc.close(closePromise).syncUninterruptibly();
             }

@@ -112,7 +112,11 @@ public class Http3FrameCodecTest {
                 new ChannelOutboundHandlerAdapter()).get();
         qpackAttributes.whenEncoderStreamAvailable(future -> {
             if (future.isSuccess()) {
-                encoder.configureDynamicTable(qpackAttributes, maxTableCapacity, maxBlockedStreams);
+                try {
+                    encoder.configureDynamicTable(qpackAttributes, maxTableCapacity, maxBlockedStreams);
+                } catch (QpackException e) {
+                    parent.close();
+                }
             }
         });
         if (!delayQpackStreams) {

@@ -575,7 +575,7 @@ public class ProxyHandlerTest {
             ctx.writeAndFlush(Unpooled.copiedBuffer("A\n", CharsetUtil.US_ASCII)).addListener(
                     new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             latch.countDown();
                             if (!(future.cause() instanceof ProxyConnectException)) {
                                 exceptions.add(new AssertionError(

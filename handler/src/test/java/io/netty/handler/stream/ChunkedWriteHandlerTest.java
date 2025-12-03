@@ -200,7 +200,7 @@ public class ChunkedWriteHandlerTest {
         final ChannelFutureListener listener = new ChannelFutureListener() {
 
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 listenerNotified.set(true);
             }
         };

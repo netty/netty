@@ -27,7 +27,6 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -138,7 +137,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                     ChannelFuture f = ctx.write(Unpooled.wrappedBuffer(new byte[] { 'b' }));
                     f.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             // This message must be flushed
                             ctx.writeAndFlush(Unpooled.wrappedBuffer(new byte[]{'c'}));
                         }

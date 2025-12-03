@@ -136,7 +136,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                         // Write Data of actual request
                         channelFuture.addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
+                            public void operationComplete(ChannelFuture future) {
                                 Http2DataFrame dataFrame = new DefaultHttp2DataFrame(
                                         Unpooled.wrappedBuffer("Meow".getBytes()), true);
                                 dataFrame.stream(receivedFrame.stream());

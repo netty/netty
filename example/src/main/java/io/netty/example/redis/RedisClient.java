@@ -79,7 +79,7 @@ public class RedisClient {
                 lastWriteFuture = ch.writeAndFlush(line);
                 lastWriteFuture.addListener(new GenericFutureListener<ChannelFuture>() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             System.err.print("write failed: ");
                             future.cause().printStackTrace(System.err);

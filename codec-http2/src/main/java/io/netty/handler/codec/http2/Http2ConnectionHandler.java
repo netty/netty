@@ -519,7 +519,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
                 final ChannelFutureListener oldCloseListener = closeListener;
                 closeListener = new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         try {
                             oldCloseListener.operationComplete(future);
                         } finally {
@@ -773,7 +773,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } else {
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     closeConnectionOnError(ctx, future);
                 }
             });
@@ -819,7 +819,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } else {
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     processRstStreamWriteResult(ctx, stream, future);
                 }
             });
@@ -854,7 +854,7 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
         } else {
             future.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     processGoAwayWriteResult(ctx, lastStreamId, errorCode, debugData, future);
                 }
             });

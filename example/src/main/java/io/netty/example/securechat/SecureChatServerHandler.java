@@ -25,8 +25,6 @@ import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.GlobalEventExecutor;
 
-import java.net.InetAddress;
-
 /**
  * Handles a server-side channel.
  */
@@ -35,15 +33,15 @@ public class SecureChatServerHandler extends SimpleChannelInboundHandler<String>
     static final ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
 
     @Override
-    public void channelActive(final ChannelHandlerContext ctx) {
+    public void channelActive(final ChannelHandlerContext ctx) throws Exception {
         // Once session is secured, send a greeting and register the channel to the global channel
         // list so the channel received the messages from others.
         ctx.pipeline().get(SslHandler.class).handshakeFuture().addListener(
                 new GenericFutureListener<Future<Channel>>() {
                     @Override
-                    public void operationComplete(Future<Channel> future) throws Exception {
+                    public void operationComplete(Future<Channel> future) {
                         ctx.writeAndFlush(
-                                "Welcome to " + InetAddress.getLocalHost().getHostName() + " secure chat service!\n");
+                                "Welcome to secure chat service!\n");
                         ctx.writeAndFlush(
                                 "Your session is protected by " +
                                         ctx.pipeline().get(SslHandler.class).engine().getSession().getCipherSuite() +

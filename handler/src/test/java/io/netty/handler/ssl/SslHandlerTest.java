@@ -887,7 +887,7 @@ public class SslHandlerTest {
                         }
                     }).connect(sc.localAddress()).addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             // Write something to trigger the handshake before fireChannelActive is called.
                             future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
                         }
@@ -966,7 +966,7 @@ public class SslHandlerTest {
             if (!startTls) {
                 future.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         // Write something to trigger the handshake before fireChannelActive is called.
                         future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
                     }

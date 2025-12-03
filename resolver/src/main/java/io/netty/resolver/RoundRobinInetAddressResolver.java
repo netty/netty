@@ -54,7 +54,7 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
         // because an unresolved address always has a host name.
         nameResolver.resolveAll(inetHost).addListener(new FutureListener<List<InetAddress>>() {
             @Override
-            public void operationComplete(Future<List<InetAddress>> future) throws Exception {
+            public void operationComplete(Future<List<InetAddress>> future) {
                 if (future.isSuccess()) {
                     List<InetAddress> inetAddresses = future.getNow();
                     int numAddresses = inetAddresses.size();
@@ -76,7 +76,7 @@ public class RoundRobinInetAddressResolver extends InetNameResolver {
     protected void doResolveAll(String inetHost, final Promise<List<InetAddress>> promise) throws Exception {
         nameResolver.resolveAll(inetHost).addListener(new FutureListener<List<InetAddress>>() {
             @Override
-            public void operationComplete(Future<List<InetAddress>> future) throws Exception {
+            public void operationComplete(Future<List<InetAddress>> future) {
                 if (future.isSuccess()) {
                     List<InetAddress> inetAddresses = future.getNow();
                     if (!inetAddresses.isEmpty()) {
