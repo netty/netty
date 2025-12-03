@@ -16,13 +16,11 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DatagramChannel;
@@ -58,9 +56,6 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
-            StringUtil.simpleClassName(AddressedEnvelope.class) + '<' +
-            StringUtil.simpleClassName(ByteBuf.class) + ", " +
-            StringUtil.simpleClassName(InetSocketAddress.class) + ">, " +
             StringUtil.simpleClassName(ByteBuf.class) + ')';
 
     private final IoUringDatagramChannelConfig config;
@@ -311,9 +306,9 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }));
     }
 
-    private static void checkUnresolved(AddressedEnvelope<?, ?> envelope) {
-        if (envelope.recipient() instanceof InetSocketAddress
-                && (((InetSocketAddress) envelope.recipient()).isUnresolved())) {
+    private static void checkUnresolved(SocketAddress address) {
+        if (address instanceof InetSocketAddress
+                && (((InetSocketAddress) address).isUnresolved())) {
             throw new UnresolvedAddressException();
         }
     }
@@ -322,7 +317,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     protected Object filterOutboundMessage(Object msg) {
         if (msg instanceof DatagramPacket) {
             DatagramPacket packet = (DatagramPacket) msg;
-            checkUnresolved(packet);
+            checkUnresolved(packet.recipient());
             ByteBuf content = packet.content();
             return !content.hasMemoryAddress() ?
                     packet.replace(newDirectBuffer(packet, content)) : msg;
@@ -331,20 +326,6 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         if (msg instanceof ByteBuf) {
             ByteBuf buf = (ByteBuf) msg;
             return !buf.hasMemoryAddress()? newDirectBuffer(buf) : buf;
-        }
-
-        if (msg instanceof AddressedEnvelope) {
-            @SuppressWarnings("unchecked")
-            AddressedEnvelope<Object, SocketAddress> e = (AddressedEnvelope<Object, SocketAddress>) msg;
-            checkUnresolved(e);
-            if (e.content() instanceof ByteBuf &&
-                (e.recipient() == null || e.recipient() instanceof InetSocketAddress)) {
-
-                ByteBuf content = (ByteBuf) e.content();
-                return !content.hasMemoryAddress()?
-                        new DefaultAddressedEnvelope<>(
-                            newDirectBuffer(e, content), (InetSocketAddress) e.recipient()) : e;
-            }
         }
 
         throw new UnsupportedOperationException(
@@ -597,12 +578,11 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         final ByteBuf data;
         final InetSocketAddress remoteAddress;
         final int segmentSize;
-        if (msg instanceof AddressedEnvelope) {
+        if (msg instanceof DatagramPacket) {
             @SuppressWarnings("unchecked")
-            AddressedEnvelope<ByteBuf, InetSocketAddress> envelope =
-                    (AddressedEnvelope<ByteBuf, InetSocketAddress>) msg;
-            data = envelope.content();
-            remoteAddress = envelope.recipient();
+            DatagramPacket packet = (DatagramPacket) msg;
+            data = packet.content();
+            remoteAddress = (InetSocketAddress) packet.recipient();
             if (msg instanceof SegmentedDatagramPacket) {
                 segmentSize = ((SegmentedDatagramPacket) msg).segmentSize();
             } else {
