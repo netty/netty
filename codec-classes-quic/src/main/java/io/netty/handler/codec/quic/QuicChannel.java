@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
@@ -116,11 +115,6 @@ public interface QuicChannel extends Channel {
     @Override
     default ChannelPromise newPromise() {
         return pipeline().newPromise();
-    }
-
-    @Override
-    default ChannelProgressivePromise newProgressivePromise() {
-        return pipeline().newProgressivePromise();
     }
 
     @Override

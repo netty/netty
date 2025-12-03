@@ -26,7 +26,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelProgressivePromise;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -344,7 +343,6 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
             long inputProgress = input.progress();
             long inputLength = input.length();
             closeInput(input);
-            currentWrite.progress(inputProgress, inputLength);
             currentWrite.success(inputLength);
         }
     }
@@ -354,7 +352,6 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
             closeInput(input);
             currentWrite.fail(future.cause());
         } else {
-            currentWrite.progress(input.progress(), input.length());
             if (resume && future.channel().isWritable()) {
                 resumeTransfer();
             }
@@ -388,14 +385,7 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                 // No need to notify the progress or fulfill the promise because it's done already.
                 return;
             }
-            progress(total, total);
             promise.trySuccess();
-        }
-
-        void progress(long progress, long total) {
-            if (promise instanceof ChannelProgressivePromise) {
-                ((ChannelProgressivePromise) promise).tryProgress(progress, total);
-            }
         }
     }
 }

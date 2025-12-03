@@ -258,12 +258,6 @@ public final class ChannelOutboundBuffer {
         if (promiseClass == DefaultChannelPromise.class) {
             return;
         }
-        // this is going to save from type pollution due to https://bugs.openjdk.org/browse/JDK-8180450
-        if (p instanceof DefaultChannelProgressivePromise) {
-            ((DefaultChannelProgressivePromise) p).tryProgress(progress, e.total);
-        } else if (p instanceof ChannelProgressivePromise) {
-            ((ChannelProgressivePromise) p).tryProgress(progress, e.total);
-        }
     }
 
     /**

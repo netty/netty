@@ -533,11 +533,6 @@ public interface ChannelPipeline
     }
 
     @Override
-    default ChannelProgressivePromise newProgressivePromise() {
-        return new DefaultChannelProgressivePromise(channel());
-    }
-
-    @Override
     default ChannelFuture newFailedFuture(Throwable cause) {
         return new FailedChannelFuture(channel(), null, cause);
     }
