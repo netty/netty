@@ -57,13 +57,6 @@ public interface EventExecutor extends EventExecutorGroup, ThreadAwareExecutor {
     }
 
     /**
-     * Create a new {@link ProgressivePromise}.
-     */
-    default <V> ProgressivePromise<V> newProgressivePromise() {
-        return new DefaultProgressivePromise<>(this);
-    }
-
-    /**
      * Create a new {@link Future} which is marked as succeeded already. So {@link Future#isSuccess()}
      * will return {@code true}. All {@link FutureListener} added to it will be notified directly. Also
      * every call of blocking methods will just return without blocking.
