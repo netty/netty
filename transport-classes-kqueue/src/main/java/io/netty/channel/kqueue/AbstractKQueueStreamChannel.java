@@ -29,7 +29,8 @@ import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.internal.ChannelUtils;
-import io.netty.channel.socket.DuplexChannel;
+import io.netty.channel.socket.ServerSocketChannel;
+import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
@@ -48,7 +49,7 @@ import static io.netty.channel.internal.ChannelUtils.MAX_BYTES_PER_GATHERING_WRI
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.util.internal.StringUtil.className;
 
-public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel implements DuplexChannel {
+public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel implements SocketChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractKQueueStreamChannel.class);
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
@@ -74,6 +75,11 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
 
     AbstractKQueueStreamChannel(EventLoop eventLoop, BsdSocket fd) {
         this(eventLoop, null, fd, isSoErrorZero(fd));
+    }
+
+    @Override
+    public ServerSocketChannel parent() {
+        return (ServerSocketChannel) super.parent();
     }
 
     @Override
@@ -107,7 +113,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         } else {
             ByteBuffer[] nioBuffers = buf.nioBuffers();
             return writeBytesMultiple(in, nioBuffers, nioBuffers.length, readableBytes,
-                    config().getMaxBytesPerGatheringWrite());
+                    ((KQueueChannelConfig) config()).getMaxBytesPerGatheringWrite());
         }
     }
 
@@ -117,10 +123,10 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
         // make a best effort to adjust as OS behavior changes.
         if (attempted == written) {
             if (attempted << 1 > oldMaxBytesPerGatheringWrite) {
-                config().setMaxBytesPerGatheringWrite(attempted << 1);
+                ((KQueueChannelConfig) config()).setMaxBytesPerGatheringWrite(attempted << 1);
             }
         } else if (attempted > MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD && written < attempted >>> 1) {
-            config().setMaxBytesPerGatheringWrite(attempted >>> 1);
+            ((KQueueChannelConfig) config()).setMaxBytesPerGatheringWrite(attempted >>> 1);
         }
     }
 
@@ -341,7 +347,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
      * @throws Exception If an I/O error occurs.
      */
     private int doWriteMultiple(ChannelOutboundBuffer in) throws Exception {
-        final long maxBytesPerGatheringWrite = config().getMaxBytesPerGatheringWrite();
+        final long maxBytesPerGatheringWrite = ((KQueueChannelConfig) config()).getMaxBytesPerGatheringWrite();
         IovArray array = ((NativeArrays) registration().attachment()).cleanIovArray();
         array.maxBytes(maxBytesPerGatheringWrite);
         in.forEachFlushedMessage(array);

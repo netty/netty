@@ -22,38 +22,51 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.SocketProtocolFamily;
+import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import static io.netty.channel.ChannelOption.*;
+import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
 
 final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implements SocketChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
+    private static final AtomicReferenceFieldUpdater<IoUringSocketChannelConfig, DomainSocketReadMode> MODE_UPDATER =
+            AtomicReferenceFieldUpdater.newUpdater(
+                    IoUringSocketChannelConfig.class, DomainSocketReadMode.class, "mode");
 
     static final int DISABLE_WRITE_ZERO_COPY = -1;
     private volatile int writeZeroCopyThreshold = DISABLE_WRITE_ZERO_COPY;
+    private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
 
     IoUringSocketChannelConfig(AbstractIoUringChannel channel) {
         super(channel);
-        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+        if (channel.socket.protocolFamily() != SocketProtocolFamily.UNIX &&
+                PlatformDependent.canEnableTcpNoDelayByDefault()) {
             setTcpNoDelay(true);
         }
     }
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(
+        Map<ChannelOption<?>, Object> options = getOptions(
                 super.getOptions(),
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
                 ALLOW_HALF_CLOSURE, IoUringChannelOption.TCP_CORK, IoUringChannelOption.TCP_NOTSENT_LOWAT,
                 IoUringChannelOption.TCP_KEEPCNT, IoUringChannelOption.TCP_KEEPIDLE, IoUringChannelOption.TCP_KEEPINTVL,
                 IoUringChannelOption.TCP_QUICKACK, IoUringChannelOption.IP_TRANSPARENT,
                 ChannelOption.TCP_FASTOPEN_CONNECT, IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD);
+        if (((AbstractIoUringChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return getOptions(options, DOMAIN_SOCKET_READ_MODE);
+        }
+        return options;
     }
 
     @SuppressWarnings("unchecked")
@@ -113,6 +126,10 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         if (option == IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD) {
             return (T) Integer.valueOf(getWriteZeroCopyThreshold());
         }
+        if (option == DOMAIN_SOCKET_READ_MODE &&
+                ((AbstractIoUringChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return (T) getReadMode();
+        }
         return super.getOption(option);
     }
 
@@ -156,6 +173,9 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
             setTcpFastOpenConnect((Boolean) value);
         } else if (option == IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD) {
             setWriteZeroCopyThreshold((Integer) value);
+        } else if (option == DOMAIN_SOCKET_READ_MODE &&
+                ((AbstractIoUringChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            setReadMode((DomainSocketReadMode) value);
         } else {
             return super.setOption(option, value);
         }
@@ -652,5 +672,23 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         // This can reduce one read operation on a volatile field.
         int threshold = this.getWriteZeroCopyThreshold();
         return threshold != DISABLE_WRITE_ZERO_COPY && amount >= threshold;
+    }
+
+    IoUringSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
+        ObjectUtil.checkNotNull(mode, "mode");
+        DomainSocketReadMode expectedMode = mode == DomainSocketReadMode.BYTES ?
+                DomainSocketReadMode.FILE_DESCRIPTORS : DomainSocketReadMode.BYTES;
+        boolean change = MODE_UPDATER.compareAndSet(this, expectedMode, mode);
+        if (change) {
+            if (channel.isRegistered()) {
+                // cancel current Read
+                ((AbstractIoUringChannel) channel).autoReadCleared();
+            }
+        }
+        return this;
+    }
+
+    DomainSocketReadMode getReadMode() {
+        return mode;
     }
 }

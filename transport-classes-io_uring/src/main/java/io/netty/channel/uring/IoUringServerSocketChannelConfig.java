@@ -35,7 +35,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
     private volatile int backlog = NetUtil.SOMAXCONN;
     private volatile int pendingFastOpenRequestsThreshold;
 
-    IoUringServerSocketChannelConfig(AbstractIoUringServerChannel channel) {
+    IoUringServerSocketChannelConfig(IoUringServerSocketChannel channel) {
         super(channel, new ServerChannelRecvByteBufAllocator());
         setReuseAddress(true);
     }

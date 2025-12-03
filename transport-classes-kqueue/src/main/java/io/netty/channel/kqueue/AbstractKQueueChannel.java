@@ -218,9 +218,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         });
     }
 
-    @Override
-    public abstract KQueueChannelConfig config();
-
     /**
      * Returns an off-heap copy of the specified {@link ByteBuf}, and releases the original one.
      */
@@ -312,10 +309,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     private static boolean isAllowHalfClosure(ChannelConfig config) {
-        if (config instanceof KQueueDomainSocketChannelConfig) {
-            return ((KQueueDomainSocketChannelConfig) config).isAllowHalfClosure();
-        }
-
         return config instanceof SocketChannelConfig &&
                 ((SocketChannelConfig) config).isAllowHalfClosure();
     }
@@ -570,7 +563,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         if (socket.finishConnect()) {
             writeFilter(false);
             if (requestedRemoteAddress instanceof InetSocketAddress) {
-                remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+                remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress,
+                        (InetSocketAddress) socket.remoteAddress());
             }
             requestedRemoteAddress = null;
             return true;
@@ -622,7 +616,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         boolean connected = doConnect0(remoteAddress, localAddress);
         if (connected) {
             remote = remoteSocketAddr == null?
-                    remoteAddress : computeRemoteAddr(remoteSocketAddr, socket.remoteAddress());
+                    remoteAddress : computeRemoteAddr(remoteSocketAddr, (InetSocketAddress) socket.remoteAddress());
             active = true;
         }
         // We always need to set the localAddress even if not connected yet as the bind already took place.

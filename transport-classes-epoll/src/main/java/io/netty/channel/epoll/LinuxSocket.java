@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.ProtocolFamily;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 
@@ -40,18 +41,16 @@ import static io.netty.channel.unix.Errors.newIOException;
  */
 @UnstableApi
 public final class LinuxSocket extends Socket {
+    static final InetAddress INET6_ANY = unsafeInetAddrByName("::");
+    private static final InetAddress INET_ANY = unsafeInetAddrByName("0.0.0.0");
     private static final long MAX_UINT32_T = 0xFFFFFFFFL;
 
-    LinuxSocket(int fd) {
-        super(fd);
-    }
-
-    SocketProtocolFamily family() {
-        return ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET;
+    LinuxSocket(int fd, SocketProtocolFamily family) {
+        super(fd, family);
     }
 
     int sendmmsg(NativeDatagramPacketArray.NativeDatagramPacket[] msgs,
-                               int offset, int len) throws IOException {
+                 int offset, int len) throws IOException {
         return Native.sendmmsg(intValue(), ipv6, msgs, offset, len);
     }
 
@@ -74,9 +73,9 @@ public final class LinuxSocket extends Socket {
     }
 
     void setNetworkInterface(NetworkInterface netInterface) throws IOException {
-        InetAddress address = deriveInetAddress(netInterface, family() == SocketProtocolFamily.INET6);
-        if (address.equals(family() == SocketProtocolFamily.INET ? Native.INET_ANY : Native.INET6_ANY)) {
-            throw new IOException("NetworkInterface does not support " + family());
+        InetAddress address = deriveInetAddress(netInterface, protocolFamily() == SocketProtocolFamily.INET6);
+        if (address.equals(protocolFamily() == SocketProtocolFamily.INET ? INET_ANY : INET6_ANY)) {
+            throw new IOException("NetworkInterface does not support " + protocolFamily());
         }
         final NativeInetAddress nativeAddress = NativeInetAddress.newInstance(address);
         setInterface(intValue(), ipv6, nativeAddress.address(), nativeAddress.scopeId(), interfaceIndex(netInterface));
@@ -346,6 +345,7 @@ public final class LinuxSocket extends Socket {
             return null;
         }
         int cid = getIntAt(addr, 0);
+
         int port = getIntAt(addr, 4);
         return new VSockAddress(cid, port);
     }
@@ -366,7 +366,7 @@ public final class LinuxSocket extends Socket {
     }
 
     private static InetAddress deriveInetAddress(NetworkInterface netInterface, boolean ipv6) {
-        final InetAddress ipAny = ipv6 ? Native.INET6_ANY : Native.INET_ANY;
+        final InetAddress ipAny = ipv6 ? INET6_ANY : INET_ANY;
         if (netInterface != null) {
             final Enumeration<InetAddress> ias = netInterface.getInetAddresses();
             while (ias.hasMoreElements()) {
@@ -380,12 +380,9 @@ public final class LinuxSocket extends Socket {
         return ipAny;
     }
 
-    public static LinuxSocket newSocket(int fd) {
-        return new LinuxSocket(fd);
-    }
-
     public static LinuxSocket newVSockStream() {
-        return new LinuxSocket(newVSockStream0());
+        return new LinuxSocket(newVSockStream0(),
+                isIPv6Preferred() ? SocketProtocolFamily.INET6 :  SocketProtocolFamily.INET);
     }
 
     static int newVSockStream0() {
@@ -396,12 +393,54 @@ public final class LinuxSocket extends Socket {
         return res;
     }
 
-    public static LinuxSocket newSocketStream(boolean ipv6) {
-        return new LinuxSocket(newSocketStream0(ipv6));
+    private static native int newVSockStreamFd();
+    private static native int bindVSock(int fd, int cid, int port);
+    private static native int connectVSock(int fd, int cid, int port);
+    private static native byte[] remoteVSockAddress(int fd);
+    private static native byte[] localVSockAddress(int fd);
+
+    public static LinuxSocket newDatagramSocket(ProtocolFamily family) {
+        if (family == null) {
+            return newSocketDgram();
+        }
+        SocketProtocolFamily protocolFamily = SocketProtocolFamily.of(family);
+        switch (protocolFamily) {
+            case UNIX:
+                return newSocketDomainDgram();
+            case INET6:
+            case INET:
+                return newSocketDgram(protocolFamily);
+            default:
+                throw new UnsupportedOperationException();
+        }
     }
 
-    public static LinuxSocket newSocketStream(SocketProtocolFamily protocol) {
-        return new LinuxSocket(newSocketStream0(protocol));
+    public static LinuxSocket newSocket(ProtocolFamily family) {
+        if (family == null) {
+            return newSocketStream();
+        }
+        SocketProtocolFamily protocolFamily = SocketProtocolFamily.of(family);
+
+        switch (protocolFamily) {
+            case UNIX:
+                return newSocketDomain();
+            case INET6:
+            case INET:
+                return newSocketStream(protocolFamily);
+            default:
+                throw new UnsupportedOperationException();
+        }
+    }
+
+    public static LinuxSocket newSocketStream(boolean ipv6) {
+        return new LinuxSocket(newSocketStream0(ipv6), ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
+    }
+
+    public static LinuxSocket newSocketStream(ProtocolFamily protocol) {
+        if (protocol == null) {
+            protocol = isIPv6Preferred() ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET;
+        }
+        return new LinuxSocket(newSocketStream0(protocol), SocketProtocolFamily.of(protocol));
     }
 
     public static LinuxSocket newSocketStream() {
@@ -409,11 +448,14 @@ public final class LinuxSocket extends Socket {
     }
 
     public static LinuxSocket newSocketDgram(boolean ipv6) {
-        return new LinuxSocket(newSocketDgram0(ipv6));
+        return new LinuxSocket(newSocketDgram0(ipv6), ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
     }
 
-    public static LinuxSocket newSocketDgram(SocketProtocolFamily family) {
-        return new LinuxSocket(newSocketDgram0(family));
+    public static LinuxSocket newSocketDgram(ProtocolFamily family) {
+        if (family == null) {
+            family = isIPv6Preferred() ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET;
+        }
+        return new LinuxSocket(newSocketDgram0(family), SocketProtocolFamily.of(family));
     }
 
     public static LinuxSocket newSocketDgram() {
@@ -421,18 +463,20 @@ public final class LinuxSocket extends Socket {
     }
 
     public static LinuxSocket newSocketDomain() {
-        return new LinuxSocket(newSocketDomain0());
+        return new LinuxSocket(newSocketDomain0(), SocketProtocolFamily.UNIX);
     }
 
     public static LinuxSocket newSocketDomainDgram() {
-        return new LinuxSocket(newSocketDomainDgram0());
+        return new LinuxSocket(newSocketDomainDgram0(), SocketProtocolFamily.UNIX);
     }
 
-    private static native int newVSockStreamFd();
-    private static native int bindVSock(int fd, int cid, int port);
-    private static native int connectVSock(int fd, int cid, int port);
-    private static native byte[] remoteVSockAddress(int fd);
-    private static native byte[] localVSockAddress(int fd);
+    private static InetAddress unsafeInetAddrByName(String inetName) {
+        try {
+            return InetAddress.getByName(inetName);
+        } catch (UnknownHostException uhe) {
+            throw new ChannelException(uhe);
+        }
+    }
 
     private static native void joinGroup(int fd, boolean ipv6, byte[] group, byte[] interfaceAddress,
                                          int scopeId, int interfaceIndex) throws IOException;

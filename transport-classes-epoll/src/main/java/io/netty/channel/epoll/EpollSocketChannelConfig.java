@@ -22,6 +22,9 @@ import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.SocketProtocolFamily;
+import io.netty.channel.unix.DomainSocketReadMode;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 
 import java.io.IOException;
@@ -36,18 +39,21 @@ import static io.netty.channel.ChannelOption.SO_RCVBUF;
 import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.ChannelOption.TCP_NODELAY;
+import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
-public final class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChannelConfig {
+class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
+    private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
 
     /**
      * Creates a new instance.
      */
-    EpollSocketChannelConfig(EpollSocketChannel channel) {
+    EpollSocketChannelConfig(AbstractEpollChannel channel) {
         super(channel);
 
-        if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+        if (channel.socket.protocolFamily() != SocketProtocolFamily.UNIX &&
+                PlatformDependent.canEnableTcpNoDelayByDefault()) {
             setTcpNoDelay(true);
         }
         calculateMaxBytesPerGatheringWrite();
@@ -55,7 +61,7 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
 
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
-        return getOptions(
+        Map<ChannelOption<?>, Object> options = getOptions(
                 super.getOptions(),
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
                 ALLOW_HALF_CLOSURE, EpollChannelOption.TCP_CORK, EpollChannelOption.TCP_NOTSENT_LOWAT,
@@ -63,6 +69,10 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
                 EpollChannelOption.TCP_MD5SIG, EpollChannelOption.TCP_QUICKACK,
                 EpollChannelOption.IP_BIND_ADDRESS_NO_PORT, EpollChannelOption.IP_TRANSPARENT,
                 ChannelOption.TCP_FASTOPEN_CONNECT, EpollChannelOption.SO_BUSY_POLL);
+        if (((AbstractEpollChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return getOptions(options, DOMAIN_SOCKET_READ_MODE);
+        }
+        return options;
     }
 
     @SuppressWarnings("unchecked")
@@ -125,6 +135,10 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         if (option == EpollChannelOption.SO_BUSY_POLL) {
             return (T) Integer.valueOf(getSoBusyPoll());
         }
+        if (option == DOMAIN_SOCKET_READ_MODE &&
+                ((EpollSocketChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            return (T) getReadMode();
+        }
         return super.getOption(option);
     }
 
@@ -174,6 +188,9 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
             setTcpFastOpenConnect((Boolean) value);
         } else if (option == EpollChannelOption.SO_BUSY_POLL) {
             setSoBusyPoll((Integer) value);
+        } else if (option == DOMAIN_SOCKET_READ_MODE &&
+                ((EpollSocketChannel) channel).socket.protocolFamily() == SocketProtocolFamily.UNIX) {
+            setReadMode((DomainSocketReadMode) value);
         } else {
             return super.setOption(option, value);
         }
@@ -687,5 +704,14 @@ public final class EpollSocketChannelConfig extends EpollChannelConfig implement
         if (newSendBufferSize > 0) {
             setMaxBytesPerGatheringWrite(newSendBufferSize);
         }
+    }
+
+    EpollSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
+        this.mode = ObjectUtil.checkNotNull(mode, "mode");
+        return this;
+    }
+
+    DomainSocketReadMode getReadMode() {
+        return mode;
     }
 }

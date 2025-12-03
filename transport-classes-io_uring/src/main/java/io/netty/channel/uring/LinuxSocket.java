@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.ProtocolFamily;
 import java.net.UnknownHostException;
 import java.util.Enumeration;
 
@@ -37,16 +38,12 @@ final class LinuxSocket extends Socket {
     private static final InetAddress INET_ANY = unsafeInetAddrByName("0.0.0.0");
     private static final long MAX_UINT32_T = 0xFFFFFFFFL;
 
-    LinuxSocket(int fd) {
-        super(fd);
-    }
-
-    SocketProtocolFamily family() {
-        return ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET;
+    LinuxSocket(int fd, SocketProtocolFamily family) {
+        super(fd, family);
     }
 
     @Override
-    public boolean markClosed() {
+    protected boolean markClosed() {
         return super.markClosed();
     }
 
@@ -60,9 +57,9 @@ final class LinuxSocket extends Socket {
     }
 
     void setNetworkInterface(NetworkInterface netInterface) throws IOException {
-        InetAddress address = deriveInetAddress(netInterface, family() == SocketProtocolFamily.INET6);
-        if (address.equals(family() == SocketProtocolFamily.INET ? INET_ANY : INET6_ANY)) {
-            throw new IOException("NetworkInterface does not support " + family());
+        InetAddress address = deriveInetAddress(netInterface, protocolFamily() == SocketProtocolFamily.INET6);
+        if (address.equals(protocolFamily() == SocketProtocolFamily.INET ? INET_ANY : INET6_ANY)) {
+            throw new IOException("NetworkInterface does not support " + protocolFamily());
         }
         final NativeInetAddress nativeAddress = NativeInetAddress.newInstance(address);
         setInterface(intValue(), ipv6, nativeAddress.address(), nativeAddress.scopeId(), interfaceIndex(netInterface));
@@ -108,11 +105,14 @@ final class LinuxSocket extends Socket {
         final boolean isIpv6 = group instanceof Inet6Address;
         final NativeInetAddress i = NativeInetAddress.newInstance(deriveInetAddress(netInterface, isIpv6));
         if (source != null) {
+            if (source.getClass() != group.getClass()) {
+                throw new IllegalArgumentException("Source address is different type to group");
+            }
             final NativeInetAddress s = NativeInetAddress.newInstance(source);
-            joinSsmGroup(intValue(), ipv6, g.address(), i.address(),
+            joinSsmGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(),
                     g.scopeId(), interfaceIndex(netInterface), s.address());
         } else {
-            joinGroup(intValue(), ipv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
+            joinGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
         }
     }
 
@@ -121,11 +121,14 @@ final class LinuxSocket extends Socket {
         final boolean isIpv6 = group instanceof Inet6Address;
         final NativeInetAddress i = NativeInetAddress.newInstance(deriveInetAddress(netInterface, isIpv6));
         if (source != null) {
+            if (source.getClass() != group.getClass()) {
+                throw new IllegalArgumentException("Source address is different type to group");
+            }
             final NativeInetAddress s = NativeInetAddress.newInstance(source);
-            leaveSsmGroup(intValue(), ipv6, g.address(), i.address(),
+            leaveSsmGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(),
                     g.scopeId(), interfaceIndex(netInterface), s.address());
         } else {
-            leaveGroup(intValue(), ipv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
+            leaveGroup(intValue(), ipv6 && isIpv6, g.address(), i.address(), g.scopeId(), interfaceIndex(netInterface));
         }
     }
 
@@ -192,6 +195,14 @@ final class LinuxSocket extends Socket {
         setTcpUserTimeout(intValue(), milliseconds);
     }
 
+    void setIpBindAddressNoPort(boolean enabled) throws IOException {
+        setIpBindAddressNoPort(intValue(), enabled ? 1 : 0);
+    }
+
+    void setIpMulticastAll(boolean enabled) throws IOException {
+        setIpMulticastAll(intValue(), ipv6, enabled ? 1 : 0);
+    }
+
     void setIpFreeBind(boolean enabled) throws IOException {
         setIpFreeBind(intValue(), enabled ? 1 : 0);
     }
@@ -202,10 +213,6 @@ final class LinuxSocket extends Socket {
 
     void setIpRecvOrigDestAddr(boolean enabled) throws IOException {
         setIpRecvOrigDestAddr(intValue(), enabled ? 1 : 0);
-    }
-
-    void setIpMulticastAll(boolean enabled) throws IOException {
-        setIpMulticastAll(intValue(), ipv6, enabled ? 1 : 0);
     }
 
     int getTimeToLive() throws IOException {
@@ -257,6 +264,14 @@ final class LinuxSocket extends Socket {
         return getTcpUserTimeout(intValue());
     }
 
+    boolean isIpBindAddressNoPort() throws IOException {
+        return isIpBindAddressNoPort(intValue()) != 0;
+    }
+
+    boolean isIpMulticastAll() throws IOException {
+        return isIpMulticastAll(intValue(), ipv6) != 0;
+    }
+
     boolean isIpFreeBind() throws IOException {
         return isIpFreeBind(intValue()) != 0;
     }
@@ -269,10 +284,6 @@ final class LinuxSocket extends Socket {
         return isIpRecvOrigDestAddr(intValue()) != 0;
     }
 
-    boolean isIpMulticastAll() throws IOException {
-        return isIpMulticastAll(intValue(), ipv6) != 0;
-    }
-
     PeerCredentials getPeerCredentials() throws IOException {
         return getPeerCredentials(intValue());
     }
@@ -283,6 +294,10 @@ final class LinuxSocket extends Socket {
 
     void setLoopbackModeDisabled(boolean loopbackModeDisabled) throws IOException {
         setIpMulticastLoop(intValue(), ipv6, loopbackModeDisabled ? 0 : 1);
+    }
+
+    boolean isUdpGro() throws IOException {
+        return isUdpGro(intValue()) != 0;
     }
 
     void setUdpGro(boolean gro) throws IOException {
@@ -304,12 +319,48 @@ final class LinuxSocket extends Socket {
         return ipAny;
     }
 
-    boolean isIpv6() {
-        return ipv6;
+    public static LinuxSocket newDatagramSocket(ProtocolFamily family) {
+        if (family == null) {
+            return newSocketDgram();
+        }
+        SocketProtocolFamily protocolFamily = SocketProtocolFamily.of(family);
+        switch (protocolFamily) {
+            case UNIX:
+                return newSocketDomainDgram();
+            case INET6:
+            case INET:
+                return newSocketDgram(protocolFamily);
+            default:
+                throw new UnsupportedOperationException();
+        }
+    }
+
+    public static LinuxSocket newSocket(ProtocolFamily family) {
+        if (family == null) {
+            return newSocketStream();
+        }
+        SocketProtocolFamily protocolFamily = SocketProtocolFamily.of(family);
+
+        switch (protocolFamily) {
+            case UNIX:
+                return newSocketDomain();
+            case INET6:
+            case INET:
+                return newSocketStream(protocolFamily);
+            default:
+                throw new UnsupportedOperationException();
+        }
     }
 
     public static LinuxSocket newSocketStream(boolean ipv6) {
-        return new LinuxSocket(newSocketStream0(ipv6));
+        return new LinuxSocket(newSocketStream0(ipv6), ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
+    }
+
+    public static LinuxSocket newSocketStream(ProtocolFamily protocol) {
+        if (protocol == null) {
+            protocol = isIPv6Preferred() ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET;
+        }
+        return new LinuxSocket(newSocketStream0(protocol), SocketProtocolFamily.of(protocol));
     }
 
     public static LinuxSocket newSocketStream() {
@@ -317,7 +368,14 @@ final class LinuxSocket extends Socket {
     }
 
     public static LinuxSocket newSocketDgram(boolean ipv6) {
-        return new LinuxSocket(newSocketDgram0(ipv6));
+        return new LinuxSocket(newSocketDgram0(ipv6), ipv6 ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET);
+    }
+
+    public static LinuxSocket newSocketDgram(ProtocolFamily family) {
+        if (family == null) {
+            family = isIPv6Preferred() ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET;
+        }
+        return new LinuxSocket(newSocketDgram0(family), SocketProtocolFamily.of(family));
     }
 
     public static LinuxSocket newSocketDgram() {
@@ -325,7 +383,11 @@ final class LinuxSocket extends Socket {
     }
 
     public static LinuxSocket newSocketDomain() {
-        return new LinuxSocket(newSocketDomain0());
+        return new LinuxSocket(newSocketDomain0(), SocketProtocolFamily.UNIX);
+    }
+
+    public static LinuxSocket newSocketDomainDgram() {
+        return new LinuxSocket(newSocketDomainDgram0(), SocketProtocolFamily.UNIX);
     }
 
     private static InetAddress unsafeInetAddrByName(String inetName) {
@@ -355,10 +417,11 @@ final class LinuxSocket extends Socket {
     private static native int getTcpKeepCnt(int fd) throws IOException;
     private static native int getTcpUserTimeout(int fd) throws IOException;
     private static native int getTimeToLive(int fd) throws IOException;
+    private static native int isIpBindAddressNoPort(int fd) throws IOException;
+    private static native int isIpMulticastAll(int fd, boolean ipv6) throws IOException;
     private static native int isIpFreeBind(int fd) throws IOException;
     private static native int isIpTransparent(int fd) throws IOException;
     private static native int isIpRecvOrigDestAddr(int fd) throws IOException;
-    private static native int isIpMulticastAll(int fd, boolean ipv6) throws IOException;
     private static native void getTcpInfo(int fd, long[] array) throws IOException;
     private static native PeerCredentials getPeerCredentials(int fd) throws IOException;
     private static native int isTcpFastOpenConnect(int fd) throws IOException;
@@ -374,10 +437,11 @@ final class LinuxSocket extends Socket {
     private static native void setTcpKeepIntvl(int fd, int seconds) throws IOException;
     private static native void setTcpKeepCnt(int fd, int probes) throws IOException;
     private static native void setTcpUserTimeout(int fd, int milliseconds)throws IOException;
+    private static native void setIpBindAddressNoPort(int fd, int ipBindAddressNoPort) throws IOException;
+    private static native void setIpMulticastAll(int fd, boolean ipv6, int enabled) throws IOException;
     private static native void setIpFreeBind(int fd, int freeBind) throws IOException;
     private static native void setIpTransparent(int fd, int transparent) throws IOException;
     private static native void setIpRecvOrigDestAddr(int fd, int transparent) throws IOException;
-    private static native void setIpMulticastAll(int fd, boolean ipv6, int enabled) throws IOException;
     private static native void setTcpMd5Sig(
             int fd, boolean ipv6, byte[] address, int scopeId, byte[] key) throws IOException;
     private static native void setInterface(
@@ -385,7 +449,8 @@ final class LinuxSocket extends Socket {
     private static native int getInterface(int fd, boolean ipv6);
     private static native int getIpMulticastLoop(int fd, boolean ipv6) throws IOException;
     private static native void setIpMulticastLoop(int fd, boolean ipv6, int enabled) throws IOException;
-    private static native void setTimeToLive(int fd, int ttl) throws IOException;
     private static native int makeBlocking(int fd) throws IOException;
+    private static native void setTimeToLive(int fd, int ttl) throws IOException;
+    private static native int isUdpGro(int fd) throws IOException;
     private static native void setUdpGro(int fd, int gro) throws IOException;
 }

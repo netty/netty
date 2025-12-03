@@ -34,6 +34,7 @@ import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.SocketChannelConfig;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Errors;
@@ -1065,7 +1066,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         cleanable = Buffer.allocateDirectBufferWithNativeOrder(Native.SIZEOF_SOCKADDR_STORAGE);
         remoteAddressMemory = cleanable.buffer();
 
-        SockaddrIn.set(socket.isIpv6(), remoteAddressMemory, inetSocketAddress);
+        SockaddrIn.set(socket.protocolFamily() == SocketProtocolFamily.INET6,
+                remoteAddressMemory, inetSocketAddress);
 
         int fd = fd().intValue();
         IoRegistration registration = registration();
@@ -1160,7 +1162,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     private void computeRemote() {
         if (requestedRemoteAddress instanceof InetSocketAddress) {
-            remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress, socket.remoteAddress());
+            remote = computeRemoteAddr((InetSocketAddress) requestedRemoteAddress,
+                    (InetSocketAddress) socket.remoteAddress());
+        } else {
+            remote = socket.remoteAddress();
         }
     }
 

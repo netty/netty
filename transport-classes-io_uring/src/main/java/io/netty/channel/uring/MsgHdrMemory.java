@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Buffer;
 import io.netty.util.internal.CleanableDirectBuffer;
 
@@ -88,7 +89,8 @@ final class MsgHdrMemory {
     void set(LinuxSocket socket, InetSocketAddress address, long bufferAddress , int length, short segmentSize) {
         int addressLength;
         if (address == null) {
-            addressLength = socket.isIpv6() ? Native.SIZEOF_SOCKADDR_IN6 : Native.SIZEOF_SOCKADDR_IN;
+            addressLength = socket.protocolFamily() == SocketProtocolFamily.INET6 ?
+                    Native.SIZEOF_SOCKADDR_IN6 : Native.SIZEOF_SOCKADDR_IN;
             socketAddrMemory.mark();
             try {
                 socketAddrMemory.put(EMPTY_SOCKADDR_STORAGE);
@@ -96,7 +98,8 @@ final class MsgHdrMemory {
                 socketAddrMemory.reset();
             }
         } else {
-            addressLength = SockaddrIn.set(socket.isIpv6(), socketAddrMemory, address);
+            addressLength = SockaddrIn.set(
+                    socket.protocolFamily() == SocketProtocolFamily.INET6, socketAddrMemory, address);
         }
         Iov.set(iovMemory, bufferAddress, length);
         MsgHdr.set(msgHdrMemory, socketAddrMemory, addressLength, iovMemory, 1, cmsgDataMemory,
@@ -120,7 +123,7 @@ final class MsgHdrMemory {
     }
 
     boolean hasPort(IoUringDatagramChannel channel) {
-        if (channel.socket.isIpv6()) {
+        if (channel.socket.protocolFamily() == SocketProtocolFamily.INET6) {
             return SockaddrIn.hasPortIpv6(socketAddrMemory);
         }
         return SockaddrIn.hasPortIpv4(socketAddrMemory);
@@ -128,7 +131,7 @@ final class MsgHdrMemory {
 
     DatagramPacket get(IoUringDatagramChannel channel, IoUringIoHandler handler, ByteBuf buffer, int bytesRead) {
         InetSocketAddress sender;
-        if (channel.socket.isIpv6()) {
+        if (channel.socket.protocolFamily() == SocketProtocolFamily.INET6) {
             byte[] ipv6Bytes = handler.inet6AddressArray();
             byte[] ipv4bytes = handler.inet4AddressArray();
 

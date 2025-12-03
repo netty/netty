@@ -113,7 +113,8 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
      * on the Operation Systems default which will be chosen.
      */
     public IoUringDatagramChannel(EventLoop eventLoop, int fd) {
-        this(eventLoop, new LinuxSocket(fd), true);
+        this(eventLoop, new LinuxSocket(fd,
+                Socket.isIPv6Preferred() ? SocketProtocolFamily.INET6 : SocketProtocolFamily.INET), true);
     }
 
     private IoUringDatagramChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
@@ -295,7 +296,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
             if (socketAddress.getAddress().isAnyLocalAddress() &&
                     socketAddress.getAddress() instanceof Inet4Address) {
-                if (socket.family() == SocketProtocolFamily.INET6) {
+                if (socket.protocolFamily() == SocketProtocolFamily.INET6) {
                     localAddress = new InetSocketAddress(LinuxSocket.INET6_ANY, socketAddress.getPort());
                 }
             }

@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.testsuite.transport.TestsuitePermutation;
@@ -68,7 +69,8 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 // Create new channel and obtain a file descriptor from it.
-                final EpollDomainSocketChannel ch = new EpollDomainSocketChannel(ctx.channel().executor());
+                final EpollSocketChannel ch = new EpollSocketChannel(
+                        ctx.channel().executor(), SocketProtocolFamily.UNIX);
 
                 ctx.writeAndFlush(ch.fd()).addListener(new ChannelFutureListener() {
                     @Override

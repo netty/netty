@@ -34,7 +34,7 @@ import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty.channel.ChannelOption.TCP_FASTOPEN;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
-public class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSocketChannelConfig {
+class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSocketChannelConfig {
     private volatile int backlog = NetUtil.SOMAXCONN;
     private volatile boolean enableTcpFastOpen;
 

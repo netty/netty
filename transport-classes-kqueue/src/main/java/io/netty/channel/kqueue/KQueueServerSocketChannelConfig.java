@@ -28,7 +28,7 @@ import java.util.Map;
 import static io.netty.channel.kqueue.KQueueChannelOption.SO_ACCEPTFILTER;
 import static io.netty.channel.unix.UnixChannelOption.SO_REUSEPORT;
 
-public class KQueueServerSocketChannelConfig extends KQueueServerChannelConfig {
+final class KQueueServerSocketChannelConfig extends KQueueServerChannelConfig {
     KQueueServerSocketChannelConfig(KQueueServerSocketChannel channel) {
         super(channel);
 
@@ -72,7 +72,7 @@ public class KQueueServerSocketChannelConfig extends KQueueServerChannelConfig {
 
     public KQueueServerSocketChannelConfig setReusePort(boolean reusePort) {
         try {
-            ((KQueueServerSocketChannel) channel).socket.setReusePort(reusePort);
+            ((AbstractKQueueChannel) channel).socket.setReusePort(reusePort);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -81,7 +81,7 @@ public class KQueueServerSocketChannelConfig extends KQueueServerChannelConfig {
 
     public boolean isReusePort() {
         try {
-            return ((KQueueServerSocketChannel) channel).socket.isReusePort();
+            return ((AbstractKQueueChannel) channel).socket.isReusePort();
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -89,7 +89,7 @@ public class KQueueServerSocketChannelConfig extends KQueueServerChannelConfig {
 
     public KQueueServerSocketChannelConfig setAcceptFilter(AcceptFilter acceptFilter) {
         try {
-            ((KQueueServerSocketChannel) channel).socket.setAcceptFilter(acceptFilter);
+            ((AbstractKQueueChannel) channel).socket.setAcceptFilter(acceptFilter);
             return this;
         } catch (IOException e) {
             throw new ChannelException(e);
@@ -98,7 +98,7 @@ public class KQueueServerSocketChannelConfig extends KQueueServerChannelConfig {
 
     public AcceptFilter getAcceptFilter() {
         try {
-            return ((KQueueServerSocketChannel) channel).socket.getAcceptFilter();
+            return ((AbstractKQueueChannel) channel).socket.getAcceptFilter();
         } catch (IOException e) {
             throw new ChannelException(e);
         }

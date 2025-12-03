@@ -31,10 +31,6 @@ public class LoadClassTest {
         classes.add(EpollServerSocketChannel.class);
         classes.add(EpollDatagramChannel.class);
 
-        classes.add(EpollDomainSocketChannel.class);
-        classes.add(EpollServerDomainSocketChannel.class);
-        classes.add(EpollDomainDatagramChannel.class);
-
         classes.add(EpollIoHandler.class);
 
         return classes.toArray(new Class<?>[0]);
