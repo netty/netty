@@ -132,24 +132,8 @@ public final class ImmediateEventExecutor extends AbstractEventExecutor {
         return new ImmediatePromise<V>(this);
     }
 
-    @Override
-    public <V> ProgressivePromise<V> newProgressivePromise() {
-        return new ImmediateProgressivePromise<V>(this);
-    }
-
     static class ImmediatePromise<V> extends DefaultPromise<V> {
         ImmediatePromise(EventExecutor executor) {
-            super(executor);
-        }
-
-        @Override
-        protected void checkDeadLock() {
-            // No check
-        }
-    }
-
-    static class ImmediateProgressivePromise<V> extends DefaultProgressivePromise<V> {
-        ImmediateProgressivePromise(EventExecutor executor) {
             super(executor);
         }
 
