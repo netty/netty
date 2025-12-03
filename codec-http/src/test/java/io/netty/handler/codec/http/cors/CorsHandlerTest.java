@@ -631,22 +631,35 @@ public class CorsHandlerTest {
     }
 
     @Test
-    public void testContentForwardedWhenNoDiscard() {
+    public void preflightEmptyLastDiscardedThenNewRequestForwarded() {
         CorsConfig config = forOrigin("http://allowed").build();
         EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
 
-        FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, GET, "/test");
+        // Preflight request
+        FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/pre");
+        preflight.headers().set(ORIGIN, "http://allowed");
+        preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
+        assertFalse(ch.writeInbound(preflight));
+        Object preflightResp = ch.readOutbound();
+        assertNotNull(preflightResp);
+        ReferenceCountUtil.release(preflightResp);
+
+        // Empty last content should be discarded
+        assertFalse(ch.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertNull(ch.readInbound());
+
+        // New request should be forwarded
+        FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, GET, "/next");
         req.headers().set(ORIGIN, "http://allowed");
         assertTrue(ch.writeInbound(req));
 
+        Object firstInbound = ch.readInbound();
+        assertNotNull(firstInbound);
+
         HttpContent content = new DefaultHttpContent(Unpooled.copiedBuffer("test message", CharsetUtil.UTF_8));
         assertTrue(ch.writeInbound(content));
-
-        Object first = ch.readInbound();
-        Object second = ch.readInbound();
-
-        assertNotNull(first);
-        assertNotNull(second);
+        Object secondInbound = ch.readInbound();
+        assertNotNull(secondInbound);
 
         assertNull(ch.readInbound());
         assertFalse(ch.finish());
