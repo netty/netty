@@ -17,6 +17,7 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelMetadata;
@@ -28,7 +29,6 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.Errors;
@@ -803,7 +803,7 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     }
 
     @Override
-    public SocketChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 
@@ -977,5 +977,10 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             return false;
         }
         return bufferRing == null || !bufferRing.isUsable();
+    }
+
+    @Override
+    protected boolean isAllowHalfClosure() {
+        return config.isAllowHalfClosure();
     }
 }

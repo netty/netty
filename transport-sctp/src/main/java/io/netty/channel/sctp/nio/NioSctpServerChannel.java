@@ -17,17 +17,23 @@ package io.netty.channel.sctp.nio;
 
 import com.sun.nio.sctp.SctpChannel;
 import com.sun.nio.sctp.SctpServerChannel;
+import com.sun.nio.sctp.SctpStandardSocketOptions;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.nio.NioIoHandle;
-import io.netty.channel.sctp.DefaultSctpServerChannelConfig;
-import io.netty.channel.sctp.SctpServerChannelConfig;
+import io.netty.channel.sctp.SctpChannelOption;
+import io.netty.util.NetUtil;
+import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -38,7 +44,10 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
+import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 /**
  * {@link io.netty.channel.sctp.SctpServerChannel} implementation which use non-blocking mode to accept new
@@ -60,7 +69,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         }
     }
 
-    private final SctpServerChannelConfig config;
+    private final NioSctpServerChannelConfig config;
     private final EventLoopGroup childEventLoopGroup;
     /**
      * Create a new instance
@@ -97,7 +106,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    public SctpServerChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 
@@ -248,9 +257,120 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         throw new UnsupportedOperationException();
     }
 
-    private final class NioSctpServerChannelConfig extends DefaultSctpServerChannelConfig {
+    private final class NioSctpServerChannelConfig extends DefaultChannelConfig {
+
+        private final SctpServerChannel javaChannel;
+        private volatile int backlog = NetUtil.SOMAXCONN;
+
         private NioSctpServerChannelConfig(NioSctpServerChannel channel, SctpServerChannel javaChannel) {
-            super(channel, javaChannel);
+            super(channel, new ServerChannelRecvByteBufAllocator());
+            this.javaChannel = ObjectUtil.checkNotNull(javaChannel, "javaChannel");
+        }
+
+        @Override
+        public Map<ChannelOption<?>, Object> getOptions() {
+            return getOptions(
+                    super.getOptions(),
+                    ChannelOption.SO_RCVBUF, ChannelOption.SO_SNDBUF, ChannelOption.SO_BACKLOG,
+                    SctpChannelOption.SCTP_INIT_MAXSTREAMS);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <T> T getOption(ChannelOption<T> option) {
+            if (option == ChannelOption.SO_RCVBUF) {
+                return (T) Integer.valueOf(getReceiveBufferSize());
+            }
+            if (option == ChannelOption.SO_SNDBUF) {
+                return (T) Integer.valueOf(getSendBufferSize());
+            }
+            if (option == ChannelOption.SO_BACKLOG) {
+                return (T) Integer.valueOf(getBacklog());
+            }
+            if (option == SctpChannelOption.SCTP_INIT_MAXSTREAMS) {
+                return (T) getInitMaxStreams();
+            }
+            return super.getOption(option);
+        }
+
+        @Override
+        public <T> boolean setOption(ChannelOption<T> option, T value) {
+            validate(option, value);
+
+            if (option == ChannelOption.SO_RCVBUF) {
+                setReceiveBufferSize((Integer) value);
+            } else if (option == ChannelOption.SO_SNDBUF) {
+                setSendBufferSize((Integer) value);
+            } else if (option == SctpChannelOption.SO_BACKLOG) {
+                setBacklog((Integer) value);
+            } else if (option == SctpChannelOption.SCTP_INIT_MAXSTREAMS) {
+                setInitMaxStreams((SctpStandardSocketOptions.InitMaxStreams) value);
+            } else {
+                return super.setOption(option, value);
+            }
+
+            return true;
+        }
+
+        int getSendBufferSize() {
+            try {
+                return javaChannel.getOption(SctpStandardSocketOptions.SO_SNDBUF);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        NioSctpServerChannelConfig setSendBufferSize(int sendBufferSize) {
+            try {
+                javaChannel.setOption(SctpStandardSocketOptions.SO_SNDBUF, sendBufferSize);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+            return this;
+        }
+
+        int getReceiveBufferSize() {
+            try {
+                return javaChannel.getOption(SctpStandardSocketOptions.SO_RCVBUF);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        NioSctpServerChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+            try {
+                javaChannel.setOption(SctpStandardSocketOptions.SO_RCVBUF, receiveBufferSize);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+            return this;
+        }
+
+        SctpStandardSocketOptions.InitMaxStreams getInitMaxStreams() {
+            try {
+                return javaChannel.getOption(SctpStandardSocketOptions.SCTP_INIT_MAXSTREAMS);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        NioSctpServerChannelConfig setInitMaxStreams(SctpStandardSocketOptions.InitMaxStreams initMaxStreams) {
+            try {
+                javaChannel.setOption(SctpStandardSocketOptions.SCTP_INIT_MAXSTREAMS, initMaxStreams);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+            return this;
+        }
+
+        int getBacklog() {
+            return backlog;
+        }
+
+        NioSctpServerChannelConfig setBacklog(int backlog) {
+            checkPositiveOrZero(backlog, "backlog");
+            this.backlog = backlog;
+            return this;
         }
 
         @Override

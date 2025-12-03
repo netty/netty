@@ -123,11 +123,6 @@ final class KQueueServerSocketChannelConfig extends KQueueServerChannelConfig {
     }
 
     @Override
-    public KQueueServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
-        return this;
-    }
-
-    @Override
     public KQueueServerSocketChannelConfig setBacklog(int backlog) {
         super.setBacklog(backlog);
         return this;

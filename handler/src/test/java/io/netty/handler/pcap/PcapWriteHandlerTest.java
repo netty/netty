@@ -18,11 +18,11 @@ package io.netty.handler.pcap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufOutputStream;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -34,15 +34,11 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoopGroup;
-import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioDatagramChannel;
@@ -1344,7 +1340,7 @@ public class PcapWriteHandlerTest {
     private static class EmbeddedDatagramChannel extends EmbeddedChannel implements DatagramChannel {
         private final InetSocketAddress local;
         private final InetSocketAddress remote;
-        private DatagramChannelConfig config;
+        private ChannelConfig config;
 
         EmbeddedDatagramChannel(InetSocketAddress local, InetSocketAddress remote) {
             super(DefaultChannelId.newInstance(), false);
@@ -1358,7 +1354,7 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public DatagramChannelConfig config() {
+        public ChannelConfig config() {
             if (config == null) {
                 // ick! config() is called by the super constructor, so we need to do this.
                 config = new DatagramChannelConfigImpl(this);
@@ -1506,173 +1502,9 @@ public class PcapWriteHandlerTest {
         }
     }
 
-    private static final class DatagramChannelConfigImpl extends DefaultChannelConfig
-            implements DatagramChannelConfig {
+    private static final class DatagramChannelConfigImpl extends DefaultChannelConfig {
         DatagramChannelConfigImpl(Channel channel) {
             super(channel);
-        }
-
-        @Override
-        public int getSendBufferSize() {
-            return 0;
-        }
-
-        @Override
-        public DatagramChannelConfig setSendBufferSize(int sendBufferSize) {
-            return this;
-        }
-
-        @Override
-        public int getReceiveBufferSize() {
-            return 0;
-        }
-
-        @Override
-        public DatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
-            return this;
-        }
-
-        @Override
-        public int getTrafficClass() {
-            return 0;
-        }
-
-        @Override
-        public DatagramChannelConfig setTrafficClass(int trafficClass) {
-            return this;
-        }
-
-        @Override
-        public boolean isReuseAddress() {
-            return false;
-        }
-
-        @Override
-        public DatagramChannelConfig setReuseAddress(boolean reuseAddress) {
-            return this;
-        }
-
-        @Override
-        public boolean isBroadcast() {
-            return false;
-        }
-
-        @Override
-        public DatagramChannelConfig setBroadcast(boolean broadcast) {
-            return this;
-        }
-
-        @Override
-        public boolean isLoopbackModeDisabled() {
-            return false;
-        }
-
-        @Override
-        public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
-            return this;
-        }
-
-        @Override
-        public int getTimeToLive() {
-            return 0;
-        }
-
-        @Override
-        public DatagramChannelConfig setTimeToLive(int ttl) {
-            return this;
-        }
-
-        @Override
-        public InetAddress getInterface() {
-            return null;
-        }
-
-        @Override
-        public DatagramChannelConfig setInterface(InetAddress interfaceAddress) {
-            return this;
-        }
-
-        @Override
-        public NetworkInterface getNetworkInterface() {
-            return null;
-        }
-
-        @Override
-        public DatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setWriteSpinCount(int writeSpinCount) {
-            super.setWriteSpinCount(writeSpinCount);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-            super.setConnectTimeoutMillis(connectTimeoutMillis);
-            return this;
-        }
-
-        @Override
-        @Deprecated
-        public DatagramChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-            super.setMaxMessagesPerRead(maxMessagesPerRead);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setAllocator(ByteBufAllocator allocator) {
-            super.setAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-            super.setRecvByteBufAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setAutoRead(boolean autoRead) {
-            super.setAutoRead(autoRead);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setAutoClose(boolean autoClose) {
-            super.setAutoClose(autoClose);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-            super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-            super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-            super.setWriteBufferWaterMark(writeBufferWaterMark);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-            super.setMessageSizeEstimator(estimator);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
-            super.setMaxMessagesPerWrite(maxMessagesPerWrite);
-            return this;
         }
     }
 }

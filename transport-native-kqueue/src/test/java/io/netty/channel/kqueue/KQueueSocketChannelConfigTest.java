@@ -18,6 +18,7 @@ package io.netty.channel.kqueue;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -106,7 +107,7 @@ public class KQueueSocketChannelConfigTest {
     public void testSetOptionWhenClosed() {
         ch.close().syncUninterruptibly();
         try {
-            ch.config().setSoLinger(0);
+            ch.config().setOption(ChannelOption.SO_LINGER, 0);
             fail();
         } catch (ChannelException e) {
             assertTrue(e.getCause() instanceof ClosedChannelException);
@@ -117,7 +118,7 @@ public class KQueueSocketChannelConfigTest {
     public void testGetOptionWhenClosed() {
         ch.close().syncUninterruptibly();
         try {
-        ch.config().getSoLinger();
+            ch.config().getOption(ChannelOption.SO_LINGER);
             fail();
         } catch (ChannelException e) {
             assertTrue(e.getCause() instanceof ClosedChannelException);

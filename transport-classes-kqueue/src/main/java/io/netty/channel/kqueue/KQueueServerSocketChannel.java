@@ -24,7 +24,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.internal.logging.InternalLogger;
@@ -113,7 +112,7 @@ public final class KQueueServerSocketChannel extends AbstractKQueueChannel imple
     void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
         assert executor().inEventLoop();
         final ChannelConfig config = config();
-        if (shouldBreakReadReady(config)) {
+        if (shouldBreakReadReady()) {
             clearReadFilter0();
             return;
         }
@@ -192,7 +191,7 @@ public final class KQueueServerSocketChannel extends AbstractKQueueChannel imple
     }
 
     @Override
-    public ServerSocketChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 

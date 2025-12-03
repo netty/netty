@@ -30,6 +30,24 @@ import java.util.Set;
  * <p>
  * The SctpChannel is a message-oriented, connected transport which supports multi-streaming and multi-homing.
  * </p>
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options supported by {@link Channel},
+ * {@link SctpChannel} allows the following options in the
+ * option map via {@link io.netty.channel.ChannelOption}:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>ChannelOption</th>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_RCVBUF}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_SNDBUF}</td>
+ * </tr><tr>
+ * <td>{@link SctpChannelOption#SCTP_NODELAY}</td>
+ * </tr>
+ * </table>
  */
 public interface SctpChannel extends Channel {
     @Override
@@ -58,12 +76,6 @@ public interface SctpChannel extends Channel {
      * Please note that, it will return more than one address if this channel is using multi-homing
      */
     Set<InetSocketAddress> allLocalAddresses();
-
-    /**
-     * Returns the {@link SctpChannelConfig} configuration of the channel.
-     */
-    @Override
-    SctpChannelConfig config();
 
     /**
      * Return the (primary) remote address of the SCTP channel.

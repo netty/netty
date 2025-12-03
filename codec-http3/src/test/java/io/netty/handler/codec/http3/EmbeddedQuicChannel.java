@@ -30,7 +30,6 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.quic.QuicChannel;
-import io.netty.handler.codec.quic.QuicChannelConfig;
 import io.netty.handler.codec.quic.QuicConnectionAddress;
 import io.netty.handler.codec.quic.QuicConnectionPathStats;
 import io.netty.handler.codec.quic.QuicConnectionStats;
@@ -62,7 +61,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     private final Map<QuicStreamType, Long> peerAllowedStreams = new EnumMap<>(QuicStreamType.class);
     private final AtomicBoolean closed = new AtomicBoolean();
     private final ConcurrentLinkedQueue<Integer> closeErrorCodes = new ConcurrentLinkedQueue<>();
-    private QuicChannelConfig config;
+    private ChannelConfig config;
 
     EmbeddedQuicChannel(boolean server) {
         this(server, new ChannelHandler[0]);
@@ -119,7 +118,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     }
 
     @Override
-    public QuicChannelConfig config() {
+    public ChannelConfig config() {
         if (config == null) {
             config = new EmbeddedQuicChannelConfig(super.config());
         }
@@ -193,7 +192,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         return unmodifiableCollection(closeErrorCodes);
     }
 
-    private static final class EmbeddedQuicChannelConfig implements QuicChannelConfig {
+    private static final class EmbeddedQuicChannelConfig implements ChannelConfig {
         private final ChannelConfig delegate;
 
         EmbeddedQuicChannelConfig(ChannelConfig delegate) {
@@ -226,7 +225,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         }
 
         @Override
-        public QuicChannelConfig setConnectTimeoutMillis(int i) {
+        public EmbeddedQuicChannelConfig setConnectTimeoutMillis(int i) {
             delegate.setConnectTimeoutMillis(i);
             return this;
         }
@@ -239,7 +238,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
 
         @Override
         @Deprecated
-        public QuicChannelConfig setMaxMessagesPerRead(int i) {
+        public EmbeddedQuicChannelConfig setMaxMessagesPerRead(int i) {
             delegate.setMaxMessagesPerRead(i);
             return this;
         }
@@ -250,7 +249,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         }
 
         @Override
-        public QuicChannelConfig setWriteSpinCount(int i) {
+        public EmbeddedQuicChannelConfig setWriteSpinCount(int i) {
             delegate.setWriteSpinCount(i);
             return this;
         }
@@ -261,7 +260,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         }
 
         @Override
-        public QuicChannelConfig setAllocator(ByteBufAllocator byteBufAllocator) {
+        public EmbeddedQuicChannelConfig setAllocator(ByteBufAllocator byteBufAllocator) {
             delegate.setAllocator(byteBufAllocator);
             return this;
         }
@@ -272,7 +271,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         }
 
         @Override
-        public QuicChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator recvByteBufAllocator) {
+        public EmbeddedQuicChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator recvByteBufAllocator) {
             delegate.setRecvByteBufAllocator(recvByteBufAllocator);
             return this;
         }
@@ -283,7 +282,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         }
 
         @Override
-        public QuicChannelConfig setAutoRead(boolean b) {
+        public EmbeddedQuicChannelConfig setAutoRead(boolean b) {
             delegate.setAutoRead(b);
             return this;
         }
@@ -294,7 +293,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         }
 
         @Override
-        public QuicChannelConfig setAutoClose(boolean b) {
+        public EmbeddedQuicChannelConfig setAutoClose(boolean b) {
             delegate.setAutoClose(b);
             return this;
         }
@@ -305,7 +304,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         }
 
         @Override
-        public QuicChannelConfig setWriteBufferHighWaterMark(int i) {
+        public EmbeddedQuicChannelConfig setWriteBufferHighWaterMark(int i) {
             delegate.setWriteBufferHighWaterMark(i);
             return this;
         }
@@ -316,7 +315,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         }
 
         @Override
-        public QuicChannelConfig setWriteBufferLowWaterMark(int i) {
+        public EmbeddedQuicChannelConfig setWriteBufferLowWaterMark(int i) {
             delegate.setWriteBufferLowWaterMark(i);
             return this;
         }
@@ -327,7 +326,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         }
 
         @Override
-        public QuicChannelConfig setMessageSizeEstimator(MessageSizeEstimator messageSizeEstimator) {
+        public EmbeddedQuicChannelConfig setMessageSizeEstimator(MessageSizeEstimator messageSizeEstimator) {
             delegate.setMessageSizeEstimator(messageSizeEstimator);
             return this;
         }
@@ -338,7 +337,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         }
 
         @Override
-        public QuicChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
+        public EmbeddedQuicChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
             delegate.setWriteBufferWaterMark(writeBufferWaterMark);
             return this;
         }

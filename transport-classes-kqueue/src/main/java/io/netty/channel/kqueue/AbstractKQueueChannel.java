@@ -32,7 +32,6 @@ import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -304,13 +303,12 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         return WRITE_STATUS_SNDBUF_FULL;
     }
 
-    final boolean shouldBreakReadReady(ChannelConfig config) {
-        return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
+    final boolean shouldBreakReadReady() {
+        return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure());
     }
 
-    private static boolean isAllowHalfClosure(ChannelConfig config) {
-        return config instanceof SocketChannelConfig &&
-                ((SocketChannelConfig) config).isAllowHalfClosure();
+    protected boolean isAllowHalfClosure() {
+        return false;
     }
 
     final void clearReadFilter() {
@@ -474,7 +472,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
             finishConnect();
         }
         if (!socket.isInputShutdown()) {
-            if (isAllowHalfClosure(config())) {
+            if (isAllowHalfClosure()) {
                 try {
                     socket.shutdown(true, false);
                 } catch (IOException ignored) {

@@ -17,6 +17,7 @@ package io.netty.channel.kqueue;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -24,7 +25,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DatagramSocketAddress;
@@ -434,8 +434,8 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     @Override
     void readReady(KQueueRecvByteAllocatorHandle allocHandle) {
         assert executor().inEventLoop();
-        final DatagramChannelConfig config = config();
-        if (shouldBreakReadReady(config)) {
+        final ChannelConfig config = config();
+        if (shouldBreakReadReady()) {
             clearReadFilter0();
             return;
         }

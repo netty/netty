@@ -15,21 +15,17 @@
  */
 package io.netty.handler.codec.quic;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
 
 /**
- * Default {@link QuicChannelConfig} implementation.
+ * Default {@link io.netty.channel.ChannelConfig} implementation.
  */
-final class QuicheQuicChannelConfig extends DefaultChannelConfig implements QuicChannelConfig {
+final class QuicheQuicChannelConfig extends DefaultChannelConfig {
 
     private volatile QLogConfiguration qLogConfiguration;
     private volatile SegmentedDatagramPacketAllocator segmentedDatagramPacketAllocator =
@@ -68,73 +64,6 @@ final class QuicheQuicChannelConfig extends DefaultChannelConfig implements Quic
             return true;
         }
         return super.setOption(option, value);
-    }
-
-    @Override
-    public QuicChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public QuicChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public QuicChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public QuicChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public QuicChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public QuicChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    public QuicChannelConfig setAutoClose(boolean autoClose) {
-        super.setAutoClose(autoClose);
-        return this;
-    }
-
-    @Override
-    public QuicChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    public QuicChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    public QuicChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public QuicChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
-        return this;
     }
 
     @Nullable

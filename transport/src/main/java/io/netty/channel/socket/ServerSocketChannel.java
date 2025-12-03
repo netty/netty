@@ -15,14 +15,32 @@
  */
 package io.netty.channel.socket;
 
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ServerChannel;
 
 import java.net.InetSocketAddress;
 
 /**
- * A TCP/IP {@link ServerChannel} which accepts incoming TCP/IP connections.
+ * A {@link ServerChannel} which accepts incoming connections.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options supported by {@link ServerChannel},
+ * {@link ServerSocketChannel} allows the following options in the
+ * option map via {@link io.netty.channel.ChannelOption}:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>ChannelOption</th>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_BACKLOG}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_REUSEADDR}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_RCVBUF}</td>
+ * </tr>
+ * </table>
  */
 public interface ServerSocketChannel extends ServerChannel {
-    @Override
-    ServerSocketChannelConfig config();
+
 }

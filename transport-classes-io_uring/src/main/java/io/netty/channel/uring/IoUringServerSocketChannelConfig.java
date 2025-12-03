@@ -15,14 +15,9 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.NetUtil;
 
 import java.io.IOException;
@@ -31,7 +26,7 @@ import java.util.Map;
 import static io.netty.channel.ChannelOption.TCP_FASTOPEN;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
-final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implements ServerSocketChannelConfig {
+final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
     private volatile int backlog = NetUtil.SOMAXCONN;
     private volatile int pendingFastOpenRequestsThreshold;
 
@@ -103,13 +98,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
         return true;
     }
 
-    @Override
-    public IoUringServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
-        return this;
-    }
-
-    @Override
-    public boolean isReuseAddress() {
+    boolean isReuseAddress() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -117,8 +106,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
         }
     }
 
-    @Override
-    public IoUringServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+    IoUringServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
             ((AbstractIoUringChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
@@ -127,8 +115,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
         }
     }
 
-    @Override
-    public int getReceiveBufferSize() {
+    int getReceiveBufferSize() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -136,8 +123,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
         }
     }
 
-    @Override
-    public IoUringServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    IoUringServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((AbstractIoUringChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
@@ -146,85 +132,20 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
         }
     }
 
-    @Override
-    public int getBacklog() {
+    int getBacklog() {
         return backlog;
     }
 
-    @Override
-    public IoUringServerSocketChannelConfig setBacklog(int backlog) {
+    IoUringServerSocketChannelConfig setBacklog(int backlog) {
         checkPositiveOrZero(backlog, "backlog");
         this.backlog = backlog;
-        return this;
-    }
-
-    @Override
-    public IoUringServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public IoUringServerSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public IoUringServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public IoUringServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public IoUringServerSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public IoUringServerSocketChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public IoUringServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public IoUringServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    public IoUringServerSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public IoUringServerSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
         return this;
     }
 
     /**
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
-    public boolean isReusePort() {
+    boolean isReusePort() {
         try {
             return ((IoUringServerSocketChannel) channel).socket.isReusePort();
         } catch (IOException e) {
@@ -240,7 +161,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
      * Be aware this method needs be called before
      * {@link io.netty.channel.socket.ServerSocketChannel#bind(java.net.SocketAddress)} to have any affect.
      */
-    public IoUringServerSocketChannelConfig setReusePort(boolean reusePort) {
+    IoUringServerSocketChannelConfig setReusePort(boolean reusePort) {
         try {
             ((IoUringServerSocketChannel) channel).socket.setReusePort(reusePort);
             return this;
@@ -253,7 +174,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} otherwise.
      */
-    public boolean isFreeBind() {
+    boolean isFreeBind() {
         try {
             return ((IoUringServerSocketChannel) channel).socket.isIpFreeBind();
         } catch (IOException e) {
@@ -265,7 +186,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    public IoUringServerSocketChannelConfig setFreeBind(boolean freeBind) {
+    IoUringServerSocketChannelConfig setFreeBind(boolean freeBind) {
         try {
             ((IoUringServerSocketChannel) channel).socket.setIpFreeBind(freeBind);
             return this;
@@ -278,7 +199,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
      */
-    public boolean isIpTransparent() {
+    boolean isIpTransparent() {
         try {
             return ((IoUringServerSocketChannel) channel).socket.isIpTransparent();
         } catch (IOException e) {
@@ -290,7 +211,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    public IoUringServerSocketChannelConfig setIpTransparent(boolean transparent) {
+    IoUringServerSocketChannelConfig setIpTransparent(boolean transparent) {
         try {
             ((IoUringServerSocketChannel) channel).socket.setIpTransparent(transparent);
             return this;
@@ -302,7 +223,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
     /**
      * Set the {@code TCP_DEFER_ACCEPT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IoUringServerSocketChannelConfig setTcpDeferAccept(int deferAccept) {
+    IoUringServerSocketChannelConfig setTcpDeferAccept(int deferAccept) {
         try {
             ((IoUringServerSocketChannel) channel).socket.setTcpDeferAccept(deferAccept);
             return this;
@@ -314,7 +235,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
     /**
      * Returns a positive value if <a href="https://linux.die.net/man/7/tcp">TCP_DEFER_ACCEPT</a> is enabled.
      */
-    public int getTcpDeferAccept() {
+    int getTcpDeferAccept() {
         try {
             return ((IoUringServerSocketChannel) channel).socket.getTcpDeferAccept();
         } catch (IOException e) {
@@ -327,7 +248,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
      *
      * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
      */
-    public int getTcpFastopen() {
+     int getTcpFastopen() {
         return pendingFastOpenRequestsThreshold;
     }
 
@@ -340,7 +261,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig implem
      *
      * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
      */
-    public IoUringServerSocketChannelConfig setTcpFastopen(int pendingFastOpenRequestsThreshold) {
+    IoUringServerSocketChannelConfig setTcpFastopen(int pendingFastOpenRequestsThreshold) {
         this.pendingFastOpenRequestsThreshold = checkPositiveOrZero(pendingFastOpenRequestsThreshold,
                 "pendingFastOpenRequestsThreshold");
         return this;

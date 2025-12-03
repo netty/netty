@@ -30,7 +30,6 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.util.LeakPresenceDetector;
 import io.netty.util.internal.StringUtil;
 
@@ -85,18 +84,17 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         return METADATA;
     }
 
-    final boolean shouldBreakReadReady(ChannelConfig config) {
-        return isInputShutdown0() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
+    final boolean shouldBreakReadReady() {
+        return isInputShutdown0() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure());
     }
 
-    private static boolean isAllowHalfClosure(ChannelConfig config) {
-        return config instanceof SocketChannelConfig &&
-                ((SocketChannelConfig) config).isAllowHalfClosure();
+    protected boolean isAllowHalfClosure() {
+        return false;
     }
 
     private void closeOnRead(ChannelPipeline pipeline) {
         if (!isInputShutdown0()) {
-            if (isAllowHalfClosure(config())) {
+            if (isAllowHalfClosure()) {
                 shutdownInput();
                 pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
             } else {
@@ -135,7 +133,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     @Override
     protected final void readNow() {
         final ChannelConfig config = config();
-        if (shouldBreakReadReady(config)) {
+        if (shouldBreakReadReady()) {
             clearReadPending();
             return;
         }

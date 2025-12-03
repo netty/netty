@@ -21,8 +21,8 @@ import io.netty.channel.ChannelInboundHandler;
 /**
  * Special event which will be fired and passed to the
  * {@link ChannelInboundHandler#userEventTriggered(ChannelHandlerContext, Object)} methods once the input of
- * a {@link SocketChannel} was shutdown and the {@link SocketChannelConfig#isAllowHalfClosure()} method returns
- * {@code true}.
+ * a {@link SocketChannel} was shutdown and the {@link io.netty.channel.ChannelOption#ALLOW_HALF_CLOSURE}
+ * was set to {@code true}.
  */
 public final class ChannelInputShutdownEvent {
 
