@@ -19,7 +19,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -113,8 +114,8 @@ public class QuicStreamFrameTest extends AbstractQuicTest {
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-            if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            if (type.direction() == ChannelShutdownDirection.Inbound) {
                 queue.add(2);
                 if (((QuicStreamChannel) ctx.channel()).type() == QuicStreamType.BIDIRECTIONAL) {
                     // Let's write back a fin which will also close the channel and so call channelInactive(...)

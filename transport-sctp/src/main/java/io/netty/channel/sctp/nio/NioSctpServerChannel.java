@@ -24,6 +24,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -77,6 +78,11 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         this.childEventLoopGroup =
                 validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", NioIoHandle.class);
         config = new NioSctpServerChannelConfig(this, javaChannel());
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

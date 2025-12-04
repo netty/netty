@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.TooLongFrameException;
@@ -345,5 +346,11 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
     @Override
     public void flush(ChannelHandlerContext ctx) {
         ctx.flush();
+    }
+
+    @Override
+    public void shutdown(ChannelHandlerContext ctx,
+                         ChannelShutdownType type, ChannelPromise promise) {
+        ctx.shutdown(type, promise);
     }
 }

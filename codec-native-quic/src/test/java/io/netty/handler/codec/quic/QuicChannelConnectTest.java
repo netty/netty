@@ -25,8 +25,9 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.ConnectTimeoutException;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.SniCompletionEvent;
@@ -330,12 +331,12 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     }
 
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) throws Exception {
                         // Server closes the stream whenever the client sends a FIN.
-                        if (evt instanceof ChannelInputShutdownEvent) {
+                        if (type.direction() == ChannelShutdownDirection.Inbound) {
                             ctx.close();
                         }
-                        ctx.fireUserEventTriggered(evt);
+                        ctx.fireChannelShutdown(type);
                     }
                 });
 
@@ -369,7 +370,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
             ByteBuf payload = Unpooled.wrappedBuffer("HELLO!".getBytes(StandardCharsets.US_ASCII));
             quicStream.writeAndFlush(payload).sync();
-            quicStream.shutdownOutput().sync();
+            quicStream.shutdown(ChannelShutdownType.newOutbound(0)).sync();
             assertTrue(quicStream.closeFuture().await().isSuccess());
 
             ChannelFuture closeFuture = channel.close().await();
@@ -439,12 +440,12 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     }
 
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) throws Exception {
                         // Server closes the stream whenever the client sends a FIN.
-                        if (evt instanceof ChannelInputShutdownEvent) {
+                        if (type.direction() == ChannelShutdownDirection.Inbound) {
                             ctx.close();
                         }
-                        ctx.fireUserEventTriggered(evt);
+                        ctx.fireChannelShutdown(type);
                     }
                 });
 

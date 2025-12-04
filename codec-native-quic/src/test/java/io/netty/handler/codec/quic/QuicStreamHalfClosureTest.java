@@ -20,8 +20,8 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -108,7 +108,7 @@ public class QuicStreamHalfClosureTest extends AbstractQuicTest {
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) {
-            queue.add(5);
+            queue.add(4);
             // Close the QUIC channel as well.
             ctx.channel().parent().close();
         }
@@ -116,24 +116,22 @@ public class QuicStreamHalfClosureTest extends AbstractQuicTest {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             ReferenceCountUtil.release(msg);
-            if (((QuicStreamChannel) ctx.channel()).isInputShutdown()) {
+            if (ctx.channel().isShutdown(ChannelShutdownDirection.Inbound)) {
                 queue.add(1);
             }
         }
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-            if (evt == ChannelInputShutdownEvent.INSTANCE) {
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            if (type.direction() == ChannelShutdownDirection.Inbound) {
                 addIsShutdown(ctx);
                 queue.add(3);
-            } else if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
-                queue.add(4);
                 ctx.close();
             }
         }
 
         private void addIsShutdown(ChannelHandlerContext ctx) {
-            if (((QuicStreamChannel) ctx.channel()).isInputShutdown()) {
+            if (ctx.channel().isShutdown(ChannelShutdownDirection.Inbound)) {
                 queue.add(2);
             }
         }
@@ -149,7 +147,6 @@ public class QuicStreamHalfClosureTest extends AbstractQuicTest {
             }
             assertEquals(3, (int) queue.take());
             assertEquals(4, (int) queue.take());
-            assertEquals(5, (int) queue.take());
             assertTrue(queue.isEmpty());
         }
     }

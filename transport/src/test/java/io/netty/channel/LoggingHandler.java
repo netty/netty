@@ -23,7 +23,7 @@ final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHand
 
     enum Event { WRITE, FLUSH, BIND, CONNECT, DISCONNECT, CLOSE, DEREGISTER, READ, WRITABILITY,
         HANDLER_ADDED, HANDLER_REMOVED, EXCEPTION, READ_COMPLETE, REGISTERED, UNREGISTERED, ACTIVE, INACTIVE,
-        USER, REGISTER }
+        USER, REGISTER, SHUTDOWN }
 
     private StringBuilder log = new StringBuilder();
 
@@ -145,6 +145,19 @@ final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHand
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         log(Event.USER, evt.toString());
         ctx.fireUserEventTriggered(evt);
+    }
+
+    @Override
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+        log(Event.SHUTDOWN);
+        ctx.fireChannelShutdown(type);
+    }
+
+    @Override
+    public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
+                         ChannelPromise promise) {
+        log(Event.SHUTDOWN);
+        ctx.shutdown(type, promise);
     }
 
     String getLog() {

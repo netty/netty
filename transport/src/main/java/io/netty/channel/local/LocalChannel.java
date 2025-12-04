@@ -22,6 +22,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
@@ -99,6 +100,11 @@ public class LocalChannel extends AbstractChannel {
         this.peer = peer;
         localAddress = parent.localAddress();
         remoteAddress = peer.localAddress();
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

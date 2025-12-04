@@ -21,8 +21,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.ChannelOutputShutdownException;
+import io.netty.channel.ChannelOutputShutdownException;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.util.ReferenceCountUtil;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -245,7 +246,7 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
                 public void channelActive(ChannelHandlerContext ctx)  {
                     final ChannelFuture future;
                     if (halfClose) {
-                        future = ((QuicStreamChannel) ctx.channel()).shutdownOutput();
+                        future = ctx.channel().shutdown(ChannelShutdownType.newOutbound(0));
                     } else {
                         future = ctx.channel().close();
                     }
@@ -291,8 +292,8 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
     private static final class StreamHandler extends ChannelInboundHandlerAdapter {
 
         @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            if (type.direction() == ChannelShutdownDirection.Inbound) {
                 // Received a FIN
                 ctx.close();
             }

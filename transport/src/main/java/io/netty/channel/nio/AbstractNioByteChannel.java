@@ -19,16 +19,16 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.internal.ChannelUtils;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.util.LeakPresenceDetector;
 import io.netty.util.internal.StringUtil;
 
@@ -67,17 +67,8 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
         super(eventLoop, parent, ch, NioIoOps.READ, false);
     }
 
-    /**
-     * Shutdown the input side of the channel.
-     */
-    protected abstract ChannelFuture shutdownInput();
-
-    protected boolean isInputShutdown0() {
-        return false;
-    }
-
     final boolean shouldBreakReadReady() {
-        return isInputShutdown0() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure());
+        return isShutdown(ChannelShutdownDirection.Inbound) && (inputClosedSeenErrorOnRead || !isAllowHalfClosure());
     }
 
     protected boolean isAllowHalfClosure() {
@@ -85,16 +76,16 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
     }
 
     private void closeOnRead(ChannelPipeline pipeline) {
-        if (!isInputShutdown0()) {
+        if (!isShutdown(ChannelShutdownDirection.Inbound)) {
             if (isAllowHalfClosure()) {
-                shutdownInput();
-                pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                ChannelPromise promise = pipeline.newPromise();
+                ioTransport().shutdown(ChannelShutdownType.newInbound(), promise);
             } else {
                 close(newPromise());
             }
         } else if (!inputClosedSeenErrorOnRead) {
             inputClosedSeenErrorOnRead = true;
-            pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+            pipeline.fireChannelShutdown(ChannelShutdownType.newInbound());
         }
     }
 

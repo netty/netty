@@ -19,12 +19,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.ObjectUtil;
 import org.jetbrains.annotations.Nullable;
 
 import static io.netty.handler.codec.http3.Http3CodecUtils.closeOnFailure;
+import static io.netty.handler.codec.http3.Http3CodecUtils.criticalStreamClosed;
 
 final class Http3ControlStreamOutboundHandler
         extends Http3FrameTypeDuplexValidationHandler<Http3ControlStreamFrame> {
@@ -74,12 +76,12 @@ final class Http3ControlStreamOutboundHandler
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-        if (evt instanceof ChannelInputShutdownEvent) {
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+        if (type.direction() == ChannelShutdownDirection.Inbound) {
             // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-6.2.1
             Http3CodecUtils.criticalStreamClosed(ctx);
         }
-        ctx.fireUserEventTriggered(evt);
+        ctx.fireChannelShutdown(type);
     }
 
     @Override

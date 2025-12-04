@@ -687,6 +687,11 @@ public final class ChannelOutboundBuffer {
         }
     }
 
+    void failFlushedAndClose(Throwable failCause, boolean notify, Throwable closeCause, boolean allowChannelOpen) {
+        failFlushed(failCause, notify);
+        close(closeCause, allowChannelOpen);
+    }
+
     void close(final Throwable cause, final boolean allowChannelOpen) {
         if (inFail) {
             channel.executor().execute(new Runnable() {

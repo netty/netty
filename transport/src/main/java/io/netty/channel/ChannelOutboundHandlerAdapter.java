@@ -134,4 +134,17 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
     public void flush(ChannelHandlerContext ctx) {
         ctx.flush();
     }
+
+    /**
+     * Calls {@link ChannelHandlerContext#shutdown(ChannelShutdownType, ChannelPromise)} to forward
+     * to the next {@link ChannelOutboundHandler} in the {@link ChannelPipeline}.
+     *
+     * Sub-classes may override this method to change behavior.
+     */
+    @Skip
+    @Override
+    public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
+                         ChannelPromise promise) {
+        ctx.shutdown(type, promise);
+    }
 }

@@ -23,6 +23,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FixedRecvByteBufAllocator;
@@ -168,6 +170,11 @@ public final class NioDatagramChannel
         return ch.isOpen() && (
                 config.getOption(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION) && isRegistered()
                 || localAddress0() != null);
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

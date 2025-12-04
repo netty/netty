@@ -100,4 +100,13 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @throws Exception        thrown if an error occurs
      */
     void flush(ChannelHandlerContext ctx);
+    /**
+     * Called once a shutdown operation was requested and should be executed.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the shutdown operation is made
+     * @param type              the {@link ChannelShutdownType} that is used.
+     * @param promise           the {@link ChannelPromise} to notify once the operation completes
+     */
+    void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
+                  ChannelPromise promise) ;
 }

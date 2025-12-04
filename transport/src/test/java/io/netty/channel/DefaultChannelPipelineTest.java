@@ -1207,6 +1207,13 @@ public class DefaultChannelPipelineTest {
                 ctx.flush();
             }
 
+            @Override
+            public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
+                                 ChannelPromise promise) {
+                fail();
+                ctx.shutdown(type, promise);
+            }
+
             @Skip
             @Override
             public void channelRegistered(ChannelHandlerContext ctx) {
@@ -1268,6 +1275,13 @@ public class DefaultChannelPipelineTest {
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 fail();
                 ctx.fireExceptionCaught(cause);
+            }
+
+            @Override
+            public void channelShutdown(ChannelHandlerContext ctx,
+                                        ChannelShutdownType type) {
+                fail();
+                ctx.fireChannelShutdown(type);
             }
 
             @Override

@@ -21,6 +21,8 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -291,5 +293,15 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     @Override
     public final ChannelFuture newFailedFuture(Throwable cause) {
         return channel().newFailedFuture(cause);
+    }
+
+    @Override
+    public ChannelHandlerContext fireChannelShutdown(ChannelShutdownType type) {
+        return this;
+    }
+
+    @Override
+    public ChannelFuture shutdown(ChannelShutdownType type, ChannelPromise promise) {
+        return channel().shutdown(type, promise);
     }
 }

@@ -32,6 +32,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
@@ -2493,5 +2494,11 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             }
             super.checkDeadLock();
         }
+    }
+
+    @Override
+    public void shutdown(ChannelHandlerContext ctx,
+                         ChannelShutdownType type, ChannelPromise promise) {
+        ctx.shutdown(type, promise);
     }
 }

@@ -22,9 +22,8 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.ReferenceCounted;
 
@@ -290,14 +289,26 @@ public class Http2MultiplexCodec extends Http2FrameCodec {
 
     @Override
     final void onUserEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
-            forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR);
-        } else if (evt == ChannelOutputShutdownEvent.INSTANCE) {
-            forEachActiveStream(CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR);
-        } else if (evt == SslCloseCompletionEvent.SUCCESS) {
+        if (evt == SslCloseCompletionEvent.SUCCESS) {
             forEachActiveStream(SSL_CLOSE_COMPLETION_EVENT_VISITOR);
         }
         super.onUserEventTriggered(ctx, evt);
+    }
+
+    @Override
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type)
+            throws Exception {
+        switch (type.direction()) {
+            case Outbound:
+                forEachActiveStream(CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR);
+                break;
+           case Inbound:
+                forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR);
+                break;
+           default:
+                break;
+        }
+        super.channelShutdown(ctx, type);
     }
 
     final void flush0(ChannelHandlerContext ctx) {

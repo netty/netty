@@ -25,6 +25,8 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -164,7 +166,7 @@ public class HttpClientCodecTest {
                                         @Override
                                         public void operationComplete(ChannelFuture future) {
                                             assertTrue(future.isSuccess());
-                                            sChannel.shutdownOutput();
+                                            sChannel.shutdown(ChannelShutdownType.newOutbound());
                                         }
                                     });
                                 }

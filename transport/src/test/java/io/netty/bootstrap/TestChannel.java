@@ -21,6 +21,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 
@@ -38,6 +39,11 @@ class TestChannel extends AbstractChannel {
     TestChannel(EventLoop eventLoop, Channel parent) {
         super(eventLoop, null, parent);
         config = new TestConfig(this);
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        promise.setSuccess();
     }
 
     @Override

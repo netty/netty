@@ -20,7 +20,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.DecoderException;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.RecyclableArrayList;
@@ -125,6 +125,13 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     }
 
     @Override
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type)
+            throws Exception {
+        fireBufferedMessages();
+        ctx.fireChannelShutdown(type);
+    }
+
+    @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
         if (evt instanceof SslHandshakeCompletionEvent) {
             SslHandshakeCompletionEvent handshakeEvent = (SslHandshakeCompletionEvent) evt;
@@ -152,10 +159,6 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
                     removeSelfIfPresent(ctx);
                 }
             }
-        }
-
-        if (evt instanceof ChannelInputShutdownEvent) {
-            fireBufferedMessages();
         }
 
         ctx.fireUserEventTriggered(evt);

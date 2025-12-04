@@ -22,7 +22,9 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.ChannelOutputShutdownException;
+import io.netty.channel.ChannelOutputShutdownException;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -75,8 +77,8 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
 
             QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
                     new ChannelInboundHandlerAdapter()).sync().getNow();
-            streamChannel.shutdownInput().sync();
-            assertTrue(streamChannel.isInputShutdown());
+            streamChannel.shutdown(ChannelShutdownType.newInbound()).sync();
+            assertTrue(streamChannel.isShutdown(ChannelShutdownDirection.Inbound));
             streamChannel.writeAndFlush(Unpooled.buffer().writeLong(8)).sync();
 
             latch.await();
@@ -101,7 +103,8 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             QuicStreamChannel streamChannel = (QuicStreamChannel) ctx.channel();
-                            streamChannel.shutdownInput().addListener(new ChannelFutureListener() {
+                            streamChannel.shutdown(ChannelShutdownType.newInbound())
+                                    .addListener(new ChannelFutureListener() {
                                 @Override
                                 public void operationComplete(ChannelFuture f) {
                                     ByteBuf buffer = (ByteBuf) msg;
@@ -177,7 +180,8 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                             QuicStreamChannel streamChannel = (QuicStreamChannel) ctx.channel();
                             ByteBuf buffer = (ByteBuf) msg;
                             buffer.release();
-                            streamChannel.shutdownOutput(100).addListener(new ChannelFutureListener() {
+                            streamChannel.shutdown(ChannelShutdownType.newOutbound(100))
+                                    .addListener(new ChannelFutureListener() {
                                 @Override
                                 public void operationComplete(ChannelFuture f) {
                                     if (!f.isSuccess()) {

@@ -23,6 +23,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
@@ -126,6 +127,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
+    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
+    }
+
     public boolean isActive() {
         return socket.isOpen() && (config.getActiveOnOpen() && isRegistered() || active);
     }

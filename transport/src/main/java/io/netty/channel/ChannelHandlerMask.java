@@ -45,22 +45,25 @@ final class ChannelHandlerMask {
     static final int MASK_CHANNEL_READ_COMPLETE = 1 << 6;
     static final int MASK_USER_EVENT_TRIGGERED = 1 << 7;
     static final int MASK_CHANNEL_WRITABILITY_CHANGED = 1 << 8;
-    static final int MASK_BIND = 1 << 9;
-    static final int MASK_CONNECT = 1 << 10;
-    static final int MASK_DISCONNECT = 1 << 11;
-    static final int MASK_CLOSE = 1 << 12;
-    static final int MASK_DEREGISTER = 1 << 13;
-    static final int MASK_READ = 1 << 14;
-    static final int MASK_WRITE = 1 << 15;
-    static final int MASK_FLUSH = 1 << 16;
-    static final int MASK_REGISTER = 1 << 17;
+    static final int MASK_CHANNEL_SHUTDOWN = 1 << 9;
+    static final int MASK_BIND = 1 << 10;
+    static final int MASK_CONNECT = 1 << 11;
+    static final int MASK_DISCONNECT = 1 << 12;
+    static final int MASK_CLOSE = 1 << 13;
+    static final int MASK_DEREGISTER = 1 << 14;
+    static final int MASK_READ = 1 << 15;
+    static final int MASK_WRITE = 1 << 16;
+    static final int MASK_FLUSH = 1 << 17;
+    static final int MASK_REGISTER = 1 << 18;
+    static final int MASK_SHUTDOWN = 1 << 19;
 
     static final int MASK_ONLY_INBOUND =  MASK_CHANNEL_REGISTERED |
             MASK_CHANNEL_UNREGISTERED | MASK_CHANNEL_ACTIVE | MASK_CHANNEL_INACTIVE | MASK_CHANNEL_READ |
-            MASK_CHANNEL_READ_COMPLETE | MASK_USER_EVENT_TRIGGERED | MASK_CHANNEL_WRITABILITY_CHANGED;
+            MASK_CHANNEL_READ_COMPLETE | MASK_USER_EVENT_TRIGGERED | MASK_CHANNEL_WRITABILITY_CHANGED |
+            MASK_CHANNEL_SHUTDOWN;
     private static final int MASK_ALL_INBOUND = MASK_EXCEPTION_CAUGHT | MASK_ONLY_INBOUND;
     static final int MASK_ONLY_OUTBOUND =  MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
-            MASK_CLOSE | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH | MASK_REGISTER;
+            MASK_CLOSE | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH | MASK_REGISTER | MASK_SHUTDOWN;
     private static final int MASK_ALL_OUTBOUND = MASK_EXCEPTION_CAUGHT | MASK_ONLY_OUTBOUND;
 
     private static final FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>> MASKS =
@@ -116,6 +119,10 @@ final class ChannelHandlerMask {
                 if (isSkippable(handlerType, "channelWritabilityChanged", ChannelHandlerContext.class)) {
                     mask &= ~MASK_CHANNEL_WRITABILITY_CHANGED;
                 }
+                if (isSkippable(handlerType, "channelShutdown", ChannelHandlerContext.class,
+                        ChannelShutdownType.class)) {
+                    mask &= ~MASK_CHANNEL_SHUTDOWN;
+                }
                 if (isSkippable(handlerType, "userEventTriggered", ChannelHandlerContext.class, Object.class)) {
                     mask &= ~MASK_USER_EVENT_TRIGGERED;
                 }
@@ -153,6 +160,10 @@ final class ChannelHandlerMask {
                 }
                 if (isSkippable(handlerType, "register", ChannelHandlerContext.class, ChannelPromise.class)) {
                     mask &= ~MASK_REGISTER;
+                }
+                if (isSkippable(handlerType, "shutdown", ChannelHandlerContext.class,
+                        ChannelShutdownType.class, ChannelPromise.class)) {
+                    mask &= ~MASK_SHUTDOWN;
                 }
             }
 

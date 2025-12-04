@@ -19,8 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -282,7 +282,7 @@ public class ReplayingDecoderTest {
         });
 
         assertFalse(channel.writeInbound(Unpooled.wrappedBuffer(new byte[] {0, 1})));
-        channel.pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+        channel.pipeline().fireChannelShutdown(ChannelShutdownType.newInbound());
         assertFalse(channel.finishAndReleaseAll());
 
         Error err = error.get();

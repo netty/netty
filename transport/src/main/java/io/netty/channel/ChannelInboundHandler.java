@@ -66,6 +66,8 @@ public interface ChannelInboundHandler extends ChannelHandler {
      */
     void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception;
 
+    void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) throws Exception;
+
     /**
      * Gets called if a {@link Throwable} was thrown.
      */

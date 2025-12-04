@@ -17,7 +17,8 @@ package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.quic.QuicException;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -46,11 +47,10 @@ public abstract class Http3RequestStreamInboundHandler extends ChannelInboundHan
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt == ChannelInputShutdownEvent.INSTANCE) {
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) throws Exception {
+        if (type.direction() == ChannelShutdownDirection.Inbound) {
             channelInputClosed(ctx);
         }
-        ctx.fireUserEventTriggered(evt);
     }
 
     @Override

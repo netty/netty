@@ -209,6 +209,11 @@ public class ChannelOutboundBufferTest {
         }
 
         @Override
+        protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+            promise.setFailure(new UnsupportedOperationException());
+        }
+
+        @Override
         protected void doDeregister(ChannelPromise promise) {
             promise.setSuccess();
         }

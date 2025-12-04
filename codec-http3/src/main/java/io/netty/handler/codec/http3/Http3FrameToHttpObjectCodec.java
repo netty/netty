@@ -22,6 +22,8 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.handler.codec.http.DefaultHttpContent;
@@ -294,5 +296,11 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
     @Override
     public void read(ChannelHandlerContext ctx) {
         ctx.read();
+    }
+
+    @Override
+    public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
+                         ChannelPromise promise) {
+        ctx.shutdown(type, promise);
     }
 }

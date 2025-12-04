@@ -22,7 +22,8 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
@@ -393,14 +394,16 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-        if (evt instanceof ChannelInputShutdownEvent) {
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type)
+            throws Exception {
+        if (type.direction() == ChannelShutdownDirection.Inbound) {
             // The decodeLast method is invoked when a channelInactive event is encountered.
             // This method is responsible for ending requests in some situations and must be called
             // when the input has been shutdown.
             channelInputClosed(ctx, false);
         }
-        super.userEventTriggered(ctx, evt);
+
+        super.channelShutdown(ctx, type);
     }
 
     private void channelInputClosed(ChannelHandlerContext ctx, boolean callChannelInactive) {
@@ -435,7 +438,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
 
     /**
      * Called when the input of the channel was closed which may be because it changed to inactive or because of
-     * {@link ChannelInputShutdownEvent}.
+     * {@link #channelShutdown(ChannelHandlerContext, ChannelShutdownType}.
      */
     void channelInputClosed(ChannelHandlerContext ctx, List<Object> out) throws Exception {
         if (cumulation != null) {

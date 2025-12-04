@@ -26,12 +26,12 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.ReferenceCountUtil;
@@ -42,7 +42,6 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.AlreadyConnectedException;
-import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.UnresolvedAddressException;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
@@ -299,7 +298,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     }
 
     final boolean shouldBreakReadReady() {
-        return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure());
+        return isShutdown(ChannelShutdownDirection.Inbound) && (inputClosedSeenErrorOnRead || !isAllowHalfClosure());
     }
 
     protected boolean isAllowHalfClosure() {
@@ -468,21 +467,10 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
         if (!socket.isInputShutdown()) {
             if (isAllowHalfClosure()) {
-                try {
-                    socket.shutdown(true, false);
-                } catch (IOException ignored) {
-                    // We attempted to shutdown and failed, which means the input has already effectively been
-                    // shutdown.
-                    fireEventAndClose(ChannelInputShutdownEvent.INSTANCE);
-                    return;
-                } catch (NotYetConnectedException ignore) {
-                    // We attempted to shutdown and failed, which means the input has already effectively been
-                    // shutdown.
-                }
+                ioTransport().shutdown(ChannelShutdownType.newInbound(), newPromise());
                 if (shouldStopReading(config())) {
                     clearReadFilter0();
-                }
-                pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                 }
             } else {
                 close(newPromise());
                 return;
@@ -490,7 +478,7 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
         if (!readEOF && !inputClosedSeenErrorOnRead) {
             inputClosedSeenErrorOnRead = true;
-            pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+            pipeline().fireChannelShutdown(ChannelShutdownType.newInbound());
         }
     }
 

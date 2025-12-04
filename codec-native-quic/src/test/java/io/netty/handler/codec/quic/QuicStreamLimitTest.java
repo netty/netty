@@ -18,7 +18,8 @@ package io.netty.handler.codec.quic;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -60,8 +61,8 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
                     }
 
                     @Override
-                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-                        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+                        if (type.direction() == ChannelShutdownDirection.Inbound) {
                             ctx.close();
                         }
                     }

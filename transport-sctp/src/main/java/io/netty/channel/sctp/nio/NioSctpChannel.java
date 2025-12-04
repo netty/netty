@@ -28,6 +28,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
@@ -125,6 +126,11 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
             throw new ChannelException("Failed to enter non-blocking mode.", e);
         }
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

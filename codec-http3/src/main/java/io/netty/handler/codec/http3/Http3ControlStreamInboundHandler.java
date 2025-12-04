@@ -19,7 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
@@ -215,12 +216,12 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-        if (evt instanceof ChannelInputShutdownEvent) {
-            // See https://www.ietf.org/archive/id/draft-ietf-quic-qpack-19.html#section-4.2
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+        if (type.direction() == ChannelShutdownDirection.Inbound) {
+            // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#section-4.2
             criticalStreamClosed(ctx);
         }
-        ctx.fireUserEventTriggered(evt);
+        ctx.fireChannelShutdown(type);
     }
 
     private abstract static class AbstractQPackStreamInitializer extends ChannelInboundHandlerAdapter {
@@ -245,13 +246,13 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
         }
 
         @Override
-        public final void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-            streamClosed(ctx);
-            if (evt instanceof ChannelInputShutdownEvent) {
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            //streamClosed(ctx);
+            if (type.direction() == ChannelShutdownDirection.Inbound) {
                 // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#section-4.2
                 criticalStreamClosed(ctx);
             }
-            ctx.fireUserEventTriggered(evt);
+            ctx.fireChannelShutdown(type);
         }
 
         @Override

@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
 import io.netty.util.ReferenceCountUtil;
@@ -513,5 +514,11 @@ public class SpdyFrameCodec extends ByteToMessageDecoder
     @Override
     public void readFrameError(String message) {
         ctx.fireExceptionCaught(INVALID_FRAME);
+    }
+
+    @Override
+    public void shutdown(ChannelHandlerContext ctx,
+                         ChannelShutdownType type, ChannelPromise promise) {
+        ctx.shutdown(type, promise);
     }
 }

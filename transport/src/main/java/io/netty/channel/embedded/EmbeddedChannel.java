@@ -27,6 +27,7 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
@@ -283,6 +284,11 @@ public class EmbeddedChannel extends AbstractChannel {
     @Override
     public boolean isActive() {
         return state == State.ACTIVE;
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     /**
@@ -1190,6 +1196,17 @@ public class EmbeddedChannel extends AbstractChannel {
 
         EmbeddedIoTransport(IoTransport transport) {
             this.transport = transport;
+        }
+
+        @Override
+        public void shutdown(ChannelShutdownType type, ChannelPromise promise) {
+            executingStackCnt++;
+            try {
+                transport.shutdown(type, promise.addListener(futureListener));
+            } finally {
+                executingStackCnt--;
+                maybeRunPendingTasks();
+            }
         }
 
         @Override

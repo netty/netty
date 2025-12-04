@@ -91,4 +91,14 @@ public interface ChannelInboundInvoker {
      * event to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      */
     ChannelInboundInvoker fireChannelWritabilityChanged();
+
+    /**
+     * A {@link Channel} was shutdown in a specific direction.
+     *
+     * This will result in having the
+     * {@link ChannelInboundHandler#channelShutdown(ChannelHandlerContext, ChannelShutdownType)}  method
+     * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
+     * {@link Channel}.
+     */
+    ChannelInboundInvoker fireChannelShutdown(ChannelShutdownType type);
 }

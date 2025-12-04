@@ -20,6 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
@@ -283,7 +284,7 @@ final class Http3CodecUtils {
     }
 
     static void streamError(ChannelHandlerContext ctx, Http3ErrorCode errorCode) {
-        ((QuicStreamChannel) ctx.channel()).shutdownOutput(errorCode.code);
+        ctx.channel().shutdown(ChannelShutdownType.newOutbound(errorCode.code));
     }
 
     static void readIfNoAutoRead(ChannelHandlerContext ctx) {

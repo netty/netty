@@ -271,6 +271,17 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type)
+            throws Exception {
+        assert ctx == inboundCtx.ctx;
+        if (!inboundCtx.removed) {
+            inboundHandler.channelShutdown(inboundCtx,  type);
+        } else {
+            inboundCtx.fireChannelShutdown(type);
+        }
+    }
+
+    @Override
     public void bind(
             ChannelHandlerContext ctx,
             SocketAddress localAddress, ChannelPromise promise) {
@@ -365,6 +376,17 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
     }
 
+    @Override
+    public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
+                         ChannelPromise promise) {
+        assert ctx == outboundCtx.ctx;
+        if (!outboundCtx.removed) {
+            outboundHandler.shutdown(outboundCtx, type, promise);
+        } else {
+            outboundCtx.shutdown(type, promise);
+        }
+    }
+
     private static class DelegatingChannelHandlerContext implements ChannelHandlerContext {
 
         private final ChannelHandlerContext ctx;
@@ -452,6 +474,12 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         @Override
         public ChannelHandlerContext fireChannelWritabilityChanged() {
             ctx.fireChannelWritabilityChanged();
+            return this;
+        }
+
+        @Override
+        public ChannelHandlerContext fireChannelShutdown(ChannelShutdownType type) {
+            ctx.fireChannelShutdown(type);
             return this;
         }
 
@@ -556,6 +584,16 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         @Override
         public ChannelFuture writeAndFlush(Object msg) {
             return ctx.writeAndFlush(msg);
+        }
+
+        @Override
+        public ChannelFuture shutdown(ChannelShutdownType type, ChannelPromise promise) {
+            return ctx.shutdown(type, promise);
+        }
+
+        @Override
+        public ChannelFuture shutdown(ChannelShutdownType type) {
+            return ctx.shutdown(type);
         }
 
         @Override
