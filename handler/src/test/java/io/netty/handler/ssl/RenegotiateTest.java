@@ -83,7 +83,7 @@ public abstract class RenegotiateTest {
                                             renegotiate = true;
                                             handler.renegotiate().addListener(new FutureListener<Channel>() {
                                                 @Override
-                                                public void operationComplete(Future<Channel> future) throws Exception {
+                                                public void operationComplete(Future<Channel> future) {
                                                     if (!future.isSuccess()) {
                                                         error.compareAndSet(null, future.cause());
                                                         ctx.close();

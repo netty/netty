@@ -282,7 +282,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
                     finalClientChannel.writeAndFlush(buf.writerIndex(buf.writerIndex() + size))
                             .addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             try {
                                 writeFailCauseRef.set(future.cause());
                             } finally {

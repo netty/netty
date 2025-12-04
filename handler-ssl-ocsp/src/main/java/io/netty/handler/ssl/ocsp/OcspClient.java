@@ -145,12 +145,16 @@ final class OcspClient {
                     // Validate OCSP response
                     ocspResponsePromise.addListener(new GenericFutureListener<Future<OCSPResp>>() {
                         @Override
-                        public void operationComplete(Future<OCSPResp> future) throws Exception {
+                        public void operationComplete(Future<OCSPResp> future) {
                             // If Future was successful then we have received OCSP response
                             // We will now validate it.
                             if (future.isSuccess()) {
-                                BasicOCSPResp resp = (BasicOCSPResp) future.get().getResponseObject();
-                                validateResponse(responsePromise, resp, derNonce, issuer, validateResponseNonce);
+                                try {
+                                    BasicOCSPResp resp = (BasicOCSPResp) future.getNow().getResponseObject();
+                                    validateResponse(responsePromise, resp, derNonce, issuer, validateResponseNonce);
+                                } catch (Throwable t) {
+                                    responsePromise.tryFailure(t);
+                                }
                             } else {
                                 responsePromise.tryFailure(future.cause());
                             }
@@ -191,13 +195,13 @@ final class OcspClient {
 
             dnsNameResolver.resolve(host).addListener(new FutureListener<InetAddress>() {
                 @Override
-                public void operationComplete(Future<InetAddress> future) throws Exception {
+                public void operationComplete(Future<InetAddress> future) {
 
                     // If Future was successful then we have successfully resolved OCSP server address.
                     // If not, mark 'responsePromise' as failure.
                     if (future.isSuccess()) {
                         // Get the resolved InetAddress
-                        InetAddress hostAddress = future.get();
+                        InetAddress hostAddress = future.getNow();
                         final ChannelFuture channelFuture = bootstrap.connect(hostAddress, port);
                         channelFuture.addListener(new ChannelFutureListener() {
                             @Override

@@ -74,7 +74,7 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
 
                 ctx.writeAndFlush(ch.fd()).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             Throwable cause = future.cause();
                             queue.offer(cause);

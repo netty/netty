@@ -82,7 +82,7 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
 
                 ctx.writeAndFlush(ch.fd()).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             Throwable cause = future.cause();
                             recvFdFuture.completeExceptionally(cause);
@@ -91,7 +91,7 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
                             sendBuffer.writeBytes(expected.getBytes());
                             ctx.writeAndFlush(sendBuffer).addListener(new ChannelFutureListener() {
                                 @Override
-                                public void operationComplete(ChannelFuture future) throws Exception {
+                                public void operationComplete(ChannelFuture future) {
                                     if (!future.isSuccess()) {
                                         Throwable cause = future.cause();
                                         recvByteBufFuture.completeExceptionally(cause);

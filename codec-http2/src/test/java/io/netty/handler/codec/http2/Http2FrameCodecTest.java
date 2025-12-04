@@ -664,7 +664,7 @@ public class Http2FrameCodecTest {
         channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), false).stream(stream))
                .addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         assertTrue(future.isSuccess());
                         assertTrue(isStreamIdValid(stream.id()));
                         listenerExecuted.setSuccess(null);
@@ -905,7 +905,7 @@ public class Http2FrameCodecTest {
         channel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers()).stream(stream2))
                 .addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         assertTrue(future.isSuccess());
                         assertEquals(State.OPEN, stream2.state());
                         listenerExecuted.set(true);
@@ -942,7 +942,7 @@ public class Http2FrameCodecTest {
                     ctx.writeAndFlush(new DefaultHttp2WindowUpdateFrame(data.initialFlowControlledBytes())
                             .stream(data.stream())).addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             Throwable cause = future.cause();
                             if (cause != null) {
                                 ctx.fireExceptionCaught(cause);

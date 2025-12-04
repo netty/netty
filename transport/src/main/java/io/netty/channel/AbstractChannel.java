@@ -364,7 +364,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             boolean firstRegistration = neverRegistered;
             registerPromise.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     if (future.isSuccess()) {
                         neverRegistered = false;
                         registered = true;
@@ -585,7 +585,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     // This means close() was called before so we just register a listener and return
                     closeFuture.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             promise.setSuccess();
                         }
                     });

@@ -96,7 +96,7 @@ public class EmbeddedChannelTest {
         EmbeddedChannel channel = new EmbeddedChannel();
         channel.closeFuture().addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 future.channel().close();
             }
         });
@@ -144,7 +144,7 @@ public class EmbeddedChannelTest {
         }, 1, TimeUnit.SECONDS);
         future.addListener(new FutureListener() {
             @Override
-            public void operationComplete(Future future) throws Exception {
+            public void operationComplete(Future future) {
                 latch.countDown();
             }
         });

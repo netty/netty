@@ -101,7 +101,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
         });
         future.addListener(new PromiseNotifier(logNotifyFailure, promise) {
             @Override
-            public void operationComplete(Future f) throws Exception {
+            public void operationComplete(Future f) {
                 if (promise.isCancelled() && f.isCancelled()) {
                     // Just return if we propagate a cancel from the promise to the future and both are notified already
                     return;
@@ -113,10 +113,10 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
     }
 
     @Override
-    public void operationComplete(F future) throws Exception {
+    public void operationComplete(F future) {
         InternalLogger internalLogger = logNotifyFailure ? logger : null;
         if (future.isSuccess()) {
-            V result = future.get();
+            V result = future.getNow();
             for (Promise<? super V> p: promises) {
                 PromiseNotificationUtil.trySuccess(p, result, internalLogger);
             }

@@ -60,7 +60,6 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
@@ -187,7 +186,7 @@ public class ParameterizedSslHandlerTest {
                                             }
                                             ctx.writeAndFlush(content).addListener(new ChannelFutureListener() {
                                                 @Override
-                                                public void operationComplete(ChannelFuture future) throws Exception {
+                                                public void operationComplete(ChannelFuture future) {
                                                     writeCause = future.cause();
                                                     if (writeCause == null) {
                                                         sentData = true;

@@ -43,7 +43,7 @@ public class UniqueIpFilter extends AbstractRemoteAddressFilter<InetSocketAddres
         } else {
             ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     connected.remove(remoteIp);
                 }
             });

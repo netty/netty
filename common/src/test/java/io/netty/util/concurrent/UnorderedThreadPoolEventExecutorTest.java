@@ -60,7 +60,7 @@ public class UnorderedThreadPoolEventExecutorTest {
                 }
             }).addListener(new FutureListener<Object>() {
                 @Override
-                public void operationComplete(Future<Object> future) throws Exception {
+                public void operationComplete(Future<Object> future) {
                     latch.countDown();
                 }
             });

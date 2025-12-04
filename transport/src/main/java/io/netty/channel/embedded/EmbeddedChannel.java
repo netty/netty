@@ -69,7 +69,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private final ChannelFutureListener recordExceptionListener = new ChannelFutureListener() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             recordException(future);
         }
     };

@@ -180,7 +180,7 @@ public class SimpleChannelPool implements ChannelPool {
                 } else {
                     f.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             notifyConnect(future, promise);
                         }
                     });
@@ -323,7 +323,7 @@ public class SimpleChannelPool implements ChannelPool {
         } else {
             f.addListener(new FutureListener<Boolean>() {
                 @Override
-                public void operationComplete(Future<Boolean> future) throws Exception {
+                public void operationComplete(Future<Boolean> future) {
                     releaseAndOfferIfHealthy(channel, promise, f);
                 }
             });

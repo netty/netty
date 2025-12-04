@@ -241,7 +241,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
             public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
                 promise.addListener(new GenericFutureListener<Future<? super Void>>() {
                     @Override
-                    public void operationComplete(Future<? super Void> future) throws Exception {
+                    public void operationComplete(Future<? super Void> future) {
                         ctx.channel().close();
                     }
                 });

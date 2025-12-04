@@ -98,7 +98,7 @@ public class SocketBufReleaseTest extends AbstractSocketTest {
 
             ctx.channel().writeAndFlush(buf).addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     latch.countDown();
                 }
             });

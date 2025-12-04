@@ -708,7 +708,7 @@ public abstract class WebSocketClientHandshaker {
 
                     channel.closeFuture().addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             forceCloseFuture.cancel(false);
                         }
                     });

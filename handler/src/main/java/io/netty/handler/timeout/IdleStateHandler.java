@@ -101,7 +101,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
     // Not create a new ChannelFutureListener per write operation to reduce GC pressure.
     private final ChannelFutureListener writeListener = new ChannelFutureListener() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             lastWriteTime = ticker.nanoTime();
             firstWriterIdleEvent = firstAllIdleEvent = true;
         }

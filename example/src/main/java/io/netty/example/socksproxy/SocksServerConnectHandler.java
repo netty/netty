@@ -48,7 +48,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
             promise.addListener(
                     new FutureListener<Channel>() {
                         @Override
-                        public void operationComplete(final Future<Channel> future) throws Exception {
+                        public void operationComplete(final Future<Channel> future) {
                             final Channel outboundChannel = future.getNow();
                             if (future.isSuccess()) {
                                 ChannelFuture responseFuture = ctx.channel().writeAndFlush(
@@ -79,7 +79,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
 
             b.connect(request.dstAddr(), request.dstPort()).addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     if (future.isSuccess()) {
                         // Connection established use handler provided results
                     } else {
@@ -97,7 +97,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
             promise.addListener(
                     new FutureListener<Channel>() {
                         @Override
-                        public void operationComplete(final Future<Channel> future) throws Exception {
+                        public void operationComplete(final Future<Channel> future) {
                             final Channel outboundChannel = future.getNow();
                             if (future.isSuccess()) {
                                 ChannelFuture responseFuture =
@@ -132,7 +132,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
 
             b.connect(request.dstAddr(), request.dstPort()).addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     if (future.isSuccess()) {
                         // Connection established use handler provided results
                     } else {

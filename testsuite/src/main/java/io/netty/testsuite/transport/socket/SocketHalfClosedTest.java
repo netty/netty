@@ -383,7 +383,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                             buf.writerIndex(buf.capacity());
                             ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
                                 @Override
-                                public void operationComplete(ChannelFuture future) throws Exception {
+                                public void operationComplete(ChannelFuture future) {
                                     ((DuplexChannel) future.channel()).shutdownOutput();
                                 }
                             });
@@ -577,10 +577,10 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 buf.writerIndex(buf.writerIndex() + expectedBytes);
                 ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         future.channel().close().addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(final ChannelFuture future) throws Exception {
+                            public void operationComplete(final ChannelFuture future) {
                                 // This is a bit racy but there is no better way how to handle this in Java11.
                                 // The problem is that on close() the underlying FD will not actually be closed directly
                                 // but the close will be done after the Selector did process all events. Because of
@@ -636,7 +636,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             // This write should fail, but we should still be allowed to read the peer's data
             ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture future) throws Exception {
+                public void operationComplete(ChannelFuture future) {
                     if (future.cause() == null) {
                         causeRef.set(new IllegalStateException("second write should have failed!"));
                         doneLatch.countDown();

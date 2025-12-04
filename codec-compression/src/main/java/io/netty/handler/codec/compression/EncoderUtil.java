@@ -39,7 +39,7 @@ final class EncoderUtil {
 
             finishFuture.addListener(new ChannelFutureListener() {
                 @Override
-                public void operationComplete(ChannelFuture f)  {
+                public void operationComplete(ChannelFuture f) {
                     // Cancel the scheduled timeout.
                     future.cancel(true);
                     if (!promise.isDone()) {

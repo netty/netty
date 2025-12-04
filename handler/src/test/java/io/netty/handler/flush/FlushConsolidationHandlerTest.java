@@ -174,7 +174,7 @@ public class FlushConsolidationHandlerTest {
         final EmbeddedChannel channel = newChannel(flushCount, true);
         channel.writeAndFlush(1L).addListener(new GenericFutureListener<Future<? super Void>>() {
             @Override
-            public void operationComplete(Future<? super Void> future) throws Exception {
+            public void operationComplete(Future<? super Void> future) {
                 channel.writeAndFlush(1L);
             }
         });

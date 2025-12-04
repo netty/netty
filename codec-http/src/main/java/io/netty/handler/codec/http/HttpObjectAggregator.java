@@ -251,7 +251,7 @@ public class HttpObjectAggregator
                 ChannelFuture future = ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate());
                 future.addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
                         }
@@ -261,7 +261,7 @@ public class HttpObjectAggregator
             } else {
                 ctx.writeAndFlush(TOO_LARGE.retainedDuplicate()).addListener(new ChannelFutureListener() {
                     @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
+                    public void operationComplete(ChannelFuture future) {
                         if (!future.isSuccess()) {
                             logger.debug("Failed to send a 413 Request Entity Too Large.", future.cause());
                             ctx.close();

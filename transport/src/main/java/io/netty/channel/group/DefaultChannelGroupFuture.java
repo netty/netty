@@ -47,7 +47,7 @@ final class DefaultChannelGroupFuture extends DefaultPromise<Void> implements Ch
 
     private final ChannelFutureListener childListener = new ChannelFutureListener() {
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             boolean success = future.isSuccess();
             boolean callSetDone;
             synchronized (DefaultChannelGroupFuture.this) {

@@ -57,7 +57,7 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         super.channelActive(ctx);
         handshaker.handshake(ctx.channel()).addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 if (!future.isSuccess()) {
                     handshakePromise.tryFailure(future.cause());
                     ctx.fireExceptionCaught(future.cause());
@@ -127,7 +127,7 @@ class WebSocketClientProtocolHandshakeHandler extends ChannelInboundHandlerAdapt
         // Cancel the handshake timeout when handshake is finished.
         localHandshakePromise.addListener(new FutureListener<Void>() {
             @Override
-            public void operationComplete(Future<Void> f) throws Exception {
+            public void operationComplete(Future<Void> f) {
                 timeoutFuture.cancel(false);
             }
         });

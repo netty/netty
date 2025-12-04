@@ -1056,7 +1056,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         assertFalse(f.isDone());
         f.addListener(new ChannelFutureListener() {
             @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
+            public void operationComplete(ChannelFuture future) {
                 channelOpen.set(future.channel().isOpen());
                 channelActive.set(future.channel().isActive());
             }

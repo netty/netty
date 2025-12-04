@@ -55,7 +55,7 @@ public class InetSocketAddressResolver extends AbstractAddressResolver<InetSocke
         nameResolver.resolve(unresolvedAddress.getHostName())
                 .addListener(new FutureListener<InetAddress>() {
                     @Override
-                    public void operationComplete(Future<InetAddress> future) throws Exception {
+                    public void operationComplete(Future<InetAddress> future) {
                         if (future.isSuccess()) {
                             promise.setSuccess(new InetSocketAddress(future.getNow(), unresolvedAddress.getPort()));
                         } else {
@@ -73,7 +73,7 @@ public class InetSocketAddressResolver extends AbstractAddressResolver<InetSocke
         nameResolver.resolveAll(unresolvedAddress.getHostName())
                 .addListener(new FutureListener<List<InetAddress>>() {
                     @Override
-                    public void operationComplete(Future<List<InetAddress>> future) throws Exception {
+                    public void operationComplete(Future<List<InetAddress>> future) {
                         if (future.isSuccess()) {
                             List<InetAddress> inetAddresses = future.getNow();
                             List<InetSocketAddress> socketAddresses =

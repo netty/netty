@@ -251,7 +251,7 @@ public class WebSocketHandshakeHandOverTest {
                 if (evt == ClientHandshakeStateEvent.HANDSHAKE_COMPLETE) {
                     ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             clientForceClosed = true;
                         }
                     });

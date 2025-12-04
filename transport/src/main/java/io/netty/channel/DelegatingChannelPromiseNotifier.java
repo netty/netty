@@ -45,10 +45,10 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     }
 
     @Override
-    public void operationComplete(ChannelFuture future) throws Exception {
+    public void operationComplete(ChannelFuture future) {
         InternalLogger internalLogger = logNotifyFailure ? logger : null;
         if (future.isSuccess()) {
-            Void result = future.get();
+            Void result = future.getNow();
             PromiseNotificationUtil.trySuccess(delegate, result, internalLogger);
         } else if (future.isCancelled()) {
             PromiseNotificationUtil.tryCancel(delegate, internalLogger);

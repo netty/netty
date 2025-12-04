@@ -373,7 +373,7 @@ public class LocalChannelTest {
                         ChannelPromise promise = ccCpy.newPromise();
                         promise.addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
+                            public void operationComplete(ChannelFuture future) {
                                 ccCpy.pipeline().lastContext().close();
                             }
                         });
@@ -516,7 +516,7 @@ public class LocalChannelTest {
                         ChannelPromise promise = ccCpy.newPromise();
                         promise.addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
+                            public void operationComplete(ChannelFuture future) {
                                 ccCpy.writeAndFlush(data2.retainedDuplicate(), ccCpy.newPromise());
                             }
                         });
@@ -598,7 +598,7 @@ public class LocalChannelTest {
                     ChannelPromise promise = ccCpy.newPromise();
                     promise.addListener(new ChannelFutureListener() {
                         @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
+                        public void operationComplete(ChannelFuture future) {
                             Channel serverChannelCpy = serverChannelRef.get();
                             serverChannelCpy.writeAndFlush(data2.retainedDuplicate(), serverChannelCpy.newPromise());
                         }
@@ -680,7 +680,7 @@ public class LocalChannelTest {
                         ChannelPromise promise = ccCpy.newPromise();
                         promise.addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
+                            public void operationComplete(ChannelFuture future) {
                                 Channel serverChannelCpy = serverChannelRef.get();
                                 serverChannelCpy.writeAndFlush(
                                         data2.retainedDuplicate(), serverChannelCpy.newPromise());
@@ -762,7 +762,7 @@ public class LocalChannelTest {
                         ccCpy.writeAndFlush(data.retainedDuplicate(), ccCpy.newPromise())
                         .addListener(new ChannelFutureListener() {
                             @Override
-                            public void operationComplete(ChannelFuture future) throws Exception {
+                            public void operationComplete(ChannelFuture future) {
                                 serverChannelCpy.executor().execute(new Runnable() {
                                     @Override
                                     public void run() {
@@ -783,7 +783,7 @@ public class LocalChannelTest {
                                                                        serverChannelCpy.newPromise())
                                             .addListener(new ChannelFutureListener() {
                                             @Override
-                                            public void operationComplete(ChannelFuture future) throws Exception {
+                                            public void operationComplete(ChannelFuture future) {
                                                 if (!future.isSuccess() &&
                                                     future.cause() instanceof ClosedChannelException) {
                                                     writeFailLatch.countDown();
@@ -886,7 +886,7 @@ public class LocalChannelTest {
         }
 
         @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
+        public void operationComplete(ChannelFuture future) {
             countDown();
         }
     }
