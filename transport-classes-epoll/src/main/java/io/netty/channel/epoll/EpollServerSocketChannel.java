@@ -57,8 +57,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
 
     // Will hold the remote address after accept(...) was successful.
     // We need 24 bytes for the address as maximum + 1 byte for storing the length.
-    // So use 26 bytes as it's a power of two.
-    private final byte[] acceptedAddress = new byte[26];
+    private final byte[] acceptedAddress = new byte[25];
 
     private final EpollServerSocketChannelConfig config;
     private volatile Collection<InetAddress> tcpMd5SigAddresses = Collections.emptyList();

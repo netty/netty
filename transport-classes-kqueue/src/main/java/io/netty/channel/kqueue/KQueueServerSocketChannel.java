@@ -47,8 +47,7 @@ public final class KQueueServerSocketChannel extends AbstractKQueueChannel imple
 
     // Will hold the remote address after accept(...) was successful.
     // We need 24 bytes for the address as maximum + 1 byte for storing the capacity.
-    // So use 26 bytes as it's a power of two.
-    private final byte[] acceptedAddress = new byte[26];
+    private final byte[] acceptedAddress = new byte[25];
 
     public KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup, int fd) {
         // Must call this constructor to ensure this object's local address is configured correctly.
