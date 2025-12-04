@@ -16,14 +16,18 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPromise;
+import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
@@ -31,7 +35,9 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.AttributeKey;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.function.Executable;
 
+import java.net.SocketAddress;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
@@ -40,11 +46,37 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ServerBootstrapTest {
+
+    @Test
+    public void testSetOptionsThrow() {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
+        try {
+            final ChannelFuture cf = new ServerBootstrap()
+                    .group(group)
+                    .channelFactory((e, c) -> new TestServerChannel(e))
+                    .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .childHandler(new ChannelInboundHandlerAdapter())
+                    .register();
+
+            assertThrows(UnsupportedOperationException.class, new Executable() {
+                @Override
+                public void execute() throws Throwable {
+                    cf.syncUninterruptibly();
+                }
+            });
+            assertFalse(cf.channel().isActive());
+        } finally {
+            group.shutdownGracefully();
+        }
+    }
 
     @Test
     @Timeout(value = 5000, unit = TimeUnit.MILLISECONDS)
@@ -239,5 +271,22 @@ public class ServerBootstrapTest {
         serverChannel.close().syncUninterruptibly();
         clientChannel.close().syncUninterruptibly();
         group.shutdownGracefully();
+    }
+
+    private static final class TestServerChannel extends TestChannel implements ServerChannel {
+        TestServerChannel(EventLoop eventLoop) {
+            super(eventLoop);
+        }
+
+        @Override
+        protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+            active = true;
+            promise.setSuccess();
+        }
+
+        @Override
+        public EventLoopGroup childEventExecutorGroup() {
+            return executor();
+        }
     }
 }

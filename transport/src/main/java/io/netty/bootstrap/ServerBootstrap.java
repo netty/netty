@@ -168,8 +168,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         return channelFactory.newChannel(eventLoop, childGroup);
     }
 
-    @Override
-    void init(Channel channel) {
+    void init(Channel channel) throws Throwable {
         setChannelOptions(channel, newOptionsArray(), logger);
         setAttributes(channel, newAttributesArray());
 
@@ -276,7 +275,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
         private void initChildChannel(Channel child) {
             child.pipeline().addLast(childHandler);
 
-            setChannelOptions(child, childOptions, logger);
+            try {
+                setChannelOptions(child, childOptions, logger);
+            } catch (Throwable cause) {
+                forceClose(child, cause);
+                return;
+            }
             setAttributes(child, childAttrs);
 
             if (!extensions.isEmpty()) {

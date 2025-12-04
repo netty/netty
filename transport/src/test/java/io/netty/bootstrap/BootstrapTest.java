@@ -90,6 +90,24 @@ public class BootstrapTest {
     }
 
     @Test
+    public void testSetOptionsThrow() {
+        final ChannelFuture cf = new Bootstrap()
+                .group(groupA)
+                .channelFactory(TestChannel::new)
+                .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
+                .handler(new ChannelInboundHandlerAdapter())
+                .register();
+
+        assertThrows(UnsupportedOperationException.class, new  Executable() {
+            @Override
+            public void execute() throws Throwable {
+                cf.syncUninterruptibly();
+            }
+        });
+        assertFalse(cf.channel().isActive());
+    }
+
+    @Test
     public void testOptionsCopied() {
         final Bootstrap bootstrapA = new Bootstrap();
         bootstrapA.option(ChannelOption.AUTO_READ, true);
@@ -537,4 +555,5 @@ public class BootstrapTest {
             };
         }
     }
+
 }
