@@ -305,9 +305,9 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
         if (state.get() == State.INIT) {
             try {
                 initializeIfNecessary(ctx);
-            } catch (Exception e) {
+            } catch (Exception ex) {
                 ReferenceCountUtil.release(msg);
-                promise.setFailure(e);
+                promise.setFailure(ex);
                 return;
             }
         }
