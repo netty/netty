@@ -734,8 +734,8 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             io.netty.channel.unix.SegmentedDatagramPacket segmentedDatagramPacket =
                     (io.netty.channel.unix.SegmentedDatagramPacket) packet;
             ByteBuf content = segmentedDatagramPacket.content();
-            InetSocketAddress recipient = (InetSocketAddress) segmentedDatagramPacket.recipient();
-            InetSocketAddress sender = (InetSocketAddress) segmentedDatagramPacket.sender();
+            SocketAddress recipient = segmentedDatagramPacket.recipient();
+            SocketAddress sender = segmentedDatagramPacket.sender();
             int segmentSize = segmentedDatagramPacket.segmentSize();
             do {
                 out.add(new DatagramPacket(content.readRetainedSlice(Math.min(content.readableBytes(),
