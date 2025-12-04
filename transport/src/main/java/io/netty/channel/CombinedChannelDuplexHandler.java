@@ -275,7 +275,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     @Override
     public void bind(
             ChannelHandlerContext ctx,
-            SocketAddress localAddress, ChannelPromise promise) throws Exception {
+            SocketAddress localAddress, ChannelPromise promise) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
             outboundHandler.bind(outboundCtx, localAddress, promise);
@@ -288,7 +288,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     public void connect(
             ChannelHandlerContext ctx,
             SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelPromise promise) throws Exception {
+            ChannelPromise promise) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
             outboundHandler.connect(outboundCtx, remoteAddress, localAddress, promise);
@@ -298,7 +298,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
             outboundHandler.disconnect(outboundCtx, promise);
@@ -308,7 +308,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
             outboundHandler.close(outboundCtx, promise);
@@ -318,7 +318,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
             outboundHandler.deregister(outboundCtx, promise);
@@ -328,7 +328,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
             outboundHandler.read(outboundCtx);
@@ -338,7 +338,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
             outboundHandler.write(outboundCtx, msg, promise);
@@ -348,7 +348,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
     }
 
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         assert ctx == outboundCtx.ctx;
         if (!outboundCtx.removed) {
             outboundHandler.flush(outboundCtx);

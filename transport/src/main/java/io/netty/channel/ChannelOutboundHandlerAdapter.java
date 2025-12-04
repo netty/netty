@@ -33,7 +33,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      */
     @Skip
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.register(promise);
     }
 
@@ -46,7 +46,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
     @Skip
     @Override
     public void bind(ChannelHandlerContext ctx, SocketAddress localAddress,
-            ChannelPromise promise) throws Exception {
+            ChannelPromise promise) {
         ctx.bind(localAddress, promise);
     }
 
@@ -59,7 +59,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
     @Skip
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelPromise promise) throws Exception {
+            SocketAddress localAddress, ChannelPromise promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
@@ -71,8 +71,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      */
     @Skip
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise)
-            throws Exception {
+    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.disconnect(promise);
     }
 
@@ -84,8 +83,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      */
     @Skip
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise)
-            throws Exception {
+    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.close(promise);
     }
 
@@ -97,7 +95,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      */
     @Skip
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) throws Exception {
+    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
         ctx.deregister(promise);
     }
 
@@ -109,7 +107,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      */
     @Skip
     @Override
-    public void read(ChannelHandlerContext ctx) throws Exception {
+    public void read(ChannelHandlerContext ctx) {
         ctx.read();
     }
 
@@ -121,7 +119,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      */
     @Skip
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         ctx.write(msg, promise);
     }
 
@@ -133,7 +131,7 @@ public class ChannelOutboundHandlerAdapter extends ChannelHandlerAdapter impleme
      */
     @Skip
     @Override
-    public void flush(ChannelHandlerContext ctx) throws Exception {
+    public void flush(ChannelHandlerContext ctx) {
         ctx.flush();
     }
 }

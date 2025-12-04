@@ -34,7 +34,7 @@ final class Http3RequestStreamEncodeStateValidator extends ChannelOutboundHandle
     private State state = State.None;
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (!(msg instanceof Http3RequestStreamFrame)) {
             super.write(ctx, msg, promise);
             return;

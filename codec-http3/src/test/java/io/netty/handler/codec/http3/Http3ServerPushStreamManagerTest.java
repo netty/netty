@@ -197,7 +197,7 @@ public class Http3ServerPushStreamManagerTest {
         final List<Http3PushStreamFrame> framesWritten = new ArrayList<>();
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             if (msg instanceof Http3PushStreamFrame) {
                 framesWritten.add((Http3PushStreamFrame) msg);
             }

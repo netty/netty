@@ -189,7 +189,7 @@ public class FlushConsolidationHandlerTest {
         return new EmbeddedChannel(
                 new ChannelOutboundHandlerAdapter() {
                     @Override
-                    public void flush(ChannelHandlerContext ctx) throws Exception {
+                    public void flush(ChannelHandlerContext ctx) {
                         flushCount.incrementAndGet();
                         ctx.flush();
                     }

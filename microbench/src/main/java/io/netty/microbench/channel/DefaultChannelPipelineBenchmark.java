@@ -89,17 +89,17 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
 
     private static final ChannelHandler OUTBOUND_CONSUMING_HANDLER = new SharableOutboundHandlerAdapter() {
         @Override
-        public void read(ChannelHandlerContext ctx) throws Exception {
+        public void read(ChannelHandlerContext ctx) {
             // NOOP
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
             // NOOP
         }
 
         @Override
-        public void flush(ChannelHandlerContext ctx) throws Exception {
+        public void flush(ChannelHandlerContext ctx) {
             // NOOP
         }
     };
@@ -247,52 +247,52 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
             },
             new SharableOutboundHandlerAdapter() {
                 @Override
-                public void read(ChannelHandlerContext ctx) throws Exception {
+                public void read(ChannelHandlerContext ctx) {
                     ctx.read();
                 }
             },
             new SharableOutboundHandlerAdapter() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                     ctx.write(msg, promise);
                 }
             },
             new SharableOutboundHandlerAdapter() {
                 @Override
-                public void flush(ChannelHandlerContext ctx) throws Exception {
+                public void flush(ChannelHandlerContext ctx) {
                     ctx.flush();
                 }
             },
             new SharableOutboundHandlerAdapter() {
                 @Override
-                public void read(ChannelHandlerContext ctx) throws Exception {
+                public void read(ChannelHandlerContext ctx) {
                     ctx.read();
                 }
 
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                     ctx.write(msg, promise);
                 }
             },
             new SharableOutboundHandlerAdapter() {
                 @Override
-                public void read(ChannelHandlerContext ctx) throws Exception {
+                public void read(ChannelHandlerContext ctx) {
                     ctx.read();
                 }
 
                 @Override
-                public void flush(ChannelHandlerContext ctx) throws Exception {
+                public void flush(ChannelHandlerContext ctx) {
                     ctx.flush();
                 }
             },
             new SharableOutboundHandlerAdapter() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                     ctx.write(msg, promise);
                 }
 
                 @Override
-                public void flush(ChannelHandlerContext ctx) throws Exception {
+                public void flush(ChannelHandlerContext ctx) {
                     ctx.flush();
                 }
             },

@@ -56,7 +56,7 @@ public class MessageToMessageDecoderTest {
     private static final class ReadCountHandler extends ChannelOutboundHandlerAdapter {
         final AtomicInteger readCount = new AtomicInteger();
         @Override
-        public void read(ChannelHandlerContext ctx) throws Exception {
+        public void read(ChannelHandlerContext ctx) {
             readCount.incrementAndGet();
             super.read(ctx);
         }

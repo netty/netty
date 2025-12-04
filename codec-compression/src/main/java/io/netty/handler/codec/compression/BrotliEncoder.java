@@ -157,7 +157,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         finishEncode(ctx, ctx.newPromise());
     }
 
-    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise promise) throws IOException {
+    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise promise) {
         Writer writer;
 
         if (isSharable) {
@@ -174,7 +174,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) throws Exception {
+    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
         ChannelFuture f = finishEncode(ctx, ctx.newPromise());
         EncoderUtil.closeAfterFinishEncode(ctx, f, promise);
     }

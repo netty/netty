@@ -300,7 +300,7 @@ public final class PcapWriteHandler extends ChannelDuplexHandler implements Clos
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         // Initialize if needed
         if (state.get() == State.INIT) {
             try {

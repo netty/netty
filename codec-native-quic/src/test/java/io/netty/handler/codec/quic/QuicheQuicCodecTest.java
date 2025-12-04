@@ -71,7 +71,7 @@ public abstract class QuicheQuicCodecTest<B extends QuicCodecBuilder<B>> extends
 
         EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
             @Override
-            public void flush(ChannelHandlerContext ctx) throws Exception {
+            public void flush(ChannelHandlerContext ctx) {
                 flushCount.incrementAndGet();
                 super.flush(ctx);
             }

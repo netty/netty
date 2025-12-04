@@ -441,7 +441,7 @@ public class ByteToMessageDecoderTest {
         private int readsTriggered;
 
         @Override
-        public void read(ChannelHandlerContext ctx) throws Exception {
+        public void read(ChannelHandlerContext ctx) {
             readsTriggered++;
             super.read(ctx);
         }
