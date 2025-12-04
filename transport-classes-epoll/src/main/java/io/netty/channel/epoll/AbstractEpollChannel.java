@@ -32,7 +32,6 @@ import io.netty.channel.IoRegistration;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.FileDescriptor;
@@ -248,12 +247,11 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     final boolean shouldBreakEpollInReady(ChannelConfig config) {
-        return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
+        return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure());
     }
 
-    private static boolean isAllowHalfClosure(ChannelConfig config) {
-        return config instanceof SocketChannelConfig &&
-                ((SocketChannelConfig) config).isAllowHalfClosure();
+    protected boolean isAllowHalfClosure() {
+        return false;
     }
 
     final void clearEpollIn() {
@@ -565,7 +563,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
      */
     void shutdownInput(boolean allDataRead) {
         if (!socket.isInputShutdown()) {
-            if (isAllowHalfClosure(config())) {
+            if (isAllowHalfClosure()) {
                 try {
                     socket.shutdown(true, false);
                 } catch (IOException ignored) {

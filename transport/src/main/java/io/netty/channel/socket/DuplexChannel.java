@@ -18,11 +18,26 @@ package io.netty.channel.socket;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ServerChannel;
 
 import java.net.Socket;
 
 /**
  * A duplex {@link Channel} that has two sides that can be shutdown independently.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options supported by {@link Channel},
+ * {@link DuplexChannel} allows the following options in the
+ * option map via {@link io.netty.channel.ChannelOption}:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>ChannelOption</th>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#ALLOW_HALF_CLOSURE}</td>
+ * </tr>
+ * </table>
  */
 public interface DuplexChannel extends Channel {
     /**

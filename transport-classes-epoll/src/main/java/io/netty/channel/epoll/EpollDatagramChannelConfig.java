@@ -16,14 +16,10 @@
 package io.netty.channel.epoll;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
-import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
@@ -31,9 +27,10 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Map;
 
-public final class EpollDatagramChannelConfig extends EpollChannelConfig implements DatagramChannelConfig {
+final class EpollDatagramChannelConfig extends EpollChannelConfig {
     private boolean activeOnOpen;
     private volatile int maxDatagramSize;
+    private volatile boolean gro;
 
     EpollDatagramChannelConfig(AbstractEpollChannel channel) {
         super(channel, new FixedRecvByteBufAllocator(2048));
@@ -167,77 +164,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         return activeOnOpen;
     }
 
-    @Override
-    public EpollDatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollDatagramChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollDatagramChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    public EpollDatagramChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public EpollDatagramChannelConfig setAutoClose(boolean autoClose) {
-        super.setAutoClose(autoClose);
-        return this;
-    }
-
-    @Override
-    public EpollDatagramChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    public EpollDatagramChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public EpollDatagramChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public EpollDatagramChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public EpollDatagramChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollDatagramChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public int getSendBufferSize() {
+    int getSendBufferSize() {
         try {
             return ((AbstractEpollChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
@@ -245,8 +172,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public EpollDatagramChannelConfig setSendBufferSize(int sendBufferSize) {
+    EpollDatagramChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
             ((AbstractEpollChannel) channel).socket.setSendBufferSize(sendBufferSize);
             return this;
@@ -255,8 +181,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public int getReceiveBufferSize() {
+    int getReceiveBufferSize() {
         try {
             return ((AbstractEpollChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -264,8 +189,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public EpollDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    EpollDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((AbstractEpollChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
@@ -274,8 +198,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public int getTrafficClass() {
+    int getTrafficClass() {
         try {
             return ((AbstractEpollChannel) channel).socket.getTrafficClass();
         } catch (IOException e) {
@@ -283,8 +206,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public EpollDatagramChannelConfig setTrafficClass(int trafficClass) {
+    EpollDatagramChannelConfig setTrafficClass(int trafficClass) {
         try {
             ((AbstractEpollChannel) channel).socket.setTrafficClass(trafficClass);
             return this;
@@ -293,8 +215,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public boolean isReuseAddress() {
+    boolean isReuseAddress() {
         try {
             return ((AbstractEpollChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -302,8 +223,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public EpollDatagramChannelConfig setReuseAddress(boolean reuseAddress) {
+    EpollDatagramChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
             ((AbstractEpollChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
@@ -312,8 +232,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public boolean isBroadcast() {
+    boolean isBroadcast() {
         try {
             return ((AbstractEpollChannel) channel).socket.isBroadcast();
         } catch (IOException e) {
@@ -321,8 +240,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public EpollDatagramChannelConfig setBroadcast(boolean broadcast) {
+    EpollDatagramChannelConfig setBroadcast(boolean broadcast) {
         try {
             ((AbstractEpollChannel) channel).socket.setBroadcast(broadcast);
             return this;
@@ -331,8 +249,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public boolean isLoopbackModeDisabled() {
+    boolean isLoopbackModeDisabled() {
         try {
             return ((AbstractEpollChannel) channel).socket.isLoopbackModeDisabled();
         } catch (IOException e) {
@@ -340,8 +257,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
+    EpollDatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
         try {
             ((AbstractEpollChannel) channel).socket.setLoopbackModeDisabled(loopbackModeDisabled);
             return this;
@@ -350,8 +266,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public int getTimeToLive() {
+    int getTimeToLive() {
         try {
             return ((AbstractEpollChannel) channel).socket.getTimeToLive();
         } catch (IOException e) {
@@ -359,8 +274,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public EpollDatagramChannelConfig setTimeToLive(int ttl) {
+    EpollDatagramChannelConfig setTimeToLive(int ttl) {
         try {
             ((AbstractEpollChannel) channel).socket.setTimeToLive(ttl);
             return this;
@@ -369,8 +283,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public InetAddress getInterface() {
+    InetAddress getInterface() {
         try {
             return ((AbstractEpollChannel) channel).socket.getInterface();
         } catch (IOException e) {
@@ -378,8 +291,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public EpollDatagramChannelConfig setInterface(InetAddress interfaceAddress) {
+    EpollDatagramChannelConfig setInterface(InetAddress interfaceAddress) {
         try {
             ((AbstractEpollChannel) channel).socket.setInterface(interfaceAddress);
             return this;
@@ -388,8 +300,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public NetworkInterface getNetworkInterface() {
+    NetworkInterface getNetworkInterface() {
         try {
             return ((AbstractEpollChannel) channel).socket.getNetworkInterface();
         } catch (IOException e) {
@@ -397,8 +308,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
         }
     }
 
-    @Override
-    public EpollDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
+    EpollDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
         try {
             AbstractEpollChannel datagramChannel = (AbstractEpollChannel) channel;
             datagramChannel.socket.setNetworkInterface(networkInterface);
@@ -411,7 +321,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     /**
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
-    public boolean isReusePort() {
+    boolean isReusePort() {
         try {
             return ((AbstractEpollChannel) channel).socket.isReusePort();
         } catch (IOException e) {
@@ -426,7 +336,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * Be aware this method needs be called before {@link EpollDatagramChannel#bind(java.net.SocketAddress)} to have
      * any affect.
      */
-    public EpollDatagramChannelConfig setReusePort(boolean reusePort) {
+    EpollDatagramChannelConfig setReusePort(boolean reusePort) {
         try {
             ((AbstractEpollChannel) channel).socket.setReusePort(reusePort);
             return this;
@@ -439,7 +349,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
      */
-    public boolean isIpTransparent() {
+    boolean isIpTransparent() {
         try {
             return ((AbstractEpollChannel) channel).socket.isIpTransparent();
         } catch (IOException e) {
@@ -451,7 +361,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    public EpollDatagramChannelConfig setIpTransparent(boolean ipTransparent) {
+    EpollDatagramChannelConfig setIpTransparent(boolean ipTransparent) {
         try {
             ((AbstractEpollChannel) channel).socket.setIpTransparent(ipTransparent);
             return this;
@@ -464,7 +374,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} otherwise.
      */
-    public boolean isFreeBind() {
+    boolean isFreeBind() {
         try {
             return ((AbstractEpollChannel) channel).socket.isIpFreeBind();
         } catch (IOException e) {
@@ -476,7 +386,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    public EpollDatagramChannelConfig setFreeBind(boolean freeBind) {
+    EpollDatagramChannelConfig setFreeBind(boolean freeBind) {
         try {
             ((AbstractEpollChannel) channel).socket.setIpFreeBind(freeBind);
             return this;
@@ -489,7 +399,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_RECVORIGDSTADDR</a> is
      * enabled, {@code false} otherwise.
      */
-    public boolean isIpRecvOrigDestAddr() {
+    boolean isIpRecvOrigDestAddr() {
         try {
             return ((AbstractEpollChannel) channel).socket.isIpRecvOrigDestAddr();
         } catch (IOException e) {
@@ -501,7 +411,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_RECVORIGDSTADDR</a> is
      * enabled, {@code false} for disable it. Default is disabled.
      */
-    public EpollDatagramChannelConfig setIpRecvOrigDestAddr(boolean ipTransparent) {
+    EpollDatagramChannelConfig setIpRecvOrigDestAddr(boolean ipTransparent) {
         try {
             ((AbstractEpollChannel) channel).socket.setIpRecvOrigDestAddr(ipTransparent);
             return this;
@@ -514,7 +424,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> (or
      * IPV6_MULTICAST_ALL for IPV6) is enabled, {@code false} otherwise.
      */
-    public boolean isIpMulticastAll() {
+    boolean isIpMulticastAll() {
         try {
             return ((AbstractEpollChannel) channel).socket.isIpMulticastAll();
         } catch (IOException e) {
@@ -526,7 +436,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> is
      * enabled (or IPV6_MULTICAST_ALL for IPV6), {@code false} for disable it. Default is enabled.
      */
-    public EpollDatagramChannelConfig setIpMulticastAll(boolean multicastAll) {
+    EpollDatagramChannelConfig setIpMulticastAll(boolean multicastAll) {
         try {
             ((AbstractEpollChannel) channel).socket.setIpMulticastAll(multicastAll);
             return this;
@@ -543,7 +453,7 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * {@link RecvByteBufAllocator}. You can use {@code 0} to disable the usage of recvmmsg, any other bigger value
      * will enable it.
      */
-    public EpollDatagramChannelConfig setMaxDatagramPayloadSize(int maxDatagramSize) {
+    EpollDatagramChannelConfig setMaxDatagramPayloadSize(int maxDatagramSize) {
         this.maxDatagramSize = ObjectUtil.checkPositiveOrZero(maxDatagramSize, "maxDatagramSize");
         return this;
     }
@@ -551,18 +461,16 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
     /**
      * Get the maximum {@link io.netty.channel.socket.DatagramPacket} size.
      */
-    public int getMaxDatagramPayloadSize() {
+    int getMaxDatagramPayloadSize() {
         return maxDatagramSize;
     }
-
-    private volatile boolean gro;
 
     /**
      * Enable / disable <a href="https://lwn.net/Articles/768995/">UDP_GRO</a>.
      * @param gro {@code true} if {@code UDP_GRO} should be enabled, {@code false} otherwise.
      * @return this.
      */
-    public EpollDatagramChannelConfig setUdpGro(boolean gro) {
+    EpollDatagramChannelConfig setUdpGro(boolean gro) {
         try {
             ((AbstractEpollChannel) channel).socket.setUdpGro(gro);
         } catch (IOException e) {
@@ -576,15 +484,9 @@ public final class EpollDatagramChannelConfig extends EpollChannelConfig impleme
      * Returns if {@code UDP_GRO} is enabled.
      * @return {@code true} if enabled, {@code false} otherwise.
      */
-    public boolean isUdpGro() {
+    boolean isUdpGro() {
         // We don't do a syscall here but just return the cached value due a kernel bug:
         // https://lore.kernel.org/netdev/20210325195614.800687-1-norman_maurer@apple.com/T/#u
         return gro;
-    }
-
-    @Override
-    public EpollDatagramChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
-        super.setMaxMessagesPerWrite(maxMessagesPerWrite);
-        return this;
     }
 }

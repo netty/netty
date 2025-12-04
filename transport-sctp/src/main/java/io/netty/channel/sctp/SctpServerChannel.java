@@ -29,14 +29,28 @@ import java.util.Set;
  * <p>
  * Multi-homing address binding/unbinding can done through bindAddress/unbindAddress methods.
  * </p>
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options supported by {@link ServerChannel},
+ * {@link SctpServerChannel} allows the following options in the
+ * option map via {@link io.netty.channel.ChannelOption}:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>ChannelOption</th>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_RCVBUF}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_SNDBUF}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_BACKLOG}</td>
+ * </tr><tr>
+ * <td>{@link SctpChannelOption#SCTP_NODELAY}</td>
+ * </tr>
+ * </table>
  */
 public interface SctpServerChannel extends ServerChannel {
-
-    /**
-     * Returns the {@link SctpServerChannelConfig} configuration of the channel.
-     */
-    @Override
-    SctpServerChannelConfig config();
 
     /**
      * Return the (primary) local address of the SCTP server channel.

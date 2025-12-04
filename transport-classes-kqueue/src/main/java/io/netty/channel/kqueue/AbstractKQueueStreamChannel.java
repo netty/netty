@@ -511,7 +511,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
     @Override
     void readReady(final KQueueRecvByteAllocatorHandle allocHandle) {
         final ChannelConfig config = config();
-        if (shouldBreakReadReady(config)) {
+        if (shouldBreakReadReady()) {
             clearReadFilter0();
             return;
         }
@@ -543,7 +543,7 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
 
-                if (shouldBreakReadReady(config)) {
+                if (shouldBreakReadReady()) {
                     // We need to do this for two reasons:
                     //
                     // - If the input was shutdown in between (which may be the case when the user did it in the

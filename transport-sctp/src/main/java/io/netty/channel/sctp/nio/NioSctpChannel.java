@@ -19,22 +19,25 @@ import com.sun.nio.sctp.Association;
 import com.sun.nio.sctp.MessageInfo;
 import com.sun.nio.sctp.NotificationHandler;
 import com.sun.nio.sctp.SctpChannel;
+import com.sun.nio.sctp.SctpStandardSocketOptions;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.nio.NioIoOps;
-import io.netty.channel.sctp.DefaultSctpChannelConfig;
-import io.netty.channel.sctp.SctpChannelConfig;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.channel.sctp.SctpNotificationHandler;
 import io.netty.channel.sctp.SctpServerChannel;
+import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -51,7 +54,13 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
+import static io.netty.channel.ChannelOption.SO_RCVBUF;
+import static io.netty.channel.ChannelOption.SO_SNDBUF;
+import static io.netty.channel.sctp.SctpChannelOption.SCTP_INIT_MAXSTREAMS;
+import static io.netty.channel.sctp.SctpChannelOption.SCTP_NODELAY;
 
 /**
  * {@link io.netty.channel.sctp.SctpChannel} implementation which use non-blocking mode and allows to read /
@@ -65,7 +74,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSctpChannel.class);
 
-    private final SctpChannelConfig config;
+    private final NioSctpChannelConfig config;
 
     private final NotificationHandler<?> notificationHandler;
     private ByteBuffer inputCopy;
@@ -164,7 +173,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    public SctpChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 
@@ -427,11 +436,134 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
         return promise;
     }
 
-    private final class NioSctpChannelConfig extends DefaultSctpChannelConfig {
+    private final class NioSctpChannelConfig extends DefaultChannelConfig {
+        private final SctpChannel javaChannel;
+
         private NioSctpChannelConfig(NioSctpChannel channel, SctpChannel javaChannel) {
-            super(channel, javaChannel);
+            super(channel);
+            this.javaChannel = ObjectUtil.checkNotNull(javaChannel, "javaChannel");
+
+            // Enable TCP_NODELAY by default if possible.
+            if (PlatformDependent.canEnableTcpNoDelayByDefault()) {
+                try {
+                    setSctpNoDelay(true);
+                } catch (Exception e) {
+                    // Ignore.
+                }
+            }
         }
 
+        @Override
+        public Map<ChannelOption<?>, Object> getOptions() {
+            return getOptions(
+                    super.getOptions(),
+                    SO_RCVBUF, SO_SNDBUF, SCTP_NODELAY, SCTP_INIT_MAXSTREAMS);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public <T> T getOption(ChannelOption<T> option) {
+            if (option == SO_RCVBUF) {
+                return (T) Integer.valueOf(getReceiveBufferSize());
+            }
+            if (option == SO_SNDBUF) {
+                return (T) Integer.valueOf(getSendBufferSize());
+            }
+            if (option == SCTP_NODELAY) {
+                return (T) Boolean.valueOf(isSctpNoDelay());
+            }
+            if (option == SCTP_INIT_MAXSTREAMS) {
+                return (T) getInitMaxStreams();
+            }
+            return super.getOption(option);
+        }
+
+        @Override
+        public <T> boolean setOption(ChannelOption<T> option, T value) {
+            validate(option, value);
+
+            if (option == SO_RCVBUF) {
+                setReceiveBufferSize((Integer) value);
+            } else if (option == SO_SNDBUF) {
+                setSendBufferSize((Integer) value);
+            } else if (option == SCTP_NODELAY) {
+                setSctpNoDelay((Boolean) value);
+            } else if (option == SCTP_INIT_MAXSTREAMS) {
+                setInitMaxStreams((SctpStandardSocketOptions.InitMaxStreams) value);
+            } else {
+                return super.setOption(option, value);
+            }
+
+            return true;
+        }
+
+        boolean isSctpNoDelay() {
+            try {
+                return javaChannel.getOption(SctpStandardSocketOptions.SCTP_NODELAY);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        NioSctpChannelConfig setSctpNoDelay(boolean sctpNoDelay) {
+            try {
+                javaChannel.setOption(SctpStandardSocketOptions.SCTP_NODELAY, sctpNoDelay);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+            return this;
+        }
+
+        int getSendBufferSize() {
+            try {
+                return javaChannel.getOption(SctpStandardSocketOptions.SO_SNDBUF);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        NioSctpChannelConfig setSendBufferSize(int sendBufferSize) {
+            try {
+                javaChannel.setOption(SctpStandardSocketOptions.SO_SNDBUF, sendBufferSize);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+            return this;
+        }
+
+        public int getReceiveBufferSize() {
+            try {
+                return javaChannel.getOption(SctpStandardSocketOptions.SO_RCVBUF);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        NioSctpChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+            try {
+                javaChannel.setOption(SctpStandardSocketOptions.SO_RCVBUF, receiveBufferSize);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+            return this;
+        }
+
+        SctpStandardSocketOptions.InitMaxStreams getInitMaxStreams() {
+            try {
+                return javaChannel.getOption(SctpStandardSocketOptions.SCTP_INIT_MAXSTREAMS);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+        }
+
+        NioSctpChannelConfig setInitMaxStreams(SctpStandardSocketOptions.InitMaxStreams initMaxStreams) {
+            try {
+                javaChannel.setOption(SctpStandardSocketOptions.SCTP_INIT_MAXSTREAMS, initMaxStreams);
+            } catch (IOException e) {
+                throw new ChannelException(e);
+            }
+            return this;
+        }
         @Override
         protected void autoReadCleared() {
             clearReadPending();

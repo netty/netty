@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelMetadata;
@@ -58,7 +59,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     private final ChannelPromise closePromise;
     private final PendingWriteQueue queue;
 
-    private final QuicStreamChannelConfig config;
+    private final QuicheQuicStreamChannelConfig config;
     private final QuicStreamAddress address;
 
     private boolean readable;
@@ -313,7 +314,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     @Override
-    public QuicStreamChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 

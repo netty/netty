@@ -150,7 +150,7 @@ public class EpollSocketChannelConfigTest {
         ChannelException e = assertThrows(ChannelException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                ch.config().setSoLinger(0);
+                ch.config().setOption(ChannelOption.SO_LINGER, 0);
             }
         });
         assertThat(e).hasCauseInstanceOf(ClosedChannelException.class);
@@ -165,7 +165,7 @@ public class EpollSocketChannelConfigTest {
         ChannelException e = assertThrows(ChannelException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
-                ch.config().getSoLinger();
+                ch.config().getOption(ChannelOption.SO_LINGER);
             }
         });
         assertThat(e).hasCauseInstanceOf(ClosedChannelException.class);

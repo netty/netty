@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -24,7 +25,6 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.DatagramChannel;
-import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Errors;
@@ -333,7 +333,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    public DatagramChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 

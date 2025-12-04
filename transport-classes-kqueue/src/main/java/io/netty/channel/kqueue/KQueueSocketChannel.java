@@ -31,7 +31,6 @@ import io.netty.channel.FileRegion;
 import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.FileDescriptor;
@@ -101,6 +100,11 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
 
     private KQueueSocketChannel(EventLoop eventLoop, BsdSocket fd) {
         this(eventLoop, null, fd, isSoErrorZero(fd));
+    }
+
+    @Override
+    protected boolean isAllowHalfClosure() {
+        return config.isAllowHalfClosure();
     }
 
     @Override
@@ -594,7 +598,7 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
 
     private void readReadyBytes(final KQueueRecvByteAllocatorHandle allocHandle) {
         final ChannelConfig config = config();
-        if (shouldBreakReadReady(config)) {
+        if (shouldBreakReadReady()) {
             clearReadFilter0();
             return;
         }
@@ -626,7 +630,7 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
                 pipeline.fireChannelRead(byteBuf);
                 byteBuf = null;
 
-                if (shouldBreakReadReady(config)) {
+                if (shouldBreakReadReady()) {
                     // We need to do this for two reasons:
                     //
                     // - If the input was shutdown in between (which may be the case when the user did it in the
@@ -695,7 +699,7 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
     }
 
     @Override
-    public SocketChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 
@@ -738,7 +742,7 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
         try {
             // Check isOpen() first as otherwise it will throw a RuntimeException
             // when call getSoLinger() as the fd is not valid anymore.
-            if (isOpen() && config().getSoLinger() > 0) {
+            if (isOpen() && config.getSoLinger() > 0) {
                 // We need to cancel this key of the channel so we may not end up in a eventloop spin
                 // because we try to read or write until the actual close happens which may be later due
                 // SO_LINGER handling.

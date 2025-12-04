@@ -16,6 +16,7 @@
 package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -25,7 +26,6 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
@@ -316,7 +316,7 @@ public final class IoUringServerSocketChannel extends AbstractIoUringChannel imp
     }
 
     @Override
-    public ServerSocketChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 

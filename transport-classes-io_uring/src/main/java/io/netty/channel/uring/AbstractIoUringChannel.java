@@ -33,7 +33,6 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
@@ -610,7 +609,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     final void shutdownInput(boolean allDataRead) {
         logger.trace("shutdownInput Fd: {}", fd().intValue());
         if (!socket.isInputShutdown()) {
-            if (isAllowHalfClosure(config())) {
+            if (isAllowHalfClosure()) {
                 try {
                     socket.shutdown(true, false);
                 } catch (IOException ignored) {
@@ -643,7 +642,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     final void schedulePollIn() {
         assert (ioState & POLL_IN_SCHEDULED) == 0;
-        if (!isActive() || shouldBreakIoUringInReady(config())) {
+        if (!isActive() || shouldBreakIoUringInReady()) {
             return;
         }
         pollInId = schedulePollAdd(POLL_IN_SCHEDULED, Native.POLLIN, allowMultiShotPollIn());
@@ -1155,9 +1154,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         return remote;
     }
 
-    private static boolean isAllowHalfClosure(ChannelConfig config) {
-        return config instanceof SocketChannelConfig &&
-               ((SocketChannelConfig) config).isAllowHalfClosure();
+    protected boolean isAllowHalfClosure() {
+        return false;
     }
 
     private void computeRemote() {
@@ -1169,8 +1167,8 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
     }
 
-    private boolean shouldBreakIoUringInReady(ChannelConfig config) {
-        return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure(config));
+    private boolean shouldBreakIoUringInReady() {
+        return socket.isInputShutdown() && (inputClosedSeenErrorOnRead || !isAllowHalfClosure());
     }
 
     /**

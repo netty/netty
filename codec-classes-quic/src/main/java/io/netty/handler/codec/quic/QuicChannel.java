@@ -29,6 +29,28 @@ import java.net.SocketAddress;
 
 /**
  * A QUIC {@link Channel}.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options supported by {@link Channel},
+ * {@link QuicChannel} allows the following options in the
+ * option map via {@link io.netty.channel.ChannelOption}:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>ChannelOption</th>
+ * </tr><tr>
+ * <td>{@link QuicChannelOption#QLOG}</td>
+ * </tr>
+ * </table>
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>ChannelOption</th>
+ * </tr><tr>
+ * <td>{@link QuicChannelOption#QLOG}</td>
+ * <td>{@link QuicChannelOption#SEGMENTED_DATAGRAM_PACKET_ALLOCATOR}</td>
+ * </tr>
+ * </table>
  */
 public interface QuicChannel extends Channel {
 
@@ -132,12 +154,6 @@ public interface QuicChannel extends Channel {
 
     @Override
     QuicChannel flush();
-
-    /**
-     * Returns the configuration of this channel.
-     */
-    @Override
-    QuicChannelConfig config();
 
     /**
      * Returns the used {@link SSLEngine} or {@code null} if none is used (yet).

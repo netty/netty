@@ -45,10 +45,10 @@ public class KQueueChannelConfigTest {
     @Test
     public void testOptionGetThrowsChannelException() throws Exception {
         KQueueSocketChannel channel = new KQueueSocketChannel(KQueueSocketTestPermutation.KQUEUE_GROUP.next());
-        channel.config().getSoLinger();
+        channel.config().getOption(ChannelOption.SO_LINGER);
         channel.fd().close();
         try {
-            channel.config().getSoLinger();
+            channel.config().getOption(ChannelOption.SO_LINGER);
             fail();
         } catch (ChannelException e) {
             // expected
@@ -58,10 +58,11 @@ public class KQueueChannelConfigTest {
     @Test
     public void testOptionSetThrowsChannelException() throws Exception {
         KQueueSocketChannel channel = new KQueueSocketChannel(KQueueSocketTestPermutation.KQUEUE_GROUP.next());
-        channel.config().setKeepAlive(true);
+        channel.config().setOption(ChannelOption.SO_KEEPALIVE, true);
+
         channel.fd().close();
         try {
-            channel.config().setKeepAlive(true);
+            channel.config().setOption(ChannelOption.SO_KEEPALIVE, true);
             fail();
         } catch (ChannelException e) {
             // expected

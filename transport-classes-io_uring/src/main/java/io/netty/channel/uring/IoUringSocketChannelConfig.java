@@ -15,13 +15,8 @@
  */
 package io.netty.channel.uring;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.util.internal.ObjectUtil;
@@ -35,7 +30,7 @@ import static io.netty.channel.ChannelOption.*;
 import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
 
-final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implements SocketChannelConfig {
+final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
     private static final AtomicReferenceFieldUpdater<IoUringSocketChannelConfig, DomainSocketReadMode> MODE_UPDATER =
@@ -183,8 +178,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         return true;
     }
 
-    @Override
-    public int getSendBufferSize() {
+    int getSendBufferSize() {
         try {
             return ((IoUringSocketChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
@@ -192,8 +186,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public int getSoLinger() {
+    int getSoLinger() {
         try {
             return ((IoUringSocketChannel) channel).socket.getSoLinger();
         } catch (IOException e) {
@@ -201,8 +194,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public int getTrafficClass() {
+    int getTrafficClass() {
         try {
             return ((IoUringSocketChannel) channel).socket.getTrafficClass();
         } catch (IOException e) {
@@ -210,8 +202,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public boolean isKeepAlive() {
+    boolean isKeepAlive() {
         try {
             return ((IoUringSocketChannel) channel).socket.isKeepAlive();
         } catch (IOException e) {
@@ -219,8 +210,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public boolean isReuseAddress() {
+    boolean isReuseAddress() {
         try {
             return ((IoUringSocketChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -228,8 +218,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public boolean isTcpNoDelay() {
+    boolean isTcpNoDelay() {
         try {
             return ((IoUringSocketChannel) channel).socket.isTcpNoDelay();
         } catch (IOException e) {
@@ -240,7 +229,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Get the {@code TCP_CORK} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public boolean isTcpCork() {
+    boolean isTcpCork() {
         try {
             return ((IoUringSocketChannel) channel).socket.isTcpCork();
         } catch (IOException e) {
@@ -251,7 +240,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Get the {@code SO_BUSY_POLL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getSoBusyPoll() {
+    int getSoBusyPoll() {
         try {
             return ((IoUringSocketChannel) channel).socket.getSoBusyPoll();
         } catch (IOException e) {
@@ -264,7 +253,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
      *
      * @return value is a uint32_t
      */
-    public long getTcpNotSentLowAt() {
+    long getTcpNotSentLowAt() {
         try {
             return ((IoUringSocketChannel) channel).socket.getTcpNotSentLowAt();
         } catch (IOException e) {
@@ -275,7 +264,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Get the {@code TCP_KEEPIDLE} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getTcpKeepIdle() {
+    int getTcpKeepIdle() {
         try {
             return ((IoUringSocketChannel) channel).socket.getTcpKeepIdle();
         } catch (IOException e) {
@@ -286,7 +275,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Get the {@code TCP_KEEPINTVL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getTcpKeepIntvl() {
+    int getTcpKeepIntvl() {
         try {
             return ((IoUringSocketChannel) channel).socket.getTcpKeepIntvl();
         } catch (IOException e) {
@@ -297,7 +286,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Get the {@code TCP_KEEPCNT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getTcpKeepCnt() {
+    int getTcpKeepCnt() {
         try {
             return ((IoUringSocketChannel) channel).socket.getTcpKeepCnt();
         } catch (IOException e) {
@@ -308,7 +297,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Get the {@code TCP_USER_TIMEOUT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getTcpUserTimeout() {
+    int getTcpUserTimeout() {
         try {
             return ((IoUringSocketChannel) channel).socket.getTcpUserTimeout();
         } catch (IOException e) {
@@ -316,8 +305,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setKeepAlive(boolean keepAlive) {
+    IoUringSocketChannelConfig setKeepAlive(boolean keepAlive) {
         try {
             ((IoUringSocketChannel) channel).socket.setKeepAlive(keepAlive);
             return this;
@@ -326,14 +314,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setPerformancePreferences(
-            int connectionTime, int latency, int bandwidth) {
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    IoUringSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((IoUringSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
@@ -342,8 +323,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+    IoUringSocketChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
             ((IoUringSocketChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
@@ -352,8 +332,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setSendBufferSize(int sendBufferSize) {
+    IoUringSocketChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
             ((IoUringSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
             return this;
@@ -362,8 +341,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public int getReceiveBufferSize() {
+    int getReceiveBufferSize() {
         try {
             return ((IoUringSocketChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -371,8 +349,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setSoLinger(int soLinger) {
+    IoUringSocketChannelConfig setSoLinger(int soLinger) {
         try {
             ((IoUringSocketChannel) channel).socket.setSoLinger(soLinger);
             return this;
@@ -381,8 +358,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
+    IoUringSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpNoDelay(tcpNoDelay);
             return this;
@@ -394,7 +370,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Set the {@code TCP_CORK} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IoUringSocketChannelConfig setTcpCork(boolean tcpCork) {
+    IoUringSocketChannelConfig setTcpCork(boolean tcpCork) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpCork(tcpCork);
             return this;
@@ -406,7 +382,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Set the {@code SO_BUSY_POLL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IoUringSocketChannelConfig setSoBusyPoll(int loopMicros) {
+    IoUringSocketChannelConfig setSoBusyPoll(int loopMicros) {
         try {
             ((IoUringSocketChannel) channel).socket.setSoBusyPoll(loopMicros);
             return this;
@@ -420,7 +396,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
      *
      * @param tcpNotSentLowAt is a uint32_t
      */
-    public IoUringSocketChannelConfig setTcpNotSentLowAt(long tcpNotSentLowAt) {
+    IoUringSocketChannelConfig setTcpNotSentLowAt(long tcpNotSentLowAt) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpNotSentLowAt(tcpNotSentLowAt);
             return this;
@@ -429,8 +405,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
         }
     }
 
-    @Override
-    public IoUringSocketChannelConfig setTrafficClass(int trafficClass) {
+    IoUringSocketChannelConfig setTrafficClass(int trafficClass) {
         try {
             ((IoUringSocketChannel) channel).socket.setTrafficClass(trafficClass);
             return this;
@@ -442,7 +417,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Set the {@code TCP_KEEPIDLE} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IoUringSocketChannelConfig setTcpKeepIdle(int seconds) {
+    IoUringSocketChannelConfig setTcpKeepIdle(int seconds) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpKeepIdle(seconds);
             return this;
@@ -454,7 +429,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Set the {@code TCP_KEEPINTVL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IoUringSocketChannelConfig setTcpKeepIntvl(int seconds) {
+    IoUringSocketChannelConfig setTcpKeepIntvl(int seconds) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpKeepIntvl(seconds);
             return this;
@@ -464,17 +439,9 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     }
 
     /**
-     * @deprecated use {@link #setTcpKeepCnt(int)}
-     */
-    @Deprecated
-    public IoUringSocketChannelConfig setTcpKeepCntl(int probes) {
-        return setTcpKeepCnt(probes);
-    }
-
-    /**
      * Set the {@code TCP_KEEPCNT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IoUringSocketChannelConfig setTcpKeepCnt(int probes) {
+    IoUringSocketChannelConfig setTcpKeepCnt(int probes) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpKeepCnt(probes);
             return this;
@@ -486,7 +453,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Set the {@code TCP_USER_TIMEOUT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public IoUringSocketChannelConfig setTcpUserTimeout(int milliseconds) {
+    IoUringSocketChannelConfig setTcpUserTimeout(int milliseconds) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpUserTimeout(milliseconds);
             return this;
@@ -499,7 +466,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
      */
-    public boolean isIpTransparent() {
+    boolean isIpTransparent() {
         try {
             return ((IoUringSocketChannel) channel).socket.isIpTransparent();
         } catch (IOException e) {
@@ -511,7 +478,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    public IoUringSocketChannelConfig setIpTransparent(boolean transparent) {
+    IoUringSocketChannelConfig setIpTransparent(boolean transparent) {
         try {
             ((IoUringSocketChannel) channel).socket.setIpTransparent(transparent);
             return this;
@@ -538,7 +505,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
      * Set the {@code TCP_QUICKACK} option on the socket. See <a href="https://linux.die.net/man/7/tcp">TCP_QUICKACK</a>
      * for more details.
      */
-    public IoUringSocketChannelConfig setTcpQuickAck(boolean quickAck) {
+    IoUringSocketChannelConfig setTcpQuickAck(boolean quickAck) {
         try {
             ((IoUringSocketChannel) channel).socket.setTcpQuickAck(quickAck);
             return this;
@@ -551,7 +518,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
      * Returns {@code true} if <a href="https://linux.die.net/man/7/tcp">TCP_QUICKACK</a> is enabled, {@code false}
      * otherwise.
      */
-    public boolean isTcpQuickAck() {
+    boolean isTcpQuickAck() {
         try {
             return ((IoUringSocketChannel) channel).socket.isTcpQuickAck();
         } catch (IOException e) {
@@ -562,7 +529,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Enables client TCP fast open. See this <a href="https://lwn.net/Articles/508865/">LWN article</a> for more info.
      */
-    public IoUringSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
+    IoUringSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
         this.tcpFastopen = fastOpenConnect;
         return this;
     }
@@ -570,87 +537,16 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig implem
     /**
      * Returns {@code true} if {@code TCP_FASTOPEN_CONNECT} is enabled, {@code false} otherwise.
      */
-    public boolean isTcpFastOpenConnect() {
+    boolean isTcpFastOpenConnect() {
         return tcpFastopen;
     }
 
-    @Override
-    public boolean isAllowHalfClosure() {
+    boolean isAllowHalfClosure() {
         return allowHalfClosure;
     }
 
-    @Override
-    public IoUringSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+    IoUringSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
         this.allowHalfClosure = allowHalfClosure;
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public IoUringSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setAutoClose(boolean autoClose) {
-        super.setAutoClose(autoClose);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public IoUringSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public IoUringSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public IoUringSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
         return this;
     }
 

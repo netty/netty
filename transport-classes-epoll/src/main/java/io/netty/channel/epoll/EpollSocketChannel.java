@@ -33,7 +33,6 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.internal.ChannelUtils;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.FileDescriptor;
@@ -133,6 +132,11 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         if (parent instanceof EpollServerSocketChannel) {
             tcpMd5SigAddresses = ((EpollServerSocketChannel) parent).tcpMd5SigAddresses();
         }
+    }
+
+    @Override
+    protected boolean isAllowHalfClosure() {
+        return this.config.isAllowHalfClosure();
     }
 
     @Override
@@ -710,7 +714,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     }
 
     @Override
-    public SocketChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 
@@ -748,7 +752,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         try {
             // Check isOpen() first as otherwise it will throw a RuntimeException
             // when call getSoLinger() as the fd is not valid anymore.
-            if (isOpen() && config().getSoLinger() > 0) {
+            if (isOpen() && config.getSoLinger() > 0) {
                 // We need to cancel this key of the channel so we may not end up in a eventloop spin
                 // because we try to read or write until the actual close happens which may be later due
                 // SO_LINGER handling.

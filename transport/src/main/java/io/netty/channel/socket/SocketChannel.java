@@ -15,15 +15,36 @@
  */
 package io.netty.channel.socket;
 
-import io.netty.channel.Channel;
-
 /**
- * A TCP/IP socket {@link Channel}.
+ * A socket {@link DuplexChannel}.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options supported by {@link DuplexChannel},
+ * {@link SocketChannel} allows the following options in the
+ * option map via {@link io.netty.channel.ChannelOption}:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>ChannelOption</th>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_KEEPALIVE}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_REUSEADDR}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_LINGER}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#TCP_NODELAY}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_RCVBUF}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#SO_SNDBUF}</td>
+ * </tr><tr>
+ * <td>{@link io.netty.channel.ChannelOption#IP_TOS}</td>
+ * </tr>
+ * </table>
  */
 public interface SocketChannel extends DuplexChannel {
     @Override
     ServerSocketChannel parent();
-
-    @Override
-    SocketChannelConfig config();
 }

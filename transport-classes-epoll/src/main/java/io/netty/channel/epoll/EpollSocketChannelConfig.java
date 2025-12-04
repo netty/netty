@@ -15,13 +15,8 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.util.internal.ObjectUtil;
@@ -41,7 +36,7 @@ import static io.netty.channel.ChannelOption.SO_SNDBUF;
 import static io.netty.channel.ChannelOption.TCP_NODELAY;
 import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
-class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChannelConfig {
+final class EpollSocketChannelConfig extends EpollChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
     private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
@@ -198,8 +193,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         return true;
     }
 
-    @Override
-    public int getReceiveBufferSize() {
+    int getReceiveBufferSize() {
         try {
             return ((EpollSocketChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -207,8 +201,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         }
     }
 
-    @Override
-    public int getSendBufferSize() {
+    int getSendBufferSize() {
         try {
             return ((EpollSocketChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
@@ -216,8 +209,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         }
     }
 
-    @Override
-    public int getSoLinger() {
+    int getSoLinger() {
         try {
             return ((EpollSocketChannel) channel).socket.getSoLinger();
         } catch (IOException e) {
@@ -225,8 +217,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         }
     }
 
-    @Override
-    public int getTrafficClass() {
+    int getTrafficClass() {
         try {
             return ((EpollSocketChannel) channel).socket.getTrafficClass();
         } catch (IOException e) {
@@ -234,8 +225,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         }
     }
 
-    @Override
-    public boolean isKeepAlive() {
+    boolean isKeepAlive() {
         try {
             return ((EpollSocketChannel) channel).socket.isKeepAlive();
         } catch (IOException e) {
@@ -243,8 +233,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         }
     }
 
-    @Override
-    public boolean isReuseAddress() {
+    boolean isReuseAddress() {
         try {
             return ((EpollSocketChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -252,8 +241,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         }
     }
 
-    @Override
-    public boolean isTcpNoDelay() {
+    boolean isTcpNoDelay() {
         try {
             return ((EpollSocketChannel) channel).socket.isTcpNoDelay();
         } catch (IOException e) {
@@ -264,7 +252,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     /**
      * Get the {@code TCP_CORK} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public boolean isTcpCork() {
+    boolean isTcpCork() {
         try {
             return ((EpollSocketChannel) channel).socket.isTcpCork();
         } catch (IOException e) {
@@ -275,7 +263,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     /**
      * Get the {@code SO_BUSY_POLL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getSoBusyPoll() {
+    int getSoBusyPoll() {
         try {
             return ((EpollSocketChannel) channel).socket.getSoBusyPoll();
         } catch (IOException e) {
@@ -287,7 +275,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
      * Get the {@code TCP_NOTSENT_LOWAT} option on the socket. See {@code man 7 tcp} for more details.
      * @return value is a uint32_t
      */
-    public long getTcpNotSentLowAt() {
+    long getTcpNotSentLowAt() {
         try {
             return ((EpollSocketChannel) channel).socket.getTcpNotSentLowAt();
         } catch (IOException e) {
@@ -298,7 +286,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     /**
      * Get the {@code TCP_KEEPIDLE} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getTcpKeepIdle() {
+    int getTcpKeepIdle() {
         try {
             return ((EpollSocketChannel) channel).socket.getTcpKeepIdle();
         } catch (IOException e) {
@@ -309,7 +297,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     /**
      * Get the {@code TCP_KEEPINTVL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getTcpKeepIntvl() {
+    int getTcpKeepIntvl() {
         try {
             return ((EpollSocketChannel) channel).socket.getTcpKeepIntvl();
         } catch (IOException e) {
@@ -320,7 +308,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     /**
      * Get the {@code TCP_KEEPCNT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getTcpKeepCnt() {
+    int getTcpKeepCnt() {
         try {
             return ((EpollSocketChannel) channel).socket.getTcpKeepCnt();
         } catch (IOException e) {
@@ -331,7 +319,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     /**
      * Get the {@code TCP_USER_TIMEOUT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public int getTcpUserTimeout() {
+    int getTcpUserTimeout() {
         try {
             return ((EpollSocketChannel) channel).socket.getTcpUserTimeout();
         } catch (IOException e) {
@@ -339,8 +327,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         }
     }
 
-    @Override
-    public EpollSocketChannelConfig setKeepAlive(boolean keepAlive) {
+    EpollSocketChannelConfig setKeepAlive(boolean keepAlive) {
         try {
             ((EpollSocketChannel) channel).socket.setKeepAlive(keepAlive);
             return this;
@@ -349,14 +336,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         }
     }
 
-    @Override
-    public EpollSocketChannelConfig setPerformancePreferences(
-            int connectionTime, int latency, int bandwidth) {
-        return this;
-    }
-
-    @Override
-    public EpollSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    EpollSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((EpollSocketChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
@@ -365,8 +345,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         }
     }
 
-    @Override
-    public EpollSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+    EpollSocketChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
             ((EpollSocketChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
@@ -375,8 +354,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         }
     }
 
-    @Override
-    public EpollSocketChannelConfig setSendBufferSize(int sendBufferSize) {
+    EpollSocketChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
             ((EpollSocketChannel) channel).socket.setSendBufferSize(sendBufferSize);
             calculateMaxBytesPerGatheringWrite();
@@ -386,8 +364,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         }
     }
 
-    @Override
-    public EpollSocketChannelConfig setSoLinger(int soLinger) {
+    EpollSocketChannelConfig setSoLinger(int soLinger) {
         try {
             ((EpollSocketChannel) channel).socket.setSoLinger(soLinger);
             return this;
@@ -396,8 +373,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         }
     }
 
-    @Override
-    public EpollSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
+    EpollSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
         try {
             ((EpollSocketChannel) channel).socket.setTcpNoDelay(tcpNoDelay);
             return this;
@@ -409,7 +385,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     /**
      * Set the {@code TCP_CORK} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public EpollSocketChannelConfig setTcpCork(boolean tcpCork) {
+    EpollSocketChannelConfig setTcpCork(boolean tcpCork) {
         try {
             ((EpollSocketChannel) channel).socket.setTcpCork(tcpCork);
             return this;
@@ -421,7 +397,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     /**
      * Set the {@code SO_BUSY_POLL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public EpollSocketChannelConfig setSoBusyPoll(int loopMicros) {
+    EpollSocketChannelConfig setSoBusyPoll(int loopMicros) {
         try {
             ((EpollSocketChannel) channel).socket.setSoBusyPoll(loopMicros);
             return this;
@@ -434,7 +410,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
      * Set the {@code TCP_NOTSENT_LOWAT} option on the socket. See {@code man 7 tcp} for more details.
      * @param tcpNotSentLowAt is a uint32_t
      */
-    public EpollSocketChannelConfig setTcpNotSentLowAt(long tcpNotSentLowAt) {
+    EpollSocketChannelConfig setTcpNotSentLowAt(long tcpNotSentLowAt) {
         try {
             ((EpollSocketChannel) channel).socket.setTcpNotSentLowAt(tcpNotSentLowAt);
             return this;
@@ -443,8 +419,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
         }
     }
 
-    @Override
-    public EpollSocketChannelConfig setTrafficClass(int trafficClass) {
+    EpollSocketChannelConfig setTrafficClass(int trafficClass) {
         try {
             ((EpollSocketChannel) channel).socket.setTrafficClass(trafficClass);
             return this;
@@ -456,7 +431,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     /**
      * Set the {@code TCP_KEEPIDLE} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public EpollSocketChannelConfig setTcpKeepIdle(int seconds) {
+    EpollSocketChannelConfig setTcpKeepIdle(int seconds) {
         try {
             ((EpollSocketChannel) channel).socket.setTcpKeepIdle(seconds);
             return this;
@@ -468,7 +443,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     /**
      * Set the {@code TCP_KEEPINTVL} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public EpollSocketChannelConfig setTcpKeepIntvl(int seconds) {
+    EpollSocketChannelConfig setTcpKeepIntvl(int seconds) {
         try {
             ((EpollSocketChannel) channel).socket.setTcpKeepIntvl(seconds);
             return this;
@@ -478,17 +453,9 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     }
 
     /**
-     * @deprecated use {@link #setTcpKeepCnt(int)}
-     */
-    @Deprecated
-    public EpollSocketChannelConfig setTcpKeepCntl(int probes) {
-        return setTcpKeepCnt(probes);
-    }
-
-    /**
      * Set the {@code TCP_KEEPCNT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public EpollSocketChannelConfig setTcpKeepCnt(int probes) {
+    EpollSocketChannelConfig setTcpKeepCnt(int probes) {
         try {
             ((EpollSocketChannel) channel).socket.setTcpKeepCnt(probes);
             return this;
@@ -500,7 +467,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     /**
      * Set the {@code TCP_USER_TIMEOUT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public EpollSocketChannelConfig setTcpUserTimeout(int milliseconds) {
+    EpollSocketChannelConfig setTcpUserTimeout(int milliseconds) {
         try {
             ((EpollSocketChannel) channel).socket.setTcpUserTimeout(milliseconds);
             return this;
@@ -512,7 +479,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     /**
      * Returns {@code true} if the IP_BIND_ADDRESS_NO_PORT option is set.
      */
-    public boolean isIpBindAddressNoPort() {
+    boolean isIpBindAddressNoPort() {
         try {
             return ((EpollSocketChannel) channel).socket.isIpBindAddressNoPort();
         } catch (IOException e) {
@@ -526,7 +493,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
      * Be aware this method needs be called before {@link EpollSocketChannel#bind(java.net.SocketAddress)} to have
      * any affect.
      */
-    public EpollSocketChannelConfig setIpBindAddressNoPort(boolean ipBindAddressNoPort) {
+    EpollSocketChannelConfig setIpBindAddressNoPort(boolean ipBindAddressNoPort) {
         try {
             ((EpollSocketChannel) channel).socket.setIpBindAddressNoPort(ipBindAddressNoPort);
             return this;
@@ -539,7 +506,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
      */
-    public boolean isIpTransparent() {
+     boolean isIpTransparent() {
         try {
             return ((EpollSocketChannel) channel).socket.isIpTransparent();
         } catch (IOException e) {
@@ -551,7 +518,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    public EpollSocketChannelConfig setIpTransparent(boolean transparent) {
+    EpollSocketChannelConfig setIpTransparent(boolean transparent) {
         try {
             ((EpollSocketChannel) channel).socket.setIpTransparent(transparent);
             return this;
@@ -565,7 +532,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
      * Keys can only be set on, not read to prevent a potential leak, as they are confidential.
      * Allowing them being read would mean anyone with access to the channel could get them.
      */
-    public EpollSocketChannelConfig setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
+    EpollSocketChannelConfig setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
         try {
             ((EpollSocketChannel) channel).setTcpMd5Sig(keys);
             return this;
@@ -579,7 +546,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
      * See <a href="https://linux.die.net//man/7/tcp">TCP_QUICKACK</a>
      * for more details.
      */
-    public EpollSocketChannelConfig setTcpQuickAck(boolean quickAck) {
+    EpollSocketChannelConfig setTcpQuickAck(boolean quickAck) {
         try {
             ((EpollSocketChannel) channel).socket.setTcpQuickAck(quickAck);
             return this;
@@ -592,7 +559,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
      * Returns {@code true} if <a href="https://linux.die.net//man/7/tcp">TCP_QUICKACK</a> is enabled,
      * {@code false} otherwise.
      */
-    public boolean isTcpQuickAck() {
+    boolean isTcpQuickAck() {
         try {
             return ((EpollSocketChannel) channel).socket.isTcpQuickAck();
         } catch (IOException e) {
@@ -606,7 +573,7 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
      * client socket mechanics that work with kernel 3.6 and later. See this
      * <a href="https://lwn.net/Articles/508865/">LWN article</a> for more info.
      */
-    public EpollSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
+    EpollSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
         tcpFastopen = fastOpenConnect;
         return this;
     }
@@ -614,87 +581,16 @@ class EpollSocketChannelConfig extends EpollChannelConfig implements SocketChann
     /**
      * Returns {@code true} if TCP fast open is enabled, {@code false} otherwise.
      */
-    public boolean isTcpFastOpenConnect() {
+    boolean isTcpFastOpenConnect() {
         return tcpFastopen;
     }
 
-    @Override
-    public boolean isAllowHalfClosure() {
+    boolean isAllowHalfClosure() {
         return allowHalfClosure;
     }
 
-    @Override
-    public EpollSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+    EpollSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
         this.allowHalfClosure = allowHalfClosure;
-        return this;
-    }
-
-    @Override
-    public EpollSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public EpollSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public EpollSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public EpollSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public EpollSocketChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    public EpollSocketChannelConfig setAutoClose(boolean autoClose) {
-        super.setAutoClose(autoClose);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    public EpollSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public EpollSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
         return this;
     }
 

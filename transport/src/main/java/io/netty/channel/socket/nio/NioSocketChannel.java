@@ -16,8 +16,8 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -27,13 +27,10 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FileRegion;
-import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.AbstractNioByteChannel;
 import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.SocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.ObjectUtil;
@@ -70,7 +67,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSocketChannel.class);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
-    private final SocketChannelConfig config;
+    private final NioSocketChannelConfig config;
 
     private static SocketChannel newChannel(SelectorProvider provider, SocketProtocolFamily family) {
         try {
@@ -135,13 +132,17 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         config = new NioSocketChannelConfig(this, channel);
     }
 
+    protected boolean isAllowHalfClosure() {
+        return config.isAllowHalfClosure();
+    }
+
     @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
     }
 
     @Override
-    public SocketChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 
@@ -389,10 +390,10 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         // make a best effort to adjust as OS behavior changes.
         if (attempted == written) {
             if (attempted << 1 > oldMaxBytesPerGatheringWrite) {
-                ((NioSocketChannelConfig) config).setMaxBytesPerGatheringWrite(attempted << 1);
+                config.setMaxBytesPerGatheringWrite(attempted << 1);
             }
         } else if (attempted > MAX_BYTES_PER_GATHERING_WRITE_ATTEMPTED_LOW_THRESHOLD && written < attempted >>> 1) {
-            ((NioSocketChannelConfig) config).setMaxBytesPerGatheringWrite(attempted >>> 1);
+            config.setMaxBytesPerGatheringWrite(attempted >>> 1);
         }
     }
 
@@ -409,7 +410,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             }
 
             // Ensure the pending writes are made of ByteBufs only.
-            int maxBytesPerGatheringWrite = ((NioSocketChannelConfig) config).getMaxBytesPerGatheringWrite();
+            int maxBytesPerGatheringWrite = config.getMaxBytesPerGatheringWrite();
             ByteBuffer[] nioBuffers = in.nioBuffers(1024, maxBytesPerGatheringWrite);
             int nioBufferCnt = in.nioBufferCount();
 
@@ -462,7 +463,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     @Override
     protected Executor prepareToClose() {
         try {
-            if (javaChannel().isOpen() && config().getSoLinger() > 0) {
+            if (javaChannel().isOpen() && config.getSoLinger() > 0) {
                 // We need to cancel this key of the channel so we may not end up in a eventloop spin
                 // because we try to read or write until the actual close happens which may be later due
                 // SO_LINGER handling.
@@ -478,8 +479,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         return null;
     }
 
-    private static final class NioSocketChannelConfig extends DefaultChannelConfig
-            implements SocketChannelConfig {
+    private static final class NioSocketChannelConfig extends DefaultChannelConfig {
 
         final NetworkChannel jdkChannel;
         private volatile boolean allowHalfClosure;
@@ -576,165 +576,76 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             return true;
         }
 
-        @Override
-        public int getReceiveBufferSize() {
+        int getReceiveBufferSize() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_RCVBUF);
         }
 
-        @Override
-        public int getSendBufferSize() {
+        int getSendBufferSize() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_SNDBUF);
         }
 
-        @Override
-        public int getSoLinger() {
+        int getSoLinger() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_LINGER);
         }
 
-        @Override
-        public int getTrafficClass() {
+        int getTrafficClass() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.IP_TOS);
         }
 
-        @Override
-        public boolean isKeepAlive() {
+        boolean isKeepAlive() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_KEEPALIVE);
         }
 
-        @Override
-        public boolean isReuseAddress() {
+        boolean isReuseAddress() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_REUSEADDR);
         }
 
-        @Override
-        public boolean isTcpNoDelay() {
+        boolean isTcpNoDelay() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.TCP_NODELAY);
         }
 
-        @Override
-        public SocketChannelConfig setKeepAlive(boolean keepAlive) {
+        NioSocketChannelConfig setKeepAlive(boolean keepAlive) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_KEEPALIVE, keepAlive);
             return this;
         }
 
-        @Override
-        public SocketChannelConfig setPerformancePreferences(
-                int connectionTime, int latency, int bandwidth) {
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        NioSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
             return this;
         }
 
-        @Override
-        public SocketChannelConfig setReuseAddress(boolean reuseAddress) {
+        NioSocketChannelConfig setReuseAddress(boolean reuseAddress) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_REUSEADDR, reuseAddress);
             return this;
         }
 
-        @Override
-        public SocketChannelConfig setSendBufferSize(int sendBufferSize) {
+        NioSocketChannelConfig setSendBufferSize(int sendBufferSize) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_SNDBUF, sendBufferSize);
             calculateMaxBytesPerGatheringWrite();
             return this;
         }
 
-        @Override
-        public SocketChannelConfig setSoLinger(int soLinger) {
+        NioSocketChannelConfig setSoLinger(int soLinger) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_LINGER, soLinger);
             return this;
         }
 
-        @Override
-        public SocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
+        NioSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.TCP_NODELAY, tcpNoDelay);
             return this;
         }
 
-        @Override
-        public SocketChannelConfig setTrafficClass(int trafficClass) {
+        NioSocketChannelConfig setTrafficClass(int trafficClass) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.IP_TOS, trafficClass);
             return this;
         }
 
-        @Override
-        public boolean isAllowHalfClosure() {
+        boolean isAllowHalfClosure() {
             return allowHalfClosure;
         }
 
-        @Override
-        public SocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+        NioSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
             this.allowHalfClosure = allowHalfClosure;
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-            super.setConnectTimeoutMillis(connectTimeoutMillis);
-            return this;
-        }
-
-        @Override
-        @Deprecated
-        public SocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-            super.setMaxMessagesPerRead(maxMessagesPerRead);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-            super.setWriteSpinCount(writeSpinCount);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-            super.setAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-            super.setRecvByteBufAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setAutoRead(boolean autoRead) {
-            super.setAutoRead(autoRead);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setAutoClose(boolean autoClose) {
-            super.setAutoClose(autoClose);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-            super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-            super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-            super.setWriteBufferWaterMark(writeBufferWaterMark);
-            return this;
-        }
-
-        @Override
-        public SocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-            super.setMessageSizeEstimator(estimator);
             return this;
         }
 

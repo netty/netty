@@ -15,13 +15,8 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.NetUtil;
 
 import java.io.IOException;
@@ -34,8 +29,7 @@ import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty.channel.ChannelOption.TCP_FASTOPEN;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
-final class EpollServerSocketChannelConfig extends EpollChannelConfig
-        implements ServerSocketChannelConfig {
+final class EpollServerSocketChannelConfig extends EpollChannelConfig {
 
     private volatile int backlog = NetUtil.SOMAXCONN;
     private volatile int pendingFastOpenRequestsThreshold;
@@ -117,8 +111,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
         return true;
     }
 
-    @Override
-    public boolean isReuseAddress() {
+    boolean isReuseAddress() {
         try {
             return ((AbstractEpollChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -126,7 +119,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
         }
     }
 
-    public EpollServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+    EpollServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
             ((AbstractEpollChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
@@ -135,7 +128,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
         }
     }
 
-    public int getReceiveBufferSize() {
+    int getReceiveBufferSize() {
         try {
             return ((AbstractEpollChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -143,8 +136,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
         }
     }
 
-    @Override
-    public EpollServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    EpollServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((AbstractEpollChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
@@ -153,18 +145,11 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
         }
     }
 
-    @Override
-    public ServerSocketChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
-        return this;
-    }
-
-    @Override
-    public int getBacklog() {
+    int getBacklog() {
         return backlog;
     }
 
-    @Override
-    public EpollServerSocketChannelConfig setBacklog(int backlog) {
+    EpollServerSocketChannelConfig setBacklog(int backlog) {
         checkPositiveOrZero(backlog, "backlog");
         this.backlog = backlog;
         return this;
@@ -175,7 +160,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
      *
      * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
      */
-    public int getTcpFastopen() {
+    int getTcpFastopen() {
         return pendingFastOpenRequestsThreshold;
     }
 
@@ -188,72 +173,9 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
      *
      * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
      */
-    public EpollServerSocketChannelConfig setTcpFastopen(int pendingFastOpenRequestsThreshold) {
+    EpollServerSocketChannelConfig setTcpFastopen(int pendingFastOpenRequestsThreshold) {
         this.pendingFastOpenRequestsThreshold = checkPositiveOrZero(pendingFastOpenRequestsThreshold,
                 "pendingFastOpenRequestsThreshold");
-        return this;
-    }
-
-    @Override
-    public EpollServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollServerSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public EpollServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public EpollServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public EpollServerSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public EpollServerSocketChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    public EpollServerSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public EpollServerSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
         return this;
     }
 
@@ -262,7 +184,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
      * Keys can only be set on, not read to prevent a potential leak, as they are confidential.
      * Allowing them being read would mean anyone with access to the channel could get them.
      */
-    public EpollServerSocketChannelConfig setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
+    EpollServerSocketChannelConfig setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
         try {
             ((EpollServerSocketChannel) channel).setTcpMd5Sig(keys);
             return this;
@@ -274,7 +196,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
     /**
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
-    public boolean isReusePort() {
+    boolean isReusePort() {
         try {
             return ((EpollServerSocketChannel) channel).socket.isReusePort();
         } catch (IOException e) {
@@ -289,7 +211,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
      * Be aware this method needs be called before {@link EpollSocketChannel#bind(java.net.SocketAddress)} to have
      * any affect.
      */
-    public EpollServerSocketChannelConfig setReusePort(boolean reusePort) {
+    EpollServerSocketChannelConfig setReusePort(boolean reusePort) {
         try {
             ((EpollServerSocketChannel) channel).socket.setReusePort(reusePort);
             return this;
@@ -302,7 +224,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} otherwise.
      */
-    public boolean isFreeBind() {
+    boolean isFreeBind() {
         try {
             return ((EpollServerSocketChannel) channel).socket.isIpFreeBind();
         } catch (IOException e) {
@@ -314,7 +236,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    public EpollServerSocketChannelConfig setFreeBind(boolean freeBind) {
+    EpollServerSocketChannelConfig setFreeBind(boolean freeBind) {
         try {
             ((EpollServerSocketChannel) channel).socket.setIpFreeBind(freeBind);
             return this;
@@ -327,7 +249,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
      */
-    public boolean isIpTransparent() {
+    boolean isIpTransparent() {
         try {
             return ((EpollServerSocketChannel) channel).socket.isIpTransparent();
         } catch (IOException e) {
@@ -339,7 +261,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    public EpollServerSocketChannelConfig setIpTransparent(boolean transparent) {
+    EpollServerSocketChannelConfig setIpTransparent(boolean transparent) {
         try {
             ((EpollServerSocketChannel) channel).socket.setIpTransparent(transparent);
             return this;
@@ -351,7 +273,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
     /**
      * Set the {@code TCP_DEFER_ACCEPT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    public EpollServerSocketChannelConfig setTcpDeferAccept(int deferAccept) {
+    EpollServerSocketChannelConfig setTcpDeferAccept(int deferAccept) {
         try {
             ((EpollServerSocketChannel) channel).socket.setTcpDeferAccept(deferAccept);
             return this;
@@ -363,7 +285,7 @@ final class EpollServerSocketChannelConfig extends EpollChannelConfig
     /**
      * Returns a positive value if <a href="https://linux.die.net//man/7/tcp">TCP_DEFER_ACCEPT</a> is enabled.
      */
-    public int getTcpDeferAccept() {
+    int getTcpDeferAccept() {
         try {
             return ((EpollServerSocketChannel) channel).socket.getTcpDeferAccept();
         } catch (IOException e) {

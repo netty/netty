@@ -16,8 +16,8 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelMetadata;
@@ -27,11 +27,8 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.FixedRecvByteBufAllocator;
-import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.nio.AbstractNioMessageChannel;
-import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.UncheckedBooleanSupplier;
@@ -88,7 +85,7 @@ public final class NioDatagramChannel
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
             StringUtil.simpleClassName(ByteBuf.class) + ')';
 
-    private final DatagramChannelConfig config;
+    private final NioDatagramChannelConfig config;
 
     private Map<InetAddress, List<MembershipKey>> memberships;
 
@@ -167,7 +164,7 @@ public final class NioDatagramChannel
     }
 
     @Override
-    public DatagramChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 
@@ -272,7 +269,7 @@ public final class NioDatagramChannel
     @Override
     protected int doReadMessages(List<Object> buf) throws Exception {
         DatagramChannel ch = javaChannel();
-        DatagramChannelConfig config = config();
+        ChannelConfig config = config();
         RecvByteBufAllocator.Handle allocHandle = recvBufAllocHandle();
 
         ByteBuf data = allocHandle.allocate(config.getAllocator());
@@ -623,7 +620,7 @@ public final class NioDatagramChannel
         return allocHandle.continueReading();
     }
 
-    private static final class NioDatagramChannelConfig extends DefaultChannelConfig implements DatagramChannelConfig {
+    private static final class NioDatagramChannelConfig extends DefaultChannelConfig {
         private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioDatagramChannelConfig.class);
 
         final DatagramChannel jdkChannel;
@@ -727,8 +724,7 @@ public final class NioDatagramChannel
             this.activeOnOpen = activeOnOpen;
         }
 
-        @Override
-        public boolean isBroadcast() {
+        boolean isBroadcast() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.SO_BROADCAST);
             } catch (IOException e) {
@@ -736,8 +732,7 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setBroadcast(boolean broadcast) {
+        NioDatagramChannelConfig setBroadcast(boolean broadcast) {
             try {
                 // See: https://github.com/netty/netty/issues/576
                 if (broadcast &&
@@ -765,8 +760,7 @@ public final class NioDatagramChannel
             return this;
         }
 
-        @Override
-        public InetAddress getInterface() {
+        InetAddress getInterface() {
             NetworkInterface iface = getNetworkInterface();
             if (iface != null) {
                 Enumeration<InetAddress> addresses = iface.getInetAddresses();
@@ -778,8 +772,7 @@ public final class NioDatagramChannel
             return null;
         }
 
-        @Override
-        public DatagramChannelConfig setInterface(InetAddress interfaceAddress) {
+        NioDatagramChannelConfig setInterface(InetAddress interfaceAddress) {
             try {
                 setNetworkInterface(NetworkInterface.getByInetAddress(interfaceAddress));
             } catch (SocketException e) {
@@ -788,8 +781,7 @@ public final class NioDatagramChannel
             return this;
         }
 
-        @Override
-        public boolean isLoopbackModeDisabled() {
+        boolean isLoopbackModeDisabled() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_LOOP);
             } catch (IOException e) {
@@ -797,8 +789,7 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
+        NioDatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.IP_MULTICAST_LOOP, loopbackModeDisabled);
             } catch (IOException e) {
@@ -807,8 +798,7 @@ public final class NioDatagramChannel
             return this;
         }
 
-        @Override
-        public NetworkInterface getNetworkInterface() {
+        NetworkInterface getNetworkInterface() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_IF);
             } catch (IOException e) {
@@ -816,8 +806,7 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
+        NioDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.IP_MULTICAST_IF, networkInterface);
             } catch (IOException e) {
@@ -826,8 +815,7 @@ public final class NioDatagramChannel
             return this;
         }
 
-        @Override
-        public boolean isReuseAddress() {
+        boolean isReuseAddress() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.SO_REUSEADDR);
             } catch (IOException e) {
@@ -835,8 +823,7 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setReuseAddress(boolean reuseAddress) {
+        NioDatagramChannelConfig setReuseAddress(boolean reuseAddress) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
             } catch (IOException e) {
@@ -845,8 +832,7 @@ public final class NioDatagramChannel
             return this;
         }
 
-        @Override
-        public int getReceiveBufferSize() {
+        int getReceiveBufferSize() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.SO_RCVBUF);
             } catch (IOException e) {
@@ -854,8 +840,7 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        NioDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
             } catch (IOException e) {
@@ -864,8 +849,7 @@ public final class NioDatagramChannel
             return this;
         }
 
-        @Override
-        public int getSendBufferSize() {
+        int getSendBufferSize() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.SO_SNDBUF);
             } catch (IOException e) {
@@ -873,8 +857,7 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setSendBufferSize(int sendBufferSize) {
+        NioDatagramChannelConfig setSendBufferSize(int sendBufferSize) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
             } catch (IOException e) {
@@ -883,8 +866,7 @@ public final class NioDatagramChannel
             return this;
         }
 
-        @Override
-        public int getTimeToLive() {
+        int getTimeToLive() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_TTL);
             } catch (IOException e) {
@@ -892,8 +874,7 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setTimeToLive(int ttl) {
+        NioDatagramChannelConfig setTimeToLive(int ttl) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.IP_MULTICAST_TTL, ttl);
             } catch (IOException e) {
@@ -902,8 +883,7 @@ public final class NioDatagramChannel
             return this;
         }
 
-        @Override
-        public int getTrafficClass() {
+        int getTrafficClass() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.IP_TOS);
             } catch (IOException e) {
@@ -911,86 +891,12 @@ public final class NioDatagramChannel
             }
         }
 
-        @Override
-        public DatagramChannelConfig setTrafficClass(int trafficClass) {
+        NioDatagramChannelConfig setTrafficClass(int trafficClass) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.IP_TOS, trafficClass);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setWriteSpinCount(int writeSpinCount) {
-            super.setWriteSpinCount(writeSpinCount);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-            super.setConnectTimeoutMillis(connectTimeoutMillis);
-            return this;
-        }
-
-        @Override
-        @Deprecated
-        public DatagramChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-            super.setMaxMessagesPerRead(maxMessagesPerRead);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setAllocator(ByteBufAllocator allocator) {
-            super.setAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-            super.setRecvByteBufAllocator(allocator);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setAutoRead(boolean autoRead) {
-            super.setAutoRead(autoRead);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setAutoClose(boolean autoClose) {
-            super.setAutoClose(autoClose);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-            super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-            super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-            super.setWriteBufferWaterMark(writeBufferWaterMark);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-            super.setMessageSizeEstimator(estimator);
-            return this;
-        }
-
-        @Override
-        public DatagramChannelConfig setMaxMessagesPerWrite(int maxMessagesPerWrite) {
-            super.setMaxMessagesPerWrite(maxMessagesPerWrite);
             return this;
         }
 

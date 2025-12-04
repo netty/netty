@@ -25,7 +25,6 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ServerSocketChannel;
-import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.util.internal.logging.InternalLogger;
@@ -217,7 +216,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
     }
 
     @Override
-    public ServerSocketChannelConfig config() {
+    public ChannelConfig config() {
         return config;
     }
 

@@ -19,12 +19,27 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DuplexChannel;
+import io.netty.channel.socket.SocketChannel;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.SocketAddress;
 
 /**
- * A QUIC stream.
+ * A QUIC stream {@link DuplexChannel}.
+ *
+ * <h3>Available options</h3>
+ *
+ * In addition to the options supported by {@link DuplexChannel},
+ * {@link QuicStreamChannel} allows the following options in the
+ * option map via {@link io.netty.channel.ChannelOption}:
+ *
+ * <table border="1" cellspacing="0" cellpadding="6">
+ * <tr>
+ * <th>ChannelOption</th>
+ * </tr><tr>
+ * <td>{@link QuicChannelOption#READ_FRAMES}</td>
+ * </tr>
+ * </table>
  */
 public interface QuicStreamChannel extends DuplexChannel {
 
@@ -284,7 +299,4 @@ public interface QuicStreamChannel extends DuplexChannel {
 
     @Override
     QuicStreamChannel flush();
-
-    @Override
-    QuicStreamChannelConfig config();
 }

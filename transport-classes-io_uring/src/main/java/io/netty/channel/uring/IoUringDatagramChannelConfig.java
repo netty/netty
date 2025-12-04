@@ -16,14 +16,10 @@
 package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
-import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.DatagramChannelConfig;
 import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
@@ -31,7 +27,7 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.util.Map;
 
-final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements DatagramChannelConfig {
+final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
     private static final RecvByteBufAllocator DEFAULT_RCVBUF_ALLOCATOR = new FixedRecvByteBufAllocator(2048);
     private boolean activeOnOpen;
     private volatile int maxDatagramSize;
@@ -159,77 +155,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         return activeOnOpen;
     }
 
-    @Override
-    public IoUringDatagramChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public IoUringDatagramChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public IoUringDatagramChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    public IoUringDatagramChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public IoUringDatagramChannelConfig setAutoClose(boolean autoClose) {
-        super.setAutoClose(autoClose);
-        return this;
-    }
-
-    @Override
-    public IoUringDatagramChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    public IoUringDatagramChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public IoUringDatagramChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public IoUringDatagramChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public IoUringDatagramChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public IoUringDatagramChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public int getSendBufferSize() {
+    int getSendBufferSize() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
@@ -237,8 +163,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public IoUringDatagramChannelConfig setSendBufferSize(int sendBufferSize) {
+    IoUringDatagramChannelConfig setSendBufferSize(int sendBufferSize) {
         try {
             ((AbstractIoUringChannel) channel).socket.setSendBufferSize(sendBufferSize);
             return this;
@@ -247,8 +172,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public int getReceiveBufferSize() {
+    int getReceiveBufferSize() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -256,8 +180,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public IoUringDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    IoUringDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((AbstractIoUringChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
@@ -266,8 +189,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public int getTrafficClass() {
+    int getTrafficClass() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getTrafficClass();
         } catch (IOException e) {
@@ -275,8 +197,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public IoUringDatagramChannelConfig setTrafficClass(int trafficClass) {
+    IoUringDatagramChannelConfig setTrafficClass(int trafficClass) {
         try {
             ((AbstractIoUringChannel) channel).socket.setTrafficClass(trafficClass);
             return this;
@@ -285,8 +206,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public boolean isReuseAddress() {
+    boolean isReuseAddress() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -294,8 +214,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public IoUringDatagramChannelConfig setReuseAddress(boolean reuseAddress) {
+    IoUringDatagramChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
             ((AbstractIoUringChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
@@ -304,8 +223,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public boolean isBroadcast() {
+    boolean isBroadcast() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isBroadcast();
         } catch (IOException e) {
@@ -313,8 +231,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public IoUringDatagramChannelConfig setBroadcast(boolean broadcast) {
+    IoUringDatagramChannelConfig setBroadcast(boolean broadcast) {
         try {
             ((AbstractIoUringChannel) channel).socket.setBroadcast(broadcast);
             return this;
@@ -323,8 +240,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public boolean isLoopbackModeDisabled() {
+    boolean isLoopbackModeDisabled() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isLoopbackModeDisabled();
         } catch (IOException e) {
@@ -332,8 +248,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public IoUringDatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
+    IoUringDatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
         try {
             ((AbstractIoUringChannel) channel).socket.setLoopbackModeDisabled(loopbackModeDisabled);
             return this;
@@ -342,8 +257,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public int getTimeToLive() {
+    int getTimeToLive() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getTimeToLive();
         } catch (IOException e) {
@@ -351,8 +265,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public IoUringDatagramChannelConfig setTimeToLive(int ttl) {
+    IoUringDatagramChannelConfig setTimeToLive(int ttl) {
         try {
             ((AbstractIoUringChannel) channel).socket.setTimeToLive(ttl);
             return this;
@@ -361,8 +274,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public InetAddress getInterface() {
+    InetAddress getInterface() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getInterface();
         } catch (IOException e) {
@@ -370,8 +282,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public IoUringDatagramChannelConfig setInterface(InetAddress interfaceAddress) {
+    IoUringDatagramChannelConfig setInterface(InetAddress interfaceAddress) {
         try {
             ((AbstractIoUringChannel) channel).socket.setInterface(interfaceAddress);
             return this;
@@ -380,8 +291,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public NetworkInterface getNetworkInterface() {
+    NetworkInterface getNetworkInterface() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getNetworkInterface();
         } catch (IOException e) {
@@ -389,8 +299,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         }
     }
 
-    @Override
-    public IoUringDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
+    IoUringDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
         try {
             ((AbstractIoUringChannel) channel).socket.setNetworkInterface(networkInterface);
             return this;
@@ -402,7 +311,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
     /**
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
-    public boolean isReusePort() {
+    boolean isReusePort() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isReusePort();
         } catch (IOException e) {
@@ -418,7 +327,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
      * {@link io.netty.channel.socket.DatagramChannel#bind(java.net.SocketAddress)} to have
      * any affect.
      */
-    public IoUringDatagramChannelConfig setReusePort(boolean reusePort) {
+    IoUringDatagramChannelConfig setReusePort(boolean reusePort) {
         try {
             ((AbstractIoUringChannel) channel).socket.setReusePort(reusePort);
             return this;
@@ -431,7 +340,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
      */
-    public boolean isIpTransparent() {
+    boolean isIpTransparent() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isIpTransparent();
         } catch (IOException e) {
@@ -443,7 +352,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    public IoUringDatagramChannelConfig setIpTransparent(boolean ipTransparent) {
+    IoUringDatagramChannelConfig setIpTransparent(boolean ipTransparent) {
         try {
             ((AbstractIoUringChannel) channel).socket.setIpTransparent(ipTransparent);
             return this;
@@ -456,7 +365,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} otherwise.
      */
-    public boolean isFreeBind() {
+    boolean isFreeBind() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isIpFreeBind();
         } catch (IOException e) {
@@ -468,7 +377,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    public IoUringDatagramChannelConfig setFreeBind(boolean freeBind) {
+    IoUringDatagramChannelConfig setFreeBind(boolean freeBind) {
         try {
             ((AbstractIoUringChannel) channel).socket.setIpFreeBind(freeBind);
             return this;
@@ -486,7 +395,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
      * {@link RecvByteBufAllocator}. You can use {@code 0} to disable the usage of batching, any other bigger value
      * will enable it.
      */
-    public IoUringDatagramChannelConfig setMaxDatagramPayloadSize(int maxDatagramSize) {
+    IoUringDatagramChannelConfig setMaxDatagramPayloadSize(int maxDatagramSize) {
         this.maxDatagramSize = ObjectUtil.checkPositiveOrZero(maxDatagramSize, "maxDatagramSize");
         return this;
     }
@@ -494,7 +403,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
     /**
      * Get the maximum {@link io.netty.channel.socket.DatagramPacket} size.
      */
-    public int getMaxDatagramPayloadSize() {
+    int getMaxDatagramPayloadSize() {
         return maxDatagramSize;
     }
 
@@ -502,7 +411,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> is
      * enabled (or IPV6_MULTICAST_ALL for IPV6), {@code false} for disable it. Default is enabled.
      */
-    public IoUringDatagramChannelConfig setIpMulticastAll(boolean multicastAll) {
+    IoUringDatagramChannelConfig setIpMulticastAll(boolean multicastAll) {
         try {
             ((IoUringDatagramChannel) channel).socket.setIpMulticastAll(multicastAll);
             return this;
@@ -515,7 +424,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> (or
      * IPV6_MULTICAST_ALL for IPV6) is enabled, {@code false} otherwise.
      */
-    public boolean isIpMulticastAll() {
+    boolean isIpMulticastAll() {
         try {
             return ((IoUringDatagramChannel) channel).socket.isIpMulticastAll();
         } catch (IOException e) {

@@ -33,7 +33,6 @@ import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamAddress;
 import io.netty.handler.codec.quic.QuicStreamChannel;
-import io.netty.handler.codec.quic.QuicStreamChannelConfig;
 import io.netty.handler.codec.quic.QuicStreamFrame;
 import io.netty.handler.codec.quic.QuicStreamPriority;
 import io.netty.handler.codec.quic.QuicStreamType;
@@ -49,7 +48,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     private static final AttributeKey<Long> streamIdKey = valueOf("embedded_channel_stream_id");
     private static final AttributeKey<QuicStreamType> streamTypeKey = valueOf("embedded_channel_stream_type");
     private static final AttributeKey<Boolean> localCreatedKey = valueOf("embedded_channel_stream_local_created");
-    private QuicStreamChannelConfig config;
+    private ChannelConfig config;
     private Integer inputShutdown;
     private Integer outputShutdown;
 
@@ -135,7 +134,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     @Override
-    public QuicStreamChannelConfig config() {
+    public ChannelConfig config() {
         if (config == null) {
             config = new EmbeddedQuicStreamChannelConfig(super.config());
         }
@@ -217,98 +216,96 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
         return inputShutdown;
     }
 
-    private static final class EmbeddedQuicStreamChannelConfig implements QuicStreamChannelConfig {
+    private static final class EmbeddedQuicStreamChannelConfig implements ChannelConfig {
         private final ChannelConfig config;
         private boolean allowHalfClosure;
+        private boolean readFrames;
 
         EmbeddedQuicStreamChannelConfig(ChannelConfig config) {
             this.config = config;
         }
 
-        @Override
-        public QuicStreamChannelConfig setReadFrames(boolean readFrames) {
+        EmbeddedQuicStreamChannelConfig setReadFrames(boolean readFrames) {
+            this.readFrames = readFrames;
             return this;
         }
 
-        @Override
-        public boolean isReadFrames() {
-            return false;
+        boolean isReadFrames() {
+            return readFrames;
         }
 
-        @Override
-        public QuicStreamChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+        EmbeddedQuicStreamChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
             this.allowHalfClosure = allowHalfClosure;
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
+        public EmbeddedQuicStreamChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
             config.setMaxMessagesPerRead(maxMessagesPerRead);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setWriteSpinCount(int writeSpinCount) {
+        public EmbeddedQuicStreamChannelConfig setWriteSpinCount(int writeSpinCount) {
             config.setWriteSpinCount(writeSpinCount);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setAllocator(ByteBufAllocator allocator) {
+        public EmbeddedQuicStreamChannelConfig setAllocator(ByteBufAllocator allocator) {
             config.setAllocator(allocator);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+        public EmbeddedQuicStreamChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
             config.setRecvByteBufAllocator(allocator);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setAutoRead(boolean autoRead) {
+        public EmbeddedQuicStreamChannelConfig setAutoRead(boolean autoRead) {
             config.setAutoRead(autoRead);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setAutoClose(boolean autoClose) {
+        public EmbeddedQuicStreamChannelConfig setAutoClose(boolean autoClose) {
             config.setAutoClose(autoClose);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
+        public EmbeddedQuicStreamChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
             config.setMessageSizeEstimator(estimator);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
+        public EmbeddedQuicStreamChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
             config.setWriteBufferWaterMark(writeBufferWaterMark);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
+        public EmbeddedQuicStreamChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
             config.setConnectTimeoutMillis(connectTimeoutMillis);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
+        public EmbeddedQuicStreamChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
             config.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
             return this;
         }
 
         @Override
-        public QuicStreamChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
+        public EmbeddedQuicStreamChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
             config.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
             return this;
         }
 
-        @Override
-        public boolean isAllowHalfClosure() {
+        boolean isAllowHalfClosure() {
             return allowHalfClosure;
         }
 

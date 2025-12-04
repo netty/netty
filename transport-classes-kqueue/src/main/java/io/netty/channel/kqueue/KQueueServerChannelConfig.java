@@ -15,14 +15,9 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.ServerSocketChannelConfig;
 import io.netty.util.NetUtil;
 
 import java.io.IOException;
@@ -34,7 +29,7 @@ import static io.netty.channel.ChannelOption.SO_REUSEADDR;
 import static io.netty.channel.ChannelOption.TCP_FASTOPEN;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
-class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSocketChannelConfig {
+class KQueueServerChannelConfig extends KQueueChannelConfig {
     private volatile int backlog = NetUtil.SOMAXCONN;
     private volatile boolean enableTcpFastOpen;
 
@@ -84,8 +79,7 @@ class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSoc
         return true;
     }
 
-    @Override
-    public boolean isReuseAddress() {
+    boolean isReuseAddress() {
         try {
             return ((AbstractKQueueChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -93,8 +87,7 @@ class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSoc
         }
     }
 
-    @Override
-    public KQueueServerChannelConfig setReuseAddress(boolean reuseAddress) {
+    KQueueServerChannelConfig setReuseAddress(boolean reuseAddress) {
         try {
             ((AbstractKQueueChannel) channel).socket.setReuseAddress(reuseAddress);
             return this;
@@ -103,8 +96,7 @@ class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSoc
         }
     }
 
-    @Override
-    public int getReceiveBufferSize() {
+    int getReceiveBufferSize() {
         try {
             return ((AbstractKQueueChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -112,8 +104,7 @@ class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSoc
         }
     }
 
-    @Override
-    public KQueueServerChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    KQueueServerChannelConfig setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((AbstractKQueueChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
             return this;
@@ -122,13 +113,11 @@ class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSoc
         }
     }
 
-    @Override
-    public int getBacklog() {
+    int getBacklog() {
         return backlog;
     }
 
-    @Override
-    public KQueueServerChannelConfig setBacklog(int backlog) {
+    KQueueServerChannelConfig setBacklog(int backlog) {
         checkPositiveOrZero(backlog, "backlog");
         this.backlog = backlog;
         return this;
@@ -139,7 +128,7 @@ class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSoc
      *
      * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
      */
-    public boolean isTcpFastOpen() {
+    boolean isTcpFastOpen() {
         return enableTcpFastOpen;
     }
 
@@ -151,82 +140,8 @@ class KQueueServerChannelConfig extends KQueueChannelConfig implements ServerSoc
      *
      * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
      */
-    public KQueueServerChannelConfig setTcpFastOpen(boolean enableTcpFastOpen) {
+    KQueueServerChannelConfig setTcpFastOpen(boolean enableTcpFastOpen) {
         this.enableTcpFastOpen = enableTcpFastOpen;
-        return this;
-    }
-
-    @Override
-    public KQueueServerChannelConfig setRcvAllocTransportProvidesGuess(boolean transportProvidesGuess) {
-        super.setRcvAllocTransportProvidesGuess(transportProvidesGuess);
-        return this;
-    }
-
-    @Override
-    public KQueueServerChannelConfig setPerformancePreferences(int connectionTime, int latency, int bandwidth) {
-        return this;
-    }
-
-    @Override
-    public KQueueServerChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueServerChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public KQueueServerChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public KQueueServerChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public KQueueServerChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public KQueueServerChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueServerChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueServerChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    public KQueueServerChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public KQueueServerChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
         return this;
     }
 }
