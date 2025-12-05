@@ -28,10 +28,11 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.DefaultMaxMessagesRecvByteBufAllocator;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.MultithreadEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.SingleThreadEventLoop;
 import io.netty.util.ReferenceCountUtil;
@@ -46,9 +47,11 @@ import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
 
 import java.net.ConnectException;
+import java.nio.channels.AlreadyConnectedException;
 import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -73,9 +76,9 @@ public class LocalChannelTest {
 
     @BeforeAll
     public static void beforeClass() {
-        group1 = new DefaultEventLoopGroup(2);
-        group2 = new DefaultEventLoopGroup(2);
-        sharedGroup = new DefaultEventLoopGroup(1);
+        group1 = new MultiThreadIoEventLoopGroup(2, LocalIoHandler.newFactory());
+        group2 = new MultiThreadIoEventLoopGroup(2, LocalIoHandler.newFactory());
+        sharedGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
     }
 
     @AfterAll
@@ -228,7 +231,7 @@ public class LocalChannelTest {
     @Test
     public void localChannelRaceCondition() throws Exception {
         final CountDownLatch closeLatch = new CountDownLatch(1);
-        final EventLoopGroup clientGroup = new DefaultEventLoopGroup(1) {
+        final EventLoopGroup clientGroup = new MultithreadEventLoopGroup(1, (ThreadFactory) null) {
             @Override
             protected EventLoop newChild(Executor threadFactory, Object... args)
                     throws Exception {
@@ -879,6 +882,48 @@ public class LocalChannelTest {
                 sb.connect(LocalAddress.ANY).syncUninterruptibly();
             }
         });
+    }
+
+    @Test
+    public void testConnectedAlready() throws Exception {
+        Bootstrap cb = new Bootstrap();
+        ServerBootstrap sb = new ServerBootstrap();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
+        cb.group(group1)
+                .channel(LocalChannel.class)
+                .handler(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        causeRef.set(cause);
+                    }
+                });
+
+        sb.group(group2)
+                .channel(LocalServerChannel.class)
+                .childHandler(new ChannelInitializer<LocalChannel>() {
+                    @Override
+                    public void initChannel(LocalChannel ch) throws Exception {
+                        ch.pipeline().addLast(new TestHandler());
+                    }
+                });
+
+        Channel sc = null;
+        Channel cc = null;
+        try {
+            // Start server
+            sc = sb.bind(TEST_ADDRESS).sync().channel();
+
+            // Connect to the server
+            cc = cb.connect(sc.localAddress()).sync().channel();
+
+            ChannelFuture f = cc.connect(sc.localAddress()).awaitUninterruptibly();
+            assertInstanceOf(AlreadyConnectedException.class, f.cause());
+            cc.close().syncUninterruptibly();
+            assertNull(causeRef.get());
+        } finally {
+            closeChannel(cc);
+            closeChannel(sc);
+        }
     }
 
     private static final class LatchChannelFutureListener extends CountDownLatch implements ChannelFutureListener {

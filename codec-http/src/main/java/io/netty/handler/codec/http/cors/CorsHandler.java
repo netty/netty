@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpHeaders;
@@ -29,6 +30,7 @@ import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
 import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
+import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -58,6 +60,7 @@ public class CorsHandler extends ChannelDuplexHandler {
     private HttpRequest request;
     private final List<CorsConfig> configList;
     private final boolean isShortCircuit;
+    private boolean consumeContent;
 
     /**
      * Creates a new instance with a single {@link CorsConfig}.
@@ -87,13 +90,28 @@ public class CorsHandler extends ChannelDuplexHandler {
             config = getForOrigin(origin);
             if (isPreflightRequest(request)) {
                 handlePreflight(ctx, request);
+                // Enable consumeContent so that all following HttpContent
+                // for this request will be released and not propagated downstream.
+                consumeContent = true;
                 return;
             }
             if (isShortCircuit && !(origin == null || config != null)) {
                 forbidden(ctx, request);
+                consumeContent = true;
                 return;
             }
+
+            // This request is forwarded, stop discarding
+            consumeContent = false;
+            ctx.fireChannelRead(msg);
+            return;
         }
+
+        if (consumeContent && (msg instanceof HttpContent)) {
+            ReferenceCountUtil.release(msg);
+            return;
+        }
+
         ctx.fireChannelRead(msg);
     }
 
