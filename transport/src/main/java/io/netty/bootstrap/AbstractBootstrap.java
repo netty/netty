@@ -32,6 +32,7 @@ import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 
 import java.net.InetAddress;
@@ -52,6 +53,9 @@ import java.util.concurrent.ConcurrentHashMap;
  * transports such as datagram (UDP).</p>
  */
 public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C extends Channel> implements Cloneable {
+
+    private static final boolean CLOSE_ON_SET_OPTION_FAILURE = SystemPropertyUtil.getBoolean(
+            "io.netty.bootstrap.closeOnSetOptionFailure", true);
     @SuppressWarnings("unchecked")
     private static final Map.Entry<ChannelOption<?>, Object>[] EMPTY_OPTION_ARRAY = new Map.Entry[0];
     @SuppressWarnings("unchecked")
@@ -357,7 +361,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         return regFuture;
     }
 
-    abstract void init(Channel channel) throws Exception;
+    abstract void init(Channel channel) throws Throwable;
 
     Collection<ChannelInitializerExtension> getInitializerExtensions() {
         ClassLoader loader = extensionsClassLoader;
@@ -474,7 +478,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     static void setChannelOptions(
-            Channel channel, Map.Entry<ChannelOption<?>, Object>[] options, InternalLogger logger) {
+            Channel channel, Map.Entry<ChannelOption<?>, Object>[] options, InternalLogger logger) throws Throwable {
         for (Map.Entry<ChannelOption<?>, Object> e: options) {
             setChannelOption(channel, e.getKey(), e.getValue(), logger);
         }
@@ -482,7 +486,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
     @SuppressWarnings("unchecked")
     private static void setChannelOption(
-            Channel channel, ChannelOption<?> option, Object value, InternalLogger logger) {
+            Channel channel, ChannelOption<?> option, Object value, InternalLogger logger) throws Throwable {
         try {
             if (!channel.config().setOption((ChannelOption<Object>) option, value)) {
                 logger.warn("Unknown channel option '{}' for channel '{}' of type '{}'",
@@ -492,6 +496,10 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             logger.warn(
                     "Failed to set channel option '{}' with value '{}' for channel '{}' of type '{}'",
                     option, value, channel, channel.getClass(), t);
+            if (CLOSE_ON_SET_OPTION_FAILURE) {
+                // Only rethrow if we want to close the channel in case of a failure.
+                throw t;
+            }
         }
     }
 
