@@ -77,8 +77,7 @@ public abstract class AbstractEpollServerChannel extends AbstractEpollChannel im
     final class EpollServerSocketUnsafe extends AbstractEpollUnsafe {
         // Will hold the remote address after accept(...) was successful.
         // We need 24 bytes for the address as maximum + 1 byte for storing the length.
-        // So use 26 bytes as it's a power of two.
-        private final byte[] acceptedAddress = new byte[26];
+        private final byte[] acceptedAddress = new byte[25];
 
         @Override
         public void connect(SocketAddress socketAddress, SocketAddress socketAddress2, ChannelPromise channelPromise) {
