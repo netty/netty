@@ -58,7 +58,7 @@ import static io.netty.util.internal.StringUtil.className;
 
 public final class KQueueSocketChannel extends AbstractKQueueChannel implements SocketChannel {
 
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractKQueueStreamChannel.class);
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueSocketChannel.class);
     private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +

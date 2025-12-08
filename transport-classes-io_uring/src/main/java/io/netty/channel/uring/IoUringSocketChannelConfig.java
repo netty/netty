@@ -30,7 +30,7 @@ import static io.netty.channel.ChannelOption.*;
 import static io.netty.channel.unix.UnixChannelOption.DOMAIN_SOCKET_READ_MODE;
 
 
-final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig {
+final class IoUringSocketChannelConfig extends IoUringChannelConfig {
     private volatile boolean allowHalfClosure;
     private volatile boolean tcpFastopen;
     private static final AtomicReferenceFieldUpdater<IoUringSocketChannelConfig, DomainSocketReadMode> MODE_UPDATER =
@@ -40,6 +40,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig {
     static final int DISABLE_WRITE_ZERO_COPY = -1;
     private volatile int writeZeroCopyThreshold = DISABLE_WRITE_ZERO_COPY;
     private volatile DomainSocketReadMode mode = DomainSocketReadMode.BYTES;
+    private volatile short bufferGroupId = -1;
 
     IoUringSocketChannelConfig(AbstractIoUringChannel channel) {
         super(channel);
@@ -52,7 +53,7 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig {
     @Override
     public Map<ChannelOption<?>, Object> getOptions() {
         Map<ChannelOption<?>, Object> options = getOptions(
-                super.getOptions(),
+                super.getOptions(), IoUringChannelOption.IO_URING_BUFFER_GROUP_ID,
                 SO_RCVBUF, SO_SNDBUF, TCP_NODELAY, SO_KEEPALIVE, SO_REUSEADDR, SO_LINGER, IP_TOS,
                 ALLOW_HALF_CLOSURE, IoUringChannelOption.TCP_CORK, IoUringChannelOption.TCP_NOTSENT_LOWAT,
                 IoUringChannelOption.TCP_KEEPCNT, IoUringChannelOption.TCP_KEEPIDLE, IoUringChannelOption.TCP_KEEPINTVL,
@@ -67,6 +68,9 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig {
     @SuppressWarnings("unchecked")
     @Override
     public <T> T getOption(ChannelOption<T> option) {
+        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
+            return (T) Short.valueOf(getBufferGroupId());
+        }
         if (option == SO_RCVBUF) {
             return (T) Integer.valueOf(getReceiveBufferSize());
         }
@@ -132,7 +136,9 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig {
     public <T> boolean setOption(ChannelOption<T> option, T value) {
         validate(option, value);
 
-        if (option == SO_RCVBUF) {
+        if (option == IoUringChannelOption.IO_URING_BUFFER_GROUP_ID) {
+            setBufferGroupId((Short) value);
+        } else if (option == SO_RCVBUF) {
             setReceiveBufferSize((Integer) value);
         } else if (option == SO_SNDBUF) {
             setSendBufferSize((Integer) value);
@@ -586,5 +592,14 @@ final class IoUringSocketChannelConfig extends IoUringStreamChannelConfig {
 
     DomainSocketReadMode getReadMode() {
         return mode;
+    }
+
+    short getBufferGroupId() {
+        return bufferGroupId;
+    }
+
+    IoUringSocketChannelConfig setBufferGroupId(short bufferGroupId) {
+        this.bufferGroupId = (short) ObjectUtil.checkPositiveOrZero(bufferGroupId, "bufferGroupId");
+        return this;
     }
 }
