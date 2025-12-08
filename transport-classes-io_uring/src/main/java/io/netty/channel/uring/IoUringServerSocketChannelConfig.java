@@ -98,7 +98,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
         return true;
     }
 
-    boolean isReuseAddress() {
+    private boolean isReuseAddress() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -106,16 +106,15 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
         }
     }
 
-    IoUringServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+    private void setReuseAddress(boolean reuseAddress) {
         try {
             ((AbstractIoUringChannel) channel).socket.setReuseAddress(reuseAddress);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    int getReceiveBufferSize() {
+    private int getReceiveBufferSize() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -123,10 +122,9 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
         }
     }
 
-    IoUringServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    private void setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((AbstractIoUringChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -136,16 +134,15 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
         return backlog;
     }
 
-    IoUringServerSocketChannelConfig setBacklog(int backlog) {
+    private void setBacklog(int backlog) {
         checkPositiveOrZero(backlog, "backlog");
         this.backlog = backlog;
-        return this;
     }
 
     /**
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
-    boolean isReusePort() {
+    private boolean isReusePort() {
         try {
             return ((IoUringServerSocketChannel) channel).socket.isReusePort();
         } catch (IOException e) {
@@ -161,10 +158,9 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
      * Be aware this method needs be called before
      * {@link io.netty.channel.socket.ServerSocketChannel#bind(java.net.SocketAddress)} to have any affect.
      */
-    IoUringServerSocketChannelConfig setReusePort(boolean reusePort) {
+    private void setReusePort(boolean reusePort) {
         try {
             ((IoUringServerSocketChannel) channel).socket.setReusePort(reusePort);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -174,7 +170,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} otherwise.
      */
-    boolean isFreeBind() {
+    private boolean isFreeBind() {
         try {
             return ((IoUringServerSocketChannel) channel).socket.isIpFreeBind();
         } catch (IOException e) {
@@ -186,10 +182,9 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    IoUringServerSocketChannelConfig setFreeBind(boolean freeBind) {
+    private void setFreeBind(boolean freeBind) {
         try {
             ((IoUringServerSocketChannel) channel).socket.setIpFreeBind(freeBind);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -199,7 +194,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
      */
-    boolean isIpTransparent() {
+    private boolean isIpTransparent() {
         try {
             return ((IoUringServerSocketChannel) channel).socket.isIpTransparent();
         } catch (IOException e) {
@@ -211,10 +206,9 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    IoUringServerSocketChannelConfig setIpTransparent(boolean transparent) {
+    private void setIpTransparent(boolean transparent) {
         try {
             ((IoUringServerSocketChannel) channel).socket.setIpTransparent(transparent);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -223,10 +217,9 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
     /**
      * Set the {@code TCP_DEFER_ACCEPT} option on the socket. See {@code man 7 tcp} for more details.
      */
-    IoUringServerSocketChannelConfig setTcpDeferAccept(int deferAccept) {
+    private void setTcpDeferAccept(int deferAccept) {
         try {
             ((IoUringServerSocketChannel) channel).socket.setTcpDeferAccept(deferAccept);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -235,7 +228,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
     /**
      * Returns a positive value if <a href="https://linux.die.net/man/7/tcp">TCP_DEFER_ACCEPT</a> is enabled.
      */
-    int getTcpDeferAccept() {
+    private int getTcpDeferAccept() {
         try {
             return ((IoUringServerSocketChannel) channel).socket.getTcpDeferAccept();
         } catch (IOException e) {
@@ -248,7 +241,7 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
      *
      * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
      */
-     int getTcpFastopen() {
+     private int getTcpFastopen() {
         return pendingFastOpenRequestsThreshold;
     }
 
@@ -261,9 +254,8 @@ final class IoUringServerSocketChannelConfig extends IoUringChannelConfig {
      *
      * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
      */
-    IoUringServerSocketChannelConfig setTcpFastopen(int pendingFastOpenRequestsThreshold) {
+    private void setTcpFastopen(int pendingFastOpenRequestsThreshold) {
         this.pendingFastOpenRequestsThreshold = checkPositiveOrZero(pendingFastOpenRequestsThreshold,
                 "pendingFastOpenRequestsThreshold");
-        return this;
     }
 }

@@ -15,14 +15,12 @@
  */
 package io.netty.channel.epoll;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.DefaultChannelConfig;
-import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.unix.IntegerUnixChannelOption;
 import io.netty.channel.unix.RawUnixChannelOption;
 
@@ -95,69 +93,12 @@ public class EpollChannelConfig extends DefaultChannelConfig {
     }
 
     @Override
-    public EpollChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public EpollChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public EpollChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public EpollChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
+    public ChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
         if (!(allocator.newHandle() instanceof RecvByteBufAllocator.ExtendedHandle)) {
             throw new IllegalArgumentException("allocator.newHandle() must return an object of type: " +
                     RecvByteBufAllocator.ExtendedHandle.class);
         }
         super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public EpollChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public EpollChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    public EpollChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public EpollChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
         return this;
     }
 

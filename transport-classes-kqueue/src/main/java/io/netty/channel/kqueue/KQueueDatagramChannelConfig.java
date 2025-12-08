@@ -140,7 +140,7 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig {
     /**
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
-    public boolean isReusePort() {
+    private boolean isReusePort() {
         try {
             return ((KQueueDatagramChannel) channel).socket.isReusePort();
         } catch (IOException e) {
@@ -155,16 +155,15 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig {
      * Be aware this method needs be called before {@link KQueueDatagramChannel#bind(java.net.SocketAddress)} to have
      * any affect.
      */
-    public KQueueDatagramChannelConfig setReusePort(boolean reusePort) {
+    private void setReusePort(boolean reusePort) {
         try {
             ((KQueueDatagramChannel) channel).socket.setReusePort(reusePort);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    int getSendBufferSize() {
+    private int getSendBufferSize() {
         try {
             return ((KQueueDatagramChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
@@ -172,16 +171,15 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    KQueueDatagramChannelConfig setSendBufferSize(int sendBufferSize) {
+    private void setSendBufferSize(int sendBufferSize) {
         try {
             ((KQueueDatagramChannel) channel).socket.setSendBufferSize(sendBufferSize);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    int getReceiveBufferSize() {
+    private int getReceiveBufferSize() {
         try {
             return ((KQueueDatagramChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -189,16 +187,15 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    KQueueDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    private void setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((KQueueDatagramChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    int getTrafficClass() {
+    private int getTrafficClass() {
         try {
             return ((KQueueDatagramChannel) channel).socket.getTrafficClass();
         } catch (IOException e) {
@@ -206,16 +203,15 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    KQueueDatagramChannelConfig setTrafficClass(int trafficClass) {
+    private void setTrafficClass(int trafficClass) {
         try {
             ((KQueueDatagramChannel) channel).socket.setTrafficClass(trafficClass);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    boolean isReuseAddress() {
+    private boolean isReuseAddress() {
         try {
             return ((KQueueDatagramChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -223,16 +219,15 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    KQueueDatagramChannelConfig setReuseAddress(boolean reuseAddress) {
+    private void setReuseAddress(boolean reuseAddress) {
         try {
             ((KQueueDatagramChannel) channel).socket.setReuseAddress(reuseAddress);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    boolean isBroadcast() {
+    private boolean isBroadcast() {
         try {
             return ((KQueueDatagramChannel) channel).socket.isBroadcast();
         } catch (IOException e) {
@@ -240,20 +235,19 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    KQueueDatagramChannelConfig setBroadcast(boolean broadcast) {
+    private void setBroadcast(boolean broadcast) {
         try {
             ((KQueueDatagramChannel) channel).socket.setBroadcast(broadcast);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    boolean isLoopbackModeDisabled() {
+    private boolean isLoopbackModeDisabled() {
         return false;
     }
 
-    KQueueDatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
+    private void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
         throw new UnsupportedOperationException("Multicast not supported");
     }
 
@@ -261,23 +255,23 @@ public final class KQueueDatagramChannelConfig extends KQueueChannelConfig {
         return -1;
     }
 
-    KQueueDatagramChannelConfig setTimeToLive(int ttl) {
+    private void setTimeToLive(int ttl) {
         throw new UnsupportedOperationException("Multicast not supported");
     }
 
-    InetAddress getInterface() {
+    private InetAddress getInterface() {
         return null;
     }
 
-    KQueueDatagramChannelConfig setInterface(InetAddress interfaceAddress) {
+    private void setInterface(InetAddress interfaceAddress) {
         throw new UnsupportedOperationException("Multicast not supported");
     }
 
-    NetworkInterface getNetworkInterface() {
+    private NetworkInterface getNetworkInterface() {
         return null;
     }
 
-    KQueueDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
+    private void setNetworkInterface(NetworkInterface networkInterface) {
         throw new UnsupportedOperationException("Multicast not supported");
     }
 }

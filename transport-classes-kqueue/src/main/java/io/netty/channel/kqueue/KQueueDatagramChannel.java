@@ -180,7 +180,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
             case INET6:
             case INET:
                 try {
-                    NetworkInterface iface = config().getNetworkInterface();
+                    NetworkInterface iface = config().getOption(KQueueChannelOption.IP_MULTICAST_IF);
                     if (iface == null) {
                         iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
                     }

@@ -15,12 +15,8 @@
  */
 package io.netty.channel.kqueue;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.MessageSizeEstimator;
-import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.NetUtil;
 
 import java.io.IOException;
@@ -100,16 +96,15 @@ final class KQueueServerSocketChannelConfig extends KQueueChannelConfig {
         return true;
     }
 
-    public KQueueServerSocketChannelConfig setReusePort(boolean reusePort) {
+    private void setReusePort(boolean reusePort) {
         try {
             ((AbstractKQueueChannel) channel).socket.setReusePort(reusePort);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    public boolean isReusePort() {
+    private boolean isReusePort() {
         try {
             return ((AbstractKQueueChannel) channel).socket.isReusePort();
         } catch (IOException e) {
@@ -117,16 +112,15 @@ final class KQueueServerSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    public KQueueServerSocketChannelConfig setAcceptFilter(AcceptFilter acceptFilter) {
+    private void setAcceptFilter(AcceptFilter acceptFilter) {
         try {
             ((AbstractKQueueChannel) channel).socket.setAcceptFilter(acceptFilter);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    public AcceptFilter getAcceptFilter() {
+    private AcceptFilter getAcceptFilter() {
         try {
             return ((AbstractKQueueChannel) channel).socket.getAcceptFilter();
         } catch (IOException e) {
@@ -134,7 +128,7 @@ final class KQueueServerSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    boolean isReuseAddress() {
+    private boolean isReuseAddress() {
         try {
             return ((AbstractKQueueChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -142,16 +136,15 @@ final class KQueueServerSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    KQueueServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+    private void setReuseAddress(boolean reuseAddress) {
         try {
             ((AbstractKQueueChannel) channel).socket.setReuseAddress(reuseAddress);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    int getReceiveBufferSize() {
+    private int getReceiveBufferSize() {
         try {
             return ((AbstractKQueueChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -159,10 +152,9 @@ final class KQueueServerSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    KQueueServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    private void setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((AbstractKQueueChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -172,10 +164,9 @@ final class KQueueServerSocketChannelConfig extends KQueueChannelConfig {
         return backlog;
     }
 
-    KQueueServerSocketChannelConfig setBacklog(int backlog) {
+    private void setBacklog(int backlog) {
         checkPositiveOrZero(backlog, "backlog");
         this.backlog = backlog;
-        return this;
     }
 
     /**
@@ -195,77 +186,7 @@ final class KQueueServerSocketChannelConfig extends KQueueChannelConfig {
      *
      * @see <a href="https://tools.ietf.org/html/rfc7413#appendix-A.2">RFC 7413 Passive Open</a>
      */
-    KQueueServerSocketChannelConfig setTcpFastOpen(boolean enableTcpFastOpen) {
+    private void setTcpFastOpen(boolean enableTcpFastOpen) {
         this.enableTcpFastOpen = enableTcpFastOpen;
-        return this;
-    }
-
-    @Override
-    public KQueueServerSocketChannelConfig setRcvAllocTransportProvidesGuess(boolean transportProvidesGuess) {
-        super.setRcvAllocTransportProvidesGuess(transportProvidesGuess);
-        return this;
-    }
-
-    @Override
-    public KQueueServerSocketChannelConfig setConnectTimeoutMillis(int connectTimeoutMillis) {
-        super.setConnectTimeoutMillis(connectTimeoutMillis);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueServerSocketChannelConfig setMaxMessagesPerRead(int maxMessagesPerRead) {
-        super.setMaxMessagesPerRead(maxMessagesPerRead);
-        return this;
-    }
-
-    @Override
-    public KQueueServerSocketChannelConfig setWriteSpinCount(int writeSpinCount) {
-        super.setWriteSpinCount(writeSpinCount);
-        return this;
-    }
-
-    @Override
-    public KQueueServerSocketChannelConfig setAllocator(ByteBufAllocator allocator) {
-        super.setAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public KQueueServerSocketChannelConfig setRecvByteBufAllocator(RecvByteBufAllocator allocator) {
-        super.setRecvByteBufAllocator(allocator);
-        return this;
-    }
-
-    @Override
-    public KQueueServerSocketChannelConfig setAutoRead(boolean autoRead) {
-        super.setAutoRead(autoRead);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueServerSocketChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-        super.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-        return this;
-    }
-
-    @Override
-    @Deprecated
-    public KQueueServerSocketChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-        super.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-        return this;
-    }
-
-    @Override
-    public KQueueServerSocketChannelConfig setWriteBufferWaterMark(WriteBufferWaterMark writeBufferWaterMark) {
-        super.setWriteBufferWaterMark(writeBufferWaterMark);
-        return this;
-    }
-
-    @Override
-    public KQueueServerSocketChannelConfig setMessageSizeEstimator(MessageSizeEstimator estimator) {
-        super.setMessageSizeEstimator(estimator);
-        return this;
     }
 }

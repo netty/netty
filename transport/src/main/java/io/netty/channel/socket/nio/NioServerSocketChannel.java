@@ -312,28 +312,25 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_REUSEADDR);
         }
 
-        private NioServerSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+        private void setReuseAddress(boolean reuseAddress) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_REUSEADDR, reuseAddress);
-            return this;
         }
 
         private int getReceiveBufferSize() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_RCVBUF);
         }
 
-        private NioServerSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        private void setReceiveBufferSize(int receiveBufferSize) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
-            return this;
         }
 
         private int getBacklog() {
             return backlog;
         }
 
-        private NioServerSocketChannelConfig setBacklog(int backlog) {
+        private void setBacklog(int backlog) {
             checkPositiveOrZero(backlog, "backlog");
             this.backlog = backlog;
-            return this;
         }
     }
 

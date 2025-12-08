@@ -576,77 +576,69 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
             return true;
         }
 
-        int getReceiveBufferSize() {
+        private int getReceiveBufferSize() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_RCVBUF);
         }
 
-        int getSendBufferSize() {
+        private int getSendBufferSize() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_SNDBUF);
         }
 
-        int getSoLinger() {
+        private int getSoLinger() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_LINGER);
         }
 
-        int getTrafficClass() {
+        private int getTrafficClass() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.IP_TOS);
         }
 
-        boolean isKeepAlive() {
+        private boolean isKeepAlive() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_KEEPALIVE);
         }
 
-        boolean isReuseAddress() {
+        private boolean isReuseAddress() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.SO_REUSEADDR);
         }
 
-        boolean isTcpNoDelay() {
+        private boolean isTcpNoDelay() {
             return NioChannelOption.getOption0(jdkChannel, StandardSocketOptions.TCP_NODELAY);
         }
 
-        NioSocketChannelConfig setKeepAlive(boolean keepAlive) {
+        private void setKeepAlive(boolean keepAlive) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_KEEPALIVE, keepAlive);
-            return this;
         }
 
-        NioSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        private void setReceiveBufferSize(int receiveBufferSize) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
-            return this;
         }
 
-        NioSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+        private void setReuseAddress(boolean reuseAddress) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_REUSEADDR, reuseAddress);
-            return this;
         }
 
-        NioSocketChannelConfig setSendBufferSize(int sendBufferSize) {
+        private void setSendBufferSize(int sendBufferSize) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_SNDBUF, sendBufferSize);
             calculateMaxBytesPerGatheringWrite();
-            return this;
         }
 
-        NioSocketChannelConfig setSoLinger(int soLinger) {
+        private void setSoLinger(int soLinger) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.SO_LINGER, soLinger);
-            return this;
         }
 
-        NioSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
+        private void setTcpNoDelay(boolean tcpNoDelay) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.TCP_NODELAY, tcpNoDelay);
-            return this;
         }
 
-        NioSocketChannelConfig setTrafficClass(int trafficClass) {
+        private void setTrafficClass(int trafficClass) {
             NioChannelOption.setOption0(jdkChannel, StandardSocketOptions.IP_TOS, trafficClass);
-            return this;
         }
 
-        boolean isAllowHalfClosure() {
+        private boolean isAllowHalfClosure() {
             return allowHalfClosure;
         }
 
-        NioSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+        private void setAllowHalfClosure(boolean allowHalfClosure) {
             this.allowHalfClosure = allowHalfClosure;
-            return this;
         }
 
         void setMaxBytesPerGatheringWrite(int maxBytesPerGatheringWrite) {
