@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -47,7 +46,6 @@ import static io.netty.channel.unix.Errors.ioResult;
 public final class IoUringSocketChannel extends AbstractIoUringChannel implements SocketChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringSocketChannel.class);
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private final IoUringSocketChannelConfig config;
 
     // Marker object that is used to mark a batch of buffers that were used with zero-copy write operations.
@@ -78,28 +76,23 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     }
 
     public IoUringSocketChannel(EventLoop eventLoop, SocketProtocolFamily family) {
-        super(eventLoop, null, LinuxSocket.newSocket(family), false);
+        super(eventLoop, null, LinuxSocket.newSocket(family), false, false);
         this.config = new IoUringSocketChannelConfig(this);
     }
 
     IoUringSocketChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd) {
-        super(eventLoop, parent, fd, true);
+        super(eventLoop, parent, fd, true, false);
         this.config = new IoUringSocketChannelConfig(this);
     }
 
     IoUringSocketChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd, SocketAddress remote) {
-        super(eventLoop, parent, fd, remote);
+        super(eventLoop, parent, fd, remote, false);
         this.config = new IoUringSocketChannelConfig(this);
     }
 
     @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

@@ -21,7 +21,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -59,7 +58,6 @@ import static io.netty.util.internal.StringUtil.className;
 public final class KQueueSocketChannel extends AbstractKQueueChannel implements SocketChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(KQueueSocketChannel.class);
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
@@ -89,12 +87,12 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
     }
 
     KQueueSocketChannel(EventLoop eventLoop, Channel parent, BsdSocket fd, SocketAddress remoteAddress) {
-        super(eventLoop, parent, fd, remoteAddress);
+        super(eventLoop, parent, fd, remoteAddress, false);
         config = new KQueueSocketChannelConfig(this);
     }
 
     KQueueSocketChannel(EventLoop eventLoop, Channel parent, BsdSocket fd, boolean active) {
-        super(eventLoop, parent, fd, active);
+        super(eventLoop, parent, fd, active, false);
         config = new KQueueSocketChannelConfig(this);
     }
 
@@ -105,11 +103,6 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
     @Override
     protected boolean isAllowHalfClosure() {
         return config.isAllowHalfClosure();
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     /**

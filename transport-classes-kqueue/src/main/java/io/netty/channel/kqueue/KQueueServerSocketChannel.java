@@ -17,7 +17,6 @@ package io.netty.channel.kqueue;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -41,7 +40,6 @@ public final class KQueueServerSocketChannel extends AbstractKQueueChannel imple
             KQueueServerSocketChannel.class);
 
     private final KQueueServerSocketChannelConfig config;
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private final EventLoopGroup childEventLoopGroup;
 
@@ -71,7 +69,7 @@ public final class KQueueServerSocketChannel extends AbstractKQueueChannel imple
 
     private KQueueServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                       BsdSocket fd, boolean active) {
-        super(eventLoop, null, fd, active);
+        super(eventLoop, null, fd, active, false);
         this.childEventLoopGroup =
                 validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", KQueueIoHandle.class);
         config = new KQueueServerSocketChannelConfig(this);
@@ -80,11 +78,6 @@ public final class KQueueServerSocketChannel extends AbstractKQueueChannel imple
     @Override
     public EventLoopGroup childEventExecutorGroup() {
         return childEventLoopGroup;
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

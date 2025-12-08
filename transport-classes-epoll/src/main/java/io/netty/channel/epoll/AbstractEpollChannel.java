@@ -23,9 +23,9 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoRegistration;
@@ -59,7 +59,6 @@ import static io.netty.channel.unix.UnixChannelUtil.computeRemoteAddr;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     protected final LinuxSocket socket;
     private final EpollIoHandleImpl ioHandle = new  EpollIoHandleImpl();
     private ChannelPromise connectPromise;
@@ -74,8 +73,9 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     protected volatile boolean active;
 
-    AbstractEpollChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd, boolean active, EpollIoOps initialOps) {
-        super(eventLoop, EpollIoHandle.class, parent);
+    AbstractEpollChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd, boolean active, EpollIoOps initialOps,
+                         boolean hasDisconnect) {
+        super(eventLoop, EpollIoHandle.class, parent, DefaultChannelId.newInstance(), hasDisconnect);
         this.socket = checkNotNull(fd, "fd");
         this.active = active;
         if (active) {
@@ -88,8 +88,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     AbstractEpollChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd,
-                         SocketAddress remote, EpollIoOps initialOps) {
-        super(eventLoop, EpollIoHandle.class, parent);
+                         SocketAddress remote, EpollIoOps initialOps, boolean hasDisconnect) {
+        super(eventLoop, EpollIoHandle.class, parent, DefaultChannelId.newInstance(), hasDisconnect);
         this.socket = checkNotNull(fd, "fd");
         this.active = true;
         // Directly cache the remote and local addresses
@@ -148,11 +148,6 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     @Override
     public boolean isActive() {
         return active;
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

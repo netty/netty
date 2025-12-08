@@ -18,7 +18,6 @@ package io.netty.channel.uring;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -53,7 +52,6 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringDatagramChannel.class);
     private static final boolean IP_MULTICAST_ALL =
             SystemPropertyUtil.getBoolean("io.netty.channel.iouring.ipMulticastAll", false);
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
             StringUtil.simpleClassName(ByteBuf.class) + ')';
@@ -114,7 +112,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
     private IoUringDatagramChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
         // Always use a blocking fd and so make use of fast-poll.
-        super(eventLoop, null, fd, active);
+        super(eventLoop, null, fd, active, true);
 
         // Configure IP_MULTICAST_ALL - disable by default to match the behaviour of NIO.
         try {
@@ -124,11 +122,6 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
         }
 
         config = new IoUringDatagramChannelConfig(this);
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

@@ -170,7 +170,6 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         if (GZIP.contentEqualsIgnoreCase(contentEncoding) || X_GZIP.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(ZlibCodecFactory.newZlibDecoder(ZlibWrapper.GZIP, maxAllocation))
                     .build();
@@ -180,7 +179,6 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
             // To be strict, 'deflate' means ZLIB, but some servers were not implemented correctly.
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(ZlibCodecFactory.newZlibDecoder(wrapper, maxAllocation))
                     .build();
@@ -188,7 +186,6 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         if (Brotli.isAvailable() && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new BrotliDecoder())
                     .build();
@@ -196,7 +193,6 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         if (SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new SnappyFrameDecoder())
                     .build();
@@ -204,7 +200,6 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
         if (Zstd.isAvailable() && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new ZstdDecoder())
                     .build();

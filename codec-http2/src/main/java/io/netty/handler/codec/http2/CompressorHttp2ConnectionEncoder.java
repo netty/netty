@@ -294,7 +294,6 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (Brotli.isAvailable() && brotliOptions != null && BR.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new BrotliEncoder(brotliOptions.parameters()))
                     .build();
@@ -302,7 +301,6 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (zstdOptions != null && ZSTD.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new ZstdEncoder(zstdOptions.compressionLevel(),
                             zstdOptions.blockSize(), zstdOptions.maxEncodeSize()))
@@ -311,7 +309,6 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         if (snappyOptions != null && SNAPPY.contentEqualsIgnoreCase(contentEncoding)) {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(new SnappyFrameEncoder())
                     .build();
@@ -343,7 +340,6 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             if (wrapper == ZlibWrapper.GZIP && gzipCompressionOptions != null) {
                 return EmbeddedChannel.builder()
                         .channelId(channel.id())
-                        .hasDisconnect(channel.metadata().hasDisconnect())
                         .config(channel.config())
                         .handlers(ZlibCodecFactory.newZlibEncoder(wrapper,
                                 gzipCompressionOptions.compressionLevel(),
@@ -354,7 +350,6 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
             } else if (wrapper == ZlibWrapper.ZLIB && deflateOptions != null) {
                 return EmbeddedChannel.builder()
                         .channelId(channel.id())
-                        .hasDisconnect(channel.metadata().hasDisconnect())
                         .config(channel.config())
                         .handlers(ZlibCodecFactory.newZlibEncoder(wrapper,
                                 deflateOptions.compressionLevel(),
@@ -368,7 +363,6 @@ public class CompressorHttp2ConnectionEncoder extends DecoratingHttp2ConnectionE
         } else {
             return EmbeddedChannel.builder()
                     .channelId(channel.id())
-                    .hasDisconnect(channel.metadata().hasDisconnect())
                     .config(channel.config())
                     .handlers(ZlibCodecFactory.newZlibEncoder(wrapper, compressionLevel, windowBits, memLevel))
                     .build();

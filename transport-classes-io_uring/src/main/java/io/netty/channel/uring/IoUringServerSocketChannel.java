@@ -17,7 +17,6 @@ package io.netty.channel.uring;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
@@ -46,8 +45,6 @@ public final class IoUringServerSocketChannel extends AbstractIoUringChannel imp
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
             IoUringServerSocketChannel.class);
-
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private static final class AcceptedAddressMemory {
         private final CleanableDirectBuffer acceptedAddressMemoryCleanable;
@@ -93,7 +90,7 @@ public final class IoUringServerSocketChannel extends AbstractIoUringChannel imp
         //
         //  - https://lore.kernel.org/netdev/20240509180627.204155-1-axboe@kernel.dk/
         //  - https://lore.kernel.org/io-uring/20240508142725.91273-1-axboe@kernel.dk/
-        super(eventLoop, null, LinuxSocket.newSocket(family), false);
+        super(eventLoop, null, LinuxSocket.newSocket(family), false, false);
         this.childEventLoopGroup =
                 validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", IoUringIoHandle.class);
 
@@ -123,11 +120,6 @@ public final class IoUringServerSocketChannel extends AbstractIoUringChannel imp
     @Override
     public EventLoopGroup childEventExecutorGroup() {
         return childEventLoopGroup;
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

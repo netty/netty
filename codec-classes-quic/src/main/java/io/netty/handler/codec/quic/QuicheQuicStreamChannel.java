@@ -22,7 +22,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelId;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
@@ -50,7 +49,6 @@ import java.util.concurrent.RejectedExecutionException;
  * {@link QuicStreamChannel} implementation that uses <a href="https://github.com/cloudflare/quiche">quiche</a>.
  */
 final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicStreamChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicStreamChannel.class);
     private final QuicheQuicChannel parent;
     private final ChannelId id;
@@ -82,7 +80,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         this.parent = parent;
         this.id = DefaultChannelId.newInstance();
         ioTransport = new QuicStreamIoTransport();
-        this.pipeline = new DefaultChannelPipeline(this, ioTransport) {
+        this.pipeline = new DefaultChannelPipeline(this, false, ioTransport) {
             // TODO: add some overrides maybe ?
         };
         config = new QuicheQuicStreamChannelConfig(this);
@@ -326,11 +324,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     @Override
     public boolean isActive() {
         return isOpen();
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

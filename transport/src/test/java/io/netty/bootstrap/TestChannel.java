@@ -18,7 +18,6 @@ package io.netty.bootstrap;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
@@ -28,7 +27,6 @@ import io.netty.channel.EventLoop;
 import java.net.SocketAddress;
 
 class TestChannel extends AbstractChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private final ChannelConfig config;
     volatile boolean active;
     volatile boolean closed;
@@ -110,11 +108,6 @@ class TestChannel extends AbstractChannel {
     @Override
     public boolean isActive() {
         return active;
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     private static final class TestConfig extends DefaultChannelConfig {

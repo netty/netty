@@ -23,6 +23,7 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoRegistration;
@@ -61,20 +62,9 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     private ChannelPromise pendingConnectPromise;
 
-    /**
-     * Create a new instance
-     *
-     * @param eventLoop         the {@link EventLoop} to use for the {@link Channel}
-     * @param parent            the parent {@link Channel} by which this instance was created. May be {@code null}
-     * @param ch                the underlying {@link SelectableChannel} on which it operates
-     * @param readOps           the ops to set to receive data from the {@link SelectableChannel}
-     */
-    protected AbstractNioChannel(EventLoop eventLoop, Channel parent, SelectableChannel ch, int readOps) {
-        this(eventLoop, parent, ch, NioIoOps.valueOf(readOps));
-    }
-
-    protected AbstractNioChannel(EventLoop eventLoop, Channel parent, SelectableChannel ch, NioIoOps readOps) {
-        super(eventLoop, NioIoHandle.class, parent);
+    protected AbstractNioChannel(EventLoop eventLoop, Channel parent, SelectableChannel ch, NioIoOps readOps,
+                                 boolean hasDisconnect) {
+        super(eventLoop, NioIoHandle.class, parent, DefaultChannelId.newInstance(), hasDisconnect);
         this.ch = ch;
         this.readInterestOp = ObjectUtil.checkNotNull(readOps, "readOps").value;
         this.readOps = readOps;

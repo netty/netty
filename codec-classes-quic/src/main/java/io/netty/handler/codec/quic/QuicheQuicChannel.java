@@ -24,7 +24,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
@@ -120,7 +119,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
     }
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private long[] readableStreams = new long[4];
     private long[] writableStreams = new long[4];
     private final LongObjectMap<QuicheQuicStreamChannel> streams = new LongObjectHashMap<>();
@@ -758,11 +756,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     @Override
     public boolean isActive() {
         return state == ChannelState.ACTIVE;
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     /**

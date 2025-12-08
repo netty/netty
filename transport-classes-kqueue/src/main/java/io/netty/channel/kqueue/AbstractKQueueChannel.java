@@ -23,9 +23,9 @@ import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoRegistration;
@@ -51,7 +51,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
 abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     /**
      * The future of the current connection attempt.  If not null, subsequent
      * connection attempts will fail.
@@ -71,8 +70,8 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    AbstractKQueueChannel(EventLoop eventLoop, Channel parent, BsdSocket fd, boolean active) {
-        super(eventLoop, KQueueIoHandle.class, parent);
+    AbstractKQueueChannel(EventLoop eventLoop, Channel parent, BsdSocket fd, boolean active, boolean hasDisconnect) {
+        super(eventLoop, KQueueIoHandle.class, parent, DefaultChannelId.newInstance(), hasDisconnect);
         socket = checkNotNull(fd, "fd");
         this.active = active;
         if (active) {
@@ -83,8 +82,9 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
         }
     }
 
-    AbstractKQueueChannel(EventLoop eventLoop, Channel parent, BsdSocket fd, SocketAddress remote) {
-        super(eventLoop, KQueueIoHandle.class, parent);
+    AbstractKQueueChannel(EventLoop eventLoop, Channel parent, BsdSocket fd, SocketAddress remote,
+                          boolean hasDisconnect) {
+        super(eventLoop, KQueueIoHandle.class, parent, DefaultChannelId.newInstance(), hasDisconnect);
         socket = checkNotNull(fd, "fd");
         active = true;
         // Directly cache the remote and local addresses
@@ -114,11 +114,6 @@ abstract class AbstractKQueueChannel extends AbstractChannel implements UnixChan
     @Override
     public boolean isActive() {
         return active;
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

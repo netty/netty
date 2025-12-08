@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
@@ -29,6 +28,7 @@ import io.netty.channel.EventLoop;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
+import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.UncheckedBooleanSupplier;
@@ -49,7 +49,6 @@ import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.MembershipKey;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.UnresolvedAddressException;
 import java.nio.channels.spi.SelectorProvider;
 import java.util.ArrayList;
@@ -79,7 +78,6 @@ import static io.netty.channel.ChannelOption.SO_SNDBUF;
 public final class NioDatagramChannel
         extends AbstractNioMessageChannel implements io.netty.channel.socket.DatagramChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
@@ -154,13 +152,8 @@ public final class NioDatagramChannel
      * @param channel       the underlying {@link DatagramChannel}.
      */
     public NioDatagramChannel(EventLoop eventLoop, DatagramChannel channel) {
-        super(eventLoop, null, channel, SelectionKey.OP_READ);
+        super(eventLoop, null, channel, NioIoOps.READ, true);
         config = new NioDatagramChannelConfig(this, channel);
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override
@@ -631,7 +624,7 @@ public final class NioDatagramChannel
          */
         NioDatagramChannelConfig(io.netty.channel.socket.DatagramChannel channel,
                                         DatagramChannel jdkChannel) {
-            super(channel, new FixedRecvByteBufAllocator(2048));
+            super(channel, new FixedRecvByteBufAllocator(2048), 16);
             this.jdkChannel = ObjectUtil.checkNotNull(jdkChannel, "jdkChannel");
         }
 

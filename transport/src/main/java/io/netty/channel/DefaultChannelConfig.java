@@ -68,14 +68,22 @@ public class DefaultChannelConfig implements ChannelConfig {
     private volatile int autoRead = 1;
     private volatile boolean autoClose = true;
     private volatile WriteBufferWaterMark writeBufferWaterMark = WriteBufferWaterMark.DEFAULT;
-    private volatile boolean pinEventExecutor = true;
 
     public DefaultChannelConfig(Channel channel) {
-        this(channel, new AdaptiveRecvByteBufAllocator());
+        this(channel, new AdaptiveRecvByteBufAllocator(), 16);
+    }
+
+    public DefaultChannelConfig(Channel channel, int defaultMaxMessagesPerRead) {
+        this(channel, new AdaptiveRecvByteBufAllocator(), defaultMaxMessagesPerRead);
     }
 
     protected DefaultChannelConfig(Channel channel, RecvByteBufAllocator allocator) {
-        setRecvByteBufAllocator(allocator, channel.metadata());
+        setRecvByteBufAllocator(allocator, 16);
+        this.channel = channel;
+    }
+
+    protected DefaultChannelConfig(Channel channel, RecvByteBufAllocator allocator, int defaultMaxMessagesPerRead) {
+        setRecvByteBufAllocator(allocator, defaultMaxMessagesPerRead);
         this.channel = channel;
     }
 
@@ -311,14 +319,13 @@ public class DefaultChannelConfig implements ChannelConfig {
     /**
      * Set the {@link RecvByteBufAllocator} which is used for the channel to allocate receive buffers.
      * @param allocator the allocator to set.
-     * @param metadata Used to set the {@link ChannelMetadata#defaultMaxMessagesPerRead()} if {@code allocator}
-     * is of type {@link MaxMessagesRecvByteBufAllocator}.
+     * @param maxMessagesPerRead Used to set the default number of messages to read if
+     * {@code allocator} is of type {@link MaxMessagesRecvByteBufAllocator}.
      */
-    private void setRecvByteBufAllocator(RecvByteBufAllocator allocator, ChannelMetadata metadata) {
+    private void setRecvByteBufAllocator(RecvByteBufAllocator allocator, int maxMessagesPerRead) {
         checkNotNull(allocator, "allocator");
-        checkNotNull(metadata, "metadata");
         if (allocator instanceof MaxMessagesRecvByteBufAllocator) {
-            ((MaxMessagesRecvByteBufAllocator) allocator).maxMessagesPerRead(metadata.defaultMaxMessagesPerRead());
+            ((MaxMessagesRecvByteBufAllocator) allocator).maxMessagesPerRead(maxMessagesPerRead);
         }
         setRecvByteBufAllocator(allocator);
     }

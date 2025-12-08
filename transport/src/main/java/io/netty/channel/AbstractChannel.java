@@ -54,7 +54,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private final ChannelPipeline pipeline;
     private final CloseFuture closeFuture = new CloseFuture(this);
     private final EventLoop eventLoop;
-
     private volatile ChannelOutboundBuffer outboundBuffer = new ChannelOutboundBuffer(AbstractChannel.this);
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
@@ -62,6 +61,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private boolean closeInitiated;
     private Throwable initialCloseCause;
     private boolean inWriteFlushed;
+    protected final boolean hasDisconnect;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent
@@ -84,7 +84,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      *        the parent of this channel. {@code null} if there's no parent.
      */
     protected AbstractChannel(EventLoop eventLoop, Class<? extends IoHandle> handleType, Channel parent) {
-        this(eventLoop, handleType, parent, null);
+        this(eventLoop, handleType, parent, null, false);
     }
 
     /**
@@ -93,8 +93,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * @param parent
      *        the parent of this channel. {@code null} if there's no parent.
      */
-    protected AbstractChannel(EventLoop eventLoop, Class<? extends IoHandle> handleType, Channel parent, ChannelId id) {
+    protected AbstractChannel(EventLoop eventLoop, Class<? extends IoHandle> handleType, Channel parent, ChannelId id,
+                              boolean hasDisconnect) {
         this.parent = parent;
+        this.hasDisconnect = hasDisconnect;
         this.eventLoop = validateEventLoopGroup(eventLoop, "eventLoop", handleType);
         this.id = id == null ? DefaultChannelId.newInstance() : id;
         pipeline = newChannelPipeline();
@@ -1196,7 +1198,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     protected class DefaultAbstractChannelPipeline extends DefaultChannelPipeline {
 
         protected DefaultAbstractChannelPipeline(AbstractChannel channel) {
-            super(channel, channel.ioTransport);
+            super(channel, channel.hasDisconnect, channel.ioTransport);
         }
 
         @Override

@@ -22,7 +22,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -68,7 +67,6 @@ import static io.netty.util.internal.StringUtil.className;
  */
 public final class EpollSocketChannel extends AbstractEpollChannel implements SocketChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
                     StringUtil.simpleClassName(DefaultFileRegion.class) + ')';
@@ -116,7 +114,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
     EpollSocketChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd, SocketAddress remote) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(eventLoop, parent, fd, remote, EpollIoOps.EPOLLRDHUP);
+        super(eventLoop, parent, fd, remote, EpollIoOps.EPOLLRDHUP, false);
         config = new EpollSocketChannelConfig(this);
 
         if (parent instanceof EpollServerSocketChannel) {
@@ -126,7 +124,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
     private EpollSocketChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd, boolean active) {
         // Add EPOLLRDHUP so we are notified once the remote peer close the connection.
-        super(eventLoop, parent, fd, active, EpollIoOps.EPOLLRDHUP);
+        super(eventLoop, parent, fd, active, EpollIoOps.EPOLLRDHUP, false);
         config = new EpollSocketChannelConfig(this);
 
         if (parent instanceof EpollServerSocketChannel) {
@@ -137,11 +135,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     @Override
     protected boolean isAllowHalfClosure() {
         return this.config.isAllowHalfClosure();
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     /**
