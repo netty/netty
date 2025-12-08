@@ -15,18 +15,27 @@
  */
 package io.netty.channel.kqueue;
 
+import io.netty.channel.socket.TunAddress;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.PeerCredentials;
 import io.netty.channel.unix.tests.SocketTest;
 import io.netty.channel.unix.tests.UnixTestUtils;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class KQueueSocketTest extends SocketTest<BsdSocket> {
     @BeforeAll
@@ -79,6 +88,100 @@ public class KQueueSocketTest extends SocketTest<BsdSocket> {
         } finally {
             s1.close();
             s2.close();
+        }
+    }
+
+    @Test
+    public void testTunBind() throws IOException {
+        BsdSocket tun = null;
+        try {
+            tun = BsdSocket.newSocketTun();
+            tun.bindTun(new TunAddress());
+            assertTrue(true);
+        } finally {
+            if (tun != null) {
+                tun.close();
+            }
+        }
+    }
+
+    @Test
+    public void testTunBindInvalidName() throws IOException {
+        BsdSocket tun = null;
+        try {
+            tun = BsdSocket.newSocketTun();
+            tun.bindTun(new TunAddress("foo123"));
+            fail();
+        } catch (Exception e) {
+            // expected
+        } finally {
+            if (tun != null) {
+                tun.close();
+            }
+        }
+    }
+
+    @Test
+    public void testTunAddressBeforeBind() throws IOException {
+        BsdSocket tun = null;
+        try {
+            tun = BsdSocket.newSocketTun();
+            tun.localAddressTun();
+            fail();
+        } catch (Exception e) {
+            // expected
+        } finally {
+            if (tun != null) {
+                tun.close();
+            }
+        }
+    }
+
+    @Test
+    public void testTunAddressAfterBind() throws IOException {
+        BsdSocket tun = null;
+        try {
+            tun = BsdSocket.newSocketTun();
+            tun.bindTun(new TunAddress());
+            final SocketAddress address = tun.localAddressTun();
+            assertNotNull(address);
+            assertThat(address, is(instanceOf(TunAddress.class)));
+            assertNotNull(((TunAddress) address).ifName());
+        } finally {
+            if (tun != null) {
+                tun.close();
+            }
+        }
+    }
+
+    @Test
+    public void testTunGetMtu() throws IOException {
+        BsdSocket tun = null;
+        try {
+            tun = BsdSocket.newSocketTun();
+            tun.bindTun(new TunAddress());
+            final String name = ((TunAddress) tun.localAddressTun()).ifName();
+            assertThat(tun.getMtu(name), is(greaterThan(0)));
+        } finally {
+            if (tun != null) {
+                tun.close();
+            }
+        }
+    }
+
+    @Test
+    public void testTunSetMtu() throws IOException {
+        BsdSocket tun = null;
+        try {
+            tun = BsdSocket.newSocketTun();
+            tun.bindTun(new TunAddress());
+            final String name = ((TunAddress) tun.localAddressTun()).ifName();
+            tun.setMtu(name, 1000);
+            assertEquals(1000, tun.getMtu(name));
+        } finally {
+            if (tun != null) {
+                tun.close();
+            }
         }
     }
 
