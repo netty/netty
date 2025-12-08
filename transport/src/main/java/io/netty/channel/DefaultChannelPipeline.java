@@ -489,15 +489,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     private static void checkMultiplicity(ChannelHandler handler) {
-        if (handler instanceof ChannelHandlerAdapter) {
-            ChannelHandlerAdapter h = (ChannelHandlerAdapter) handler;
-            if (!h.isSharable() && h.added) {
-                throw new ChannelPipelineException(
-                        h.getClass().getName() +
-                        " is not a @Sharable handler, so can't be added or removed multiple times.");
-            }
-            h.added = true;
-        }
+        // TODO: Do we want to add some kind of support for this again ?
     }
 
     private void callHandlerAdded0(final AbstractChannelHandlerContext ctx) {
@@ -1132,7 +1124,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
     /**
      * Called once a {@link Throwable} hit the end of the {@link ChannelPipeline} without been handled by the user
-     * in {@link ChannelHandler#exceptionCaught(ChannelHandlerContext, Throwable)}.
+     * in {@link ChannelInboundHandler#exceptionCaught(ChannelHandlerContext, Throwable)}.
      */
     protected void onUnhandledInboundException(Throwable cause) {
         try {

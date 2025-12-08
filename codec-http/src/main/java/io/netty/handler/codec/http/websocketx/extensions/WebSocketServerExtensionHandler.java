@@ -51,7 +51,7 @@ import java.util.Queue;
  * Find a basic implementation for compression extensions at
  * <tt>io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler</tt>.
  */
-public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
+public class WebSocketServerExtensionHandler implements ChannelDuplexHandler {
 
     private final List<WebSocketServerExtensionHandshaker> extensionHandshakers;
 
@@ -84,10 +84,10 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
                 // slow path
                 onHttpRequestChannelRead(ctx, (HttpRequest) msg);
             } else {
-                super.channelRead(ctx, msg);
+                ctx.fireChannelRead(msg);
             }
         } else {
-            super.channelRead(ctx, msg);
+            ctx.fireChannelRead(msg);
         }
     }
 
@@ -155,7 +155,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
             validExtensionsList = Collections.emptyList();
         }
         validExtensions.offer(validExtensionsList);
-        super.channelRead(ctx, request);
+        ctx.fireChannelRead(request);
     }
 
     @Override
@@ -166,10 +166,10 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
             } else if (msg instanceof HttpResponse) {
                 onHttpResponseWrite(ctx, (HttpResponse) msg, promise);
             } else {
-                super.write(ctx, msg, promise);
+                ctx.write(msg, promise);
             }
         } else {
-            super.write(ctx, msg, promise);
+            ctx.write(msg, promise);
         }
     }
 
@@ -205,7 +205,7 @@ public class WebSocketServerExtensionHandler extends ChannelDuplexHandler {
         if (HttpResponseStatus.SWITCHING_PROTOCOLS.equals(response.status())) {
             handlePotentialUpgrade(ctx, promise, response, validExtensionsList);
         }
-        super.write(ctx, response, promise);
+        ctx.write(response, promise);
     }
 
     private void handlePotentialUpgrade(final ChannelHandlerContext ctx,

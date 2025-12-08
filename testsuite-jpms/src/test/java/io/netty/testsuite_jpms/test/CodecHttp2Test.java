@@ -86,7 +86,7 @@ public class CodecHttp2Test {
                                 ctx.write(new DefaultHttp2DataFrame(body, true).stream(stream));
                             }
                         } else {
-                            super.channelRead(ctx, msg);
+                            ctx.fireChannelRead(msg);
                         }
                     }
                 });

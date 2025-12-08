@@ -21,7 +21,7 @@ import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -3368,7 +3368,7 @@ public class DnsNameResolverTest {
                 public DatagramChannel newChannel(EventLoop eventLoop) {
                     DatagramChannel datagramChannel = new NioDatagramChannel(eventLoop);
                     if (truncatedBecauseOfMtu) {
-                        datagramChannel.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+                        datagramChannel.pipeline().addFirst(new ChannelInboundHandler() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 if (msg instanceof DatagramPacket) {

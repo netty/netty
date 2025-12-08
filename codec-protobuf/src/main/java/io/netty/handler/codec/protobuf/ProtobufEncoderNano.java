@@ -21,7 +21,6 @@ import com.google.protobuf.nano.MessageNano;
 import java.util.List;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.LengthFieldBasedFrameDecoder;
@@ -56,10 +55,14 @@ import io.netty.handler.codec.MessageToMessageEncoder;
  * }
  * </pre>
  */
-@ChannelHandler.Sharable
 public class ProtobufEncoderNano extends MessageToMessageEncoder<MessageNano> {
     public ProtobufEncoderNano() {
         super(MessageNano.class);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

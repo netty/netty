@@ -31,7 +31,7 @@ import io.netty.util.internal.StringUtil;
  * <p>The {@link Http2FrameCodec} is required to be part of the {@link ChannelPipeline} before this handler is added,
  * or else an {@link IllegalStateException} will be thrown.
  */
-public abstract class Http2ChannelDuplexHandler extends ChannelDuplexHandler {
+public abstract class Http2ChannelDuplexHandler implements ChannelDuplexHandler {
 
     private volatile Http2FrameCodec frameCodec;
 

@@ -34,6 +34,8 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 import java.net.SocketAddress;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
+import static io.netty.channel.ChannelHandlerMask.MASK_ALL_INBOUND;
+import static io.netty.channel.ChannelHandlerMask.MASK_ALL_OUTBOUND;
 import static io.netty.channel.ChannelHandlerMask.MASK_BIND;
 import static io.netty.channel.ChannelHandlerMask.MASK_CHANNEL_ACTIVE;
 import static io.netty.channel.ChannelHandlerMask.MASK_CHANNEL_INACTIVE;
@@ -49,8 +51,6 @@ import static io.netty.channel.ChannelHandlerMask.MASK_DEREGISTER;
 import static io.netty.channel.ChannelHandlerMask.MASK_DISCONNECT;
 import static io.netty.channel.ChannelHandlerMask.MASK_EXCEPTION_CAUGHT;
 import static io.netty.channel.ChannelHandlerMask.MASK_FLUSH;
-import static io.netty.channel.ChannelHandlerMask.MASK_ONLY_INBOUND;
-import static io.netty.channel.ChannelHandlerMask.MASK_ONLY_OUTBOUND;
 import static io.netty.channel.ChannelHandlerMask.MASK_READ;
 import static io.netty.channel.ChannelHandlerMask.MASK_REGISTER;
 import static io.netty.channel.ChannelHandlerMask.MASK_SHUTDOWN;
@@ -144,18 +144,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    // DON'T CHANGE
-                    // Duplex handlers implements both out/in interfaces causing a scalability issue
-                    // see https://bugs.openjdk.org/browse/JDK-8180450
                     final ChannelHandler handler = next.handler();
-                    final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                    if (handler == headContext) {
-                        headContext.channelRegistered(next);
-                    } else if (handler instanceof ChannelInboundHandlerAdapter) {
-                        ((ChannelInboundHandlerAdapter) handler).channelRegistered(next);
-                    } else {
-                        ((ChannelInboundHandler) handler).channelRegistered(next);
-                    }
+                    ((ChannelInboundHandler) handler).channelRegistered(next);
                 } catch (Throwable t) {
                     next.invokeExceptionCaught(t);
                 }
@@ -174,18 +164,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    // DON'T CHANGE
-                    // Duplex handlers implements both out/in interfaces causing a scalability issue
-                    // see https://bugs.openjdk.org/browse/JDK-8180450
                     final ChannelHandler handler = next.handler();
-                    final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                    if (handler == headContext) {
-                        headContext.channelUnregistered(next);
-                    } else if (handler instanceof ChannelInboundHandlerAdapter) {
-                        ((ChannelInboundHandlerAdapter) handler).channelUnregistered(next);
-                    } else {
-                        ((ChannelInboundHandler) handler).channelUnregistered(next);
-                    }
+                    ((ChannelInboundHandler) handler).channelUnregistered(next);
                 } catch (Throwable t) {
                     next.invokeExceptionCaught(t);
                 }
@@ -204,18 +184,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    // DON'T CHANGE
-                    // Duplex handlers implements both out/in interfaces causing a scalability issue
-                    // see https://bugs.openjdk.org/browse/JDK-8180450
                     final ChannelHandler handler = next.handler();
-                    final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                    if (handler == headContext) {
-                        headContext.channelActive(next);
-                    } else if (handler instanceof ChannelInboundHandlerAdapter) {
-                        ((ChannelInboundHandlerAdapter) handler).channelActive(next);
-                    } else {
-                        ((ChannelInboundHandler) handler).channelActive(next);
-                    }
+                    ((ChannelInboundHandler) handler).channelActive(next);
                 } catch (Throwable t) {
                     next.invokeExceptionCaught(t);
                 }
@@ -234,18 +204,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    // DON'T CHANGE
-                    // Duplex handlers implements both out/in interfaces causing a scalability issue
-                    // see https://bugs.openjdk.org/browse/JDK-8180450
                     final ChannelHandler handler = next.handler();
-                    final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                    if (handler == headContext) {
-                        headContext.channelInactive(next);
-                    } else if (handler instanceof ChannelInboundHandlerAdapter) {
-                        ((ChannelInboundHandlerAdapter) handler).channelInactive(next);
-                    } else {
-                        ((ChannelInboundHandler) handler).channelInactive(next);
-                    }
+                    ((ChannelInboundHandler) handler).channelInactive(next);
                 } catch (Throwable t) {
                     next.invokeExceptionCaught(t);
                 }
@@ -281,7 +241,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeExceptionCaught(final Throwable cause) {
         if (invokeHandler()) {
             try {
-                handler().exceptionCaught(this, cause);
+                ((ChannelInboundHandler) handler()).exceptionCaught(this, cause);
             } catch (Throwable error) {
                 if (logger.isDebugEnabled()) {
                     logger.debug(
@@ -307,18 +267,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    // DON'T CHANGE
-                    // Duplex handlers implements both out/in interfaces causing a scalability issue
-                    // see https://bugs.openjdk.org/browse/JDK-8180450
                     final ChannelHandler handler = next.handler();
-                    final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                    if (handler == headContext) {
-                        headContext.userEventTriggered(next, event);
-                    } else if (handler instanceof ChannelInboundHandlerAdapter) {
-                        ((ChannelInboundHandlerAdapter) handler).userEventTriggered(next, event);
-                    } else {
-                        ((ChannelInboundHandler) handler).userEventTriggered(next, event);
-                    }
+                    ((ChannelInboundHandler) handler).userEventTriggered(next, event);
                 } catch (Throwable t) {
                     next.invokeExceptionCaught(t);
                 }
@@ -338,18 +288,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             final Object m = pipeline.touch(msg, next);
             if (next.invokeHandler()) {
                 try {
-                    // DON'T CHANGE
-                    // Duplex handlers implements both out/in interfaces causing a scalability issue
-                    // see https://bugs.openjdk.org/browse/JDK-8180450
                     final ChannelHandler handler = next.handler();
-                    final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                    if (handler == headContext) {
-                        headContext.channelRead(next, m);
-                    } else if (handler instanceof ChannelDuplexHandler) {
-                        ((ChannelDuplexHandler) handler).channelRead(next, m);
-                    } else {
-                        ((ChannelInboundHandler) handler).channelRead(next, m);
-                    }
+                    ((ChannelInboundHandler) handler).channelRead(next, m);
                 } catch (Throwable t) {
                     next.invokeExceptionCaught(t);
                 }
@@ -368,18 +308,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    // DON'T CHANGE
-                    // Duplex handlers implements both out/in interfaces causing a scalability issue
-                    // see https://bugs.openjdk.org/browse/JDK-8180450
                     final ChannelHandler handler = next.handler();
-                    final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                    if (handler == headContext) {
-                        headContext.channelReadComplete(next);
-                    } else if (handler instanceof ChannelDuplexHandler) {
-                        ((ChannelDuplexHandler) handler).channelReadComplete(next);
-                    } else {
-                        ((ChannelInboundHandler) handler).channelReadComplete(next);
-                    }
+                    ((ChannelInboundHandler) handler).channelReadComplete(next);
                 } catch (Throwable t) {
                     next.invokeExceptionCaught(t);
                 }
@@ -398,18 +328,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    // DON'T CHANGE
-                    // Duplex handlers implements both out/in interfaces causing a scalability issue
-                    // see https://bugs.openjdk.org/browse/JDK-8180450
                     final ChannelHandler handler = next.handler();
-                    final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                    if (handler == headContext) {
-                        headContext.channelWritabilityChanged(next);
-                    } else if (handler instanceof ChannelInboundHandlerAdapter) {
-                        ((ChannelInboundHandlerAdapter) handler).channelWritabilityChanged(next);
-                    } else {
-                        ((ChannelInboundHandler) handler).channelWritabilityChanged(next);
-                    }
+                    ((ChannelInboundHandler) handler).channelWritabilityChanged(next);
                 } catch (Throwable t) {
                     next.invokeExceptionCaught(t);
                 }
@@ -508,20 +428,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeRegister(ChannelPromise promise) {
         if (invokeHandler()) {
             try {
-                // DON'T CHANGE
-                // Duplex handlers implements both out/in interfaces causing a scalability issue
-                // see https://bugs.openjdk.org/browse/JDK-8180450
                 final ChannelHandler handler = handler();
-                final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                if (handler == headContext) {
-                    headContext.register(this, promise);
-                } else if (handler instanceof ChannelDuplexHandler) {
-                    ((ChannelDuplexHandler) handler).register(this, promise);
-                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
-                    ((ChannelOutboundHandlerAdapter) handler).register(this, promise);
-                } else {
-                    ((ChannelOutboundHandler) handler).register(this, promise);
-                }
+                ((ChannelOutboundHandler) handler).register(this, promise);
             } catch (Throwable t) {
                 notifyOutboundHandlerException(t, promise);
             }
@@ -556,20 +464,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeBind(SocketAddress localAddress, ChannelPromise promise) {
         if (invokeHandler()) {
             try {
-                // DON'T CHANGE
-                // Duplex handlers implements both out/in interfaces causing a scalability issue
-                // see https://bugs.openjdk.org/browse/JDK-8180450
                 final ChannelHandler handler = handler();
-                final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                if (handler == headContext) {
-                    headContext.bind(this, localAddress, promise);
-                } else if (handler instanceof ChannelDuplexHandler) {
-                    ((ChannelDuplexHandler) handler).bind(this, localAddress, promise);
-                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
-                    ((ChannelOutboundHandlerAdapter) handler).bind(this, localAddress, promise);
-                } else {
-                    ((ChannelOutboundHandler) handler).bind(this, localAddress, promise);
-                }
+                ((ChannelOutboundHandler) handler).bind(this, localAddress, promise);
             } catch (Throwable t) {
                 notifyOutboundHandlerException(t, promise);
             }
@@ -611,20 +507,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
         if (invokeHandler()) {
             try {
-                // DON'T CHANGE
-                // Duplex handlers implements both out/in interfaces causing a scalability issue
-                // see https://bugs.openjdk.org/browse/JDK-8180450
                 final ChannelHandler handler = handler();
-                final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                if (handler == headContext) {
-                    headContext.connect(this, remoteAddress, localAddress, promise);
-                } else if (handler instanceof ChannelDuplexHandler) {
-                    ((ChannelDuplexHandler) handler).connect(this, remoteAddress, localAddress, promise);
-                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
-                    ((ChannelOutboundHandlerAdapter) handler).connect(this, remoteAddress, localAddress, promise);
-                } else {
-                    ((ChannelOutboundHandler) handler).connect(this, remoteAddress, localAddress, promise);
-                }
+                ((ChannelOutboundHandler) handler).connect(this, remoteAddress, localAddress, promise);
             } catch (Throwable t) {
                 notifyOutboundHandlerException(t, promise);
             }
@@ -663,20 +547,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeDisconnect(ChannelPromise promise) {
         if (invokeHandler()) {
             try {
-                // DON'T CHANGE
-                // Duplex handlers implements both out/in interfaces causing a scalability issue
-                // see https://bugs.openjdk.org/browse/JDK-8180450
                 final ChannelHandler handler = handler();
-                final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                if (handler == headContext) {
-                    headContext.disconnect(this, promise);
-                } else if (handler instanceof ChannelDuplexHandler) {
-                    ((ChannelDuplexHandler) handler).disconnect(this, promise);
-                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
-                    ((ChannelOutboundHandlerAdapter) handler).disconnect(this, promise);
-                } else {
-                    ((ChannelOutboundHandler) handler).disconnect(this, promise);
-                }
+                ((ChannelOutboundHandler) handler).disconnect(this, promise);
             } catch (Throwable t) {
                 notifyOutboundHandlerException(t, promise);
             }
@@ -711,20 +583,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeClose(ChannelPromise promise) {
         if (invokeHandler()) {
             try {
-                // DON'T CHANGE
-                // Duplex handlers implements both out/in interfaces causing a scalability issue
-                // see https://bugs.openjdk.org/browse/JDK-8180450
                 final ChannelHandler handler = handler();
-                final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                if (handler == headContext) {
-                    headContext.close(this, promise);
-                } else if (handler instanceof ChannelDuplexHandler) {
-                    ((ChannelDuplexHandler) handler).close(this, promise);
-                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
-                    ((ChannelOutboundHandlerAdapter) handler).close(this, promise);
-                } else {
-                    ((ChannelOutboundHandler) handler).close(this, promise);
-                }
+                ((ChannelOutboundHandler) handler).close(this, promise);
             } catch (Throwable t) {
                 notifyOutboundHandlerException(t, promise);
             }
@@ -759,20 +619,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeDeregister(ChannelPromise promise) {
         if (invokeHandler()) {
             try {
-                // DON'T CHANGE
-                // Duplex handlers implements both out/in interfaces causing a scalability issue
-                // see https://bugs.openjdk.org/browse/JDK-8180450
                 final ChannelHandler handler = handler();
-                final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                if (handler == headContext) {
-                    headContext.deregister(this, promise);
-                } else if (handler instanceof ChannelDuplexHandler) {
-                    ((ChannelDuplexHandler) handler).deregister(this, promise);
-                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
-                    ((ChannelOutboundHandlerAdapter) handler).deregister(this, promise);
-                } else {
-                    ((ChannelOutboundHandler) handler).deregister(this, promise);
-                }
+                ((ChannelOutboundHandler) handler).deregister(this, promise);
             } catch (Throwable t) {
                 notifyOutboundHandlerException(t, promise);
             }
@@ -837,20 +685,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    // DON'T CHANGE
-                    // Duplex handlers implements both out/in interfaces causing a scalability issue
-                    // see https://bugs.openjdk.org/browse/JDK-8180450
                     final ChannelHandler handler = next.handler();
-                    final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                    if (handler == headContext) {
-                        headContext.read(next);
-                    } else if (handler instanceof ChannelDuplexHandler) {
-                        ((ChannelDuplexHandler) handler).read(next);
-                    } else if (handler instanceof ChannelOutboundHandlerAdapter) {
-                        ((ChannelOutboundHandlerAdapter) handler).read(next);
-                    } else {
-                        ((ChannelOutboundHandler) handler).read(next);
-                    }
+                    ((ChannelOutboundHandler) handler).read(next);
                 } catch (Throwable t) {
                     handleFatalOutboundHandlerException(t);
                 }
@@ -903,20 +739,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     private void invokeFlush0() {
         try {
-            // DON'T CHANGE
-            // Duplex handlers implements both out/in interfaces causing a scalability issue
-            // see https://bugs.openjdk.org/browse/JDK-8180450
             final ChannelHandler handler = handler();
-            final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-            if (handler == headContext) {
-                headContext.flush(this);
-            } else if (handler instanceof ChannelDuplexHandler) {
-                ((ChannelDuplexHandler) handler).flush(this);
-            } else if (handler instanceof ChannelOutboundHandlerAdapter) {
-                ((ChannelOutboundHandlerAdapter) handler).flush(this);
-            } else {
-                ((ChannelOutboundHandler) handler).flush(this);
-            }
+            ((ChannelOutboundHandler) handler).flush(this);
         } catch (Throwable t) {
             handleFatalOutboundHandlerException(t);
         }
@@ -937,20 +761,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             if (executor.inEventLoop()) {
                 if (next.invokeHandler()) {
                     try {
-                        // DON'T CHANGE
-                        // Duplex handlers implements both out/in interfaces causing a scalability issue
-                        // see https://bugs.openjdk.org/browse/JDK-8180450
                         final ChannelHandler handler = next.handler();
-                        final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                        if (handler == headContext) {
-                            headContext.write(next, msg, promise);
-                        } else if (handler instanceof ChannelDuplexHandler) {
-                            ((ChannelDuplexHandler) handler).write(next, msg, promise);
-                        } else if (handler instanceof ChannelOutboundHandlerAdapter) {
-                            ((ChannelOutboundHandlerAdapter) handler).write(next, msg, promise);
-                        } else {
-                            ((ChannelOutboundHandler) handler).write(next, msg, promise);
-                        }
+                        ((ChannelOutboundHandler) handler).write(next, msg, promise);
                     } catch (Throwable t) {
                         notifyOutboundHandlerException(t, promise);
                     }
@@ -1061,7 +873,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         EventExecutor currentExecutor = executor();
         do {
             ctx = ctx.next;
-        } while (skipContext(ctx, currentExecutor, mask, MASK_ONLY_INBOUND));
+        } while (skipContext(ctx, currentExecutor, mask, MASK_ALL_INBOUND));
         return ctx;
     }
 
@@ -1070,7 +882,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         EventExecutor currentExecutor = executor();
         do {
             ctx = ctx.prev;
-        } while (skipContext(ctx, currentExecutor, mask, MASK_ONLY_OUTBOUND));
+        } while (skipContext(ctx, currentExecutor, mask, MASK_ALL_OUTBOUND));
         return ctx;
     }
 

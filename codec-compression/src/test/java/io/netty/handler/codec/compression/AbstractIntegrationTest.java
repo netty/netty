@@ -20,7 +20,7 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ByteProcessor;
 import io.netty.util.CharsetUtil;
@@ -234,7 +234,7 @@ public abstract class AbstractIntegrationTest {
     }
 
     private static final class HugeDecompressIncomingHandler
-            extends ChannelInboundHandlerAdapter implements ByteProcessor {
+            implements ChannelInboundHandler, ByteProcessor {
         final int memoryLimit;
         final MessageDigest digest;
         long total;

@@ -24,7 +24,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
@@ -53,7 +53,7 @@ public final class QuicClientZeroRTTExample {
                 applicationProtocols("http/0.9").earlyData(true).build();
 
         newChannelAndSendData(context, null);
-        newChannelAndSendData(context, new ChannelInboundHandlerAdapter() {
+        newChannelAndSendData(context, new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 if (evt instanceof SslEarlyDataReadyEvent) {
@@ -65,7 +65,7 @@ public final class QuicClientZeroRTTExample {
                         }
                     });
                 }
-                super.userEventTriggered(ctx, evt);
+                ctx.fireUserEventTriggered(evt);
             }
         });
     }
@@ -89,7 +89,7 @@ public final class QuicClientZeroRTTExample {
                     .bind(0).sync().channel();
 
             QuicChannelBootstrap quicChannelBootstrap = QuicChannel.newBootstrap(channel)
-                    .streamHandler(new ChannelInboundHandlerAdapter() {
+                    .streamHandler(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
                             // As we did not allow any remote initiated streams we will never see this method called.
@@ -122,7 +122,7 @@ public final class QuicClientZeroRTTExample {
 
     static Future<QuicStreamChannel> createStream(QuicChannel quicChannel) {
         return quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
-                new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         ByteBuf byteBuf = (ByteBuf) msg;

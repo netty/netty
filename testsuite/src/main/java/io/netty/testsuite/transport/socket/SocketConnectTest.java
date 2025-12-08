@@ -22,7 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SocketChannel;
@@ -66,9 +66,9 @@ public class SocketConnectTest extends AbstractSocketTest {
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
-            serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter()).bind().syncUninterruptibly().channel();
+            serverChannel = sb.childHandler(new ChannelInboundHandler() { }).bind().syncUninterruptibly().channel();
             final BlockingQueue<ChannelFuture> futures = new LinkedBlockingQueue<>();
-            clientChannel = cb.handler(new ChannelInboundHandlerAdapter() {
+            clientChannel = cb.handler(new ChannelInboundHandler() {
                         @Override
                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt)  {
                             futures.add(ctx.close());
@@ -109,14 +109,14 @@ public class SocketConnectTest extends AbstractSocketTest {
         Channel clientChannel = null;
         try {
             final Promise<InetSocketAddress> localAddressPromise = ImmediateEventExecutor.INSTANCE.newPromise();
-            serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
+            serverChannel = sb.childHandler(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             localAddressPromise.setSuccess((InetSocketAddress) ctx.channel().localAddress());
                         }
                     }).bind().syncUninterruptibly().channel();
 
-            clientChannel = cb.handler(new ChannelInboundHandlerAdapter()).register().syncUninterruptibly().channel();
+            clientChannel = cb.handler(new ChannelInboundHandler() { }).register().syncUninterruptibly().channel();
 
             assertNull(clientChannel.localAddress());
             assertNull(clientChannel.remoteAddress());
@@ -153,10 +153,10 @@ public class SocketConnectTest extends AbstractSocketTest {
         Channel sc = null;
         Channel cc = null;
         try {
-            sb.childHandler(new ChannelInboundHandlerAdapter());
+            sb.childHandler(new ChannelInboundHandler() { });
             sc = sb.bind().syncUninterruptibly().channel();
 
-            cb.handler(new ChannelInboundHandlerAdapter() {
+            cb.handler(new ChannelInboundHandler() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) throws Exception {
                     events.add(0);
@@ -239,7 +239,7 @@ public class SocketConnectTest extends AbstractSocketTest {
         assertFalse(address.getAddress().isAnyLocalAddress());
     }
 
-    private static class BufferingClientHandler extends ChannelInboundHandlerAdapter {
+    private static class BufferingClientHandler implements ChannelInboundHandler {
         private final Semaphore semaphore = new Semaphore(0);
         private final ByteArrayOutputStream streamBuffer = new ByteArrayOutputStream();
 
@@ -264,7 +264,7 @@ public class SocketConnectTest extends AbstractSocketTest {
         }
     }
 
-    private static final class EchoServerHandler extends ChannelInboundHandlerAdapter {
+    private static final class EchoServerHandler implements ChannelInboundHandler {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof ByteBuf) {

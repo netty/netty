@@ -44,7 +44,7 @@ import static io.netty.handler.codec.http.HttpUtil.*;
  *  </pre>
  * </blockquote>
  */
-public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
+public class HttpServerKeepAliveHandler implements ChannelDuplexHandler {
     private static final String MULTIPART_PREFIX = "multipart";
 
     private boolean persistentConnection = true;
@@ -61,7 +61,7 @@ public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
                 persistentConnection = isKeepAlive(request);
             }
         }
-        super.channelRead(ctx, msg);
+        ctx.fireChannelRead(msg);
     }
 
     @Override
@@ -84,7 +84,7 @@ public class HttpServerKeepAliveHandler extends ChannelDuplexHandler {
         if (msg instanceof LastHttpContent && !shouldKeepAlive()) {
             promise.addListener(ChannelFutureListener.CLOSE);
         }
-        super.write(ctx, msg, promise);
+        ctx.write(msg, promise);
     }
 
     private void trackResponse(HttpResponse response) {

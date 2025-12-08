@@ -56,7 +56,7 @@ import java.util.concurrent.Future;
  * The {@link FlushConsolidationHandler} should be put as first {@link ChannelHandler} in the
  * {@link ChannelPipeline} to have the best effect.
  */
-public class FlushConsolidationHandler extends ChannelDuplexHandler {
+public class FlushConsolidationHandler implements ChannelDuplexHandler {
     private final int explicitFlushAfterFlushes;
     private final boolean consolidateWhenNoReadInProgress;
     private final Runnable flushTask;

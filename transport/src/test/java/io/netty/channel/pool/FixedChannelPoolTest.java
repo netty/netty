@@ -18,7 +18,7 @@ package io.netty.channel.pool;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
@@ -421,7 +421,7 @@ public class FixedChannelPoolTest {
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
                     public void initChannel(LocalChannel ch) {
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                        ch.pipeline().addLast(new ChannelInboundHandler() { });
                     }
                 });
 

@@ -21,7 +21,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -55,7 +55,7 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
     }
 
     public void testShutdownNotYetConnected(Bootstrap cb) throws Throwable {
-        SocketChannel ch = (SocketChannel) cb.handler(new ChannelInboundHandlerAdapter())
+        SocketChannel ch = (SocketChannel) cb.handler(new ChannelInboundHandler() { })
                 .bind(newSocketAddress()).syncUninterruptibly().channel();
         try {
             try {
@@ -91,7 +91,7 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
             public void run(Bootstrap bootstrap) throws Throwable {
                 EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
                 ServerBootstrap sb = new ServerBootstrap().group(group);
-                Channel serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
+                Channel serverChannel = sb.childHandler(new ChannelInboundHandler() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
                         ctx.writeAndFlush(Unpooled.copyInt(42));

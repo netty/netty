@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.unix.IntegerUnixChannelOption;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractClientSocketTest;
@@ -125,7 +125,7 @@ public class IoUringSocketSendSzSendmsgZcTest extends AbstractClientSocketTest {
 
     private static void testBufferLifecycleCorrectlyHandled(Bootstrap cb, boolean multiple, Close remoteClose)
             throws Throwable {
-        cb.handler(new ChannelInboundHandlerAdapter());
+        cb.handler(new ChannelInboundHandler() { });
         // Force to use send_zc / sendmsg_zc if supported.
         cb.option(IoUringChannelOption.IO_URING_WRITE_ZERO_COPY_THRESHOLD, 0);
         if (remoteClose == Close.LOCAL) {

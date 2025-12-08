@@ -18,7 +18,7 @@ package io.netty.channel.epoll;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.socket.SocketProtocolFamily;
@@ -107,13 +107,13 @@ public class EpollDatagramChannelTest {
         channel.fd().close();
     }
 
-    private static final class TestHandler extends ChannelInboundHandlerAdapter {
+    private static final class TestHandler implements ChannelInboundHandler {
         private volatile SocketAddress localAddress;
 
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
             this.localAddress = ctx.channel().localAddress();
-            super.channelRegistered(ctx);
+            ctx.fireChannelRegistered();
         }
     }
 }

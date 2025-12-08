@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.http3.Http3FrameCodec.Http3FrameCodecFactory;
 import io.netty.util.AttributeKey;
@@ -176,7 +176,7 @@ abstract class Http3UnidirectionalStreamInboundHandler extends ByteToMessageDeco
         ctx.pipeline().replace(this, null, unknownStreamHandlerFactory.apply(streamType));
     }
 
-    static final class ReleaseHandler extends ChannelInboundHandlerAdapter {
+    static final class ReleaseHandler implements ChannelInboundHandler {
         static final ReleaseHandler INSTANCE = new ReleaseHandler();
 
         @Override

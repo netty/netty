@@ -18,7 +18,6 @@ package io.netty.handler.ipfilter;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 
 import java.net.InetAddress;
@@ -30,10 +29,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * This class allows one to ensure that at all times for every IP address there is at most one
  * {@link Channel} connected to the server.
  */
-@ChannelHandler.Sharable
 public class UniqueIpFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
 
     private final Set<InetAddress> connected = ConcurrentHashMap.newKeySet();
+
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
 
     @Override
     protected boolean accept(ChannelHandlerContext ctx, InetSocketAddress remoteAddress) throws Exception {

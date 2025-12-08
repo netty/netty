@@ -16,13 +16,13 @@
 package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 public class Http3ServerConnectionHandlerTest extends AbtractHttp3ConnectionHandlerTest {
-    private static final ChannelHandler REQUEST_HANDLER = new ChannelInboundHandlerAdapter() {
+    private static final ChannelHandler REQUEST_HANDLER = new ChannelInboundHandler() {
         @Override
         public boolean isSharable() {
             return true;

@@ -95,7 +95,7 @@ import java.util.concurrent.TimeUnit;
  * @see ReadTimeoutHandler
  * @see WriteTimeoutHandler
  */
-public class IdleStateHandler extends ChannelDuplexHandler {
+public class IdleStateHandler implements ChannelDuplexHandler {
     private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
     // Not create a new ChannelFutureListener per write operation to reduce GC pressure.
@@ -243,7 +243,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         if (ctx.channel().isActive()) {
             initialize(ctx);
         }
-        super.channelRegistered(ctx);
+        ctx.fireChannelRegistered();
     }
 
     @Override
@@ -252,13 +252,13 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         // before channelActive() event is fired.  If a user adds this handler
         // after the channelActive() event, initialize() will be called by beforeAdd().
         initialize(ctx);
-        super.channelActive(ctx);
+        ctx.fireChannelActive();
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         destroy();
-        super.channelInactive(ctx);
+        ctx.fireChannelInactive();
     }
 
     @Override

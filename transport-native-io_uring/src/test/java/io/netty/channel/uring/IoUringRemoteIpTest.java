@@ -18,7 +18,7 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.util.NetUtil;
@@ -72,7 +72,7 @@ public class IoUringRemoteIpTest {
             ServerBootstrap b = new ServerBootstrap();
             b.group(bossGroup)
                     .channel(IoUringServerSocketChannel.class)
-                    .childHandler(new ChannelInboundHandlerAdapter() {
+                    .childHandler(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
                             promise.setSuccess(ctx.channel().remoteAddress());

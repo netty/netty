@@ -27,7 +27,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 /**
  * Logs SPDY frames for debugging purposes.
  */
-public class SpdyFrameLogger extends ChannelDuplexHandler {
+public class SpdyFrameLogger implements ChannelDuplexHandler {
 
     private enum Direction {
         INBOUND, OUTBOUND

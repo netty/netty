@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * A common abstraction for protocols that establish blind forwarding proxy tunnels.
  */
-public abstract class ProxyHandler extends ChannelDuplexHandler {
+public abstract class ProxyHandler implements ChannelDuplexHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ProxyHandler.class);
 

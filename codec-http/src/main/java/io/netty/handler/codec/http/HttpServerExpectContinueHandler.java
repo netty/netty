@@ -18,7 +18,7 @@ package io.netty.handler.codec.http;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.ReferenceCountUtil;
 
 import static io.netty.handler.codec.http.HttpHeaderNames.CONTENT_LENGTH;
@@ -44,7 +44,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
  *  </pre>
  * </blockquote>
  */
-public class HttpServerExpectContinueHandler extends ChannelInboundHandlerAdapter {
+public class HttpServerExpectContinueHandler implements ChannelInboundHandler {
 
     private static final FullHttpResponse EXPECTATION_FAILED = new DefaultFullHttpResponse(
             HTTP_1_1, HttpResponseStatus.EXPECTATION_FAILED, Unpooled.EMPTY_BUFFER);
@@ -92,6 +92,6 @@ public class HttpServerExpectContinueHandler extends ChannelInboundHandlerAdapte
                 req.headers().remove(HttpHeaderNames.EXPECT);
             }
         }
-        super.channelRead(ctx, msg);
+        ctx.fireChannelRead(msg);
     }
 }

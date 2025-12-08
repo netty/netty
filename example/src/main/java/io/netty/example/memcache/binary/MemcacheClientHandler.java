@@ -27,7 +27,7 @@ import io.netty.handler.codec.memcache.binary.DefaultFullBinaryMemcacheRequest;
 import io.netty.handler.codec.memcache.binary.FullBinaryMemcacheResponse;
 import io.netty.util.CharsetUtil;
 
-public class MemcacheClientHandler extends ChannelDuplexHandler {
+public class MemcacheClientHandler implements ChannelDuplexHandler {
 
     /**
      * Transforms basic string requests to binary memcache requests

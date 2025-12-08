@@ -116,7 +116,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                             throw new IllegalStateException();
                         }
                         lastWritePromise = promise;
-                        super.write(ctx, msg, ctx.newPromise());
+                        ctx.write(msg, ctx.newPromise());
                     }
                 });
             }

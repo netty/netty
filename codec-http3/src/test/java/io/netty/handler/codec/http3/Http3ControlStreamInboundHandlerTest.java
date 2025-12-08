@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
@@ -63,7 +63,7 @@ public class Http3ControlStreamInboundHandlerTest extends
         super.setUp(server);
         qpackEncoder = new QpackEncoder();
         remoteControlStreamHandler = new Http3ControlStreamOutboundHandler(server, new DefaultHttp3SettingsFrame(),
-                new ChannelInboundHandlerAdapter());
+                new ChannelInboundHandler() { });
     }
 
     @Override
@@ -77,7 +77,7 @@ public class Http3ControlStreamInboundHandlerTest extends
 
     @Override
     protected ChannelHandler newHandler(boolean server) {
-        return new Http3ControlStreamInboundHandler(server, new ChannelInboundHandlerAdapter(), qpackEncoder,
+        return new Http3ControlStreamInboundHandler(server, new ChannelInboundHandler() { }, qpackEncoder,
                 remoteControlStreamHandler);
     }
 
@@ -126,7 +126,7 @@ public class Http3ControlStreamInboundHandlerTest extends
             throws Exception {
         final EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.BIDIRECTIONAL,
                         new Http3ControlStreamInboundHandler(server,
-                                forwardControlFrames ? new ChannelInboundHandlerAdapter() : null,
+                                forwardControlFrames ? new ChannelInboundHandler() { } : null,
                                 qpackEncoder, remoteControlStreamHandler));
 
         writeInvalidFrame(forwardControlFrames, Http3ErrorCode.H3_MISSING_SETTINGS, channel, frame);
@@ -202,7 +202,7 @@ public class Http3ControlStreamInboundHandlerTest extends
     private EmbeddedQuicStreamChannel newStream(boolean server, boolean forwardControlFrames) throws Exception {
         EmbeddedQuicStreamChannel channel = newStream(QuicStreamType.UNIDIRECTIONAL,
                         new Http3ControlStreamInboundHandler(server,
-                                forwardControlFrames ? new ChannelInboundHandlerAdapter() : null,
+                                forwardControlFrames ? new ChannelInboundHandler() { } : null,
                                 qpackEncoder, remoteControlStreamHandler));
 
         // We always need to start with a settings frame.

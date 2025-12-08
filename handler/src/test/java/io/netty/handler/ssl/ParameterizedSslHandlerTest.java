@@ -23,7 +23,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -169,7 +169,7 @@ public class ParameterizedSslHandlerTest {
                                 handler.setWrapDataSize(-1);
                             }
                             ch.pipeline().addLast(handler);
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 private boolean sentData;
                                 private Throwable writeCause;
 
@@ -226,7 +226,7 @@ public class ParameterizedSslHandlerTest {
                             } else {
                                 ch.pipeline().addLast(new SslHandler(sslClientCtx.newEngine(ch.alloc())));
                             }
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 private int bytesSeen;
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -335,7 +335,7 @@ public class ParameterizedSslHandlerTest {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addLast(sslServerCtx.newHandler(ch.alloc()));
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     // Just trigger a close
@@ -352,7 +352,7 @@ public class ParameterizedSslHandlerTest {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addLast(sslClientCtx.newHandler(ch.alloc()));
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                     if (cause.getCause() instanceof SSLException) {
@@ -460,7 +460,7 @@ public class ParameterizedSslHandlerTest {
                         protected void initChannel(Channel ch) throws Exception {
                             final AtomicBoolean closeSent = new AtomicBoolean();
                             if (timeout) {
-                                ch.pipeline().addFirst(new ChannelInboundHandlerAdapter() {
+                                ch.pipeline().addFirst(new ChannelInboundHandler() {
                                     @Override
                                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                         if (closeSent.get()) {
@@ -468,7 +468,7 @@ public class ParameterizedSslHandlerTest {
                                             // close_notify.
                                             ReferenceCountUtil.release(msg);
                                         } else {
-                                            super.channelRead(ctx, msg);
+                                            ctx.fireChannelRead(msg);
                                         }
                                     }
                                 });

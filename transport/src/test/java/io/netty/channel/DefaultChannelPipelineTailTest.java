@@ -57,7 +57,7 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
@@ -81,7 +81,7 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
@@ -105,7 +105,7 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
@@ -132,7 +132,7 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
@@ -157,7 +157,7 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
@@ -182,7 +182,7 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
@@ -207,7 +207,7 @@ public class DefaultChannelPipelineTailTest {
                     }
                 })
                 .group(GROUP)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()

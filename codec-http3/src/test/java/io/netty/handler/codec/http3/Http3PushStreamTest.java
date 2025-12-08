@@ -52,7 +52,8 @@ public class Http3PushStreamTest {
 
     @BeforeEach
     public void setUp() throws Exception {
-        serverConnectionHandler = new Http3ServerConnectionHandler(new ChannelDuplexHandler(), null, null, null, true);
+        serverConnectionHandler = new Http3ServerConnectionHandler(new ChannelDuplexHandler() { },
+                null, null, null, true);
         serverChannel = new EmbeddedQuicChannel(true, serverConnectionHandler);
         serverLocalControlStream = (EmbeddedQuicStreamChannel) Http3.getLocalControlStream(serverChannel);
         assertNotNull(serverLocalControlStream);
@@ -200,7 +201,7 @@ public class Http3PushStreamTest {
                             protected void initPushStream(QuicStreamChannel ch) {
                                 // noop
                             }
-                        }, ChannelDuplexHandler::new, ChannelDuplexHandler::new)).get();
+                        }, () -> new ChannelDuplexHandler() { }, () -> new ChannelDuplexHandler() { })).get();
     }
 
     private ByteBuf readStreamHeader(EmbeddedQuicStreamChannel serverStream) {

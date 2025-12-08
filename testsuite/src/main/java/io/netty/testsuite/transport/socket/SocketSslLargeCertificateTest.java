@@ -22,7 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
@@ -146,7 +146,7 @@ public class SocketSslLargeCertificateTest {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
                         ch.pipeline().addLast(serverSsl.newHandler(ch.alloc()));
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        ch.pipeline().addLast(new ChannelInboundHandler() {
                             @Override
                             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                                 if (evt instanceof SslHandshakeCompletionEvent) {
@@ -182,7 +182,7 @@ public class SocketSslLargeCertificateTest {
                     @Override
                     protected void initChannel(Channel ch) throws Exception {
                         ch.pipeline().addLast(clientSsl.newHandler(ch.alloc(), "localhost", serverAddress.getPort()));
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                        ch.pipeline().addLast(new ChannelInboundHandler() {
                             @Override
                             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                                 if (evt instanceof SslHandshakeCompletionEvent) {
@@ -221,7 +221,7 @@ public class SocketSslLargeCertificateTest {
                             @Override
                             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
                                 completion.tryFailure(cause);
-                                super.exceptionCaught(ctx, cause);
+                                ctx.fireExceptionCaught(cause);
                             }
                         });
                     }

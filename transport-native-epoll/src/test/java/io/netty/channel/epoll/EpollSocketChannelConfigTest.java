@@ -18,7 +18,7 @@ package io.netty.channel.epoll;
 import io.github.artsok.RepeatedIfExceptionsTest;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -64,7 +64,7 @@ public class EpollSocketChannelConfigTest {
         Bootstrap bootstrap = new Bootstrap();
         ch = (EpollSocketChannel) bootstrap.group(group)
                 .channel(EpollSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
     }
 

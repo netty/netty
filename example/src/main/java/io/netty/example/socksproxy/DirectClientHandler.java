@@ -17,10 +17,10 @@ package io.netty.example.socksproxy;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.concurrent.Promise;
 
-public final class DirectClientHandler extends ChannelInboundHandlerAdapter {
+public final class DirectClientHandler implements ChannelInboundHandler {
 
     private final Promise<Channel> promise;
 

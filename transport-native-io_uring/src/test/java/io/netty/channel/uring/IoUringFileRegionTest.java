@@ -22,7 +22,7 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.util.NetUtil;
@@ -53,7 +53,7 @@ public class IoUringFileRegionTest {
         ServerBootstrap serverBootstrap = new ServerBootstrap();
         serverBootstrap.channel(IoUringServerSocketChannel.class);
         Channel serverChannel = serverBootstrap.group(group)
-                .childHandler(new ChannelInboundHandlerAdapter() {
+                .childHandler(new ChannelInboundHandler() {
                     private CompositeByteBuf compositeByteBuf;
 
                     @Override
@@ -84,7 +84,7 @@ public class IoUringFileRegionTest {
         Bootstrap clientBoostrap = new Bootstrap();
         clientBoostrap.group(group)
                 .channel(IoUringSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter());
+                .handler(new ChannelInboundHandler() { });
         Channel clientChannel = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
         clientChannel.writeAndFlush(new DefaultFileRegion(inFile, 0, Files.size(inFile.toPath()))).sync();
         ByteBuf result = sendFileResult.take();

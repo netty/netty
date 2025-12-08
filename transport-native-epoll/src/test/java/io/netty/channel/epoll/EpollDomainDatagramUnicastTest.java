@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
@@ -54,7 +54,7 @@ class EpollDomainDatagramUnicastTest extends DatagramUnicastTest {
     private void testBind(Bootstrap cb) throws Throwable {
         Channel channel = null;
         try {
-            channel = cb.handler(new ChannelInboundHandlerAdapter())
+            channel = cb.handler(new ChannelInboundHandler() { })
                         .bind(newSocketAddress()).sync().channel();
             assertThat(channel.localAddress()).isNotNull()
                     .isInstanceOf(DomainSocketAddress.class);

@@ -36,7 +36,7 @@ import java.util.List;
 /**
  * An example Redis client handler. This handler read input from STDIN and write output to STDOUT.
  */
-public class RedisClientHandler extends ChannelDuplexHandler {
+public class RedisClientHandler implements ChannelDuplexHandler {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {

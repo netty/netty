@@ -17,11 +17,9 @@ package io.netty.channel;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
-import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -46,12 +44,11 @@ import java.util.concurrent.ConcurrentHashMap;
  * bootstrap.childHandler(new MyChannelInitializer());
  * ...
  * </pre>
- * Be aware that this class is marked as {@link Sharable} and so the implementation must be safe to be re-used.
+ * Be aware that this class is sharable and so the implementation must be safe to be re-used.
  *
  * @param <C>   A sub-type of {@link Channel}
  */
-@Sharable
-public abstract class ChannelInitializer<C extends Channel> extends ChannelInboundHandlerAdapter {
+public abstract class ChannelInitializer<C extends Channel> implements ChannelInboundHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ChannelInitializer.class);
     // We use a Set as a ChannelInitializer is usually shared between all Channels in a Bootstrap /
@@ -68,6 +65,11 @@ public abstract class ChannelInitializer<C extends Channel> extends ChannelInbou
      *                      the {@link Channel}.
      */
     protected abstract void initChannel(C ch) throws Exception;
+
+    @Override
+    public final boolean isSharable() {
+        return true;
+    }
 
     @Override
     @SuppressWarnings("unchecked")

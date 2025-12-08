@@ -17,7 +17,7 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -68,7 +68,7 @@ public class Http2ServerUpgradeCodecTest {
 
         ServerChannel parent = Mockito.mock(ServerChannel.class);
         EmbeddedChannel channel = new EmbeddedChannel(parent, DefaultChannelId.newInstance(), true, false,
-                new ChannelInboundHandlerAdapter());
+                new ChannelInboundHandler() { });
         ChannelHandlerContext ctx = channel.pipeline().firstContext();
         Http2ServerUpgradeCodec codec;
         if (multiplexer == null) {
@@ -102,6 +102,10 @@ public class Http2ServerUpgradeCodecTest {
         assertNull(channel.readOutbound());
     }
 
-    @ChannelHandler.Sharable
-    private static final class HttpInboundHandler extends ChannelInboundHandlerAdapter { }
+    private static final class HttpInboundHandler implements ChannelInboundHandler {
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+    }
 }

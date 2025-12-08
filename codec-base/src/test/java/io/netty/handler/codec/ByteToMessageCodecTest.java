@@ -17,40 +17,17 @@ package io.netty.handler.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.function.Executable;
 
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ByteToMessageCodecTest {
-
-    @Test
-    public void testSharable() {
-        assertThrows(IllegalStateException.class, new Executable() {
-            @Override
-            public void execute() {
-                new InvalidByteToMessageCodec();
-            }
-        });
-    }
-
-    @Test
-    public void testSharable2() {
-        assertThrows(IllegalStateException.class, new Executable() {
-            @Override
-            public void execute() {
-                new InvalidByteToMessageCodec2();
-            }
-        });
-    }
 
     @Test
     public void testForwardPendingData() {
@@ -83,31 +60,5 @@ public class ByteToMessageCodecTest {
         buf.release();
         assertNull(ch.readInbound());
         assertNull(ch.readOutbound());
-    }
-
-    @ChannelHandler.Sharable
-    private static final class InvalidByteToMessageCodec extends ByteToMessageCodec<Integer> {
-        InvalidByteToMessageCodec() {
-            super(true);
-        }
-
-        @Override
-        protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception { }
-
-        @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception { }
-    }
-
-    @ChannelHandler.Sharable
-    private static final class InvalidByteToMessageCodec2 extends ByteToMessageCodec<Integer> {
-        InvalidByteToMessageCodec2() {
-            super(Integer.class, true);
-        }
-
-        @Override
-        protected void encode(ChannelHandlerContext ctx, Integer msg, ByteBuf out) throws Exception { }
-
-        @Override
-        protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception { }
     }
 }

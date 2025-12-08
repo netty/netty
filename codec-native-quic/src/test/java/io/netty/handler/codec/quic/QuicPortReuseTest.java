@@ -22,7 +22,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Timeout;
@@ -59,7 +59,7 @@ public class QuicPortReuseTest extends AbstractQuicTest {
                                 .connectionIdAddressGenerator(idGenerator)
                                 .tokenHandler(InsecureQuicTokenHandler.INSTANCE)
                                 .handler(QuicTestUtils.NOOP_HANDLER)
-                                .streamHandler(new ChannelInboundHandlerAdapter() {
+                                .streamHandler(new ChannelInboundHandler() {
 
                                     @Override
                                     public boolean isSharable() {
@@ -110,7 +110,7 @@ public class QuicPortReuseTest extends AbstractQuicTest {
 
             for (QuicChannel quicChannel: channels) {
                 quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
-                        new ChannelInboundHandlerAdapter() {
+                        new ChannelInboundHandler() {
                             @Override
                             public void channelActive(ChannelHandlerContext ctx) {
                                 ctx.writeAndFlush(Unpooled.directBuffer().writeZero(numBytes))

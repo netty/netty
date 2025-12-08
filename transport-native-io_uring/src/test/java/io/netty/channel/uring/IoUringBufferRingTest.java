@@ -25,7 +25,7 @@ import io.netty.buffer.WrappedByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.util.NetUtil;
 import org.junit.jupiter.api.BeforeAll;
@@ -122,7 +122,7 @@ public class IoUringBufferRingTest {
         ArrayBlockingQueue<IoUringBufferRingExhaustedEvent> eventSyncer = new ArrayBlockingQueue<>(1);
 
         Channel serverChannel = serverBootstrap.group(group)
-                .childHandler(new ChannelInboundHandlerAdapter() {
+                .childHandler(new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         bufferSyncer.offer((ByteBuf) msg);
@@ -142,7 +142,7 @@ public class IoUringBufferRingTest {
         Bootstrap clientBoostrap = new Bootstrap();
         clientBoostrap.group(group)
                 .channel(IoUringSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter());
+                .handler(new ChannelInboundHandler() { });
         ChannelFuture channelFuture = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly();
         assumeTrue(channelFuture.isSuccess());
         Channel clientChannel = channelFuture.channel();
@@ -204,7 +204,7 @@ public class IoUringBufferRingTest {
 
         final BlockingQueue<ByteBuf> buffers = new LinkedBlockingQueue<>();
         Channel serverChannel = serverBootstrap.group(group)
-                .childHandler(new ChannelInboundHandlerAdapter() {
+                .childHandler(new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         buffers.offer((ByteBuf) msg);
@@ -217,7 +217,7 @@ public class IoUringBufferRingTest {
         Bootstrap clientBoostrap = new Bootstrap();
         clientBoostrap.group(group)
                 .channel(IoUringSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter());
+                .handler(new ChannelInboundHandler() { });
         ChannelFuture channelFuture = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly();
         assumeTrue(channelFuture.isSuccess());
         Channel clientChannel = channelFuture.channel();
@@ -269,7 +269,7 @@ public class IoUringBufferRingTest {
             ServerBootstrap serverBootstrap = new ServerBootstrap();
             serverBootstrap.channel(IoUringServerSocketChannel.class);
             Channel serverChannel = serverBootstrap.group(group)
-                    .childHandler(new ChannelInboundHandlerAdapter() {
+                    .childHandler(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
                             acceptedChannels.add(ctx.channel());
@@ -281,7 +281,7 @@ public class IoUringBufferRingTest {
             Bootstrap clientBoostrap = new Bootstrap();
             clientBoostrap.group(group)
                     .channel(IoUringSocketChannel.class)
-                    .handler(new ChannelInboundHandlerAdapter());
+                    .handler(new ChannelInboundHandler() { });
             ChannelFuture channelFuture = clientBoostrap.connect(serverChannel.localAddress());
             Channel clientChannel = channelFuture.sync().channel();
 

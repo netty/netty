@@ -16,7 +16,6 @@
 package io.netty.example.stomp.websocket;
 
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -42,12 +41,16 @@ import static io.netty.handler.codec.http.HttpHeaderValues.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
 import static io.netty.handler.codec.http.HttpVersion.*;
 
-@Sharable
 public final class StompWebSocketClientPageHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
 
     static final StompWebSocketClientPageHandler INSTANCE = new StompWebSocketClientPageHandler();
 
     private StompWebSocketClientPageHandler() {
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

@@ -31,7 +31,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 /**
  * Manages streams within a SPDY session.
  */
-public class SpdySessionHandler extends ChannelDuplexHandler {
+public class SpdySessionHandler implements ChannelDuplexHandler {
 
     private static final SpdyProtocolException PROTOCOL_EXCEPTION =
             SpdyProtocolException.newStatic(null, SpdySessionHandler.class, "handleOutboundMessage(...)");

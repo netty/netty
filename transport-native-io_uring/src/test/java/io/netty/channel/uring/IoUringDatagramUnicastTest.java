@@ -18,7 +18,7 @@ package io.netty.channel.uring;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.FixedRecvByteBufAllocator;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -71,7 +71,7 @@ public class IoUringDatagramUnicastTest extends DatagramUnicastInetTest {
 
             CountDownLatch readLatch = new CountDownLatch(1);
             CountDownLatch readCompleteLatch = new CountDownLatch(1);
-            sc = sb.handler(new ChannelInboundHandlerAdapter() {
+            sc = sb.handler(new ChannelInboundHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                     readLatch.countDown();

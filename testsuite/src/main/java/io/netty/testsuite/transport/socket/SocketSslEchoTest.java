@@ -21,9 +21,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -304,7 +303,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                     sch.pipeline().addLast(new ChunkedWriteHandler());
                 }
                 sch.pipeline().addLast("clientHandler", clientHandler);
-                sch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                sch.pipeline().addLast(new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
                         if (evt instanceof SslHandshakeCompletionEvent) {
@@ -452,7 +451,6 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 serverSslHandler.engine().getSession().getCipherSuite());
     }
 
-    @Sharable
     private abstract class EchoHandler extends SimpleChannelInboundHandler<ByteBuf> {
 
         protected final AtomicInteger recvCounter;
@@ -466,6 +464,11 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             this.recvCounter = recvCounter;
             this.negoCounter = negoCounter;
             this.exception = exception;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override

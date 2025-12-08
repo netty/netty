@@ -48,7 +48,7 @@ import java.util.concurrent.TimeUnit;
  * or start the monitoring, to change the checkInterval directly, or to have access to its values.</li>
  * </ul>
  */
-public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler {
+public abstract class AbstractTrafficShapingHandler implements ChannelDuplexHandler {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractTrafficShapingHandler.class);
     /**
@@ -512,7 +512,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             //release the reopen task
             channel.attr(REOPEN_TASK).set(null);
         }
-        super.handlerRemoved(ctx);
     }
 
     /**
@@ -580,7 +579,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         setUserDefinedWritability(ctx, true);
-        super.channelRegistered(ctx);
+        ctx.fireChannelRegistered();
     }
 
     void setUserDefinedWritability(ChannelHandlerContext ctx, boolean writable) {

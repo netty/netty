@@ -104,7 +104,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
  *
  * </pre>
  */
-public class Http2StaticFileServerHandler extends ChannelDuplexHandler {
+public class Http2StaticFileServerHandler implements ChannelDuplexHandler {
 
     public static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
     public static final String HTTP_DATE_GMT_TIMEZONE = "GMT";

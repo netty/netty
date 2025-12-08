@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
@@ -105,11 +105,11 @@ public class Http3FrameCodecTest {
         decoder.setDynamicTableCapacity(maxTableCapacity);
         qpackEncoderHandler = new QpackEncoderHandler(maxTableCapacity, decoder);
         encoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
-                new ChannelOutboundHandlerAdapter()).get();
+                new ChannelOutboundHandler() { }).get();
         encoder = new QpackEncoder();
         qpackDecoderHandler = new QpackDecoderHandler(encoder);
         decoderStream = (EmbeddedQuicStreamChannel) parent.createStream(QuicStreamType.UNIDIRECTIONAL,
-                new ChannelOutboundHandlerAdapter()).get();
+                new ChannelOutboundHandler() { }).get();
         qpackAttributes.whenEncoderStreamAvailable(future -> {
             if (future.isSuccess()) {
                 try {

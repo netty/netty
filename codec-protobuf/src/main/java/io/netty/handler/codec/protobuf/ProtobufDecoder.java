@@ -21,7 +21,6 @@ import com.google.protobuf.Message;
 import com.google.protobuf.MessageLite;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.ByteToMessageDecoder;
@@ -63,7 +62,6 @@ import java.util.List;
  * }
  * </pre>
  */
-@Sharable
 public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
 
     private static final boolean HAS_PARSER;
@@ -99,6 +97,11 @@ public class ProtobufDecoder extends MessageToMessageDecoder<ByteBuf> {
         super(ByteBuf.class);
         this.prototype = ObjectUtil.checkNotNull(prototype, "prototype").getDefaultInstanceForType();
         this.extensionRegistry = extensionRegistry;
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

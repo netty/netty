@@ -21,7 +21,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelId;
@@ -63,14 +63,14 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
                     channel.attr(streamTypeKey).set(type);
                     channel.attr(localCreatedKey).set(localCreated);
                 }, handlers));
-        pipeline().addFirst(new ChannelOutboundHandlerAdapter() {
+        pipeline().addFirst(new ChannelOutboundHandler() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 if (msg instanceof QuicStreamFrame && ((QuicStreamFrame) msg).hasFin()) {
                     // Mimic the API.
                     promise.addListener(f -> outputShutdown = 0);
                 }
-                super.write(ctx, msg, promise);
+                ctx.write(msg, promise);
             }
         });
     }

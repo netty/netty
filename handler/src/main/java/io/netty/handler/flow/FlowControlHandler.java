@@ -48,7 +48,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  *
  * pipeline.addLast(new MyExampleHandler());
  *
- * class MyExampleHandler extends ChannelInboundHandlerAdapter {
+ * class MyExampleHandler implements ChannelInboundHandler {
  *   @Override
  *   public void channelRead(ChannelHandlerContext ctx, Object msg) {
  *     if (msg instanceof HttpRequest) {
@@ -64,7 +64,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  *
  * @see ChannelConfig#setAutoRead(boolean)
  */
-public class FlowControlHandler extends ChannelDuplexHandler {
+public class FlowControlHandler implements ChannelDuplexHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(FlowControlHandler.class);
 
     private final boolean releaseMessages;
@@ -120,7 +120,6 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        super.handlerRemoved(ctx);
         if (!isQueueEmpty()) {
             dequeue(ctx, queue.size());
         }

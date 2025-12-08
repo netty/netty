@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
@@ -61,7 +61,7 @@ public class QuicWritableTest extends AbstractQuicTest {
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder(executor).initialMaxStreamsBidirectional(5000),
                 InsecureQuicTokenHandler.INSTANCE,
-                serverHandler, new ChannelInboundHandlerAdapter() {
+                serverHandler, new ChannelInboundHandler() {
 
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -89,12 +89,12 @@ public class QuicWritableTest extends AbstractQuicTest {
         try {
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(address)
                     .connect()
                     .get();
             QuicStreamChannel stream = quicChannel.createStream(
-                    QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
+                    QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandler() {
                         int bytes;
 
                         @Override
@@ -177,7 +177,7 @@ public class QuicWritableTest extends AbstractQuicTest {
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder(executor).initialMaxStreamsBidirectional(5000),
                 InsecureQuicTokenHandler.INSTANCE,
-                serverHandler, new ChannelInboundHandlerAdapter() {
+                serverHandler, new ChannelInboundHandler() {
 
                     private int numBytesRead;
                     @Override
@@ -229,12 +229,12 @@ public class QuicWritableTest extends AbstractQuicTest {
         try {
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(address)
                     .connect()
                     .get();
             QuicStreamChannel stream = quicChannel.createStream(
-                    QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
+                    QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandler() {
                         int bytes;
 
                         @Override

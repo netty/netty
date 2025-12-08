@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageDecoder;
@@ -28,7 +27,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 /**
  * Decodes a {@link DatagramPacket} into a {@link DatagramDnsQuery}.
  */
-@ChannelHandler.Sharable
 public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
     private final DnsRecordDecoder recordDecoder;
@@ -46,6 +44,11 @@ public class DatagramDnsQueryDecoder extends MessageToMessageDecoder<DatagramPac
     public DatagramDnsQueryDecoder(DnsRecordDecoder recordDecoder) {
         super(DatagramPacket.class);
         this.recordDecoder = checkNotNull(recordDecoder, "recordDecoder");
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

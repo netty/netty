@@ -19,9 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
@@ -98,8 +97,7 @@ public class LocalTransportThreadModelTest2 {
         localChannel.closeFuture().awaitUninterruptibly();
     }
 
-    @Sharable
-    static class LocalHandler extends ChannelInboundHandlerAdapter {
+    static class LocalHandler implements ChannelInboundHandler {
         private final String name;
 
         public volatile ChannelFuture lastWriteFuture;
@@ -108,6 +106,11 @@ public class LocalTransportThreadModelTest2 {
 
         LocalHandler(String name) {
             this.name = name;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override

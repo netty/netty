@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -48,7 +48,7 @@ public class QuicReadableTest extends AbstractQuicTest {
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder(executor).initialMaxStreamsBidirectional(5000),
                 InsecureQuicTokenHandler.INSTANCE,
-                serverHandler, new ChannelInboundHandlerAdapter() {
+                serverHandler, new ChannelInboundHandler() {
                     private int counter;
                     @Override
                     public void channelRegistered(ChannelHandlerContext ctx) {
@@ -89,7 +89,7 @@ public class QuicReadableTest extends AbstractQuicTest {
         try {
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(server.localAddress())
                     .connect()
                     .get();
@@ -97,7 +97,7 @@ public class QuicReadableTest extends AbstractQuicTest {
             List<Channel> streams = new ArrayList<>();
             for (int i = 0; i < numOfStreams; i++) {
                 QuicStreamChannel stream = quicChannel.createStream(
-                        QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
+                        QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandler() {
                             @Override
                             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                                 clientErrorRef.set(cause);

@@ -50,7 +50,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * This handler can be configured using one or more {@link CorsConfig}, please
  * refer to this class for details about the configuration options available.
  */
-public class CorsHandler extends ChannelDuplexHandler {
+public class CorsHandler implements ChannelDuplexHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(CorsHandler.class);
     private static final String ANY_ORIGIN = "*";

@@ -18,7 +18,6 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -152,12 +151,16 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         fail();
     }
 
-    @ChannelHandler.Sharable
     private static final class MulticastTestHandler extends SimpleChannelInboundHandler<DatagramPacket> {
         private final CountDownLatch latch = new CountDownLatch(1);
 
         private boolean done;
         private volatile boolean fail;
+
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
 
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) throws Exception {

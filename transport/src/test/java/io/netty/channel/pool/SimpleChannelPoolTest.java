@@ -18,7 +18,7 @@ package io.netty.channel.pool;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -59,7 +59,7 @@ public class SimpleChannelPoolTest {
           .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override
               public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                  ch.pipeline().addLast(new ChannelInboundHandler() { });
               }
           });
 
@@ -110,7 +110,7 @@ public class SimpleChannelPoolTest {
           .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override
               public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                  ch.pipeline().addLast(new ChannelInboundHandler() { });
               }
           });
 
@@ -174,7 +174,7 @@ public class SimpleChannelPoolTest {
           .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override
               public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                  ch.pipeline().addLast(new ChannelInboundHandler() { });
               }
           });
 
@@ -221,7 +221,7 @@ public class SimpleChannelPoolTest {
           .childHandler(new ChannelInitializer<LocalChannel>() {
               @Override
               public void initChannel(LocalChannel ch) throws Exception {
-                  ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                  ch.pipeline().addLast(new ChannelInboundHandler() { });
               }
           });
 
@@ -323,7 +323,7 @@ public class SimpleChannelPoolTest {
                 .childHandler(new ChannelInitializer<LocalChannel>() {
                     @Override
                     protected void initChannel(LocalChannel ch) throws Exception {
-                        ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                        ch.pipeline().addLast(new ChannelInboundHandler() { });
                     }
                 });
         final Channel sc = sb.bind(addr).syncUninterruptibly().channel();
@@ -365,7 +365,7 @@ public class SimpleChannelPoolTest {
               .childHandler(new ChannelInitializer<LocalChannel>() {
                   @Override
                   protected void initChannel(LocalChannel ch) throws Exception {
-                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter());
+                      ch.pipeline().addLast(new ChannelInboundHandler() { });
                   }
               });
         final Channel sc = sb.bind(addr).syncUninterruptibly().channel();

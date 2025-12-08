@@ -96,11 +96,6 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
 
     @Override
     public final ChannelHandlerContext fireExceptionCaught(Throwable cause) {
-        try {
-            handler().exceptionCaught(this, cause);
-        } catch (Exception e) {
-            handleException(e);
-        }
         return null;
     }
 

@@ -20,7 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.NetUtil;
@@ -101,7 +101,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
     private static void testConnectRefused0(Bootstrap cb, boolean halfClosure) throws Throwable {
         final Promise<Error> errorPromise = GlobalEventExecutor.INSTANCE.newPromise();
-        ChannelHandler handler = new ChannelInboundHandlerAdapter() {
+        ChannelHandler handler = new ChannelInboundHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 errorPromise.setFailure(new AssertionError("should have never been called"));
@@ -175,7 +175,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
         return true;
     }
 
-    private static class TestHandler extends ChannelInboundHandlerAdapter {
+    private static class TestHandler implements ChannelInboundHandler {
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             InternalLoggerFactory.getInstance(

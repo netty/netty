@@ -20,7 +20,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -64,7 +64,7 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
         };
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         try {
-            server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandler() {
 
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
@@ -86,11 +86,11 @@ public class QuicConnectionStatsTest extends AbstractQuicTest {
 
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(server.localAddress())
                     .connect().get();
             assertNotNull(quicChannel.collectStats().sync().getNow());
-            quicChannel.createStream(QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandlerAdapter() {
+            quicChannel.createStream(QuicStreamType.BIDIRECTIONAL, new ChannelInboundHandler() {
                 private final int bufferSize = 8;
                 private int received;
 

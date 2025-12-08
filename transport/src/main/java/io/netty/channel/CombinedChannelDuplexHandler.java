@@ -18,18 +18,14 @@ package io.netty.channel;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
 
 /**
- *  Combines a {@link ChannelInboundHandler} and a {@link ChannelOutboundHandler} into one {@link ChannelHandler}.
+ *  Combines a {@link ChannelInboundHandler} and a {@link ChannelOutboundHandler} into one {@link ChannelDuplexHandler}.
  */
 public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O extends ChannelOutboundHandler>
-        extends ChannelDuplexHandler {
-
-    private static final InternalLogger logger = InternalLoggerFactory.getInstance(CombinedChannelDuplexHandler.class);
+        implements ChannelDuplexHandler {
 
     private DelegatingChannelHandlerContext inboundCtx;
     private DelegatingChannelHandlerContext outboundCtx;
@@ -43,16 +39,18 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
      * {@link #init(ChannelInboundHandler, ChannelOutboundHandler)} before adding this handler into a
      * {@link ChannelPipeline}.
      */
-    protected CombinedChannelDuplexHandler() {
-        ensureNotSharable();
-    }
+    protected CombinedChannelDuplexHandler() { }
 
     /**
      * Creates a new instance that combines the specified two handlers into one.
      */
     public CombinedChannelDuplexHandler(I inboundHandler, O outboundHandler) {
-        ensureNotSharable();
         init(inboundHandler, outboundHandler);
+    }
+
+    @Override
+    public final boolean isSharable() {
+        return false;
     }
 
     /**
@@ -131,34 +129,7 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         outboundCtx = new DelegatingChannelHandlerContext(ctx, outboundHandler);
-        inboundCtx = new DelegatingChannelHandlerContext(ctx, inboundHandler) {
-            @SuppressWarnings("deprecation")
-            @Override
-            public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
-                if (!outboundCtx.removed) {
-                    try {
-                        // We directly delegate to the ChannelOutboundHandler as this may override exceptionCaught(...)
-                        // as well
-                        outboundHandler.exceptionCaught(outboundCtx, cause);
-                    } catch (Throwable error) {
-                        if (logger.isDebugEnabled()) {
-                            logger.debug(
-                                    "An exception " +
-                                    "was thrown by a user handler's exceptionCaught() " +
-                                    "method while handling the following exception:", cause);
-                        } else if (logger.isWarnEnabled()) {
-                            logger.warn(
-                                    "An exception '{}' [enable DEBUG level for full stacktrace] " +
-                                    "was thrown by a user handler's exceptionCaught() " +
-                                    "method while handling the following exception:", error, cause);
-                        }
-                    }
-                } else {
-                    super.fireExceptionCaught(cause);
-                }
-                return this;
-            }
-        };
+        inboundCtx = new DelegatingChannelHandlerContext(ctx, inboundHandler);
 
         // The inboundCtx and outboundCtx were created and set now it's safe to call removeInboundHandler() and
         // removeOutboundHandler().

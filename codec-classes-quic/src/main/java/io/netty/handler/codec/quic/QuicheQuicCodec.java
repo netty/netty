@@ -39,7 +39,7 @@ import static io.netty.handler.codec.quic.Quiche.allocateNativeOrder;
 /**
  * Abstract base class for QUIC codecs.
  */
-abstract class QuicheQuicCodec extends ChannelDuplexHandler {
+abstract class QuicheQuicCodec implements ChannelDuplexHandler {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicCodec.class);
     private final ConnectionIdChannelMap connectionIdToChannel = new ConnectionIdChannelMap();
     private final Set<QuicheQuicChannel> channels = new HashSet<>();

@@ -16,7 +16,7 @@
 package io.netty.handler.ssl.ocsp;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.resolver.dns.DnsNameResolver;
@@ -41,7 +41,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * using OCSP. Once TLS handshake is completed, {@link SslHandshakeCompletionEvent#SUCCESS} is fired, validator
  * will perform certificate validation using OCSP over HTTP/1.1 with the server's certificate issuer OCSP responder.
  */
-public class OcspServerCertificateValidator extends ChannelInboundHandlerAdapter {
+public class OcspServerCertificateValidator implements ChannelInboundHandler {
     /**
      * An attribute used to mark all channels created by the {@link OcspServerCertificateValidator}.
      */

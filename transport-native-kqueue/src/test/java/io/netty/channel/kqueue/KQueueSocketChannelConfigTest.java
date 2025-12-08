@@ -17,7 +17,7 @@ package io.netty.channel.kqueue;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 
@@ -61,7 +61,7 @@ public class KQueueSocketChannelConfigTest {
         Bootstrap bootstrap = new Bootstrap();
         ch = (KQueueSocketChannel) bootstrap.group(group)
                 .channel(KQueueSocketChannel.class)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
     }
 

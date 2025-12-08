@@ -17,7 +17,7 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.logging.LogLevel;
 import io.netty.util.internal.logging.InternalLogLevel;
@@ -29,7 +29,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 /**
  * Logs HTTP2 frames for debugging purposes.
  */
-public class Http2FrameLogger extends ChannelHandlerAdapter {
+public class Http2FrameLogger implements ChannelDuplexHandler {
 
     public enum Direction {
         INBOUND,

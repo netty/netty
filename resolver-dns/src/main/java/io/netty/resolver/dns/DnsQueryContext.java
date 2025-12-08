@@ -21,7 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.dns.AbstractDnsOptPseudoRrRecord;
 import io.netty.handler.codec.dns.DnsQuery;
@@ -377,7 +377,7 @@ abstract class DnsQueryContext {
                         recursionDesired, queryTimeoutMillis, question(), additionals, promise);
                 tcpCh.pipeline().addLast(TCP_ENCODER);
                 tcpCh.pipeline().addLast(new TcpDnsResponseDecoder());
-                tcpCh.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                tcpCh.pipeline().addLast(new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) {
                         Channel tcpCh = ctx.channel();

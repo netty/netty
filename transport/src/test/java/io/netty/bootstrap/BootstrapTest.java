@@ -19,9 +19,7 @@ package io.netty.bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
@@ -90,7 +88,7 @@ public class BootstrapTest {
                 .group(groupA)
                 .channelFactory(TestChannel::new)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
-                .handler(new ChannelInboundHandlerAdapter())
+                .handler(new ChannelInboundHandler() { })
                 .register();
 
         assertThrows(UnsupportedOperationException.class, new  Executable() {
@@ -447,8 +445,12 @@ public class BootstrapTest {
         }
     }
 
-    @Sharable
-    private static final class DummyHandler extends ChannelInboundHandlerAdapter { }
+    private static final class DummyHandler implements ChannelInboundHandler {
+        @Override
+        public boolean isSharable() {
+            return true;
+        }
+    }
 
     private static final class TestAddressResolverGroup extends AddressResolverGroup<SocketAddress> {
 

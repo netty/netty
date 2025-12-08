@@ -22,7 +22,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.RecvByteBufAllocator;
@@ -123,7 +123,7 @@ public class SocketAutoReadTest extends AbstractSocketTest {
         }
     }
 
-    private static final class AutoReadHandler extends ChannelInboundHandlerAdapter {
+    private static final class AutoReadHandler implements ChannelInboundHandler {
         private final AtomicInteger count = new AtomicInteger();
         private final CountDownLatch latch = new CountDownLatch(1);
         private final CountDownLatch latch2;

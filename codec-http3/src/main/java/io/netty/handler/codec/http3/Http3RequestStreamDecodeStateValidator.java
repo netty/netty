@@ -16,7 +16,7 @@
 package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.http3.Http3RequestStreamEncodeStateValidator.State;
 
 import static io.netty.handler.codec.http3.Http3FrameValidationUtils.frameTypeUnexpected;
@@ -25,14 +25,14 @@ import static io.netty.handler.codec.http3.Http3RequestStreamEncodeStateValidato
 import static io.netty.handler.codec.http3.Http3RequestStreamEncodeStateValidator.isStreamStarted;
 import static io.netty.handler.codec.http3.Http3RequestStreamEncodeStateValidator.isTrailersReceived;
 
-final class Http3RequestStreamDecodeStateValidator extends ChannelInboundHandlerAdapter
-        implements Http3RequestStreamCodecState {
+final class Http3RequestStreamDecodeStateValidator
+        implements ChannelInboundHandler, Http3RequestStreamCodecState {
     private State state = State.None;
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
         if (!(msg instanceof Http3RequestStreamFrame)) {
-            super.channelRead(ctx, msg);
+            ctx.fireChannelRead(msg);
             return;
         }
         final Http3RequestStreamFrame frame = (Http3RequestStreamFrame) msg;
@@ -42,7 +42,7 @@ final class Http3RequestStreamDecodeStateValidator extends ChannelInboundHandler
             return;
         }
         state = nextState;
-        super.channelRead(ctx, msg);
+        ctx.fireChannelRead(frame);
     }
 
     @Override

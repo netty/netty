@@ -105,7 +105,7 @@ public class PendingWriteQueueTest {
         final AtomicReference<PendingWriteQueue> queueRef = new AtomicReference<PendingWriteQueue>();
         final ByteBuf msg = Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII);
 
-        final EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+        final EmbeddedChannel channel = new EmbeddedChannel(new ChannelInboundHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) {
                 ctxRef.set(ctx);
@@ -204,7 +204,7 @@ public class PendingWriteQueueTest {
 
     private static EmbeddedChannel newChannel() {
         // Add a handler so we can access a ChannelHandlerContext via the ChannelPipeline.
-        return new EmbeddedChannel(new ChannelHandlerAdapter() { });
+        return new EmbeddedChannel(new ChannelHandler() { });
     }
 
     @Test
@@ -233,13 +233,13 @@ public class PendingWriteQueueTest {
 
     @Test
     public void testRemoveAndWriteAllReentrantWrite() {
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 // Convert to writeAndFlush(...) so the promise will be notified by the transport.
                 ctx.writeAndFlush(msg, promise);
             }
-        }, new ChannelOutboundHandlerAdapter());
+        }, new ChannelOutboundHandler() { });
 
         final PendingWriteQueue queue = new PendingWriteQueue(channel.pipeline().lastContext());
 
@@ -356,13 +356,13 @@ public class PendingWriteQueueTest {
         assertSame(ex, promise.cause());
     }
 
-    private static class TestHandler extends ChannelDuplexHandler {
+    private static class TestHandler implements ChannelDuplexHandler {
         protected PendingWriteQueue queue;
         private int expectedSize;
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
-            super.channelActive(ctx);
+            ctx.fireChannelActive();
             assertQueueEmpty(queue);
             assertTrue(ctx.channel().isWritable(), "Should be writable");
         }

@@ -24,7 +24,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelShutdownDirection;
@@ -95,7 +95,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
                     serverChildChannel.set(ch);
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
@@ -115,7 +115,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         private int bytesRead;
                         private int bytesSinceReadComplete;
 
@@ -209,7 +209,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
 
                   @Override
                   protected void initChannel(Channel ch) throws Exception {
-                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                      ch.pipeline().addLast(new ChannelInboundHandler() {
 
                             @Override
                             public void channelActive(final ChannelHandlerContext ctx) {
@@ -230,7 +230,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
               .handler(new ChannelInitializer<Channel>() {
                   @Override
                   protected void initChannel(Channel ch) throws Exception {
-                      ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                      ch.pipeline().addLast(new ChannelInboundHandler() {
                           @Override
                           public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
                               if (type.direction() == ChannelShutdownDirection.Inbound) {
@@ -274,7 +274,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
                             ctx.shutdown(ChannelShutdownType.newOutbound());
@@ -293,7 +293,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
 
                         @Override
                         public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
@@ -361,7 +361,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
@@ -386,7 +386,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         private int bytesRead;
                         private int bytesSinceReadComplete;
 
@@ -699,7 +699,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
@@ -719,7 +719,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         private int bytesRead;
 
                         @Override

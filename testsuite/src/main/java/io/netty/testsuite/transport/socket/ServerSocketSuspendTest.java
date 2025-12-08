@@ -17,9 +17,8 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.util.internal.SocketUtils;
 import org.junit.jupiter.api.Disabled;
@@ -99,13 +98,17 @@ public class ServerSocketSuspendTest extends AbstractServerSocketTest {
         }
     }
 
-    @ChannelHandler.Sharable
-    private static final class AcceptedChannelCounter extends ChannelInboundHandlerAdapter {
+    private static final class AcceptedChannelCounter implements ChannelInboundHandler {
 
         final CountDownLatch latch;
 
         AcceptedChannelCounter(int nChannels) {
             latch = new CountDownLatch(nChannels);
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override

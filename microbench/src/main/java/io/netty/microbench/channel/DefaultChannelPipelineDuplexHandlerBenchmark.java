@@ -17,8 +17,8 @@ package io.netty.microbench.channel;
 
 import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.microbench.util.AbstractMicrobenchmark;
@@ -55,7 +55,7 @@ public class DefaultChannelPipelineDuplexHandlerBenchmark extends AbstractMicrob
         // disabling auto-read to reduce noise on flush
         channel.config().setAutoRead(false);
         pipeline = channel.pipeline();
-        pipeline.addLast(new ChannelInboundHandlerAdapter() {
+        pipeline.addLast(new ChannelInboundHandler() {
             @Override
             public void channelReadComplete(final ChannelHandlerContext ctx) {
                 ctx.fireChannelReadComplete();
@@ -82,19 +82,19 @@ public class DefaultChannelPipelineDuplexHandlerBenchmark extends AbstractMicrob
                 }
             });
         } else {
-            pipeline.addLast(new ChannelInboundHandlerAdapter() {
+            pipeline.addLast(new ChannelInboundHandler() {
                 @Override
                 public void channelReadComplete(final ChannelHandlerContext ctx) {
                     ctx.fireChannelReadComplete();
                 }
             });
-            pipeline.addLast(new ChannelOutboundHandlerAdapter() {
+            pipeline.addLast(new ChannelOutboundHandler() {
                 @Override
                 public void flush(final ChannelHandlerContext ctx) {
                     ctx.flush();
                 }
             });
-            pipeline.addLast(new ChannelInboundHandlerAdapter() {
+            pipeline.addLast(new ChannelInboundHandler() {
                 @Override
                 public void channelReadComplete(final ChannelHandlerContext ctx) {
                     ctx.flush();

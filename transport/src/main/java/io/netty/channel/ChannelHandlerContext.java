@@ -72,7 +72,7 @@ import io.netty.util.AttributeKey;
  * the single instance can be invoked with different
  * {@link ChannelHandlerContext}s if it is added to one or more {@link ChannelPipeline}s more than once.
  * Also note that a {@link ChannelHandler} that is supposed to be added to multiple {@link ChannelPipeline}s should
- * be marked as {@link io.netty.channel.ChannelHandler.Sharable}.
+ * be return {@code true} via {@link ChannelHandler#isSharable()}.
  *
  * <h3>Additional resources worth reading</h3>
  * <p>

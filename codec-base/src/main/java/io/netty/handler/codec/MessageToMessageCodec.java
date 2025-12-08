@@ -52,7 +52,7 @@ import java.util.List;
  * are of type {@link ReferenceCounted}. This is needed as the {@link MessageToMessageCodec} will call
  * {@link ReferenceCounted#release()} on encoded / decoded messages.
  */
-public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> extends ChannelDuplexHandler {
+public abstract class MessageToMessageCodec<INBOUND_IN, OUTBOUND_IN> implements ChannelDuplexHandler {
 
     private final MessageToMessageDecoder<Object> decoder = new MessageToMessageDecoder<Object>(Object.class) {
 

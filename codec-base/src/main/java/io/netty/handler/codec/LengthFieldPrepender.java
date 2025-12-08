@@ -18,7 +18,6 @@ package io.netty.handler.codec;
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.ObjectUtil;
 
@@ -52,7 +51,6 @@ import java.util.List;
  * +--------+----------------+
  * </pre>
  */
-@Sharable
 public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
 
     private final ByteOrder byteOrder;
@@ -155,6 +153,11 @@ public class LengthFieldPrepender extends MessageToMessageEncoder<ByteBuf> {
         this.lengthFieldLength = lengthFieldLength;
         this.lengthIncludesLengthFieldLength = lengthIncludesLengthFieldLength;
         this.lengthAdjustment = lengthAdjustment;
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

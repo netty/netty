@@ -20,7 +20,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.flow.FlowControlHandler;
@@ -155,7 +155,7 @@ public class WebSocketProtocolHandlerTest {
         final AtomicReference<ChannelPromise> ref = new AtomicReference<ChannelPromise>();
         WebSocketProtocolHandler handler = new WebSocketProtocolHandler(
                 false, WebSocketCloseStatus.NORMAL_CLOSURE, 1) { };
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                 ref.set(promise);

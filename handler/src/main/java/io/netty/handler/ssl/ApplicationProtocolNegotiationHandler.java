@@ -17,7 +17,7 @@ package io.netty.handler.ssl;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelShutdownType;
@@ -64,7 +64,7 @@ import javax.net.ssl.SSLException;
  * }
  * </pre>
  */
-public abstract class ApplicationProtocolNegotiationHandler extends ChannelInboundHandlerAdapter {
+public abstract class ApplicationProtocolNegotiationHandler implements ChannelInboundHandler {
 
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(ApplicationProtocolNegotiationHandler.class);
@@ -87,14 +87,12 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
-        super.handlerAdded(ctx);
     }
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         fireBufferedMessages();
         bufferedMessages.recycle();
-        super.handlerRemoved(ctx);
     }
 
     @Override
@@ -167,7 +165,7 @@ public abstract class ApplicationProtocolNegotiationHandler extends ChannelInbou
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         fireBufferedMessages();
-        super.channelInactive(ctx);
+        ctx.fireChannelInactive();
     }
 
     private void removeSelfIfPresent(ChannelHandlerContext ctx) {
