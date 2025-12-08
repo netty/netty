@@ -32,7 +32,6 @@ import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.net.SocketAddress;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import static io.netty.channel.ChannelHandlerMask.MASK_BIND;
 import static io.netty.channel.ChannelHandlerMask.MASK_CHANNEL_ACTIVE;
@@ -59,11 +58,8 @@ import static io.netty.channel.ChannelHandlerMask.mask;
 abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, ResourceLeakHint {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannelHandlerContext.class);
-    volatile AbstractChannelHandlerContext next;
-    volatile AbstractChannelHandlerContext prev;
-
-    private static final AtomicIntegerFieldUpdater<AbstractChannelHandlerContext> HANDLER_STATE_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(AbstractChannelHandlerContext.class, "handlerState");
+    AbstractChannelHandlerContext next;
+    AbstractChannelHandlerContext prev;
 
     /**
      * {@link ChannelHandler#handlerAdded(ChannelHandlerContext)} is about to be called.
@@ -98,7 +94,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
     private Tasks invokeTasks;
 
-    private volatile int handlerState = INIT;
+    private int handlerState = INIT;
 
     AbstractChannelHandlerContext(DefaultChannelPipeline pipeline,
                                   String name, Class<? extends ChannelHandler> handlerClass) {
@@ -1008,23 +1004,20 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     final boolean setAddComplete() {
-        for (;;) {
-            int oldState = handlerState;
-            if (oldState == REMOVE_COMPLETE) {
-                return false;
-            }
-            // Ensure we never update when the handlerState is REMOVE_COMPLETE already.
-            // oldState is usually ADD_PENDING but can also be REMOVE_COMPLETE when an EventExecutor is used that is not
-            // exposing ordering guarantees.
-            if (HANDLER_STATE_UPDATER.compareAndSet(this, oldState, ADD_COMPLETE)) {
-                return true;
-            }
+        int oldState = handlerState;
+        if (oldState == REMOVE_COMPLETE) {
+            return false;
         }
+        // Ensure we never update when the handlerState is REMOVE_COMPLETE already.
+        handlerState = ADD_COMPLETE;
+        return true;
     }
 
     final void setAddPending() {
-        boolean updated = HANDLER_STATE_UPDATER.compareAndSet(this, INIT, ADD_PENDING);
-        assert updated; // This should always be true as it MUST be called before setAddComplete() or setRemoved().
+        // This should always be true as it MUST be called before setAddComplete() or setRemoved();
+        assert handlerState == INIT;
+
+        handlerState = ADD_PENDING;
     }
 
     final void callHandlerAdded() throws Exception {
