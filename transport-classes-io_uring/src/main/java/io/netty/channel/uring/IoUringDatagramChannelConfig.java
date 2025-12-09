@@ -155,7 +155,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
         return activeOnOpen;
     }
 
-    int getSendBufferSize() {
+    private int getSendBufferSize() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
@@ -163,16 +163,15 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
         }
     }
 
-    IoUringDatagramChannelConfig setSendBufferSize(int sendBufferSize) {
+    private void setSendBufferSize(int sendBufferSize) {
         try {
             ((AbstractIoUringChannel) channel).socket.setSendBufferSize(sendBufferSize);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    int getReceiveBufferSize() {
+    private int getReceiveBufferSize() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -180,16 +179,15 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
         }
     }
 
-    IoUringDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    private void setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((AbstractIoUringChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    int getTrafficClass() {
+    private int getTrafficClass() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getTrafficClass();
         } catch (IOException e) {
@@ -197,16 +195,15 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
         }
     }
 
-    IoUringDatagramChannelConfig setTrafficClass(int trafficClass) {
+    private void setTrafficClass(int trafficClass) {
         try {
             ((AbstractIoUringChannel) channel).socket.setTrafficClass(trafficClass);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    boolean isReuseAddress() {
+    private boolean isReuseAddress() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -214,16 +211,15 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
         }
     }
 
-    IoUringDatagramChannelConfig setReuseAddress(boolean reuseAddress) {
+    private void setReuseAddress(boolean reuseAddress) {
         try {
             ((AbstractIoUringChannel) channel).socket.setReuseAddress(reuseAddress);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    boolean isBroadcast() {
+    private boolean isBroadcast() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isBroadcast();
         } catch (IOException e) {
@@ -231,16 +227,15 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
         }
     }
 
-    IoUringDatagramChannelConfig setBroadcast(boolean broadcast) {
+    private void setBroadcast(boolean broadcast) {
         try {
             ((AbstractIoUringChannel) channel).socket.setBroadcast(broadcast);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    boolean isLoopbackModeDisabled() {
+    private boolean isLoopbackModeDisabled() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isLoopbackModeDisabled();
         } catch (IOException e) {
@@ -248,16 +243,15 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
         }
     }
 
-    IoUringDatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
+    private void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
         try {
             ((AbstractIoUringChannel) channel).socket.setLoopbackModeDisabled(loopbackModeDisabled);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    int getTimeToLive() {
+    private int getTimeToLive() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getTimeToLive();
         } catch (IOException e) {
@@ -265,16 +259,15 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
         }
     }
 
-    IoUringDatagramChannelConfig setTimeToLive(int ttl) {
+    private void setTimeToLive(int ttl) {
         try {
             ((AbstractIoUringChannel) channel).socket.setTimeToLive(ttl);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    InetAddress getInterface() {
+    private InetAddress getInterface() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getInterface();
         } catch (IOException e) {
@@ -282,16 +275,15 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
         }
     }
 
-    IoUringDatagramChannelConfig setInterface(InetAddress interfaceAddress) {
+    private void setInterface(InetAddress interfaceAddress) {
         try {
             ((AbstractIoUringChannel) channel).socket.setInterface(interfaceAddress);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    NetworkInterface getNetworkInterface() {
+    private NetworkInterface getNetworkInterface() {
         try {
             return ((AbstractIoUringChannel) channel).socket.getNetworkInterface();
         } catch (IOException e) {
@@ -299,10 +291,9 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
         }
     }
 
-    IoUringDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
+    private void setNetworkInterface(NetworkInterface networkInterface) {
         try {
             ((AbstractIoUringChannel) channel).socket.setNetworkInterface(networkInterface);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -311,7 +302,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
     /**
      * Returns {@code true} if the SO_REUSEPORT option is set.
      */
-    boolean isReusePort() {
+    private boolean isReusePort() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isReusePort();
         } catch (IOException e) {
@@ -327,10 +318,9 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
      * {@link io.netty.channel.socket.DatagramChannel#bind(java.net.SocketAddress)} to have
      * any affect.
      */
-    IoUringDatagramChannelConfig setReusePort(boolean reusePort) {
+    private void setReusePort(boolean reusePort) {
         try {
             ((AbstractIoUringChannel) channel).socket.setReusePort(reusePort);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -340,7 +330,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} otherwise.
      */
-    boolean isIpTransparent() {
+    private boolean isIpTransparent() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isIpTransparent();
         } catch (IOException e) {
@@ -352,10 +342,9 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_TRANSPARENT</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    IoUringDatagramChannelConfig setIpTransparent(boolean ipTransparent) {
+    private void setIpTransparent(boolean ipTransparent) {
         try {
             ((AbstractIoUringChannel) channel).socket.setIpTransparent(ipTransparent);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -365,7 +354,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} otherwise.
      */
-    boolean isFreeBind() {
+    private boolean isFreeBind() {
         try {
             return ((AbstractIoUringChannel) channel).socket.isIpFreeBind();
         } catch (IOException e) {
@@ -377,10 +366,9 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_FREEBIND</a> is enabled,
      * {@code false} for disable it. Default is disabled.
      */
-    IoUringDatagramChannelConfig setFreeBind(boolean freeBind) {
+    private void setFreeBind(boolean freeBind) {
         try {
             ((AbstractIoUringChannel) channel).socket.setIpFreeBind(freeBind);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -395,9 +383,8 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
      * {@link RecvByteBufAllocator}. You can use {@code 0} to disable the usage of batching, any other bigger value
      * will enable it.
      */
-    IoUringDatagramChannelConfig setMaxDatagramPayloadSize(int maxDatagramSize) {
+    private void setMaxDatagramPayloadSize(int maxDatagramSize) {
         this.maxDatagramSize = ObjectUtil.checkPositiveOrZero(maxDatagramSize, "maxDatagramSize");
-        return this;
     }
 
     /**
@@ -411,10 +398,9 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
      * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> is
      * enabled (or IPV6_MULTICAST_ALL for IPV6), {@code false} for disable it. Default is enabled.
      */
-    IoUringDatagramChannelConfig setIpMulticastAll(boolean multicastAll) {
+    private void setIpMulticastAll(boolean multicastAll) {
         try {
             ((IoUringDatagramChannel) channel).socket.setIpMulticastAll(multicastAll);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -424,7 +410,7 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig {
      * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> (or
      * IPV6_MULTICAST_ALL for IPV6) is enabled, {@code false} otherwise.
      */
-    boolean isIpMulticastAll() {
+    private boolean isIpMulticastAll() {
         try {
             return ((IoUringDatagramChannel) channel).socket.isIpMulticastAll();
         } catch (IOException e) {

@@ -63,9 +63,8 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
         return options;
     }
 
-    KQueueSocketChannelConfig setReadMode(DomainSocketReadMode mode) {
+    private void setReadMode(DomainSocketReadMode mode) {
         this.mode = ObjectUtil.checkNotNull(mode, "mode");
-        return this;
     }
 
     DomainSocketReadMode getReadMode() {
@@ -151,7 +150,7 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
         return true;
     }
 
-    int getReceiveBufferSize() {
+    private int getReceiveBufferSize() {
         try {
             return ((AbstractKQueueChannel) channel).socket.getReceiveBufferSize();
         } catch (IOException e) {
@@ -159,7 +158,7 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    int getSendBufferSize() {
+    private int getSendBufferSize() {
         try {
             return ((AbstractKQueueChannel) channel).socket.getSendBufferSize();
         } catch (IOException e) {
@@ -175,7 +174,7 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    int getTrafficClass() {
+    private int getTrafficClass() {
         try {
             return ((AbstractKQueueChannel) channel).socket.getTrafficClass();
         } catch (IOException e) {
@@ -183,7 +182,7 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    boolean isKeepAlive() {
+    private boolean isKeepAlive() {
         try {
             return ((AbstractKQueueChannel) channel).socket.isKeepAlive();
         } catch (IOException e) {
@@ -191,7 +190,7 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    boolean isReuseAddress() {
+    private boolean isReuseAddress() {
         try {
             return ((AbstractKQueueChannel) channel).socket.isReuseAddress();
         } catch (IOException e) {
@@ -199,7 +198,7 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    boolean isTcpNoDelay() {
+    private boolean isTcpNoDelay() {
         try {
             return ((AbstractKQueueChannel) channel).socket.isTcpNoDelay();
         } catch (IOException e) {
@@ -207,7 +206,7 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    int getSndLowAt() {
+    private int getSndLowAt() {
         try {
             return ((AbstractKQueueChannel) channel).socket.getSndLowAt();
         } catch (IOException e) {
@@ -215,7 +214,7 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    void setSndLowAt(int sndLowAt)  {
+    private void setSndLowAt(int sndLowAt)  {
         try {
             ((AbstractKQueueChannel) channel).socket.setSndLowAt(sndLowAt);
         } catch (IOException e) {
@@ -223,7 +222,7 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    boolean isTcpNoPush() {
+    private boolean isTcpNoPush() {
         try {
             return ((AbstractKQueueChannel) channel).socket.isTcpNoPush();
         } catch (IOException e) {
@@ -231,7 +230,7 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    void setTcpNoPush(boolean tcpNoPush)  {
+    private void setTcpNoPush(boolean tcpNoPush)  {
         try {
             ((AbstractKQueueChannel) channel).socket.setTcpNoPush(tcpNoPush);
         } catch (IOException e) {
@@ -239,65 +238,58 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
         }
     }
 
-    KQueueSocketChannelConfig setKeepAlive(boolean keepAlive) {
+    private void setKeepAlive(boolean keepAlive) {
         try {
             ((AbstractKQueueChannel) channel).socket.setKeepAlive(keepAlive);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    KQueueSocketChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+    private void setReceiveBufferSize(int receiveBufferSize) {
         try {
             ((AbstractKQueueChannel) channel).socket.setReceiveBufferSize(receiveBufferSize);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    KQueueSocketChannelConfig setReuseAddress(boolean reuseAddress) {
+    private void setReuseAddress(boolean reuseAddress) {
         try {
             ((AbstractKQueueChannel) channel).socket.setReuseAddress(reuseAddress);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    KQueueSocketChannelConfig setSendBufferSize(int sendBufferSize) {
+    private void setSendBufferSize(int sendBufferSize) {
         try {
             ((AbstractKQueueChannel) channel).socket.setSendBufferSize(sendBufferSize);
             calculateMaxBytesPerGatheringWrite();
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    KQueueSocketChannelConfig setSoLinger(int soLinger) {
+    private void setSoLinger(int soLinger) {
         try {
             ((AbstractKQueueChannel) channel).socket.setSoLinger(soLinger);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    KQueueSocketChannelConfig setTcpNoDelay(boolean tcpNoDelay) {
+    private void setTcpNoDelay(boolean tcpNoDelay) {
         try {
             ((AbstractKQueueChannel) channel).socket.setTcpNoDelay(tcpNoDelay);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
     }
 
-    KQueueSocketChannelConfig setTrafficClass(int trafficClass) {
+    private void setTrafficClass(int trafficClass) {
         try {
             ((AbstractKQueueChannel) channel).socket.setTrafficClass(trafficClass);
-            return this;
         } catch (IOException e) {
             throw new ChannelException(e);
         }
@@ -310,9 +302,8 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
     /**
      * Enables client TCP fast open, if available.
      */
-    KQueueSocketChannelConfig setTcpFastOpenConnect(boolean fastOpenConnect) {
+    private void setTcpFastOpenConnect(boolean fastOpenConnect) {
         tcpFastopen = fastOpenConnect;
-        return this;
     }
 
     /**
@@ -322,9 +313,8 @@ final class KQueueSocketChannelConfig extends KQueueChannelConfig {
         return tcpFastopen;
     }
 
-    public KQueueSocketChannelConfig setAllowHalfClosure(boolean allowHalfClosure) {
+    private void setAllowHalfClosure(boolean allowHalfClosure) {
         this.allowHalfClosure = allowHalfClosure;
-        return this;
     }
 
     private void calculateMaxBytesPerGatheringWrite() {

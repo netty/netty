@@ -725,7 +725,7 @@ public final class NioDatagramChannel
             }
         }
 
-        NioDatagramChannelConfig setBroadcast(boolean broadcast) {
+        private void setBroadcast(boolean broadcast) {
             try {
                 // See: https://github.com/netty/netty/issues/576
                 if (broadcast &&
@@ -750,7 +750,6 @@ public final class NioDatagramChannel
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
         InetAddress getInterface() {
@@ -765,13 +764,12 @@ public final class NioDatagramChannel
             return null;
         }
 
-        NioDatagramChannelConfig setInterface(InetAddress interfaceAddress) {
+        private void setInterface(InetAddress interfaceAddress) {
             try {
                 setNetworkInterface(NetworkInterface.getByInetAddress(interfaceAddress));
             } catch (SocketException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
         boolean isLoopbackModeDisabled() {
@@ -782,13 +780,12 @@ public final class NioDatagramChannel
             }
         }
 
-        NioDatagramChannelConfig setLoopbackModeDisabled(boolean loopbackModeDisabled) {
+        private void setLoopbackModeDisabled(boolean loopbackModeDisabled) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.IP_MULTICAST_LOOP, loopbackModeDisabled);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
         NetworkInterface getNetworkInterface() {
@@ -799,16 +796,15 @@ public final class NioDatagramChannel
             }
         }
 
-        NioDatagramChannelConfig setNetworkInterface(NetworkInterface networkInterface) {
+        private void setNetworkInterface(NetworkInterface networkInterface) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.IP_MULTICAST_IF, networkInterface);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
-        boolean isReuseAddress() {
+        private boolean isReuseAddress() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.SO_REUSEADDR);
             } catch (IOException e) {
@@ -816,16 +812,15 @@ public final class NioDatagramChannel
             }
         }
 
-        NioDatagramChannelConfig setReuseAddress(boolean reuseAddress) {
+        private void setReuseAddress(boolean reuseAddress) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.SO_REUSEADDR, reuseAddress);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
-        int getReceiveBufferSize() {
+        private int getReceiveBufferSize() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.SO_RCVBUF);
             } catch (IOException e) {
@@ -833,16 +828,15 @@ public final class NioDatagramChannel
             }
         }
 
-        NioDatagramChannelConfig setReceiveBufferSize(int receiveBufferSize) {
+        private void setReceiveBufferSize(int receiveBufferSize) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.SO_RCVBUF, receiveBufferSize);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
-        int getSendBufferSize() {
+        private int getSendBufferSize() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.SO_SNDBUF);
             } catch (IOException e) {
@@ -850,16 +844,15 @@ public final class NioDatagramChannel
             }
         }
 
-        NioDatagramChannelConfig setSendBufferSize(int sendBufferSize) {
+        private void setSendBufferSize(int sendBufferSize) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.SO_SNDBUF, sendBufferSize);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
-        int getTimeToLive() {
+        private int getTimeToLive() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.IP_MULTICAST_TTL);
             } catch (IOException e) {
@@ -867,16 +860,15 @@ public final class NioDatagramChannel
             }
         }
 
-        NioDatagramChannelConfig setTimeToLive(int ttl) {
+        private void setTimeToLive(int ttl) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.IP_MULTICAST_TTL, ttl);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
-        int getTrafficClass() {
+        private int getTrafficClass() {
             try {
                 return jdkChannel.getOption(StandardSocketOptions.IP_TOS);
             } catch (IOException e) {
@@ -884,13 +876,12 @@ public final class NioDatagramChannel
             }
         }
 
-        NioDatagramChannelConfig setTrafficClass(int trafficClass) {
+        private void setTrafficClass(int trafficClass) {
             try {
                 jdkChannel.setOption(StandardSocketOptions.IP_TOS, trafficClass);
             } catch (IOException e) {
                 throw new ChannelException(e);
             }
-            return this;
         }
 
         @Override

@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -146,7 +147,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             case INET6:
             case INET:
                 try {
-                    NetworkInterface iface = config().getNetworkInterface();
+                    NetworkInterface iface = config.getOption(ChannelOption.IP_MULTICAST_IF);
                     if (iface == null) {
                         iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
                     }
