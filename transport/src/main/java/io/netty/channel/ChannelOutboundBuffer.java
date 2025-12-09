@@ -182,7 +182,7 @@ public final class ChannelOutboundBuffer {
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
-        if (newWriteBufferSize > channel.config().getWriteBufferHighWaterMark()) {
+        if (newWriteBufferSize > channel.config().getWriteBufferWaterMark().high()) {
             setUnwritable(invokeLater);
         }
     }
@@ -201,7 +201,7 @@ public final class ChannelOutboundBuffer {
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, -size);
-        if (notifyWritability && newWriteBufferSize < channel.config().getWriteBufferLowWaterMark()) {
+        if (notifyWritability && newWriteBufferSize < channel.config().getWriteBufferWaterMark().low()) {
             setWritable(invokeLater);
         }
     }
@@ -755,7 +755,7 @@ public final class ChannelOutboundBuffer {
      */
     public long bytesBeforeUnwritable() {
         // +1 because writability doesn't change until the threshold is crossed (not equal to).
-        long bytes = channel.config().getWriteBufferHighWaterMark() - totalPendingSize + 1;
+        long bytes = channel.config().getWriteBufferWaterMark().high() - totalPendingSize + 1;
         // If bytes is negative we know we are not writable, but if bytes is non-negative we have to check writability.
         // Note that totalPendingSize and isWritable() use different volatile variables that are not synchronized
         // together. totalPendingSize will be updated before isWritable().
@@ -768,7 +768,7 @@ public final class ChannelOutboundBuffer {
      */
     public long bytesBeforeWritable() {
         // +1 because writability doesn't change until the threshold is crossed (not equal to).
-        long bytes = totalPendingSize - channel.config().getWriteBufferLowWaterMark() + 1;
+        long bytes = totalPendingSize - channel.config().getWriteBufferWaterMark().low() + 1;
         // If bytes is negative we know we are writable, but if bytes is non-negative we have to check writability.
         // Note that totalPendingSize and isWritable() use different volatile variables that are not synchronized
         // together. totalPendingSize will be updated before isWritable().

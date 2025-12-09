@@ -135,8 +135,7 @@ public class PendingWriteQueueTest {
             }
         });
 
-        channel.config().setWriteBufferLowWaterMark(1);
-        channel.config().setWriteBufferHighWaterMark(3);
+        channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(1, 3));
 
         final PendingWriteQueue queue = queueRef.get();
 
@@ -151,8 +150,7 @@ public class PendingWriteQueueTest {
     private static void assertWrite(ChannelHandler handler, int count) {
         final ByteBuf buffer = Unpooled.copiedBuffer("Test", CharsetUtil.US_ASCII);
         final EmbeddedChannel channel = new EmbeddedChannel(handler);
-        channel.config().setWriteBufferLowWaterMark(1);
-        channel.config().setWriteBufferHighWaterMark(3);
+        channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(1, 3));
 
         ByteBuf[] buffers = new ByteBuf[count];
         for (int i = 0; i < buffers.length; i++) {

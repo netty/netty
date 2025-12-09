@@ -256,7 +256,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         long newWriteBufferSize = TOTAL_PENDING_SIZE_UPDATER.addAndGet(this, size);
-        if (newWriteBufferSize > config().getWriteBufferHighWaterMark()) {
+        if (newWriteBufferSize > config().getWriteBufferWaterMark().high()) {
             setUnwritable(invokeLater);
         }
     }
@@ -272,7 +272,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         // prevent excessive buffering in the parent outbound buffer. If the parent is not writable
         // we will mark the child channel as writable once the parent becomes writable by calling
         // trySetWritable() later.
-        if (newWriteBufferSize < config().getWriteBufferLowWaterMark() && parent().isWritable()) {
+        if (newWriteBufferSize < config().getWriteBufferWaterMark().low() && parent().isWritable()) {
             setWritable(invokeLater);
         }
     }
@@ -282,7 +282,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         // Lets try to set the child channel writable to match the state of the parent channel
         // if (and only if) the totalPendingSize is smaller then the low water-mark.
         // If this is not the case we will try again later once we drop under it.
-        if (totalPendingSize < config().getWriteBufferLowWaterMark()) {
+        if (totalPendingSize < config().getWriteBufferWaterMark().low()) {
             setWritable(false);
         }
     }
@@ -410,7 +410,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     @Override
     public long bytesBeforeUnwritable() {
         // +1 because writability doesn't change until the threshold is crossed (not equal to).
-        long bytes = config().getWriteBufferHighWaterMark() - totalPendingSize + 1;
+        long bytes = config().getWriteBufferWaterMark().high() - totalPendingSize + 1;
         // If bytes is negative we know we are not writable, but if bytes is non-negative we have to check
         // writability. Note that totalPendingSize and isWritable() use different volatile variables that are not
         // synchronized together. totalPendingSize will be updated before isWritable().
@@ -420,7 +420,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     @Override
     public long bytesBeforeWritable() {
         // +1 because writability doesn't change until the threshold is crossed (not equal to).
-        long bytes = totalPendingSize - config().getWriteBufferLowWaterMark() + 1;
+        long bytes = totalPendingSize - config().getWriteBufferWaterMark().low() + 1;
         // If bytes is negative we know we are writable, but if bytes is non-negative we have to check writability.
         // Note that totalPendingSize and isWritable() use different volatile variables that are not synchronized
         // together. totalPendingSize will be updated before isWritable().

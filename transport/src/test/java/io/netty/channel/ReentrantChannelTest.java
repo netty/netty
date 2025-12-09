@@ -55,8 +55,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
 
         Channel clientChannel = cb.connect(addr).sync().channel();
-        clientChannel.config().setWriteBufferLowWaterMark(512);
-        clientChannel.config().setWriteBufferHighWaterMark(1024);
+        clientChannel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(512, 1024));
 
         // What is supposed to happen from this point:
         //
@@ -127,8 +126,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
 
         Channel clientChannel = cb.connect(addr).sync().channel();
-        clientChannel.config().setWriteBufferLowWaterMark(512);
-        clientChannel.config().setWriteBufferHighWaterMark(1024);
+        clientChannel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(512, 1024));
 
         clientChannel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
             @Override
