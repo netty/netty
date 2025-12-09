@@ -17,10 +17,11 @@
 package io.netty.handler.proxy;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.PendingWriteQueue;
 import io.netty.util.ReferenceCountUtil;
@@ -38,7 +39,7 @@ import java.util.concurrent.TimeUnit;
 /**
  * A common abstraction for protocols that establish blind forwarding proxy tunnels.
  */
-public abstract class ProxyHandler implements ChannelDuplexHandler {
+public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(ProxyHandler.class);
 

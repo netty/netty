@@ -18,7 +18,6 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -450,27 +449,27 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                 });
 
         // Have the server drop packets once we tell it to do so.
-        server.pipeline().addFirst(
-                new ChannelDuplexHandler() {
-                    @Override
-                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        if (dropPackets.get()) {
-                            ReferenceCountUtil.release(msg);
-                        } else {
-                            ctx.fireChannelRead(msg);
-                        }
-                    }
+        class DropHandler implements ChannelInboundHandler, ChannelOutboundHandler {
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                if (dropPackets.get()) {
+                    ReferenceCountUtil.release(msg);
+                } else {
+                    ctx.fireChannelRead(msg);
+                }
+            }
 
-                    @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-                        if (dropPackets.get()) {
-                            ReferenceCountUtil.release(msg);
-                            promise.setSuccess();
-                        } else {
-                            ctx.write(msg, promise);
-                        }
-                    }
-                });
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                if (dropPackets.get()) {
+                    ReferenceCountUtil.release(msg);
+                    promise.setSuccess();
+                } else {
+                    ctx.write(msg, promise);
+                }
+            }
+        }
+        server.pipeline().addFirst(new DropHandler());
 
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient(QuicTestUtils.newQuicClientBuilder(executor));

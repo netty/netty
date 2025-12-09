@@ -19,11 +19,11 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
@@ -56,41 +56,7 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
             sb.childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new ChannelDuplexHandler() {
-                        private int bytesWritten;
-
-                        @Override
-                        public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                            ReferenceCountUtil.release(msg);
-                            writeRemainingBytes(ctx);
-                        }
-
-                        @Override
-                        public void flush(ChannelHandlerContext ctx) {
-                            if (ctx.channel().isWritable()) {
-                                writeRemainingBytes(ctx);
-                            } else {
-                                ctx.flush();
-                            }
-                        }
-
-                        @Override
-                        public void channelWritabilityChanged(ChannelHandlerContext ctx) {
-                            if (ctx.channel().isWritable()) {
-                                writeRemainingBytes(ctx);
-                            }
-                            ctx.fireChannelWritabilityChanged();
-                        }
-
-                        private void writeRemainingBytes(ChannelHandlerContext ctx) {
-                            while (ctx.channel().isWritable() && bytesWritten < expectedBytes) {
-                                int chunkSize = Math.min(expectedBytes - bytesWritten, maxWriteChunkSize);
-                                bytesWritten += chunkSize;
-                                ctx.write(ctx.alloc().buffer(chunkSize).writeZero(chunkSize));
-                            }
-                            ctx.flush();
-                        }
-                    });
+                    ch.pipeline().addLast(new TestHandler(expectedBytes, maxWriteChunkSize));
                 }
             });
 
@@ -128,6 +94,49 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
             if (clientChannel != null) {
                 clientChannel.close();
             }
+        }
+    }
+
+    private static final class TestHandler implements ChannelInboundHandler, ChannelOutboundHandler {
+        private int bytesWritten;
+        private final int expectedBytes;
+        private final int maxWriteChunkSize;
+
+        TestHandler(int expectedBytes, int maxWriteChunkSize) {
+            this.expectedBytes = expectedBytes;
+            this.maxWriteChunkSize = maxWriteChunkSize;
+        }
+
+        @Override
+        public void channelRead(ChannelHandlerContext ctx, Object msg) {
+            ReferenceCountUtil.release(msg);
+            writeRemainingBytes(ctx);
+        }
+
+        @Override
+        public void flush(ChannelHandlerContext ctx) {
+            if (ctx.channel().isWritable()) {
+                writeRemainingBytes(ctx);
+            } else {
+                ctx.flush();
+            }
+        }
+
+        @Override
+        public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+            if (ctx.channel().isWritable()) {
+                writeRemainingBytes(ctx);
+            }
+            ctx.fireChannelWritabilityChanged();
+        }
+
+        private void writeRemainingBytes(ChannelHandlerContext ctx) {
+            while (ctx.channel().isWritable() && bytesWritten < expectedBytes) {
+                int chunkSize = Math.min(expectedBytes - bytesWritten, maxWriteChunkSize);
+                bytesWritten += chunkSize;
+                ctx.write(ctx.alloc().buffer(chunkSize).writeZero(chunkSize));
+            }
+            ctx.flush();
         }
     }
 }

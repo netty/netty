@@ -17,8 +17,9 @@ package io.netty.handler.codec.http.websocketx.extensions;
 
 import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -40,7 +41,7 @@ import java.util.List;
  * Find a basic implementation for compression extensions at
  * <tt>io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketClientCompressionHandler</tt>.
  */
-public class WebSocketClientExtensionHandler implements ChannelDuplexHandler {
+public class WebSocketClientExtensionHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private final List<WebSocketClientExtensionHandshaker> extensionHandshakers;
 

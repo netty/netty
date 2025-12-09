@@ -21,12 +21,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -219,7 +219,7 @@ public class FlowControlHandlerTest {
         final CountDownLatch latch = new CountDownLatch(3);
         final Exchanger<Channel> peerRef = new Exchanger<Channel>();
 
-        ChannelHandler handler = new ChannelDuplexHandler() {
+        class TestHandler implements ChannelOutboundHandler, ChannelInboundHandler {
 
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
@@ -232,10 +232,10 @@ public class FlowControlHandlerTest {
                 ReferenceCountUtil.release(msg);
                 latch.countDown();
             }
-        };
+        }
 
         final FlowControlHandler flow = new FlowControlHandler();
-        Channel server = newServer(true, flow, handler);
+        Channel server = newServer(true, flow, new TestHandler());
         Channel client = newClient(server.localAddress());
         try {
             // The client connection on the server side
@@ -359,7 +359,7 @@ public class FlowControlHandlerTest {
         final CountDownLatch msgRcvLatch2 = new CountDownLatch(2);
         final CountDownLatch msgRcvLatch3 = new CountDownLatch(3);
 
-        ChannelHandler handler = new ChannelDuplexHandler() {
+        class TestHandler implements ChannelInboundHandler, ChannelOutboundHandler {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 ctx.fireChannelActive();
@@ -372,10 +372,10 @@ public class FlowControlHandlerTest {
                 msgRcvLatch2.countDown();
                 msgRcvLatch3.countDown();
             }
-        };
+        }
 
         final FlowControlHandler flow = new FlowControlHandler();
-        Channel server = newServer(false, flow, handler);
+        Channel server = newServer(false, flow, new TestHandler());
         Channel client = newClient(server.localAddress());
         try {
             // The client connection on the server side
@@ -421,7 +421,7 @@ public class FlowControlHandlerTest {
         final CountDownLatch msgRcvLatch2 = new CountDownLatch(2);
         final CountDownLatch msgRcvLatch3 = new CountDownLatch(3);
 
-        ChannelHandler handler = new ChannelDuplexHandler() {
+        class TestHandler implements ChannelInboundHandler, ChannelOutboundHandler {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 ctx.fireChannelActive();
@@ -434,10 +434,10 @@ public class FlowControlHandlerTest {
                 msgRcvLatch2.countDown();
                 msgRcvLatch3.countDown();
             }
-        };
+        }
 
         final FlowControlHandler flow = new FlowControlHandler();
-        Channel server = newServer(false, flow, handler);
+        Channel server = newServer(false, flow, new TestHandler());
         Channel client = newClient(server.localAddress());
         try {
             // The client connection on the server side
@@ -486,7 +486,7 @@ public class FlowControlHandlerTest {
         final Exchanger<Channel> peerRef = new Exchanger<Channel>();
         final CountDownLatch latch = new CountDownLatch(3);
         final AtomicReference<Throwable> causeRef = new AtomicReference<Throwable>();
-        ChannelHandler handler = new ChannelDuplexHandler() {
+        class TestHandler implements ChannelInboundHandler, ChannelOutboundHandler {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 ctx.fireChannelActive();
@@ -503,10 +503,10 @@ public class FlowControlHandlerTest {
             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
                 causeRef.set(cause);
             }
-        };
+        }
 
         final FlowControlHandler flow = new FlowControlHandler();
-        Channel server = newServer(false, flow, handler);
+        Channel server = newServer(false, flow, new TestHandler());
         Channel client = newClient(server.localAddress());
         try {
             // The client connection on the server side
@@ -599,7 +599,7 @@ public class FlowControlHandlerTest {
 
         final CountDownLatch latch = new CountDownLatch(3);
 
-        ChannelHandler handler = new ChannelDuplexHandler() {
+        class TestHandler implements ChannelInboundHandler, ChannelOutboundHandler {
             @Override
             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                 peerRef.exchange(ctx.channel(), 1L, SECONDS);
@@ -612,8 +612,8 @@ public class FlowControlHandlerTest {
                 latch.countDown();
                 ctx.fireChannelRead(msg);
             }
-        };
-
+        }
+        final TestHandler handler = new TestHandler();
         final FlowControlHandler flow = new FlowControlHandler() {
             private int num;
             @Override

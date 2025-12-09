@@ -15,8 +15,9 @@
  */
 package io.netty.example.spdy.client;
 
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.spdy.SpdyFrame;
 import io.netty.util.internal.ObjectUtil;
@@ -27,7 +28,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 /**
  * Logs SPDY frames for debugging purposes.
  */
-public class SpdyFrameLogger implements ChannelDuplexHandler {
+public class SpdyFrameLogger implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private enum Direction {
         INBOUND, OUTBOUND

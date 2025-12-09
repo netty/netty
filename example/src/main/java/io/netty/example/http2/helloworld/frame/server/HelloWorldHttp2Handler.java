@@ -17,8 +17,8 @@ package io.netty.example.http2.helloworld.frame.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
@@ -36,7 +36,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 /**
  * A simple handler that responds with the message "Hello World!" using "frame codec" http2 API.
  */
-public class HelloWorldHttp2Handler implements ChannelDuplexHandler {
+public class HelloWorldHttp2Handler implements ChannelInboundHandler {
 
     static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(
             copiedBuffer("Hello World", CharsetUtil.UTF_8)).asReadOnly();

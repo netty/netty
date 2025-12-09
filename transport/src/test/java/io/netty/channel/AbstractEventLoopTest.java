@@ -46,13 +46,6 @@ public abstract class AbstractEventLoopTest {
         assertTrue(loop.isTerminated());
     }
 
-    private static final class TestChannelHandler implements ChannelDuplexHandler { }
-
-    private static final class TestChannelHandler2 implements ChannelDuplexHandler {
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception { }
-    }
-
     protected abstract EventLoopGroup newEventLoopGroup();
     protected abstract Class<? extends ServerChannel> newChannel();
     protected abstract Class<? extends SocketChannel> newSocketChannel();

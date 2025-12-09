@@ -19,9 +19,10 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -66,7 +67,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
             .childHandler(new ChannelInitializer<Channel>() {
                 @Override
                 protected void initChannel(Channel ch) {
-                    ch.pipeline().addLast(new ChannelDuplexHandler() {
+                    ch.pipeline().addLast(new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             if (msg instanceof ByteBuf) {
@@ -81,50 +82,52 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
             .bind(0)
             .sync()
             .channel();
-    chan = new Bootstrap()
-        .channel(EpollSocketChannel.class)
-        .handler(new ChannelInitializer<Channel>() {
+        class ClientHandler implements ChannelInboundHandler, ChannelOutboundHandler {
+
+            private ChannelPromise lastWritePromise;
+
             @Override
-            protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(new ChannelDuplexHandler() {
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                if (msg instanceof ByteBuf) {
 
-                private ChannelPromise lastWritePromise;
-
-                    @Override
-                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        if (msg instanceof ByteBuf) {
-
-                            ByteBuf buf = (ByteBuf) msg;
-                            try {
-                                if (buf.readableBytes() == 1) {
-                                    lastWritePromise.trySuccess();
-                                    lastWritePromise = null;
-                                } else {
-                                    throw new AssertionError();
-                                }
-                            } finally {
-                                buf.release();
-                            }
+                    ByteBuf buf = (ByteBuf) msg;
+                    try {
+                        if (buf.readableBytes() == 1) {
+                            lastWritePromise.trySuccess();
+                            lastWritePromise = null;
                         } else {
                             throw new AssertionError();
                         }
+                    } finally {
+                        buf.release();
                     }
-
-                    @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
-                        if (lastWritePromise != null) {
-                            throw new IllegalStateException();
-                        }
-                        lastWritePromise = promise;
-                        ctx.write(msg, ctx.newPromise());
-                    }
-                });
+                } else {
+                    throw new AssertionError();
+                }
             }
-        })
-        .group(group)
-        .connect(serverChan.localAddress())
-        .sync()
-        .channel();
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                if (lastWritePromise != null) {
+                    throw new IllegalStateException();
+                }
+                lastWritePromise = promise;
+                ctx.write(msg, ctx.newPromise());
+            }
+        }
+
+        chan = new Bootstrap()
+                .channel(EpollSocketChannel.class)
+                .handler(new ChannelInitializer<Channel>() {
+                    @Override
+                    protected void initChannel(Channel ch) {
+                        ch.pipeline().addLast(new ClientHandler());
+                    }
+                })
+                .group(group)
+                .connect(serverChan.localAddress())
+                .sync()
+                .channel();
 
         abyte = chan.alloc().directBuffer(1);
         abyte.writeByte('a');

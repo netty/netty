@@ -15,9 +15,10 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 
@@ -44,7 +45,7 @@ import static io.netty.handler.codec.http.HttpUtil.*;
  *  </pre>
  * </blockquote>
  */
-public class HttpServerKeepAliveHandler implements ChannelDuplexHandler {
+public class HttpServerKeepAliveHandler implements ChannelInboundHandler, ChannelOutboundHandler {
     private static final String MULTIPART_PREFIX = "multipart";
 
     private boolean persistentConnection = true;

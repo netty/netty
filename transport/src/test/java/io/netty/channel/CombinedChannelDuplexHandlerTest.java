@@ -91,13 +91,15 @@ public class CombinedChannelDuplexHandlerTest {
         });
     }
 
+    private static final class InvalidHandler implements ChannelInboundHandler, ChannelOutboundHandler { }
+
     @Test
     public void testInboundHandlerImplementsOutboundHandler() {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() {
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
-                        new ChannelDuplexHandler() { }, new ChannelOutboundHandler() { });
+                        new InvalidHandler(), new ChannelOutboundHandler() { });
             }
         });
     }
@@ -108,7 +110,7 @@ public class CombinedChannelDuplexHandlerTest {
             @Override
             public void execute() {
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
-                        new ChannelInboundHandler() { }, new ChannelDuplexHandler() { });
+                        new ChannelInboundHandler() { }, new InvalidHandler());
             }
         });
     }

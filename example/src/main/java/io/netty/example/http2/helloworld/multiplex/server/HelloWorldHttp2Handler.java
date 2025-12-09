@@ -20,8 +20,9 @@ import static io.netty.buffer.Unpooled.unreleasableBuffer;
 import static io.netty.handler.codec.http.HttpResponseStatus.OK;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
 import io.netty.handler.codec.http2.DefaultHttp2Headers;
 import io.netty.handler.codec.http2.DefaultHttp2HeadersFrame;
@@ -33,7 +34,7 @@ import io.netty.util.CharsetUtil;
 /**
  * A simple handler that responds with the message "Hello World!".
  */
-public class HelloWorldHttp2Handler implements ChannelDuplexHandler {
+public class HelloWorldHttp2Handler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     static final ByteBuf RESPONSE_BYTES = unreleasableBuffer(
             copiedBuffer("Hello World", CharsetUtil.UTF_8)).asReadOnly();

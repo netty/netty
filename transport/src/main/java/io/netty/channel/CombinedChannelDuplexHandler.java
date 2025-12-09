@@ -22,10 +22,11 @@ import io.netty.util.internal.ObjectUtil;
 import java.net.SocketAddress;
 
 /**
- *  Combines a {@link ChannelInboundHandler} and a {@link ChannelOutboundHandler} into one {@link ChannelDuplexHandler}.
+ *  Combines a {@link ChannelInboundHandler} and a {@link ChannelOutboundHandler} into one handler that implements
+ *  {@link ChannelInboundHandler} and {@link ChannelOutboundHandler}.
  */
 public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O extends ChannelOutboundHandler>
-        implements ChannelDuplexHandler {
+        implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private DelegatingChannelHandlerContext inboundCtx;
     private DelegatingChannelHandlerContext outboundCtx;

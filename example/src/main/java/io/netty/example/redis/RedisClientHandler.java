@@ -17,8 +17,9 @@
 package io.netty.example.redis;
 
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.CodecException;
 import io.netty.handler.codec.redis.ArrayRedisMessage;
@@ -36,7 +37,7 @@ import java.util.List;
 /**
  * An example Redis client handler. This handler read input from STDIN and write output to STDOUT.
  */
-public class RedisClientHandler implements ChannelDuplexHandler {
+public class RedisClientHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {

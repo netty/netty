@@ -17,8 +17,9 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -33,7 +34,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 /**
  * Channel handler that allows to easily access inbound messages.
  */
-public class LastInboundHandler implements ChannelDuplexHandler {
+public class LastInboundHandler implements ChannelInboundHandler, ChannelOutboundHandler {
     private final List<Object> queue = new ArrayList<Object>();
     private final Consumer<ChannelHandlerContext> channelReadCompleteConsumer;
     private Throwable lastException;

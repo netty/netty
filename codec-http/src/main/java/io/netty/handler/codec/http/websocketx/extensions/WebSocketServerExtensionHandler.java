@@ -19,10 +19,11 @@ import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
@@ -51,7 +52,7 @@ import java.util.Queue;
  * Find a basic implementation for compression extensions at
  * <tt>io.netty.handler.codec.http.websocketx.extensions.compression.WebSocketServerCompressionHandler</tt>.
  */
-public class WebSocketServerExtensionHandler implements ChannelDuplexHandler {
+public class WebSocketServerExtensionHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private final List<WebSocketServerExtensionHandshaker> extensionHandshakers;
 

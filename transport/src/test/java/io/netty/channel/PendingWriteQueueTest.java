@@ -356,7 +356,7 @@ public class PendingWriteQueueTest {
         assertSame(ex, promise.cause());
     }
 
-    private static class TestHandler implements ChannelDuplexHandler {
+    private static class TestHandler implements  ChannelInboundHandler, ChannelOutboundHandler {
         protected PendingWriteQueue queue;
         private int expectedSize;
 

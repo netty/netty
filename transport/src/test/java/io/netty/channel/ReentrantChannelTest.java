@@ -317,7 +317,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                             });
                             // second handler buffers messages, sends them on in channelReadComplete, and acts as flow
                             // control
-                            ch.pipeline().addLast(new ChannelDuplexHandler() {
+                            class TestHandler implements ChannelInboundHandler, ChannelOutboundHandler {
                                 final Queue<Object> queue = new ArrayDeque<>();
                                 boolean demand = true;
 
@@ -354,7 +354,8 @@ public class ReentrantChannelTest extends BaseChannelTest {
                                 public void handlerAdded(ChannelHandlerContext ctx) {
                                     ctx.read();
                                 }
-                            });
+                            }
+                            ch.pipeline().addLast(new TestHandler());
                             // third handler saves incoming packets so that we can test their order
                             ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override

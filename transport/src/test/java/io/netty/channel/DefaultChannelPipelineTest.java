@@ -1597,7 +1597,7 @@ public class DefaultChannelPipelineTest {
                         ctx.fireUserEventTriggered(evt);
                     }
                 });
-                pipeline.addFirst(new ChannelDuplexHandler() {
+                pipeline.addFirst(new ChannelOutboundHandler() {
                     @Override
                     public void handlerAdded(ChannelHandlerContext ctx) {
                         ctx.fireUserEventTriggered(userEvent);
@@ -1779,14 +1779,14 @@ public class DefaultChannelPipelineTest {
         return new TestHandler();
     }
 
-    private static class TestHandler implements ChannelDuplexHandler {
+    private static class TestHandler implements ChannelHandler {
         @Override
         public boolean isSharable() {
             return true;
         }
     }
 
-    private static class BufferedTestHandler implements ChannelDuplexHandler {
+    private static class BufferedTestHandler implements ChannelInboundHandler, ChannelOutboundHandler {
         final Queue<Object> inboundBuffer = new ArrayDeque<Object>();
         final Queue<Object> outboundBuffer = new ArrayDeque<Object>();
 

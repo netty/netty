@@ -16,8 +16,9 @@
 package io.netty.handler.codec.quic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.socket.DatagramPacket;
@@ -39,7 +40,7 @@ import static io.netty.handler.codec.quic.Quiche.allocateNativeOrder;
 /**
  * Abstract base class for QUIC codecs.
  */
-abstract class QuicheQuicCodec implements ChannelDuplexHandler {
+abstract class QuicheQuicCodec implements ChannelInboundHandler, ChannelOutboundHandler {
     private static final InternalLogger LOGGER = InternalLoggerFactory.getInstance(QuicheQuicCodec.class);
     private final ConnectionIdChannelMap connectionIdToChannel = new ConnectionIdChannelMap();
     private final Set<QuicheQuicChannel> channels = new HashSet<>();

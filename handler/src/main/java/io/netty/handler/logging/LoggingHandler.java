@@ -17,9 +17,9 @@ package io.netty.handler.logging;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.ObjectUtil;
@@ -37,7 +37,7 @@ import static io.netty.util.internal.StringUtil.NEWLINE;
  * By default, all events are logged at <tt>DEBUG</tt> level and full hex dumps are recorded for ByteBufs.
  */
 @SuppressWarnings({ "StringConcatenationInsideStringBufferAppend", "StringBufferReplaceableByString" })
-public class LoggingHandler implements ChannelDuplexHandler {
+public class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private static final LogLevel DEFAULT_LEVEL = LogLevel.DEBUG;
 
