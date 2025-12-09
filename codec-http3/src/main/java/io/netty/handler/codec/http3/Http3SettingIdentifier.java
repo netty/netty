@@ -90,7 +90,6 @@ public enum Http3SettingIdentifier {
 
     private final long id;
 
-
     private static final Map<Long, Http3SettingIdentifier> LOOKUP = Collections.unmodifiableMap(
         Arrays.stream(values()).collect(Collectors.toMap(Http3SettingIdentifier::id, Function.identity()))
     );
