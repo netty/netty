@@ -73,7 +73,7 @@ public abstract class QuicheQuicCodecTest<B extends QuicCodecBuilder<B>> extends
             @Override
             public void flush(ChannelHandlerContext ctx) {
                 flushCount.incrementAndGet();
-                ChannelOutboundHandler.super.flush(ctx);
+                ctx.flush();
             }
         }, builder.build());
         assertEquals(0, numPacketsTracker.get());
