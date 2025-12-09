@@ -99,7 +99,7 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
 
         // When Non-Standard/Unknown settings identifier identifier present - Ignore
         if (identifier == null) {
-            return value;
+            return null;
         }
 
         //Validation
