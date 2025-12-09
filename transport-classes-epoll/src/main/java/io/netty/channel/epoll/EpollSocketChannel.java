@@ -48,6 +48,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.NotYetConnectedException;
 import java.nio.channels.WritableByteChannel;
 import java.util.Collection;
 import java.util.Collections;
@@ -431,6 +432,9 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         }
         try {
             socket.shutdown(read, write);
+        } catch (NotYetConnectedException ex) {
+            // We attempted to shutdown and failed, which means the input has already effectively been
+            // shutdown.
         } catch (Throwable cause) {
             promise.setFailure(cause);
             return;

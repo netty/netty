@@ -614,6 +614,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 // Handle this same way as if we did read all data so we don't schedule another read.
                 inputClosedSeenErrorOnRead = true;
                 close(newPromise());
+                return;
             }
         }
 

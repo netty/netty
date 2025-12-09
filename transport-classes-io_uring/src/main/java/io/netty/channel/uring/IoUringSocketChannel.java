@@ -37,6 +37,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.NotYetConnectedException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
@@ -139,6 +140,9 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
         }
         try {
             socket.shutdown(read, write);
+        } catch (NotYetConnectedException ex) {
+            // We attempted to shutdown and failed, which means the input has already effectively been
+            // shutdown.
         } catch (Throwable cause) {
             promise.setFailure(cause);
             return;
