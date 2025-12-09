@@ -67,21 +67,17 @@ public class Http3SettingsTest {
         assertNull(settingsFrame.put(16383, 16383L));
         assertNull(settingsFrame.put(1073741823, 1073741823L));
         assertNull(settingsFrame.put(4611686018427387903L, 4611686018427387903L));
-
         //even duplicates of unknown ignored as we ignore unknown
         assertNull(settingsFrame.put(4611686018427387903L, 4611686018427387903L));
-
     }
     @Test
     void duplicateSettingsValuesInsideHttp3SettingsTest() {
-
         Http3Settings http3Settings = new Http3Settings();
         assertNull(http3Settings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY, 100L));
         assertNull(http3Settings.put(Http3SettingsFrame.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS, 1L));
         assertNull(http3Settings.put(Http3SettingsFrame.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE, 128L));
         assertNull(http3Settings.put(Http3SettingsFrame.HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL, 0L));
         assertNull(http3Settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_H3_DATAGRAM.id(), 1L));
-
         //known headers should not contain duplicate so give non-null
         // which is used in http3framecodec to throw error
         assertNotNull(http3Settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_H3_DATAGRAM.id(), 1L));
@@ -93,7 +89,6 @@ public class Http3SettingsTest {
         assertNull(http3Settings.put(4611686018427387903L, 4611686018427387903L));
         //even duplicates of unknown ignored as we ignore unknown
         assertNull(http3Settings.put(4611686018427387903L, 4611686018427387903L));
-
     }
 
     @Test
