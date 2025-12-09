@@ -68,7 +68,7 @@ public class Http3SettingsTest {
         assertNull(settingsFrame.put(1073741823, 1073741823L));
         assertNull(settingsFrame.put(4611686018427387903L, 4611686018427387903L));
 
-        //even duplicates ignored as we ignore unknown
+        //even duplicates of unknown ignored as we ignore unknown
         assertNull(settingsFrame.put(4611686018427387903L, 4611686018427387903L));
 
     }
@@ -91,7 +91,7 @@ public class Http3SettingsTest {
         assertNull(http3Settings.put(16383, 16383L));
         assertNull(http3Settings.put(1073741823, 1073741823L));
         assertNull(http3Settings.put(4611686018427387903L, 4611686018427387903L));
-        //even duplicates ignored as we ignore unknown
+        //even duplicates of unknown ignored as we ignore unknown
         assertNull(http3Settings.put(4611686018427387903L, 4611686018427387903L));
 
     }
