@@ -478,19 +478,6 @@ final class IoUringSocketChannelConfig extends IoUringChannelConfig {
         }
     }
 
-//    /**
-//     * Set the {@code TCP_MD5SIG} option on the socket. See {@code linux/tcp.h} for more details. Keys can only be set
-//     * on, not read to prevent a potential leak, as they are confidential. Allowing them being read would mean anyone
-//     * with access to the channel could get them.
-//     */
-//    private void setTcpMd5Sig(Map<InetAddress, byte[]> keys) {
-//        try {
-//            ((IOUringSocketChannel) channel).setTcpMd5Sig(keys);
-//        } catch (IOException e) {
-//            throw new ChannelException(e);
-//        }
-//    }
-
     /**
      * Set the {@code TCP_QUICKACK} option on the socket. See <a href="https://linux.die.net/man/7/tcp">TCP_QUICKACK</a>
      * for more details.
