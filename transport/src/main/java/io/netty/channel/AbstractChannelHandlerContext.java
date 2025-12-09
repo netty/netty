@@ -603,7 +603,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public ChannelFuture disconnect(final ChannelPromise promise) {
-        if (!channel().metadata().hasDisconnect()) {
+        if (!pipeline.hasDisconnect) {
             // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
             // So far, UDP/IP is the only transport that has such behavior.
             return close(promise);

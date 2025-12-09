@@ -23,7 +23,6 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -81,8 +80,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
             new UserEventStreamVisitor(SslCloseCompletionEvent.SUCCESS);
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractHttp2StreamChannel.class);
-
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     /**
      * Number of bytes to consider non-payload messages. 9 is arbitrary, but also the minimum size of an HTTP/2 frame.
@@ -216,7 +213,7 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     AbstractHttp2StreamChannel(DefaultHttp2FrameStream stream, int id, ChannelHandler inboundHandler) {
         this.stream = stream;
         stream.attachment = this;
-        pipeline = new DefaultChannelPipeline(this, unsafe) {
+        pipeline = new DefaultChannelPipeline(this, false, unsafe) {
             @Override
             protected void incrementPendingOutboundBytes(long size) {
                 AbstractHttp2StreamChannel.this.incrementPendingOutboundBytes(size, true);
@@ -353,11 +350,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         // Attempt to drain any queued data from the queue and deliver it to the application before closing this
         // channel.
         unsafe.doBeginRead();
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

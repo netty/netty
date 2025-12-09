@@ -230,7 +230,6 @@ public class AbstractChannelTest {
     }
 
     private static class TestChannel extends AbstractChannel {
-        private static final ChannelMetadata TEST_METADATA = new ChannelMetadata(false);
 
         private final ChannelConfig config = new DefaultChannelConfig(this);
 
@@ -251,11 +250,6 @@ public class AbstractChannelTest {
         @Override
         public boolean isActive() {
             return true;
-        }
-
-        @Override
-        public ChannelMetadata metadata() {
-            return TEST_METADATA;
         }
 
         @Override

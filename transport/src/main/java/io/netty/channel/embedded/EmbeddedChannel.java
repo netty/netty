@@ -24,7 +24,6 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -64,9 +63,6 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
 
-    private static final ChannelMetadata METADATA_NO_DISCONNECT = new ChannelMetadata(false);
-    private static final ChannelMetadata METADATA_DISCONNECT = new ChannelMetadata(true);
-
     private final ChannelFutureListener recordExceptionListener = new ChannelFutureListener() {
         @Override
         public void operationComplete(ChannelFuture future) {
@@ -74,9 +70,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     };
 
-    private final ChannelMetadata metadata;
     private final ChannelConfig config;
-
     private Queue<Object> inboundMessages;
     private Queue<Object> outboundMessages;
     private Throwable lastException;
@@ -218,18 +212,13 @@ public class EmbeddedChannel extends AbstractChannel {
      */
     protected EmbeddedChannel(Builder builder) {
         super(new EmbeddedEventLoop(builder.ticker == null ? new EmbeddedEventLoop.FreezableTicker() : builder.ticker),
-                EmbeddedIoHandle.class, builder.parent, builder.channelId);
-        metadata = metadata(builder.hasDisconnect);
+                EmbeddedIoHandle.class, builder.parent, builder.channelId, builder.hasDisconnect);
         config = builder.config == null ? new DefaultChannelConfig(this) : builder.config;
         if (builder.handler == null) {
             setup(builder.register, builder.handlers);
         } else {
             setup(builder.register, builder.handler);
         }
-    }
-
-    private static ChannelMetadata metadata(boolean hasDisconnect) {
-        return hasDisconnect ? METADATA_DISCONNECT : METADATA_NO_DISCONNECT;
     }
 
     private void setup(boolean register, final ChannelHandler... handlers) {
@@ -279,11 +268,6 @@ public class EmbeddedChannel extends AbstractChannel {
     @Override
     protected final DefaultChannelPipeline newChannelPipeline() {
         return new EmbeddedChannelPipeline(this);
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return metadata;
     }
 
     @Override
@@ -655,7 +639,7 @@ public class EmbeddedChannel extends AbstractChannel {
         try {
             future = super.disconnect(promise);
 
-            if (!metadata.hasDisconnect()) {
+            if (!hasDisconnect) {
                 cancelRemainingScheduledTasks = true;
             }
         } finally {
@@ -1012,7 +996,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     protected void doDisconnect(ChannelPromise promise) {
-        if (!metadata.hasDisconnect()) {
+        if (!hasDisconnect) {
             doClose(promise);
         } else {
             promise.setSuccess();
@@ -1310,7 +1294,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private final class EmbeddedChannelPipeline extends DefaultChannelPipeline {
         EmbeddedChannelPipeline(EmbeddedChannel channel) {
-            super(channel, new EmbeddedIoTransport(channel.ioTransport()));
+            super(channel, channel.hasDisconnect, new EmbeddedIoTransport(channel.ioTransport()));
         }
 
         @Override

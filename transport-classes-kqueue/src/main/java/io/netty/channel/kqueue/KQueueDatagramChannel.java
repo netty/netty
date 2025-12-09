@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -56,18 +55,17 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
                     StringUtil.simpleClassName(ByteBuf.class) + ')';
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private final KQueueDatagramChannelConfig config;
 
     private volatile boolean connected;
 
     public KQueueDatagramChannel(EventLoop eventLoop) {
-        super(eventLoop, null, newSocketDgram(), false);
+        super(eventLoop, null, newSocketDgram(), false, true);
         config = new KQueueDatagramChannelConfig(this);
     }
 
     public KQueueDatagramChannel(EventLoop eventLoop, SocketProtocolFamily protocol) {
-        super(eventLoop, null, newSocketDgram(protocol), false);
+        super(eventLoop, null, newSocketDgram(protocol), false, true);
         config = new KQueueDatagramChannelConfig(this);
     }
 
@@ -77,7 +75,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     KQueueDatagramChannel(EventLoop eventLoop, BsdSocket socket, boolean active) {
-        super(eventLoop, null, socket, active);
+        super(eventLoop, null, socket, active, true);
         config = new KQueueDatagramChannelConfig(this);
     }
 
@@ -124,11 +122,6 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
                 promise.setFailure(f.cause());
             }
         }));
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

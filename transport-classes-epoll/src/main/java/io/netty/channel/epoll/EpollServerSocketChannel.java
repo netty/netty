@@ -17,7 +17,6 @@ package io.netty.channel.epoll;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -51,7 +50,6 @@ import static io.netty.channel.unix.Socket.isIPv6Preferred;
 public final class EpollServerSocketChannel extends AbstractEpollChannel implements ServerSocketChannel {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
             EpollServerSocketChannel.class);
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private final EventLoopGroup childEventLoopGroup;
 
@@ -84,7 +82,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
 
     private EpollServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                          LinuxSocket fd, boolean active) {
-        super(eventLoop, null, fd, active, EpollIoOps.valueOf(0));
+        super(eventLoop, null, fd, active, EpollIoOps.valueOf(0), false);
         this.childEventLoopGroup =
                 validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", EpollIoHandle.class);
         config = new EpollServerSocketChannelConfig(this);
@@ -93,11 +91,6 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
     @Override
     public EventLoopGroup childEventExecutorGroup() {
         return childEventLoopGroup;
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

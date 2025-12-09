@@ -25,7 +25,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
@@ -70,7 +69,6 @@ import static io.netty.channel.sctp.SctpChannelOption.SCTP_NODELAY;
  * to understand what you need to do to use it. Also this feature is only supported on Java 7+.
  */
 public class NioSctpChannel extends AbstractNioMessageChannel implements io.netty.channel.sctp.SctpChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioSctpChannel.class);
 
@@ -110,7 +108,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
      * @param sctpChannel   the underlying {@link SctpChannel}
      */
     public NioSctpChannel(EventLoop eventLoop, Channel parent, SctpChannel sctpChannel) {
-        super(eventLoop, parent, sctpChannel, SelectionKey.OP_READ);
+        super(eventLoop, parent, sctpChannel, NioIoOps.READ, false);
         try {
             sctpChannel.configureBlocking(false);
             config = new NioSctpChannelConfig(this, sctpChannel);
@@ -142,11 +140,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     @Override
     public SctpServerChannel parent() {
         return (SctpServerChannel) super.parent();
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

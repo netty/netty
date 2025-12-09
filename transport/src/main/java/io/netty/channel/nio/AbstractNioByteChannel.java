@@ -20,7 +20,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
@@ -35,7 +34,6 @@ import io.netty.util.internal.StringUtil;
 
 import java.io.IOException;
 import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
 
 import static io.netty.channel.internal.ChannelUtils.WRITE_STATUS_SNDBUF_FULL;
 import static io.netty.util.internal.StringUtil.className;
@@ -44,7 +42,6 @@ import static io.netty.util.internal.StringUtil.className;
  * {@link AbstractNioChannel} base class for {@link Channel}s that operate on bytes.
  */
 public abstract class AbstractNioByteChannel extends AbstractNioChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(ByteBuf.class) + ", " +
             StringUtil.simpleClassName(FileRegion.class) + ')';
@@ -67,7 +64,7 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
      * @param ch                the underlying {@link SelectableChannel} on which it operates
      */
     protected AbstractNioByteChannel(EventLoop eventLoop, Channel parent, SelectableChannel ch) {
-        super(eventLoop, parent, ch, SelectionKey.OP_READ);
+        super(eventLoop, parent, ch, NioIoOps.READ, false);
     }
 
     /**
@@ -77,11 +74,6 @@ public abstract class AbstractNioByteChannel extends AbstractNioChannel {
 
     protected boolean isInputShutdown0() {
         return false;
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     final boolean shouldBreakReadReady() {

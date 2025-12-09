@@ -26,6 +26,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoRegistration;
@@ -117,8 +118,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
 
-    AbstractIoUringChannel(EventLoop eventLoop, Channel parent, LinuxSocket socket, boolean active) {
-        super(eventLoop, IoUringIoHandle.class, parent);
+    AbstractIoUringChannel(EventLoop eventLoop, Channel parent, LinuxSocket socket, boolean active,
+                           boolean hasDisconnect) {
+        super(eventLoop, IoUringIoHandle.class, parent, DefaultChannelId.newInstance(), hasDisconnect);
         this.socket = checkNotNull(socket, "fd");
 
         if (active) {
@@ -132,8 +134,9 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         logger.trace("Create {} Socket: {}", this instanceof ServerChannel ? "Server" : "Channel", socket.intValue());
     }
 
-    AbstractIoUringChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd, SocketAddress remote) {
-        super(eventLoop, IoUringIoHandle.class, parent);
+    AbstractIoUringChannel(EventLoop eventLoop, Channel parent, LinuxSocket fd, SocketAddress remote,
+                           boolean hasDisconnect) {
+        super(eventLoop, IoUringIoHandle.class, parent, DefaultChannelId.newInstance(), hasDisconnect);
         this.socket = checkNotNull(fd, "fd");
         this.active = true;
 

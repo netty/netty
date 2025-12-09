@@ -59,6 +59,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     DefaultChannelPipeline.class, MessageSizeEstimator.Handle.class, "estimatorHandle");
     final HeadContext head;
     final TailContext tail;
+    final boolean hasDisconnect;
 
     private final Channel channel;
     private final ChannelFuture succeededFuture;
@@ -83,8 +84,9 @@ public class DefaultChannelPipeline implements ChannelPipeline {
      */
     private boolean registered;
 
-    protected DefaultChannelPipeline(Channel channel, IoTransport transport) {
+    protected DefaultChannelPipeline(Channel channel, boolean hasDisconnect, IoTransport transport) {
         this.channel = ObjectUtil.checkNotNull(channel, "channel");
+        this.hasDisconnect = hasDisconnect;
         succeededFuture = new SucceededChannelFuture(channel, null);
 
         tail = new TailContext(this);

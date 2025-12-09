@@ -222,7 +222,6 @@ public class DefaultChannelPipelineTailTest {
     }
 
     private abstract static class MyChannel extends AbstractChannel {
-        private static final ChannelMetadata METADATA = new ChannelMetadata(false);
 
         private final ChannelConfig config = new DefaultChannelConfig(this);
 
@@ -251,11 +250,6 @@ public class DefaultChannelPipelineTailTest {
         @Override
         public boolean isActive() {
             return isOpen() && active;
-        }
-
-        @Override
-        public ChannelMetadata metadata() {
-            return METADATA;
         }
 
         @Override

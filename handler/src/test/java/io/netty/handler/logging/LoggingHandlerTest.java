@@ -23,7 +23,6 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 
@@ -320,12 +319,7 @@ public class LoggingHandlerTest {
     private static final class DisconnectingEmbeddedChannel extends EmbeddedChannel {
 
         private DisconnectingEmbeddedChannel(ChannelHandler... handlers) {
-            super(handlers);
-        }
-
-        @Override
-        public ChannelMetadata metadata() {
-            return new ChannelMetadata(true);
+            super(true, handlers);
         }
     }
 }

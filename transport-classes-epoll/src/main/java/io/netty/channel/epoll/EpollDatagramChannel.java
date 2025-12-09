@@ -19,7 +19,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -61,7 +60,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDatagramChannel.class);
     private static final boolean IP_MULTICAST_ALL =
             SystemPropertyUtil.getBoolean("io.netty.channel.epoll.ipMulticastAll", false);
-    private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
             StringUtil.simpleClassName(ByteBuf.class) + ')';
@@ -112,7 +110,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     private EpollDatagramChannel(EventLoop eventLoop, LinuxSocket fd, boolean active) {
-        super(eventLoop, null, fd, active, EpollIoOps.valueOf(0));
+        super(eventLoop, null, fd, active, EpollIoOps.valueOf(0), true);
 
         if (fd.protocolFamily() != SocketProtocolFamily.UNIX) {
             // Configure IP_MULTICAST_ALL - disable by default to match the behaviour of NIO.
@@ -124,11 +122,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         }
 
         config = new EpollDatagramChannelConfig(this);
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

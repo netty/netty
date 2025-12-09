@@ -21,7 +21,6 @@ import com.sun.nio.sctp.SctpStandardSocketOptions;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
@@ -31,6 +30,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.nio.NioIoHandle;
+import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.sctp.SctpChannelOption;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.ObjectUtil;
@@ -39,7 +39,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.nio.channels.SelectionKey;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -58,7 +57,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
  */
 public class NioSctpServerChannel extends AbstractNioMessageChannel
         implements io.netty.channel.sctp.SctpServerChannel {
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
 
     private static SctpServerChannel newSocket() {
         try {
@@ -75,7 +73,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
      * Create a new instance
      */
     public NioSctpServerChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup) {
-        super(eventLoop, null, newSocket(), SelectionKey.OP_ACCEPT);
+        super(eventLoop, null, newSocket(), NioIoOps.ACCEPT, false);
         this.childEventLoopGroup =
                 validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", NioIoHandle.class);
         config = new NioSctpServerChannelConfig(this, javaChannel());
@@ -84,11 +82,6 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     @Override
     public EventLoopGroup childEventExecutorGroup() {
         return childEventLoopGroup;
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override

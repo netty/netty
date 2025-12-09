@@ -38,13 +38,8 @@ public abstract class AbstractNioMessageChannel extends AbstractNioChannel {
     boolean inputShutdown;
 
     protected AbstractNioMessageChannel(EventLoop eventLoop, Channel parent,
-                                        SelectableChannel ch, int readInterestOp) {
-        super(eventLoop, parent, ch, readInterestOp);
-    }
-
-    protected AbstractNioMessageChannel(EventLoop eventLoop, Channel parent,
-                                        SelectableChannel ch, NioIoOps readOps) {
-        super(eventLoop, parent, ch, readOps);
+                                        SelectableChannel ch, NioIoOps readOps, boolean hasDisconnect) {
+        super(eventLoop, parent, ch, readOps, hasDisconnect);
     }
 
     @Override

@@ -17,7 +17,6 @@ package io.netty.channel.socket.nio;
 
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelMetadata;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
@@ -27,6 +26,7 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.nio.NioIoHandle;
+import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.NetUtil;
 import io.netty.util.internal.ObjectUtil;
@@ -59,7 +59,6 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 public class NioServerSocketChannel extends AbstractNioMessageChannel
                              implements io.netty.channel.socket.ServerSocketChannel {
 
-    private static final ChannelMetadata METADATA = new ChannelMetadata(false, 16);
     private static final SelectorProvider DEFAULT_SELECTOR_PROVIDER = SelectorProvider.provider();
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(NioServerSocketChannel.class);
@@ -106,7 +105,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
      */
     public NioServerSocketChannel(EventLoop eventLoop, EventLoopGroup childEventLoopGroup,
                                   ServerSocketChannel channel) {
-        super(eventLoop, null, channel, SelectionKey.OP_ACCEPT);
+        super(eventLoop, null, channel, NioIoOps.ACCEPT, false);
         this.childEventLoopGroup = validateEventLoopGroup(
                 childEventLoopGroup, "childEventLoopGroup", NioIoHandle.class);
         config = new NioServerSocketChannelConfig(this, channel);
@@ -126,11 +125,6 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     @Override
     public EventLoopGroup childEventExecutorGroup() {
         return childEventLoopGroup;
-    }
-
-    @Override
-    public ChannelMetadata metadata() {
-        return METADATA;
     }
 
     @Override
