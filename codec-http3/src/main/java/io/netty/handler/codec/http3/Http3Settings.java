@@ -54,7 +54,7 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
      * Creates a new instance
      */
     public Http3Settings() {
-        this.settings = new LongObjectHashMap<>(4);
+        this.settings = new LongObjectHashMap<>(Http3SettingIdentifier.values().length);
     }
 
     /**
