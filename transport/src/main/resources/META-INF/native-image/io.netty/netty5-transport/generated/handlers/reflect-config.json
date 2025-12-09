@@ -14,13 +14,6 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.channel.ChannelDuplexHandler",
-    "condition": {
-      "typeReachable": "io.netty.channel.ChannelDuplexHandler"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.netty.channel.ChannelHandler",
     "condition": {
       "typeReachable": "io.netty.channel.ChannelHandler"
