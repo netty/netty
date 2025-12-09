@@ -355,6 +355,16 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
     }
 
+    @Override
+    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+        assert ctx == outboundCtx.ctx;
+        if (!outboundCtx.removed) {
+            outboundHandler.register(outboundCtx, promise);
+        } else {
+            outboundCtx.register(promise);
+        }
+    }
+
     private static class DelegatingChannelHandlerContext implements ChannelHandlerContext {
 
         private final ChannelHandlerContext ctx;
