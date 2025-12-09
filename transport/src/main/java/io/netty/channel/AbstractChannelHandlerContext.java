@@ -1066,16 +1066,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return handlerState == REMOVE_COMPLETE;
     }
 
-    @Override
-    public <T> Attribute<T> attr(AttributeKey<T> key) {
-        return channel().attr(key);
-    }
-
-    @Override
-    public <T> boolean hasAttr(AttributeKey<T> key) {
-        return channel().hasAttr(key);
-    }
-
     private static boolean safeExecute(EventExecutor executor, Runnable runnable,
             ChannelPromise promise, Object msg, boolean lazy) {
         try {

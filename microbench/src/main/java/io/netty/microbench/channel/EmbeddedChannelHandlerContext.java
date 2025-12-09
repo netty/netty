@@ -23,8 +23,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -48,16 +46,6 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     protected abstract void handleException(Throwable t);
-
-    @Override
-    public final <T> Attribute<T> attr(AttributeKey<T> key) {
-        return null;
-    }
-
-    @Override
-    public final <T> boolean hasAttr(AttributeKey<T> key) {
-        return false;
-    }
 
     @Override
     public final Channel channel() {
