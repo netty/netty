@@ -240,7 +240,7 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
         registerPromise.addListener(f -> {
             if (f.isSuccess()) {
                 try {
-                    short bgid = ((IoUringStreamChannelConfig) config()).getBufferGroupId();
+                    short bgid = ((IoUringSocketChannelConfig) config()).getBufferGroupId();
                     if (bgid >= 0) {
                         final IoUringIoHandler ioUringIoHandler = registration().attachment();
                         bufferRing = ioUringIoHandler.findBufferRing(bgid);
