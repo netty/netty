@@ -1206,9 +1206,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     /**
-     * Called once an user event hit the end of the {@link ChannelPipeline} without been handled by the user
+     * Called once a shutdown event hit the end of the {@link ChannelPipeline} without been handled by the user
      * in {@link ChannelInboundHandler#channelShutdown(ChannelHandlerContext, ChannelShutdownType)}.
-     * This method is responsible to call {@link ReferenceCountUtil#release(Object)} on the given event at some point.
      */
     protected void onUnhandledInboundChannelShutdown(ChannelShutdownType type) {
     }

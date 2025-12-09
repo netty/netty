@@ -399,7 +399,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 }
                 safeCascade(f, promise);
                 if (f.isSuccess() && type.direction() == ChannelShutdownDirection.Outbound) {
-                    // TODO: IS this correct ?
                     pipeline().fireChannelShutdown(ChannelShutdownType.newOutbound());
                 }
             }));
@@ -751,13 +750,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public void read() {
             assertEventLoop();
 
-            /*
-            if (isShutdown(ChannelShutdownDirection.Inbound)) {
-                // Input was shutdown so not try to read.
-                return;
-            }
-             */
-
             try {
                 doBeginRead();
             } catch (final Exception e) {
@@ -984,7 +976,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             ioTransport.safeCascade(f, promise);
             outboundBuffer.failFlushedAndClose(shutdownCause, false, shutdownCause, true);
-            // TODO: Is this correct ?
             pipeline().fireChannelShutdown(ChannelShutdownType.newOutbound());
         });
         doShutdown(ChannelShutdownType.newOutbound(), shutdownPromise);

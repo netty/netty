@@ -228,25 +228,10 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
     }
 
     public void testShutdownOutputSoLingerNoAssertError(Bootstrap cb) throws Throwable {
-        testShutdownSoLingerNoAssertError0(cb, true);
+        testShutdownSoLingerNoAssertError0(cb);
     }
 
-    @Test
-    @Timeout(value = 30000, unit = TimeUnit.MILLISECONDS)
-    public void testShutdownSoLingerNoAssertError(TestInfo testInfo) throws Throwable {
-        run(testInfo, new Runner<Bootstrap>() {
-            @Override
-            public void run(Bootstrap bootstrap) throws Throwable {
-                testShutdownSoLingerNoAssertError(bootstrap);
-            }
-        });
-    }
-
-    public void testShutdownSoLingerNoAssertError(Bootstrap cb) throws Throwable {
-        testShutdownSoLingerNoAssertError0(cb, false);
-    }
-
-    private void testShutdownSoLingerNoAssertError0(Bootstrap cb, boolean output) throws Throwable {
+    private void testShutdownSoLingerNoAssertError0(Bootstrap cb) throws Throwable {
         ServerSocket ss = new ServerSocket();
         Socket s = null;
 
@@ -259,11 +244,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
             cf.sync();
 
-            if (output) {
-                cf.channel().shutdown(ChannelShutdownType.newOutbound()).sync();
-            } else {
-                cf.channel().shutdown(ChannelShutdownType.newOutbound()).sync();
-            }
+            cf.channel().shutdown(ChannelShutdownType.newOutbound()).sync();
         } finally {
             if (s != null) {
                 s.close();

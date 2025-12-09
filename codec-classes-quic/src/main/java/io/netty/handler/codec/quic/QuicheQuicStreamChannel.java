@@ -398,6 +398,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             }
 
             if (write) {
+                if (outputShutdown) {
+                    promise.setSuccess();
+                    return;
+                }
                 ioTransport.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, newPromise()
                         .addListener(f -> {
                             if (f.isSuccess()) {
@@ -412,6 +416,10 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                         }));
                 ioTransport.flush();
             } else {
+                if (inputShutdown) {
+                    promise.setSuccess();
+                    return;
+                }
                 int error;
                 if (type.data() == null) {
                     error = 0;

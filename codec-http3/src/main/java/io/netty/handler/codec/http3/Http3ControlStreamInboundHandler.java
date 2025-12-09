@@ -247,7 +247,7 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
 
         @Override
         public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
-            //streamClosed(ctx);
+            streamClosed(ctx);
             if (type.direction() == ChannelShutdownDirection.Inbound) {
                 // See https://quicwg.org/base-drafts/draft-ietf-quic-qpack.html#section-4.2
                 criticalStreamClosed(ctx);

@@ -51,6 +51,7 @@ public abstract class Http3RequestStreamInboundHandler extends ChannelInboundHan
         if (type.direction() == ChannelShutdownDirection.Inbound) {
             channelInputClosed(ctx);
         }
+        ctx.fireChannelShutdown(type);
     }
 
     @Override

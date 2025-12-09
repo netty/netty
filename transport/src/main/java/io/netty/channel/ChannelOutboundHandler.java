@@ -100,6 +100,7 @@ public interface ChannelOutboundHandler extends ChannelHandler {
      * @throws Exception        thrown if an error occurs
      */
     void flush(ChannelHandlerContext ctx);
+
     /**
      * Called once a shutdown operation was requested and should be executed.
      *

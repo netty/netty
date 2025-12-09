@@ -71,10 +71,10 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     };
 
     static final Http2FrameStreamVisitor CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR =
-            new UserEventStreamVisitor(ChannelShutdownType.newInbound());
+            new ShutdownEventVisitor(ChannelShutdownType.newInbound());
 
     static final Http2FrameStreamVisitor CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR =
-            new UserEventStreamVisitor(ChannelShutdownType.newOutbound());
+            new ShutdownEventVisitor(ChannelShutdownType.newOutbound());
 
     static final Http2FrameStreamVisitor SSL_CLOSE_COMPLETION_EVENT_VISITOR = new Http2FrameStreamVisitor() {
         @Override
@@ -97,11 +97,11 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     /**
      * {@link Http2FrameStreamVisitor} that fires the user event for every active stream pipeline.
      */
-    private static final class UserEventStreamVisitor implements Http2FrameStreamVisitor {
+    private static final class ShutdownEventVisitor implements Http2FrameStreamVisitor {
 
         private final ChannelShutdownType type;
 
-        UserEventStreamVisitor(ChannelShutdownType type) {
+        ShutdownEventVisitor(ChannelShutdownType type) {
             this.type = checkNotNull(type, "type");
         }
 
