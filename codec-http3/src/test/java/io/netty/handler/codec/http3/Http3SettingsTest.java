@@ -264,4 +264,46 @@ public class Http3SettingsTest {
         Http3Settings settings = new Http3Settings();
         assertThrows(NullPointerException.class, () -> settings.putAll(null));
     }
+
+    @Test
+    void duplicateSettingsValuesInsideFrameTest() {
+        Http3SettingsFrame settingsFrame = new DefaultHttp3SettingsFrame();
+        assertNull(settingsFrame.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(), 100L));
+        assertNull(settingsFrame.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(), 1L));
+        assertNull(settingsFrame.put(Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id(), 128L));
+        assertNull(settingsFrame.put(Http3SettingIdentifier.HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL.id(), 0L));
+        assertNull(settingsFrame.put(Http3SettingIdentifier.HTTP3_SETTINGS_H3_DATAGRAM.id(), 1L));
+        //known headers should not contain duplicate so give non-null
+        // which is used in http3framecodec to throw error
+        assertNotNull(settingsFrame.put(Http3SettingIdentifier.HTTP3_SETTINGS_H3_DATAGRAM.id(), 1L));
+        // Ensure we can encode and decode all sizes correctly.
+        // unknown settings id/key will be ignored
+        assertNull(settingsFrame.put(63, 63L));
+        assertNull(settingsFrame.put(16383, 16383L));
+        assertNull(settingsFrame.put(1073741823, 1073741823L));
+        assertNull(settingsFrame.put(4611686018427387903L, 4611686018427387903L));
+        //even duplicates of unknown ignored as we ignore unknown
+        assertNull(settingsFrame.put(4611686018427387903L, 4611686018427387903L));
+    }
+
+    @Test
+    void duplicateSettingsValuesInsideHttp3SettingsTest() {
+        Http3Settings http3Settings = new Http3Settings();
+        assertNull(http3Settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_MAX_TABLE_CAPACITY.id(), 100L));
+        assertNull(http3Settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_QPACK_BLOCKED_STREAMS.id(), 1L));
+        assertNull(http3Settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_MAX_FIELD_SECTION_SIZE.id(), 128L));
+        assertNull(http3Settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_ENABLE_CONNECT_PROTOCOL.id(), 0L));
+        assertNull(http3Settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_H3_DATAGRAM.id(), 1L));
+        //known headers should not contain duplicate so give non-null
+        // which is used in http3framecodec to throw error
+        assertNotNull(http3Settings.put(Http3SettingIdentifier.HTTP3_SETTINGS_H3_DATAGRAM.id(), 1L));
+        // Ensure we can encode and decode all sizes correctly.
+        // unknown settings id/key will be ignored
+        assertNull(http3Settings.put(63, 63L));
+        assertNull(http3Settings.put(16383, 16383L));
+        assertNull(http3Settings.put(1073741823, 1073741823L));
+        assertNull(http3Settings.put(4611686018427387903L, 4611686018427387903L));
+        //even duplicates of unknown ignored as we ignore unknown
+        assertNull(http3Settings.put(4611686018427387903L, 4611686018427387903L));
+    }
 }
