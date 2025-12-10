@@ -162,7 +162,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     @Override
     public boolean isShutdown(ChannelShutdownDirection direction) {
         if (!isActive()) {
-            return false;
+            return true;
         }
         switch (direction) {
             case Outbound:
@@ -431,14 +431,18 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         private void shutdown0(boolean read, boolean write, int error, ChannelPromise promise) {
-            parent().streamShutdown(streamId(), read, write, error, promise.addListener(f -> {
+            parent().streamShutdown(streamId(), read, write, error, newPromise().addListener(f -> {
                 if (f.isSuccess()) {
+                    // Update fields before notify promise
                     if (write) {
                         outputShutdown = true;
                     }
                     if (read) {
                         inputShutdown = true;
                     }
+                    promise.setSuccess();
+                } else {
+                    promise.setFailure(f.cause());
                 }
                 closeIfDone();
             }));
