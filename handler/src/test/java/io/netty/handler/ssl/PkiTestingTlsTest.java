@@ -295,7 +295,7 @@ public class PkiTestingTlsTest {
                                                 }
                                                 return;
                                             }
-                                            ctx.fireChannelRead(evt);
+                                            ctx.fireUserEventTriggered(evt);
                                         }
 
                                         @Override
