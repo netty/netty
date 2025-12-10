@@ -293,18 +293,6 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
             return this;
         }
 
-        @Override
-        public EmbeddedQuicStreamChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark) {
-            config.setWriteBufferHighWaterMark(writeBufferHighWaterMark);
-            return this;
-        }
-
-        @Override
-        public EmbeddedQuicStreamChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark) {
-            config.setWriteBufferLowWaterMark(writeBufferLowWaterMark);
-            return this;
-        }
-
         boolean isAllowHalfClosure() {
             return allowHalfClosure;
         }
@@ -362,16 +350,6 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
         @Override
         public boolean isAutoClose() {
             return config.isAutoClose();
-        }
-
-        @Override
-        public int getWriteBufferHighWaterMark() {
-            return config.getWriteBufferHighWaterMark();
-        }
-
-        @Override
-        public int getWriteBufferLowWaterMark() {
-            return config.getWriteBufferLowWaterMark();
         }
 
         @Override

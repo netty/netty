@@ -299,28 +299,6 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
         }
 
         @Override
-        public int getWriteBufferHighWaterMark() {
-            return delegate.getWriteBufferHighWaterMark();
-        }
-
-        @Override
-        public EmbeddedQuicChannelConfig setWriteBufferHighWaterMark(int i) {
-            delegate.setWriteBufferHighWaterMark(i);
-            return this;
-        }
-
-        @Override
-        public int getWriteBufferLowWaterMark() {
-            return delegate.getWriteBufferLowWaterMark();
-        }
-
-        @Override
-        public EmbeddedQuicChannelConfig setWriteBufferLowWaterMark(int i) {
-            delegate.setWriteBufferLowWaterMark(i);
-            return this;
-        }
-
-        @Override
         public MessageSizeEstimator getMessageSizeEstimator() {
             return delegate.getMessageSizeEstimator();
         }

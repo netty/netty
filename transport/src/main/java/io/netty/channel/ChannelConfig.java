@@ -197,40 +197,6 @@ public interface ChannelConfig {
     ChannelConfig setAutoClose(boolean autoClose);
 
     /**
-     * Returns the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-     * will start to return {@code false}.
-     */
-    int getWriteBufferHighWaterMark();
-
-    /**
-     * <p>
-     * Sets the high water mark of the write buffer.  If the number of bytes
-     * queued in the write buffer exceeds this value, {@link Channel#isWritable()}
-     * will start to return {@code false}.
-     */
-    ChannelConfig setWriteBufferHighWaterMark(int writeBufferHighWaterMark);
-
-    /**
-     * Returns the low water mark of the write buffer.  Once the number of bytes
-     * queued in the write buffer exceeded the
-     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link Channel#isWritable()} will start to return
-     * {@code true} again.
-     */
-    int getWriteBufferLowWaterMark();
-
-    /**
-     * <p>
-     * Sets the low water mark of the write buffer.  Once the number of bytes
-     * queued in the write buffer exceeded the
-     * {@linkplain #setWriteBufferHighWaterMark(int) high water mark} and then
-     * dropped down below this value, {@link Channel#isWritable()} will start to return
-     * {@code true} again.
-     */
-    ChannelConfig setWriteBufferLowWaterMark(int writeBufferLowWaterMark);
-
-    /**
      * Returns {@link MessageSizeEstimator} which is used for the channel
      * to detect the size of a message.
      */

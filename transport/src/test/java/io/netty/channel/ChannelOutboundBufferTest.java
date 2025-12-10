@@ -275,8 +275,9 @@ public class ChannelOutboundBufferTest {
             }
         });
 
-        ch.config().setWriteBufferLowWaterMark(128 + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD);
-        ch.config().setWriteBufferHighWaterMark(256 + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD);
+        ch.config().setWriteBufferWaterMark(
+                new WriteBufferWaterMark(128 + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD,
+                        256 + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD));
 
         ch.write(buffer().writeZero(128));
         // Ensure exceeding the low watermark does not make channel unwritable.
@@ -310,8 +311,7 @@ public class ChannelOutboundBufferTest {
             }
         });
 
-        ch.config().setWriteBufferLowWaterMark(128);
-        ch.config().setWriteBufferHighWaterMark(256);
+        ch.config().setWriteBufferWaterMark(new WriteBufferWaterMark(128, 256));
 
         ChannelOutboundBuffer cob = ch.outboundBuffer();
 
@@ -344,8 +344,7 @@ public class ChannelOutboundBufferTest {
             }
         });
 
-        ch.config().setWriteBufferLowWaterMark(128);
-        ch.config().setWriteBufferHighWaterMark(256);
+        ch.config().setWriteBufferWaterMark(new WriteBufferWaterMark(128, 256));
 
         ChannelOutboundBuffer cob = ch.outboundBuffer();
 
@@ -384,8 +383,7 @@ public class ChannelOutboundBufferTest {
             }
         });
 
-        ch.config().setWriteBufferLowWaterMark(128);
-        ch.config().setWriteBufferHighWaterMark(256);
+        ch.config().setWriteBufferWaterMark(new WriteBufferWaterMark(128, 256));
 
         ChannelOutboundBuffer cob = ch.outboundBuffer();
 

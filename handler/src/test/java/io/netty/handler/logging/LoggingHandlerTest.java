@@ -23,6 +23,7 @@ import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.DefaultByteBufHolder;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 
@@ -123,8 +124,7 @@ public class LoggingHandlerTest {
     public void shouldLogChannelWritabilityChanged() throws Exception {
         EmbeddedChannel channel = new EmbeddedChannel(new LoggingHandler(LogLevel.WARN));
         // this is used to switch the channel to become unwritable
-        channel.config().setWriteBufferLowWaterMark(5);
-        channel.config().setWriteBufferHighWaterMark(10);
+        channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(5, 10));
         channel.write("hello", channel.newPromise());
 
         verify(appender).doAppend(argThat(new RegexLogMatcher(".+WRITABILITY CHANGED$")));

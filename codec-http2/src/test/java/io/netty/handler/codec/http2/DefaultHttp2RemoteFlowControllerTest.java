@@ -19,6 +19,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.concurrent.EventExecutor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -91,6 +92,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     public void setup() throws Http2Exception {
         MockitoAnnotations.initMocks(this);
 
+        when(config.getWriteBufferWaterMark()).thenReturn(new WriteBufferWaterMark(0, Integer.MAX_VALUE));
         when(ctx.newPromise()).thenReturn(promise);
         when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
         setChannelWritability(true);
