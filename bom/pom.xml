@@ -174,11 +174,6 @@
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
-        <artifactId>netty5-codec-marshalling</artifactId>
-        <version>${project.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>io.netty</groupId>
         <artifactId>netty5-common</artifactId>
         <version>${project.version}</version>
       </dependency>

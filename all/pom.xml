@@ -421,17 +421,6 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-codec-marshalling</artifactId>
-      <scope>compile</scope>
-      <exclusions>
-        <exclusion>
-          <groupId>org.jboss.marshalling</groupId>
-          <artifactId>jboss-marshalling</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
       <artifactId>netty5-common</artifactId>
       <scope>compile</scope>
     </dependency>
