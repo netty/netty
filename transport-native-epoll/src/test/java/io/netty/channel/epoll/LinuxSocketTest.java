@@ -106,6 +106,8 @@ public class LinuxSocketTest {
             socket.bind(domainSocketAddress);
             DomainSocketAddress local = socket.localDomainSocketAddress();
             assertEquals(domainSocketAddress, local);
+            assertEquals(address, domainSocketAddress.path());
+            assertEquals(address, local.path());
         } finally {
             socket.close();
         }
