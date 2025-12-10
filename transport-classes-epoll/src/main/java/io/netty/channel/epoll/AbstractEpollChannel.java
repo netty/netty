@@ -155,7 +155,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         ChannelPromise connectPromise = this.connectPromise;
         if (connectPromise != null) {
             // Use tryFailure() instead of setFailure() to avoid the race against cancel().
-            promise.tryFailure(new ClosedChannelException());
+            connectPromise.tryFailure(new ClosedChannelException());
             this.connectPromise = null;
         }
 
