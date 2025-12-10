@@ -141,9 +141,8 @@ static int domainSocketPathLength(const struct sockaddr_un* s, const socklen_t a
        // This is an abstract domain socket address
        return (addrlen - sizeof(sa_family_t));
     }
-#else
-    return strlen(s->sun_path);
 #endif
+    return strlen(s->sun_path);
 }
 
 static jobject createDomainDatagramSocketAddress(JNIEnv* env, const struct sockaddr_storage* addr, const socklen_t addrlen, int len, jobject local) {
