@@ -116,6 +116,14 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     boolean isActive();
 
     /**
+     * Returns {@code true} if the given {@link ChannelShutdownDirection} is shutdown, {@code false} otherwise.
+     *
+     * @param direction     the {@link ChannelShutdownDirection}
+     * @return              {@code true} if shutdown.
+     */
+    boolean isShutdown(ChannelShutdownDirection direction);
+
+    /**
      * Returns the local address where this channel is bound to.  The returned
      * {@link SocketAddress} is supposed to be down-cast into more concrete
      * type such as {@link InetSocketAddress} to retrieve the detailed
@@ -341,5 +349,15 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     @Override
     default ChannelFuture register(ChannelPromise promise) {
         return pipeline().register(promise);
+    }
+
+    @Override
+    default ChannelFuture shutdown(ChannelShutdownType type, ChannelPromise promise) {
+        return pipeline().shutdown(type, promise);
+    }
+
+    @Override
+    default ChannelFuture shutdown(ChannelShutdownType type) {
+        return pipeline().shutdown(type);
     }
 }

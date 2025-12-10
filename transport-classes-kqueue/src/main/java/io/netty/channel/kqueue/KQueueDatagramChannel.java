@@ -22,6 +22,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.channel.socket.DatagramPacket;
@@ -77,6 +78,11 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     KQueueDatagramChannel(EventLoop eventLoop, BsdSocket socket, boolean active) {
         super(eventLoop, null, socket, active, true);
         config = new KQueueDatagramChannelConfig(this);
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

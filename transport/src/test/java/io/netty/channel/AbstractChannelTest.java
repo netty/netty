@@ -263,6 +263,11 @@ public class AbstractChannelTest {
         }
 
         @Override
+        protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+            promise.setSuccess();
+        }
+
+        @Override
         protected void doDeregister(ChannelPromise promise) {
             promise.setSuccess();
         }

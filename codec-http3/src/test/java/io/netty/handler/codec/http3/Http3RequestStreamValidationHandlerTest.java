@@ -18,7 +18,7 @@ package io.netty.handler.codec.http3;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
@@ -219,7 +219,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
         responseHeadersFrame.headers().setLong(HttpHeaderNames.CONTENT_LENGTH, 10);
 
         assertTrue(channel.writeInbound(responseHeadersFrame));
-        channel.pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+        channel.pipeline().fireChannelShutdown(ChannelShutdownType.newInbound());
 
         assertTrue(channel.finishAndReleaseAll());
     }
@@ -270,7 +270,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
             if (trailers) {
                 channel.writeInbound(new DefaultHttp3HeadersFrame());
             } else {
-                channel.pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+                channel.pipeline().fireChannelShutdown(ChannelShutdownType.newInbound());
                 channel.checkException();
             }
         } catch (Exception e) {
@@ -322,7 +322,7 @@ public class Http3RequestStreamValidationHandlerTest extends Http3FrameTypeValid
             if (trailers) {
                 channel.writeInbound(new DefaultHttp3HeadersFrame());
             } else {
-                channel.pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+                channel.pipeline().fireChannelShutdown(ChannelShutdownType.newInbound());
                 channel.checkException();
             }
         } catch (Exception e) {

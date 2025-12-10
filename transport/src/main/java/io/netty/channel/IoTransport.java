@@ -76,4 +76,10 @@ public interface IoTransport {
      * Flush out all write operations scheduled via {@link #write(Object, ChannelPromise)}.
      */
     void flush();
+
+    /**
+     * Shutdown the {@link ChannelShutdownType} if the {@link Channel} and notify the {@link ChannelPromise}
+     * once the operation was complete.
+     */
+    void shutdown(ChannelShutdownType type, ChannelPromise promise);
 }

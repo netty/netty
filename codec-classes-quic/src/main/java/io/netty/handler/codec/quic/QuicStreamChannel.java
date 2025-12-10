@@ -15,21 +15,21 @@
  */
 package io.netty.handler.codec.quic;
 
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.socket.DuplexChannel;
-import io.netty.channel.socket.SocketChannel;
+import io.netty.channel.ChannelShutdownType;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.SocketAddress;
 
 /**
- * A QUIC stream {@link DuplexChannel}.
+ * A QUIC stream {@link Channel}.
  *
  * <h3>Available options</h3>
  *
- * In addition to the options supported by {@link DuplexChannel},
+ * In addition to the options supported by {@link Channel},
  * {@link QuicStreamChannel} allows the following options in the
  * option map via {@link io.netty.channel.ChannelOption}:
  *
@@ -41,13 +41,14 @@ import java.net.SocketAddress;
  * </tr>
  * </table>
  */
-public interface QuicStreamChannel extends DuplexChannel {
+public interface QuicStreamChannel extends Channel {
 
     /**
      * Should be added to a {@link ChannelFuture} when the output should be cleanly shutdown via a {@code FIN}. No more
      * writes will be allowed after this point.
      */
-    ChannelFutureListener SHUTDOWN_OUTPUT = f -> ((QuicStreamChannel) f.channel()).shutdownOutput();
+    ChannelFutureListener SHUTDOWN_OUTPUT = f ->
+            f.channel().shutdown(ChannelShutdownType.newOutbound());
 
     @Override
     default ChannelFuture bind(SocketAddress socketAddress) {
@@ -144,95 +145,6 @@ public interface QuicStreamChannel extends DuplexChannel {
     default ChannelFuture newFailedFuture(Throwable cause) {
         return pipeline().newFailedFuture(cause);
     }
-
-    @Override
-    default ChannelFuture shutdownInput() {
-        return shutdownInput(newPromise());
-    }
-
-    @Override
-    default ChannelFuture shutdownInput(ChannelPromise promise) {
-        return shutdownInput(0, promise);
-    }
-
-    @Override
-    default ChannelFuture shutdownOutput() {
-        return shutdownOutput(newPromise());
-    }
-
-    @Override
-    default ChannelFuture shutdown() {
-        return shutdown(newPromise());
-    }
-
-    /**
-     * Shortcut for calling {@link #shutdownInput(int)} and {@link #shutdownInput(int)}.
-     *
-     * @param error the error to send.
-     * @return the future that is notified on completion.
-     */
-    default ChannelFuture shutdown(int error) {
-        return shutdown(error, newPromise());
-    }
-
-    /**
-     * Shortcut for calling {@link #shutdownInput(int, ChannelPromise)} and {@link #shutdownInput(int, ChannelPromise)}.
-     *
-     * @param error the error to send.
-     * @param promise will be notified on completion.
-     * @return the future that is notified on completion.
-     */
-    ChannelFuture shutdown(int error, ChannelPromise promise);
-
-    /**
-     * Shutdown the input of the stream with the given error code. This means a {@code STOP_SENDING} frame will
-     * be send to the remote peer and all data received will be discarded.
-     *
-     * @param error the error to send as part of the {@code STOP_SENDING} frame.
-     * @return the future that is notified on completion.
-     */
-    default ChannelFuture shutdownInput(int error) {
-        return shutdownInput(error, newPromise());
-    }
-
-    /**
-     * Shutdown the input of the stream with the given error code. This means a {@code STOP_SENDING} frame will
-     * be send to the remote peer and all data received will be discarded.
-     *
-     * @param error the error to send as part of the {@code STOP_SENDING} frame.
-     * @param promise will be notified on completion.
-     * @return the future that is notified on completion.
-     */
-    ChannelFuture shutdownInput(int error, ChannelPromise promise);
-
-    /**
-     * Shutdown the output of the stream with the given error code. This means a {@code RESET_STREAM} frame will
-     * be send to the remote peer and all data that is not sent yet will be discarded.
-     *
-     * <strong>Important:</strong>If you want to shutdown the output without sending a {@code RESET_STREAM} frame you
-     * should use {@link #shutdownOutput()} which will shutdown the output by sending a {@code FIN} and so signal
-     * a clean shutdown.
-     *
-     * @param error the error to send as part of the {@code RESET_STREAM} frame.
-     * @return the future that is notified on completion.
-     */
-    default ChannelFuture shutdownOutput(int error) {
-        return shutdownOutput(error, newPromise());
-    }
-
-    /**
-     * Shutdown the output of the stream with the given error code. This means a {@code RESET_STREAM} frame will
-     * be send to the remote peer and all data that is not sent yet will be discarded.
-     *
-     * <strong>Important:</strong>If you want to shutdown the output without sending a {@code RESET_STREAM} frame you
-     * should use {@link #shutdownOutput(ChannelPromise)} which will shutdown the output by sending a {@code FIN}
-     * and so signal a clean shutdown.
-     *
-     * @param error the error to send as part of the {@code RESET_STREAM} frame.
-     * @param promise will be notified on completion.
-     * @return the future that is notified on completion.
-     */
-    ChannelFuture shutdownOutput(int error, ChannelPromise promise);
 
     @Override
     QuicStreamAddress localAddress();

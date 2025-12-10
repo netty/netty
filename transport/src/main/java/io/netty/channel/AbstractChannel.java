@@ -15,8 +15,6 @@
  */
 package io.netty.channel;
 
-import io.netty.channel.socket.ChannelOutputShutdownEvent;
-import io.netty.channel.socket.ChannelOutputShutdownException;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
@@ -58,6 +56,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     private volatile SocketAddress localAddress;
     private volatile SocketAddress remoteAddress;
     private volatile boolean registered;
+    private volatile boolean inputShutdown;
+    private volatile boolean outputShutdown;
+
     private boolean closeInitiated;
     private Throwable initialCloseCause;
     private boolean inWriteFlushed;
@@ -336,6 +337,21 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         return strVal;
     }
 
+    @Override
+    public final boolean isShutdown(ChannelShutdownDirection direction) {
+        if (!isActive()) {
+            return true;
+        }
+        switch (direction) {
+            case Outbound:
+                return outputShutdown;
+            case Inbound:
+                return inputShutdown;
+            default:
+                return false;
+        }
+    }
+
     protected final ChannelOutboundBuffer outboundBuffer() {
         return outboundBuffer;
     }
@@ -347,6 +363,46 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         /** true if the channel has never been registered, false otherwise */
         private boolean neverRegistered = true;
+
+        @Override
+        public void shutdown(ChannelShutdownType type, ChannelPromise promise) {
+            assertEventLoop();
+            if (!promise.setUncancellable()) {
+                return;
+            }
+            if (!isActive()) {
+                if (isOpen()) {
+                    promise.setFailure(new NotYetConnectedException());
+                } else {
+                    promise.setFailure(new ClosedChannelException());
+                }
+                return;
+            }
+            if (isShutdown(type.direction())) {
+                // Already shutdown so let's just make this a noop.
+                promise.setSuccess(null);
+                return;
+            }
+
+            doShutdown(type, newPromise().addListener(f -> {
+                if (f.isSuccess()) {
+                    switch (type.direction()) {
+                        case Outbound:
+                            outputShutdown = true;
+                            break;
+                        case Inbound:
+                            inputShutdown = true;
+                            break;
+                        default:
+                            throw new AssertionError();
+                    }
+                }
+                safeCascade(f, promise);
+                if (f.isSuccess() && type.direction() == ChannelShutdownDirection.Outbound) {
+                    pipeline().fireChannelShutdown(ChannelShutdownType.newOutbound());
+                }
+            }));
+        }
 
         @Override
         public void register(final ChannelPromise promise) {
@@ -566,13 +622,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             close(promise, closedChannelException, closedChannelException);
         }
 
-        private void closeOutboundBufferForShutdown(
-                ChannelPipeline pipeline, ChannelOutboundBuffer buffer, Throwable cause) {
-            buffer.failFlushed(cause, false);
-            buffer.close(cause, true);
-            pipeline.fireUserEventTriggered(ChannelOutputShutdownEvent.INSTANCE);
-        }
-
         private void close(final ChannelPromise promise, final Throwable cause,
                            final ClosedChannelException closeCause) {
             if (!promise.setUncancellable()) {
@@ -610,8 +659,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     public void run() {
                         if (outboundBuffer != null) {
                             // Fail all the queued messages
-                            outboundBuffer.failFlushed(cause, false);
-                            outboundBuffer.close(closeCause);
+                            outboundBuffer.failFlushedAndClose(cause, false, closeCause, false);
                         }
                         fireChannelInactiveAndDeregister(wasActive);
                     }
@@ -725,12 +773,16 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     // release message now to prevent resource-leak
                     ReferenceCountUtil.release(msg);
                 } finally {
-                    // If the outboundBuffer is null we know the channel was closed and so
+                    // If the outboundBuffer is null we know the channel was closed or the outbound was shutdown, so
                     // need to fail the future right away. If it is not null the handling of the rest
                     // will be done in flush0()
                     // See https://github.com/netty/netty/issues/2362
-                    safeSetFailure(promise, newClosedChannelException(
-                            IoTransportImpl.class, initialCloseCause, "write(Object, ChannelPromise)"));
+                    if (!isActive()) {
+                        safeSetFailure(promise, newClosedChannelException(
+                                IoTransportImpl.class, initialCloseCause, "write(Object, ChannelPromise)"));
+                    } else {
+                        safeSetFailure(promise, new ChannelOutputShutdownException("Channel output shutdown"));
+                    }
                 }
                 return;
             }
@@ -895,23 +947,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
     /**
      * Shutdown the output portion of the corresponding {@link Channel}.
      * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
-     */
-    // TODO: Make this a concept of the Unsafe.
-    protected final void shutdownOutput0(final ChannelPromise promise) {
-        assertEventLoop();
-        shutdownOutput(promise, null);
-    }
-
-    /**
-     * Shutdown the output portion of the corresponding {@link Channel}.
-     * For example this will clean up the {@link ChannelOutboundBuffer} and not allow any more writes.
      * @param cause The cause which may provide rational for the shutdown.
      */
     private void shutdownOutput(final ChannelPromise promise, Throwable cause) {
-        if (!promise.setUncancellable()) {
-            return;
-        }
-
         final ChannelOutboundBuffer outboundBuffer = AbstractChannel.this.outboundBuffer;
         if (outboundBuffer == null) {
             promise.setFailure(new ClosedChannelException());
@@ -930,13 +968,17 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         // The shutdown function does not block regardless of the SO_LINGER setting on the socket
         // so we don't need to use GlobalEventExecutor to execute the shutdown
         ChannelPromise shutdownPromise = newPromise().addListener(f -> {
+            if (f.isSuccess()) {
+                outputShutdown = true;
+            }
             // Disallow adding any messages and flushes to outboundBuffer.
             AbstractChannel.this.outboundBuffer = null;
 
             ioTransport.safeCascade(f, promise);
-            ioTransport.closeOutboundBufferForShutdown(pipeline, outboundBuffer, shutdownCause);
+            outboundBuffer.failFlushedAndClose(shutdownCause, false, shutdownCause, true);
+            pipeline().fireChannelShutdown(ChannelShutdownType.newOutbound());
         });
-        doShutdownOutput(shutdownPromise);
+        doShutdown(ChannelShutdownType.newOutbound(), shutdownPromise);
     }
 
     private MessageSizeEstimator.Handle estimatorHandle() {
@@ -1083,9 +1125,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Called when conditions justify shutting down the output portion of the channel. This may happen if a write
      * operation throws an exception.
      */
-    protected void doShutdownOutput(ChannelPromise promise) {
-        doClose(promise);
-    }
+    protected abstract void doShutdown(ChannelShutdownType type, ChannelPromise promise);
 
     /**
      * Deregister the {@link Channel} from its {@link EventLoop}.

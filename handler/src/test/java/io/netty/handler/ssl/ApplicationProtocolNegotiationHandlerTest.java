@@ -19,8 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.handler.codec.DecoderException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -172,7 +172,7 @@ public class ApplicationProtocolNegotiationHandlerTest {
                 new ApplicationProtocolNegotiationHandlerTest.Consumer<ChannelHandlerContext>() {
                     @Override
                     public void consume(ChannelHandlerContext ctx) {
-                        ctx.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+                        ctx.fireChannelShutdown(ChannelShutdownType.newInbound());
                     }
                 });
     }

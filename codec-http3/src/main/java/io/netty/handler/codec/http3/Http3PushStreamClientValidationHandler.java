@@ -16,7 +16,8 @@
 package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 
 import static io.netty.handler.codec.http3.Http3RequestStreamValidationUtils.INVALID_FRAME_READ;
 import static io.netty.handler.codec.http3.Http3RequestStreamValidationUtils.sendStreamAbandonedIfRequired;
@@ -71,14 +72,14 @@ final class Http3PushStreamClientValidationHandler
     }
 
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+        if (type.direction() == ChannelShutdownDirection.Inbound) {
             sendStreamAbandonedIfRequired(ctx, qpackAttributes, qpackDecoder, decodeState);
             if (!validateOnStreamClosure(ctx, expectedLength, seenLength, false)) {
                 return;
             }
         }
-        ctx.fireUserEventTriggered(evt);
+        ctx.fireChannelShutdown(type);
     }
 
     @Override

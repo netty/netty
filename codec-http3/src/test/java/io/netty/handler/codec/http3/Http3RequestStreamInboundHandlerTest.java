@@ -17,8 +17,8 @@ package io.netty.handler.codec.http3;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
@@ -35,7 +35,7 @@ public class Http3RequestStreamInboundHandlerTest {
         assertTrue(channel.writeInbound(new DefaultHttp3HeadersFrame()));
         assertTrue(channel.writeInbound(new DefaultHttp3DataFrame(Unpooled.buffer())));
         assertTrue(channel.writeInbound(new DefaultHttp3DataFrame(Unpooled.buffer())));
-        channel.pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
+        channel.pipeline().fireChannelShutdown(ChannelShutdownType.newInbound());
         assertFrame(channel);
         assertFrame(channel);
         assertFrame(channel);

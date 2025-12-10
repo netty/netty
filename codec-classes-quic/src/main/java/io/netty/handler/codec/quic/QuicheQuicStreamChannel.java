@@ -24,15 +24,15 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoTransport;
 import io.netty.channel.PendingWriteQueue;
 import io.netty.channel.RecvByteBufAllocator;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.ChannelOutputShutdownException;
+import io.netty.channel.ChannelOutputShutdownException;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.PromiseNotifier;
@@ -155,127 +155,23 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     @Override
-    public boolean isInputShutdown() {
-        return inputShutdown;
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput(ChannelPromise promise) {
-        if (executor().inEventLoop()) {
-            shutdownOutput0(promise);
-        } else {
-            executor().execute(() -> shutdownOutput0(promise));
-        }
-        return promise;
-    }
-
-    private void shutdownOutput0(ChannelPromise promise) {
-        assert executor().inEventLoop();
-        if (!promise.setUncancellable()) {
-            return;
-        }
-        outputShutdown = true;
-        ioTransport.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, promise);
-        ioTransport.flush();
-    }
-
-    @Override
-    public ChannelFuture shutdownInput(int error, ChannelPromise promise) {
-        if (executor().inEventLoop()) {
-            shutdownInput0(error, promise);
-        } else {
-            executor().execute(() -> shutdownInput0(error, promise));
-        }
-        return promise;
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput(int error, ChannelPromise promise) {
-        if (executor().inEventLoop()) {
-            shutdownOutput0(error, promise);
-        } else {
-            executor().execute(() -> shutdownOutput0(error, promise));
-        }
-        return promise;
-    }
-
-    @Override
     public QuicheQuicChannel parent() {
         return parent;
     }
 
-    private void shutdownInput0(int err, ChannelPromise channelPromise) {
-        assert executor().inEventLoop();
-        if (!channelPromise.setUncancellable()) {
-            return;
-        }
-        inputShutdown = true;
-        parent().streamShutdown(streamId(), true, false, err, channelPromise);
-        closeIfDone();
-    }
-
     @Override
-    public boolean isOutputShutdown() {
-        return outputShutdown;
-    }
-
-    private void shutdownOutput0(int error, ChannelPromise channelPromise) {
-        assert executor().inEventLoop();
-        if (!channelPromise.setUncancellable()) {
-            return;
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        if (!isActive()) {
+            return true;
         }
-        parent().streamShutdown(streamId(), false, true, error, channelPromise);
-        outputShutdown = true;
-        closeIfDone();
-    }
-
-    @Override
-    public boolean isShutdown() {
-        return outputShutdown && inputShutdown;
-    }
-
-    @Override
-    public ChannelFuture shutdown(ChannelPromise channelPromise) {
-        if (executor().inEventLoop()) {
-            shutdown0(channelPromise);
-        } else {
-            executor().execute(() -> shutdown0(channelPromise));
+        switch (direction) {
+            case Outbound:
+                return outputShutdown;
+            case Inbound:
+                return inputShutdown;
+            default:
+                return false;
         }
-        return channelPromise;
-    }
-
-    private void shutdown0(ChannelPromise promise) {
-        assert executor().inEventLoop();
-        if (!promise.setUncancellable()) {
-            return;
-        }
-        inputShutdown = true;
-        outputShutdown = true;
-        ioTransport.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, newPromise());
-        ioTransport.flush();
-        parent().streamShutdown(streamId(), true, false, 0, promise);
-        closeIfDone();
-    }
-
-    @Override
-    public ChannelFuture shutdown(int error, ChannelPromise promise) {
-        if (executor().inEventLoop()) {
-            shutdown0(error, promise);
-        } else {
-            executor().execute(() -> shutdown0(error, promise));
-        }
-        return promise;
-    }
-
-    private void shutdown0(int error, ChannelPromise channelPromise) {
-        assert executor().inEventLoop();
-        if (!channelPromise.setUncancellable()) {
-            return;
-        }
-        inputShutdown = true;
-        outputShutdown = true;
-        parent().streamShutdown(streamId(), true, true, error, channelPromise);
-        closeIfDone();
     }
 
     private void sendFinIfNeeded() throws Exception {
@@ -476,6 +372,80 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 recvHandle = config.getRecvByteBufAllocator().newHandle();
             }
             return recvHandle;
+        }
+
+        @Override
+        public void shutdown(ChannelShutdownType type, ChannelPromise promise) {
+            if (type.data() != null && !(type.data() instanceof Integer)) {
+                promise.setFailure(new IllegalArgumentException(
+                        "ChannelShutdownType with data if non integer type is allowed: " + type));
+                return;
+            }
+            final boolean read;
+            final boolean write;
+            switch (type.direction()) {
+                case Outbound:
+                    write = true;
+                    read = false;
+                    break;
+                case Inbound:
+                    read = true;
+                    write = false;
+                    break;
+                default:
+                    promise.setFailure(new UnsupportedOperationException());
+                    return;
+            }
+
+            if (write) {
+                if (outputShutdown) {
+                    promise.setSuccess();
+                    return;
+                }
+                ioTransport.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, newPromise()
+                        .addListener(f -> {
+                            if (f.isSuccess()) {
+                                if (type.data() == null) {
+                                    promise.setSuccess();
+                                } else {
+                                    shutdown0(read, write, (Integer) type.data(), promise);
+                                }
+                            } else {
+                                promise.setFailure(f.cause());
+                            }
+                        }));
+                ioTransport.flush();
+            } else {
+                if (inputShutdown) {
+                    promise.setSuccess();
+                    return;
+                }
+                int error;
+                if (type.data() == null) {
+                    error = 0;
+                } else {
+                    error = (Integer) type.data();
+                }
+                shutdown0(read, write, error, promise);
+            }
+        }
+
+        private void shutdown0(boolean read, boolean write, int error, ChannelPromise promise) {
+            parent().streamShutdown(streamId(), read, write, error, newPromise().addListener(f -> {
+                if (f.isSuccess()) {
+                    // Update fields before notify promise
+                    if (write) {
+                        outputShutdown = true;
+                    }
+                    if (read) {
+                        inputShutdown = true;
+                    }
+                    promise.setSuccess();
+                } else {
+                    promise.setFailure(f.cause());
+                }
+                closeIfDone();
+            }));
         }
 
         @Override
@@ -879,8 +849,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 if (finReceived) {
                     // If we receive a fin there will be no more data to read so we need to fire both events
                     // to be consistent with other transports.
-                    pipeline.fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-                    pipeline.fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+                    pipeline.fireChannelShutdown(ChannelShutdownType.newInbound());
                     if (finSent) {
                         // This was an unidirectional stream which means as soon as we received FIN and sent a FIN
                         // we need close the connection.

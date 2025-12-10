@@ -27,6 +27,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -247,7 +248,7 @@ public class NioSocketChannelTest extends AbstractNioChannelTest<NioSocketChanne
                     .syncUninterruptibly().channel();
 
             accepted = socket.accept();
-            channel.shutdownOutput().syncUninterruptibly();
+            channel.shutdown(ChannelShutdownType.newOutbound()).syncUninterruptibly();
 
             channel.close().syncUninterruptibly();
         } finally {

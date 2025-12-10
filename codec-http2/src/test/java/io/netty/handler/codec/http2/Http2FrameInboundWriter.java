@@ -25,6 +25,8 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.concurrent.EventExecutor;
 
@@ -188,6 +190,17 @@ final class Http2FrameInboundWriter {
         public ChannelHandlerContext fireChannelWritabilityChanged() {
             channel.pipeline().fireChannelWritabilityChanged();
             return this;
+        }
+
+        @Override
+        public ChannelHandlerContext fireChannelShutdown(ChannelShutdownType type) {
+            channel.pipeline().fireChannelShutdown(type);
+            return this;
+        }
+
+        @Override
+        public ChannelFuture shutdown(ChannelShutdownType type, ChannelPromise promise) {
+            return channel.shutdown(type, promise);
         }
 
         @Override

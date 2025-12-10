@@ -23,10 +23,9 @@ import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.ServerChannel;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.ReferenceCounted;
@@ -265,14 +264,26 @@ public final class Http2MultiplexHandler extends Http2ChannelDuplexHandler {
             }
             return;
         }
-        if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
-            forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR);
-        } else if (evt == ChannelOutputShutdownEvent.INSTANCE) {
-            forEachActiveStream(CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR);
-        } else if (evt == SslCloseCompletionEvent.SUCCESS) {
+        if (evt == SslCloseCompletionEvent.SUCCESS) {
             forEachActiveStream(SSL_CLOSE_COMPLETION_EVENT_VISITOR);
         }
         ctx.fireUserEventTriggered(evt);
+    }
+
+    @Override
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type)
+            throws Exception {
+        switch(type.direction()) {
+            case Outbound:
+                forEachActiveStream(CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR);
+                break;
+            case Inbound:
+                forEachActiveStream(CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR);
+                break;
+            default:
+                break;
+        }
+        super.channelShutdown(ctx, type);
     }
 
     // TODO: This is most likely not the best way to expose this, need to think more about it.

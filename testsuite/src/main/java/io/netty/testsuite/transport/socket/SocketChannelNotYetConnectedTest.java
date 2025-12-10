@@ -22,6 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
@@ -58,14 +59,14 @@ public class SocketChannelNotYetConnectedTest extends AbstractClientSocketTest {
                 .bind(newSocketAddress()).syncUninterruptibly().channel();
         try {
             try {
-                ch.shutdownInput().syncUninterruptibly();
+                ch.shutdown(ChannelShutdownType.newInbound()).syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
                 checkThrowable(cause);
             }
 
             try {
-                ch.shutdownOutput().syncUninterruptibly();
+                ch.shutdown(ChannelShutdownType.newOutbound()).syncUninterruptibly();
                 fail();
             } catch (Throwable cause) {
                 checkThrowable(cause);

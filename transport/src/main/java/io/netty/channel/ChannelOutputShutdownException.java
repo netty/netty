@@ -13,15 +13,22 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.channel.socket;
+package io.netty.channel;
+
+
+import java.io.IOException;
 
 /**
- * User event that signifies the channel's input side is shutdown, and we tried to shut it down again. This typically
- * indicates that there is no more data to read.
+ * Used to fail pending writes when a channel's output has been shutdown.
  */
-public final class ChannelInputShutdownReadComplete {
-    public static final ChannelInputShutdownReadComplete INSTANCE = new ChannelInputShutdownReadComplete();
+public final class ChannelOutputShutdownException extends IOException {
+    private static final long serialVersionUID = 6712549938359321378L;
 
-    private ChannelInputShutdownReadComplete() {
+    public ChannelOutputShutdownException(String msg) {
+        super(msg);
+    }
+
+    public ChannelOutputShutdownException(String msg, Throwable cause) {
+        super(msg, cause);
     }
 }

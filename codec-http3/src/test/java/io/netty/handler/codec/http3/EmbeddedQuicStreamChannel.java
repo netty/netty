@@ -23,13 +23,12 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.embedded.EmbeddedChannel;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamAddress;
 import io.netty.handler.codec.quic.QuicStreamChannel;
@@ -77,20 +76,19 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     boolean writeInboundWithFin(Object... msgs) {
-        shutdownInput();
+        shutdown(ChannelShutdownType.newInbound(0));
         boolean written = writeInbound(msgs);
         fireInputShutdownEvents();
         return written;
     }
 
     void writeInboundFin() {
-        shutdownInput();
+        shutdown(ChannelShutdownType.newInbound(0));
         fireInputShutdownEvents();
     }
 
     private void fireInputShutdownEvents() {
-        pipeline().fireUserEventTriggered(ChannelInputShutdownEvent.INSTANCE);
-        pipeline().fireUserEventTriggered(ChannelInputShutdownReadComplete.INSTANCE);
+        pipeline().fireChannelShutdown(ChannelShutdownType.newInbound());
     }
 
     @Override
@@ -157,55 +155,23 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     @Override
-    public boolean isInputShutdown() {
-        return inputShutdown != null;
-    }
-
-    @Override
-    public boolean isOutputShutdown() {
-        return outputShutdown != null;
-    }
-
-    @Override
-    public ChannelFuture shutdown(int i, ChannelPromise channelPromise) {
-        if (inputShutdown == null) {
-            inputShutdown = i;
+    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        if (type.data() != null && !(type.data() instanceof Integer)) {
+            promise.setFailure(new IllegalArgumentException(
+                    "ChannelShutdownType with data if non integer type is allowed: " + type));
+            return;
         }
-        if (outputShutdown == null) {
-            outputShutdown = i;
+        switch(type.direction()) {
+            case Outbound:
+                outputShutdown = (Integer) type.data();
+                break;
+            case Inbound:
+                inputShutdown = (Integer) type.data();
+                break;
+            default:
+                break;
         }
-        return channelPromise.setSuccess();
-    }
-
-    @Override
-    public ChannelFuture shutdownInput(int i, ChannelPromise channelPromise) {
-        if (inputShutdown == null) {
-            inputShutdown = i;
-        }
-        return channelPromise.setSuccess();
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput(int i, ChannelPromise channelPromise) {
-        if (outputShutdown == null) {
-            outputShutdown = i;
-        }
-        return channelPromise.setSuccess();
-    }
-
-    @Override
-    public boolean isShutdown() {
-        return isInputShutdown() && isOutputShutdown();
-    }
-
-    @Override
-    public ChannelFuture shutdown(ChannelPromise promise) {
-        return shutdown(0, promise);
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput(ChannelPromise promise) {
-        return shutdownOutput(0, promise);
+        promise.setSuccess();
     }
 
     Integer outputShutdownError() {

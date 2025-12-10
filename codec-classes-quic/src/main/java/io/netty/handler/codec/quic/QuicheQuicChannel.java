@@ -28,6 +28,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.ssl.SniCompletionEvent;
@@ -238,6 +239,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
             return new long[Math.min(MAX_ARRAY_LEN, array.length + 4)];
         }
         return array;
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

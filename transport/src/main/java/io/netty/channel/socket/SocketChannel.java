@@ -15,12 +15,14 @@
  */
 package io.netty.channel.socket;
 
+import io.netty.channel.Channel;
+
 /**
- * A socket {@link DuplexChannel}.
+ * A socket {@link Channel}.
  *
  * <h3>Available options</h3>
  *
- * In addition to the options supported by {@link DuplexChannel},
+ * In addition to the options supported by {@link Channel},
  * {@link SocketChannel} allows the following options in the
  * option map via {@link io.netty.channel.ChannelOption}:
  *
@@ -44,7 +46,7 @@ package io.netty.channel.socket;
  * </tr>
  * </table>
  */
-public interface SocketChannel extends DuplexChannel {
+public interface SocketChannel extends Channel {
     @Override
     ServerSocketChannel parent();
 }

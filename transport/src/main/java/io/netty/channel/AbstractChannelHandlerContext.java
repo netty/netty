@@ -40,6 +40,7 @@ import static io.netty.channel.ChannelHandlerMask.MASK_CHANNEL_INACTIVE;
 import static io.netty.channel.ChannelHandlerMask.MASK_CHANNEL_READ;
 import static io.netty.channel.ChannelHandlerMask.MASK_CHANNEL_READ_COMPLETE;
 import static io.netty.channel.ChannelHandlerMask.MASK_CHANNEL_REGISTERED;
+import static io.netty.channel.ChannelHandlerMask.MASK_CHANNEL_SHUTDOWN;
 import static io.netty.channel.ChannelHandlerMask.MASK_CHANNEL_UNREGISTERED;
 import static io.netty.channel.ChannelHandlerMask.MASK_CHANNEL_WRITABILITY_CHANGED;
 import static io.netty.channel.ChannelHandlerMask.MASK_CLOSE;
@@ -52,6 +53,7 @@ import static io.netty.channel.ChannelHandlerMask.MASK_ONLY_INBOUND;
 import static io.netty.channel.ChannelHandlerMask.MASK_ONLY_OUTBOUND;
 import static io.netty.channel.ChannelHandlerMask.MASK_READ;
 import static io.netty.channel.ChannelHandlerMask.MASK_REGISTER;
+import static io.netty.channel.ChannelHandlerMask.MASK_SHUTDOWN;
 import static io.netty.channel.ChannelHandlerMask.MASK_USER_EVENT_TRIGGERED;
 import static io.netty.channel.ChannelHandlerMask.MASK_WRITE;
 import static io.netty.channel.ChannelHandlerMask.mask;
@@ -421,6 +423,36 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
+    public ChannelHandlerContext fireChannelShutdown(ChannelShutdownType type) {
+        AbstractChannelHandlerContext next = findContextInbound(MASK_CHANNEL_SHUTDOWN);
+        if (next.executor().inEventLoop()) {
+            if (next.invokeHandler()) {
+                try {
+                    // DON'T CHANGE
+                    // Duplex handlers implements both out/in interfaces causing a scalability issue
+                    // see https://bugs.openjdk.org/browse/JDK-8180450
+                    final ChannelHandler handler = next.handler();
+                    final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
+                    if (handler == headContext) {
+                        headContext.channelShutdown(next, type);
+                    } else if (handler instanceof ChannelDuplexHandler) {
+                        ((ChannelDuplexHandler) handler).channelShutdown(next, type);
+                    } else {
+                        ((ChannelInboundHandler) handler).channelShutdown(next, type);
+                    }
+                } catch (Throwable t) {
+                    next.invokeExceptionCaught(t);
+                }
+            } else {
+                next.fireChannelShutdown(type);
+            }
+        } else {
+            next.executor().execute(() -> fireChannelShutdown(type));
+        }
+        return this;
+    }
+
+    @Override
     public ChannelFuture register() {
         return register(newPromise());
     }
@@ -746,6 +778,56 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             }
         } else {
             deregister(promise);
+        }
+    }
+
+    @Override
+    public ChannelFuture shutdown(ChannelShutdownType type, ChannelPromise promise) {
+        ObjectUtil.checkNotNull(type, "type");
+
+        if (isNotValidPromise(promise)) {
+            // cancelled
+            return promise;
+        }
+
+        final AbstractChannelHandlerContext next = findContextOutbound(MASK_SHUTDOWN);
+        EventExecutor executor = next.executor();
+        if (executor.inEventLoop()) {
+            next.invokeShutdown(type, promise);
+        } else {
+            safeExecute(executor, new Runnable() {
+                @Override
+                public void run() {
+                    next.invokeShutdown(type, promise);
+                }
+            }, promise, null, false);
+        }
+
+        return promise;
+    }
+
+    private void invokeShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        if (invokeHandler()) {
+            try {
+                // DON'T CHANGE
+                // Duplex handlers implements both out/in interfaces causing a scalability issue
+                // see https://bugs.openjdk.org/browse/JDK-8180450
+                final ChannelHandler handler = handler();
+                final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
+                if (handler == headContext) {
+                    headContext.shutdown(this, type, promise);
+                } else if (handler instanceof ChannelDuplexHandler) {
+                    ((ChannelDuplexHandler) handler).shutdown(this, type, promise);
+                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
+                    ((ChannelOutboundHandlerAdapter) handler).shutdown(this, type, promise);
+                } else {
+                    ((ChannelOutboundHandler) handler).shutdown(this, type, promise);
+                }
+            } catch (Throwable t) {
+                notifyOutboundHandlerException(t, promise);
+            }
+        } else {
+            shutdown(type, promise);
         }
     }
 

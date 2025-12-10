@@ -525,6 +525,9 @@ public interface ChannelPipeline
     ChannelPipeline fireChannelWritabilityChanged();
 
     @Override
+    ChannelPipeline fireChannelShutdown(ChannelShutdownType type);
+
+    @Override
     ChannelPipeline flush();
 
     @Override

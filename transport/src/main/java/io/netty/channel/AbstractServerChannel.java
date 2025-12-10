@@ -23,6 +23,7 @@ import java.net.SocketAddress;
  * <ul>
  * <li>{@link #connect(SocketAddress, ChannelPromise)}</li>
  * <li>{@link #disconnect(ChannelPromise)}</li>
+ * <li>{@link #shutdown(ChannelShutdownType, ChannelPromise)}</li>
  * <li>{@link #write(Object, ChannelPromise)}</li>
  * <li>{@link #flush()}</li>
  * <li>and the shortcut methods which calls the methods mentioned above
@@ -54,6 +55,11 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     @Override
     protected SocketAddress remoteAddress0() {
         return null;
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

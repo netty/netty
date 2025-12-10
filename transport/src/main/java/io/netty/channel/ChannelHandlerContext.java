@@ -132,6 +132,9 @@ public interface ChannelHandlerContext extends ChannelInboundInvoker, ChannelOut
     ChannelHandlerContext fireChannelReadComplete();
 
     @Override
+    ChannelHandlerContext fireChannelShutdown(ChannelShutdownType type);
+
+    @Override
     ChannelHandlerContext fireChannelWritabilityChanged();
 
     @Override

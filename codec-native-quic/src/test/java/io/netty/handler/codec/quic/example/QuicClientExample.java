@@ -22,10 +22,11 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.codec.quic.QuicChannel;
@@ -88,8 +89,8 @@ public final class QuicClientExample {
                         }
 
                         @Override
-                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                            if (evt == ChannelInputShutdownReadComplete.INSTANCE) {
+                        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+                            if (type.direction() == ChannelShutdownDirection.Inbound) {
                                 // Close the connection once the remote peer did send the FIN for this stream.
                                 ((QuicChannel) ctx.channel().parent()).close(true, 0,
                                         ctx.alloc().directBuffer(16)

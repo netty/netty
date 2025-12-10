@@ -18,6 +18,7 @@ package io.netty.handler.codec.http3;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 
 import java.net.SocketAddress;
 
@@ -88,5 +89,10 @@ class Http3FrameTypeDuplexValidationHandler<T extends Http3Frame> extends Http3F
     @Override
     public void read(ChannelHandlerContext ctx) {
         ctx.read();
+    }
+
+    @Override
+    public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, ChannelPromise promise) {
+        ctx.shutdown(type, promise);
     }
 }

@@ -734,6 +734,20 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         return this;
     }
 
+    @Override
+    public final ChannelPipeline fireChannelShutdown(ChannelShutdownType type) {
+        if (head.executor().inEventLoop()) {
+            if (head.invokeHandler()) {
+                head.channelShutdown(head, type);
+            } else {
+                head.fireChannelShutdown(type);
+            }
+        } else {
+            head.executor().execute(() -> head.fireChannelShutdown(type));
+        }
+        return this;
+    }
+
     /**
      * Removes all handlers from the pipeline one by one from tail (exclusive) to head (exclusive) to trigger
      * handlerRemoved().
@@ -1004,6 +1018,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
+    public final ChannelFuture shutdown(ChannelShutdownType type, ChannelPromise promise) {
+        return tail.shutdown(type, promise);
+    }
+
+    @Override
     public final ChannelPromise newPromise() {
         return new DefaultChannelPromise(channel);
     }
@@ -1187,6 +1206,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     /**
+     * Called once a shutdown event hit the end of the {@link ChannelPipeline} without been handled by the user
+     * in {@link ChannelInboundHandler#channelShutdown(ChannelHandlerContext, ChannelShutdownType)}.
+     */
+    protected void onUnhandledInboundChannelShutdown(ChannelShutdownType type) {
+    }
+
+    /**
      * Called once the {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)} event hit
      * the end of the {@link ChannelPipeline}.
      */
@@ -1259,6 +1285,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void channelReadComplete(ChannelHandlerContext ctx) {
             onUnhandledInboundChannelReadComplete();
+        }
+
+        @Override
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            onUnhandledInboundChannelShutdown(type);
         }
     }
 
@@ -1357,6 +1388,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
 
         @Override
+        public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, ChannelPromise promise) {
+            transport.shutdown(type, promise);
+        }
+
+        @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
             ctx.fireExceptionCaught(cause);
         }
@@ -1415,6 +1451,11 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void channelWritabilityChanged(ChannelHandlerContext ctx) {
             ctx.fireChannelWritabilityChanged();
+        }
+
+        @Override
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            ctx.fireChannelShutdown(type);
         }
     }
 

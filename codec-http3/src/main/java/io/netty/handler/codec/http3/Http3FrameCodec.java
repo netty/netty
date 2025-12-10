@@ -21,6 +21,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.PendingWriteQueue;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.quic.QuicStreamChannel;
@@ -648,6 +649,11 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
         } else {
             ctx.flush();
         }
+    }
+
+    @Override
+    public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, ChannelPromise promise) {
+        ctx.shutdown(type, promise);
     }
 
     private static final class ReadResumptionListener

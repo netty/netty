@@ -17,7 +17,8 @@ package io.netty.handler.codec.http3;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.socket.ChannelInputShutdownEvent;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.util.AsciiString;
@@ -201,14 +202,13 @@ final class QpackEncoderHandler extends ByteToMessageDecoder {
         // and AUTO_READ.
         Http3CodecUtils.readIfNoAutoRead(ctx);
     }
-
     @Override
-    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-        if (evt instanceof ChannelInputShutdownEvent) {
+    public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+        if (type.direction() == ChannelShutdownDirection.Inbound) {
             // See https://www.rfc-editor.org/rfc/rfc9204.html#name-encoder-and-decoder-streams
             Http3CodecUtils.criticalStreamClosed(ctx);
         }
-        ctx.fireUserEventTriggered(evt);
+        ctx.fireChannelShutdown(type);
     }
 
     @Override

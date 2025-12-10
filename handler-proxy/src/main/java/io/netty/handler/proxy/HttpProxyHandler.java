@@ -23,6 +23,7 @@ import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -344,6 +345,16 @@ public final class HttpProxyHandler extends ProxyHandler {
         @Override
         public void flush(ChannelHandlerContext ctx) {
             codec.flush(ctx);
+        }
+
+        @Override
+        public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
+            ctx.fireChannelShutdown(type);
+        }
+
+        @Override
+        public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, ChannelPromise promise) {
+            codec.shutdown(ctx, type, promise);
         }
     }
 }

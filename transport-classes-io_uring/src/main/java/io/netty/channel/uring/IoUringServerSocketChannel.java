@@ -21,6 +21,7 @@ import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.IoRegistration;
@@ -115,6 +116,11 @@ public final class IoUringServerSocketChannel extends AbstractIoUringChannel imp
             acceptedAddressMemory = new AcceptedAddressMemory();
         }
         this.config = new IoUringServerSocketChannelConfig(this);
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

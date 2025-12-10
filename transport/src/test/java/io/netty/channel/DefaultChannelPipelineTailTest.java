@@ -233,6 +233,11 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
+        protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+            promise.setFailure(new UnsupportedOperationException());
+        }
+
+        @Override
         protected DefaultChannelPipeline newChannelPipeline() {
             return new MyChannelPipeline(this);
         }

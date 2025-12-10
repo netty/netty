@@ -26,6 +26,8 @@ import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownDirection;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.EventLoop;
@@ -33,8 +35,6 @@ import io.netty.channel.IoTransport;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
-import io.netty.channel.socket.ChannelInputShutdownReadComplete;
-import io.netty.channel.socket.ChannelOutputShutdownEvent;
 import io.netty.handler.codec.http2.Http2FrameCodec.DefaultHttp2FrameStream;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.util.DefaultAttributeMap;
@@ -71,13 +71,20 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     };
 
     static final Http2FrameStreamVisitor CHANNEL_INPUT_SHUTDOWN_READ_COMPLETE_VISITOR =
-            new UserEventStreamVisitor(ChannelInputShutdownReadComplete.INSTANCE);
+            new ShutdownEventVisitor(ChannelShutdownType.newInbound());
 
     static final Http2FrameStreamVisitor CHANNEL_OUTPUT_SHUTDOWN_EVENT_VISITOR =
-            new UserEventStreamVisitor(ChannelOutputShutdownEvent.INSTANCE);
+            new ShutdownEventVisitor(ChannelShutdownType.newOutbound());
 
-    static final Http2FrameStreamVisitor SSL_CLOSE_COMPLETION_EVENT_VISITOR =
-            new UserEventStreamVisitor(SslCloseCompletionEvent.SUCCESS);
+    static final Http2FrameStreamVisitor SSL_CLOSE_COMPLETION_EVENT_VISITOR = new Http2FrameStreamVisitor() {
+        @Override
+        public boolean visit(Http2FrameStream stream) {
+            final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
+                    ((DefaultHttp2FrameStream) stream).attachment;
+            childChannel.pipeline().fireUserEventTriggered(SslCloseCompletionEvent.SUCCESS);
+            return true;
+        }
+    };
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractHttp2StreamChannel.class);
 
@@ -90,19 +97,19 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     /**
      * {@link Http2FrameStreamVisitor} that fires the user event for every active stream pipeline.
      */
-    private static final class UserEventStreamVisitor implements Http2FrameStreamVisitor {
+    private static final class ShutdownEventVisitor implements Http2FrameStreamVisitor {
 
-        private final Object event;
+        private final ChannelShutdownType type;
 
-        UserEventStreamVisitor(Object event) {
-            this.event = checkNotNull(event, "event");
+        ShutdownEventVisitor(ChannelShutdownType type) {
+            this.type = checkNotNull(type, "type");
         }
 
         @Override
         public boolean visit(Http2FrameStream stream) {
             final AbstractHttp2StreamChannel childChannel = (AbstractHttp2StreamChannel)
                     ((DefaultHttp2FrameStream) stream).attachment;
-            childChannel.pipeline().fireUserEventTriggered(event);
+            childChannel.pipeline().fireChannelShutdown(type);
             return true;
         }
     }
@@ -209,6 +216,24 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     /** {@code true} after the first HEADERS frame has been written **/
     private boolean firstFrameWritten;
     private boolean readCompletePending;
+
+    private volatile boolean receivedEndOfStream;
+    private volatile boolean sentEndOfStream;
+
+    @Override
+    public boolean isShutdown(ChannelShutdownDirection direction) {
+        if (!isActive()) {
+            return false;
+        }
+        switch (direction) {
+            case Outbound:
+                return sentEndOfStream;
+            case Inbound:
+                return receivedEndOfStream;
+            default:
+                return false;
+        }
+    }
 
     AbstractHttp2StreamChannel(DefaultHttp2FrameStream stream, int id, ChannelHandler inboundHandler) {
         this.stream = stream;
@@ -622,8 +647,11 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         private boolean closeInitiated;
         private boolean readEOS;
 
-        private boolean receivedEndOfStream;
-        private boolean sentEndOfStream;
+        @Override
+        public void shutdown(ChannelShutdownType type, ChannelPromise promise) {
+            // TODO: Can we do better ?
+            promise.setFailure(new UnsupportedOperationException());
+        }
 
         @Override
         public void connect(final SocketAddress remoteAddress,

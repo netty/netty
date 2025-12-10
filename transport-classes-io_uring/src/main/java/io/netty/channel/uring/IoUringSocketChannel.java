@@ -18,11 +18,10 @@ package io.netty.channel.uring;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoRegistration;
@@ -38,6 +37,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.SocketAddress;
+import java.nio.channels.NotYetConnectedException;
 import java.util.ArrayDeque;
 import java.util.Queue;
 
@@ -96,137 +96,6 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     }
 
     @Override
-    public ChannelFuture shutdown() {
-        return shutdown(newPromise());
-    }
-
-    @Override
-    public ChannelFuture shutdown(final ChannelPromise promise) {
-        ChannelFuture shutdownOutputFuture = shutdownOutput();
-        if (shutdownOutputFuture.isDone()) {
-            shutdownOutputDone(shutdownOutputFuture, promise);
-        } else {
-            shutdownOutputFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(final ChannelFuture shutdownOutputFuture) {
-                    shutdownOutputDone(shutdownOutputFuture, promise);
-                }
-            });
-        }
-        return promise;
-    }
-
-    @Override
-    protected void doShutdownOutput(ChannelPromise promise) {
-        try {
-            socket.shutdown(false, true);
-        } catch (Throwable cause) {
-            promise.setFailure(cause);
-            return;
-        }
-        promise.setSuccess();
-    }
-
-    private void shutdownInput0(final ChannelPromise promise) {
-        try {
-            socket.shutdown(true, false);
-            promise.setSuccess();
-        } catch (Throwable cause) {
-            promise.setFailure(cause);
-        }
-    }
-
-    @Override
-    public boolean isOutputShutdown() {
-        return socket.isOutputShutdown();
-    }
-
-    @Override
-    public boolean isInputShutdown() {
-        return socket.isInputShutdown();
-    }
-
-    @Override
-    public boolean isShutdown() {
-        return socket.isShutdown();
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput() {
-        return shutdownOutput(newPromise());
-    }
-
-    @Override
-    public ChannelFuture shutdownOutput(final ChannelPromise promise) {
-        EventLoop loop = executor();
-        if (loop.inEventLoop()) {
-            shutdownOutput0(promise);
-        } else {
-            loop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    shutdownOutput0(promise);
-                }
-            });
-        }
-
-        return promise;
-    }
-
-    @Override
-    public ChannelFuture shutdownInput() {
-        return shutdownInput(newPromise());
-    }
-
-    @Override
-    public ChannelFuture shutdownInput(final ChannelPromise promise) {
-        EventLoop loop = executor();
-        if (loop.inEventLoop()) {
-            shutdownInput0(promise);
-        } else {
-            loop.execute(new Runnable() {
-                @Override
-                public void run() {
-                    shutdownInput0(promise);
-                }
-            });
-        }
-        return promise;
-    }
-
-    private void shutdownOutputDone(final ChannelFuture shutdownOutputFuture, final ChannelPromise promise) {
-        ChannelFuture shutdownInputFuture = shutdownInput();
-        if (shutdownInputFuture.isDone()) {
-            shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
-        } else {
-            shutdownInputFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture shutdownInputFuture) {
-                    shutdownDone(shutdownOutputFuture, shutdownInputFuture, promise);
-                }
-            });
-        }
-    }
-
-    private static void shutdownDone(ChannelFuture shutdownOutputFuture,
-                                     ChannelFuture shutdownInputFuture,
-                                     ChannelPromise promise) {
-        Throwable shutdownOutputCause = shutdownOutputFuture.cause();
-        Throwable shutdownInputCause = shutdownInputFuture.cause();
-        if (shutdownOutputCause != null) {
-            if (shutdownInputCause != null) {
-                logger.info("Exception suppressed because a previous exception occurred.",
-                        shutdownInputCause);
-            }
-            promise.setFailure(shutdownOutputCause);
-        } else if (shutdownInputCause != null) {
-            promise.setFailure(shutdownInputCause);
-        } else {
-            promise.setSuccess();
-        }
-    }
-
-    @Override
     protected void doRegister(ChannelPromise promise) {
         ChannelPromise registerPromise = this.newPromise();
         // Ensure that the buffer group is properly set before channel::read
@@ -251,6 +120,34 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
         });
 
         super.doRegister(registerPromise);
+    }
+
+    @Override
+    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        if (type.data() != null) {
+            promise.setFailure(new IllegalArgumentException("ChannelShutdownType with data is not supported: " + type));
+            return;
+        }
+        boolean read = false;
+        boolean write = false;
+        switch (type.direction()) {
+            case Outbound:
+                write = true;
+                break;
+            case Inbound:
+                read = true;
+                break;
+        }
+        try {
+            socket.shutdown(read, write);
+        } catch (NotYetConnectedException ex) {
+            // We attempted to shutdown and failed, which means the input has already effectively been
+            // shutdown.
+        } catch (Throwable cause) {
+            promise.setFailure(cause);
+            return;
+        }
+        promise.setSuccess();
     }
 
     @Override
