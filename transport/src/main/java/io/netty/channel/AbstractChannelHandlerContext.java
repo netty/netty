@@ -16,8 +16,6 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.Attribute;
-import io.netty.util.AttributeKey;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
@@ -352,14 +350,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     // Duplex handlers implements both out/in interfaces causing a scalability issue
                     // see https://bugs.openjdk.org/browse/JDK-8180450
                     final ChannelHandler handler = next.handler();
-                    final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                    if (handler == headContext) {
-                        headContext.channelShutdown(next, type);
-                    } else if (handler instanceof ChannelDuplexHandler) {
-                        ((ChannelDuplexHandler) handler).channelShutdown(next, type);
-                    } else {
-                        ((ChannelInboundHandler) handler).channelShutdown(next, type);
-                    }
+                    ((ChannelInboundHandler) handler).channelShutdown(next, type);
                 } catch (Throwable t) {
                     next.invokeExceptionCaught(t);
                 }
@@ -657,20 +648,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void invokeShutdown(ChannelShutdownType type, ChannelPromise promise) {
         if (invokeHandler()) {
             try {
-                // DON'T CHANGE
-                // Duplex handlers implements both out/in interfaces causing a scalability issue
-                // see https://bugs.openjdk.org/browse/JDK-8180450
                 final ChannelHandler handler = handler();
-                final DefaultChannelPipeline.HeadContext headContext = pipeline.head;
-                if (handler == headContext) {
-                    headContext.shutdown(this, type, promise);
-                } else if (handler instanceof ChannelDuplexHandler) {
-                    ((ChannelDuplexHandler) handler).shutdown(this, type, promise);
-                } else if (handler instanceof ChannelOutboundHandlerAdapter) {
-                    ((ChannelOutboundHandlerAdapter) handler).shutdown(this, type, promise);
-                } else {
-                    ((ChannelOutboundHandler) handler).shutdown(this, type, promise);
-                }
+                ((ChannelOutboundHandler) handler).shutdown(this, type, promise);
             } catch (Throwable t) {
                 notifyOutboundHandlerException(t, promise);
             }
