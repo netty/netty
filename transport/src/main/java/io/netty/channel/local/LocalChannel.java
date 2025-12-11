@@ -427,6 +427,8 @@ public class LocalChannel extends AbstractChannel {
     }
 
     private void runFinishTask0() {
+        // If the peer is writing, we must wait until after reads are completed for that peer before we can read. So
+        // we keep track of the task, and coordinate later that our read can't happen until the peer is done.
         if (writeInProgress) {
             finishReadFuture = eventLoop().submit(finishReadTask);
         } else {
@@ -435,8 +437,6 @@ public class LocalChannel extends AbstractChannel {
     }
 
     private void runFinishPeerReadTask(final LocalChannel peer) {
-        // If the peer is writing, we must wait until after reads are completed for that peer before we can read. So
-        // we keep track of the task, and coordinate later that our read can't happen until the peer is done.
         try {
             peer.runFinishTask0();
         } catch (Throwable cause) {
