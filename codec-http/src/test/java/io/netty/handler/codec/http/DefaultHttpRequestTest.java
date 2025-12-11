@@ -17,12 +17,88 @@ package io.netty.handler.codec.http;
 
 import io.netty.util.AsciiString;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class DefaultHttpRequestTest {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "http://localhost/\r\n",
+            "/r\r\n?q=1",
+            "http://localhost/\r\n?q=1",
+            "/r\r\n/?q=1",
+            "http://localhost/\r\n/?q=1",
+            "/r\r\n",
+            "http://localhost/ HTTP/1.1\r\n\r\nPOST /p HTTP/1.1\r\n\r\n",
+            "/r HTTP/1.1\r\n\r\nPOST /p HTTP/1.1\r\n\r\n",
+            "/ path",
+            "/path ",
+            " /path",
+            "http://localhost/ ",
+            " http://localhost/",
+            "http://local host/",
+    })
+    void constructorMustRejectIllegalUrisByDefault(String uri) {
+        assertThrows(IllegalArgumentException.class, () ->
+                new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, uri));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "GET ",
+            " GET",
+            "G ET",
+            " GET ",
+            "GET\r",
+            "GET\n",
+            "GET\r\n",
+            "GE\rT",
+            "GE\nT",
+            "GE\r\nT",
+            "\rGET",
+            "\nGET",
+            "\r\nGET",
+            " \r\nGET",
+            "\r \nGET",
+            "\r\n GET",
+            "\r\nGET ",
+            "\nGET ",
+            "\rGET ",
+            "\r GET",
+            " \rGET",
+            "\nGET ",
+            "\n GET",
+            " \nGET",
+            "GET \n",
+            "GET \r",
+            " GET\r",
+            " GET\r",
+            "GET \n",
+            " GET\n",
+            " GET\n",
+            "GE\nT ",
+            "GE\rT ",
+            " GE\rT",
+            " GE\rT",
+            "GE\nT ",
+            " GE\nT",
+            " GE\nT",
+    })
+    void constructorMustRejectIllegalHttpMethodByDefault(String method) {
+        assertThrows(IllegalArgumentException.class, () -> {
+            new DefaultHttpRequest(HttpVersion.HTTP_1_0, new HttpMethod("GET") {
+                @Override
+                public AsciiString asciiName() {
+                    return new AsciiString(method);
+                }
+            }, "/");
+        });
+    }
 
     @Test
     public void testHeaderRemoval() {

@@ -75,9 +75,25 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
      * @param headers           the Headers for this Request
      */
     public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, HttpHeaders headers) {
+        this(httpVersion, method, uri, headers, true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param httpVersion       the HTTP version of the request
+     * @param method            the HTTP method of the request
+     * @param uri               the URI or path of the request
+     * @param headers           the Headers for this Request
+     */
+    public DefaultHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri, HttpHeaders headers,
+                              boolean validateRequestLine) {
         super(httpVersion, headers);
         this.method = checkNotNull(method, "method");
         this.uri = checkNotNull(uri, "uri");
+        if (validateRequestLine) {
+            HttpUtil.validateRequestLineTokens(httpVersion, method, uri);
+        }
     }
 
     @Override
