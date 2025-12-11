@@ -137,7 +137,7 @@ static int domainSocketPathLength(const struct sockaddr_un* s, const socklen_t a
 #ifdef __linux__
     // Linux supports abstract domain sockets so we need to handle it.
     // https://man7.org/linux/man-pages/man7/unix.7.html
-    if (s->sun_path[0] == '\0') {
+    if (addrlen >= sizeof(sa_family_t) && s->sun_path[0] == '\0') {
        // This is an abstract domain socket address
        return (addrlen - sizeof(sa_family_t));
     }
