@@ -104,7 +104,7 @@ public class LinuxSocketTest {
         final Socket socket = Socket.newSocketDomain();
         try {
             socket.bind(domainSocketAddress);
-            DomainSocketAddress local = socket.localDomainSocketAddress();
+            DomainSocketAddress local = (DomainSocketAddress) socket.localAddress();
             assertEquals(domainSocketAddress, local);
             assertEquals(address, domainSocketAddress.path());
             assertEquals(address, local.path());
