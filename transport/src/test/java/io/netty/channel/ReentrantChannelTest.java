@@ -128,7 +128,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         Channel clientChannel = cb.connect(addr).sync().channel();
         clientChannel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(512, 1024));
 
-        clientChannel.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+        clientChannel.pipeline().addLast(new ChannelInboundHandler() {
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
                 if (!ctx.channel().isWritable()) {
@@ -176,7 +176,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         Channel clientChannel = cb.connect(addr).sync().channel();
 
-        clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
+        clientChannel.pipeline().addLast(new ChannelOutboundHandler() {
 
             int writeCount;
             int flushCount;
@@ -187,7 +187,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                     writeCount++;
                     ctx.channel().flush();
                 }
-                super.write(ctx, msg,  promise);
+                ctx.write(msg,  promise);
             }
 
             @Override
@@ -196,7 +196,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                     flushCount++;
                     ctx.channel().write(createTestBuf(2000));
                 }
-                super.flush(ctx);
+                ctx.flush();
             }
         });
 
@@ -233,7 +233,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         Channel clientChannel = cb.connect(addr).sync().channel();
 
-        clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
+        clientChannel.pipeline().addLast(new ChannelOutboundHandler() {
 
             @Override
             public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
@@ -243,7 +243,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                         ctx.channel().close();
                     }
                 });
-                super.write(ctx, msg, promise);
+                ctx.write(msg, promise);
                 ctx.channel().flush();
             }
         });
@@ -268,16 +268,11 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         Channel clientChannel = cb.connect(addr).sync().channel();
 
-        clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
+        clientChannel.pipeline().addLast(new ChannelOutboundHandler() {
 
             @Override
             public void flush(ChannelHandlerContext ctx) {
                 throw new IllegalStateException("intentional failure");
-            }
-
-            @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                ctx.close();
             }
         });
 
@@ -310,7 +305,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                         protected void initChannel(Channel ch) throws Exception {
                             ch.config().setAutoRead(false);
                             // first handler splits input by \n and into strings
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                     String string = ((ByteBuf) msg).toString(StandardCharsets.UTF_8);
@@ -322,7 +317,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                             });
                             // second handler buffers messages, sends them on in channelReadComplete, and acts as flow
                             // control
-                            ch.pipeline().addLast(new ChannelDuplexHandler() {
+                            class TestHandler implements ChannelInboundHandler, ChannelOutboundHandler {
                                 final Queue<Object> queue = new ArrayDeque<>();
                                 boolean demand = true;
 
@@ -359,9 +354,10 @@ public class ReentrantChannelTest extends BaseChannelTest {
                                 public void handlerAdded(ChannelHandlerContext ctx) {
                                     ctx.read();
                                 }
-                            });
+                            }
+                            ch.pipeline().addLast(new TestHandler());
                             // third handler saves incoming packets so that we can test their order
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                     received.add(msg);
@@ -369,7 +365,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                                 }
                             });
                             // final handler relieves backpressure, triggering reentrant channelReads
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                     ctx.read();
@@ -385,7 +381,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
             Channel client = new Bootstrap()
                     .group(group)
                     .channel(LocalChannel.class)
-                    .handler(new ChannelInboundHandlerAdapter())
+                    .handler(new ChannelInboundHandler() { })
                     .connect(addr).sync().channel();
 
             client.writeAndFlush(Unpooled.copiedBuffer("A\nB\nC", StandardCharsets.UTF_8)).sync();

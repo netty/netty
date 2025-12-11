@@ -34,7 +34,7 @@ public abstract class AbstractEventLoopTest {
         ServerBootstrap b = new ServerBootstrap();
         b.group(loop)
                 .channel(newChannel())
-                .childHandler(new ChannelInboundHandlerAdapter());
+                .childHandler(new ChannelInboundHandler() { });
 
         // Not close the Channel to ensure the EventLoop is still shutdown in time.
         b.bind(0).sync().channel();
@@ -44,13 +44,6 @@ public abstract class AbstractEventLoopTest {
         assertTrue(f.syncUninterruptibly().isSuccess());
         assertTrue(loop.isShutdown());
         assertTrue(loop.isTerminated());
-    }
-
-    private static final class TestChannelHandler extends ChannelDuplexHandler { }
-
-    private static final class TestChannelHandler2 extends ChannelDuplexHandler {
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception { }
     }
 
     protected abstract EventLoopGroup newEventLoopGroup();

@@ -18,13 +18,6 @@ package io.netty.channel;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Inherited;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 /**
  * Handles an I/O event or intercepts an I/O operation, and forwards it to its next handler in
  * its {@link ChannelPipeline}.
@@ -35,14 +28,6 @@ import java.lang.annotation.Target;
  * <ul>
  * <li>{@link ChannelInboundHandler} to handle inbound I/O events, and</li>
  * <li>{@link ChannelOutboundHandler} to handle outbound I/O operations.</li>
- * </ul>
- * </p>
- * <p>
- * Alternatively, the following adapter classes are provided for your convenience:
- * <ul>
- * <li>{@link ChannelInboundHandlerAdapter} to handle inbound I/O events,</li>
- * <li>{@link ChannelOutboundHandlerAdapter} to handle outbound I/O operations, and</li>
- * <li>{@link ChannelDuplexHandler} to handle both inbound and outbound events</li>
  * </ul>
  * </p>
  * <p>
@@ -178,42 +163,25 @@ import java.lang.annotation.Target;
 public interface ChannelHandler {
 
     /**
+     * Return {@code true} if the implementation is sharable and so the same instance can be added
+     * to different {@link ChannelPipeline}s.
+     */
+    default boolean isSharable() {
+        return false;
+    }
+
+    /**
      * Gets called after the {@link ChannelHandler} was added to the actual context and it's ready to handle events.
      */
-    void handlerAdded(ChannelHandlerContext ctx) throws Exception;
+    default void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+        // NOOP.
+    }
 
     /**
      * Gets called after the {@link ChannelHandler} was removed from the actual context and it doesn't handle events
      * anymore.
      */
-    void handlerRemoved(ChannelHandlerContext ctx) throws Exception;
-
-    /**
-     * Gets called if a {@link Throwable} was thrown.
-     *
-     * @deprecated if you want to handle this event you should implement {@link ChannelInboundHandler} and
-     * implement the method there.
-     */
-    @Deprecated
-    void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception;
-
-    /**
-     * Indicates that the same instance of the annotated {@link ChannelHandler}
-     * can be added to one or more {@link ChannelPipeline}s multiple times
-     * without a race condition.
-     * <p>
-     * If this annotation is not specified, you have to create a new handler
-     * instance every time you add it to a pipeline because it has unshared
-     * state such as member variables.
-     * <p>
-     * This annotation is provided for documentation purpose, just like
-     * <a href="http://www.javaconcurrencyinpractice.com/annotations/doc/">the JCIP annotations</a>.
-     */
-    @Inherited
-    @Documented
-    @Target(ElementType.TYPE)
-    @Retention(RetentionPolicy.RUNTIME)
-    @interface Sharable {
-        // no value
+    default void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
+        // NOOP
     }
 }

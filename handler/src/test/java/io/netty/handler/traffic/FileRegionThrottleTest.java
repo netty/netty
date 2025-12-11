@@ -22,7 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoopGroup;
@@ -121,7 +121,7 @@ public class FileRegionThrottleTest {
         return bc.connect(server).sync();
     }
 
-    private static final class MessageDecoder extends ChannelInboundHandlerAdapter {
+    private static final class MessageDecoder implements ChannelInboundHandler {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
             if (msg instanceof ByteBuf) {
@@ -136,7 +136,7 @@ public class FileRegionThrottleTest {
         }
     }
 
-    private static final class ReadHandler extends ChannelInboundHandlerAdapter {
+    private static final class ReadHandler implements ChannelInboundHandler {
         private long bytesTransferred;
         private final CountDownLatch latch;
 

@@ -17,7 +17,6 @@ package io.netty.example.stomp.websocket;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.DecoderResult;
@@ -36,11 +35,15 @@ import java.util.concurrent.ConcurrentMap;
 
 import static io.netty.handler.codec.stomp.StompHeaders.*;
 
-@Sharable
 public class StompChatHandler extends SimpleChannelInboundHandler<StompFrame> {
 
     private final ConcurrentMap<String, Set<StompSubscription>> chatDestinations =
             new ConcurrentHashMap<String, Set<StompSubscription>>();
+
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
 
     @Override
     protected void channelRead0(ChannelHandlerContext ctx, StompFrame inboundFrame) throws Exception {

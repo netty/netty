@@ -18,9 +18,8 @@ package io.netty.bootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
@@ -62,8 +61,8 @@ public class ServerBootstrapTest {
                     .group(group)
                     .channelFactory((e, c) -> new TestServerChannel(e))
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
-                    .handler(new ChannelInboundHandlerAdapter())
-                    .childHandler(new ChannelInboundHandlerAdapter())
+                    .handler(new ChannelInboundHandler() { })
+                    .childHandler(new ChannelInboundHandler() { })
                     .register();
 
             assertThrows(UnsupportedOperationException.class, new Executable() {
@@ -88,8 +87,8 @@ public class ServerBootstrapTest {
             ServerBootstrap sb = new ServerBootstrap();
             sb.channel(LocalServerChannel.class)
               .group(group)
-              .childHandler(new ChannelInboundHandlerAdapter())
-              .handler(new ChannelHandlerAdapter() {
+              .childHandler(new ChannelInboundHandler() { })
+              .handler(new ChannelHandler() {
                   @Override
                   public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                       try {
@@ -126,17 +125,16 @@ public class ServerBootstrapTest {
         final CountDownLatch readLatch = new CountDownLatch(1);
         final CountDownLatch initLatch = new CountDownLatch(1);
 
-        final ChannelHandler handler = new ChannelInboundHandlerAdapter() {
+        final ChannelHandler handler = new ChannelInboundHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                 initLatch.countDown();
-                super.handlerAdded(ctx);
             }
 
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 readLatch.countDown();
-                super.channelRead(ctx, msg);
+                ctx.fireChannelRead(msg);
             }
         };
 
@@ -147,7 +145,7 @@ public class ServerBootstrapTest {
             ServerBootstrap sb = new ServerBootstrap();
             sb.channel(LocalServerChannel.class)
                     .group(group)
-                    .childHandler(new ChannelInboundHandlerAdapter());
+                    .childHandler(new ChannelInboundHandler() { });
             if (channelInitializer) {
                 sb.handler(new ChannelInitializer<Channel>() {
                     @Override
@@ -162,7 +160,7 @@ public class ServerBootstrapTest {
             Bootstrap cb = new Bootstrap();
             cb.group(group)
                     .channel(LocalChannel.class)
-                    .handler(new ChannelInboundHandlerAdapter());
+                    .handler(new ChannelInboundHandler() { });
 
             sch = sb.bind(addr).syncUninterruptibly().channel();
 
@@ -206,7 +204,7 @@ public class ServerBootstrapTest {
         Bootstrap cb = new Bootstrap();
         cb.group(group)
                 .channel(LocalChannel.class)
-                .handler(new ChannelInboundHandlerAdapter());
+                .handler(new ChannelInboundHandler() { });
         Channel clientChannel = cb.connect(addr).syncUninterruptibly().channel();
         serverChannel.close().syncUninterruptibly();
         clientChannel.close().syncUninterruptibly();
@@ -254,7 +252,7 @@ public class ServerBootstrapTest {
         Bootstrap cb = new Bootstrap();
         cb.group(group)
                 .channel(LocalChannel.class)
-                .handler(new ChannelInboundHandlerAdapter());
+                .handler(new ChannelInboundHandler() { });
         Channel clientChannel = cb.connect(addr).syncUninterruptibly().channel();
 
         assertSame(clientChannel, StubChannelInitializerExtension.lastSeenClientChannel.get());

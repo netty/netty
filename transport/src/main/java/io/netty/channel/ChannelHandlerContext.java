@@ -42,11 +42,11 @@ import io.netty.util.AttributeKey;
  * You can keep the {@link ChannelHandlerContext} for later use, such as
  * triggering an event outside the handler methods, even from a different thread.
  * <pre>
- * public class MyHandler extends {@link ChannelDuplexHandler} {
+ * public class MyHandler extends {@link ChannelHandler} {
  *
  *     <b>private {@link ChannelHandlerContext} ctx;</b>
  *
- *     public void beforeAdd({@link ChannelHandlerContext} ctx) {
+ *     public void handlerAdded({@link ChannelHandlerContext} ctx) {
  *         <b>this.ctx = ctx;</b>
  *     }
  *
@@ -72,7 +72,7 @@ import io.netty.util.AttributeKey;
  * the single instance can be invoked with different
  * {@link ChannelHandlerContext}s if it is added to one or more {@link ChannelPipeline}s more than once.
  * Also note that a {@link ChannelHandler} that is supposed to be added to multiple {@link ChannelPipeline}s should
- * be marked as {@link io.netty.channel.ChannelHandler.Sharable}.
+ * be return {@code true} via {@link ChannelHandler#isSharable()}.
  *
  * <h3>Additional resources worth reading</h3>
  * <p>

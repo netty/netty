@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -41,8 +40,7 @@ public class Http2MultiplexCodecBuilder
     }
 
     private static ChannelHandler checkSharable(ChannelHandler handler) {
-        if (handler instanceof ChannelHandlerAdapter && !((ChannelHandlerAdapter) handler).isSharable() &&
-                !handler.getClass().isAnnotationPresent(ChannelHandler.Sharable.class)) {
+        if (!handler.isSharable()) {
             throw new IllegalArgumentException("The handler must be Sharable");
         }
         return handler;
@@ -58,7 +56,7 @@ public class Http2MultiplexCodecBuilder
      * Creates a builder for an HTTP/2 client.
      *
      * @param childHandler the handler added to channels for remotely-created streams. It must be
-     *     {@link ChannelHandler.Sharable}.
+     *     sharable.
      */
     public static Http2MultiplexCodecBuilder forClient(ChannelHandler childHandler) {
         return new Http2MultiplexCodecBuilder(false, childHandler);
@@ -68,7 +66,7 @@ public class Http2MultiplexCodecBuilder
      * Creates a builder for an HTTP/2 server.
      *
      * @param childHandler the handler added to channels for remotely-created streams. It must be
-     *     {@link ChannelHandler.Sharable}.
+     *     sharable.
      */
     public static Http2MultiplexCodecBuilder forServer(ChannelHandler childHandler) {
         return new Http2MultiplexCodecBuilder(true, childHandler);

@@ -20,9 +20,10 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 import io.netty.util.Attribute;
@@ -48,7 +49,7 @@ import java.util.concurrent.TimeUnit;
  * or start the monitoring, to change the checkInterval directly, or to have access to its values.</li>
  * </ul>
  */
-public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler {
+public abstract class AbstractTrafficShapingHandler implements ChannelInboundHandler, ChannelOutboundHandler {
     private static final InternalLogger logger =
             InternalLoggerFactory.getInstance(AbstractTrafficShapingHandler.class);
     /**
@@ -512,7 +513,6 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
             //release the reopen task
             channel.attr(REOPEN_TASK).set(null);
         }
-        super.handlerRemoved(ctx);
     }
 
     /**
@@ -580,7 +580,7 @@ public abstract class AbstractTrafficShapingHandler extends ChannelDuplexHandler
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
         setUserDefinedWritability(ctx, true);
-        super.channelRegistered(ctx);
+        ctx.fireChannelRegistered();
     }
 
     void setUserDefinedWritability(ChannelHandlerContext ctx, boolean writable) {

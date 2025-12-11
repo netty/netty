@@ -21,7 +21,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
@@ -66,7 +66,7 @@ public final class QuicClientExample {
                     .bind(0).sync().channel();
 
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
-                    .streamHandler(new ChannelInboundHandlerAdapter() {
+                    .streamHandler(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
                             // As we did not allow any remote initiated streams we will never see this method called.
@@ -80,7 +80,7 @@ public final class QuicClientExample {
                     .get();
 
             QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
-                    new ChannelInboundHandlerAdapter() {
+                    new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) {
                             ByteBuf byteBuf = (ByteBuf) msg;

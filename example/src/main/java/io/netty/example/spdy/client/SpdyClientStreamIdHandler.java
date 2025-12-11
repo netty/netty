@@ -16,7 +16,7 @@
 package io.netty.example.spdy.client;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.HttpMessage;
 import io.netty.handler.codec.spdy.SpdyHttpHeaders;
@@ -25,7 +25,7 @@ import io.netty.handler.codec.spdy.SpdyHttpHeaders.Names;
 /**
  * Adds a unique client stream ID to the SPDY header. Client stream IDs MUST be odd.
  */
-public class SpdyClientStreamIdHandler extends ChannelOutboundHandlerAdapter {
+public class SpdyClientStreamIdHandler implements ChannelOutboundHandler {
 
     private int currentStreamId = 1;
 

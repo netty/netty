@@ -19,12 +19,12 @@ package io.netty.testsuite_jpms.test;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioIoHandler;
@@ -72,7 +72,7 @@ public class CodecHttp2Test {
         serverBootstrap.childHandler(new ChannelInitializer<>() {
             @Override
             protected void initChannel(Channel ch) {
-                ch.pipeline().addLast(Http2FrameCodecBuilder.forServer().build(), new ChannelDuplexHandler() {
+                ch.pipeline().addLast(Http2FrameCodecBuilder.forServer().build(), new ChannelInboundHandler() {
                     @Override
                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                         if (msg instanceof Http2HeadersFrame) {
@@ -86,7 +86,7 @@ public class CodecHttp2Test {
                                 ctx.write(new DefaultHttp2DataFrame(body, true).stream(stream));
                             }
                         } else {
-                            super.channelRead(ctx, msg);
+                            ctx.fireChannelRead(msg);
                         }
                     }
                 });

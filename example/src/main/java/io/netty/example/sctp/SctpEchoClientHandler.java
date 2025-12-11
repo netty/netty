@@ -18,7 +18,7 @@ package io.netty.example.sctp;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.sctp.SctpMessage;
 
 /**
@@ -26,7 +26,7 @@ import io.netty.channel.sctp.SctpMessage;
  * traffic between the echo client and server by sending the first message to
  * the server.
  */
-public class SctpEchoClientHandler extends ChannelInboundHandlerAdapter {
+public class SctpEchoClientHandler implements ChannelInboundHandler {
 
     private final ByteBuf firstMessage;
 

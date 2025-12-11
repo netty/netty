@@ -272,7 +272,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void testWritability() {
         final StringBuilder buf = new StringBuilder();
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandler() {
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 buf.append(ctx.channel().isWritable());
@@ -308,7 +308,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void testUserDefinedWritability() {
         final StringBuilder buf = new StringBuilder();
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandler() {
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 buf.append(ctx.channel().isWritable());
@@ -341,7 +341,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void testUserDefinedWritability2() {
         final StringBuilder buf = new StringBuilder();
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandler() {
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 buf.append(ctx.channel().isWritable());
@@ -380,7 +380,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void testMixedWritability() {
         final StringBuilder buf = new StringBuilder();
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandlerAdapter() {
+        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandler() {
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) {
                 buf.append(ctx.channel().isWritable());

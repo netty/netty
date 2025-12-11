@@ -16,7 +16,7 @@
 package io.netty.example.mqtt.heartBeat;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.mqtt.MqttConnectMessage;
 import io.netty.handler.codec.mqtt.MqttConnectPayload;
 import io.netty.handler.codec.mqtt.MqttConnectVariableHeader;
@@ -28,7 +28,7 @@ import io.netty.handler.codec.mqtt.MqttProperties;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
 
-public class MqttHeartBeatClientHandler extends ChannelInboundHandlerAdapter {
+public class MqttHeartBeatClientHandler implements ChannelInboundHandler {
 
     private static final String PROTOCOL_NAME_MQTT_3_1_1 = "MQTT";
     private static final int PROTOCOL_VERSION_MQTT_3_1_1 = 4;
@@ -77,7 +77,7 @@ public class MqttHeartBeatClientHandler extends ChannelInboundHandlerAdapter {
             ctx.writeAndFlush(pingreqMessage);
             System.out.println("Sent PINGREQ");
         } else {
-            super.userEventTriggered(ctx, evt);
+            ctx.fireUserEventTriggered(evt);
         }
     }
 

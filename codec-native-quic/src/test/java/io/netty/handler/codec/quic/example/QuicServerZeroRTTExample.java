@@ -23,7 +23,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -65,7 +65,7 @@ public final class QuicServerZeroRTTExample {
                 // one.
                 .tokenHandler(null)
                 // ChannelHandler that is added into QuicChannel pipeline.
-                .handler(new ChannelInboundHandlerAdapter() {
+                .handler(new ChannelInboundHandler() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) {
                         QuicChannel channel = (QuicChannel) ctx.channel();
@@ -90,7 +90,7 @@ public final class QuicServerZeroRTTExample {
                     protected void initChannel(QuicStreamChannel ch)  {
                         // Add a LineBasedFrameDecoder here as we just want to do some simple HTTP 0.9 handling.
                         ch.pipeline().addLast(new LineBasedFrameDecoder(1024))
-                                .addLast(new ChannelInboundHandlerAdapter() {
+                                .addLast(new ChannelInboundHandler() {
                             @Override
                             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                                 ByteBuf byteBuf = (ByteBuf) msg;

@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.AsciiString;
 import org.jetbrains.annotations.Nullable;
@@ -509,7 +509,7 @@ public class QpackEncoderDecoderTest {
                 is(receivedCount == 0 ? 0 : receivedCount % (2 * maxEntries) + 1));
     }
 
-    private static final class ForwardWriteToReadOnOtherHandler extends ChannelOutboundHandlerAdapter {
+    private static final class ForwardWriteToReadOnOtherHandler implements ChannelOutboundHandler {
 
         private final ChannelInboundHandler other;
         private final BlockingQueue<Callable<Void>> suspendQueue;
@@ -548,7 +548,7 @@ public class QpackEncoderDecoderTest {
                     promise.setSuccess();
                 }
             } else {
-                super.write(ctx, msg, promise);
+                ctx.write(msg, promise);
             }
         }
     }

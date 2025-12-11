@@ -23,7 +23,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.SocketChannel;
@@ -285,7 +284,6 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         return idSet;
     }
 
-    @Sharable
     private static class ReadAndDiscardHandler extends SimpleChannelInboundHandler<ByteBuf> {
         final AtomicReference<Throwable> exception = new AtomicReference<Throwable>();
         private final boolean server;
@@ -294,6 +292,11 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         ReadAndDiscardHandler(boolean server, boolean autoRead) {
             this.server = server;
             this.autoRead = autoRead;
+        }
+
+        @Override
+        public boolean isSharable() {
+            return true;
         }
 
         @Override

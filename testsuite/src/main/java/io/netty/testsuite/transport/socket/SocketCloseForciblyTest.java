@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SocketChannel;
 import org.junit.jupiter.api.Test;
@@ -38,16 +38,16 @@ public class SocketCloseForciblyTest extends AbstractSocketTest {
     }
 
     public void testCloseForcibly(ServerBootstrap sb, Bootstrap cb) throws Throwable {
-        sb.handler(new ChannelInboundHandlerAdapter() {
+        sb.handler(new ChannelInboundHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                 SocketChannel childChannel = (SocketChannel) msg;
                 childChannel.config().setOption(ChannelOption.SO_LINGER, 0);
                 childChannel.close(childChannel.newPromise());
             }
-        }).childHandler(new ChannelInboundHandlerAdapter());
+        }).childHandler(new ChannelInboundHandler() { });
 
-        cb.handler(new ChannelInboundHandlerAdapter());
+        cb.handler(new ChannelInboundHandler() { });
 
         Channel sc = sb.bind().sync().channel();
 

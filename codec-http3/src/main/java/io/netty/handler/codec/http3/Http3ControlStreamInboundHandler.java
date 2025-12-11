@@ -18,7 +18,7 @@ package io.netty.handler.codec.http3;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.quic.QuicChannel;
@@ -224,7 +224,7 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
         ctx.fireChannelShutdown(type);
     }
 
-    private abstract static class AbstractQPackStreamInitializer extends ChannelInboundHandlerAdapter {
+    private abstract static class AbstractQPackStreamInitializer implements ChannelInboundHandler {
         private final int streamType;
         protected final QpackAttributes attributes;
 

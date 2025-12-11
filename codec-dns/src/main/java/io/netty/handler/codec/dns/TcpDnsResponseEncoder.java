@@ -23,7 +23,6 @@ import io.netty.util.internal.ObjectUtil;
 
 import java.util.List;
 
-@ChannelHandler.Sharable
 public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResponse> {
     private final DnsRecordEncoder encoder;
 
@@ -40,6 +39,11 @@ public final class TcpDnsResponseEncoder extends MessageToMessageEncoder<DnsResp
     public TcpDnsResponseEncoder(DnsRecordEncoder encoder) {
         super(DnsResponse.class);
         this.encoder = ObjectUtil.checkNotNull(encoder, "encoder");
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

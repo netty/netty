@@ -17,7 +17,7 @@ package io.netty.handler.codec.quic;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
@@ -48,7 +48,7 @@ public class QuicTransportParametersTest extends AbstractQuicTest {
         };
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
         try {
-            server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandlerAdapter() {
+            server = QuicTestUtils.newServer(executor, serverHandler, new ChannelInboundHandler() {
                 @Override
                 public boolean isSharable() {
                     return true;
@@ -58,7 +58,7 @@ public class QuicTransportParametersTest extends AbstractQuicTest {
 
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(server.localAddress())
                     .connect().get();
             assertTransportParameters(quicChannel.peerTransportParameters());

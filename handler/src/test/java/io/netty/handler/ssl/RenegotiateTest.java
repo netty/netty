@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -63,7 +63,7 @@ public abstract class RenegotiateTest {
                             SslHandler handler = context.newHandler(ch.alloc());
                             handler.setHandshakeTimeoutMillis(0);
                             ch.pipeline().addLast(handler);
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 private boolean renegotiate;
 
                                 @Override
@@ -118,7 +118,7 @@ public abstract class RenegotiateTest {
                             SslHandler handler = clientContext.newHandler(ch.alloc());
                             handler.setHandshakeTimeoutMillis(0);
                             ch.pipeline().addLast(handler);
-                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void userEventTriggered(
                                         ChannelHandlerContext ctx, Object evt) throws Exception {

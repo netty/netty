@@ -19,7 +19,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.util.ReferenceCountUtil;
@@ -58,7 +58,7 @@ public class QuicStreamHalfClosureTest extends AbstractQuicTest {
             channel = QuicTestUtils.newClient(executor);
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(server.localAddress())
                     .connect()
                     .get();
@@ -87,7 +87,7 @@ public class QuicStreamHalfClosureTest extends AbstractQuicTest {
         public void channelActive(ChannelHandlerContext ctx) {
             super.channelActive(ctx);
             QuicChannel channel = (QuicChannel) ctx.channel();
-            channel.createStream(type, new ChannelInboundHandlerAdapter() {
+            channel.createStream(type, new ChannelInboundHandler() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx)  {
                     // Do the write and close the channel
@@ -98,7 +98,7 @@ public class QuicStreamHalfClosureTest extends AbstractQuicTest {
         }
     }
 
-    private static final class StreamHandler extends ChannelInboundHandlerAdapter {
+    private static final class StreamHandler implements ChannelInboundHandler {
         private final BlockingQueue<Integer> queue = new LinkedBlockingQueue<>();
 
         @Override

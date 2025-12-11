@@ -22,7 +22,7 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MessageSizeEstimator;
@@ -75,11 +75,10 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     static ChannelHandler[] prependChannelConsumer(Consumer<Channel> channelConsumer,
                                                    ChannelHandler... handlers) {
         ChannelHandler[] toReturn = new ChannelHandler[handlers.length + 1];
-        toReturn[0] = new ChannelInboundHandlerAdapter() {
+        toReturn[0] = new ChannelInboundHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                 channelConsumer.accept(ctx.channel());
-                super.handlerAdded(ctx);
             }
         };
         arraycopy(handlers, 0, toReturn, 1, handlers.length);

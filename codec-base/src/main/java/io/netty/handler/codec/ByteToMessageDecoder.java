@@ -21,7 +21,7 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.util.IllegalReferenceCountException;
@@ -36,7 +36,7 @@ import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.util.internal.ObjectUtil.checkPositive;
 
 /**
- * {@link ChannelInboundHandlerAdapter} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to
+ * {@link ChannelInboundHandler} which decodes bytes in a stream-like fashion from one {@link ByteBuf} to
  * another Message type.
  * <p>
  * For example here is an implementation which reads all readable bytes from
@@ -76,7 +76,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositive;
  * is not released or added to the <tt>out</tt> {@link List}. Use derived buffers like {@link ByteBuf#readSlice(int)}
  * to avoid leaking memory.
  */
-public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter {
+public abstract class ByteToMessageDecoder implements ChannelInboundHandler {
 
     /**
      * Cumulate {@link ByteBuf}s by merge them into one {@link ByteBuf}'s, using memory copies.
@@ -192,8 +192,9 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
     private int discardAfterReads = 16;
     private int numReads;
 
-    protected ByteToMessageDecoder() {
-        ensureNotSharable();
+    @Override
+    public final boolean isSharable() {
+        return false;
     }
 
     /**
@@ -403,7 +404,7 @@ public abstract class ByteToMessageDecoder extends ChannelInboundHandlerAdapter 
             channelInputClosed(ctx, false);
         }
 
-        super.channelShutdown(ctx, type);
+        ctx.fireChannelShutdown(type);
     }
 
     private void channelInputClosed(ChannelHandlerContext ctx, boolean callChannelInactive) {

@@ -20,7 +20,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutputShutdownException;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
@@ -71,7 +71,7 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
             final Promise<Channel> streamPromise = ImmediateEventExecutor.INSTANCE.newPromise();
             QuicChannelValidationHandler serverHandler = new StreamCreationHandler(type, halfClose, streamPromise);
             server = QuicTestUtils.newServer(executor, serverHandler,
-                    new ChannelInboundHandlerAdapter());
+                    new ChannelInboundHandler() { });
             channel = QuicTestUtils.newClient(executor);
 
             QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
@@ -140,7 +140,7 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
             StreamCreationHandler creationHandler = new StreamCreationHandler(type, halfClose, streamPromise);
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(creationHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(server.localAddress())
                     .connect()
                     .get();
@@ -195,14 +195,14 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
         Channel channel = null;
         try {
             final Promise<Channel> streamPromise = ImmediateEventExecutor.INSTANCE.newPromise();
-            server = QuicTestUtils.newServer(executor, new ChannelInboundHandlerAdapter(), new StreamHandler());
+            server = QuicTestUtils.newServer(executor, new ChannelInboundHandler() { }, new StreamHandler());
             channel = QuicTestUtils.newClient(executor);
 
             StreamCreationAndTearDownHandler creationHandler =
                     new StreamCreationAndTearDownHandler(type, halfClose, streamPromise);
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(creationHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(server.localAddress())
                     .connect()
                     .get();
@@ -241,7 +241,7 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
         public void channelActive(ChannelHandlerContext ctx) {
             super.channelActive(ctx);
             QuicChannel channel = (QuicChannel) ctx.channel();
-            channel.createStream(type, new ChannelInboundHandlerAdapter() {
+            channel.createStream(type, new ChannelInboundHandler() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx)  {
                     final ChannelFuture future;
@@ -275,7 +275,7 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
         public void channelActive(ChannelHandlerContext ctx) {
             super.channelActive(ctx);
             QuicChannel channel = (QuicChannel) ctx.channel();
-            channel.createStream(type, new ChannelInboundHandlerAdapter() {
+            channel.createStream(type, new ChannelInboundHandler() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx)  {
                     streamPromise.trySuccess(ctx.channel());
@@ -289,7 +289,7 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
         }
     }
 
-    private static final class StreamHandler extends ChannelInboundHandlerAdapter {
+    private static final class StreamHandler implements ChannelInboundHandler {
 
         @Override
         public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {

@@ -17,7 +17,6 @@ package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.AddressedEnvelope;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.MessageToMessageEncoder;
@@ -31,7 +30,6 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
  * Encodes a {@link DatagramDnsResponse} (or an {@link AddressedEnvelope} of {@link DnsResponse}} into a
  * {@link DatagramPacket}.
  */
-@ChannelHandler.Sharable
 public class DatagramDnsResponseEncoder
     extends MessageToMessageEncoder<AddressedEnvelope<DnsResponse, InetSocketAddress>> {
 
@@ -49,6 +47,11 @@ public class DatagramDnsResponseEncoder
      */
     public DatagramDnsResponseEncoder(DnsRecordEncoder recordEncoder) {
         this.recordEncoder = checkNotNull(recordEncoder, "recordEncoder");
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

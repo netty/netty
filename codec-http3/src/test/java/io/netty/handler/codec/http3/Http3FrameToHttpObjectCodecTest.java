@@ -23,9 +23,9 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
@@ -755,7 +755,7 @@ public class Http3FrameToHttpObjectCodecTest {
 
         List<ChannelPromise> framePromises = new ArrayList<>();
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(
-                new ChannelOutboundHandlerAdapter() {
+                new ChannelOutboundHandler() {
                     @Override
                     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                         framePromises.add(promise);
@@ -971,7 +971,7 @@ public class Http3FrameToHttpObjectCodecTest {
                     .handler(new ChannelInitializer<Channel>() {
                         @Override
                         protected void initChannel(Channel ch) throws Exception {
-                            ch.pipeline().addLast(new Http3ServerConnectionHandler(new ChannelInboundHandlerAdapter() {
+                            ch.pipeline().addLast(new Http3ServerConnectionHandler(new ChannelInboundHandler() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                     if (msg instanceof Http3HeadersFrame) {
@@ -984,7 +984,7 @@ public class Http3FrameToHttpObjectCodecTest {
                                         // send a fin, this also flushes
                                         ctx.channel().shutdown(ChannelShutdownType.newOutbound());
                                     } else {
-                                        super.channelRead(ctx, msg);
+                                        ctx.fireChannelRead(msg);
                                     }
                                 }
                             }));
@@ -1020,7 +1020,7 @@ public class Http3FrameToHttpObjectCodecTest {
                 protected void initRequestStream(QuicStreamChannel ch) {
                     ch.pipeline()
                             .addLast(new Http3FrameToHttpObjectCodec(false))
-                            .addLast(new ChannelInboundHandlerAdapter() {
+                            .addLast(new ChannelInboundHandler() {
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                     received.put(msg);

@@ -15,9 +15,8 @@
  */
 package io.netty.example.mqtt.heartBeat;
 
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.mqtt.MqttConnAckMessage;
 import io.netty.handler.codec.mqtt.MqttConnAckVariableHeader;
 import io.netty.handler.codec.mqtt.MqttConnectReturnCode;
@@ -29,12 +28,16 @@ import io.netty.handler.timeout.IdleState;
 import io.netty.handler.timeout.IdleStateEvent;
 import io.netty.util.ReferenceCountUtil;
 
-@Sharable
-public final class MqttHeartBeatBrokerHandler extends ChannelInboundHandlerAdapter {
+public final class MqttHeartBeatBrokerHandler implements ChannelInboundHandler {
 
     public static final MqttHeartBeatBrokerHandler INSTANCE = new MqttHeartBeatBrokerHandler();
 
     private MqttHeartBeatBrokerHandler() {
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

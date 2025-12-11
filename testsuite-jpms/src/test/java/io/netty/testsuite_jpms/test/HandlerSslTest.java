@@ -21,7 +21,7 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelFuture;
@@ -132,7 +132,7 @@ public class HandlerSslTest {
 
                 SslHandler handler = serverSslCtx.newHandler(ch.alloc());
                 p.addLast(handler);
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == SslHandshakeCompletionEvent.SUCCESS) {
@@ -177,7 +177,7 @@ public class HandlerSslTest {
                 parameters.setEndpointIdentificationAlgorithm("HTTPS");
                 sslHandler.engine().setSSLParameters(parameters);
                 p.addLast(sslHandler);
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void handlerAdded(ChannelHandlerContext ctx) {
                         // Only write if there is a failure expected. We don't actually care about the write going

@@ -18,7 +18,6 @@ package io.netty.handler.codec.http3;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.quic.QuicChannel;
@@ -80,7 +79,7 @@ public final class Http3ServerPushStreamManager {
     public Http3ServerPushStreamManager(QuicChannel channel, int initialPushStreamsCountHint) {
         this.channel = requireNonNull(channel, "channel");
         pushStreams = newConcurrentHashMap(initialPushStreamsCountHint);
-        controlStreamListener = new ChannelInboundHandlerAdapter() {
+        controlStreamListener = new ChannelInboundHandler() {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 if (msg instanceof Http3CancelPushFrame) {
@@ -222,7 +221,7 @@ public final class Http3ServerPushStreamManager {
         return new Http3PushStreamServerInitializer(pushId) {
             @Override
             protected void initPushStream(QuicStreamChannel ch) {
-                ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                ch.pipeline().addLast(new ChannelInboundHandler() {
                     private boolean stateUpdated;
 
                     @Override

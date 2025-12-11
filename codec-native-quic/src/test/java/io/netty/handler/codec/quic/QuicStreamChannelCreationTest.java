@@ -17,7 +17,7 @@ package io.netty.handler.codec.quic;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.util.AttributeKey;
 import org.jetbrains.annotations.Nullable;
@@ -40,7 +40,7 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
     public void testCreateStream(Executor executor) throws Throwable {
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(executor, serverHandler,
-                new ChannelInboundHandlerAdapter());
+                new ChannelInboundHandler() { });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient(executor);
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
@@ -48,13 +48,13 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
         try {
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(address)
                     .connect()
                     .get();
             CountDownLatch latch = new CountDownLatch(1);
             QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.UNIDIRECTIONAL,
-                    new ChannelInboundHandlerAdapter() {
+                    new ChannelInboundHandler() {
                @Override
                public void channelRegistered(ChannelHandlerContext ctx) {
                    assertQuicStreamChannel((QuicStreamChannel) ctx.channel(),
@@ -83,7 +83,7 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
     public void testCreateStreamViaBootstrap(Executor executor) throws Throwable {
         QuicChannelValidationHandler serverHandler = new QuicChannelValidationHandler();
         Channel server = QuicTestUtils.newServer(executor, serverHandler,
-                new ChannelInboundHandlerAdapter());
+                new ChannelInboundHandler() { });
         InetSocketAddress address = (InetSocketAddress) server.localAddress();
         Channel channel = QuicTestUtils.newClient(executor);
         QuicChannelValidationHandler clientHandler = new QuicChannelValidationHandler();
@@ -91,7 +91,7 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
         try {
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(address)
                     .connect()
                     .get();
@@ -100,7 +100,7 @@ public class QuicStreamChannelCreationTest extends AbstractQuicTest {
                     .type(QuicStreamType.UNIDIRECTIONAL)
                     .attr(ATTRIBUTE_KEY, ATTRIBUTE_VALUE)
                     .option(ChannelOption.AUTO_READ,  Boolean.FALSE)
-                    .handler(new ChannelInboundHandlerAdapter() {
+                    .handler(new ChannelInboundHandler() {
                         @Override
                         public void channelRegistered(ChannelHandlerContext ctx) {
                             assertQuicStreamChannel((QuicStreamChannel) ctx.channel(),

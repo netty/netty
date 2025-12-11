@@ -18,7 +18,7 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.socket.DatagramPacket;
 import org.junit.jupiter.api.Test;
@@ -69,11 +69,11 @@ public abstract class QuicheQuicCodecTest<B extends QuicCodecBuilder<B>> extends
             return false;
         });
 
-        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandlerAdapter() {
+        EmbeddedChannel channel = new EmbeddedChannel(new ChannelOutboundHandler() {
             @Override
             public void flush(ChannelHandlerContext ctx) {
                 flushCount.incrementAndGet();
-                super.flush(ctx);
+                ctx.flush();
             }
         }, builder.build());
         assertEquals(0, numPacketsTracker.get());

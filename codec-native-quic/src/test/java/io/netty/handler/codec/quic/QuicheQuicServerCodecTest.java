@@ -15,14 +15,14 @@
  */
 package io.netty.handler.codec.quic;
 
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.concurrent.ImmediateExecutor;
 
 public class QuicheQuicServerCodecTest extends QuicheQuicCodecTest<QuicServerCodecBuilder> {
     @Override
     protected QuicServerCodecBuilder newCodecBuilder() {
         return QuicTestUtils.newQuicServerBuilder(ImmediateExecutor.INSTANCE)
-                .streamHandler(new ChannelInboundHandlerAdapter())
+                .streamHandler(new ChannelInboundHandler() { })
                 .tokenHandler(InsecureQuicTokenHandler.INSTANCE);
     }
 }

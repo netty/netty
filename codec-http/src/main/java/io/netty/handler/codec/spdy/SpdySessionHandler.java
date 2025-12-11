@@ -15,10 +15,11 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.internal.ObjectUtil;
 
@@ -31,7 +32,7 @@ import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
 /**
  * Manages streams within a SPDY session.
  */
-public class SpdySessionHandler extends ChannelDuplexHandler {
+public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
     private static final SpdyProtocolException PROTOCOL_EXCEPTION =
             SpdyProtocolException.newStatic(null, SpdySessionHandler.class, "handleOutboundMessage(...)");

@@ -17,7 +17,7 @@ package io.netty.handler.codec.quic;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.util.concurrent.Future;
@@ -54,7 +54,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
                 QuicTestUtils.newQuicServerBuilder(executor).initialMaxStreamsBidirectional(1)
                         .initialMaxStreamsUnidirectional(1),
                 InsecureQuicTokenHandler.INSTANCE,
-                serverHandler, new ChannelInboundHandlerAdapter() {
+                serverHandler, new ChannelInboundHandler() {
                     @Override
                     public boolean isSharable() {
                         return true;
@@ -88,20 +88,20 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
         try {
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(address)
                     .connect().get();
             latch.await();
             assertEquals(1, quicChannel.peerAllowedStreams(QuicStreamType.UNIDIRECTIONAL));
             assertEquals(1, quicChannel.peerAllowedStreams(QuicStreamType.BIDIRECTIONAL));
             QuicStreamChannel stream = quicChannel.createStream(
-                    type, new ChannelInboundHandlerAdapter()).get();
+                    type, new ChannelInboundHandler() { }).get();
 
             assertEquals(0, quicChannel.peerAllowedStreams(type));
 
             // Second stream creation should fail.
             Throwable cause = quicChannel.createStream(
-                    type, new ChannelInboundHandlerAdapter()).await().cause();
+                    type, new ChannelInboundHandler() { }).await().cause();
             assertInstanceOf(QuicException.class, cause);
             stream.close().sync();
             latch2.await();
@@ -141,12 +141,12 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
             public void channelActive(ChannelHandlerContext ctx) {
                 super.channelActive(ctx);
                 QuicChannel channel = (QuicChannel) ctx.channel();
-                channel.createStream(type, new ChannelInboundHandlerAdapter())
+                channel.createStream(type, new ChannelInboundHandler() { })
                         .addListener((Future<QuicStreamChannel> future) -> {
                             if (future.isSuccess()) {
                                 QuicStreamChannel stream = future.getNow();
                                 streamPromise.setSuccess(null);
-                                channel.createStream(type, new ChannelInboundHandlerAdapter())
+                                channel.createStream(type, new ChannelInboundHandler() { })
                                         .addListener((Future<QuicStreamChannel> f) -> {
                                             stream.close();
                                             stream2Promise.setSuccess(f.cause());
@@ -160,7 +160,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
         Channel server = QuicTestUtils.newServer(
                 QuicTestUtils.newQuicServerBuilder(executor),
                 InsecureQuicTokenHandler.INSTANCE,
-                serverHandler, new ChannelInboundHandlerAdapter() {
+                serverHandler, new ChannelInboundHandler() {
                     @Override
                     public boolean isSharable() {
                         return true;
@@ -174,7 +174,7 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
         try {
             QuicChannel quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
                     .handler(clientHandler)
-                    .streamHandler(new ChannelInboundHandlerAdapter())
+                    .streamHandler(new ChannelInboundHandler() { })
                     .remoteAddress(address)
                     .connect().get();
             streamPromise.sync();

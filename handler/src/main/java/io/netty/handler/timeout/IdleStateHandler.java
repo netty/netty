@@ -17,11 +17,12 @@ package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Ticker;
@@ -72,7 +73,7 @@ import java.util.concurrent.TimeUnit;
  * }
  *
  * // Handler should handle the {@link IdleStateEvent} triggered by {@link IdleStateHandler}.
- * public class MyHandler extends {@link ChannelDuplexHandler} {
+ * public class MyHandler extends {@link ChannelInboundHandler} {
  *     {@code @Override}
  *     public void userEventTriggered({@link ChannelHandlerContext} ctx, {@link Object} evt) throws {@link Exception} {
  *         if (evt instanceof {@link IdleStateEvent}) {
@@ -95,7 +96,7 @@ import java.util.concurrent.TimeUnit;
  * @see ReadTimeoutHandler
  * @see WriteTimeoutHandler
  */
-public class IdleStateHandler extends ChannelDuplexHandler {
+public class IdleStateHandler implements ChannelInboundHandler, ChannelOutboundHandler {
     private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
     // Not create a new ChannelFutureListener per write operation to reduce GC pressure.
@@ -243,7 +244,7 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         if (ctx.channel().isActive()) {
             initialize(ctx);
         }
-        super.channelRegistered(ctx);
+        ctx.fireChannelRegistered();
     }
 
     @Override
@@ -252,13 +253,13 @@ public class IdleStateHandler extends ChannelDuplexHandler {
         // before channelActive() event is fired.  If a user adds this handler
         // after the channelActive() event, initialize() will be called by beforeAdd().
         initialize(ctx);
-        super.channelActive(ctx);
+        ctx.fireChannelActive();
     }
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
         destroy();
-        super.channelInactive(ctx);
+        ctx.fireChannelInactive();
     }
 
     @Override

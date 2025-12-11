@@ -16,11 +16,9 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 
-@ChannelHandler.Sharable
 public final class TcpDnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
 
     private final DnsQueryEncoder encoder;
@@ -38,6 +36,11 @@ public final class TcpDnsQueryEncoder extends MessageToByteEncoder<DnsQuery> {
     public TcpDnsQueryEncoder(DnsRecordEncoder recordEncoder) {
         super(DnsQuery.class);
         this.encoder = new DnsQueryEncoder(recordEncoder);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

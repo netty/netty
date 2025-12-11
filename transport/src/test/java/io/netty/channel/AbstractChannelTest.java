@@ -37,6 +37,34 @@ import static org.mockito.Mockito.*;
 
 public class AbstractChannelTest {
 
+    private static final class TestHandler implements ChannelInboundHandler {
+
+        int added;
+        int registered;
+        int active;
+        int unregistered;
+
+        @Override
+        public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
+            added++;
+        }
+
+        @Override
+        public void channelRegistered(ChannelHandlerContext ctx) throws Exception {
+            registered++;
+        }
+
+        @Override
+        public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            active++;
+        }
+
+        @Override
+        public void channelUnregistered(ChannelHandlerContext ctx) throws Exception {
+            unregistered++;
+        }
+    }
+
     @Test
     public void ensureInitialRegistrationFiresActive() throws Throwable {
         EventLoop eventLoop = mock(EventLoop.class);
@@ -44,14 +72,15 @@ public class AbstractChannelTest {
         when(eventLoop.inEventLoop()).thenReturn(true);
 
         TestChannel channel = new TestChannel(eventLoop);
-        ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
+
+        TestHandler handler = new TestHandler();
         channel.pipeline().addLast(handler);
 
         registerChannel(channel);
 
-        verify(handler).handlerAdded(any(ChannelHandlerContext.class));
-        verify(handler).channelRegistered(any(ChannelHandlerContext.class));
-        verify(handler).channelActive(any(ChannelHandlerContext.class));
+        assertEquals(1, handler.added);
+        assertEquals(1, handler.registered);
+        assertEquals(1, handler.active);
     }
 
     @Test
@@ -69,7 +98,7 @@ public class AbstractChannelTest {
         }).when(eventLoop).execute(any(Runnable.class));
 
         final TestChannel channel = new TestChannel(eventLoop);
-        ChannelInboundHandler handler = mock(ChannelInboundHandler.class);
+        TestHandler handler = new TestHandler();
 
         channel.pipeline().addLast(handler);
 
@@ -78,12 +107,12 @@ public class AbstractChannelTest {
 
         registerChannel(channel);
 
-        verify(handler).handlerAdded(any(ChannelHandlerContext.class));
+        assertEquals(1, handler.added);
 
         // Should register twice
-        verify(handler,  times(2)) .channelRegistered(any(ChannelHandlerContext.class));
-        verify(handler).channelActive(any(ChannelHandlerContext.class));
-        verify(handler).channelUnregistered(any(ChannelHandlerContext.class));
+        assertEquals(2, handler.registered);
+        assertEquals(1, handler.active);
+        assertEquals(1, handler.unregistered);
     }
 
     @Test

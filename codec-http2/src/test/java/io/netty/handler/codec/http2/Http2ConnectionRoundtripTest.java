@@ -22,11 +22,11 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -610,7 +610,7 @@ public class Http2ConnectionRoundtripTest {
         assertTrue(requestLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
 
         // Add a handler that will immediately throw an exception.
-        clientChannel.pipeline().addFirst(new ChannelHandlerAdapter() {
+        clientChannel.pipeline().addFirst(new ChannelHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                 throw Http2Exception.connectionError(PROTOCOL_ERROR, "Fake Exception");
@@ -746,7 +746,7 @@ public class Http2ConnectionRoundtripTest {
             public void run() throws Http2Exception {
                 http2Client.encoder().writeHeaders(ctx(), 3, EmptyHttp2Headers.INSTANCE, 0, (short) 16, false, 0, false,
                         newPromise());
-                clientChannel.pipeline().addFirst(new ChannelOutboundHandlerAdapter() {
+                clientChannel.pipeline().addFirst(new ChannelOutboundHandler() {
                     @Override
                     public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
                         ReferenceCountUtil.release(msg);
@@ -820,7 +820,7 @@ public class Http2ConnectionRoundtripTest {
         assertTrue(requestLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
 
         // Add a handler that will immediately throw an exception.
-        clientChannel.pipeline().addFirst(new ChannelHandlerAdapter() {
+        clientChannel.pipeline().addFirst(new ChannelHandler() {
             @Override
             public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
                 throw new RuntimeException("Fake Exception");
@@ -1232,7 +1232,7 @@ public class Http2ConnectionRoundtripTest {
                         .validateHeaders(false)
                         .gracefulShutdownTimeoutMillis(0)
                         .build());
-                p.addLast(new ChannelInboundHandlerAdapter() {
+                p.addLast(new ChannelInboundHandler() {
                     @Override
                     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                         if (evt == Http2ConnectionPrefaceAndSettingsFrameWrittenEvent.INSTANCE) {

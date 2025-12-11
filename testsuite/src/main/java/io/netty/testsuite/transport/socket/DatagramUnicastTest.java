@@ -22,7 +22,7 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -275,7 +275,7 @@ public abstract class DatagramUnicastTest extends AbstractDatagramTest {
         }).bind(serverAddress).sync().channel();
 
         Channel cc = cb.option(ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION, true).
-                handler(new ChannelInboundHandlerAdapter()).register().sync().channel();
+                handler(new ChannelInboundHandler() { }).register().sync().channel();
         try {
             InetSocketAddress goodHost = sendToAddress((InetSocketAddress) sc.localAddress());
             InetSocketAddress unresolvedHost = new InetSocketAddress("NOT_A_REAL_ADDRESS", goodHost.getPort());

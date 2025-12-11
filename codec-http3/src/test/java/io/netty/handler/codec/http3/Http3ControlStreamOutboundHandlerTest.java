@@ -18,7 +18,7 @@ package io.netty.handler.codec.http3;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
@@ -47,7 +47,7 @@ public class Http3ControlStreamOutboundHandlerTest extends
 
     @Override
     protected Http3ControlStreamOutboundHandler newHandler(boolean server) {
-        return new Http3ControlStreamOutboundHandler(server, settingsFrame, new ChannelInboundHandlerAdapter());
+        return new Http3ControlStreamOutboundHandler(server, settingsFrame, new ChannelInboundHandler() { });
     }
 
     @Override

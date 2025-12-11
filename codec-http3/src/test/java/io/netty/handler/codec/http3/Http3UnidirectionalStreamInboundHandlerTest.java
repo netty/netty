@@ -18,8 +18,7 @@ package io.netty.handler.codec.http3;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
@@ -92,7 +91,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         EmbeddedChannel channel = newChannel(server, v -> {
             assertEquals(streamType, v);
             // Add an handler that will just forward the received bytes.
-            return new ChannelInboundHandlerAdapter();
+            return new ChannelInboundHandler() { };
         });
         ByteBuf buffer = Unpooled.buffer(8);
         Http3CodecUtils.writeVariableLengthInteger(buffer, streamType);
@@ -152,7 +151,7 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
         setup(server);
         assertFalse(parent.finish());
         parent = new EmbeddedQuicChannel(server, server ?
-                new Http3ServerConnectionHandler(new ChannelInboundHandlerAdapter()) :
+                new Http3ServerConnectionHandler(new ChannelInboundHandler() { }) :
                 new Http3ClientConnectionHandler());
         final EmbeddedQuicStreamChannel localControlStream =
                 (EmbeddedQuicStreamChannel) Http3.getLocalControlStream(parent);
@@ -281,5 +280,5 @@ public class Http3UnidirectionalStreamInboundHandlerTest {
                         qpackDecoder), () -> new QpackDecoderHandler(qpackEncoder));
     }
 
-    private static final class CodecHandler extends ChannelHandlerAdapter {  }
+    private static final class CodecHandler implements ChannelHandler {  }
 }

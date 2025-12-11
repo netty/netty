@@ -16,7 +16,6 @@
 package io.netty.handler.codec.base64;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DelimiterBasedFrameDecoder;
@@ -40,7 +39,6 @@ import java.util.List;
  * pipeline.addLast("base64Encoder", new {@link Base64Encoder}());
  * </pre>
  */
-@Sharable
 public class Base64Encoder extends MessageToMessageEncoder<ByteBuf> {
 
     private final boolean breakLines;
@@ -58,6 +56,11 @@ public class Base64Encoder extends MessageToMessageEncoder<ByteBuf> {
         super(ByteBuf.class);
         this.dialect = ObjectUtil.checkNotNull(dialect, "dialect");
         this.breakLines = breakLines;
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     @Override

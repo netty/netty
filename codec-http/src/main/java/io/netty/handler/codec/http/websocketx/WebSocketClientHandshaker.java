@@ -21,7 +21,7 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
@@ -503,7 +503,7 @@ public abstract class WebSocketClientHandshaker {
                 p.addAfter(ctx.name(), aggregatorCtx, new HttpObjectAggregator(8192));
             }
 
-            p.addAfter(aggregatorCtx, "handshaker", new ChannelInboundHandlerAdapter() {
+            p.addAfter(aggregatorCtx, "handshaker", new ChannelInboundHandler() {
 
                 private FullHttpResponse fullHttpResponse;
 
@@ -516,7 +516,7 @@ public abstract class WebSocketClientHandshaker {
                             ReferenceCountUtil.release(msg);
                         }
                     } else {
-                        super.channelRead(ctx, msg);
+                        ctx.fireChannelRead(msg);
                     }
                 }
 

@@ -19,9 +19,10 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.Recycler;
@@ -48,7 +49,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  *
  * pipeline.addLast(new MyExampleHandler());
  *
- * class MyExampleHandler extends ChannelInboundHandlerAdapter {
+ * class MyExampleHandler implements ChannelInboundHandler {
  *   @Override
  *   public void channelRead(ChannelHandlerContext ctx, Object msg) {
  *     if (msg instanceof HttpRequest) {
@@ -64,7 +65,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  *
  * @see ChannelConfig#setAutoRead(boolean)
  */
-public class FlowControlHandler extends ChannelDuplexHandler {
+public class FlowControlHandler implements ChannelInboundHandler, ChannelOutboundHandler {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(FlowControlHandler.class);
 
     private final boolean releaseMessages;
@@ -120,7 +121,6 @@ public class FlowControlHandler extends ChannelDuplexHandler {
 
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        super.handlerRemoved(ctx);
         if (!isQueueEmpty()) {
             dequeue(ctx, queue.size());
         }

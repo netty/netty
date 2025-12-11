@@ -15,16 +15,14 @@
  */
 package io.netty.microbench.channel;
 
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
-import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -41,9 +39,6 @@ public class DefaultChannelPipelineDuplexHandlerBenchmark extends AbstractMicrob
     private ChannelPipeline pipeline;
     private EmbeddedChannel channel;
 
-    @Param({"true", "false"})
-    private boolean duplex;
-
     @Setup
     public void setup() {
         channel = new EmbeddedChannel() {
@@ -55,52 +50,31 @@ public class DefaultChannelPipelineDuplexHandlerBenchmark extends AbstractMicrob
         // disabling auto-read to reduce noise on flush
         channel.config().setAutoRead(false);
         pipeline = channel.pipeline();
-        pipeline.addLast(new ChannelInboundHandlerAdapter() {
+        pipeline.addLast(new ChannelInboundHandler() {
             @Override
             public void channelReadComplete(final ChannelHandlerContext ctx) {
                 ctx.fireChannelReadComplete();
             }
         });
-        // Duplex handlers implements both out/in interfaces causing a scalability issue
-        // see https://bugs.openjdk.org/browse/JDK-8180450
-        if (duplex) {
-            pipeline.addLast(new ChannelDuplexHandler() {
-                @Override
-                public void channelReadComplete(final ChannelHandlerContext ctx) {
-                    ctx.fireChannelReadComplete();
-                }
 
-                @Override
-                public void flush(final ChannelHandlerContext ctx) {
-                    ctx.flush();
-                }
-            });
-            pipeline.addLast(new ChannelDuplexHandler() {
-                @Override
-                public void channelReadComplete(final ChannelHandlerContext ctx) {
-                    ctx.flush();
-                }
-            });
-        } else {
-            pipeline.addLast(new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelReadComplete(final ChannelHandlerContext ctx) {
-                    ctx.fireChannelReadComplete();
-                }
-            });
-            pipeline.addLast(new ChannelOutboundHandlerAdapter() {
-                @Override
-                public void flush(final ChannelHandlerContext ctx) {
-                    ctx.flush();
-                }
-            });
-            pipeline.addLast(new ChannelInboundHandlerAdapter() {
-                @Override
-                public void channelReadComplete(final ChannelHandlerContext ctx) {
-                    ctx.flush();
-                }
-            });
-        }
+        pipeline.addLast(new ChannelInboundHandler() {
+            @Override
+            public void channelReadComplete(final ChannelHandlerContext ctx) {
+                ctx.fireChannelReadComplete();
+            }
+        });
+        pipeline.addLast(new ChannelOutboundHandler() {
+            @Override
+            public void flush(final ChannelHandlerContext ctx) {
+                ctx.flush();
+            }
+        });
+        pipeline.addLast(new ChannelInboundHandler() {
+            @Override
+            public void channelReadComplete(final ChannelHandlerContext ctx) {
+                ctx.flush();
+            }
+        });
     }
 
     @TearDown

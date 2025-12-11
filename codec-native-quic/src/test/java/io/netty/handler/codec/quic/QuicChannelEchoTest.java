@@ -26,7 +26,7 @@ import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.concurrent.Future;
@@ -119,7 +119,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
         final EchoHandler sh = new EchoHandler(true, autoRead, allocator);
         final EchoHandler ch = new EchoHandler(false, autoRead, allocator);
         AtomicReference<List<ChannelFuture>> writeFutures = new AtomicReference<>();
-        Channel server = QuicTestUtils.newServer(ImmediateExecutor.INSTANCE, new ChannelInboundHandlerAdapter() {
+        Channel server = QuicTestUtils.newServer(ImmediateExecutor.INSTANCE, new ChannelInboundHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
                 setAllocator(ctx.channel(), allocator);
@@ -150,7 +150,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
         QuicChannel quicChannel = null;
         try {
             quicChannel = QuicTestUtils.newQuicChannelBootstrap(channel)
-                    .handler(new ChannelInboundHandlerAdapter() {
+                    .handler(new ChannelInboundHandler() {
                         @Override
                         public void channelActive(ChannelHandlerContext ctx) {
                             if (!autoRead) {

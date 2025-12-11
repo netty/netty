@@ -17,8 +17,8 @@ package io.netty.microbench.channel;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -46,14 +46,14 @@ import java.util.SplittableRandom;
 public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
     private static final Object MESSAGE = new Object();
 
-    private abstract static class SharableInboundHandlerAdapter extends ChannelInboundHandlerAdapter {
+    private abstract static class SharableInboundHandlerAdapter implements ChannelInboundHandler {
         @Override
         public final boolean isSharable() {
             return true;
         }
     }
 
-    private abstract static class SharableOutboundHandlerAdapter extends ChannelOutboundHandlerAdapter {
+    private abstract static class SharableOutboundHandlerAdapter implements ChannelOutboundHandler {
         @Override
         public final boolean isSharable() {
             return true;

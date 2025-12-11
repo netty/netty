@@ -16,7 +16,7 @@
 package io.netty.handler.codec.spdy;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -321,7 +321,7 @@ public class SpdySessionHandlerTest {
 
     // Echo Handler opens 4 half-closed streams on session connection
     // and then sets the number of concurrent streams to 1
-    private static class EchoHandler extends ChannelInboundHandlerAdapter {
+    private static class EchoHandler implements ChannelInboundHandler {
         private final int closeSignal;
         private final boolean server;
 

@@ -24,9 +24,8 @@ import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelHandlerAdapter;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
@@ -122,7 +121,7 @@ public class DnsNameResolver extends InetNameResolver {
     private static final SocketProtocolFamily[] IPV6_PREFERRED_RESOLVED_PROTOCOL_FAMILIES =
             {SocketProtocolFamily.INET6, SocketProtocolFamily.INET};
 
-    private static final ChannelHandler NOOP_HANDLER = new ChannelHandlerAdapter() {
+    private static final ChannelHandler NOOP_HANDLER = new ChannelHandler() {
         @Override
         public boolean isSharable() {
             return true;
@@ -1512,7 +1511,7 @@ public class DnsNameResolver extends InetNameResolver {
         return dnsServerAddressStreamProvider.nameServerAddressStream(hostname);
     }
 
-    private static final class DnsResponseHandler extends ChannelInboundHandlerAdapter {
+    private static final class DnsResponseHandler implements ChannelInboundHandler {
 
         private final DnsQueryContextManager queryContextManager;
 

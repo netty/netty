@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandlerAdapter;
+import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -51,7 +51,7 @@ public class DatagramUnicastInetTest extends DatagramUnicastTest {
     private static void testBindWithPortOnly(Bootstrap cb) throws Throwable {
         Channel channel = null;
         try {
-            cb.handler(new ChannelHandlerAdapter() { });
+            cb.handler(new ChannelHandler() { });
             channel = cb.bind(0).sync().channel();
         } finally {
             closeChannel(channel);

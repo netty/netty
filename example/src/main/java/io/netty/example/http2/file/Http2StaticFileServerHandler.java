@@ -17,10 +17,10 @@ package io.netty.example.http2.file;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http2.DefaultHttp2DataFrame;
@@ -104,7 +104,7 @@ import static io.netty.handler.codec.http.HttpResponseStatus.OK;
  *
  * </pre>
  */
-public class Http2StaticFileServerHandler extends ChannelDuplexHandler {
+public class Http2StaticFileServerHandler implements ChannelInboundHandler {
 
     public static final String HTTP_DATE_FORMAT = "EEE, dd MMM yyyy HH:mm:ss zzz";
     public static final String HTTP_DATE_GMT_TIMEZONE = "GMT";

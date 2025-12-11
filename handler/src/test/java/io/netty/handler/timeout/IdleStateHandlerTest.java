@@ -16,7 +16,7 @@
 package io.netty.handler.timeout;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import org.junit.jupiter.api.Test;
 
@@ -59,7 +59,7 @@ public class IdleStateHandlerTest {
         assertThat(expected.length).isGreaterThanOrEqualTo(1);
 
         final List<Object> events = new ArrayList<Object>();
-        ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
+        ChannelInboundHandler handler = new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 events.add(evt);
@@ -176,7 +176,7 @@ public class IdleStateHandlerTest {
                                    Action action, Object expected) throws Exception {
 
         final List<Object> events = new ArrayList<Object>();
-        ChannelInboundHandlerAdapter handler = new ChannelInboundHandlerAdapter() {
+        ChannelInboundHandler handler = new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
                 events.add(evt);

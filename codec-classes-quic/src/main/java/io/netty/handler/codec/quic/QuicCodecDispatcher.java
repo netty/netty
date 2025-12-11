@@ -18,7 +18,7 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.internal.ObjectUtil;
 import org.jetbrains.annotations.Nullable;
@@ -48,7 +48,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * {@code epbf} program to route the packet to the correct socket.
  *
  */
-public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
+public abstract class QuicCodecDispatcher implements ChannelInboundHandler {
     // 20 is the max as per RFC.
     // See https://datatracker.ietf.org/doc/html/rfc9000#section-17.2
     private static final int MAX_LOCAL_CONNECTION_ID_LENGTH = 20;
@@ -84,8 +84,6 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
 
     @Override
     public final void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        super.handlerAdded(ctx);
-
         ChannelHandlerContextDispatcher ctxDispatcher = new ChannelHandlerContextDispatcher(ctx);
         contextList.add(ctxDispatcher);
         int idx = contextList.indexOf(ctxDispatcher);
@@ -102,8 +100,6 @@ public abstract class QuicCodecDispatcher extends ChannelInboundHandlerAdapter {
 
     @Override
     public final void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        super.handlerRemoved(ctx);
-
         for (int idx = 0; idx < contextList.size(); idx++) {
             ChannelHandlerContextDispatcher ctxDispatcher = contextList.get(idx);
             if (ctxDispatcher != null && ctxDispatcher.ctx.equals(ctx)) {

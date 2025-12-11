@@ -16,7 +16,6 @@
 package io.netty.handler.ipfilter;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.internal.ObjectUtil;
 
@@ -51,7 +50,6 @@ import java.util.List;
  * </p>
  *
  */
-@Sharable
 public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddress> {
 
     private final boolean acceptIfNotFound;
@@ -59,6 +57,11 @@ public class IpSubnetFilter extends AbstractRemoteAddressFilter<InetSocketAddres
     private final IpSubnetFilterRule[] ipv6Rules;
     private final IpFilterRuleType ipFilterRuleTypeIPv4;
     private final IpFilterRuleType ipFilterRuleTypeIPv6;
+
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
 
     /**
      * <p> Create new {@link IpSubnetFilter} Instance with specified {@link IpSubnetFilterRule} as array. </p>

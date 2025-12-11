@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
@@ -282,7 +282,7 @@ public class PkiTestingTlsTest {
                             }
                             ch.pipeline()
                                     .addLast(handler)
-                                    .addLast(new ChannelInboundHandlerAdapter() {
+                                    .addLast(new ChannelInboundHandler() {
                                         @Override
                                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt)
                                                 throws Exception {
@@ -295,7 +295,7 @@ public class PkiTestingTlsTest {
                                                 }
                                                 return;
                                             }
-                                            super.userEventTriggered(ctx, evt);
+                                            ctx.fireUserEventTriggered(evt);
                                         }
 
                                         @Override

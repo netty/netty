@@ -17,8 +17,9 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelDuplexHandler;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandler;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -33,7 +34,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 /**
  * Channel handler that allows to easily access inbound messages.
  */
-public class LastInboundHandler extends ChannelDuplexHandler {
+public class LastInboundHandler implements ChannelInboundHandler, ChannelOutboundHandler {
     private final List<Object> queue = new ArrayList<Object>();
     private final Consumer<ChannelHandlerContext> channelReadCompleteConsumer;
     private Throwable lastException;
@@ -67,7 +68,6 @@ public class LastInboundHandler extends ChannelDuplexHandler {
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        super.handlerAdded(ctx);
         this.ctx = ctx;
     }
 
@@ -77,7 +77,7 @@ public class LastInboundHandler extends ChannelDuplexHandler {
             throw new IllegalStateException("channelActive may only be fired once.");
         }
         channelActive = true;
-        super.channelActive(ctx);
+        ctx.fireChannelActive();
     }
 
     public boolean isChannelActive() {
@@ -94,7 +94,7 @@ public class LastInboundHandler extends ChannelDuplexHandler {
             throw new IllegalStateException("channelInactive may only be fired once after channelActive.");
         }
         channelActive = false;
-        super.channelInactive(ctx);
+        ctx.fireChannelInactive();
     }
 
     @Override
@@ -104,7 +104,7 @@ public class LastInboundHandler extends ChannelDuplexHandler {
         } else {
             writabilityStates += "," + ctx.channel().isWritable();
         }
-        super.channelWritabilityChanged(ctx);
+        ctx.fireChannelWritabilityChanged();
     }
 
     @Override

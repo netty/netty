@@ -69,7 +69,7 @@ public class CombinedChannelDuplexHandlerTest {
     public void testInboundRemoveBeforeAdded() {
         final CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
-                        new ChannelInboundHandlerAdapter(), new ChannelOutboundHandlerAdapter());
+                        new ChannelInboundHandler() { }, new ChannelOutboundHandler() { });
         assertThrows(IllegalStateException.class, new Executable() {
             @Override
             public void execute() {
@@ -82,7 +82,7 @@ public class CombinedChannelDuplexHandlerTest {
     public void testOutboundRemoveBeforeAdded() {
         final CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
-                        new ChannelInboundHandlerAdapter(), new ChannelOutboundHandlerAdapter());
+                        new ChannelInboundHandler() { }, new ChannelOutboundHandler() { });
         assertThrows(IllegalStateException.class, new Executable() {
             @Override
             public void execute() {
@@ -91,13 +91,15 @@ public class CombinedChannelDuplexHandlerTest {
         });
     }
 
+    private static final class InvalidHandler implements ChannelInboundHandler, ChannelOutboundHandler { }
+
     @Test
     public void testInboundHandlerImplementsOutboundHandler() {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() {
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
-                        new ChannelDuplexHandler(), new ChannelOutboundHandlerAdapter());
+                        new InvalidHandler(), new ChannelOutboundHandler() { });
             }
         });
     }
@@ -108,7 +110,7 @@ public class CombinedChannelDuplexHandlerTest {
             @Override
             public void execute() {
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
-                        new ChannelInboundHandlerAdapter(), new ChannelDuplexHandler());
+                        new ChannelInboundHandler() { }, new InvalidHandler());
             }
         });
     }
@@ -126,52 +128,12 @@ public class CombinedChannelDuplexHandlerTest {
     }
 
     @Test
-    public void testExceptionCaughtBothCombinedHandlers() {
-        final Exception exception = new Exception();
-        final Queue<ChannelHandler> queue = new ArrayDeque<ChannelHandler>();
-
-        ChannelInboundHandler inboundHandler = new ChannelInboundHandlerAdapter() {
-            @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                assertSame(exception, cause);
-                queue.add(this);
-                ctx.fireExceptionCaught(cause);
-            }
-        };
-        ChannelOutboundHandler outboundHandler = new ChannelOutboundHandlerAdapter() {
-            @SuppressWarnings("deprecation")
-            @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                assertSame(exception, cause);
-                queue.add(this);
-                ctx.fireExceptionCaught(cause);
-            }
-        };
-        ChannelInboundHandler lastHandler = new ChannelInboundHandlerAdapter() {
-            @Override
-            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                assertSame(exception, cause);
-                queue.add(this);
-            }
-        };
-        EmbeddedChannel channel = new EmbeddedChannel(
-                new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
-                        inboundHandler, outboundHandler), lastHandler);
-        channel.pipeline().fireExceptionCaught(exception);
-        assertFalse(channel.finish());
-        assertSame(inboundHandler, queue.poll());
-        assertSame(outboundHandler, queue.poll());
-        assertSame(lastHandler, queue.poll());
-        assertTrue(queue.isEmpty());
-    }
-
-    @Test
     public void testInboundEvents() {
         InboundEventHandler inboundHandler = new InboundEventHandler();
 
         CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
-                inboundHandler, new ChannelOutboundHandlerAdapter());
+                inboundHandler, new ChannelOutboundHandler() { });
 
         EmbeddedChannel channel = new EmbeddedChannel();
         channel.pipeline().addLast(handler);
@@ -201,7 +163,7 @@ public class CombinedChannelDuplexHandlerTest {
 
     @Test
     public void testOutboundEvents() {
-        ChannelInboundHandler inboundHandler = new ChannelInboundHandlerAdapter();
+        ChannelInboundHandler inboundHandler = new ChannelInboundHandler() { };
         OutboundEventHandler outboundHandler = new OutboundEventHandler();
 
         CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler> handler =
@@ -283,7 +245,7 @@ public class CombinedChannelDuplexHandlerTest {
         OutboundEventHandler outboundHandler = new OutboundEventHandler();
         EmbeddedChannel ch = new EmbeddedChannel(outboundHandler,
                 new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>(
-                        new ChannelInboundHandlerAdapter(), new ChannelOutboundHandlerAdapter()));
+                        new ChannelInboundHandler() { }, new ChannelOutboundHandler() { }));
         ChannelPipeline pipeline = ch.pipeline();
 
         ChannelPromise promise = ch.newPromise();
@@ -312,22 +274,7 @@ public class CombinedChannelDuplexHandlerTest {
         ch.finish();
     }
 
-    @Test
-    public void testNotSharable() {
-        assertThrows(IllegalStateException.class, new Executable() {
-            @Override
-            public void execute() {
-                new CombinedChannelDuplexHandler<ChannelInboundHandler, ChannelOutboundHandler>() {
-                    @Override
-                    public boolean isSharable() {
-                        return true;
-                    }
-                };
-            }
-        });
-    }
-
-    private static final class InboundEventHandler extends ChannelInboundHandlerAdapter {
+    private static final class InboundEventHandler implements ChannelInboundHandler {
         private final Queue<Object> queue = new ArrayDeque<Object>();
 
         @Override
@@ -394,7 +341,7 @@ public class CombinedChannelDuplexHandlerTest {
         }
     }
 
-    private static final class OutboundEventHandler extends ChannelOutboundHandlerAdapter {
+    private static final class OutboundEventHandler implements ChannelOutboundHandler {
         private final Queue<Object> queue = new ArrayDeque<Object>();
 
         @Override

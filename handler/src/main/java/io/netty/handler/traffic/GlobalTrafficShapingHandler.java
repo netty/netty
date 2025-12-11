@@ -16,7 +16,6 @@
 package io.netty.handler.traffic;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -75,7 +74,6 @@ import java.util.concurrent.atomic.AtomicLong;
  * Be sure to call {@link #release()} once this handler is not needed anymore to release all internal resources.
  * This will not shutdown the {@link EventExecutor} as it may be shared, so you need to do this by your own.
  */
-@Sharable
 public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     /**
      * All queues per channel
@@ -189,6 +187,11 @@ public class GlobalTrafficShapingHandler extends AbstractTrafficShapingHandler {
     public GlobalTrafficShapingHandler(ScheduledExecutorService executor, long checkInterval) {
         super(checkInterval);
         createGlobalTrafficCounter(executor);
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     /**

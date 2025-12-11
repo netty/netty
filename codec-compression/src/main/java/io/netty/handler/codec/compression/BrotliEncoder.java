@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.MessageToByteEncoder;
@@ -39,7 +38,6 @@ import java.nio.channels.WritableByteChannel;
  * <p>
  * See <a href="https://github.com/google/brotli">brotli</a>.
  */
-@ChannelHandler.Sharable
 public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
     private static final AttributeKey<Writer> ATTR = AttributeKey.valueOf("BrotliEncoderWriter");

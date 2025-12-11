@@ -25,10 +25,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelOutboundHandlerAdapter;
+import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
@@ -490,7 +490,7 @@ public class PcapWriteHandlerTest {
                             p.addLast(PcapWriteHandler.builder().sharedOutputStream(sharedOutputStream)
                                     .writePcapGlobalHeader(writeGlobalHeaders)
                                     .build(new ByteBufOutputStream(byteBuf)));
-                            p.addLast(new ChannelInboundHandlerAdapter() {
+                            p.addLast(new ChannelInboundHandler() {
                                 private int read;
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -524,7 +524,7 @@ public class PcapWriteHandlerTest {
                         @Override
                         public void initChannel(SocketChannel ch) throws Exception {
                             ChannelPipeline p = ch.pipeline();
-                            p.addLast(new ChannelInboundHandlerAdapter() {
+                            p.addLast(new ChannelInboundHandler() {
                                 private int read;
                                 @Override
                                 public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -833,10 +833,10 @@ public class PcapWriteHandlerTest {
 
         CloseDetectingByteBufOutputStream outputStream = new CloseDetectingByteBufOutputStream(pcapBuffer);
         final EmbeddedChannel embeddedChannel = new EmbeddedChannel(
-                new ChannelInboundHandlerAdapter() {
+                new ChannelInboundHandler() {
                     @Override
                     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-                        super.channelActive(ctx);
+                        ctx.fireChannelActive();
 
                         ctx.fireExceptionCaught(exception);
                     }
@@ -1480,7 +1480,7 @@ public class PcapWriteHandlerTest {
         }
     }
 
-    static final class DiscardingReadsHandler extends ChannelInboundHandlerAdapter {
+    static final class DiscardingReadsHandler implements ChannelInboundHandler {
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) {
             //Discard
@@ -1488,7 +1488,7 @@ public class PcapWriteHandlerTest {
         }
     }
 
-    static class DiscardingWritesAndFlushesHandler extends ChannelOutboundHandlerAdapter {
+    static class DiscardingWritesAndFlushesHandler implements ChannelOutboundHandler {
         @Override
         public void flush(ChannelHandlerContext ctx) {
             //Discard

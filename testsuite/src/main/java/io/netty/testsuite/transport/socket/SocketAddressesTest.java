@@ -19,7 +19,7 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
@@ -63,7 +63,7 @@ public abstract class SocketAddressesTest extends AbstractSocketTest {
         try {
             final Promise<SocketAddress> localAddressPromise = ImmediateEventExecutor.INSTANCE.newPromise();
             final Promise<SocketAddress> remoteAddressPromise = ImmediateEventExecutor.INSTANCE.newPromise();
-            serverChannel = sb.childHandler(new ChannelInboundHandlerAdapter() {
+            serverChannel = sb.childHandler(new ChannelInboundHandler() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx) {
                     localAddressPromise.setSuccess(ctx.channel().localAddress());
@@ -71,7 +71,7 @@ public abstract class SocketAddressesTest extends AbstractSocketTest {
                 }
             }).bind().syncUninterruptibly().channel();
 
-            clientChannel = cb.handler(new ChannelInboundHandlerAdapter()).register().syncUninterruptibly().channel();
+            clientChannel = cb.handler(new ChannelInboundHandler() { }).register().syncUninterruptibly().channel();
 
             assertNull(clientChannel.localAddress());
             assertNull(clientChannel.remoteAddress());

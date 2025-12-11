@@ -18,7 +18,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.compression.Brotli;
@@ -369,7 +369,7 @@ public class DelegatingDecompressorFrameListener extends Http2FrameListenerDecor
 
         Http2Decompressor(EmbeddedChannel decompressor,  Http2Connection connection, Http2FrameListener listener) {
             this.decompressor = decompressor;
-            this.decompressor.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+            this.decompressor.pipeline().addLast(new ChannelInboundHandler() {
                 @Override
                 public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                     ByteBuf buf = (ByteBuf) msg;

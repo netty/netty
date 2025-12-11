@@ -18,7 +18,7 @@ package io.netty.channel.kqueue;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractClientSocketTest;
@@ -40,7 +40,7 @@ class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
             @Override
             public void run(Bootstrap bootstrap) {
                 try {
-                    bootstrap.handler(new ChannelInboundHandlerAdapter())
+                    bootstrap.handler(new ChannelInboundHandler() { })
                              .connect(KQueueSocketTestPermutation.newSocketAddress()).sync().channel();
                     fail("Expected FileNotFoundException");
                 } catch (Exception e) {
@@ -56,7 +56,7 @@ class KQueueDomainDatagramPathTest extends AbstractClientSocketTest {
             @Override
             public void run(Bootstrap bootstrap) {
                 try {
-                    Channel ch = bootstrap.handler(new ChannelInboundHandlerAdapter())
+                    Channel ch = bootstrap.handler(new ChannelInboundHandler() { })
                                           .bind(KQueueSocketTestPermutation.newSocketAddress()).sync().channel();
                     ch.writeAndFlush(new DatagramPacket(
                             Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII),

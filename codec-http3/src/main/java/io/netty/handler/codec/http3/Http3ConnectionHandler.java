@@ -17,7 +17,7 @@ package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.http3.Http3FrameCodec.Http3FrameCodecFactory;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
@@ -34,7 +34,7 @@ import static java.lang.Math.toIntExact;
 /**
  * Handler that handles <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32">HTTP3</a> connections.
  */
-public abstract class Http3ConnectionHandler extends ChannelInboundHandlerAdapter {
+public abstract class Http3ConnectionHandler implements ChannelInboundHandler {
     final Http3FrameCodecFactory codecFactory;
     final LongFunction<ChannelHandler> unknownInboundStreamHandlerFactory;
     final boolean disableQpackDynamicTable;

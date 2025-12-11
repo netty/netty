@@ -15,7 +15,6 @@
  */
 package io.netty.example.stomp.websocket;
 
-import io.netty.channel.ChannelHandler.Sharable;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToMessageCodec;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
@@ -30,11 +29,15 @@ import io.netty.handler.codec.stomp.StompSubframeDecoder;
 
 import java.util.List;
 
-@Sharable
 public class StompWebSocketProtocolCodec extends MessageToMessageCodec<WebSocketFrame, StompSubframe> {
 
     private final StompChatHandler stompChatHandler = new StompChatHandler();
     private final StompWebSocketFrameEncoder stompWebSocketFrameEncoder = new StompWebSocketFrameEncoder();
+
+    @Override
+    public boolean isSharable() {
+        return true;
+    }
 
     @Override
     public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {

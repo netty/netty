@@ -16,13 +16,13 @@
 package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.internal.ObjectUtil;
 
 import static io.netty.handler.codec.http3.Http3FrameValidationUtils.frameTypeUnexpected;
 import static io.netty.handler.codec.http3.Http3FrameValidationUtils.validateFrameRead;
 
-class Http3FrameTypeInboundValidationHandler<T extends Http3Frame> extends ChannelInboundHandlerAdapter {
+class Http3FrameTypeInboundValidationHandler<T extends Http3Frame> implements ChannelInboundHandler {
 
     protected final Class<T> frameType;
 

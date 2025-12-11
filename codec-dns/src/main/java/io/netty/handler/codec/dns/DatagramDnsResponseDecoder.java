@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.dns;
 
-import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.codec.CorruptedFrameException;
@@ -27,7 +26,6 @@ import java.util.List;
 /**
  * Decodes a {@link DatagramPacket} into a {@link DatagramDnsResponse}.
  */
-@ChannelHandler.Sharable
 public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<DatagramPacket> {
 
     private final DnsResponseDecoder<InetSocketAddress> responseDecoder;
@@ -60,6 +58,11 @@ public class DatagramDnsResponseDecoder extends MessageToMessageDecoder<Datagram
         } catch (IndexOutOfBoundsException e) {
             throw new CorruptedFrameException("Unable to decode response", e);
         }
+    }
+
+    @Override
+    public boolean isSharable() {
+        return true;
     }
 
     protected DnsResponse decodeResponse(ChannelHandlerContext ctx, DatagramPacket packet) throws Exception {
