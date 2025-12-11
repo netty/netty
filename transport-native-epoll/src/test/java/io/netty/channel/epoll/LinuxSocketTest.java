@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class LinuxSocketTest {
@@ -90,6 +91,23 @@ public class LinuxSocketTest {
                 }
             });
             Assertions.assertTrue(exception.getMessage().contains("too long"));
+        } finally {
+            socket.close();
+        }
+    }
+
+    @Test
+    public void testUnixAbstractDomainSocket() throws IOException {
+        String address  = "\0" + UUID.randomUUID();
+
+        final DomainSocketAddress domainSocketAddress = new DomainSocketAddress(address);
+        final Socket socket = Socket.newSocketDomain();
+        try {
+            socket.bind(domainSocketAddress);
+            DomainSocketAddress local = socket.localDomainSocketAddress();
+            assertEquals(domainSocketAddress, local);
+            assertEquals(address, domainSocketAddress.path());
+            assertEquals(address, local.path());
         } finally {
             socket.close();
         }

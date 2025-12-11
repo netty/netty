@@ -133,23 +133,23 @@ done:
     return obj;
 }
 
-static jobject createDomainDatagramSocketAddress(JNIEnv* env, const struct sockaddr_storage* addr, int len, jobject local) {
-    jclass domainDatagramSocketAddressClass = NULL;
-    jobject obj  = NULL;
-    struct sockaddr_un* s = (struct sockaddr_un*) addr;
+static int domainSocketPathLength(const struct sockaddr_un* s, const socklen_t addrlen) {
 #ifdef __linux__
     // Linux supports abstract domain sockets so we need to handle it.
     // https://man7.org/linux/man-pages/man7/unix.7.html
-    int pathLength = 0;
-    if (s->sun_path[0] == '\0') {
+    if (addrlen >= sizeof(sa_family_t) && s->sun_path[0] == '\0') {
        // This is an abstract domain socket address
-       pathLength = strlen(&(s->sun_path[1])) + 1;
-    } else {
-       pathLength = strlen(s->sun_path);
+       return (addrlen - sizeof(sa_family_t));
     }
-#else
-    int pathLength = strlen(s->sun_path);
 #endif
+    return strlen(s->sun_path);
+}
+
+static jobject createDomainDatagramSocketAddress(JNIEnv* env, const struct sockaddr_storage* addr, const socklen_t addrlen, int len, jobject local) {
+    jclass domainDatagramSocketAddressClass = NULL;
+    jobject obj  = NULL;
+    struct sockaddr_un* s = (struct sockaddr_un*) addr;
+    int pathLength = domainSocketPathLength(s, addrlen);
     jbyteArray pathBytes = (*env)->NewByteArray(env, pathLength);
     if (pathBytes == NULL) {
         return NULL;
@@ -169,21 +169,9 @@ done:
     return obj;
 }
 
-static jbyteArray netty_unix_socket_createDomainSocketAddressArray(JNIEnv* env, const struct sockaddr_storage* addr) {
+static jbyteArray netty_unix_socket_createDomainSocketAddressArray(JNIEnv* env, const struct sockaddr_storage* addr, const socklen_t addrlen) {
     struct sockaddr_un* s = (struct sockaddr_un*) addr;
-#ifdef __linux__
-    // Linux supports abstract domain sockets so we need to handle it.
-    // https://man7.org/linux/man-pages/man7/unix.7.html
-    int pathLength = 0;
-    if (s->sun_path[0] == '\0') {
-       // This is an abstract domain socket address
-       pathLength = strlen(&(s->sun_path[1])) + 1;
-    } else {
-       pathLength = strlen(s->sun_path);
-    }
-#else
-    int pathLength = strlen(s->sun_path);
-#endif
+    int pathLength = domainSocketPathLength(s, addrlen);
     jbyteArray pathBytes = (*env)->NewByteArray(env, pathLength);
     if (pathBytes == NULL) {
         return NULL;
@@ -488,7 +476,7 @@ static jobject _recvFromDomainSocket(JNIEnv* env, jint fd, void* buffer, jint po
         return NULL;
     }
 
-    return createDomainDatagramSocketAddress(env, &addr, res, NULL);
+    return createDomainDatagramSocketAddress(env, &addr, addrlen, res, NULL);
 }
 
 static jint _send(JNIEnv* env, jclass clazz, jint fd, void* buffer, jint pos, jint limit) {
@@ -733,7 +721,7 @@ static jbyteArray netty_unix_socket_remoteDomainSocketAddress(JNIEnv* env, jclas
     if (getpeername(fd, (struct sockaddr*) &addr, &len) == -1) {
         return NULL;
     }
-    return netty_unix_socket_createDomainSocketAddressArray(env, &addr);
+    return netty_unix_socket_createDomainSocketAddressArray(env, &addr, len);
 }
 
 static jbyteArray netty_unix_socket_localAddress(JNIEnv* env, jclass clazz, jint fd) {
@@ -751,7 +739,7 @@ static jbyteArray netty_unix_socket_localDomainSocketAddress(JNIEnv* env, jclass
     if (getsockname(fd, (struct sockaddr*) &addr, &len) == -1) {
         return NULL;
     }
-    return netty_unix_socket_createDomainSocketAddressArray(env, &addr);
+    return netty_unix_socket_createDomainSocketAddressArray(env, &addr, len);
 }
 
 static jint netty_unix_socket_newSocketDgramFd(JNIEnv* env, jclass clazz, jboolean ipv6) {
