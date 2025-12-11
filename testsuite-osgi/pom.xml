@@ -156,12 +156,6 @@
     </dependency>
     <dependency>
       <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-codec-marshalling</artifactId>
-      <version>${project.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
       <artifactId>netty5-codec-compression</artifactId>
       <version>${project.version}</version>
       <scope>test</scope>

@@ -27,7 +27,6 @@ open module io.netty.testsuite_jpms.test {
     requires io.netty.codec.stomp;
     requires io.netty.codec.socks;
     requires io.netty.codec.protobuf;
-    requires io.netty.codec.marshalling;
     requires io.netty.codec.compression;
     requires io.netty.common;
     requires io.netty.handler;
@@ -43,7 +42,6 @@ open module io.netty.testsuite_jpms.test {
     requires io.netty.codec.http2;
     requires io.netty.codec.http3;
     requires io.netty.codec.classes.quic;
-    requires org.jboss.marshalling;
     requires org.bouncycastle.pkix;
 
     requires static org.slf4j;

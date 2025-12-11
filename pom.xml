@@ -424,7 +424,6 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
-    <jboss.marshalling.version>2.2.3.Final</jboss.marshalling.version>
     <bouncycastle.version>1.82</bouncycastle.version>
     <argLine.common>
       -server
@@ -492,7 +491,6 @@
     <module>codec-base</module>
     <module>codec-compression</module>
     <module>codec-protobuf</module>
-    <module>codec-marshalling</module>
     <module>codec</module>
     <module>codec-dns</module>
     <module>codec-haproxy</module>
@@ -569,14 +567,6 @@
         <version>1.2.0</version>
       </dependency>
 
-      <!-- JBoss Marshalling - completely optional -->
-      <dependency>
-        <groupId>org.jboss.marshalling</groupId>
-        <artifactId>jboss-marshalling</artifactId>
-        <version>${jboss.marshalling.version}</version>
-        <scope>compile</scope>
-        <optional>true</optional>
-      </dependency>
 
       <!-- Google Protocol Buffers - completely optional -->
       <dependency>
@@ -855,20 +845,6 @@
         <scope>test</scope>
       </dependency>
 
-      <!-- Test dependencies for jboss marshalling encoder/decoder -->
-      <dependency>
-        <groupId>org.jboss.marshalling</groupId>
-        <artifactId>jboss-marshalling-serial</artifactId>
-        <version>${jboss.marshalling.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.jboss.marshalling</groupId>
-        <artifactId>jboss-marshalling-river</artifactId>
-        <version>${jboss.marshalling.version}</version>
-        <scope>test</scope>
-      </dependency>
-
       <!-- Test dependencies for microbench -->
       <dependency>
         <groupId>com.google.caliper</groupId>
@@ -1056,18 +1032,6 @@
                   <old>method void io.netty.handler.codec.http2.Http2ServerUpgradeCodec::<![CDATA[<init>]]>(java.lang.String, io.netty.handler.codec.http2.Http2ConnectionHandler, io.netty.channel.ChannelHandler[])</old>
                   <new>method void io.netty.handler.codec.http2.Http2ServerUpgradeCodec::<![CDATA[<init>]]>(java.lang.String, io.netty.handler.codec.http2.Http2ConnectionHandler, io.netty.channel.ChannelHandler[])</new>
                   <justification>Be able to directly construct class</justification>
-                </item>
-                <item>
-                  <ignore>true</ignore>
-                  <code>java.class.externalClassExposedInAPI</code>
-                  <new>interface org.jboss.marshalling.ClassNameTransformer</new>
-                  <justification>We need to build with upgraded JBoss Marshalling version. Otherwise, testsuite-jpms won't compile.</justification>
-                </item>
-                <item>
-                  <ignore>true</ignore>
-                  <code>java.class.externalClassExposedInAPI</code>
-                  <new>interface org.jboss.marshalling.UnmarshallingObjectInputFilter</new>
-                  <justification>We need to build with upgraded JBoss Marshalling version. Otherwise, testsuite-jpms won't compile.</justification>
                 </item>
                 <item>
                   <ignore>true</ignore>

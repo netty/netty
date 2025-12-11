@@ -74,17 +74,6 @@
         </exclusion>
       </exclusions>
     </dependency>
-    <dependency>
-      <groupId>${project.groupId}</groupId>
-      <artifactId>netty5-codec-marshalling</artifactId>
-      <version>${project.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.jboss.marshalling</groupId>
-          <artifactId>jboss-marshalling</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
 
     <dependency>
       <groupId>com.google.protobuf</groupId>
@@ -96,12 +85,6 @@
       <artifactId>protobuf-javanano</artifactId>
       <optional>true</optional>
     </dependency>
-    <dependency>
-      <groupId>org.jboss.marshalling</groupId>
-      <artifactId>jboss-marshalling</artifactId>
-      <optional>true</optional>
-    </dependency>
-
   </dependencies>
 
   <build>
