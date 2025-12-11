@@ -46,7 +46,6 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
@@ -162,7 +161,7 @@ final class AdaptivePoolingAllocator {
     };
 
     private static final int SIZE_CLASSES_COUNT = SIZE_CLASSES.length;
-    private static final byte[] SIZE_INDEXES = new byte[(SIZE_CLASSES[SIZE_CLASSES_COUNT - 1] / 32) + 1];
+    private static final byte[] SIZE_INDEXES = new byte[SIZE_CLASSES[SIZE_CLASSES_COUNT - 1] / 32 + 1];
 
     static {
         if (MAGAZINE_BUFFER_QUEUE_CAPACITY < 2) {
@@ -353,10 +352,6 @@ final class AdaptivePoolingAllocator {
 
     private void free() {
         largeBufferMagazineGroup.free();
-    }
-
-    static int sizeToBucket(int size) {
-        return HistogramChunkController.sizeToBucket(size);
     }
 
     private static final class MagazineGroup {
@@ -632,221 +627,6 @@ final class AdaptivePoolingAllocator {
             BuddyChunk chunk = new BuddyChunk(chunkAllocator.allocate(chunkSize, chunkSize), magazine, size -> false);
             chunkRegistry.add(chunk);
             return chunk;
-        }
-    }
-
-    private static final class HistogramChunkControllerFactory implements ChunkControllerFactory {
-        private final boolean shareable;
-
-        private HistogramChunkControllerFactory(boolean shareable) {
-            this.shareable = shareable;
-        }
-
-        @Override
-        public ChunkController create(MagazineGroup group) {
-            return new HistogramChunkController(group, shareable);
-        }
-    }
-
-    private static final class HistogramChunkController implements ChunkController, ChunkReleasePredicate {
-        private static final int MIN_DATUM_TARGET = 1024;
-        private static final int MAX_DATUM_TARGET = 65534;
-        private static final int INIT_DATUM_TARGET = 9;
-        private static final int HISTO_BUCKET_COUNT = 16;
-        private static final int[] HISTO_BUCKETS = {
-                16 * 1024,
-                24 * 1024,
-                32 * 1024,
-                48 * 1024,
-                64 * 1024,
-                96 * 1024,
-                128 * 1024,
-                192 * 1024,
-                256 * 1024,
-                384 * 1024,
-                512 * 1024,
-                768 * 1024,
-                1024 * 1024,
-                1792 * 1024,
-                2048 * 1024,
-                3072 * 1024
-        };
-
-        private final MagazineGroup group;
-        private final boolean shareable;
-        private final short[][] histos = {
-                new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
-                new short[HISTO_BUCKET_COUNT], new short[HISTO_BUCKET_COUNT],
-        };
-        private final ChunkRegistry chunkRegistry;
-        private short[] histo = histos[0];
-        private final int[] sums = new int[HISTO_BUCKET_COUNT];
-
-        private int histoIndex;
-        private int datumCount;
-        private int datumTarget = INIT_DATUM_TARGET;
-        private boolean hasHadRotation;
-        private volatile int sharedPrefChunkSize = MIN_CHUNK_SIZE;
-        private volatile int localPrefChunkSize = MIN_CHUNK_SIZE;
-        private volatile int localUpperBufSize;
-
-        private HistogramChunkController(MagazineGroup group, boolean shareable) {
-            this.group = group;
-            this.shareable = shareable;
-            chunkRegistry = group.allocator.chunkRegistry;
-        }
-
-        @Override
-        public int computeBufferCapacity(
-                int requestedSize, int maxCapacity, boolean isReallocation) {
-            if (!isReallocation) {
-                // Only record allocation size if it's not caused by a reallocation that was triggered by capacity
-                // change of the buffer.
-                recordAllocationSize(requestedSize);
-            }
-
-            // Predict starting capacity from localUpperBufSize, but place limits on the max starting capacity
-            // based on the requested size, because localUpperBufSize can potentially be quite large.
-            int startCapLimits;
-            if (requestedSize <= 32768) { // Less than or equal to 32 KiB.
-                startCapLimits = 65536; // Use at most 64 KiB, which is also the AdaptiveRecvByteBufAllocator max.
-            } else {
-                startCapLimits = requestedSize * 2; // Otherwise use at most twice the requested memory.
-            }
-            int startingCapacity = Math.min(startCapLimits, localUpperBufSize);
-            startingCapacity = Math.max(requestedSize, Math.min(maxCapacity, startingCapacity));
-            return startingCapacity;
-        }
-
-        private void recordAllocationSize(int bufferSizeToRecord) {
-            // Use the preserved size from the reused AdaptiveByteBuf, if available.
-            // Otherwise, use the requested buffer size.
-            // This way, we better take into account
-            if (bufferSizeToRecord == 0) {
-                return;
-            }
-            int bucket = sizeToBucket(bufferSizeToRecord);
-            histo[bucket]++;
-            if (datumCount++ == datumTarget) {
-                rotateHistograms();
-            }
-        }
-
-        static int sizeToBucket(int size) {
-            int index = binarySearchInsertionPoint(Arrays.binarySearch(HISTO_BUCKETS, size));
-            return index >= HISTO_BUCKETS.length ? HISTO_BUCKETS.length - 1 : index;
-        }
-
-        private static int binarySearchInsertionPoint(int index) {
-            if (index < 0) {
-                index = -(index + 1);
-            }
-            return index;
-        }
-
-        static int bucketToSize(int sizeBucket) {
-            return HISTO_BUCKETS[sizeBucket];
-        }
-
-        private void rotateHistograms() {
-            short[][] hs = histos;
-            for (int i = 0; i < HISTO_BUCKET_COUNT; i++) {
-                sums[i] = (hs[0][i] & 0xFFFF) + (hs[1][i] & 0xFFFF) + (hs[2][i] & 0xFFFF) + (hs[3][i] & 0xFFFF);
-            }
-            int sum = 0;
-            for (int count : sums) {
-                sum  += count;
-            }
-            int targetPercentile = (int) (sum * 0.99);
-            int sizeBucket = 0;
-            for (; sizeBucket < sums.length; sizeBucket++) {
-                if (sums[sizeBucket] > targetPercentile) {
-                    break;
-                }
-                targetPercentile -= sums[sizeBucket];
-            }
-            hasHadRotation = true;
-            int percentileSize = bucketToSize(sizeBucket);
-            int prefChunkSize = Math.max(percentileSize * BUFS_PER_CHUNK, MIN_CHUNK_SIZE);
-            localUpperBufSize = percentileSize;
-            localPrefChunkSize = prefChunkSize;
-            if (shareable) {
-                for (Magazine mag : group.magazines) {
-                    HistogramChunkController statistics = (HistogramChunkController) mag.chunkController;
-                    prefChunkSize = Math.max(prefChunkSize, statistics.localPrefChunkSize);
-                }
-            }
-            if (sharedPrefChunkSize != prefChunkSize) {
-                // Preferred chunk size changed. Increase check frequency.
-                datumTarget = Math.max(datumTarget >> 1, MIN_DATUM_TARGET);
-                sharedPrefChunkSize = prefChunkSize;
-            } else {
-                // Preferred chunk size did not change. Check less often.
-                datumTarget = Math.min(datumTarget << 1, MAX_DATUM_TARGET);
-            }
-
-            histoIndex = histoIndex + 1 & 3;
-            histo = histos[histoIndex];
-            datumCount = 0;
-            Arrays.fill(histo, (short) 0);
-        }
-
-        /**
-         * Get the preferred chunk size, based on statistics from the {@linkplain #recordAllocationSize(int) recorded}
-         * allocation sizes.
-         * <p>
-         * This method must be thread-safe.
-         *
-         * @return The currently preferred chunk allocation size.
-         */
-        int preferredChunkSize() {
-            return sharedPrefChunkSize;
-        }
-
-        @Override
-        public void initializeSharedStateIn(ChunkController chunkController) {
-            HistogramChunkController statistics = (HistogramChunkController) chunkController;
-            int sharedPrefChunkSize = this.sharedPrefChunkSize;
-            statistics.localPrefChunkSize = sharedPrefChunkSize;
-            statistics.sharedPrefChunkSize = sharedPrefChunkSize;
-        }
-
-        @Override
-        public Chunk newChunkAllocation(int promptingSize, Magazine magazine) {
-            int size = Math.max(promptingSize * BUFS_PER_CHUNK, preferredChunkSize());
-            int minChunks = size / MIN_CHUNK_SIZE;
-            if (MIN_CHUNK_SIZE * minChunks < size) {
-                // Round up to nearest whole MIN_CHUNK_SIZE unit. The MIN_CHUNK_SIZE is an even multiple of many
-                // popular small page sizes, like 4k, 16k, and 64k, which makes it easier for the system allocator
-                // to manage the memory in terms of whole pages. This reduces memory fragmentation,
-                // but without the potentially high overhead that power-of-2 chunk sizes would bring.
-                size = MIN_CHUNK_SIZE * (1 + minChunks);
-            }
-
-            // Limit chunks to the max size, even if the histogram suggests to go above it.
-            size = Math.min(size, MAX_CHUNK_SIZE);
-
-            // If we haven't rotated the histogram yet, optimisticly record this chunk size as our preferred.
-            if (!hasHadRotation && sharedPrefChunkSize == MIN_CHUNK_SIZE) {
-                sharedPrefChunkSize = size;
-            }
-
-            ChunkAllocator chunkAllocator = group.chunkAllocator;
-            Chunk chunk = new Chunk(chunkAllocator.allocate(size, size), magazine, true, this);
-            chunkRegistry.add(chunk);
-            return chunk;
-        }
-
-        @Override
-        public boolean shouldReleaseChunk(int chunkSize) {
-            int preferredSize = preferredChunkSize();
-            int givenChunks = chunkSize / MIN_CHUNK_SIZE;
-            int preferredChunks = preferredSize / MIN_CHUNK_SIZE;
-            int deviation = Math.abs(givenChunks - preferredChunks);
-
-            // Retire chunks with a 5% probability per unit of MIN_CHUNK_SIZE deviation from preference.
-            return deviation != 0 &&
-                    ThreadLocalRandom.current().nextDouble() * 20.0 < deviation;
         }
     }
 
