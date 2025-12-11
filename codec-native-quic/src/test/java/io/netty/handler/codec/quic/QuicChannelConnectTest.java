@@ -1439,7 +1439,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                                 sslEventLatch.countDown();
                             }
                         }
-                        ctx.fireChannelRead(evt);
+                        ctx.fireUserEventTriggered(evt);
                     }
                 },
                 new TestHandler());
