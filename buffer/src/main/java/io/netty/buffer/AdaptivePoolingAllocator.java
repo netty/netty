@@ -1296,7 +1296,7 @@ final class AdaptivePoolingAllocator {
                     return found;
                 }
                 index = (index << 1) + 1;
-                currOffset += currValue;
+                currOffset += currValue >> 1; // Bump offset to skip first half of this layer.
             }
             return -1;
         }
