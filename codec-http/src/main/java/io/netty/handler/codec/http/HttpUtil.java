@@ -128,7 +128,7 @@ public final class HttpUtil {
 
     private static long charMask(CharSequence token, int i) {
         char c = token.charAt(i);
-        return c <= 64 ? 1L << c : 0;
+        return c < 64 ? 1L << c : 0;
     }
 
     /**
