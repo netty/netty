@@ -17,9 +17,7 @@ package io.netty.handler.codec.socks;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ReplayingDecoder;
-import io.netty.handler.codec.socks.SocksInitRequestDecoder.State;
-import io.netty.util.internal.UnstableApi;
+import io.netty.handler.codec.ByteToMessageDecoder;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -29,24 +27,31 @@ import java.util.List;
  * Decodes {@link ByteBuf}s into {@link SocksInitRequest}.
  * Before returning SocksRequest decoder removes itself from pipeline.
  */
-public class SocksInitRequestDecoder extends ReplayingDecoder<State> {
-
-    public SocksInitRequestDecoder() {
-        super(State.CHECK_PROTOCOL_VERSION);
-    }
+public class SocksInitRequestDecoder extends ByteToMessageDecoder {
+    private State state = State.CHECK_PROTOCOL_VERSION;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf byteBuf, List<Object> out) throws Exception {
-        switch (state()) {
+        switch (state) {
             case CHECK_PROTOCOL_VERSION: {
+                if (byteBuf.readableBytes() < 1) {
+                    return;
+                }
                 if (byteBuf.readByte() != SocksProtocolVersion.SOCKS5.byteValue()) {
                     out.add(SocksCommonUtils.UNKNOWN_SOCKS_REQUEST);
                     break;
                 }
-                checkpoint(State.READ_AUTH_SCHEMES);
+                state = State.READ_AUTH_SCHEMES;
             }
             case READ_AUTH_SCHEMES: {
-                final byte authSchemeNum = byteBuf.readByte();
+                if (byteBuf.readableBytes() < 1) {
+                    return;
+                }
+                final byte authSchemeNum = byteBuf.getByte(byteBuf.readerIndex());
+                if (byteBuf.readableBytes() < 1 + authSchemeNum) {
+                    return;
+                }
+                byteBuf.skipBytes(1);
                 final List<SocksAuthScheme> authSchemes;
                 if (authSchemeNum > 0) {
                     authSchemes = new ArrayList<SocksAuthScheme>(authSchemeNum);
@@ -60,14 +65,13 @@ public class SocksInitRequestDecoder extends ReplayingDecoder<State> {
                 break;
             }
             default: {
-                throw new Error("Unexpected request decoder type: " + state());
+                throw new Error("Unexpected request decoder type: " + state);
             }
         }
         ctx.pipeline().remove(this);
     }
 
-    @UnstableApi
-    public enum State {
+    private enum State {
         CHECK_PROTOCOL_VERSION,
         READ_AUTH_SCHEMES
     }

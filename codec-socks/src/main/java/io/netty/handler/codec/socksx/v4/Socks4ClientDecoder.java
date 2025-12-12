@@ -18,12 +18,10 @@ package io.netty.handler.codec.socksx.v4;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.ReplayingDecoder;
-import io.netty.handler.codec.socksx.v4.Socks4ClientDecoder.State;
 import io.netty.util.NetUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -33,25 +31,28 @@ import java.util.List;
  * other handler can remove this decoder later.  On failed decode, this decoder will discard the
  * received data, so that other handler closes the connection later.
  */
-public class Socks4ClientDecoder extends ReplayingDecoder<State> {
+public class Socks4ClientDecoder extends ByteToMessageDecoder {
 
-    @UnstableApi
-    public enum State {
+    private enum State {
         START,
         SUCCESS,
         FAILURE
     }
+    private State state = State.START;
 
     public Socks4ClientDecoder() {
-        super(State.START);
         setSingleDecode(true);
     }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         try {
-            switch (state()) {
+            switch (state) {
             case START: {
+                if (in.readableBytes() < 8) {
+                    // Not enough data to read.
+                    return;
+                }
                 final int version = in.readUnsignedByte();
                 if (version != 0) {
                     throw new DecoderException("unsupported reply version: " + version + " (expected: 0)");
@@ -62,17 +63,17 @@ public class Socks4ClientDecoder extends ReplayingDecoder<State> {
                 final String dstAddr = NetUtil.intToIpAddress(ByteBufUtil.readIntBE(in));
 
                 out.add(new DefaultSocks4CommandResponse(status, dstAddr, dstPort));
-                checkpoint(State.SUCCESS);
+                state = State.SUCCESS;
             }
             case SUCCESS: {
-                int readableBytes = actualReadableBytes();
+                int readableBytes = in.readableBytes();
                 if (readableBytes > 0) {
                     out.add(in.readRetainedSlice(readableBytes));
                 }
                 break;
             }
             case FAILURE: {
-                in.skipBytes(actualReadableBytes());
+                in.skipBytes(in.readableBytes());
                 break;
             }
             }
@@ -90,6 +91,6 @@ public class Socks4ClientDecoder extends ReplayingDecoder<State> {
         m.setDecoderResult(DecoderResult.failure(cause));
         out.add(m);
 
-        checkpoint(State.FAILURE);
+        state = State.FAILURE;
     }
 }
