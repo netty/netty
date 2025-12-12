@@ -458,7 +458,7 @@ static jobject _recvFromDomainSocket(JNIEnv* env, jint fd, void* buffer, jint po
     int err;
 
     do {
-        bzero(&addr, sizeof(addr)); // Zap addr so we can strlen(addr.sun_path) later. See unix(4).
+        memset(&addr, 0, sizeof(addr)); // Zap addr so we can strlen(addr.sun_path) later. See unix(4).
         res = recvfrom(fd, buffer + pos, (size_t) (limit - pos), 0, (struct sockaddr*) &addr, &addrlen);
         // Keep on reading if it was interrupted
     } while (res == -1 && ((err = errno) == EINTR));
