@@ -255,26 +255,21 @@ public final class MqttDecoder extends ByteToMessageDecoder {
                 throw new DecoderException("Unknown message type, do not know how to validate fixed header");
         }
 
-        if (buffer.readableBytes() < 4) {
-            buffer.readerIndex(readerIndex);
-            return null;
-        }
-        int remainingLength = parseRemainingLength(buffer, messageType);
-        MqttFixedHeader decodedFixedHeader =
-                new MqttFixedHeader(messageType, dupFlag, MqttQoS.valueOf(qosLevel), retain, remainingLength);
-        return validateFixedHeader(ctx, resetUnusedFields(decodedFixedHeader));
-    }
-
-    private static int parseRemainingLength(ByteBuf buffer, MqttMessageType messageType) {
         int remainingLength = 0;
         int multiplier = 1;
 
         for (int i = 0; i < 4; i++) {
+            if (buffer.readableBytes() < 1) {
+                buffer.readerIndex(readerIndex);
+                return null;
+            }
             short digit = buffer.readUnsignedByte();
             remainingLength += (digit & 127) * multiplier;
 
             if ((digit & 128) == 0) {
-                return remainingLength;
+                MqttFixedHeader decodedFixedHeader =
+                        new MqttFixedHeader(messageType, dupFlag, MqttQoS.valueOf(qosLevel), retain, remainingLength);
+                return validateFixedHeader(ctx, resetUnusedFields(decodedFixedHeader));
             }
 
             multiplier *= 128;

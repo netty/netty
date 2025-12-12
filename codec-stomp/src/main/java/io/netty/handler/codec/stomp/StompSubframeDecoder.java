@@ -222,7 +222,7 @@ public class StompSubframeDecoder extends ByteToMessageDecoder {
     private State readHeaders(ByteBuf buffer, StompHeadersSubframe headersSubframe) {
         StompHeaders headers = headersSubframe.headers();
         boolean headerRead = headerParser.parseHeader(headersSubframe, buffer);
-        if (!headerRead) {
+        if (headerRead) {
             if (headers.contains(StompHeaders.CONTENT_LENGTH)) {
                 contentLength = getContentLength(headers);
                 if (contentLength == 0) {
