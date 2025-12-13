@@ -18,19 +18,20 @@ package io.netty.example.securechat;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.group.ChannelGroup;
-import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
-import io.netty.util.concurrent.GlobalEventExecutor;
+
+import java.util.Collections;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Handles a server-side channel.
  */
 public class SecureChatServerHandler extends SimpleChannelInboundHandler<String> {
 
-    static final ChannelGroup channels = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+    static final Set<Channel> channels = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     @Override
     public void channelActive(final ChannelHandlerContext ctx) throws Exception {
