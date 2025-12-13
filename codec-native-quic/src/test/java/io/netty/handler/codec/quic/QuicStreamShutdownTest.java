@@ -54,13 +54,10 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                     new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                            ChannelFutureListener futureListener = new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture channelFuture) {
-                                    Throwable cause = channelFuture.cause();
-                                    if (cause instanceof ChannelOutputShutdownException) {
-                                        latch.countDown();
-                                    }
+                            ChannelFutureListener futureListener = channelFuture -> {
+                                Throwable cause = channelFuture.cause();
+                                if (cause instanceof ChannelOutputShutdownException) {
+                                    latch.countDown();
                                 }
                             };
                             ByteBuf buffer = (ByteBuf) msg;
@@ -105,27 +102,21 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                             QuicStreamChannel streamChannel = (QuicStreamChannel) ctx.channel();
                             streamChannel.shutdown(ChannelShutdownType.newInbound())
-                                    .addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture f) {
-                                    ByteBuf buffer = (ByteBuf) msg;
-                                    if (!f.isSuccess()) {
-                                        errorRef.compareAndSet(null, f.cause());
-                                        latch.countDown();
-                                        buffer.release();
-                                    } else {
-                                        ctx.writeAndFlush(buffer).addListener(new ChannelFutureListener() {
-                                            @Override
-                                            public void operationComplete(ChannelFuture channelFuture) {
+                                    .addListener(f -> {
+                                        ByteBuf buffer = (ByteBuf) msg;
+                                        if (!f.isSuccess()) {
+                                            errorRef.compareAndSet(null, f.cause());
+                                            latch.countDown();
+                                            buffer.release();
+                                        } else {
+                                            ctx.writeAndFlush(buffer).addListener(channelFuture -> {
                                                 if (!channelFuture.isSuccess()) {
                                                     errorRef.compareAndSet(null, channelFuture.cause());
                                                 }
                                                 latch.countDown();
-                                            }
-                                        });
-                                    }
-                                }
-                            });
+                                            });
+                                        }
+                                    });
                         }
                     });
 
@@ -182,15 +173,12 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                             ByteBuf buffer = (ByteBuf) msg;
                             buffer.release();
                             streamChannel.shutdown(ChannelShutdownType.newOutbound(100))
-                                    .addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture f) {
-                                    if (!f.isSuccess()) {
-                                        errorRef.compareAndSet(null, f.cause());
-                                    }
-                                    latch.countDown();
-                                }
-                            });
+                                    .addListener(f -> {
+                                        if (!f.isSuccess()) {
+                                            errorRef.compareAndSet(null, f.cause());
+                                        }
+                                        latch.countDown();
+                                    });
                         }
                     });
 

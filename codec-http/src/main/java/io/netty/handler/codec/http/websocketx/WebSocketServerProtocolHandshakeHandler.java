@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelPipeline;
@@ -28,7 +27,6 @@ import io.netty.handler.codec.http.websocketx.WebSocketServerProtocolHandler.Ser
 import io.netty.handler.ssl.SslHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 
 import java.util.concurrent.TimeUnit;
 
@@ -84,21 +82,18 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelInboundHandler {
                     ctx.pipeline().remove(this);
 
                     final ChannelFuture handshakeFuture = handshaker.handshake(ctx.channel(), req);
-                    handshakeFuture.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) {
-                            if (!future.isSuccess()) {
-                                localHandshakePromise.tryFailure(future.cause());
-                                ctx.fireExceptionCaught(future.cause());
-                            } else {
-                                localHandshakePromise.trySuccess();
-                                // Kept for compatibility
-                                ctx.fireUserEventTriggered(
-                                        WebSocketServerProtocolHandler.ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
-                                ctx.fireUserEventTriggered(
-                                        new WebSocketServerProtocolHandler.HandshakeComplete(
-                                                req.uri(), req.headers(), handshaker.selectedSubprotocol()));
-                            }
+                    handshakeFuture.addListener(future -> {
+                        if (!future.isSuccess()) {
+                            localHandshakePromise.tryFailure(future.cause());
+                            ctx.fireExceptionCaught(future.cause());
+                        } else {
+                            localHandshakePromise.trySuccess();
+                            // Kept for compatibility
+                            ctx.fireUserEventTriggered(
+                                    ServerHandshakeStateEvent.HANDSHAKE_COMPLETE);
+                            ctx.fireUserEventTriggered(
+                                    new WebSocketServerProtocolHandler.HandshakeComplete(
+                                            req.uri(), req.headers(), handshaker.selectedSubprotocol()));
                         }
                     });
                     applyHandshakeTimeout();
@@ -160,11 +155,6 @@ class WebSocketServerProtocolHandshakeHandler implements ChannelInboundHandler {
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);
 
         // Cancel the handshake timeout when handshake is finished.
-        localHandshakePromise.addListener(new FutureListener<Void>() {
-            @Override
-            public void operationComplete(Future<Void> f) {
-                timeoutFuture.cancel(false);
-            }
-        });
+        localHandshakePromise.addListener(f -> timeoutFuture.cancel(false));
     }
 }

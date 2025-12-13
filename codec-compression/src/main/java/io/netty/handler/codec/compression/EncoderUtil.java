@@ -37,14 +37,11 @@ final class EncoderUtil {
                 }
             }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
 
-            finishFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture f) {
-                    // Cancel the scheduled timeout.
-                    future.cancel(true);
-                    if (!promise.isDone()) {
-                        ctx.close(promise);
-                    }
+            finishFuture.addListener(f -> {
+                // Cancel the scheduled timeout.
+                future.cancel(true);
+                if (!promise.isDone()) {
+                    ctx.close(promise);
                 }
             });
         } else {

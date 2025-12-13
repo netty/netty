@@ -17,7 +17,6 @@
 package io.netty.example.haproxy;
 
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPromise;
@@ -35,15 +34,12 @@ public class HAProxyHandler implements ChannelOutboundHandler {
     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         ChannelFuture future = ctx.write(msg, promise);
         if (msg instanceof HAProxyMessage) {
-            future.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    if (future.isSuccess()) {
-                        ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
-                        ctx.pipeline().remove(HAProxyHandler.this);
-                    } else {
-                        ctx.close();
-                    }
+            future.addListener(future1 -> {
+                if (future1.isSuccess()) {
+                    ctx.pipeline().remove(HAProxyMessageEncoder.INSTANCE);
+                    ctx.pipeline().remove(HAProxyHandler.this);
+                } else {
+                    ctx.close();
                 }
             });
         }

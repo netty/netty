@@ -64,12 +64,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
 
-    private final ChannelFutureListener recordExceptionListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) {
-            recordException(future);
-        }
-    };
+    private final ChannelFutureListener recordExceptionListener = this::recordException;
 
     private final ChannelConfig config;
     private Queue<Object> inboundMessages;

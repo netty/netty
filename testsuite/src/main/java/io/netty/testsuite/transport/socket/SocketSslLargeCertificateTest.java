@@ -209,12 +209,7 @@ public class SocketSslLargeCertificateTest {
                                 if (receivedRead) {
                                     receivedRead = false;
                                     ctx.writeAndFlush(Unpooled.buffer()).addListener(ChannelFutureListener.CLOSE);
-                                    ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
-                                        @Override
-                                        public void operationComplete(ChannelFuture future) {
-                                            completion.setSuccess(null);
-                                        }
-                                    });
+                                    ctx.channel().closeFuture().addListener(future -> completion.setSuccess(null));
                                 }
                             }
 

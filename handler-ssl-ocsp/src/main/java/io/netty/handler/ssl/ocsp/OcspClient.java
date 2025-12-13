@@ -143,21 +143,18 @@ final class OcspClient {
                             uri.getHost(), port, path, ioTransport, dnsNameResolver);
 
                     // Validate OCSP response
-                    ocspResponsePromise.addListener(new GenericFutureListener<Future<OCSPResp>>() {
-                        @Override
-                        public void operationComplete(Future<OCSPResp> future) {
-                            // If Future was successful then we have received OCSP response
-                            // We will now validate it.
-                            if (future.isSuccess()) {
-                                try {
-                                    BasicOCSPResp resp = (BasicOCSPResp) future.getNow().getResponseObject();
-                                    validateResponse(responsePromise, resp, derNonce, issuer, validateResponseNonce);
-                                } catch (Throwable t) {
-                                    responsePromise.tryFailure(t);
-                                }
-                            } else {
-                                responsePromise.tryFailure(future.cause());
+                    ocspResponsePromise.addListener((GenericFutureListener<Future<OCSPResp>>) future -> {
+                        // If Future was successful then we have received OCSP response
+                        // We will now validate it.
+                        if (future.isSuccess()) {
+                            try {
+                                BasicOCSPResp resp = (BasicOCSPResp) future.getNow().getResponseObject();
+                                validateResponse(responsePromise, resp, derNonce, issuer, validateResponseNonce);
+                            } catch (Throwable t) {
+                                responsePromise.tryFailure(t);
                             }
+                        } else {
+                            responsePromise.tryFailure(future.cause());
                         }
                     });
 
@@ -193,41 +190,35 @@ final class OcspClient {
                     .attr(OcspServerCertificateValidator.OCSP_PIPELINE_ATTRIBUTE, Boolean.TRUE)
                     .handler(new Initializer(responsePromise));
 
-            dnsNameResolver.resolve(host).addListener(new FutureListener<InetAddress>() {
-                @Override
-                public void operationComplete(Future<InetAddress> future) {
+            dnsNameResolver.resolve(host).addListener((FutureListener<InetAddress>) future -> {
 
-                    // If Future was successful then we have successfully resolved OCSP server address.
-                    // If not, mark 'responsePromise' as failure.
-                    if (future.isSuccess()) {
-                        // Get the resolved InetAddress
-                        InetAddress hostAddress = future.getNow();
-                        final ChannelFuture channelFuture = bootstrap.connect(hostAddress, port);
-                        channelFuture.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) {
-                                // If Future was successful then connection to OCSP responder was successful.
-                                // We will send a OCSP request now
-                                if (future.isSuccess()) {
-                                    FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, path,
-                                            ocspRequest);
-                                    request.headers().add(HttpHeaderNames.HOST, host);
-                                    request.headers().add(HttpHeaderNames.USER_AGENT, "Netty OCSP Client");
-                                    request.headers().add(HttpHeaderNames.CONTENT_TYPE, OCSP_REQUEST_TYPE);
-                                    request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, OCSP_RESPONSE_TYPE);
-                                    request.headers().add(HttpHeaderNames.CONTENT_LENGTH, ocspRequest.readableBytes());
+                // If Future was successful then we have successfully resolved OCSP server address.
+                // If not, mark 'responsePromise' as failure.
+                if (future.isSuccess()) {
+                    // Get the resolved InetAddress
+                    InetAddress hostAddress = future.getNow();
+                    final ChannelFuture channelFuture = bootstrap.connect(hostAddress, port);
+                    channelFuture.addListener(f -> {
+                        // If Future was successful then connection to OCSP responder was successful.
+                        // We will send a OCSP request now
+                        if (f.isSuccess()) {
+                            FullHttpRequest request = new DefaultFullHttpRequest(HTTP_1_1, POST, path,
+                                    ocspRequest);
+                            request.headers().add(HttpHeaderNames.HOST, host);
+                            request.headers().add(HttpHeaderNames.USER_AGENT, "Netty OCSP Client");
+                            request.headers().add(HttpHeaderNames.CONTENT_TYPE, OCSP_REQUEST_TYPE);
+                            request.headers().add(HttpHeaderNames.ACCEPT_ENCODING, OCSP_RESPONSE_TYPE);
+                            request.headers().add(HttpHeaderNames.CONTENT_LENGTH, ocspRequest.readableBytes());
 
-                                    // Send the OCSP HTTP Request
-                                    channelFuture.channel().writeAndFlush(request);
-                                } else {
-                                    responsePromise.tryFailure(new IllegalStateException(
-                                            "Connection to OCSP Responder Failed", future.cause()));
-                                }
-                            }
-                        });
-                    } else {
-                        responsePromise.tryFailure(future.cause());
-                    }
+                            // Send the OCSP HTTP Request
+                            channelFuture.channel().writeAndFlush(request);
+                        } else {
+                            responsePromise.tryFailure(new IllegalStateException(
+                                    "Connection to OCSP Responder Failed", f.cause()));
+                        }
+                    });
+                } else {
+                    responsePromise.tryFailure(future.cause());
                 }
             });
         } catch (Exception ex) {

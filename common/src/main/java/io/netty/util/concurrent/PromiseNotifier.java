@@ -91,12 +91,9 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static <V, F extends Future<V>> F cascade(boolean logNotifyFailure, final F future,
                                                      final Promise<? super V> promise) {
-        promise.addListener(new FutureListener() {
-            @Override
-            public void operationComplete(Future f) {
-                if (f.isCancelled()) {
-                    future.cancel(false);
-                }
+        promise.addListener((FutureListener) f -> {
+            if (f.isCancelled()) {
+                future.cancel(false);
             }
         });
         future.addListener(new PromiseNotifier(logNotifyFailure, promise) {

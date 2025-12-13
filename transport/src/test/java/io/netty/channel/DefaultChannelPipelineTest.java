@@ -1016,34 +1016,31 @@ public class DefaultChannelPipelineTest {
         try {
             final Object event = new Object();
             final Promise<Object> promise = ImmediateEventExecutor.INSTANCE.newPromise();
-            pipeline1.channel().register().addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    ChannelPipeline pipeline = future.channel().pipeline();
-                    final AtomicBoolean handlerAddedCalled = new AtomicBoolean();
-                    pipeline.addLast(new ChannelInboundHandler() {
-                        @Override
-                        public void handlerAdded(ChannelHandlerContext ctx) {
-                            handlerAddedCalled.set(true);
-                        }
-
-                        @Override
-                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                            promise.setSuccess(event);
-                        }
-
-                        @Override
-                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                            promise.setFailure(cause);
-                        }
-                    });
-                    if (!handlerAddedCalled.get()) {
-                        promise.setFailure(new AssertionError("handlerAdded(...) should have been called"));
-                        return;
+            pipeline1.channel().register().addListener(future -> {
+                ChannelPipeline pipeline = channel.pipeline();
+                final AtomicBoolean handlerAddedCalled = new AtomicBoolean();
+                pipeline.addLast(new ChannelInboundHandler() {
+                    @Override
+                    public void handlerAdded(ChannelHandlerContext ctx) {
+                        handlerAddedCalled.set(true);
                     }
-                    // This event must be captured by the added handler.
-                    pipeline.fireUserEventTriggered(event);
+
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                        promise.setSuccess(event);
+                    }
+
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                        promise.setFailure(cause);
+                    }
+                });
+                if (!handlerAddedCalled.get()) {
+                    promise.setFailure(new AssertionError("handlerAdded(...) should have been called"));
+                    return;
                 }
+                // This event must be captured by the added handler.
+                pipeline.fireUserEventTriggered(event);
             });
             assertSame(event, promise.syncUninterruptibly().getNow());
         } finally {
