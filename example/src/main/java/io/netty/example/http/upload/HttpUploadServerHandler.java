@@ -17,8 +17,6 @@ package io.netty.example.http.upload;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -50,6 +48,7 @@ import io.netty.handler.codec.http.multipart.HttpPostRequestDecoder.ErrorDataDec
 import io.netty.handler.codec.http.multipart.InterfaceHttpData;
 import io.netty.handler.codec.http.multipart.InterfaceHttpData.HttpDataType;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
 
 import java.io.IOException;
 import java.net.URI;
@@ -342,10 +341,10 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
             }
         }
         // Write the response.
-        ChannelFuture future = channel.writeAndFlush(response);
+        Future<Void> future = channel.writeAndFlush(response);
         // Close the connection after the write operation is done if necessary.
         if (!keepAlive) {
-            future.addListener(ChannelFutureListener.CLOSE);
+            future.addListener(f -> channel.close());
         }
     }
 
@@ -438,10 +437,10 @@ public class HttpUploadServerHandler extends SimpleChannelInboundHandler<HttpObj
         }
 
         // Write the response.
-        ChannelFuture future = ctx.channel().writeAndFlush(response);
+        Future<Void> future = ctx.channel().writeAndFlush(response);
         // Close the connection after the write operation is done if necessary.
         if (!keepAlive) {
-            future.addListener(ChannelFutureListener.CLOSE);
+            future.addListener(f -> ctx.close());
         }
     }
 

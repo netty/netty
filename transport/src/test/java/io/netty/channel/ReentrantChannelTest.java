@@ -24,6 +24,8 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.nio.channels.ClosedChannelException;
@@ -46,13 +48,13 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testWritabilityChanged");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).get();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        Channel clientChannel = cb.connect(addr).get();
         clientChannel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(512, 1024));
 
         // What is supposed to happen from this point:
@@ -84,7 +86,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
         // the flush() is invoked from a non-I/O thread while the other are from
         // an I/O thread.
 
-        ChannelFuture future = clientChannel.write(createTestBuf(2000));
+        Future<Void> future = clientChannel.write(createTestBuf(2000));
 
         clientChannel.flush();
         future.sync();
@@ -145,13 +147,13 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testFlushInWritabilityChanged");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).get();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY, Event.CLOSE);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        Channel clientChannel = cb.connect(addr).get();
         clientChannel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(512, 1024));
 
         clientChannel.pipeline().addLast(new ChannelInboundHandler() {
@@ -234,13 +236,13 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testWriteFlushPingPong");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).get();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        Channel clientChannel = cb.connect(addr).get();
 
         clientChannel.pipeline().addLast(new ChannelOutboundHandler() {
 
@@ -248,7 +250,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
             int flushCount;
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 if (writeCount < 5) {
                     writeCount++;
                     ctx.channel().flush();
@@ -291,18 +293,18 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testCloseInFlush");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).get();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        Channel clientChannel = cb.connect(addr).get();
 
         clientChannel.pipeline().addLast(new ChannelOutboundHandler() {
 
             @Override
-            public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 promise.addListener(future -> ctx.channel().close());
                 ctx.write(msg, promise);
                 ctx.channel().flush();
@@ -321,13 +323,13 @@ public class ReentrantChannelTest extends BaseChannelTest {
         LocalAddress addr = new LocalAddress("testFlushFailure");
 
         ServerBootstrap sb = getLocalServerBootstrap();
-        sb.bind(addr).sync().channel();
+        sb.bind(addr).get();
 
         Bootstrap cb = getLocalClientBootstrap();
 
         setInterest(Event.WRITE, Event.FLUSH, Event.CLOSE, Event.EXCEPTION);
 
-        Channel clientChannel = cb.connect(addr).sync().channel();
+        Channel clientChannel = cb.connect(addr).get();
 
         clientChannel.pipeline().addLast(new ChannelOutboundHandler() {
 
@@ -438,12 +440,12 @@ public class ReentrantChannelTest extends BaseChannelTest {
                                 }
                             });
                         }
-                    }).bind(addr).sync().channel();
+                    }).bind(addr).get();
             Channel client = new Bootstrap()
                     .group(group)
                     .channel(LocalChannel.class)
                     .handler(new ChannelInboundHandler() { })
-                    .connect(addr).sync().channel();
+                    .connect(addr).get();
 
             client.writeAndFlush(Unpooled.copiedBuffer("A\nB\nC", StandardCharsets.UTF_8)).sync();
 

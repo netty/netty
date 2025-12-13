@@ -18,13 +18,13 @@ package io.netty.channel.epoll;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.AdaptiveRecvByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.AbstractDatagramTest;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -132,7 +132,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
                     // Nothing will be sent.
                 }
             });
-            cc = cb.bind(newSocketAddress()).sync().channel();
+            cc = cb.bind(newSocketAddress()).get();
             final SocketAddress ccAddress = cc.localAddress();
 
             final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
@@ -167,7 +167,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
             });
 
             sb.option(ChannelOption.AUTO_READ, false);
-            sc = sb.bind(newSocketAddress()).sync().channel();
+            sc = sb.bind(newSocketAddress()).get();
 
             if (connected) {
                 sc.connect(cc.localAddress()).syncUninterruptibly();
@@ -175,14 +175,14 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
 
             InetSocketAddress addr = (InetSocketAddress) sc.localAddress();
 
-            List<ChannelFuture> futures = new ArrayList<ChannelFuture>(numPackets);
+            List<Future<Void>> futures = new ArrayList<>(numPackets);
             for (int i = 0; i < numPackets; i++) {
                 futures.add(cc.write(new DatagramPacket(cc.alloc().directBuffer().writeLong(i), addr)));
             }
 
             cc.flush();
 
-            for (ChannelFuture f: futures) {
+            for (Future<Void> f: futures) {
                 f.sync();
             }
 
@@ -250,7 +250,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
                     // Nothing will be sent.
                 }
             });
-            cc = cb.bind(newSocketAddress()).sync().channel();
+            cc = cb.bind(newSocketAddress()).get();
             final SocketAddress ccAddress = cc.localAddress();
 
             final AtomicReference<Throwable> errorRef = new AtomicReference<Throwable>();
@@ -278,7 +278,7 @@ public class EpollDatagramScatteringReadTest extends AbstractDatagramTest  {
                 }
             });
 
-            sc = sb.bind(newSocketAddress()).sync().channel();
+            sc = sb.bind(newSocketAddress()).get();
 
             if (connected) {
                 sc.connect(cc.localAddress()).syncUninterruptibly();

@@ -140,7 +140,7 @@ final class SniClientJava8TestUtil {
                         }
                     });
                 }
-            }).bind(address).syncUninterruptibly().channel();
+            }).bind(address).get();
 
             sslClientContext = SslContextBuilder.forClient().trustManager(InsecureTrustManagerFactory.INSTANCE)
                     .sslProvider(sslClientProvider).build();
@@ -149,7 +149,7 @@ final class SniClientJava8TestUtil {
                     sslClientContext.newEngine(ByteBufAllocator.DEFAULT, sniHost, -1));
             Bootstrap cb = new Bootstrap();
             cc = cb.group(group).channel(LocalChannel.class).handler(sslHandler)
-                    .connect(address).syncUninterruptibly().channel();
+                    .connect(address).get();
 
             promise.syncUninterruptibly();
             sslHandler.handshakeFuture().syncUninterruptibly();

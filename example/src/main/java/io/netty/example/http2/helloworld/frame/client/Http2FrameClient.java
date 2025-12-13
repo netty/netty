@@ -89,14 +89,14 @@ public final class Http2FrameClient {
             b.handler(new Http2ClientFrameInitializer(sslCtx));
 
             // Start the client.
-            final Channel channel = b.connect().syncUninterruptibly().channel();
+            final Channel channel = b.connect().get();
             System.out.println("Connected to [" + HOST + ':' + PORT + ']');
 
             final Http2ClientStreamFrameResponseHandler streamFrameResponseHandler =
                     new Http2ClientStreamFrameResponseHandler();
 
             final Http2StreamChannelBootstrap streamChannelBootstrap = new Http2StreamChannelBootstrap(channel);
-            final Http2StreamChannel streamChannel = streamChannelBootstrap.open().syncUninterruptibly().getNow();
+            final Http2StreamChannel streamChannel = streamChannelBootstrap.open().get();
             streamChannel.pipeline().addLast(streamFrameResponseHandler);
 
             // Send request (a HTTP/2 HEADERS frame - with ':method = GET' in this case)

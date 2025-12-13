@@ -36,19 +36,19 @@ import static org.mockito.Mockito.when;
 public class PromiseCombinerTest {
     @Mock
     private Promise<Void> p1;
-    private GenericFutureListener<Future<Void>> l1;
+    private FutureListener<Void> l1;
     private final GenericFutureListenerConsumer l1Consumer = new GenericFutureListenerConsumer() {
         @Override
-        public void accept(GenericFutureListener<Future<Void>> listener) {
+        public void accept(FutureListener<Void> listener) {
             l1 = listener;
         }
     };
     @Mock
     private Promise<Void> p2;
-    private GenericFutureListener<Future<Void>> l2;
+    private FutureListener<Void> l2;
     private final GenericFutureListenerConsumer l2Consumer = new GenericFutureListenerConsumer() {
         @Override
-        public void accept(GenericFutureListener<Future<Void>> listener) {
+        public void accept(FutureListener<Void> listener) {
             l2 = listener;
         }
     };
@@ -255,13 +255,13 @@ public class PromiseCombinerTest {
             @SuppressWarnings({ "unchecked", "raw-types" })
             @Override
             public Promise<Void> answer(InvocationOnMock invocation) throws Throwable {
-                consumer.accept((GenericFutureListener) invocation.getArgument(0));
+                consumer.accept((FutureListener) invocation.getArgument(0));
                 return p;
             }
-        }).when(p).addListener(any(GenericFutureListener.class));
+        }).when(p).addListener(any(FutureListener.class));
     }
 
     interface GenericFutureListenerConsumer {
-        void accept(GenericFutureListener<Future<Void>> listener);
+        void accept(FutureListener<Void> listener);
     }
 }

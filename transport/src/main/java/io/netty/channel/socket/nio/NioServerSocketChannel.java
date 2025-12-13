@@ -19,7 +19,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
@@ -30,6 +29,7 @@ import io.netty.channel.nio.NioIoHandle;
 import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.logging.InternalLogger;
@@ -40,7 +40,6 @@ import java.net.SocketAddress;
 import java.net.StandardSocketOptions;
 import java.net.UnixDomainSocketAddress;
 import java.nio.channels.NetworkChannel;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.spi.SelectorProvider;
@@ -134,7 +133,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -165,18 +164,18 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
         try {
             javaChannel().bind(localAddress, config.getBacklog());
         } catch (Throwable cause) {
             promise.setFailure(cause);
             return;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doClose(ChannelPromise promise) {
+    protected void doClose(Promise<Void> promise) {
         SocketAddress localAddress = localAddress0();
         try {
             try {
@@ -185,7 +184,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
                 promise.setFailure(cause);
                 return;
             }
-            promise.setSuccess();
+            promise.setSuccess(null);
         } finally {
             if (localAddress instanceof UnixDomainSocketAddress) {
                 Path path = ((UnixDomainSocketAddress) localAddress).getPath();
@@ -236,7 +235,7 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    protected void doDisconnect(ChannelPromise promise) {
+    protected void doDisconnect(Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 

@@ -22,7 +22,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -31,6 +30,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.concurrent.Promise;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -158,7 +158,7 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (msg != Unpooled.EMPTY_BUFFER && !(msg instanceof ByteBuf)) {
             if (msg instanceof DefaultHttpResponse) {
                 onHttpResponseWrite(ctx, (DefaultHttpResponse) msg, promise);
@@ -176,9 +176,10 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
      * This is a method exposed to perform fail-fast checks of user-defined http types.<p>
      * eg:<br>
      * If the user has defined a specific {@link HttpResponse} type i.e.{@code CustomHttpResponse} and
-     * {@link #write} can receive {@link ByteBuf} {@code msg} types too, it can be overridden like this:
+     * {@link ChannelOutboundHandler#write} can receive {@link ByteBuf} {@code msg} types too, it can be overridden
+     * like this:
      * <pre>
-     *     public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
+     *     public void write(final ChannelHandlerContext ctx, Object msg, Promise<Void> promise) throws Exception {
      *         if (msg != Unpooled.EMPTY_BUFFER && !(msg instanceof ByteBuf)) {
      *             if (msg instanceof CustomHttpResponse) {
      *                 onHttpResponseWrite(ctx, (CustomHttpResponse) msg, promise);
@@ -198,7 +199,7 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
      * <strong>IMPORTANT:</strong>
      * It already call {@code super.write(ctx, response, promise)} before returning.
      */
-    protected void onHttpResponseWrite(ChannelHandlerContext ctx, HttpResponse response, ChannelPromise promise) {
+    protected void onHttpResponseWrite(ChannelHandlerContext ctx, HttpResponse response, Promise<Void> promise) {
         List<WebSocketServerExtension> validExtensionsList = validExtensions.poll();
         // checking the status is faster than looking at headers so we do this first
         if (HttpResponseStatus.SWITCHING_PROTOCOLS.equals(response.status())) {
@@ -208,7 +209,7 @@ public class WebSocketServerExtensionHandler implements ChannelInboundHandler, C
     }
 
     private void handlePotentialUpgrade(final ChannelHandlerContext ctx,
-                                        ChannelPromise promise, HttpResponse httpResponse,
+                                        Promise<Void> promise, HttpResponse httpResponse,
                                         final List<WebSocketServerExtension> validExtensionsList) {
         HttpHeaders headers = httpResponse.headers();
 

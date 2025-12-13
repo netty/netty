@@ -55,7 +55,6 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
@@ -451,7 +450,7 @@ public class WebSocket08FrameDecoder extends ByteToMessageDecoder
                 }
                 closeMessage = new CloseWebSocketFrame(closeStatus, reasonText);
             }
-            ctx.writeAndFlush(closeMessage).addListener(ChannelFutureListener.CLOSE);
+            ctx.writeAndFlush(closeMessage).addListener(f -> ctx.close());
         }
         throw ex;
     }

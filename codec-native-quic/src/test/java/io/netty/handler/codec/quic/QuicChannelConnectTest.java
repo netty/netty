@@ -18,12 +18,10 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.ConnectTimeoutException;
@@ -37,6 +35,7 @@ import io.netty.util.DomainWildcardMappingBuilder;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -294,7 +293,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .connect()
                     .get();
             assertTrue(quicChannel.close().await().isSuccess());
-            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            Future<Void> closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
             assertEquals(clientIdLength, clientQuicChannelHandler.localAddress().id().remaining());
@@ -372,7 +371,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             quicStream.shutdown(ChannelShutdownType.newOutbound(0)).sync();
             assertTrue(quicStream.closeFuture().await().isSuccess());
 
-            ChannelFuture closeFuture = channel.close().await();
+            Future<Void> closeFuture = channel.close().await();
             assertTrue(closeFuture.isSuccess());
         } finally {
             clientQuicChannelHandler.assertState();
@@ -460,10 +459,10 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 if (dropPackets.get()) {
                     ReferenceCountUtil.release(msg);
-                    promise.setSuccess();
+                    promise.setSuccess(null);
                 } else {
                     ctx.write(msg, promise);
                 }
@@ -492,7 +491,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             accepted.closeFuture().sync();
             assertTrue(accepted.parent().isTimedOut());
 
-            ChannelFuture closeFuture = channel.close().await();
+            Future<Void> closeFuture = channel.close().await();
             assertTrue(closeFuture.isSuccess());
         } finally {
             clientQuicChannelHandler.assertState();
@@ -538,7 +537,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
         channel.pipeline().addLast(new ChannelOutboundHandler() {
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                                ChannelPromise promise) {
+                                Promise<Void> promise) {
                 promise.setFailure(exception);
             }
         });
@@ -580,11 +579,11 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .get();
 
             // Try to connect again
-            ChannelFuture connectFuture = quicChannel.connect(QuicConnectionAddress.random());
+            Future<Void> connectFuture = quicChannel.connect(QuicConnectionAddress.random());
             Throwable cause = connectFuture.await().cause();
             assertInstanceOf(AlreadyConnectedException.class, cause);
             assertTrue(quicChannel.close().await().isSuccess());
-            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            Future<Void> closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
             serverQuicChannelHandler.assertState();
@@ -656,7 +655,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     quicheQuicSslEngine.getApplicationProtocol());
             stream.close().sync();
             quicChannel.close().sync();
-            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            Future<Void> closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
 
             clientQuicChannelHandler.assertState();
@@ -714,7 +713,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     quicheQuicSslEngine.getApplicationProtocol());
             stream.close().sync();
             quicChannel.close().sync();
-            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            Future<Void> closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
 
             clientQuicChannelHandler.assertState();
@@ -1022,7 +1021,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
 
             stream.close().sync();
             quicChannel.close().sync();
-            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            Future<Void> closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
         } finally {
@@ -1222,7 +1221,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .connect()
                     .get();
             assertTrue(quicChannel.close().await().isSuccess());
-            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            Future<Void> closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
         } finally {
@@ -1332,7 +1331,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .connect()
                     .get();
             assertTrue(quicChannel.close().await().isSuccess());
-            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            Future<Void> closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
         } finally {
@@ -1461,7 +1460,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .get();
 
             quicChannel.close().sync();
-            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            Future<Void> closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
             sniEventLatch.await();
@@ -1529,7 +1528,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
                     .get();
 
             quicChannel.close().sync();
-            ChannelFuture closeFuture = quicChannel.closeFuture().await();
+            Future<Void> closeFuture = quicChannel.closeFuture().await();
             assertTrue(closeFuture.isSuccess());
             clientQuicChannelHandler.assertState();
         } finally {
@@ -1625,7 +1624,7 @@ public class QuicChannelConnectTest extends AbstractQuicTest {
             } else {
                 QuicChannel quicChannel = connectFuture.get();
                 assertTrue(quicChannel.close().await().isSuccess());
-                ChannelFuture closeFuture = quicChannel.closeFuture().await();
+                Future<Void> closeFuture = quicChannel.closeFuture().await();
                 assertTrue(closeFuture.isSuccess());
                 clientQuicChannelHandler.assertState();
                 assertNull(causeRef.get());

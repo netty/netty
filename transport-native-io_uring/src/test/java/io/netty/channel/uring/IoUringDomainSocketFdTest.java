@@ -137,8 +137,8 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
         });
         cb.option(IoUringChannelOption.DOMAIN_SOCKET_READ_MODE,
                 DomainSocketReadMode.FILE_DESCRIPTORS);
-        Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        Channel sc = sb.bind().get();
+        Channel cc = cb.connect(sc.localAddress()).get();
 
         FileDescriptor fd = recvFdFuture.get();
         assertTrue(fd.isOpen());

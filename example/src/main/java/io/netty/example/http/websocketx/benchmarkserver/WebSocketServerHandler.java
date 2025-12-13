@@ -17,8 +17,6 @@ package io.netty.example.http.websocketx.benchmarkserver;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -35,6 +33,7 @@ import io.netty.handler.codec.http.websocketx.TextWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
+import io.netty.util.concurrent.Future;
 
 import static io.netty.handler.codec.http.HttpMethod.*;
 import static io.netty.handler.codec.http.HttpResponseStatus.*;
@@ -139,9 +138,9 @@ public class WebSocketServerHandler extends SimpleChannelInboundHandler<Object> 
         // Send the response and close the connection if necessary.
         boolean keepAlive = HttpUtil.isKeepAlive(req) && responseStatus.code() == 200;
         HttpUtil.setKeepAlive(res, keepAlive);
-        ChannelFuture future = ctx.write(res); // Flushed in channelReadComplete()
+        Future<Void> future = ctx.write(res); // Flushed in channelReadComplete()
         if (!keepAlive) {
-            future.addListener(ChannelFutureListener.CLOSE);
+            future.addListener(f -> ctx.close());
         }
     }
 

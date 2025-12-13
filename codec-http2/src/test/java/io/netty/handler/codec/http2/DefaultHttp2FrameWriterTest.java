@@ -18,12 +18,11 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,7 +49,7 @@ public class DefaultHttp2FrameWriterTest {
 
     private ByteBuf expectedOutbound;
 
-    private ChannelPromise promise;
+    private Promise<Void> promise;
 
     private Http2HeadersEncoder http2HeadersEncoder;
 
@@ -58,7 +57,7 @@ public class DefaultHttp2FrameWriterTest {
     private Channel channel;
 
     @Mock
-    private ChannelFuture future;
+    private Future<Void> future;
 
     @Mock
     private ChannelHandlerContext ctx;
@@ -76,7 +75,7 @@ public class DefaultHttp2FrameWriterTest {
 
         expectedOutbound = Unpooled.EMPTY_BUFFER;
 
-        promise = new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+        promise = ImmediateEventExecutor.INSTANCE.newPromise();
 
         Answer<Object> answer = new Answer<Object>() {
             @Override
@@ -90,7 +89,7 @@ public class DefaultHttp2FrameWriterTest {
             }
         };
         when(ctx.write(any())).then(answer);
-        when(ctx.write(any(), any(ChannelPromise.class))).then(answer);
+        when(ctx.write(any(), any(Promise.class))).then(answer);
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);

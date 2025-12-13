@@ -17,13 +17,13 @@ package io.netty.handler.codec.http;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 
@@ -83,7 +83,7 @@ public class HttpClientUpgradeHandlerTest {
         EmbeddedChannel channel = new EmbeddedChannel(catcher);
         final HttpRequest afterUpgradeMessage =
                 new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.GET, "netty.io");
-        final ChannelPromise promise = channel.newPromise();
+        final Promise<Void> promise = channel.newPromise();
         channel.pipeline().addFirst(new ChannelInboundHandler() {
             @Override
             public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {

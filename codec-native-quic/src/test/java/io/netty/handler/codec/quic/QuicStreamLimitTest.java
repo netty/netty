@@ -20,7 +20,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -142,12 +141,12 @@ public class QuicStreamLimitTest extends AbstractQuicTest {
                 super.channelActive(ctx);
                 QuicChannel channel = (QuicChannel) ctx.channel();
                 channel.createStream(type, new ChannelInboundHandler() { })
-                        .addListener((Future<QuicStreamChannel> future) -> {
+                        .addListener(future -> {
                             if (future.isSuccess()) {
                                 QuicStreamChannel stream = future.getNow();
                                 streamPromise.setSuccess(null);
                                 channel.createStream(type, new ChannelInboundHandler() { })
-                                        .addListener((Future<QuicStreamChannel> f) -> {
+                                        .addListener(f -> {
                                             stream.close();
                                             stream2Promise.setSuccess(f.cause());
                                         });

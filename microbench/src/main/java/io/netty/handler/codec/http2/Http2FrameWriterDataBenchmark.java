@@ -19,12 +19,12 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty.microbench.util.AbstractMicrobenchmark;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -118,8 +118,8 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
                 unreleasableBuffer(directBuffer(MAX_UNSIGNED_BYTE).writeZero(MAX_UNSIGNED_BYTE)).asReadOnly();
         private final int maxFrameSize = DEFAULT_MAX_FRAME_SIZE;
         @Override
-        public ChannelFuture writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
-                                       int padding, boolean endStream, ChannelPromise promise) {
+        public Future<Void> writeData(ChannelHandlerContext ctx, int streamId, ByteBuf data,
+                                      int padding, boolean endStream, Promise<Void> promise) {
             final Http2CodecUtil.SimpleChannelPromiseAggregator promiseAggregator =
                     new Http2CodecUtil.SimpleChannelPromiseAggregator(promise, ctx.channel(), ctx.executor());
             final DataFrameHeader header = new DataFrameHeader(ctx, streamId);

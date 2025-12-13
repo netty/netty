@@ -28,6 +28,22 @@ import java.util.concurrent.TimeoutException;
  */
 public abstract class AbstractFuture<V> implements Future<V> {
 
+    private final EventExecutor executor;
+
+    /**
+     * Creates a new instance.
+     *
+     * @param executor the {@link EventExecutor} associated with this future
+     */
+    protected AbstractFuture(EventExecutor executor) {
+        this.executor = executor;
+    }
+
+    @Override
+    public EventExecutor executor() {
+        return executor;
+    }
+
     @Override
     public V get() throws InterruptedException, ExecutionException {
         await();

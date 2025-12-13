@@ -61,7 +61,7 @@ public class IoUringAutoReadTest {
                             ctx.read();
                         }
                     })
-                    .bind(0).sync().channel();
+                    .bind(0).get();
 
             InetSocketAddress localAddress = (InetSocketAddress) server.localAddress();
             try (Socket sock = new Socket(localAddress.getAddress(), localAddress.getPort())) {

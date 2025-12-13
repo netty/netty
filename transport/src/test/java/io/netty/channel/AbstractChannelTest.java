@@ -22,7 +22,9 @@ import java.nio.channels.ClosedChannelException;
 import java.util.concurrent.Executors;
 
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
@@ -70,7 +72,8 @@ public class AbstractChannelTest {
         EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
-
+        when(eventLoop.isShuttingDown()).thenReturn(true);
+        when(eventLoop.newPromise()).thenReturn(new DefaultPromise(eventLoop));
         TestChannel channel = new TestChannel(eventLoop);
 
         TestHandler handler = new TestHandler();
@@ -88,7 +91,7 @@ public class AbstractChannelTest {
         final EventLoop eventLoop = mock(EventLoop.class);
         // This allows us to have a single-threaded test
         when(eventLoop.inEventLoop()).thenReturn(true);
-
+        when(eventLoop.newPromise()).thenReturn(new DefaultPromise(eventLoop));
         doAnswer(new Answer<Object>() {
             @Override
             public Object answer(InvocationOnMock invocationOnMock) {
@@ -103,7 +106,7 @@ public class AbstractChannelTest {
         channel.pipeline().addLast(handler);
 
         registerChannel(channel);
-        channel.deregister(new DefaultChannelPromise(channel));
+        channel.deregister(new DefaultPromise<>(channel.executor()));
 
         registerChannel(channel);
 
@@ -203,16 +206,16 @@ public class AbstractChannelTest {
             private boolean active;
 
             @Override
-            protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
                 active = true;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
-            protected void doClose(ChannelPromise promise)  {
+            protected void doClose(Promise<Void> promise)  {
                 active = false;
                 open = false;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
@@ -245,7 +248,7 @@ public class AbstractChannelTest {
         }
     }
 
-    private static void assertClosedChannelException(ChannelFuture future, IOException expected)
+    private static void assertClosedChannelException(Future<Void> future, IOException expected)
             throws InterruptedException {
         Throwable cause = future.await().cause();
         assertTrue(cause instanceof ClosedChannelException);
@@ -253,7 +256,7 @@ public class AbstractChannelTest {
     }
 
     private static void registerChannel(Channel channel) throws Exception {
-        DefaultChannelPromise future = new DefaultChannelPromise(channel);
+        DefaultPromise<Void> future = new DefaultPromise<>(channel.executor());
         channel.register(future);
         future.sync(); // Cause any exceptions to be thrown
     }
@@ -292,38 +295,38 @@ public class AbstractChannelTest {
         }
 
         @Override
-        protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
-            promise.setSuccess();
+        protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+            promise.setSuccess(null);
         }
 
         @Override
-        protected void doDeregister(ChannelPromise promise) {
-            promise.setSuccess();
+        protected void doDeregister(Promise<Void> promise) {
+            promise.setSuccess(null);
         }
 
         @Override
-        protected void doRegister(ChannelPromise promise) {
-            promise.setSuccess();
+        protected void doRegister(Promise<Void> promise) {
+            promise.setSuccess(null);
         }
 
         @Override
-        protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
-            promise.setSuccess();
+        protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+            promise.setSuccess(null);
         }
 
         @Override
-        protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
 
         @Override
-        protected void doDisconnect(ChannelPromise promise) {
-            promise.setSuccess();
+        protected void doDisconnect(Promise<Void> promise) {
+            promise.setSuccess(null);
         }
 
         @Override
-        protected void doClose(ChannelPromise promise) {
-            promise.setSuccess();
+        protected void doClose(Promise<Void> promise) {
+            promise.setSuccess(null);
         }
 
         @Override

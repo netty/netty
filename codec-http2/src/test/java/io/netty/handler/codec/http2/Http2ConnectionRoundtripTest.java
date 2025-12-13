@@ -20,14 +20,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
@@ -39,6 +37,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -665,7 +664,7 @@ public class Http2ConnectionRoundtripTest {
             throws Exception {
         bootstrapEnv(1, 1, 2, 1);
 
-        final ChannelPromise emptyDataPromise = newPromise();
+        final Promise<Void> emptyDataPromise = newPromise();
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() throws Http2Exception {
@@ -713,8 +712,8 @@ public class Http2ConnectionRoundtripTest {
             throws Exception {
         bootstrapEnv(1, 1, 3, 1);
 
-        final ChannelPromise dataPromise = newPromise();
-        final ChannelPromise assertPromise = newPromise();
+        final Promise<Void> dataPromise = newPromise();
+        final Promise<Void> assertPromise = newPromise();
 
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
@@ -723,7 +722,7 @@ public class Http2ConnectionRoundtripTest {
                         newPromise());
                 clientChannel.pipeline().addFirst(new ChannelOutboundHandler() {
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                         ReferenceCountUtil.release(msg);
 
                         // Ensure we update the window size so we will try to write the rest of the frame while
@@ -749,7 +748,7 @@ public class Http2ConnectionRoundtripTest {
                     // The Frame should have been removed after the write failed.
                     assertFalse(http2Client.encoder().flowController()
                             .hasFlowControlled(http2Client.connection().stream(3)));
-                    assertPromise.setSuccess();
+                    assertPromise.setSuccess(null);
                 } catch (Throwable error) {
                     assertPromise.setFailure(error);
                 }
@@ -885,12 +884,12 @@ public class Http2ConnectionRoundtripTest {
         verify(clientListener).onGoAwayRead(any(ChannelHandlerContext.class), eq(3), eq(NO_ERROR.code()),
                 any(ByteBuf.class));
 
-        final AtomicReference<ChannelFuture> clientWriteAfterGoAwayFutureRef = new AtomicReference<ChannelFuture>();
+        final AtomicReference<Future<Void>> clientWriteAfterGoAwayFutureRef = new AtomicReference<>();
         final CountDownLatch clientWriteAfterGoAwayLatch = new CountDownLatch(1);
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() throws Http2Exception {
-                ChannelFuture f = http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, (short) 16, false, 0,
+                Future<Void> f = http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, (short) 16, false, 0,
                         true, newPromise());
                 clientWriteAfterGoAwayFutureRef.set(f);
                 http2Client.flush(ctx());
@@ -901,7 +900,7 @@ public class Http2ConnectionRoundtripTest {
         // Wait for the client's write operation to complete.
         assertTrue(clientWriteAfterGoAwayLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
 
-        ChannelFuture clientWriteAfterGoAwayFuture = clientWriteAfterGoAwayFutureRef.get();
+        Future<Void> clientWriteAfterGoAwayFuture = clientWriteAfterGoAwayFutureRef.get();
         assertNotNull(clientWriteAfterGoAwayFuture);
         Throwable clientCause = clientWriteAfterGoAwayFuture.cause();
         assertInstanceOf(Http2Exception.StreamException.class, clientCause);
@@ -1209,11 +1208,11 @@ public class Http2ConnectionRoundtripTest {
             }
         });
 
-        serverChannel = sb.bind(new LocalAddress(getClass())).sync().channel();
+        serverChannel = sb.bind(new LocalAddress(getClass())).get();
 
-        ChannelFuture ccf = cb.connect(serverChannel.localAddress());
+        Future<Channel> ccf = cb.connect(serverChannel.localAddress());
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
+        clientChannel = ccf.getNow();
         assertTrue(prefaceWrittenLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
         http2Client = clientChannel.pipeline().get(Http2ConnectionHandler.class);
         assertTrue(serverInitLatch.await(DEFAULT_AWAIT_TIMEOUT_SECONDS, SECONDS));
@@ -1228,11 +1227,11 @@ public class Http2ConnectionRoundtripTest {
         return serverConnectedChannel.pipeline().firstContext();
     }
 
-    private ChannelPromise newPromise() {
+    private Promise<Void> newPromise() {
         return ctx().newPromise();
     }
 
-    private ChannelPromise serverNewPromise() {
+    private Promise<Void> serverNewPromise() {
         return serverCtx().newPromise();
     }
 

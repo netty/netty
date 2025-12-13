@@ -67,7 +67,7 @@ public class IoUringDatagramUnicastTest extends DatagramUnicastInetTest {
                     // NOOP.
                 }
             });
-            cc = cb.bind(newSocketAddress()).sync().channel();
+            cc = cb.bind(newSocketAddress()).get();
 
             CountDownLatch readLatch = new CountDownLatch(1);
             CountDownLatch readCompleteLatch = new CountDownLatch(1);
@@ -83,7 +83,7 @@ public class IoUringDatagramUnicastTest extends DatagramUnicastInetTest {
                     readCompleteLatch.countDown();
                 }
             }).option(ChannelOption.RECVBUF_ALLOCATOR, new FixedRecvByteBufAllocator(2048))
-                    .bind(newSocketAddress()).sync().channel();
+                    .bind(newSocketAddress()).get();
             InetSocketAddress addr = sendToAddress((InetSocketAddress) sc.localAddress());
             cc.writeAndFlush(new DatagramPacket(cc.alloc().buffer().writeZero(512),  addr)).sync();
 

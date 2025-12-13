@@ -20,7 +20,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
@@ -32,6 +31,7 @@ import io.netty.channel.unix.DomainSocketReadMode;
 import io.netty.channel.unix.Errors;
 import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.IovArray;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -108,8 +108,8 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     }
 
     @Override
-    protected void doRegister(ChannelPromise promise) {
-        ChannelPromise registerPromise = this.newPromise();
+    protected void doRegister(Promise<Void> promise) {
+        Promise<Void> registerPromise = this.newPromise();
         // Ensure that the buffer group is properly set before channel::read
         registerPromise.addListener(f -> {
             if (f.isSuccess()) {
@@ -124,7 +124,7 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
                         schedulePollRdHup();
                     }
                 } finally {
-                    promise.setSuccess();
+                    promise.setSuccess(null);
                 }
             } else {
                 promise.setFailure(f.cause());
@@ -135,7 +135,7 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         if (type.data() != null) {
             promise.setFailure(new IllegalArgumentException("ChannelShutdownType with data is not supported: " + type));
             return;
@@ -159,7 +159,7 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             promise.setFailure(cause);
             return;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override

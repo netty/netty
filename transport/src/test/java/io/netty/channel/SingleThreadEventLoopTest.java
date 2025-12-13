@@ -21,6 +21,7 @@ import ch.qos.logback.core.Appender;
 import io.netty.channel.local.LocalChannel;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
@@ -389,11 +390,12 @@ public class SingleThreadEventLoopTest {
         }
 
         try {
-            ChannelFuture f = new LocalChannel(loopA).register();
+            Channel channel = new LocalChannel(loopA);
+            Future<Void> f = channel.register();
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
             assertInstanceOf(RejectedExecutionException.class, f.cause());
-            assertFalse(f.channel().isOpen());
+            assertFalse(channel.isOpen());
         } finally {
             for (Appender<ILoggingEvent> a: appenders) {
                 root.addAppender(a);
@@ -409,7 +411,7 @@ public class SingleThreadEventLoopTest {
         loopA.shutdown();
         final CountDownLatch latch = new CountDownLatch(1);
         Channel ch = new LocalChannel(loopA);
-        ChannelPromise promise = ch.newPromise();
+        Promise<Void> promise = ch.newPromise();
         promise.addListener(future -> latch.countDown());
 
         // Disable logging temporarily.
@@ -422,7 +424,7 @@ public class SingleThreadEventLoopTest {
         }
 
         try {
-            ChannelFuture f = promise.channel().register();
+            Future<Void> f = ch.register();
             f.awaitUninterruptibly();
             assertFalse(f.isSuccess());
             assertInstanceOf(RejectedExecutionException.class, f.cause());

@@ -18,7 +18,7 @@ package io.netty.handler.codec.http2;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -30,6 +30,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -66,7 +67,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                     }
                 });
 
-        ChannelFuture channelFuture = serverBootstrap.bind(0).sync();
+        Future<Channel> channelFuture = serverBootstrap.bind(0).sync();
 
         final Bootstrap bootstrap = new Bootstrap()
                 .group(eventLoopGroup)
@@ -87,7 +88,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                     }
                 });
 
-         bootstrap.connect(channelFuture.channel().localAddress()).sync();
+         bootstrap.connect(channelFuture.getNow().localAddress()).sync();
     }
 
     @Test
@@ -128,7 +129,7 @@ public class DefaultHttp2PushPromiseFrameTest {
                     http2Headers.add("push", "false");
                     Http2HeadersFrame headersFrame = new DefaultHttp2HeadersFrame(http2Headers, false);
                     headersFrame.stream(receivedFrame.stream());
-                    ChannelFuture channelFuture = ctx.writeAndFlush(headersFrame);
+                    Future<Void> channelFuture = ctx.writeAndFlush(headersFrame);
 
                     // Write Data of actual request
                     channelFuture.addListener(f -> {

@@ -15,8 +15,6 @@
  */
 package io.netty.example.stomp.websocket;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.DecoderResult;
@@ -166,7 +164,7 @@ public class StompChatHandler extends SimpleChannelInboundHandler<StompFrame> {
 
         StompFrame receiptFrame = new DefaultStompFrame(StompCommand.RECEIPT);
         receiptFrame.headers().set(RECEIPT_ID, receiptId);
-        ctx.writeAndFlush(receiptFrame).addListener(ChannelFutureListener.CLOSE);
+        ctx.writeAndFlush(receiptFrame).addListener(f -> ctx.close());
     }
 
     private static void sendErrorFrame(String message, String description, ChannelHandlerContext ctx) {
@@ -177,7 +175,7 @@ public class StompChatHandler extends SimpleChannelInboundHandler<StompFrame> {
             errorFrame.content().writeCharSequence(description, CharsetUtil.UTF_8);
         }
 
-        ctx.writeAndFlush(errorFrame).addListener(ChannelFutureListener.CLOSE);
+        ctx.writeAndFlush(errorFrame).addListener(f -> ctx.close());
     }
 
     private static StompFrame transformToMessage(StompFrame sendFrame, StompSubscription subscription) {

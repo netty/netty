@@ -17,19 +17,18 @@ package io.netty.handler.address;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.SocketAddress;
 
 /**
  * {@link ChannelOutboundHandler} which will resolve the {@link SocketAddress} that is passed to
- * {@link #connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)} if it is not already resolved
- * and the {@link AddressResolver} supports the type of {@link SocketAddress}.
+ * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, Promise)} if it is not
+ * already resolved and the {@link AddressResolver} supports the type of {@link SocketAddress}.
  */
 public class ResolveAddressHandler implements ChannelOutboundHandler {
 
@@ -46,7 +45,7 @@ public class ResolveAddressHandler implements ChannelOutboundHandler {
 
     @Override
     public void connect(final ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                        final SocketAddress localAddress, final ChannelPromise promise) {
+                        final SocketAddress localAddress, final Promise<Void> promise) {
         AddressResolver<? extends SocketAddress> resolver = resolverGroup.getResolver(ctx.executor());
         if (resolver.isSupported(remoteAddress) && !resolver.isResolved(remoteAddress)) {
             resolver.resolve(remoteAddress).addListener((FutureListener<SocketAddress>) future -> {

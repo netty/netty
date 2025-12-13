@@ -36,9 +36,9 @@ import static org.mockito.Mockito.when;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2Stream.State;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -65,7 +65,7 @@ public class DefaultHttp2LocalFlowControllerTest {
     private EventExecutor executor;
 
     @Mock
-    private ChannelPromise promise;
+    private Promise promise;
 
     private DefaultHttp2Connection connection;
 
@@ -438,7 +438,7 @@ public class DefaultHttp2LocalFlowControllerTest {
 
     private void verifyWindowUpdateNotSent() {
         verify(frameWriter, never()).writeWindowUpdate(any(ChannelHandlerContext.class), anyInt(), anyInt(),
-                any(ChannelPromise.class));
+                any(Promise.class));
     }
 
     private int window(int streamId) {

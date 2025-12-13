@@ -183,7 +183,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
     }
 
     @Override
-    protected void onLookupComplete(ChannelHandlerContext ctx, Future<T> future) throws Exception {
+    protected void onLookupComplete(ChannelHandlerContext ctx, Future<? extends T> future) throws Exception {
         if (timeoutFuture != null) {
             timeoutFuture.cancel(false);
         }
@@ -208,7 +208,7 @@ public abstract class AbstractSniHandler<T> extends SslClientHelloHandler<T> {
      * @see #lookup(ChannelHandlerContext, String)
      */
     protected abstract void onLookupComplete(ChannelHandlerContext ctx,
-                                             String hostname, Future<T> future) throws Exception;
+                                             String hostname, Future<? extends T> future) throws Exception;
 
     private static void fireSniCompletionEvent(ChannelHandlerContext ctx, String hostname, Future<?> future) {
         Throwable cause = future.cause();

@@ -15,7 +15,6 @@
  */
 package io.netty.example.spdy.client;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.example.http.snoop.HttpSnoopClientHandler;
@@ -25,6 +24,7 @@ import io.netty.handler.codec.http.HttpObject;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -35,7 +35,7 @@ import java.util.concurrent.LinkedBlockingQueue;
  */
 public class HttpResponseClientHandler extends SimpleChannelInboundHandler<HttpObject> {
 
-    private final BlockingQueue<ChannelFuture> queue = new LinkedBlockingQueue<ChannelFuture>();
+    private final BlockingQueue<Future<Void>> queue = new LinkedBlockingQueue<>();
 
     @Override
     public void channelRead0(ChannelHandlerContext ctx, HttpObject msg) throws Exception {
@@ -69,7 +69,7 @@ public class HttpResponseClientHandler extends SimpleChannelInboundHandler<HttpO
 
             if (content instanceof LastHttpContent) {
                 System.out.println("} END OF CONTENT");
-                queue.add(ctx.channel().newSucceededFuture());
+                queue.add(ctx.channel().newSucceededFuture(null));
             }
         }
     }
@@ -81,7 +81,7 @@ public class HttpResponseClientHandler extends SimpleChannelInboundHandler<HttpO
         ctx.close();
     }
 
-    public BlockingQueue<ChannelFuture> queue() {
+    public BlockingQueue<Future<Void>> queue() {
         return queue;
     }
 }

@@ -16,9 +16,9 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import java.io.Closeable;
 
@@ -62,8 +62,8 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * <p>
      * If this call has <strong>NOT</strong> modified the HPACK header state you are free to throw a stream error.
      */
-    ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
-                               int padding, boolean endStream, ChannelPromise promise);
+    Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
+                               int padding, boolean endStream, Promise<Void> promise);
 
     /**
      * Writes a HEADERS frame with priority specified to the remote endpoint.
@@ -88,9 +88,9 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * <p>
      * If this call has <strong>NOT</strong> modified the HPACK header state you are free to throw a stream error.
      */
-    ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
+    Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers,
                                int streamDependency, short weight, boolean exclusive, int padding, boolean endStream,
-                               ChannelPromise promise);
+                               Promise<Void> promise);
 
     /**
      * Writes a PRIORITY frame to the remote endpoint.
@@ -104,8 +104,8 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param promise the promise for the write.
      * @return the future for the write.
      */
-    ChannelFuture writePriority(ChannelHandlerContext ctx, int streamId, int streamDependency,
-            short weight, boolean exclusive, ChannelPromise promise);
+    Future<Void> writePriority(ChannelHandlerContext ctx, int streamId, int streamDependency,
+            short weight, boolean exclusive, Promise<Void> promise);
 
     /**
      * Writes a RST_STREAM frame to the remote endpoint.
@@ -116,8 +116,8 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param promise the promise for the write.
      * @return the future for the write.
      */
-    ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
-            ChannelPromise promise);
+    Future<Void> writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
+            Promise<Void> promise);
 
     /**
      * Writes a SETTINGS frame to the remote endpoint.
@@ -127,8 +127,8 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param promise the promise for the write.
      * @return the future for the write.
      */
-    ChannelFuture writeSettings(ChannelHandlerContext ctx, Http2Settings settings,
-            ChannelPromise promise);
+    Future<Void> writeSettings(ChannelHandlerContext ctx, Http2Settings settings,
+                               Promise<Void> promise);
 
     /**
      * Writes a SETTINGS acknowledgment to the remote endpoint.
@@ -137,7 +137,7 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param promise the promise for the write.
      * @return the future for the write.
      */
-    ChannelFuture writeSettingsAck(ChannelHandlerContext ctx, ChannelPromise promise);
+    Future<Void> writeSettingsAck(ChannelHandlerContext ctx, Promise<Void> promise);
 
     /**
      * Writes a PING frame to the remote endpoint.
@@ -149,8 +149,8 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param promise the promise for the write.
      * @return the future for the write.
      */
-    ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, long data,
-            ChannelPromise promise);
+    Future<Void> writePing(ChannelHandlerContext ctx, boolean ack, long data,
+            Promise<Void> promise);
 
     /**
      * Writes a PUSH_PROMISE frame to the remote endpoint.
@@ -171,8 +171,8 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * <p>
      * If this call has <strong>NOT</strong> modified the HPACK header state you are free to throw a stream error.
      */
-    ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
-                                   Http2Headers headers, int padding, ChannelPromise promise);
+    Future<Void> writePushPromise(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
+                                   Http2Headers headers, int padding, Promise<Void> promise);
 
     /**
      * Writes a GO_AWAY frame to the remote endpoint.
@@ -184,8 +184,8 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param promise the promise for the write.
      * @return the future for the write.
      */
-    ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
-            ByteBuf debugData, ChannelPromise promise);
+    Future<Void> writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode,
+            ByteBuf debugData, Promise<Void> promise);
 
     /**
      * Writes a WINDOW_UPDATE frame to the remote endpoint.
@@ -197,8 +197,8 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param promise the promise for the write.
      * @return the future for the write.
      */
-    ChannelFuture writeWindowUpdate(ChannelHandlerContext ctx, int streamId,
-            int windowSizeIncrement, ChannelPromise promise);
+    Future<Void> writeWindowUpdate(ChannelHandlerContext ctx, int streamId,
+            int windowSizeIncrement, Promise<Void> promise);
 
     /**
      * Generic write method for any HTTP/2 frame. This allows writing of non-standard frames.
@@ -211,8 +211,8 @@ public interface Http2FrameWriter extends Http2DataWriter, Closeable {
      * @param promise the promise for the write.
      * @return the future for the write.
      */
-    ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
-            Http2Flags flags, ByteBuf payload, ChannelPromise promise);
+    Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+            Http2Flags flags, ByteBuf payload, Promise<Void> promise);
 
     /**
      * Get the configuration related elements for this {@link Http2FrameWriter}

@@ -15,6 +15,8 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.Promise;
+
 import java.net.SocketAddress;
 
 /**
@@ -23,43 +25,43 @@ import java.net.SocketAddress;
 public interface IoTransport {
 
     /**
-     * Register the {@link Channel} of the {@link ChannelPromise} and notify
-     * the {@link ChannelPromise} once the registration was complete.
+     * Register the {@link Channel} of the {@link Promise} and notify
+     * the {@link Promise} once the registration was complete.
      */
-    void register(ChannelPromise promise);
+    void register(Promise<Void> promise);
 
     /**
-     * Bind the {@link SocketAddress} to the {@link Channel} of the {@link ChannelPromise} and notify
+     * Bind the {@link SocketAddress} to the {@link Channel} of the {@link Promise} and notify
      * it once its done.
      */
-    void bind(SocketAddress localAddress, ChannelPromise promise);
+    void bind(SocketAddress localAddress, Promise<Void> promise);
 
     /**
-     * Connect the {@link Channel} of the given {@link ChannelFuture} with the given remote {@link SocketAddress}.
+     * Connect the {@link Channel} with the given remote {@link SocketAddress}.
      * If a specific local {@link SocketAddress} should be used it need to be given as argument. Otherwise just
      * pass {@code null} to it.
      * <p>
-     * The {@link ChannelPromise} will get notified once the connect operation was complete.
+     * The {@link Promise} will get notified once the connect operation was complete.
      */
-    void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise);
+    void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise);
 
     /**
-     * Disconnect the {@link Channel} of the {@link ChannelFuture} and notify the {@link ChannelPromise} once the
+     * Disconnect the {@link Channel} and notify the {@link Promise} once the
      * operation was complete.
      */
-    void disconnect(ChannelPromise promise);
+    void disconnect(Promise<Void> promise);
 
     /**
-     * Close the {@link Channel} of the {@link ChannelPromise} and notify the {@link ChannelPromise} once the
+     * Close the {@link Channel} and notify the {@link Promise} once the
      * operation was complete.
      */
-    void close(ChannelPromise promise);
+    void close(Promise<Void> promise);
 
     /**
-     * Deregister the {@link Channel} of the {@link ChannelPromise} from {@link EventLoop} and notify the
-     * {@link ChannelPromise} once the operation was complete.
+     * Deregister the {@link Channel} from {@link EventLoop} and notify the
+     * {@link Promise} once the operation was complete.
      */
-    void deregister(ChannelPromise promise);
+    void deregister(Promise<Void> promise);
 
     /**
      * Schedules a read operation that fills the inbound buffer of the first {@link ChannelInboundHandler} in the
@@ -70,16 +72,16 @@ public interface IoTransport {
     /**
      * Schedules a write operation.
      */
-    void write(Object msg, ChannelPromise promise);
+    void write(Object msg, Promise<Void> promise);
 
     /**
-     * Flush out all write operations scheduled via {@link #write(Object, ChannelPromise)}.
+     * Flush out all write operations scheduled via {@link #write(Object, Promise)}.
      */
     void flush();
 
     /**
-     * Shutdown the {@link ChannelShutdownType} if the {@link Channel} and notify the {@link ChannelPromise}
+     * Shutdown the {@link ChannelShutdownType} if the {@link Channel} and notify the {@link Promise}
      * once the operation was complete.
      */
-    void shutdown(ChannelShutdownType type, ChannelPromise promise);
+    void shutdown(ChannelShutdownType type, Promise<Void> promise);
 }

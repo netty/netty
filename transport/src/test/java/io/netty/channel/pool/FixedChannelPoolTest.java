@@ -20,7 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
@@ -30,6 +29,7 @@ import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.pool.FixedChannelPool.AcquireTimeoutAction;
 import io.netty.util.concurrent.Future;
 
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -72,12 +72,12 @@ public class FixedChannelPoolTest {
         Tuple t = bootstrap();
 
         // Start server
-        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).get();
         CountingChannelPoolHandler handler = new CountingChannelPoolHandler();
 
         ChannelPool pool = new FixedChannelPool(t.cb, handler, 1, Integer.MAX_VALUE);
 
-        Channel channel = pool.acquire().syncUninterruptibly().getNow();
+        Channel channel = pool.acquire().get();
         Future<Channel> future = pool.acquire();
         assertFalse(future.isDone());
 
@@ -110,12 +110,12 @@ public class FixedChannelPoolTest {
         Tuple t = bootstrap();
 
         // Start server
-        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).get();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
         ChannelPool pool = new FixedChannelPool(t.cb, handler, ChannelHealthChecker.ACTIVE,
                 AcquireTimeoutAction.FAIL, timeoutMillis, 1, Integer.MAX_VALUE);
 
-        Channel channel = pool.acquire().syncUninterruptibly().getNow();
+        Channel channel = pool.acquire().get();
         final Future<Channel> future = pool.acquire();
         assertThrows(TimeoutException.class, new Executable() {
             @Override
@@ -133,13 +133,13 @@ public class FixedChannelPoolTest {
         Tuple t = bootstrap();
 
         // Start server
-        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).get();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
         ChannelPool pool = new FixedChannelPool(t.cb, handler, ChannelHealthChecker.ACTIVE,
                 AcquireTimeoutAction.NEW, 500, 1, Integer.MAX_VALUE);
 
-        Channel channel = pool.acquire().syncUninterruptibly().getNow();
-        Channel channel2 = pool.acquire().syncUninterruptibly().getNow();
+        Channel channel = pool.acquire().get();
+        Channel channel2 = pool.acquire().get();
         assertNotSame(channel, channel2);
         sc.close().syncUninterruptibly();
         channel.close().syncUninterruptibly();
@@ -156,14 +156,14 @@ public class FixedChannelPoolTest {
         Tuple t = bootstrap();
 
         // Start server
-        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).get();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
         ChannelPool pool = new FixedChannelPool(t.cb, handler, 1);
-        Channel channel1 = pool.acquire().syncUninterruptibly().getNow();
+        Channel channel1 = pool.acquire().get();
         channel1.close().syncUninterruptibly();
         pool.release(channel1);
 
-        Channel channel2 = pool.acquire().syncUninterruptibly().getNow();
+        Channel channel2 = pool.acquire().get();
 
         assertNotSame(channel1, channel2);
         sc.close().syncUninterruptibly();
@@ -176,11 +176,11 @@ public class FixedChannelPoolTest {
         Tuple t = bootstrap();
 
         // Start server
-        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).get();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
         final ChannelPool pool = new FixedChannelPool(t.cb, handler, 1, 1);
 
-        Channel channel = pool.acquire().syncUninterruptibly().getNow();
+        Channel channel = pool.acquire().get();
         Future<Channel> future = pool.acquire();
         assertFalse(future.isDone());
 
@@ -200,12 +200,12 @@ public class FixedChannelPoolTest {
         Tuple t = bootstrap();
 
         // Start server
-        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).get();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
         ChannelPool pool = new FixedChannelPool(t.cb, handler, 1, 1);
         final ChannelPool pool2 = new FixedChannelPool(t.cb, handler, 1, 1);
 
-        final Channel channel = pool.acquire().syncUninterruptibly().getNow();
+        final Channel channel = pool.acquire().get();
 
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
@@ -224,7 +224,7 @@ public class FixedChannelPoolTest {
         Tuple t = bootstrap();
 
         // Start server
-        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).get();
 
         final FixedChannelPool pool = new FixedChannelPool(t.cb, new TestChannelPoolHandler(), 2);
         final Future<Channel> acquire = pool.acquire();
@@ -250,14 +250,14 @@ public class FixedChannelPoolTest {
     }
 
     @Test
-    public void testReleaseClosed() {
+    public void testReleaseClosed() throws Exception {
         Tuple t = bootstrap();
 
         // Start server
-        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).get();
 
         FixedChannelPool pool = new FixedChannelPool(t.cb, new TestChannelPoolHandler(), 2);
-        Channel channel = pool.acquire().syncUninterruptibly().getNow();
+        Channel channel = pool.acquire().get();
         channel.close().syncUninterruptibly();
         pool.release(channel).syncUninterruptibly();
 
@@ -270,14 +270,14 @@ public class FixedChannelPoolTest {
         Tuple t = bootstrap();
 
         // Start server
-        final Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        final Channel sc = t.sb.bind(t.address).get();
 
         final FixedChannelPool pool = new FixedChannelPool(t.cb, new TestChannelPoolHandler(), 2);
 
         pool.acquire().get();
         pool.acquire().get();
 
-        final ChannelPromise closePromise = sc.newPromise();
+        final Promise<Void> closePromise = sc.newPromise();
         pool.closeAsync().addListener(future -> {
             assertEquals(0, pool.acquiredChannelCount());
             sc.close(closePromise).syncUninterruptibly();
@@ -286,11 +286,11 @@ public class FixedChannelPoolTest {
     }
 
     @Test
-    public void testChannelAcquiredException() throws InterruptedException {
+    public void testChannelAcquiredException() throws Exception {
         Tuple t = bootstrap();
 
         // Start server
-        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).get();
         final NullPointerException exception = new NullPointerException();
         FixedChannelPool pool = new FixedChannelPool(t.cb, new ChannelPoolHandler() {
             @Override
@@ -316,25 +316,25 @@ public class FixedChannelPoolTest {
     }
 
     @Test
-    public void testChannelReleaseHealthCheck() {
+    public void testChannelReleaseHealthCheck() throws Exception {
         Tuple t = bootstrap();
 
         // Start server
-        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).get();
         ChannelPoolHandler handler = new TestChannelPoolHandler();
         InnerFixedChannelPool pool = new InnerFixedChannelPool(t.cb, handler, ChannelHealthChecker.ACTIVE,
                 AcquireTimeoutAction.NEW, 500, 1, Integer.MAX_VALUE, true);
 
         // releaseHealthCheck=true,channel=open,doHealthCheckOnRelease
-        Channel channel = pool.acquire().syncUninterruptibly().getNow();
-        pool.release(channel).syncUninterruptibly().getNow();
-        Channel sameChannel = pool.acquire().syncUninterruptibly().getNow();
+        Channel channel = pool.acquire().get();
+        pool.release(channel).get();
+        Channel sameChannel = pool.acquire().get();
         assertSame(sameChannel, channel);
 
         // releaseHealthCheck=true,channel=close,doHealthCheckOnRelease
         sameChannel.close().syncUninterruptibly();
-        pool.release(channel).syncUninterruptibly().getNow();
-        sameChannel = pool.acquire().syncUninterruptibly().getNow();
+        pool.release(channel).get();
+        sameChannel = pool.acquire().get();
         assertNotSame(sameChannel, channel);
 
         // close all and create a new poll
@@ -345,14 +345,14 @@ public class FixedChannelPoolTest {
                 AcquireTimeoutAction.NEW, 500, 1, Integer.MAX_VALUE, false);
 
         // releaseHealthCheck=false,channel=open,releaseAndOffer
-        channel = pool.acquire().syncUninterruptibly().getNow();
-        pool.release(channel).syncUninterruptibly().getNow();
-        sameChannel = pool.acquire().syncUninterruptibly().getNow();
+        channel = pool.acquire().get();
+        pool.release(channel).get();
+        sameChannel = pool.acquire().get();
         assertSame(sameChannel, channel);
 
         // releaseHealthCheck=false,channel=close,releaseAndOffer
         sameChannel.close().syncUninterruptibly();
-        pool.release(channel).syncUninterruptibly().getNow();
+        pool.release(channel).get();
         // the acquire will do a heath check.. this is why we call the special method
         sameChannel = pool.pollChannel();
         assertSame(sameChannel, channel);
@@ -365,11 +365,11 @@ public class FixedChannelPoolTest {
 
     @ParameterizedTest
     @ValueSource(booleans = { true, false })
-    public void testChannelProcessingOrder(boolean lastInFirstOutOrdering) {
+    public void testChannelProcessingOrder(boolean lastInFirstOutOrdering) throws Exception {
         Tuple t = bootstrap();
 
         // Start server
-        Channel sc = t.sb.bind(t.address).syncUninterruptibly().channel();
+        Channel sc = t.sb.bind(t.address).get();
 
         FixedChannelPool pool = new FixedChannelPool(t.cb, new TestChannelPoolHandler(),
                 ChannelHealthChecker.ACTIVE, AcquireTimeoutAction.NEW, 500, 1,
@@ -379,16 +379,16 @@ public class FixedChannelPoolTest {
         int totalChannels = 5;
         List<Channel> channels = new ArrayList<>();
         for (int i = 0; i < totalChannels; i++) {
-            Channel channel = pool.acquire().syncUninterruptibly().getNow();
+            Channel channel = pool.acquire().get();
             channels.add(channel);
         }
         for (int i = 0; i < totalChannels; i++) {
-            pool.release(channels.get(i)).syncUninterruptibly().getNow();
+            pool.release(channels.get(i)).get();
         }
 
         // test logic
         for (int i = 0; i < totalChannels; i++) {
-            Channel channel = pool.acquire().syncUninterruptibly().getNow();
+            Channel channel = pool.acquire().get();
             if (lastInFirstOutOrdering) {
                 assertSame(channel, channels.get(totalChannels - 1 - i));
             } else {

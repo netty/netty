@@ -24,7 +24,6 @@ import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.buffer.UnpooledDirectByteBuf;
 import io.netty.buffer.UnpooledHeapByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
@@ -118,16 +117,16 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
         ByteBufAllocator allocator = getAllocator(directBuffer);
         final EchoHandler sh = new EchoHandler(true, autoRead, allocator);
         final EchoHandler ch = new EchoHandler(false, autoRead, allocator);
-        AtomicReference<List<ChannelFuture>> writeFutures = new AtomicReference<>();
+        AtomicReference<List<Future<Void>>> writeFutures = new AtomicReference<>();
         Channel server = QuicTestUtils.newServer(ImmediateExecutor.INSTANCE, new ChannelInboundHandler() {
             @Override
             public void channelActive(ChannelHandlerContext ctx) {
                 setAllocator(ctx.channel(), allocator);
                 ((QuicChannel) ctx.channel()).createStream(QuicStreamType.BIDIRECTIONAL, sh)
-                        .addListener((Future<QuicStreamChannel> future) -> {
+                        .addListener(future -> {
                             QuicStreamChannel stream = future.getNow();
                             setAllocator(stream, allocator);
-                            List<ChannelFuture> futures = writeAllData(stream, composite, allocator);
+                            List<Future<Void>> futures = writeAllData(stream, composite, allocator);
                             writeFutures.set(futures);
                         });
 
@@ -177,9 +176,9 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
             waitForData(ch, sh);
 
             for (;;) {
-                List<ChannelFuture> futures = writeFutures.get();
+                List<Future<Void>> futures = writeFutures.get();
                 if (futures != null) {
-                    for (ChannelFuture f: futures) {
+                    for (Future<Void> f: futures) {
                         f.sync();
                     }
                     break;
@@ -269,7 +268,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
                     .connect()
                     .get();
 
-            QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL, ch).sync().getNow();
+            QuicStreamChannel stream = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL, ch).get();
             setAllocator(stream, allocator);
 
             assertEquals(QuicStreamType.BIDIRECTIONAL, stream.type());
@@ -279,9 +278,9 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
             for (int i = 0; i < 5; i++) {
                 ch.counter = 0;
                 sh.counter = 0;
-                List<ChannelFuture> futures = writeAllData(stream, composite, allocator);
+                List<Future<Void>> futures = writeAllData(stream, composite, allocator);
 
-                for (ChannelFuture f : futures) {
+                for (Future<Void> f : futures) {
                     f.sync();
                 }
                 waitForData(ch, sh);
@@ -308,7 +307,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
         }
     }
 
-    private List<ChannelFuture> writeAllData(Channel channel, boolean composite, ByteBufAllocator allocator) {
+    private List<Future<Void>> writeAllData(Channel channel, boolean composite, ByteBufAllocator allocator) {
         if (composite) {
             CompositeByteBuf compositeByteBuf = allocator.compositeBuffer();
             for (int i = 0; i < data.length;) {
@@ -319,7 +318,7 @@ public class QuicChannelEchoTest extends AbstractQuicTest {
             }
             return Collections.singletonList(channel.writeAndFlush(compositeByteBuf));
         } else {
-            List<ChannelFuture> futures = new ArrayList<>();
+            List<Future<Void>> futures = new ArrayList<>();
             for (int i = 0; i < data.length;) {
                 int length = Math.min(random.nextInt(1024 * 64), data.length - i);
                 ByteBuf buf = allocator.buffer().writeBytes(data, i, length);

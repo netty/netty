@@ -65,7 +65,7 @@ public class Http2MultiplexCodecBuilderTest {
     }
 
     @BeforeEach
-    public void setUp() throws InterruptedException {
+    public void setUp() throws Exception {
         final CountDownLatch serverChannelLatch = new CountDownLatch(1);
         LocalAddress serverAddress = new LocalAddress(getClass());
         serverLastInboundHandler = new SharableLastInboundHandler();
@@ -107,7 +107,7 @@ public class Http2MultiplexCodecBuilderTest {
                         serverChannelLatch.countDown();
                     }
                 });
-        serverChannel = sb.bind(serverAddress).sync().channel();
+        serverChannel = sb.bind(serverAddress).get();
 
         Bootstrap cb = new Bootstrap()
                 .channel(LocalChannel.class)
@@ -118,7 +118,7 @@ public class Http2MultiplexCodecBuilderTest {
                         fail("Should not be called for outbound streams");
                     }
                 }).build());
-        clientChannel = cb.connect(serverAddress).sync().channel();
+        clientChannel = cb.connect(serverAddress).get();
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }
 
@@ -144,8 +144,8 @@ public class Http2MultiplexCodecBuilderTest {
         }
     }
 
-    private Http2StreamChannel newOutboundStream(ChannelHandler handler) {
-        return new Http2StreamChannelBootstrap(clientChannel).handler(handler).open().syncUninterruptibly().getNow();
+    private Http2StreamChannel newOutboundStream(ChannelHandler handler) throws Exception {
+        return new Http2StreamChannelBootstrap(clientChannel).handler(handler).open().get();
     }
 
     @Test

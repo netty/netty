@@ -17,10 +17,8 @@ package io.netty.channel.uring;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoRegistration;
@@ -32,6 +30,8 @@ import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.SegmentedDatagramPacket;
 import io.netty.channel.unix.Socket;
 import io.netty.util.UncheckedBooleanSupplier;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -126,7 +126,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -141,12 +141,12 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    public ChannelFuture joinGroup(InetAddress multicastAddress) {
+    public Future<Void> joinGroup(InetAddress multicastAddress) {
         return joinGroup(multicastAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise promise) {
+    public Future<Void> joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
             return joinGroup(
                     multicastAddress,
@@ -159,35 +159,35 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    public ChannelFuture joinGroup(
+    public Future<Void> joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
         return joinGroup(multicastAddress, networkInterface, newPromise());
     }
 
     @Override
-    public ChannelFuture joinGroup(
+    public Future<Void> joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface,
-            ChannelPromise promise) {
+            Promise<Void> promise) {
         return joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public ChannelFuture joinGroup(
+    public Future<Void> joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
         return joinGroup(multicastAddress, networkInterface, source, newPromise());
     }
 
     @Override
-    public ChannelFuture joinGroup(
+    public Future<Void> joinGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress source, final ChannelPromise promise) {
+            final InetAddress source, final Promise<Void> promise) {
 
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
 
         try {
             socket.joinGroup(multicastAddress, networkInterface, source);
-            promise.setSuccess();
+            promise.setSuccess(null);
         } catch (IOException e) {
             promise.setFailure(e);
         }
@@ -195,12 +195,12 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    public ChannelFuture leaveGroup(InetAddress multicastAddress) {
+    public Future<Void> leaveGroup(InetAddress multicastAddress) {
         return leaveGroup(multicastAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise promise) {
+    public Future<Void> leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
             return leaveGroup(
                     multicastAddress, NetworkInterface.getByInetAddress(
@@ -212,34 +212,34 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    public ChannelFuture leaveGroup(
+    public Future<Void> leaveGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
         return leaveGroup(multicastAddress, networkInterface, newPromise());
     }
 
     @Override
-    public ChannelFuture leaveGroup(
+    public Future<Void> leaveGroup(
             InetSocketAddress multicastAddress,
-            NetworkInterface networkInterface, ChannelPromise promise) {
+            NetworkInterface networkInterface, Promise<Void> promise) {
         return leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public ChannelFuture leaveGroup(
+    public Future<Void> leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
         return leaveGroup(multicastAddress, networkInterface, source, newPromise());
     }
 
     @Override
-    public ChannelFuture leaveGroup(
+    public Future<Void> leaveGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
-            final ChannelPromise promise) {
+            final Promise<Void> promise) {
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
 
         try {
             socket.leaveGroup(multicastAddress, networkInterface, source);
-            promise.setSuccess();
+            promise.setSuccess(null);
         } catch (IOException e) {
             promise.setFailure(e);
         }
@@ -247,16 +247,16 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    public ChannelFuture block(
+    public Future<Void> block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress sourceToBlock) {
         return block(multicastAddress, networkInterface, sourceToBlock, newPromise());
     }
 
     @Override
-    public ChannelFuture block(
+    public Future<Void> block(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress sourceToBlock, final ChannelPromise promise) {
+            final InetAddress sourceToBlock, final Promise<Void> promise) {
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(sourceToBlock, "sourceToBlock");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
@@ -266,13 +266,13 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock) {
+    public Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
         return block(multicastAddress, sourceToBlock, newPromise());
     }
 
     @Override
-    public ChannelFuture block(
-            InetAddress multicastAddress, InetAddress sourceToBlock, ChannelPromise promise) {
+    public Future<Void> block(
+            InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> promise) {
         try {
             return block(
                     multicastAddress,
@@ -285,7 +285,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
         if (localAddress instanceof InetSocketAddress) {
             InetSocketAddress socketAddress = (InetSocketAddress) localAddress;
             if (socketAddress.getAddress().isAnyLocalAddress() &&
@@ -295,10 +295,10 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
                 }
             }
         }
-        super.doBind(localAddress, newPromise().addListener(f -> {
+        super.doBind(localAddress, this.<Void>newPromise().addListener(f -> {
             if (f.isSuccess()) {
                 active = true;
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
             }
@@ -349,7 +349,7 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
-    protected void doDisconnect(ChannelPromise promise) {
+    protected void doDisconnect(Promise<Void> promise) {
         try {
             // TODO: use io_uring for this too...
             socket.disconnect();
@@ -360,15 +360,15 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             promise.setFailure(cause);
             return;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doClose(ChannelPromise promise) {
-        super.doClose(newPromise().addListener(f -> {
+    protected void doClose(Promise<Void> promise) {
+        super.doClose(this.<Void>newPromise().addListener(f -> {
             if (f.isSuccess()) {
                 connected = false;
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
             }

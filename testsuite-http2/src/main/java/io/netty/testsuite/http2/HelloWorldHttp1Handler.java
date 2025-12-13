@@ -17,7 +17,6 @@ package io.netty.testsuite.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -60,7 +59,7 @@ public class HelloWorldHttp1Handler extends SimpleChannelInboundHandler<FullHttp
         response.headers().setInt(CONTENT_LENGTH, response.content().readableBytes());
 
         if (!keepAlive) {
-            ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+            ctx.write(response).addListener(f -> ctx.close());
         } else {
             response.headers().set(CONNECTION, HttpHeaderValues.KEEP_ALIVE);
             ctx.write(response);

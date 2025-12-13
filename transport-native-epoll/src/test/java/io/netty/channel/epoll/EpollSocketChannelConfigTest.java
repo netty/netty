@@ -60,12 +60,12 @@ public class EpollSocketChannelConfigTest {
     }
 
     @BeforeEach
-    public void setup() {
+    public void setup() throws Exception {
         Bootstrap bootstrap = new Bootstrap();
         ch = (EpollSocketChannel) bootstrap.group(group)
                 .channel(EpollSocketChannel.class)
                 .handler(new ChannelInboundHandler() { })
-                .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                .bind(new InetSocketAddress(0)).get();
     }
 
     @AfterEach

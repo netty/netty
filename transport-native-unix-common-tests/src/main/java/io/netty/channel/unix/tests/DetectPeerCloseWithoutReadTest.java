@@ -19,7 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
@@ -45,18 +44,18 @@ public abstract class DetectPeerCloseWithoutReadTest {
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void clientCloseWithoutServerReadIsDetectedNoExtraReadRequested() throws InterruptedException {
+    public void clientCloseWithoutServerReadIsDetectedNoExtraReadRequested() throws Exception {
         clientCloseWithoutServerReadIsDetected0(false);
     }
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void clientCloseWithoutServerReadIsDetectedExtraReadRequested() throws InterruptedException {
+    public void clientCloseWithoutServerReadIsDetectedExtraReadRequested() throws Exception {
         clientCloseWithoutServerReadIsDetected0(true);
     }
 
     private void clientCloseWithoutServerReadIsDetected0(final boolean extraReadRequested)
-            throws InterruptedException {
+            throws Exception {
         EventLoopGroup serverGroup = null;
         EventLoopGroup clientGroup = null;
         Channel serverChannel = null;
@@ -81,16 +80,18 @@ public abstract class DetectPeerCloseWithoutReadTest {
                 }
             });
 
-            serverChannel = sb.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+            serverChannel = sb.bind(new InetSocketAddress(0)).get();
 
             Bootstrap cb = new Bootstrap();
             cb.group(serverGroup);
             cb.channel(clientChannel());
             cb.handler(new ChannelInboundHandler() { });
-            Channel clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            Channel clientChannel = cb.connect(serverChannel.localAddress()).get();
             ByteBuf buf = clientChannel.alloc().buffer(expectedBytes);
             buf.writerIndex(buf.writerIndex() + expectedBytes);
-            clientChannel.writeAndFlush(buf).addListener(ChannelFutureListener.CLOSE);
+            clientChannel.writeAndFlush(buf).addListener(f -> {
+                clientChannel.close();
+            });
 
             latch.await();
             assertEquals(expectedBytes, bytesRead.get());
@@ -109,17 +110,17 @@ public abstract class DetectPeerCloseWithoutReadTest {
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void serverCloseWithoutClientReadIsDetectedNoExtraReadRequested() throws InterruptedException {
+    public void serverCloseWithoutClientReadIsDetectedNoExtraReadRequested() throws Exception {
         serverCloseWithoutClientReadIsDetected0(false);
     }
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
-    public void serverCloseWithoutClientReadIsDetectedExtraReadRequested() throws InterruptedException {
+    public void serverCloseWithoutClientReadIsDetectedExtraReadRequested() throws Exception {
         serverCloseWithoutClientReadIsDetected0(true);
     }
 
-    private void serverCloseWithoutClientReadIsDetected0(final boolean extraReadRequested) throws InterruptedException {
+    private void serverCloseWithoutClientReadIsDetected0(final boolean extraReadRequested) throws Exception {
         EventLoopGroup serverGroup = null;
         EventLoopGroup clientGroup = null;
         Channel serverChannel = null;
@@ -141,14 +142,14 @@ public abstract class DetectPeerCloseWithoutReadTest {
                         public void channelActive(ChannelHandlerContext ctx) {
                             ByteBuf buf = ctx.alloc().buffer(expectedBytes);
                             buf.writerIndex(buf.writerIndex() + expectedBytes);
-                            ctx.writeAndFlush(buf).addListener(ChannelFutureListener.CLOSE);
+                            ctx.writeAndFlush(buf).addListener(f -> ctx.close());
                             ctx.fireChannelActive();
                         }
                     });
                 }
             });
 
-            serverChannel = sb.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+            serverChannel = sb.bind(new InetSocketAddress(0)).get();
 
             Bootstrap cb = new Bootstrap();
             cb.group(serverGroup);
@@ -164,7 +165,7 @@ public abstract class DetectPeerCloseWithoutReadTest {
                     ch.pipeline().addLast(new TestHandler(bytesRead, extraReadRequested, latch));
                 }
             });
-            clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
 
             latch.await();
             assertEquals(expectedBytes, bytesRead.get());

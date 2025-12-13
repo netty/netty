@@ -17,7 +17,7 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -26,6 +26,7 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.SocketUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -89,12 +90,12 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
         DatagramChannel sc = null;
 
         int attempts = 5;
-        ChannelFuture clientFuture;
+        Future<Channel> clientFuture;
         do {
             if (sc != null) {
                 sc.close().sync();
             }
-            sc = (DatagramChannel) sb.bind(newSocketAddress(iface)).sync().channel();
+            sc = (DatagramChannel) sb.bind(newSocketAddress(iface)).get();
 
             assertEquals(iface, sc.config().getOption(ChannelOption.IP_MULTICAST_IF));
             assertInterfaceAddress(iface, sc.config().getOption(ChannelOption.IP_MULTICAST_ADDR));
@@ -103,7 +104,7 @@ public class DatagramMulticastTest extends AbstractDatagramTest {
             cb.localAddress(addr.getPort());
             clientFuture = cb.bind().await();
         } while (!clientFuture.isSuccess() && --attempts > 0);
-        DatagramChannel cc = (DatagramChannel) clientFuture.sync().channel();
+        DatagramChannel cc = (DatagramChannel) clientFuture.get();
         assertEquals(iface, cc.config().getOption(ChannelOption.IP_MULTICAST_IF));
         assertInterfaceAddress(iface, cc.config().getOption(ChannelOption.IP_MULTICAST_ADDR));
 

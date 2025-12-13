@@ -147,7 +147,7 @@ final class QpackDecoder {
             stateSyncStrategy.sectionAcknowledged(requiredInsertCount);
             final ByteBuf sectionAck = qpackAttributes.decoderStream().alloc().buffer(8);
             encodePrefixedInteger(sectionAck, (byte) 0b1000_0000, 7, streamId);
-            closeOnFailure(qpackAttributes.decoderStream().writeAndFlush(sectionAck));
+            closeOnFailure(qpackAttributes.decoderStream().writeAndFlush(sectionAck), qpackAttributes.decoderStream());
         }
         return true;
     }
@@ -240,7 +240,7 @@ final class QpackDecoder {
         // +---+---+-----------------------+
         final ByteBuf cancel = qpackDecoderStream.alloc().buffer(8);
         encodePrefixedInteger(cancel, (byte) 0b0100_0000, 6, streamId);
-        closeOnFailure(qpackDecoderStream.writeAndFlush(cancel));
+        closeOnFailure(qpackDecoderStream.writeAndFlush(cancel), qpackDecoderStream);
     }
 
     private static boolean isIndexed(byte b) {
@@ -510,7 +510,7 @@ final class QpackDecoder {
             final ByteBuf incr = qpackDecoderStream.alloc().buffer(8);
             encodePrefixedInteger(incr, (byte) 0b0, 6, insertCount - lastAckInsertCount);
             lastAckInsertCount = insertCount;
-            closeOnFailure(qpackDecoderStream.writeAndFlush(incr));
+            closeOnFailure(qpackDecoderStream.writeAndFlush(incr), qpackDecoderStream);
         }
     }
 }

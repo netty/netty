@@ -17,17 +17,13 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.EventExecutor;
-import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.internal.StringUtil;
@@ -198,7 +194,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * Create a new {@link Channel} and register it with an {@link EventLoop}.
      */
-    public ChannelFuture register() {
+    public Future<Channel> register() {
         validate();
         return initAndRegister();
     }
@@ -206,7 +202,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * Create a new {@link Channel} and bind it.
      */
-    public ChannelFuture bind() {
+    public Future<Channel> bind() {
         validate();
         SocketAddress localAddress = this.localAddress;
         if (localAddress == null) {
@@ -218,59 +214,54 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     /**
      * Create a new {@link Channel} and bind it.
      */
-    public ChannelFuture bind(int inetPort) {
+    public Future<Channel> bind(int inetPort) {
         return bind(new InetSocketAddress(inetPort));
     }
 
     /**
      * Create a new {@link Channel} and bind it.
      */
-    public ChannelFuture bind(String inetHost, int inetPort) {
+    public Future<Channel> bind(String inetHost, int inetPort) {
         return bind(SocketUtils.socketAddress(inetHost, inetPort));
     }
 
     /**
      * Create a new {@link Channel} and bind it.
      */
-    public ChannelFuture bind(InetAddress inetHost, int inetPort) {
+    public Future<Channel> bind(InetAddress inetHost, int inetPort) {
         return bind(new InetSocketAddress(inetHost, inetPort));
     }
 
     /**
      * Create a new {@link Channel} and bind it.
      */
-    public ChannelFuture bind(SocketAddress localAddress) {
+    public Future<Channel> bind(SocketAddress localAddress) {
         validate();
         return doBind(ObjectUtil.checkNotNull(localAddress, "localAddress"));
     }
 
-    private ChannelFuture doBind(final SocketAddress localAddress) {
-        final ChannelFuture regFuture = initAndRegister();
-        final Channel channel = regFuture.channel();
-        if (regFuture.cause() != null) {
+    private Future<Channel> doBind(final SocketAddress localAddress) {
+        final Future<Channel> regFuture = initAndRegister();
+        Throwable cause = regFuture.cause();
+        if (cause != null) {
             return regFuture;
         }
 
-        if (regFuture.isDone()) {
+        Promise<Channel> promise = regFuture.executor().newPromise();
+        if (regFuture.isSuccess()) {
             // At this point we know that the registration was complete and successful.
-            ChannelPromise promise = channel.newPromise();
-            doBind0(regFuture, channel, localAddress, promise);
+            doBind0(regFuture, localAddress, promise);
             return promise;
         } else {
             // Registration future is almost always fulfilled already, but just in case it's not.
-            final PendingRegistrationPromise promise = new PendingRegistrationPromise(channel);
             regFuture.addListener(future -> {
-                Throwable cause = future.cause();
-                if (cause != null) {
-                    // Registration on the EventLoop failed so fail the ChannelPromise directly to not cause an
+                Throwable err = future.cause();
+                if (err != null) {
+                    // Registration on the EventLoop failed so fail the Promise<Void> directly to not cause an
                     // IllegalStateException once we try to access the EventLoop of the Channel.
-                    promise.setFailure(cause);
+                    promise.setFailure(err);
                 } else {
-                    // Registration was successful, so set the correct executor to use.
-                    // See https://github.com/netty/netty/issues/2586
-                    promise.registered();
-
-                    doBind0(regFuture, channel, localAddress, promise);
+                    doBind0(regFuture, localAddress, promise);
                 }
             });
             return promise;
@@ -279,7 +270,7 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
 
     protected abstract Channel newChannel(EventLoop loop);
 
-    final ChannelFuture initAndRegister() {
+    final Future<Channel> initAndRegister() {
         Channel channel = null;
         EventLoop loop = config().group().next();
 
@@ -290,14 +281,15 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             if (channel != null) {
                 // channel can be null if newChannel crashed (eg SocketException("too many open files"))
                 channel.close();
-                return channel.newPromise().setFailure(t);
             }
-            return new FailedChannel(group.next()).newFailedFuture(t);
+            return loop.newFailedFuture(t);
         }
 
-        ChannelFuture reqFut = channel.register();
-        if (reqFut.cause() != null) {
+        Future<Void> reqFut = channel.register();
+        Throwable cause = reqFut.cause();
+        if (cause != null) {
             channel.close();
+            return loop.newFailedFuture(cause);
         }
 
         // If we are here and the promise is not failed, it's one of the following cases:
@@ -309,7 +301,16 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
         //         because bind() or connect() will be executed *after* the scheduled registration task is executed
         //         because register(), bind(), and connect() are all bound to the same thread.
 
-        return reqFut;
+        final Channel finalChannel = channel;
+        Promise<Channel> promise = loop.newPromise();
+        reqFut.addListener(f -> {
+            if (f.isSuccess()) {
+                promise.setSuccess(finalChannel);
+            } else {
+                promise.setFailure(f.cause());
+            }
+        });
+        return promise;
     }
 
     abstract void init(Channel channel) throws Throwable;
@@ -323,16 +324,24 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
     }
 
     private static void doBind0(
-            final ChannelFuture regFuture, final Channel channel,
-            final SocketAddress localAddress, final ChannelPromise promise) {
+            final Future<Channel> regFuture,
+            final SocketAddress localAddress, final Promise<Channel> promise) {
 
         // This method is invoked before channelRegistered() is triggered.  Give user handlers a chance to set up
         // the pipeline in its channelRegistered() implementation.
-        channel.executor().execute(new Runnable() {
+        regFuture.executor().execute(new Runnable() {
             @Override
             public void run() {
                 if (regFuture.isSuccess()) {
-                    channel.bind(localAddress, promise).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                    Channel channel = regFuture.getNow();
+                    channel.bind(localAddress).addListener(f -> {
+                        if (f.isSuccess()) {
+                            promise.setSuccess(channel);
+                        } else {
+                            promise.setFailure(f.cause());
+                            channel.close();
+                        }
+                    });
                 } else {
                     promise.setFailure(regFuture.cause());
                 }
@@ -455,32 +464,5 @@ public abstract class AbstractBootstrap<B extends AbstractBootstrap<B, C>, C ext
             .append(StringUtil.simpleClassName(this))
             .append('(').append(config()).append(')');
         return buf.toString();
-    }
-
-    static final class PendingRegistrationPromise extends DefaultChannelPromise {
-
-        // Is set to the correct EventExecutor once the registration was successful. Otherwise it will
-        // stay null and so the GlobalEventExecutor.INSTANCE will be used for notifications.
-        private volatile boolean registered;
-
-        PendingRegistrationPromise(Channel channel) {
-            super(channel);
-        }
-
-        void registered() {
-            registered = true;
-        }
-
-        @Override
-        protected EventExecutor executor() {
-            if (registered) {
-                // If the registration was a success executor is set.
-                //
-                // See https://github.com/netty/netty/issues/2586
-                return super.executor();
-            }
-            // The registration failed so we can only use the GlobalEventExecutor as last resort to notify.
-            return GlobalEventExecutor.INSTANCE;
-        }
     }
 }

@@ -24,10 +24,10 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 import io.netty.util.Attribute;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -389,7 +389,7 @@ public abstract class AbstractTrafficShapingHandler implements ChannelInboundHan
      * use one of the way provided by Netty to handle the capacity:</p>
      * <p>- the {@code Channel.isWritable()} property and the corresponding
      * {@code channelWritabilityChanged()}</p>
-     * <p>- the {@code ChannelFuture.addListener(new GenericFutureListener())}</p>
+     * <p>- the {@code Future.addListener(new FutureListener())}</p>
      *
      * @param maxWriteSize the maximum Write Size allowed in the buffer
      *            per channel before write suspended is set,
@@ -548,7 +548,7 @@ public abstract class AbstractTrafficShapingHandler implements ChannelInboundHan
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
+    public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
         long size = calculateSize(msg);
         long now = TrafficCounter.milliSecondFromNano();
         if (size > 0) {
@@ -569,13 +569,13 @@ public abstract class AbstractTrafficShapingHandler implements ChannelInboundHan
 
     @Deprecated
     protected void submitWrite(final ChannelHandlerContext ctx, final Object msg,
-            final long delay, final ChannelPromise promise) {
+            final long delay, final Promise<Void> promise) {
         submitWrite(ctx, msg, calculateSize(msg),
                 delay, TrafficCounter.milliSecondFromNano(), promise);
     }
 
     abstract void submitWrite(
-            ChannelHandlerContext ctx, Object msg, long size, long delay, long now, ChannelPromise promise);
+            ChannelHandlerContext ctx, Object msg, long size, long delay, long now, Promise<Void> promise);
 
     @Override
     public void channelRegistered(ChannelHandlerContext ctx) throws Exception {

@@ -16,7 +16,7 @@
 package io.netty.example.mqtt.heartBeat;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -26,6 +26,7 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.mqtt.MqttDecoder;
 import io.netty.handler.codec.mqtt.MqttEncoder;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.concurrent.Future;
 
 import java.util.concurrent.TimeUnit;
 
@@ -56,9 +57,9 @@ public final class MqttHeartBeatClient {
                 }
             });
 
-            ChannelFuture f = b.connect(HOST, PORT).sync();
+            Future<Channel> f = b.connect(HOST, PORT).sync();
             System.out.println("Client connected");
-            f.channel().closeFuture().sync();
+            f.getNow().closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }

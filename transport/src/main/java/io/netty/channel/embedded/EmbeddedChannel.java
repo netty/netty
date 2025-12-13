@@ -18,15 +18,12 @@ package io.netty.channel.embedded;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelPipeline;
@@ -36,6 +33,9 @@ import io.netty.channel.IoHandle;
 import io.netty.channel.IoRegistration;
 import io.netty.channel.IoTransport;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.Ticker;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RecyclableArrayList;
@@ -64,7 +64,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(EmbeddedChannel.class);
 
-    private final ChannelFutureListener recordExceptionListener = this::recordException;
+    private final FutureListener<Void> recordExceptionListener = this::recordException;
 
     private final ChannelConfig config;
     private Queue<Object> inboundMessages;
@@ -252,7 +252,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     private void register0() {
-        ChannelPromise promise = newPromise();
+        Promise<Void> promise = newPromise();
         ioTransport().register(promise);
         assert promise.isDone();
         Throwable cause = promise.cause();
@@ -282,7 +282,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -380,17 +380,17 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @see #writeOneOutbound(Object)
      */
-    public ChannelFuture writeOneInbound(Object msg) {
+    public Future<Void> writeOneInbound(Object msg) {
         return writeOneInbound(msg, newPromise());
     }
 
     /**
      * Writes one message to the inbound of this {@link Channel} and does not flush it. This
-     * method is conceptually equivalent to {@link #write(Object, ChannelPromise)}.
+     * method is conceptually equivalent to {@link io.netty.channel.ChannelOutboundInvoker#write(Object, Promise)}.
      *
-     * @see #writeOneOutbound(Object, ChannelPromise)
+     * @see #writeOneOutbound(Object, Promise)
      */
-    public ChannelFuture writeOneInbound(Object msg, ChannelPromise promise) {
+    public Future<Void> writeOneInbound(Object msg, Promise<Void> promise) {
         executingStackCnt++;
         try {
             if (checkOpen(true)) {
@@ -413,7 +413,7 @@ public class EmbeddedChannel extends AbstractChannel {
         return this;
     }
 
-    private ChannelFuture flushInbound(boolean recordException, ChannelPromise promise) {
+    private Future<Void> flushInbound(boolean recordException, Promise<Void> promise) {
         executingStackCnt++;
         try {
             if (checkOpen(recordException)) {
@@ -455,7 +455,7 @@ public class EmbeddedChannel extends AbstractChannel {
 
                 int size = futures.size();
                 for (int i = 0; i < size; i++) {
-                    ChannelFuture future = (ChannelFuture) futures.get(i);
+                    Future<Void> future = (Future<Void>) futures.get(i);
                     if (future.isDone()) {
                         recordException(future);
                     } else {
@@ -480,17 +480,17 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @see #writeOneInbound(Object)
      */
-    public ChannelFuture writeOneOutbound(Object msg) {
+    public Future<Void> writeOneOutbound(Object msg) {
         return writeOneOutbound(msg, newPromise());
     }
 
     /**
      * Writes one message to the outbound of this {@link Channel} and does not flush it. This
-     * method is conceptually equivalent to {@link #write(Object, ChannelPromise)}.
+     * method is conceptually equivalent to {@link io.netty.channel.ChannelOutboundInvoker#write(Object, Promise)}.
      *
-     * @see #writeOneInbound(Object, ChannelPromise)
+     * @see #writeOneInbound(Object, Promise)
      */
-    public ChannelFuture writeOneOutbound(Object msg, ChannelPromise promise) {
+    public Future<Void> writeOneOutbound(Object msg, Promise<Void> promise) {
         executingStackCnt++;
         try {
             if (checkOpen(true)) {
@@ -606,21 +606,21 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public final ChannelFuture close() {
+    public final Future<Void> close() {
         return close(newPromise());
     }
 
     @Override
-    public final ChannelFuture disconnect() {
+    public final Future<Void> disconnect() {
         return disconnect(newPromise());
     }
 
     @Override
-    public final ChannelFuture close(ChannelPromise promise) {
+    public final Future<Void> close(Promise<Void> promise) {
         // We need to call runPendingTasks() before calling super.close() as there may be something in the queue
         // that needs to be run before the actual close takes place.
         executingStackCnt++;
-        ChannelFuture future;
+        Future<Void> future;
         try {
             runPendingTasks();
             future = super.close(promise);
@@ -634,9 +634,9 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public final ChannelFuture disconnect(ChannelPromise promise) {
+    public final Future<Void> disconnect(Promise<Void> promise) {
         executingStackCnt++;
-        ChannelFuture future;
+        Future<Void> future;
         try {
             future = super.disconnect(promise);
 
@@ -651,7 +651,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress) {
+    public Future<Void> bind(SocketAddress localAddress) {
         executingStackCnt++;
         try {
             return super.bind(localAddress);
@@ -662,7 +662,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress) {
+    public Future<Void> connect(SocketAddress remoteAddress) {
         executingStackCnt++;
         try {
             return super.connect(remoteAddress);
@@ -673,7 +673,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
         executingStackCnt++;
         try {
             return super.connect(remoteAddress, localAddress);
@@ -684,7 +684,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelFuture deregister() {
+    public Future<Void> deregister() {
         executingStackCnt++;
         try {
             return super.deregister();
@@ -707,7 +707,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+    public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
         executingStackCnt++;
         try {
             return super.bind(localAddress, promise);
@@ -718,7 +718,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+    public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
         executingStackCnt++;
         try {
             return super.connect(remoteAddress, promise);
@@ -729,7 +729,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         executingStackCnt++;
         try {
             return super.connect(remoteAddress, localAddress, promise);
@@ -740,7 +740,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelFuture deregister(ChannelPromise promise) {
+    public Future<Void> deregister(Promise<Void> promise) {
         executingStackCnt++;
         try {
             return super.deregister(promise);
@@ -763,7 +763,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelFuture write(Object msg) {
+    public Future<Void> write(Object msg) {
         executingStackCnt++;
         try {
             return super.write(msg);
@@ -774,7 +774,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelFuture write(Object msg, ChannelPromise promise) {
+    public Future<Void> write(Object msg, Promise<Void> promise) {
         executingStackCnt++;
         try {
             return super.write(msg, promise);
@@ -785,7 +785,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelFuture writeAndFlush(Object msg) {
+    public Future<Void> writeAndFlush(Object msg) {
         executingStackCnt++;
         try {
             return super.writeAndFlush(msg);
@@ -796,7 +796,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
         executingStackCnt++;
         try {
             return super.writeAndFlush(msg, promise);
@@ -869,7 +869,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
     }
 
-    private void recordException(ChannelFuture future) {
+    private void recordException(Future<? extends Void> future) {
         if (!future.isSuccess()) {
             recordException(future.cause());
         }
@@ -926,14 +926,14 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Checks for the presence of an {@link Exception}.
      */
-    private ChannelFuture checkException(ChannelPromise promise) {
+    private Future<Void> checkException(Promise<Void> promise) {
       Throwable t = lastException;
       if (t != null) {
           lastException = null;
           return promise.setFailure(t);
       }
 
-      return promise.setSuccess();
+      return promise.setSuccess(null);
     }
 
     /**
@@ -982,34 +982,34 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doDeregister(ChannelPromise promise) {
-        promise.setSuccess();
+    protected void doDeregister(Promise<Void> promise) {
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doRegister(ChannelPromise promise) {
+    protected void doRegister(Promise<Void> promise) {
         state = State.ACTIVE;
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
-        promise.setSuccess();
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doDisconnect(ChannelPromise promise) {
+    protected void doDisconnect(Promise<Void> promise) {
         if (!hasDisconnect) {
             doClose(promise);
         } else {
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
     }
 
     @Override
-    protected void doClose(ChannelPromise promise)  {
+    protected void doClose(Promise<Void> promise)  {
         state = State.CLOSED;
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
@@ -1171,8 +1171,8 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        promise.setSuccess();
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        promise.setSuccess(null);
     }
 
     static final class EmbeddedIoHandle implements IoHandle {
@@ -1189,14 +1189,14 @@ public class EmbeddedChannel extends AbstractChannel {
 
     final class EmbeddedIoTransport implements IoTransport {
         private final IoTransport transport;
-        private final ChannelFutureListener futureListener = f ->  maybeRunPendingTasks();
+        private final FutureListener<Void> futureListener = f ->  maybeRunPendingTasks();
 
         EmbeddedIoTransport(IoTransport transport) {
             this.transport = transport;
         }
 
         @Override
-        public void shutdown(ChannelShutdownType type, ChannelPromise promise) {
+        public void shutdown(ChannelShutdownType type, Promise<Void> promise) {
             executingStackCnt++;
             try {
                 transport.shutdown(type, promise.addListener(futureListener));
@@ -1207,7 +1207,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void register(ChannelPromise promise) {
+        public void register(Promise<Void> promise) {
             executingStackCnt++;
             try {
                 transport.register(promise.addListener(futureListener));
@@ -1218,7 +1218,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void bind(SocketAddress localAddress, ChannelPromise promise) {
+        public void bind(SocketAddress localAddress, Promise<Void> promise) {
             executingStackCnt++;
             try {
                 transport.bind(localAddress, promise.addListener(futureListener));
@@ -1229,7 +1229,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
             executingStackCnt++;
             try {
                 transport.connect(remoteAddress, localAddress, promise.addListener(futureListener));
@@ -1240,7 +1240,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void disconnect(ChannelPromise promise) {
+        public void disconnect(Promise<Void> promise) {
             executingStackCnt++;
             try {
                 transport.disconnect(promise.addListener(futureListener));
@@ -1251,7 +1251,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void close(ChannelPromise promise) {
+        public void close(Promise<Void> promise) {
             executingStackCnt++;
             try {
                 transport.close(promise.addListener(futureListener));
@@ -1262,7 +1262,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void deregister(ChannelPromise promise) {
+        public void deregister(Promise<Void> promise) {
             executingStackCnt++;
             try {
                 transport.deregister(promise.addListener(futureListener));
@@ -1284,7 +1284,7 @@ public class EmbeddedChannel extends AbstractChannel {
         }
 
         @Override
-        public void write(Object msg, ChannelPromise promise) {
+        public void write(Object msg, Promise<Void> promise) {
             executingStackCnt++;
             try {
                 transport.write(msg, promise.addListener(futureListener));

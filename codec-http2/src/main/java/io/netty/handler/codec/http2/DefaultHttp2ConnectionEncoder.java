@@ -15,13 +15,14 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.CoalescingBufferQueue;
 import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http2.Http2CodecUtil.SimpleChannelPromiseAggregator;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 
 import java.util.ArrayDeque;
 import java.util.Queue;
@@ -116,8 +117,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     }
 
     @Override
-    public ChannelFuture writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
-            final boolean endOfStream, ChannelPromise promise) {
+    public Future<Void> writeData(final ChannelHandlerContext ctx, final int streamId, ByteBuf data, int padding,
+            final boolean endOfStream, Promise<Void> promise) {
         final Http2Stream stream;
         try {
             stream = requireStream(streamId);
@@ -138,13 +139,13 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
         // Hand control of the frame to the flow controller.
         flowController().addFlowControlled(stream,
-                new FlowControlledData(stream, data, padding, endOfStream, promise));
+                new FlowControlledData(ctx.channel(), stream, data, padding, endOfStream, promise));
         return promise;
     }
 
     @Override
-    public ChannelFuture writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
-            boolean endStream, ChannelPromise promise) {
+    public Future<Void> writeHeaders(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
+            boolean endStream, Promise<Void> promise) {
         return writeHeaders0(ctx, streamId, headers, false, 0, (short) 0, false, padding, endStream, promise);
     }
 
@@ -158,9 +159,9 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     }
 
     @Override
-    public ChannelFuture writeHeaders(final ChannelHandlerContext ctx, final int streamId,
+    public Future<Void> writeHeaders(final ChannelHandlerContext ctx, final int streamId,
             final Http2Headers headers, final int streamDependency, final short weight,
-            final boolean exclusive, final int padding, final boolean endOfStream, ChannelPromise promise) {
+            final boolean exclusive, final int padding, final boolean endOfStream, Promise<Void> promise) {
         return writeHeaders0(ctx, streamId, headers, true, streamDependency,
                 weight, exclusive, padding, endOfStream, promise);
     }
@@ -169,11 +170,11 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
      * Write headers via {@link Http2FrameWriter}. If {@code hasPriority} is {@code false} it will ignore the
      * {@code streamDependency}, {@code weight} and {@code exclusive} parameters.
      */
-    private static ChannelFuture sendHeaders(Http2FrameWriter frameWriter, ChannelHandlerContext ctx, int streamId,
+    private static Future<Void> sendHeaders(Http2FrameWriter frameWriter, ChannelHandlerContext ctx, int streamId,
                                        Http2Headers headers, final boolean hasPriority,
                                        int streamDependency, final short weight,
                                        boolean exclusive, final int padding,
-                                       boolean endOfStream, ChannelPromise promise) {
+                                       boolean endOfStream, Promise<Void> promise) {
         if (hasPriority) {
             return frameWriter.writeHeaders(ctx, streamId, headers, streamDependency,
                     weight, exclusive, padding, endOfStream, promise);
@@ -181,11 +182,11 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         return frameWriter.writeHeaders(ctx, streamId, headers, padding, endOfStream, promise);
     }
 
-    private ChannelFuture writeHeaders0(final ChannelHandlerContext ctx, final int streamId,
+    private Future<Void> writeHeaders0(final ChannelHandlerContext ctx, final int streamId,
                                         final Http2Headers headers, final boolean hasPriority,
                                         final int streamDependency, final short weight,
                                         final boolean exclusive, final int padding,
-                                        final boolean endOfStream, ChannelPromise promise) {
+                                        final boolean endOfStream, Promise<Void> promise) {
         try {
             Http2Stream stream = connection.stream(streamId);
             if (stream == null) {
@@ -226,7 +227,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
                 boolean isInformational = validateHeadersSentState(stream, headers, connection.isServer(), endOfStream);
 
-                ChannelFuture future = sendHeaders(frameWriter, ctx, streamId, headers, hasPriority, streamDependency,
+                Future<Void> future = sendHeaders(frameWriter, ctx, streamId, headers, hasPriority, streamDependency,
                         weight, exclusive, padding, endOfStream, promise);
 
                 // Writing headers may fail during the encode state if they violate HPACK limits.
@@ -270,21 +271,21 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     }
 
     @Override
-    public ChannelFuture writePriority(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
-            boolean exclusive, ChannelPromise promise) {
+    public Future<Void> writePriority(ChannelHandlerContext ctx, int streamId, int streamDependency, short weight,
+            boolean exclusive, Promise<Void> promise) {
         return frameWriter.writePriority(ctx, streamId, streamDependency, weight, exclusive, promise);
     }
 
     @Override
-    public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
-            ChannelPromise promise) {
+    public Future<Void> writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
+            Promise<Void> promise) {
         // Delegate to the lifecycle manager for proper updating of connection state.
         return lifecycleManager.resetStream(ctx, streamId, errorCode, promise);
     }
 
     @Override
-    public ChannelFuture writeSettings(ChannelHandlerContext ctx, Http2Settings settings,
-            ChannelPromise promise) {
+    public Future<Void> writeSettings(ChannelHandlerContext ctx, Http2Settings settings,
+            Promise<Void> promise) {
         outstandingLocalSettingsQueue.add(settings);
         try {
             Boolean pushEnabled = settings.pushEnabled();
@@ -299,7 +300,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     }
 
     @Override
-    public ChannelFuture writeSettingsAck(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public Future<Void> writeSettingsAck(ChannelHandlerContext ctx, Promise<Void> promise) {
         if (outstandingRemoteSettingsQueue == null) {
             return frameWriter.writeSettingsAck(ctx, promise);
         }
@@ -317,10 +318,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
         // We create a "new promise" to make sure that status from both the write and the application are taken into
         // account independently.
-        ChannelPromise applySettingsPromise = aggregator.newPromise();
+        Promise<Void> applySettingsPromise = aggregator.newPromise();
         try {
             remoteSettings(settings);
-            applySettingsPromise.setSuccess();
+            applySettingsPromise.setSuccess(null);
         } catch (Throwable e) {
             applySettingsPromise.setFailure(e);
             lifecycleManager.onError(ctx, true, e);
@@ -329,13 +330,13 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     }
 
     @Override
-    public ChannelFuture writePing(ChannelHandlerContext ctx, boolean ack, long data, ChannelPromise promise) {
+    public Future<Void> writePing(ChannelHandlerContext ctx, boolean ack, long data, Promise<Void> promise) {
         return frameWriter.writePing(ctx, ack, data, promise);
     }
 
     @Override
-    public ChannelFuture writePushPromise(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
-            Http2Headers headers, int padding, ChannelPromise promise) {
+    public Future<Void> writePushPromise(ChannelHandlerContext ctx, int streamId, int promisedStreamId,
+            Http2Headers headers, int padding, Promise<Void> promise) {
         try {
             if (connection.goAwayReceived()) {
                 throw connectionError(PROTOCOL_ERROR, "Sending PUSH_PROMISE after GO_AWAY received.");
@@ -345,7 +346,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             // Reserve the promised stream.
             connection.local().reservePushStream(promisedStreamId, stream);
 
-            ChannelFuture future = frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding,
+            Future<Void> future = frameWriter.writePushPromise(ctx, streamId, promisedStreamId, headers, padding,
                                                                 promise);
             // Writing headers may fail during the encode state if they violate HPACK limits.
             Throwable failureCause = future.cause();
@@ -370,21 +371,21 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     }
 
     @Override
-    public ChannelFuture writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
-            ChannelPromise promise) {
+    public Future<Void> writeGoAway(ChannelHandlerContext ctx, int lastStreamId, long errorCode, ByteBuf debugData,
+                                    Promise<Void> promise) {
         return lifecycleManager.goAway(ctx, lastStreamId, errorCode, debugData, promise);
     }
 
     @Override
-    public ChannelFuture writeWindowUpdate(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement,
-            ChannelPromise promise) {
+    public Future<Void> writeWindowUpdate(ChannelHandlerContext ctx, int streamId, int windowSizeIncrement,
+            Promise<Void> promise) {
         return promise.setFailure(new UnsupportedOperationException("Use the Http2[Inbound|Outbound]FlowController" +
                 " objects to control window sizes"));
     }
 
     @Override
-    public ChannelFuture writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
-            ByteBuf payload, ChannelPromise promise) {
+    public Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
+            ByteBuf payload, Promise<Void> promise) {
         return frameWriter.writeFrame(ctx, frameType, streamId, flags, payload, promise);
     }
 
@@ -438,8 +439,8 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         private final CoalescingBufferQueue queue;
         private int dataSize;
 
-        FlowControlledData(Http2Stream stream, ByteBuf buf, int padding, boolean endOfStream,
-                                   ChannelPromise promise) {
+        FlowControlledData(Channel channel, Http2Stream stream, ByteBuf buf, int padding, boolean endOfStream,
+                           Promise<Void> promise) {
             super(stream, padding, endOfStream, promise);
             queue = new CoalescingBufferQueue();
             queue.add(buf, promise);
@@ -479,7 +480,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                         // There's no need to write any data frames because there are only empty data frames in the
                         // queue and it is not end of stream yet. Just complete their promises by getting the buffer
                         // corresponding to 0 bytes and writing it to the channel (to preserve notification order).
-                        ChannelPromise writePromise = ctx.newPromise().addListener(this);
+                        Promise<Void> writePromise = ctx.<Void>newPromise().addListener(this);
                         ctx.write(queue.remove(ctx.alloc(), 0, writePromise), writePromise);
                     }
                     return;
@@ -492,7 +493,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
             // Determine how much data to write.
             int writableData = min(queuedData, allowedBytes);
-            ChannelPromise writePromise = ctx.newPromise().addListener(this);
+            Promise<Void> writePromise = ctx.<Void>newPromise().addListener(this);
             ByteBuf toWrite = queue.remove(ctx.alloc(), writableData, writePromise);
             dataSize = queue.readableBytes();
 
@@ -521,7 +522,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         }
     }
 
-    private void notifyLifecycleManagerOnError(ChannelFuture future, final ChannelHandlerContext ctx) {
+    private void notifyLifecycleManagerOnError(Future<Void> future, final ChannelHandlerContext ctx) {
         future.addListener(future1 -> {
             Throwable cause = future1.cause();
             if (cause != null) {
@@ -544,7 +545,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
         FlowControlledHeaders(Http2Stream stream, Http2Headers headers, boolean hasPriority,
                               int streamDependency, short weight, boolean exclusive,
-                              int padding, boolean endOfStream, ChannelPromise promise) {
+                              int padding, boolean endOfStream, Promise<Void> promise) {
             super(stream, padding, endOfStream, promise);
             this.headers = headers;
             this.hasPriority = hasPriority;
@@ -573,7 +574,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             // closeStreamLocal().
             promise.addListener(this);
 
-            ChannelFuture f = sendHeaders(frameWriter, ctx, stream.id(), headers, hasPriority, streamDependency,
+            Future<Void> f = sendHeaders(frameWriter, ctx, stream.id(), headers, hasPriority, streamDependency,
                     weight, exclusive, padding, endOfStream, promise);
             // Writing headers may fail during the encode state if they violate HPACK limits.
             Throwable failureCause = f.cause();
@@ -594,14 +595,14 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
      * Common base type for payloads to deliver via flow-control.
      */
     public abstract class FlowControlledBase implements Http2RemoteFlowController.FlowControlled,
-            ChannelFutureListener {
+            FutureListener<Void> {
         protected final Http2Stream stream;
-        protected ChannelPromise promise;
+        protected Promise<Void> promise;
         protected boolean endOfStream;
         protected int padding;
 
         FlowControlledBase(final Http2Stream stream, int padding, boolean endOfStream,
-                final ChannelPromise promise) {
+                final Promise<Void> promise) {
             checkPositiveOrZero(padding, "padding");
             this.padding = padding;
             this.endOfStream = endOfStream;
@@ -617,7 +618,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         }
 
         @Override
-        public void operationComplete(ChannelFuture future) {
+        public void operationComplete(Future<? extends Void> future) {
             if (!future.isSuccess()) {
                 error(flowController().channelHandlerContext(), future.cause());
             }

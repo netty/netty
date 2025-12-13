@@ -22,13 +22,13 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoop;
 import io.netty.channel.IoEvent;
 import io.netty.channel.IoRegistration;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -60,7 +60,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
         }
     };
 
-    private ChannelPromise pendingConnectPromise;
+    private Promise<Void> pendingConnectPromise;
 
     protected AbstractNioChannel(EventLoop eventLoop, Channel parent, SelectableChannel ch, NioIoOps readOps,
                                  boolean hasDisconnect) {
@@ -191,7 +191,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         final boolean connected;
         try {
             connected = doConnect(remoteAddress, localAddress);
@@ -200,7 +200,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             return;
         }
         if (connected) {
-            promise.setSuccess();
+            promise.setSuccess(null);
         } else {
             pendingConnectPromise = promise;
         }
@@ -264,7 +264,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
         assert executor().inEventLoop();
         assert pendingConnectPromise != null;
-        ChannelPromise promise = pendingConnectPromise;
+        Promise<Void> promise = pendingConnectPromise;
         pendingConnectPromise = null;
         try {
             doFinishConnect();
@@ -272,7 +272,7 @@ public abstract class AbstractNioChannel extends AbstractChannel {
             promise.setFailure(cause);
             return;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     protected final void removeReadOp() {
@@ -288,12 +288,12 @@ public abstract class AbstractNioChannel extends AbstractChannel {
 
     @SuppressWarnings("unchecked")
     @Override
-    protected void doRegister(ChannelPromise promise) {
+    protected void doRegister(Promise<Void> promise) {
         assert registration == null;
         executor().register(ioHandle).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
             }
@@ -301,13 +301,13 @@ public abstract class AbstractNioChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doDeregister(ChannelPromise promise) {
+    protected void doDeregister(Promise<Void> promise) {
         IoRegistration registration = this.registration;
         if (registration != null) {
             this.registration = null;
             registration.cancel();
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override

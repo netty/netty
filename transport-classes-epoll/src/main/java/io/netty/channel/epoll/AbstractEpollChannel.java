@@ -24,7 +24,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
@@ -40,6 +39,7 @@ import io.netty.channel.unix.Socket;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -60,7 +60,7 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 abstract class AbstractEpollChannel extends AbstractChannel implements UnixChannel {
     protected final LinuxSocket socket;
     private final EpollIoHandleImpl ioHandle = new  EpollIoHandleImpl();
-    private ChannelPromise connectPromise;
+    private Promise<Void> connectPromise;
     private SocketAddress requestedRemoteAddress;
     private volatile SocketAddress local;
     private volatile SocketAddress remote;
@@ -150,8 +150,8 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected void doClose(ChannelPromise promise) {
-        ChannelPromise connectPromise = this.connectPromise;
+    protected void doClose(Promise<Void> promise) {
+        Promise<Void> connectPromise = this.connectPromise;
         if (connectPromise != null) {
             // Use tryFailure() instead of setFailure() to avoid the race against cancel().
             connectPromise.tryFailure(new ClosedChannelException());
@@ -164,7 +164,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             //
             // See https://github.com/netty/netty/issues/7159
             EventLoop loop = executor();
-            ChannelPromise deregisterPromise = newPromise();
+            Promise<Void> deregisterPromise = newPromise();
             deregisterPromise.addListener(f -> {
                 active = false;
                 // Even if we allow half closed sockets we should give up on reading. Otherwise we may allow a read
@@ -177,7 +177,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                     promise.setFailure(cause);
                     return;
                 }
-                promise.setSuccess();
+                promise.setSuccess(null);
             });
             if (loop.inEventLoop()) {
                 doDeregister(deregisterPromise);
@@ -200,7 +200,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
                 promise.setFailure(cause);
                 return;
             }
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
     }
 
@@ -210,7 +210,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected void doDisconnect(ChannelPromise promise) {
+    protected void doDisconnect(Promise<Void> promise) {
         doClose(promise);
     }
 
@@ -220,13 +220,13 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected void doDeregister(ChannelPromise promise) {
+    protected void doDeregister(Promise<Void> promise) {
         IoRegistration registration = this.registration;
         if (registration != null) {
             ops = inital;
             registration.cancel();
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
@@ -274,13 +274,13 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected void doRegister(ChannelPromise promise) {
+    protected void doRegister(Promise<Void> promise) {
         executor().register(ioHandle).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
                 registration.submit(ops);
                 inital = ops;
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
             }
@@ -427,7 +427,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
     @Override
     protected void doConnect(
-            final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+            final SocketAddress remoteAddress, final SocketAddress localAddress, final Promise<Void> promise) {
         final boolean connected;
         requestedRemoteAddress = remoteAddress;
         try {
@@ -437,7 +437,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             return;
         }
         if (connected) {
-            promise.setSuccess();
+            promise.setSuccess(null);
         } else {
             connectPromise = promise;
         }
@@ -470,7 +470,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             // Re-ordering can easily introduce bugs and bad side-effects, as we found out painfully in the
             // past.
 
-            // First check for EPOLLOUT as we may need to fail the connect ChannelPromise before try
+            // First check for EPOLLOUT as we may need to fail the connect Promise<Void> before try
             // to read from the file descriptor.
             // See https://github.com/netty/netty/issues/3785
             //
@@ -624,7 +624,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
 
         assert executor().inEventLoop();
         assert connectPromise != null;
-        ChannelPromise promise = connectPromise;
+        Promise<Void> promise = connectPromise;
         final boolean connected;
         try {
             connected = doFinishConnect();
@@ -635,7 +635,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
         }
         if (connected) {
             connectPromise = null;
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
     }
 
@@ -661,7 +661,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
     }
 
     @Override
-    protected void doBind(SocketAddress local, ChannelPromise promise) {
+    protected void doBind(SocketAddress local, Promise<Void> promise) {
         try {
             if (local instanceof InetSocketAddress) {
                 checkResolvable((InetSocketAddress) local);
@@ -672,7 +672,7 @@ abstract class AbstractEpollChannel extends AbstractChannel implements UnixChann
             promise.setFailure(cause);
             return;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     /**

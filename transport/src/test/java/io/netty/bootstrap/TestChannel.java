@@ -20,10 +20,10 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
+import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
 
@@ -42,43 +42,43 @@ class TestChannel extends AbstractChannel {
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
-        promise.setSuccess();
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doRegister(ChannelPromise promise) {
-        promise.setSuccess();
+    protected void doRegister(Promise<Void> promise) {
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
-        promise.setSuccess();
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         active = true;
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doDisconnect(ChannelPromise promise) {
+    protected void doDisconnect(Promise<Void> promise) {
         active = false;
         closed = true;
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doClose(ChannelPromise promise) {
+    protected void doClose(Promise<Void> promise) {
         active = false;
         closed = true;
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doDeregister(ChannelPromise promise) {
-        promise.setSuccess();
+    protected void doDeregister(Promise<Void> promise) {
+        promise.setSuccess(null);
     }
 
     @Override

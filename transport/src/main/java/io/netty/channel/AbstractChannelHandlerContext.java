@@ -20,7 +20,10 @@ import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ResourceLeakHint;
 import io.netty.util.concurrent.AbstractEventExecutor;
+import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectPool.Handle;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PromiseNotificationUtil;
@@ -87,8 +90,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private final DefaultChannelPipeline pipeline;
     private final String name;
     private final int executionMask;
-
-    private ChannelFuture succeededFuture;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
@@ -376,42 +377,42 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelFuture register() {
+    public Future<Void> register() {
         return register(newPromise());
     }
 
     @Override
-    public ChannelFuture bind(SocketAddress localAddress) {
+    public Future<Void> bind(SocketAddress localAddress) {
         return bind(localAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress) {
+    public Future<Void> connect(SocketAddress remoteAddress) {
         return connect(remoteAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
         return connect(remoteAddress, localAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture disconnect() {
+    public Future<Void> disconnect() {
         return disconnect(newPromise());
     }
 
     @Override
-    public ChannelFuture close() {
+    public Future<Void> close() {
         return close(newPromise());
     }
 
     @Override
-    public ChannelFuture deregister() {
+    public Future<Void> deregister() {
         return deregister(newPromise());
     }
 
     @Override
-    public ChannelFuture register(final ChannelPromise promise) {
+    public Future<Void> register(final Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
@@ -440,7 +441,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelFuture bind(final SocketAddress localAddress, final ChannelPromise promise) {
+    public Future<Void> bind(final SocketAddress localAddress, final Promise<Void> promise) {
         ObjectUtil.checkNotNull(localAddress, "localAddress");
         if (isNotValidPromise(promise)) {
             // cancelled
@@ -469,13 +470,13 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+    public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
         return connect(remoteAddress, null, promise);
     }
 
     @Override
-    public ChannelFuture connect(
-            final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+    public Future<Void> connect(
+            final SocketAddress remoteAddress, final SocketAddress localAddress, final Promise<Void> promise) {
         ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
 
         if (isNotValidPromise(promise)) {
@@ -505,7 +506,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelFuture disconnect(final ChannelPromise promise) {
+    public Future<Void> disconnect(final Promise<Void> promise) {
         if (!pipeline.hasDisconnect) {
             // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
             // So far, UDP/IP is the only transport that has such behavior.
@@ -538,7 +539,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelFuture close(final ChannelPromise promise) {
+    public Future<Void> close(final Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
@@ -567,7 +568,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelFuture deregister(final ChannelPromise promise) {
+    public Future<Void> deregister(final Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
             return promise;
@@ -596,7 +597,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelFuture shutdown(ChannelShutdownType type, ChannelPromise promise) {
+    public Future<Void> shutdown(ChannelShutdownType type, Promise<Void> promise) {
         ObjectUtil.checkNotNull(type, "type");
 
         if (isNotValidPromise(promise)) {
@@ -649,14 +650,14 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelFuture write(Object msg) {
-        ChannelPromise promise = newPromise();
+    public Future<Void> write(Object msg) {
+        Promise<Void> promise = newPromise();
         write(msg, false, promise);
         return promise;
     }
 
     @Override
-    public ChannelFuture write(final Object msg, final ChannelPromise promise) {
+    public Future<Void> write(final Object msg, final Promise<Void> promise) {
         write(msg, false, promise);
         return promise;
     }
@@ -686,12 +687,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
         write(msg, true, promise);
         return promise;
     }
 
-    void write(Object msg, boolean flush, ChannelPromise promise) {
+    void write(Object msg, boolean flush, Promise<Void> promise) {
         if (validateWrite(msg, promise)) {
             final AbstractChannelHandlerContext next = findContextOutbound(flush ?
                     MASK_WRITE | MASK_FLUSH : MASK_WRITE);
@@ -735,7 +736,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
     }
 
-    private boolean validateWrite(Object msg, ChannelPromise promise) {
+    private boolean validateWrite(Object msg, Promise<Void> promise) {
         ObjectUtil.checkNotNull(msg, "msg");
         try {
             if (isNotValidPromise(promise)) {
@@ -750,13 +751,11 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelFuture writeAndFlush(Object msg) {
+    public Future<Void> writeAndFlush(Object msg) {
         return writeAndFlush(msg, newPromise());
     }
 
-    private static void notifyOutboundHandlerException(Throwable cause, ChannelPromise promise) {
-        // Only log if the given promise is not of type VoidChannelPromise as tryFailure(...) is expected to return
-        // false.
+    private static void notifyOutboundHandlerException(Throwable cause, Promise<Void> promise) {
         PromiseNotificationUtil.tryFailure(promise, cause, logger);
     }
 
@@ -769,26 +768,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         close();
     }
 
-    @Override
-    public ChannelPromise newPromise() {
-        return new DefaultChannelPromise(channel(), executor());
-    }
-
-    @Override
-    public ChannelFuture newSucceededFuture() {
-        ChannelFuture succeededFuture = this.succeededFuture;
-        if (succeededFuture == null) {
-            this.succeededFuture = succeededFuture = new SucceededChannelFuture(channel(), executor());
-        }
-        return succeededFuture;
-    }
-
-    @Override
-    public ChannelFuture newFailedFuture(Throwable cause) {
-        return new FailedChannelFuture(channel(), executor(), cause);
-    }
-
-    private boolean isNotValidPromise(ChannelPromise promise) {
+    private boolean isNotValidPromise(Promise<Void> promise) {
         ObjectUtil.checkNotNull(promise, "promise");
 
         if (promise.isDone()) {
@@ -802,12 +782,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             throw new IllegalArgumentException("promise already done: " + promise);
         }
 
-        if (promise.channel() != channel()) {
-            throw new IllegalArgumentException(String.format(
-                    "promise.channel does not match: %s (expected: %s)", promise.channel(), channel()));
-        }
-
-        if (promise.getClass() == DefaultChannelPromise.class) {
+        if (promise.getClass() == DefaultPromise.class) {
             return false;
         }
 
@@ -924,7 +899,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private static boolean safeExecute(EventExecutor executor, Runnable runnable,
-            ChannelPromise promise, Object msg, boolean lazy) {
+            Promise<Void> promise, Object msg, boolean lazy) {
         try {
             if (lazy && executor instanceof AbstractEventExecutor) {
                 ((AbstractEventExecutor) executor).lazyExecute(runnable);
@@ -971,7 +946,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         };
 
         static WriteTask newInstance(AbstractChannelHandlerContext ctx,
-                Object msg, ChannelPromise promise, boolean flush) {
+                Object msg, Promise<Void> promise, boolean flush) {
             WriteTask task = RECYCLER.get();
             init(task, ctx, msg, promise, flush);
 
@@ -1000,7 +975,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         private final Handle<WriteTask> handle;
         private AbstractChannelHandlerContext ctx;
         private Object msg;
-        private ChannelPromise promise;
+        private Promise<Void> promise;
         private int size;
         private boolean flush;
 
@@ -1009,7 +984,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
 
         static void init(WriteTask task, AbstractChannelHandlerContext ctx,
-                                   Object msg, ChannelPromise promise, boolean flush) {
+                                   Object msg, Promise<Void> promise, boolean flush) {
             task.ctx = ctx;
             task.msg = msg;
             task.promise = promise;

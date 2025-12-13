@@ -21,8 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
@@ -47,6 +45,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
@@ -72,7 +71,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -312,7 +310,7 @@ public class NettyBlockHoundIntegrationTest {
                     .childHandler(new ChannelInboundHandler() { })
                     .bind(new InetSocketAddress(0))
                     .syncUninterruptibly()
-                    .channel();
+                    .getNow();
 
             cc = new Bootstrap()
                     .group(group)
@@ -342,11 +340,9 @@ public class NettyBlockHoundIntegrationTest {
                             });
                         }
                     })
-                    .connect(sc.localAddress())
-                    .addListener((ChannelFutureListener) future ->
-                        future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 })))
-                    .syncUninterruptibly()
-                    .channel();
+                    .connect(sc.localAddress()).get();
+
+            cc.writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
 
             assertTrue(activeLatch.await(5, TimeUnit.SECONDS));
             assertNull(error.get());
@@ -503,9 +499,9 @@ public class NettyBlockHoundIntegrationTest {
                     .group(group)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(serverSslHandler)
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .bind(new InetSocketAddress(0)).get();
 
-            ChannelFuture future = new Bootstrap()
+            Future<Channel> future = new Bootstrap()
                     .group(group)
                     .channel(NioSocketChannel.class)
                     .handler(new ChannelInitializer<Channel>() {
@@ -526,7 +522,7 @@ public class NettyBlockHoundIntegrationTest {
                               });
                         }
                     }).connect(sc.localAddress());
-            cc = future.syncUninterruptibly().channel();
+            cc = future.get();
 
             clientSslHandler.handshakeFuture().await().sync();
             serverSslHandler.handshakeFuture().await().sync();

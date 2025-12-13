@@ -21,8 +21,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.UnsupportedMessageTypeException;
@@ -43,6 +41,7 @@ import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.quic.QuicStreamChannel;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
 import org.jetbrains.annotations.Nullable;
 
@@ -135,7 +134,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
      * @throws Exception    is thrown if an error occurs
      */
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (!(msg instanceof HttpObject)) {
             throw new UnsupportedMessageTypeException(msg, HttpObject.class);
         }
@@ -201,7 +200,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
                 // The shutdown is always done via the listener to ensure previous written data is correctly drained
                 // before QuicStreamChannel.shutdownOutput() is called. Missing to do so might cause previous queued
                 // data to be failed with a ClosedChannelException.
-                promise = promise.addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                promise = promise.addListener(f -> ctx.shutdown(ChannelShutdownType.newOutbound()));
             } finally {
                 // Release LastHttpContent, we retain the content if we need it.
                 last.release();
@@ -220,10 +219,10 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
      * Write a message. If there is a combiner, add a new write promise to that combiner. If there is no combiner
      * ({@code null}), use the {@code outerPromise} directly as the write promise.
      */
-    private static ChannelPromise writeWithOptionalCombiner(
+    private static Promise<Void> writeWithOptionalCombiner(
             ChannelHandlerContext ctx,
             Object msg,
-            ChannelPromise outerPromise,
+            Promise<Void> outerPromise,
             @Nullable PromiseCombiner combiner) {
         if (combiner == null) {
             ctx.write(msg, outerPromise);
@@ -263,33 +262,33 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.register(promise);
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
         ctx.bind(localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                        SocketAddress localAddress, ChannelPromise promise) {
+                        SocketAddress localAddress, Promise<Void> promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.disconnect(promise);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.close(promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.deregister(promise);
     }
 
@@ -300,7 +299,7 @@ public final class Http3FrameToHttpObjectCodec extends Http3RequestStreamInbound
 
     @Override
     public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
-                         ChannelPromise promise) {
+                         Promise<Void> promise) {
         ctx.shutdown(type, promise);
     }
 }

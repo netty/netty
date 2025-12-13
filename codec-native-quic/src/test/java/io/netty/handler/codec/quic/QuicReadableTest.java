@@ -103,7 +103,8 @@ public class QuicReadableTest extends AbstractQuicTest {
                                 clientErrorRef.set(cause);
                             }
                         }).get();
-                streams.add(stream.writeAndFlush(data.retainedSlice()).sync().channel());
+                stream.writeAndFlush(data.retainedSlice()).sync();
+                streams.add(stream);
             }
             latch.await();
             while (bytesRead.get() < expectedDataRead) {

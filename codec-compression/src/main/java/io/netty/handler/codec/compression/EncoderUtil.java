@@ -15,19 +15,17 @@
  */
 package io.netty.handler.codec.compression;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import java.util.concurrent.TimeUnit;
 
 final class EncoderUtil {
     private static final int THREAD_POOL_DELAY_SECONDS = 10;
 
-    static void closeAfterFinishEncode(final ChannelHandlerContext ctx, final ChannelFuture finishFuture,
-                                       final ChannelPromise promise) {
+    static void closeAfterFinishEncode(final ChannelHandlerContext ctx, final Future<Void> finishFuture,
+                                       final Promise<Void> promise) {
         if (!finishFuture.isDone()) {
             // Ensure the channel is closed even if the write operation completes in time.
             final Future<?> future = ctx.executor().schedule(new Runnable() {

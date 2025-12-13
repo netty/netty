@@ -15,7 +15,7 @@
  */
 package io.netty.handler.codec.spdy;
 
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Promise;
 
 import java.util.Comparator;
 import java.util.Map;
@@ -342,9 +342,9 @@ final class SpdySession {
 
     public static final class PendingWrite {
         final SpdyDataFrame spdyDataFrame;
-        final ChannelPromise promise;
+        final Promise<Void> promise;
 
-        PendingWrite(SpdyDataFrame spdyDataFrame, ChannelPromise promise) {
+        PendingWrite(SpdyDataFrame spdyDataFrame, Promise<Void> promise) {
             this.spdyDataFrame = spdyDataFrame;
             this.promise = promise;
         }

@@ -18,10 +18,8 @@ package io.netty.channel.kqueue;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.DatagramChannel;
@@ -35,6 +33,8 @@ import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.CharsetUtil;
 import io.netty.util.UncheckedBooleanSupplier;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 
@@ -81,7 +81,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -91,7 +91,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     @Override
-    protected void doDisconnect(ChannelPromise promise) {
+    protected void doDisconnect(Promise<Void> promise) {
         try {
             socket.disconnect();
         } catch (Throwable t) {
@@ -100,7 +100,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
         }
         connected = active = false;
         resetCachedAddresses();
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
@@ -113,17 +113,17 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     @Override
-    protected void doClose(ChannelPromise promise) {
+    protected void doClose(Promise<Void> promise) {
         super.doClose(promise);
         connected = false;
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
-        super.doBind(localAddress, newPromise().addListener(f -> {
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        super.doBind(localAddress, this.<Void>newPromise().addListener(f -> {
             if (f.isSuccess()) {
                 active = true;
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
             }
@@ -175,12 +175,12 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     @Override
-    public ChannelFuture joinGroup(InetAddress multicastAddress) {
+    public Future<Void> joinGroup(InetAddress multicastAddress) {
         return joinGroup(multicastAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise promise) {
+    public Future<Void> joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
         SocketProtocolFamily family = socket.protocolFamily();
         switch (family) {
             case INET6:
@@ -202,28 +202,28 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     @Override
-    public ChannelFuture joinGroup(
+    public Future<Void> joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
         return joinGroup(multicastAddress, networkInterface, newPromise());
     }
 
     @Override
-    public ChannelFuture joinGroup(
+    public Future<Void> joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface,
-            ChannelPromise promise) {
+            Promise<Void> promise) {
         return joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public ChannelFuture joinGroup(
+    public Future<Void> joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
         return joinGroup(multicastAddress, networkInterface, source, newPromise());
     }
 
     @Override
-    public ChannelFuture joinGroup(
+    public Future<Void> joinGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress source, final ChannelPromise promise) {
+            final InetAddress source, final Promise<Void> promise) {
 
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
@@ -235,12 +235,12 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     @Override
-    public ChannelFuture leaveGroup(InetAddress multicastAddress) {
+    public Future<Void> leaveGroup(InetAddress multicastAddress) {
         return leaveGroup(multicastAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise promise) {
+    public Future<Void> leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
             return leaveGroup(
                     multicastAddress, NetworkInterface.getByInetAddress(
@@ -252,28 +252,28 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     @Override
-    public ChannelFuture leaveGroup(
+    public Future<Void> leaveGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
         return leaveGroup(multicastAddress, networkInterface, newPromise());
     }
 
     @Override
-    public ChannelFuture leaveGroup(
+    public Future<Void> leaveGroup(
             InetSocketAddress multicastAddress,
-            NetworkInterface networkInterface, ChannelPromise promise) {
+            NetworkInterface networkInterface, Promise<Void> promise) {
         return leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public ChannelFuture leaveGroup(
+    public Future<Void> leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
         return leaveGroup(multicastAddress, networkInterface, source, newPromise());
     }
 
     @Override
-    public ChannelFuture leaveGroup(
+    public Future<Void> leaveGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
-            final ChannelPromise promise) {
+            final Promise<Void> promise) {
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
 
@@ -283,16 +283,16 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     @Override
-    public ChannelFuture block(
+    public Future<Void> block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress sourceToBlock) {
         return block(multicastAddress, networkInterface, sourceToBlock, newPromise());
     }
 
     @Override
-    public ChannelFuture block(
+    public Future<Void> block(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
-            final InetAddress sourceToBlock, final ChannelPromise promise) {
+            final InetAddress sourceToBlock, final Promise<Void> promise) {
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
         ObjectUtil.checkNotNull(sourceToBlock, "sourceToBlock");
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
@@ -302,13 +302,13 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
     }
 
     @Override
-    public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock) {
+    public Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
         return block(multicastAddress, sourceToBlock, newPromise());
     }
 
     @Override
-    public ChannelFuture block(
-            InetAddress multicastAddress, InetAddress sourceToBlock, ChannelPromise promise) {
+    public Future<Void> block(
+            InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> promise) {
         SocketProtocolFamily family = socket.protocolFamily();
         switch (family) {
             case INET6:

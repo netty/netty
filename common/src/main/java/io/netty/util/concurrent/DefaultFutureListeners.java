@@ -19,20 +19,20 @@ import java.util.Arrays;
 
 final class DefaultFutureListeners {
 
-    private GenericFutureListener<? extends Future<?>>[] listeners;
+    private FutureListener<?>[] listeners;
     private int size;
 
     @SuppressWarnings("unchecked")
     DefaultFutureListeners(
-            GenericFutureListener<? extends Future<?>> first, GenericFutureListener<? extends Future<?>> second) {
-        listeners = new GenericFutureListener[2];
+            FutureListener<?> first, FutureListener<?> second) {
+        listeners = new FutureListener[2];
         listeners[0] = first;
         listeners[1] = second;
         size = 2;
     }
 
-    public void add(GenericFutureListener<? extends Future<?>> l) {
-        GenericFutureListener<? extends Future<?>>[] listeners = this.listeners;
+    public void add(FutureListener<?> l) {
+        FutureListener<?>[] listeners = this.listeners;
         final int size = this.size;
         if (size == listeners.length) {
             this.listeners = listeners = Arrays.copyOf(listeners, size << 1);
@@ -41,8 +41,8 @@ final class DefaultFutureListeners {
         this.size = size + 1;
     }
 
-    public void remove(GenericFutureListener<? extends Future<?>> l) {
-        final GenericFutureListener<? extends Future<?>>[] listeners = this.listeners;
+    public void remove(FutureListener<?> l) {
+        final FutureListener<?>[] listeners = this.listeners;
         int size = this.size;
         for (int i = 0; i < size; i ++) {
             if (listeners[i] == l) {
@@ -57,7 +57,7 @@ final class DefaultFutureListeners {
         }
     }
 
-    public GenericFutureListener<? extends Future<?>>[] listeners() {
+    public FutureListener<?>[] listeners() {
         return listeners;
     }
 

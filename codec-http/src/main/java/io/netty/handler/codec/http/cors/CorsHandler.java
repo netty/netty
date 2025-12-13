@@ -16,12 +16,9 @@
 package io.netty.handler.codec.http.cors;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpHeaderNames;
@@ -32,6 +29,8 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -252,7 +251,7 @@ public class CorsHandler implements ChannelInboundHandler, ChannelOutboundHandle
     }
 
     @Override
-    public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
+    public void write(final ChannelHandlerContext ctx, final Object msg, final Promise<Void> promise) {
         if (config != null && config.isCorsSupportEnabled() && msg instanceof HttpResponse) {
             final HttpResponse response = (HttpResponse) msg;
             if (setOrigin(response)) {
@@ -280,9 +279,11 @@ public class CorsHandler implements ChannelInboundHandler, ChannelOutboundHandle
 
         HttpUtil.setKeepAlive(response, keepAlive);
 
-        final ChannelFuture future = ctx.writeAndFlush(response);
+        final Future<Void> future = ctx.writeAndFlush(response);
         if (!keepAlive) {
-            future.addListener(ChannelFutureListener.CLOSE);
+            future.addListener(f -> {
+                ctx.close();
+            });
         }
     }
 }

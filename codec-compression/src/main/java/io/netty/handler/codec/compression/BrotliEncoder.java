@@ -20,12 +20,12 @@ import com.aayushatharva.brotli4j.encoder.Encoder;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
 import java.io.IOException;
@@ -155,7 +155,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         finishEncode(ctx, ctx.newPromise());
     }
 
-    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise promise) {
+    private Future<Void> finishEncode(ChannelHandlerContext ctx, Promise<Void> promise) {
         Writer writer;
 
         if (isSharable) {
@@ -172,8 +172,8 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
+    public void close(final ChannelHandlerContext ctx, final Promise<Void> promise) {
+        Future<Void> f = finishEncode(ctx, ctx.newPromise());
         EncoderUtil.closeAfterFinishEncode(ctx, f, promise);
     }
 
@@ -239,7 +239,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
 
         @Override
         public void close() {
-            final ChannelPromise promise = ctx.newPromise();
+            final Promise<Void> promise = ctx.newPromise();
 
             ctx.executor().execute(new Runnable() {
                 @Override
@@ -253,7 +253,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
             });
         }
 
-        public void finish(final ChannelPromise promise) throws IOException {
+        public void finish(final Promise<Void> promise) throws IOException {
             if (!isClosed) {
                 // Allocate a buffer and write last pending data.
                 allocate(true);

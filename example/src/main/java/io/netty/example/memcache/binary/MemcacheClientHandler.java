@@ -20,13 +20,13 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheOpcodes;
 import io.netty.handler.codec.memcache.binary.BinaryMemcacheRequest;
 import io.netty.handler.codec.memcache.binary.DefaultBinaryMemcacheRequest;
 import io.netty.handler.codec.memcache.binary.DefaultFullBinaryMemcacheRequest;
 import io.netty.handler.codec.memcache.binary.FullBinaryMemcacheResponse;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Promise;
 
 public class MemcacheClientHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
@@ -34,7 +34,7 @@ public class MemcacheClientHandler implements ChannelInboundHandler, ChannelOutb
      * Transforms basic string requests to binary memcache requests
      */
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         String command = (String) msg;
         if (command.startsWith("get ")) {
             String keyString = command.substring("get ".length());

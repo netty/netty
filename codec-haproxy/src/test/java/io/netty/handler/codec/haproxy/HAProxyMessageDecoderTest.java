@@ -17,13 +17,13 @@ package io.netty.handler.codec.haproxy;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.ProtocolDetectionResult;
 import io.netty.handler.codec.ProtocolDetectionState;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.TransportProtocol;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -278,7 +278,7 @@ public class HAProxyMessageDecoderTest {
 
     @Test
     public void testCloseOnInvalid() {
-        ChannelFuture closeFuture = ch.closeFuture();
+        Future<Void> closeFuture = ch.closeFuture();
         String header = "GET / HTTP/1.1\r\n";
         try {
             ch.writeInbound(copiedBuffer(header, CharsetUtil.US_ASCII));

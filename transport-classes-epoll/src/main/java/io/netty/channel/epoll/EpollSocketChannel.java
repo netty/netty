@@ -22,7 +22,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.EventLoop;
@@ -39,6 +38,7 @@ import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.LeakPresenceDetector;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -425,7 +425,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         if (type.data() != null) {
             promise.setFailure(new IllegalArgumentException("ChannelShutdownType with data is not supported: " + type));
             return;
@@ -449,7 +449,7 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
             promise.setFailure(cause);
             return;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override

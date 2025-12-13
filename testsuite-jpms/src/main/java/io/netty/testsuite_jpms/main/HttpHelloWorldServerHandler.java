@@ -17,8 +17,6 @@
 package io.netty.testsuite_jpms.main;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.HttpObject;
@@ -26,6 +24,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.util.concurrent.Future;
 
 import java.nio.charset.StandardCharsets;
 
@@ -68,10 +67,10 @@ public class HttpHelloWorldServerHandler extends SimpleChannelInboundHandler<Htt
                 response.headers().set(CONNECTION, CLOSE);
             }
 
-            ChannelFuture f = ctx.write(response);
+            Future<Void> f = ctx.write(response);
 
             if (!keepAlive) {
-                f.addListener(ChannelFutureListener.CLOSE);
+                f.addListener(f2 -> ctx.close());
             }
         }
     }

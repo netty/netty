@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -49,9 +50,12 @@ public class SocketCloseForciblyTest extends AbstractSocketTest {
 
         cb.handler(new ChannelInboundHandler() { });
 
-        Channel sc = sb.bind().sync().channel();
+        Channel sc = sb.bind().get();
 
-        cb.connect(sc.localAddress()).channel().closeFuture().syncUninterruptibly();
+        Future<Channel> cf = cb.connect(sc.localAddress()).awaitUninterruptibly();
+        if (cf.isSuccess()) {
+            cf.getNow().closeFuture().syncUninterruptibly();
+        }
         sc.close().sync();
     }
 }

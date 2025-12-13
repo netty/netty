@@ -20,7 +20,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -30,6 +29,7 @@ import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.Buffer;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.channel.unix.Errors;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -119,7 +119,7 @@ public final class IoUringServerSocketChannel extends AbstractIoUringChannel imp
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -296,7 +296,7 @@ public final class IoUringServerSocketChannel extends AbstractIoUringChannel imp
     }
 
     @Override
-    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -350,8 +350,8 @@ public final class IoUringServerSocketChannel extends AbstractIoUringChannel imp
     }
 
     @Override
-    public void doBind(SocketAddress localAddress, ChannelPromise promise) {
-        super.doBind(localAddress, newPromise().addListener(f -> {
+    public void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        super.doBind(localAddress, this.<Void>newPromise().addListener(f -> {
             if (f.isSuccess()) {
                 try {
                     if (IoUring.isTcpFastOpenServerSideAvailable()) {
@@ -366,14 +366,14 @@ public final class IoUringServerSocketChannel extends AbstractIoUringChannel imp
                     promise.setFailure(cause);
                     return;
                 }
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
             }
         }));
     }
     @Override
-    protected void doClose(ChannelPromise promise) {
+    protected void doClose(Promise<Void> promise) {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
             DomainSocketAddress local = (DomainSocketAddress) localAddress();
             super.doClose(promise.addListener(f -> {

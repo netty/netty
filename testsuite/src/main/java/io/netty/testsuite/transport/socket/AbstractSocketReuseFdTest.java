@@ -20,14 +20,13 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
@@ -96,13 +95,13 @@ public abstract class AbstractSocketReuseFdTest extends AbstractSocketTest {
             }
         });
 
-        ChannelFutureListener listener = future -> {
+        FutureListener<Channel> listener = future -> {
             if (!future.isSuccess()) {
                 clientDonePromise.tryFailure(future.cause());
             }
         };
 
-        Channel sc = sb.bind().sync().channel();
+        Channel sc = sb.bind().get();
         for (int i = 0; i < numChannels; i++) {
             cb.connect(sc.localAddress()).addListener(listener);
         }

@@ -152,8 +152,8 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         });
         cb.handler(new ChannelInboundHandler() { });
 
-        Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        Channel sc = sb.bind().get();
+        Channel cc = cb.connect(sc.localAddress()).get();
 
         // Request file region which is bigger then the underlying file.
         FileRegion region = new DefaultFileRegion(
@@ -215,9 +215,9 @@ public class SocketFileRegionTest extends AbstractSocketTest {
         sb.childHandler(sh);
         cb.handler(ch);
 
-        Channel sc = sb.bind().sync().channel();
+        Channel sc = sb.bind().get();
 
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).get();
         FileRegion region = new DefaultFileRegion(
                 new RandomAccessFile(file, "r").getChannel(), startOffset, data.length - bufferSize);
         FileRegion emptyRegion = new DefaultFileRegion(new RandomAccessFile(file, "r").getChannel(), 0, 0);

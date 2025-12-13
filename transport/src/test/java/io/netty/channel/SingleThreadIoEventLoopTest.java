@@ -88,7 +88,7 @@ public class SingleThreadIoEventLoopTest {
             }
         });
         assertFalse(loop.isSuspended());
-        IoRegistration registration = loop.register(new TestIoHandle()).sync().getNow();
+        IoRegistration registration = loop.register(new TestIoHandle()).get();
         Thread currentThread = threadFactory.threads.take();
         assertTrue(currentThread.isAlive());
         assertTrue(loop.trySuspend());

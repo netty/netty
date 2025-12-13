@@ -109,8 +109,8 @@ public class SocketEchoTest extends AbstractSocketTest {
         sb.childOption(ChannelOption.AUTO_READ, autoRead);
         cb.option(ChannelOption.AUTO_READ, autoRead);
 
-        Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        Channel sc = sb.bind().get();
+        Channel cc = cb.connect(sc.localAddress()).get();
 
         for (int i = 0; i < data.length;) {
             int length = Math.min(random.nextInt(1024 * 64), data.length - i);

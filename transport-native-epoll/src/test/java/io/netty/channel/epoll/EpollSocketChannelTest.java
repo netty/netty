@@ -39,7 +39,7 @@ public class EpollSocketChannelTest {
             EpollSocketChannel ch = (EpollSocketChannel) bootstrap.group(group)
                     .channel(EpollSocketChannel.class)
                     .handler(new ChannelInboundHandler() { })
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .bind(new InetSocketAddress(0)).get();
             EpollTcpInfo info = ch.tcpInfo();
             assertTcpInfo0(info);
             ch.close().syncUninterruptibly();
@@ -57,7 +57,7 @@ public class EpollSocketChannelTest {
             EpollSocketChannel ch = (EpollSocketChannel) bootstrap.group(group)
                     .channel(EpollSocketChannel.class)
                     .handler(new ChannelInboundHandler() { })
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .bind(new InetSocketAddress(0)).get();
             EpollTcpInfo info = new EpollTcpInfo();
             ch.tcpInfo(info);
             assertTcpInfo0(info);
@@ -115,7 +115,7 @@ public class EpollSocketChannelTest {
                     .channel(EpollSocketChannel.class)
                     .option(ChannelOption.SO_LINGER, 10)
                     .handler(new ChannelInboundHandler() { })
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .bind(new InetSocketAddress(0)).get();
             ch.close().syncUninterruptibly();
         } finally {
             group.shutdownGracefully();

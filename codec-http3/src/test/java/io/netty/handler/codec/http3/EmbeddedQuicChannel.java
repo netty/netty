@@ -19,12 +19,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.WriteBufferWaterMark;
@@ -154,7 +152,7 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     }
 
     @Override
-    public ChannelFuture close(boolean applicationClose, int error, ByteBuf reason, ChannelPromise promise) {
+    public Future<Void> close(boolean applicationClose, int error, ByteBuf reason, Promise<Void> promise) {
         closeErrorCodes.add(error);
         if (closed.compareAndSet(false, true)) {
             promise.addListener(__ -> reason.release());

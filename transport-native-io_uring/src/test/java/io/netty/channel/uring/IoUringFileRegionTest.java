@@ -29,7 +29,6 @@ import io.netty.util.NetUtil;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.UUID;
@@ -42,7 +41,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class IoUringFileRegionTest {
 
     @Test
-    public void testSendFile() throws IOException, InterruptedException {
+    public void testSendFile() throws Exception {
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, IoUringIoHandler.newFactory());
         String sampleString = "hello netty io_uring sendFile!";
         File inFile = File.createTempFile(UUID.randomUUID().toString(), ".tmp");
@@ -79,13 +78,13 @@ public class IoUringFileRegionTest {
                     }
                 })
                 .bind(NetUtil.LOCALHOST, 0)
-                .syncUninterruptibly().channel();
+                .get();
 
         Bootstrap clientBoostrap = new Bootstrap();
         clientBoostrap.group(group)
                 .channel(IoUringSocketChannel.class)
                 .handler(new ChannelInboundHandler() { });
-        Channel clientChannel = clientBoostrap.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+        Channel clientChannel = clientBoostrap.connect(serverChannel.localAddress()).get();
         clientChannel.writeAndFlush(new DefaultFileRegion(inFile, 0, Files.size(inFile.toPath()))).sync();
         ByteBuf result = sendFileResult.take();
         ByteBuf expected = Unpooled.copiedBuffer(sampleString, StandardCharsets.US_ASCII);

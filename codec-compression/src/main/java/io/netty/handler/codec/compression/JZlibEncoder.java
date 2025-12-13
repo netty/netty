@@ -19,12 +19,10 @@ import com.jcraft.jzlib.Deflater;
 import com.jcraft.jzlib.JZlib;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
@@ -223,22 +221,22 @@ public class JZlibEncoder extends ZlibEncoder {
     }
 
     @Override
-    public ChannelFuture close() {
+    public Future<Void> close() {
         return close(ctx().channel().newPromise());
     }
 
     @Override
-    public ChannelFuture close(final ChannelPromise promise) {
+    public Future<Void> close(final Promise<Void> promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
             return finishEncode(ctx, promise);
         } else {
-            final ChannelPromise p = ctx.newPromise();
+            final Promise<Void> p = ctx.newPromise();
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    ChannelFuture f = finishEncode(ctx(), p);
+                    Future<Void> f = finishEncode(ctx(), p);
                     PromiseNotifier.cascade(f, promise);
                 }
             });
@@ -323,8 +321,8 @@ public class JZlibEncoder extends ZlibEncoder {
     @Override
     public void close(
             final ChannelHandlerContext ctx,
-            final ChannelPromise promise) {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
+            final Promise<Void> promise) {
+        Future<Void> f = finishEncode(ctx, ctx.newPromise());
 
         if (!f.isDone()) {
             // Ensure the channel is closed even if the write operation completes in time.
@@ -349,9 +347,9 @@ public class JZlibEncoder extends ZlibEncoder {
         }
     }
 
-    private ChannelFuture finishEncode(ChannelHandlerContext ctx, ChannelPromise promise) {
+    private Future<Void> finishEncode(ChannelHandlerContext ctx, Promise<Void> promise) {
         if (finished) {
-            promise.setSuccess();
+            promise.setSuccess(null);
             return promise;
         }
         finished = true;

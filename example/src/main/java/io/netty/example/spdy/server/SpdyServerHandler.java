@@ -17,7 +17,6 @@ package io.netty.example.spdy.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -68,7 +67,7 @@ public class SpdyServerHandler extends SimpleChannelInboundHandler<Object> {
             } else {
                 // Tell the client we're going to close the connection.
                 response.headers().set(CONNECTION, CLOSE);
-                ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+                ctx.write(response).addListener(f -> ctx.close());
             }
         }
     }

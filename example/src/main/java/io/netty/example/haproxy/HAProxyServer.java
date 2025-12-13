@@ -44,7 +44,7 @@ public final class HAProxyServer {
              .channel(NioServerSocketChannel.class)
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new HAProxyServerInitializer());
-            b.bind(PORT).sync().channel().closeFuture().sync();
+            b.bind(PORT).get().closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }

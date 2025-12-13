@@ -18,8 +18,8 @@ package io.netty.example.spdy.client;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.spdy.SpdyFrame;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -51,7 +51,7 @@ public class SpdyFrameLogger implements ChannelInboundHandler, ChannelOutboundHa
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (acceptMessage(msg)) {
             log((SpdyFrame) msg, Direction.OUTBOUND);
         }

@@ -105,7 +105,7 @@ public final class Http2Client {
             b.handler(initializer);
 
             // Start the client.
-            Channel channel = b.connect().syncUninterruptibly().channel();
+            Channel channel = b.connect().get();
             System.out.println("Connected to [" + HOST + ':' + PORT + ']');
 
             // Wait for the HTTP/2 upgrade to occur.

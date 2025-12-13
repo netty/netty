@@ -21,8 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
@@ -701,7 +699,7 @@ public class ProxyHandlerTest {
                 }
             });
 
-            boolean finished = b.connect(destination).channel().closeFuture().await(10, TimeUnit.SECONDS);
+            boolean finished = b.connect(destination).get().closeFuture().await(10, TimeUnit.SECONDS);
 
             logger.debug("Received messages: {}", testHandler.received);
 
@@ -749,7 +747,7 @@ public class ProxyHandlerTest {
                 }
             });
 
-            boolean finished = b.connect(destination).channel().closeFuture().await(10, TimeUnit.SECONDS);
+            boolean finished = b.connect(destination).get().closeFuture().await(10, TimeUnit.SECONDS);
             finished &= testHandler.latch.await(10, TimeUnit.SECONDS);
 
             logger.debug("Recorded exceptions: {}", testHandler.exceptions);
@@ -794,7 +792,7 @@ public class ProxyHandlerTest {
                 }
             });
 
-            ChannelFuture cf = b.connect(DESTINATION).channel().closeFuture();
+            Future<Void> cf = b.connect(DESTINATION).get().closeFuture();
             boolean finished = cf.await(TIMEOUT * 2, TimeUnit.MILLISECONDS);
             finished &= testHandler.latch.await(TIMEOUT * 2, TimeUnit.MILLISECONDS);
 

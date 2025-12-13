@@ -18,8 +18,7 @@ package io.netty.handler.ssl.ocsp;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -33,7 +32,6 @@ import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -143,7 +141,7 @@ final class OcspClient {
                             uri.getHost(), port, path, ioTransport, dnsNameResolver);
 
                     // Validate OCSP response
-                    ocspResponsePromise.addListener((GenericFutureListener<Future<OCSPResp>>) future -> {
+                    ocspResponsePromise.addListener(future -> {
                         // If Future was successful then we have received OCSP response
                         // We will now validate it.
                         if (future.isSuccess()) {
@@ -197,7 +195,7 @@ final class OcspClient {
                 if (future.isSuccess()) {
                     // Get the resolved InetAddress
                     InetAddress hostAddress = future.getNow();
-                    final ChannelFuture channelFuture = bootstrap.connect(hostAddress, port);
+                    final Future<Channel> channelFuture = bootstrap.connect(hostAddress, port);
                     channelFuture.addListener(f -> {
                         // If Future was successful then connection to OCSP responder was successful.
                         // We will send a OCSP request now
@@ -211,7 +209,7 @@ final class OcspClient {
                             request.headers().add(HttpHeaderNames.CONTENT_LENGTH, ocspRequest.readableBytes());
 
                             // Send the OCSP HTTP Request
-                            channelFuture.channel().writeAndFlush(request);
+                            channelFuture.getNow().writeAndFlush(request);
                         } else {
                             responsePromise.tryFailure(new IllegalStateException(
                                     "Connection to OCSP Responder Failed", f.cause()));

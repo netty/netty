@@ -18,8 +18,6 @@ package io.netty.channel.epoll;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.socket.SocketProtocolFamily;
@@ -95,8 +93,8 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
         });
         cb.option(EpollChannelOption.DOMAIN_SOCKET_READ_MODE,
                 DomainSocketReadMode.FILE_DESCRIPTORS);
-        Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        Channel sc = sb.bind().get();
+        Channel cc = cb.connect(sc.localAddress()).get();
 
         Object received = queue.take();
         cc.close().sync();

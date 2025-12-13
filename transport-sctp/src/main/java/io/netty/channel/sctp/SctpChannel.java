@@ -17,8 +17,8 @@ package io.netty.channel.sctp;
 
 import com.sun.nio.sctp.Association;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -100,29 +100,33 @@ public interface SctpChannel extends Channel {
      * Bind a address to the already bound channel to enable multi-homing.
      * The Channel bust be bound and yet to be connected.
      */
-    ChannelFuture bindAddress(InetAddress localAddress);
+    default Future<Void> bindAddress(InetAddress localAddress) {
+        return bindAddress(localAddress, newPromise());
+    }
 
     /**
      * Bind a address to the already bound channel to enable multi-homing.
      * The Channel bust be bound and yet to be connected.
-     *
-     * Will notify the given {@link ChannelPromise} and return a {@link ChannelFuture}
+     * <p>
+     * Will notify the given {@link Promise} and return a {@link Future}
      */
-    ChannelFuture bindAddress(InetAddress localAddress, ChannelPromise promise);
+    Future<Void> bindAddress(InetAddress localAddress, Promise<Void> promise);
 
     /**
-     *  Unbind the address from channel's multi-homing address list.
-     *  The address should be added already in multi-homing address list.
+     * Unbind the address from channel's multi-homing address list.
+     * The address should be added already in multi-homing address list.
      */
-    ChannelFuture unbindAddress(InetAddress localAddress);
+    default Future<Void> unbindAddress(InetAddress localAddress) {
+        return unbindAddress(localAddress, newPromise());
+    }
 
     /**
-     *  Unbind the address from channel's multi-homing address list.
-     *  The address should be added already in multi-homing address list.
-     *
-     * Will notify the given {@link ChannelPromise} and return a {@link ChannelFuture}
+     * Unbind the address from channel's multi-homing address list.
+     * The address should be added already in multi-homing address list.
+     * <p>
+     * Will notify the given {@link Promise} and return a {@link Future}
      */
-    ChannelFuture unbindAddress(InetAddress localAddress, ChannelPromise promise);
+    Future<Void> unbindAddress(InetAddress localAddress, Promise<Void> promise);
 
     @Override
     SctpChannel read();

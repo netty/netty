@@ -19,7 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -84,9 +83,9 @@ public class QuicPortReuseTest extends AbstractQuicTest {
         for (int i = 0; i < numBinds; i++) {
             Channel bindChannel;
             if (bindAddress == null) {
-                bindChannel = serverBootstrap.bind().sync().channel();
+                bindChannel = serverBootstrap.bind().get();
             } else {
-                bindChannel = serverBootstrap.bind(bindAddress).sync().channel();
+                bindChannel = serverBootstrap.bind(bindAddress).get();
             }
             serverChannels.add(bindChannel);
             if (bindAddress == null) {
@@ -114,7 +113,7 @@ public class QuicPortReuseTest extends AbstractQuicTest {
                             @Override
                             public void channelActive(ChannelHandlerContext ctx) {
                                 ctx.writeAndFlush(Unpooled.directBuffer().writeZero(numBytes))
-                                        .addListener(ChannelFutureListener.CLOSE);
+                                        .addListener(f -> ctx.close());
                             }
                         });
             }

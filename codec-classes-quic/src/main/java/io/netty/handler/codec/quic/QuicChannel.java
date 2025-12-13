@@ -17,9 +17,7 @@ package io.netty.handler.codec.quic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
@@ -53,101 +51,6 @@ import java.net.SocketAddress;
  * </table>
  */
 public interface QuicChannel extends Channel {
-
-    @Override
-    default ChannelFuture bind(SocketAddress localAddress) {
-        return pipeline().bind(localAddress);
-    }
-
-    @Override
-    default ChannelFuture connect(SocketAddress remoteAddress) {
-        return pipeline().connect(remoteAddress);
-    }
-
-    @Override
-    default ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return pipeline().connect(remoteAddress, localAddress);
-    }
-
-    @Override
-    default ChannelFuture disconnect() {
-        return pipeline().disconnect();
-    }
-
-    @Override
-    default ChannelFuture close() {
-        return pipeline().close();
-    }
-
-    @Override
-    default ChannelFuture deregister() {
-        return pipeline().deregister();
-    }
-
-    @Override
-    default ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline().bind(localAddress, promise);
-    }
-
-    @Override
-    default ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
-        return pipeline().connect(remoteAddress, promise);
-    }
-
-    @Override
-    default ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        return pipeline().connect(remoteAddress, localAddress, promise);
-    }
-
-    @Override
-    default ChannelFuture disconnect(ChannelPromise promise) {
-        return pipeline().disconnect(promise);
-    }
-
-    @Override
-    default ChannelFuture close(ChannelPromise promise) {
-        return pipeline().close(promise);
-    }
-
-    @Override
-    default ChannelFuture deregister(ChannelPromise promise) {
-        return pipeline().deregister(promise);
-    }
-
-    @Override
-    default ChannelFuture write(Object msg) {
-        return pipeline().write(msg);
-    }
-
-    @Override
-    default ChannelFuture write(Object msg, ChannelPromise promise) {
-        return pipeline().write(msg, promise);
-    }
-
-    @Override
-    default ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
-        return pipeline().writeAndFlush(msg, promise);
-    }
-
-    @Override
-    default ChannelFuture writeAndFlush(Object msg) {
-        return pipeline().writeAndFlush(msg);
-    }
-
-    @Override
-    default ChannelPromise newPromise() {
-        return pipeline().newPromise();
-    }
-
-    @Override
-    default ChannelFuture newSucceededFuture() {
-        return pipeline().newSucceededFuture();
-    }
-
-    @Override
-    default ChannelFuture newFailedFuture(Throwable cause) {
-        return pipeline().newFailedFuture(cause);
-    }
 
     @Override
     QuicChannel read();
@@ -251,7 +154,7 @@ public interface QuicChannel extends Channel {
      * @param type      the {@link QuicStreamType} of the {@link QuicStreamChannel}.
      * @param handler   the {@link ChannelHandler} that will be added to the {@link QuicStreamChannel}s
      *                  {@link io.netty.channel.ChannelPipeline} during the stream creation.
-     * @param promise   the {@link ChannelPromise} that will be notified once the operation completes.
+     * @param promise   the {@link Promise} that will be notified once the operation completes.
      * @return          the {@link Future} that will be notified once the operation completes.
      */
     Future<QuicStreamChannel> createStream(QuicStreamType type, @Nullable ChannelHandler handler,
@@ -278,7 +181,7 @@ public interface QuicChannel extends Channel {
      * @param reason            the reason for the closure (which may be an empty {@link ByteBuf}.
      * @return                  the future that is notified.
      */
-    default ChannelFuture close(boolean applicationClose, int error, ByteBuf reason) {
+    default Future<Void> close(boolean applicationClose, int error, ByteBuf reason) {
         return close(applicationClose, error, reason, newPromise());
     }
 
@@ -289,10 +192,10 @@ public interface QuicChannel extends Channel {
      *                          {@code false} if a normal close should be used.
      * @param error             the application error number, or {@code 0} if no special error should be signaled.
      * @param reason            the reason for the closure (which may be an empty {@link ByteBuf}.
-     * @param promise           the {@link ChannelPromise} that will be notified.
+     * @param promise           the {@link Promise} that will be notified.
      * @return                  the future that is notified.
      */
-    ChannelFuture close(boolean applicationClose, int error, ByteBuf reason, ChannelPromise promise);
+    Future<Void> close(boolean applicationClose, int error, ByteBuf reason, Promise<Void> promise);
 
     /**
      * Collects statistics about the connection and notifies the {@link Future} once done.
@@ -306,7 +209,7 @@ public interface QuicChannel extends Channel {
     /**
      * Collects statistics about the connection and notifies the {@link Promise} once done.
      *
-     * @param   promise the {@link ChannelPromise} that is notified once the stats were collected.
+     * @param   promise the {@link Promise} that is notified once the stats were collected.
      * @return          the {@link Future} that is notified once the stats were collected.
      */
     Future<QuicConnectionStats> collectStats(Promise<QuicConnectionStats> promise);
@@ -323,7 +226,7 @@ public interface QuicChannel extends Channel {
     /**
      * Collects statistics about the path of the connection and notifies the {@link Promise} once done.
      *
-     * @param   promise the {@link ChannelPromise} that is notified once the stats were collected.
+     * @param   promise the {@link Promise} that is notified once the stats were collected.
      * @return          the {@link Future} that is notified once the stats were collected.
      */
     Future<QuicConnectionPathStats> collectPathStats(int pathIdx, Promise<QuicConnectionPathStats> promise);

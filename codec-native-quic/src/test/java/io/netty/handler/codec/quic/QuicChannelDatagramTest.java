@@ -18,12 +18,11 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -69,13 +68,13 @@ public class QuicChannelDatagramTest extends AbstractQuicTest {
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
                 if (msg instanceof ByteBuf) {
-                    final ChannelFuture future;
+                    final Future<Void> future;
                     if (!flushInReadComplete) {
                         future = ctx.writeAndFlush(msg);
                     } else {
                         future = ctx.write(msg);
                     }
-                    future.addListener(ChannelFutureListener.CLOSE);
+                    future.addListener(f -> ctx.close());
                 } else {
                     ctx.fireChannelRead(msg);
                 }

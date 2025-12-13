@@ -86,7 +86,7 @@ public final class QuicClientZeroRTTExample {
             Channel channel = bs.group(group)
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
-                    .bind(0).sync().channel();
+                    .bind(0).get();
 
             QuicChannelBootstrap quicChannelBootstrap = QuicChannel.newBootstrap(channel)
                     .streamHandler(new ChannelInboundHandler() {
@@ -108,10 +108,10 @@ public final class QuicClientZeroRTTExample {
                     .connect()
                     .get();
 
-            QuicStreamChannel streamChannel = createStream(quicChannel).sync().getNow();
+            QuicStreamChannel streamChannel = createStream(quicChannel).get();
             // Write the data and send the FIN. After this its not possible anymore to write any more data.
             streamChannel.writeAndFlush(Unpooled.copiedBuffer("Bye\r\n", CharsetUtil.US_ASCII))
-                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                    .addListener(f -> streamChannel.shutdown(ChannelShutdownType.newOutbound()));
             streamChannel.closeFuture().sync();
             quicChannel.closeFuture().sync();
             channel.close().sync();

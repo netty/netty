@@ -15,7 +15,6 @@
  */
 package io.netty.handler.codec.http.websocketx.extensions;
 
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpRequest;
@@ -26,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import static io.netty.handler.codec.http.websocketx.extensions.WebSocketExtensionTestUtil.*;
@@ -228,7 +228,7 @@ public class WebSocketServerExtensionHandlerTest {
         ch.writeInbound(req);
 
         HttpResponse res = newUpgradeResponse(null);
-        ChannelPromise failurePromise = ch.newPromise();
+        Promise<Void> failurePromise = ch.newPromise();
         ch.writeOneOutbound(res, failurePromise);
         failurePromise.setFailure(new IOException("Cannot write response"));
 

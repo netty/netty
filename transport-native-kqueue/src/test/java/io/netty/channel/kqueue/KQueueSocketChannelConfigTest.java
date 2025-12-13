@@ -57,12 +57,12 @@ public class KQueueSocketChannelConfigTest {
     }
 
     @BeforeEach
-    public void setup() {
+    public void setup() throws Exception {
         Bootstrap bootstrap = new Bootstrap();
         ch = (KQueueSocketChannel) bootstrap.group(group)
                 .channel(KQueueSocketChannel.class)
                 .handler(new ChannelInboundHandler() { })
-                .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                .bind(new InetSocketAddress(0)).get();
     }
 
     @AfterEach

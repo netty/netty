@@ -19,7 +19,6 @@ import io.netty.channel.AbstractServerChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -29,6 +28,7 @@ import io.netty.channel.PreferHeapByteBufAllocator;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.SingleThreadEventExecutor;
 
 import java.net.SocketAddress;
@@ -93,13 +93,13 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected void doRegister(ChannelPromise promise) {
+    protected void doRegister(Promise<Void> promise) {
         EventLoop loop = executor();
         assert registration == null;
         loop.register(ioHandle).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
             }
@@ -107,7 +107,7 @@ public class LocalServerChannel extends AbstractServerChannel {
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
         try {
             this.localAddress = LocalChannelRegistry.register(this, this.localAddress, localAddress);
         } catch (Throwable cause) {
@@ -115,11 +115,11 @@ public class LocalServerChannel extends AbstractServerChannel {
             return;
         }
         state = 1;
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doClose(ChannelPromise promise) {
+    protected void doClose(Promise<Void> promise) {
         if (state <= 1) {
             // Update all internal state before the closeFuture is notified.
             if (localAddress != null) {
@@ -128,17 +128,17 @@ public class LocalServerChannel extends AbstractServerChannel {
             }
             state = 2;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doDeregister(ChannelPromise promise) {
+    protected void doDeregister(Promise<Void> promise) {
         IoRegistration registration = this.registration;
         if (registration != null) {
             this.registration = null;
             registration.cancel();
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override

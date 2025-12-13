@@ -80,7 +80,7 @@ public class KQueueChannelConfigTest {
                     .channel(KQueueSocketChannel.class)
                     .option(ChannelOption.SO_LINGER, 10)
                     .handler(new ChannelInboundHandler() { })
-                    .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    .bind(new InetSocketAddress(0)).get();
             ch.close().syncUninterruptibly();
         } finally {
             group.shutdownGracefully();

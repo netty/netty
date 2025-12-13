@@ -19,8 +19,6 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
@@ -38,6 +36,7 @@ import io.netty.handler.ssl.SslProvider;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
@@ -139,7 +138,7 @@ public class SocketSslLargeCertificateTest {
 
         final Promise<Void> completion = ImmediateEventExecutor.INSTANCE.newPromise();
 
-        ChannelFuture bindFuture = new ServerBootstrap()
+        Future<Channel> bindFuture = new ServerBootstrap()
                 .group(group)
                 .channel(NioServerSocketChannel.class)
                 .childHandler(new ChannelInitializer<Channel>() {
@@ -173,9 +172,9 @@ public class SocketSslLargeCertificateTest {
                     }
                 })
                 .bind(InetAddress.getLoopbackAddress(), 0);
-        Channel serverChannel = bindFuture.sync().channel();
+        Channel serverChannel = bindFuture.get();
         InetSocketAddress serverAddress = (InetSocketAddress) serverChannel.localAddress();
-        ChannelFuture connectFuture = new Bootstrap()
+        Future<Channel> connectFuture = new Bootstrap()
                 .group(group)
                 .channel(NioSocketChannel.class)
                 .handler(new ChannelInitializer<Channel>() {
@@ -208,7 +207,7 @@ public class SocketSslLargeCertificateTest {
                                 ctx.fireChannelReadComplete();
                                 if (receivedRead) {
                                     receivedRead = false;
-                                    ctx.writeAndFlush(Unpooled.buffer()).addListener(ChannelFutureListener.CLOSE);
+                                    ctx.writeAndFlush(Unpooled.buffer()).addListener(f -> ctx.close());
                                     ctx.channel().closeFuture().addListener(future -> completion.setSuccess(null));
                                 }
                             }
@@ -222,7 +221,7 @@ public class SocketSslLargeCertificateTest {
                     }
                 })
                 .connect(serverAddress);
-        Channel clientChannel = connectFuture.sync().channel();
+        Channel clientChannel = connectFuture.get();
         completion.sync();
         clientChannel.close().sync();
         serverChannel.close().sync();

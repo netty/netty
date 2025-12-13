@@ -16,13 +16,14 @@
 package io.netty.example.factorial;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.example.util.ServerUtil;
 import io.netty.handler.ssl.SslContext;
+import io.netty.util.concurrent.Future;
 
 /**
  * Sends a sequence of integers to a {@link FactorialServer} to calculate
@@ -46,11 +47,11 @@ public final class FactorialClient {
              .handler(new FactorialClientInitializer(sslCtx));
 
             // Make a new connection.
-            ChannelFuture f = b.connect(HOST, PORT).sync();
+            Future<Channel> f = b.connect(HOST, PORT).sync();
 
             // Get the handler instance to retrieve the answer.
             FactorialClientHandler handler =
-                (FactorialClientHandler) f.channel().pipeline().last();
+                (FactorialClientHandler) f.getNow().pipeline().last();
 
             // Print out the answer.
             System.err.format("Factorial of %,d is: %,d", COUNT, handler.getFactorial());

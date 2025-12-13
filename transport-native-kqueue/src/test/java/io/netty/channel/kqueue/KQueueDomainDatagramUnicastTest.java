@@ -18,7 +18,6 @@ package io.netty.channel.kqueue;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -27,6 +26,7 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.unix.DomainSocketAddress;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.testsuite.transport.socket.DatagramUnicastTest;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 
@@ -55,7 +55,7 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
         Channel channel = null;
         try {
             channel = cb.handler(new ChannelInboundHandler() { })
-                        .bind(newSocketAddress()).sync().channel();
+                        .bind(newSocketAddress()).get();
             assertThat(channel.localAddress()).isNotNull()
                     .isInstanceOf(DomainSocketAddress.class);
         } finally {
@@ -108,7 +108,7 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
                 errorRef.compareAndSet(null, cause);
             }
         });
-        return cb.bind(newSocketAddress()).sync().channel();
+        return cb.bind(newSocketAddress()).get();
     }
 
     @Override
@@ -147,11 +147,11 @@ class KQueueDomainDatagramUnicastTest extends DatagramUnicastTest {
                 errorRef.compareAndSet(null, cause);
             }
         });
-        return sb.bind(newSocketAddress()).sync().channel();
+        return sb.bind(newSocketAddress()).get();
     }
 
     @Override
-    protected ChannelFuture write(Channel cc, ByteBuf buf, SocketAddress remote, WrapType wrapType) {
+    protected Future<Void> write(Channel cc, ByteBuf buf, SocketAddress remote, WrapType wrapType) {
         switch (wrapType) {
             case DUP:
                 return cc.write(new DatagramPacket(buf.retainedDuplicate(), remote));

@@ -182,7 +182,7 @@ public final class HttpHelloWorldServer {
                 ch = bs.group(group)
                         .channel(NioDatagramChannel.class)
                         .handler(codec)
-                        .bind(new InetSocketAddress(port)).sync().channel();
+                        .bind(new InetSocketAddress(port)).get();
             } else {
                 SslContext sslContext;
                 if (ssl) {
@@ -204,7 +204,7 @@ public final class HttpHelloWorldServer {
                         .handler(new LoggingHandler(LogLevel.INFO))
                         .childHandler(new HttpHelloWorldServerInitializer(sslContext));
 
-                ch = b.bind(port).sync().channel();
+                ch = b.bind(port).get();
             }
 
             System.err.println("Open your web browser and navigate to " +

@@ -15,16 +15,18 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.Promise;
+
 import java.net.SocketAddress;
 
 /**
  * A skeletal server-side {@link Channel} implementation.  A server-side
  * {@link Channel} does not allow the following operations:
  * <ul>
- * <li>{@link #connect(SocketAddress, ChannelPromise)}</li>
- * <li>{@link #disconnect(ChannelPromise)}</li>
- * <li>{@link #shutdown(ChannelShutdownType, ChannelPromise)}</li>
- * <li>{@link #write(Object, ChannelPromise)}</li>
+ * <li>{@link ChannelOutboundInvoker#connect(SocketAddress, io.netty.util.concurrent.Promise)}</li>
+ * <li>{@link ChannelOutboundInvoker#disconnect(io.netty.util.concurrent.Promise)}</li>
+ * <li>{@link ChannelOutboundInvoker#shutdown(ChannelShutdownType, io.netty.util.concurrent.Promise)}</li>
+ * <li>{@link ChannelOutboundInvoker#write(Object, io.netty.util.concurrent.Promise)}</li>
  * <li>{@link #flush()}</li>
  * <li>and the shortcut methods which calls the methods mentioned above
  * </ul>
@@ -70,17 +72,17 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
-    protected void doDisconnect(ChannelPromise promise)  {
+    protected void doDisconnect(Promise<Void> promise)  {
         promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
-    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 

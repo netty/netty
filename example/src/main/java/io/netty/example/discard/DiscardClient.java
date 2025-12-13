@@ -16,7 +16,7 @@
 package io.netty.example.discard;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -26,6 +26,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.example.util.ServerUtil;
 import io.netty.handler.ssl.SslContext;
+import io.netty.util.concurrent.Future;
 
 /**
  * Keeps sending random data to the specified address.
@@ -57,10 +58,10 @@ public final class DiscardClient {
              });
 
             // Make the connection attempt.
-            ChannelFuture f = b.connect(HOST, PORT).sync();
+            Future<Channel> f = b.connect(HOST, PORT).sync();
 
             // Wait until the connection is closed.
-            f.channel().closeFuture().sync();
+            f.getNow().closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }

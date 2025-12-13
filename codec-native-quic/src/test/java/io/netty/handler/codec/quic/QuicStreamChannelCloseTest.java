@@ -17,8 +17,6 @@ package io.netty.handler.codec.quic;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutputShutdownException;
@@ -26,6 +24,7 @@ import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.util.ReferenceCountUtil;
 
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -244,7 +243,7 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
             channel.createStream(type, new ChannelInboundHandler() {
                 @Override
                 public void channelActive(ChannelHandlerContext ctx)  {
-                    final ChannelFuture future;
+                    final Future<Void> future;
                     if (halfClose) {
                         future = ctx.channel().shutdown(ChannelShutdownType.newOutbound(0));
                     } else {
@@ -281,9 +280,13 @@ public class QuicStreamChannelCloseTest extends AbstractQuicTest {
                     streamPromise.trySuccess(ctx.channel());
                     // Do the write and close the channel
                     ctx.writeAndFlush(Unpooled.buffer().writeZero(8))
-                            .addListener(halfClose
-                                    ? QuicStreamChannel.SHUTDOWN_OUTPUT
-                                    : ChannelFutureListener.CLOSE);
+                            .addListener(f -> {
+                                if (halfClose) {
+                                    ctx.shutdown(ChannelShutdownType.newOutbound());
+                                } else {
+                                    ctx.close();
+                                }
+                            });
                 }
             });
         }

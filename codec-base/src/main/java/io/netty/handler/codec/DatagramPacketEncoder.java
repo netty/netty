@@ -19,8 +19,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
@@ -89,29 +89,29 @@ public class DatagramPacketEncoder<M> extends MessageToMessageEncoder<AddressedE
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
         encoder.bind(ctx, localAddress, promise);
     }
 
     @Override
     public void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress,
-            SocketAddress localAddress, ChannelPromise promise) {
+            SocketAddress localAddress, Promise<Void> promise) {
         encoder.connect(ctx, remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
         encoder.disconnect(ctx, promise);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
         encoder.close(ctx, promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
         encoder.deregister(ctx, promise);
     }
 

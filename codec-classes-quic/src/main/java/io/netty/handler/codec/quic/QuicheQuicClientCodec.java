@@ -17,7 +17,7 @@ package io.netty.handler.codec.quic;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.InetSocketAddress;
@@ -59,7 +59,7 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
     protected void connectQuicChannel(QuicheQuicChannel channel, SocketAddress remoteAddress,
                                       SocketAddress localAddress, ByteBuf senderSockaddrMemory,
                                       ByteBuf recipientSockaddrMemory, Consumer<QuicheQuicChannel> freeTask,
-                                      int localConnIdLength, QuicheConfig config, ChannelPromise promise) {
+                                      int localConnIdLength, QuicheConfig config, Promise<Void> promise) {
         try {
             channel.connectNow(sslEngineProvider, sslTaskExecutor, freeTask, config.nativeAddress(),
                     localConnIdLength, config.isDatagramSupported(),
@@ -73,6 +73,6 @@ final class QuicheQuicClientCodec extends QuicheQuicCodec {
 
         addChannel(channel);
         channel.finishConnect();
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 }

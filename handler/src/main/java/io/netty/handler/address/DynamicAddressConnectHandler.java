@@ -17,7 +17,7 @@ package io.netty.handler.address;
 
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Promise;
 
 import java.net.NetworkInterface;
 import java.net.SocketAddress;
@@ -33,7 +33,7 @@ public abstract class DynamicAddressConnectHandler implements ChannelOutboundHan
 
     @Override
     public final void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                              SocketAddress localAddress, ChannelPromise promise) {
+                              SocketAddress localAddress, Promise<Void> promise) {
         final SocketAddress remote;
         final SocketAddress local;
         try {

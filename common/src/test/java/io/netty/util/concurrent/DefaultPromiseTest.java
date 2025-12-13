@@ -245,32 +245,32 @@ public class DefaultPromiseTest {
     public void testListenerNotifyOrder() throws Exception {
         EventExecutor executor = new TestEventExecutor();
         try {
-            final BlockingQueue<FutureListener<Void>> listeners = new LinkedBlockingQueue<FutureListener<Void>>();
+            final BlockingQueue<FutureListener<Void>> listeners = new LinkedBlockingQueue<>();
             int runs = 100000;
 
             for (int i = 0; i < runs; i++) {
-                final Promise<Void> promise = new DefaultPromise<Void>(executor);
-                final FutureListener<Void> listener1 = new FutureListener<Void>() {
+                final Promise<Void> promise = new DefaultPromise<>(executor);
+                final FutureListener<Void> listener1 = new FutureListener<>() {
                     @Override
-                    public void operationComplete(Future<Void> future) {
+                    public void operationComplete(Future<? extends Void> future) {
                         listeners.add(this);
                     }
                 };
-                final FutureListener<Void> listener2 = new FutureListener<Void>() {
+                final FutureListener<Void> listener2 = new FutureListener<>() {
                     @Override
-                    public void operationComplete(Future<Void> future) {
+                    public void operationComplete(Future<? extends Void> future) {
                         listeners.add(this);
                     }
                 };
-                final FutureListener<Void> listener4 = new FutureListener<Void>() {
+                final FutureListener<Void> listener4 = new FutureListener<>() {
                     @Override
-                    public void operationComplete(Future<Void> future) {
+                    public void operationComplete(Future<? extends Void> future) {
                         listeners.add(this);
                     }
                 };
-                final FutureListener<Void> listener3 = new FutureListener<Void>() {
+                final FutureListener<Void> listener3 = new FutureListener<>() {
                     @Override
-                    public void operationComplete(Future<Void> future) {
+                    public void operationComplete(Future<? extends Void> future) {
                         listeners.add(this);
                         future.addListener(listener4);
                     }

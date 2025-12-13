@@ -109,7 +109,7 @@ public class ChannelInitializerTest {
     }
 
     @Test
-    public void testChannelInitializerInInitializerCorrectOrdering() {
+    public void testChannelInitializerInInitializerCorrectOrdering() throws Exception {
         final ChannelInboundHandler handler1 = new ChannelInboundHandler() { };
         final ChannelInboundHandler handler2 = new ChannelInboundHandler() { };
         final ChannelInboundHandler handler3 = new ChannelInboundHandler() { };
@@ -130,7 +130,7 @@ public class ChannelInitializerTest {
             }
         }).localAddress(LocalAddress.ANY);
 
-        Channel channel = client.bind().syncUninterruptibly().channel();
+        Channel channel = client.bind().get();
         try {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
@@ -152,7 +152,7 @@ public class ChannelInitializerTest {
     }
 
     @Test
-    public void testChannelInitializerReentrance() {
+    public void testChannelInitializerReentrance() throws Exception {
         final AtomicInteger registeredCalled = new AtomicInteger(0);
         final ChannelInboundHandler handler1 = new ChannelInboundHandler() {
             @Override
@@ -170,7 +170,7 @@ public class ChannelInitializerTest {
             }
         }).localAddress(LocalAddress.ANY);
 
-        Channel channel = client.bind().syncUninterruptibly().channel();
+        Channel channel = client.bind().get();
         try {
             // Execute some task on the EventLoop and wait until its done to be sure all handlers are added to the
             // pipeline.
@@ -189,7 +189,7 @@ public class ChannelInitializerTest {
 
     @Test
     @Timeout(value = TIMEOUT_MILLIS, unit = TimeUnit.MILLISECONDS)
-    public void firstHandlerInPipelineShouldReceiveChannelRegisteredEvent() {
+    public void firstHandlerInPipelineShouldReceiveChannelRegisteredEvent() throws Exception {
         testChannelRegisteredEventPropagation(new ChannelInitializer<LocalChannel>() {
             @Override
             public void initChannel(LocalChannel channel) {
@@ -200,7 +200,7 @@ public class ChannelInitializerTest {
 
     @Test
     @Timeout(value = TIMEOUT_MILLIS, unit = TimeUnit.MILLISECONDS)
-    public void lastHandlerInPipelineShouldReceiveChannelRegisteredEvent() {
+    public void lastHandlerInPipelineShouldReceiveChannelRegisteredEvent() throws Exception {
         testChannelRegisteredEventPropagation(new ChannelInitializer<LocalChannel>() {
             @Override
             public void initChannel(LocalChannel channel) {
@@ -241,12 +241,12 @@ public class ChannelInitializerTest {
         assertTrue(called.get());
     }
 
-    private void testChannelRegisteredEventPropagation(ChannelInitializer<LocalChannel> init) {
+    private void testChannelRegisteredEventPropagation(ChannelInitializer<LocalChannel> init) throws Exception {
         Channel clientChannel = null, serverChannel = null;
         try {
             server.childHandler(init);
-            serverChannel = server.bind().syncUninterruptibly().channel();
-            clientChannel = client.connect(SERVER_ADDRESS).syncUninterruptibly().channel();
+            serverChannel = server.bind().get();
+            clientChannel = client.connect(SERVER_ADDRESS).get();
             assertEquals(1, testHandler.channelRegisteredCount.get());
         } finally {
             closeChannel(clientChannel);

@@ -19,13 +19,13 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
@@ -66,15 +66,15 @@ public class SocketConnectTest extends AbstractSocketTest {
         Channel serverChannel = null;
         Channel clientChannel = null;
         try {
-            serverChannel = sb.childHandler(new ChannelInboundHandler() { }).bind().syncUninterruptibly().channel();
-            final BlockingQueue<ChannelFuture> futures = new LinkedBlockingQueue<>();
+            serverChannel = sb.childHandler(new ChannelInboundHandler() { }).bind().get();
+            final BlockingQueue<Future<Void>> futures = new LinkedBlockingQueue<>();
             clientChannel = cb.handler(new ChannelInboundHandler() {
                         @Override
                         public void userEventTriggered(ChannelHandlerContext ctx, Object evt)  {
                             futures.add(ctx.close());
                         }
                     })
-                    .connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+                    .connect(serverChannel.localAddress()).get();
             clientChannel.pipeline().fireUserEventTriggered("test");
             clientChannel.close().syncUninterruptibly();
             futures.take().sync();
@@ -114,14 +114,14 @@ public class SocketConnectTest extends AbstractSocketTest {
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             localAddressPromise.setSuccess((InetSocketAddress) ctx.channel().localAddress());
                         }
-                    }).bind().syncUninterruptibly().channel();
+                    }).bind().get();
 
-            clientChannel = cb.handler(new ChannelInboundHandler() { }).register().syncUninterruptibly().channel();
+            clientChannel = cb.handler(new ChannelInboundHandler() { }).register().get();
 
             assertNull(clientChannel.localAddress());
             assertNull(clientChannel.remoteAddress());
 
-            clientChannel.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            clientChannel.connect(serverChannel.localAddress()).get();
             assertLocalAddress((InetSocketAddress) clientChannel.localAddress());
             assertNotNull(clientChannel.remoteAddress());
 
@@ -154,7 +154,7 @@ public class SocketConnectTest extends AbstractSocketTest {
         Channel cc = null;
         try {
             sb.childHandler(new ChannelInboundHandler() { });
-            sc = sb.bind().syncUninterruptibly().channel();
+            sc = sb.bind().get();
 
             cb.handler(new ChannelInboundHandler() {
                 @Override
@@ -168,8 +168,11 @@ public class SocketConnectTest extends AbstractSocketTest {
                 }
             });
             // Connect and directly close again.
-            cc = cb.connect(sc.localAddress()).addListener(ChannelFutureListener.CLOSE).
-                    syncUninterruptibly().channel();
+            cc = cb.connect(sc.localAddress()).addListener((FutureListener<Channel>) f -> {
+                if (f.isSuccess()) {
+                    f.getNow().close();
+                }
+            }).get();
             assertEquals(0, events.take().intValue());
             assertEquals(1, events.take().intValue());
         } finally {
@@ -205,26 +208,25 @@ public class SocketConnectTest extends AbstractSocketTest {
             }
         });
 
-        Channel sc = sb.bind().sync().channel();
+        Channel sc = sb.bind().get();
         connectAndVerifyDataTransfer(cb, sc);
         connectAndVerifyDataTransfer(cb, sc);
     }
 
     private static void connectAndVerifyDataTransfer(Bootstrap cb, Channel sc)
-            throws InterruptedException {
+            throws Exception {
         BufferingClientHandler handler = new BufferingClientHandler();
         cb.handler(handler);
-        ChannelFuture register = cb.register();
-        Channel channel = register.sync().channel();
-        ChannelFuture write = channel.write(writeAscii(DEFAULT, "[fastopen]"));
+        Future<Channel> register = cb.register();
+        Channel channel = register.get();
+        Future<Void> write = channel.write(writeAscii(DEFAULT, "[fastopen]"));
         SocketAddress remoteAddress = sc.localAddress();
-        ChannelFuture connectFuture = channel.connect(remoteAddress);
-        Channel cc = connectFuture.sync().channel();
-        cc.writeAndFlush(writeAscii(DEFAULT, "[normal data]")).sync();
+        channel.connect(remoteAddress).sync();
+        channel.writeAndFlush(writeAscii(DEFAULT, "[normal data]")).sync();
         write.sync();
         String expectedString = "[fastopen][normal data]";
         String result = handler.collectBuffer(expectedString.getBytes(US_ASCII).length);
-        cc.disconnect().sync();
+        channel.disconnect().sync();
         assertEquals(expectedString, result);
     }
 

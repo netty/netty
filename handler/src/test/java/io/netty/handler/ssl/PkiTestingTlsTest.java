@@ -242,7 +242,7 @@ public class PkiTestingTlsTest {
     }
 
     private void testTlsConnection(SslContext serverContext, SslContext clientContext, String[] groups)
-            throws InterruptedException {
+            throws Exception {
         MultiThreadIoEventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         LocalAddress serverAddress = new LocalAddress(getClass());
 
@@ -264,7 +264,7 @@ public class PkiTestingTlsTest {
                         }
                     })
                     .group(group)
-                    .bind(serverAddress).sync().channel();
+                    .bind(serverAddress).get();
 
             Promise<SslHandshakeCompletionEvent> promise = group.next().newPromise();
 
@@ -310,7 +310,7 @@ public class PkiTestingTlsTest {
                     })
                     .connect(serverAddress)
                     .sync()
-                    .channel();
+                    .getNow();
 
             promise.sync();
         } finally {

@@ -45,7 +45,7 @@ public final class FactorialServer {
              .handler(new LoggingHandler(LogLevel.INFO))
              .childHandler(new FactorialServerInitializer(sslCtx));
 
-            b.bind(PORT).sync().channel().closeFuture().sync();
+            b.bind(PORT).get().closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }

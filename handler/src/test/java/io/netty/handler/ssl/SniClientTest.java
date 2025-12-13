@@ -130,7 +130,7 @@ public class SniClientTest {
                         }
                     }));
                 }
-            }).bind(address).syncUninterruptibly().channel();
+            }).bind(address).get();
 
             TrustManagerFactory tmf = SniClientJava8TestUtil.newSniX509TrustmanagerFactory(sniHostName);
             sslClientContext = SslContextBuilder.forClient().trustManager(tmf)
@@ -140,8 +140,8 @@ public class SniClientTest {
             SslHandler handler = new SslHandler(
                     sslClientContext.newEngine(ByteBufAllocator.DEFAULT, sniHostName, -1));
             cc = cb.group(group).channel(LocalChannel.class).handler(handler)
-                    .connect(address).syncUninterruptibly().channel();
-            assertEquals(sniHostName, promise.syncUninterruptibly().getNow());
+                    .connect(address).get();
+            assertEquals(sniHostName, promise.get());
 
             // After we are done with handshaking getHandshakeSession() should return null.
             handler.handshakeFuture().syncUninterruptibly();

@@ -16,7 +16,7 @@
 package io.netty.example.sctp;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -26,6 +26,7 @@ import io.netty.channel.sctp.SctpChannel;
 import io.netty.channel.sctp.nio.NioSctpServerChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.concurrent.Future;
 
 /**
  * Echoes back any received data from a SCTP client.
@@ -54,10 +55,10 @@ public final class SctpEchoServer {
              });
 
             // Start the server.
-            ChannelFuture f = b.bind(PORT).sync();
+            Future<Channel> f = b.bind(PORT).sync();
 
             // Wait until the server socket is closed.
-            f.channel().closeFuture().sync();
+            f.getNow().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
             group.shutdownGracefully();

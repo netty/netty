@@ -21,7 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -141,7 +140,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
                 sch.pipeline().addLast(sh);
             }
         });
-        final Channel sc = sb.bind().sync().channel();
+        final Channel sc = sb.bind().get();
 
         cb.handler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -158,18 +157,18 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
 
         try {
             SSLSessionContext clientSessionCtx = clientCtx.sessionContext();
-            Channel cc = cb.connect(sc.localAddress()).sync().channel();
+            Channel cc = cb.connect(sc.localAddress()).get();
             ByteBuf msg = randomBufferType(cc.alloc(), new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
 
-            cc.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE).sync();
+            cc.writeAndFlush(msg).addListener(f -> cc.close()).sync();
             cc.closeFuture().sync();
             rethrowHandlerExceptions(sh, ch);
             Set<String> sessions = sessionIdSet(clientSessionCtx.getIds());
 
-            cc = cb.connect(sc.localAddress()).sync().channel();
-            msg = randomBufferType(cc.alloc(), new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
-            cc.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE).sync();
-            cc.closeFuture().sync();
+            Channel cc2 = cb.connect(sc.localAddress()).get();
+            msg = randomBufferType(cc2.alloc(), new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
+            cc2.writeAndFlush(msg).addListener(f -> cc2.close()).sync();
+            cc2.closeFuture().sync();
             assertEquals(sessions, sessionIdSet(clientSessionCtx.getIds()), "Expected no new sessions");
             rethrowHandlerExceptions(sh, ch);
         } finally {
@@ -226,7 +225,7 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
                 sch.pipeline().addLast(sh);
             }
         });
-        final Channel sc = sb.bind().sync().channel();
+        final Channel sc = sb.bind().get();
 
         cb.handler(new ChannelInitializer<SocketChannel>() {
             @Override
@@ -241,17 +240,17 @@ public class SocketSslSessionReuseTest extends AbstractSocketTest {
         });
 
         try {
-            Channel cc = cb.connect(sc.localAddress()).sync().channel();
+            Channel cc = cb.connect(sc.localAddress()).get();
             ByteBuf msg = randomBufferType(cc.alloc(), new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
-            cc.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE).sync();
+            cc.writeAndFlush(msg).addListener(f -> cc.close()).sync();
             cc.closeFuture().sync();
             rethrowHandlerExceptions(sh, ch);
             assertEquals("value", sessionValue.poll(10, TimeUnit.SECONDS));
 
-            cc = cb.connect(sc.localAddress()).sync().channel();
-            msg = randomBufferType(cc.alloc(), new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
-            cc.writeAndFlush(msg).addListener(ChannelFutureListener.CLOSE).sync();
-            cc.closeFuture().sync();
+            Channel cc2 = cb.connect(sc.localAddress()).get();
+            msg = randomBufferType(cc2.alloc(), new byte[] { 0xa, 0xb, 0xc, 0xd }, 0, 4);
+            cc2.writeAndFlush(msg).addListener(f -> cc2.close()).sync();
+            cc2.closeFuture().sync();
             rethrowHandlerExceptions(sh, ch);
             assertEquals("value", sessionValue.poll(10, TimeUnit.SECONDS));
         } finally {

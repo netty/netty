@@ -16,9 +16,7 @@
 package io.netty.testsuite.svm;
 
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.http.HttpClientCodec;
 
@@ -36,13 +34,13 @@ public class HttpNativeClient {
         this.channelType = channelType;
     }
 
-    public Channel initClient() throws InterruptedException {
+    public Channel initClient() throws Exception {
         Channel clientChannel = new Bootstrap()
                 .group(group)
                 .channel(channelType)
                 .handler(new HttpClientCodec())
                 .connect("localhost", port)
-                .sync().channel();
+                .get();
         return clientChannel;
     }
 }

@@ -19,12 +19,10 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
@@ -37,6 +35,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -509,12 +508,12 @@ public class DataCompressionHttp2Test {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
+        serverChannel = sb.bind(new InetSocketAddress(0)).get();
         int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
+        Future<Channel> ccf = cb.connect(new InetSocketAddress(NetUtil.LOCALHOST, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
+        clientChannel = ccf.getNow();
         assertTrue(prefaceWrittenLatch.await(5, SECONDS));
         assertTrue(serverChannelLatch.await(5, SECONDS));
     }
@@ -528,7 +527,7 @@ public class DataCompressionHttp2Test {
         return clientChannel.pipeline().firstContext();
     }
 
-    private ChannelPromise newPromiseClient() {
+    private Promise<Void> newPromiseClient() {
         return ctxClient().newPromise();
     }
 }

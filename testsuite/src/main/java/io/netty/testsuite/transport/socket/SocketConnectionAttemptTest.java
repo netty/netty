@@ -17,11 +17,11 @@ package io.netty.testsuite.transport.socket;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.SocketUtils;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
@@ -39,7 +39,6 @@ import java.util.concurrent.TimeUnit;
 import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_HOST;
 import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_PORT;
 import static io.netty.testsuite.transport.socket.SocketTestPermutation.UNASSIGNED_PORT;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -61,11 +60,13 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
     public void testConnectTimeout(Bootstrap cb) throws Throwable {
         cb.handler(new TestHandler()).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 2000);
-        ChannelFuture future = cb.connect(BAD_HOST, BAD_PORT);
+        Future<Channel> future = cb.connect(BAD_HOST, BAD_PORT);
         try {
             assertTrue(future.await(3000));
         } finally {
-            future.channel().close();
+            if (future.isSuccess()) {
+                future.getNow().close();
+            }
         }
     }
 
@@ -110,7 +111,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
         cb.handler(handler);
         cb.option(ChannelOption.ALLOW_HALF_CLOSURE, halfClosure);
-        ChannelFuture future = cb.connect(NetUtil.LOCALHOST, UNASSIGNED_PORT).awaitUninterruptibly();
+        Future<Channel> future = cb.connect(NetUtil.LOCALHOST, UNASSIGNED_PORT).awaitUninterruptibly();
         assertInstanceOf(ConnectException.class, future.cause());
         assertNull(errorPromise.cause());
     }
@@ -148,7 +149,7 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
     public void testConnectCancellation(Bootstrap cb) throws Throwable {
         cb.handler(new TestHandler()).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4000);
-        ChannelFuture future = cb.connect(BAD_HOST, BAD_PORT);
+        Future<Channel> future = cb.connect(BAD_HOST, BAD_PORT);
         try {
             if (future.await(1000)) {
                 if (future.isSuccess()) {
@@ -159,20 +160,15 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
             }
 
             if (future.cancel(true)) {
-                assertTrue(future.channel().closeFuture().await(500));
                 assertTrue(future.isCancelled());
             } else {
-                // Check if cancellation is supported or not.
-                assertFalse(isConnectCancellationSupported(future.channel()), future.channel().getClass() +
-                        " should support connect cancellation");
+                fail();
             }
         } finally {
-            future.channel().close();
+            if (future.isSuccess()) {
+                future.getNow().close();
+            }
         }
-    }
-
-    protected boolean isConnectCancellationSupported(Channel channel) {
-        return true;
     }
 
     private static class TestHandler implements ChannelInboundHandler {

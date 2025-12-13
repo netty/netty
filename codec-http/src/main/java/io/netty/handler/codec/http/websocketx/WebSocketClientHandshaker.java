@@ -17,14 +17,11 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
 import io.netty.handler.codec.http.FullHttpRequest;
@@ -42,12 +39,13 @@ import io.netty.handler.codec.http.HttpScheme;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
 import java.net.URI;
 import java.nio.channels.ClosedChannelException;
 import java.util.Locale;
-import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
@@ -273,7 +271,7 @@ public abstract class WebSocketClientHandshaker {
      * @param channel
      *            Channel
      */
-    public ChannelFuture handshake(Channel channel) {
+    public Future<Void> handshake(Channel channel) {
         ObjectUtil.checkNotNull(channel, "channel");
         return handshake(channel, channel.newPromise());
     }
@@ -284,9 +282,9 @@ public abstract class WebSocketClientHandshaker {
      * @param channel
      *            Channel
      * @param promise
-     *            the {@link ChannelPromise} to be notified when the opening handshake is sent
+     *            the {@link Promise} to be notified when the opening handshake is sent
      */
-    public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
+    public final Future<Void> handshake(Channel channel, final Promise<Void> promise) {
         final ChannelPipeline pipeline = channel.pipeline();
         HttpResponseDecoder decoder = pipeline.get(HttpResponseDecoder.class);
         if (decoder == null) {
@@ -335,7 +333,7 @@ public abstract class WebSocketClientHandshaker {
                 }
                 pipeline.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
 
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(future.cause());
             }
@@ -452,9 +450,9 @@ public abstract class WebSocketClientHandshaker {
      * @param response
      *            HTTP response containing the closing handshake details
      * @return future
-     *            the {@link ChannelFuture} which is notified once the handshake completes.
+     *            the {@link Future} which is notified once the handshake completes.
      */
-    public final ChannelFuture processHandshake(final Channel channel, HttpResponse response) {
+    public final Future<Void> processHandshake(final Channel channel, HttpResponse response) {
         return processHandshake(channel, response, channel.newPromise());
     }
 
@@ -466,16 +464,16 @@ public abstract class WebSocketClientHandshaker {
      * @param response
      *            HTTP response containing the closing handshake details
      * @param promise
-     *            the {@link ChannelPromise} to notify once the handshake completes.
+     *            the {@link Promise} to notify once the handshake completes.
      * @return future
-     *            the {@link ChannelFuture} which is notified once the handshake completes.
+     *            the {@link Future} which is notified once the handshake completes.
      */
-    public final ChannelFuture processHandshake(final Channel channel, HttpResponse response,
-                                                final ChannelPromise promise) {
+    public final Future<Void> processHandshake(final Channel channel, HttpResponse response,
+                                                final Promise<Void> promise) {
         if (response instanceof FullHttpResponse) {
             try {
                 finishHandshake(channel, (FullHttpResponse) response);
-                promise.setSuccess();
+                promise.setSuccess(null);
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
@@ -575,7 +573,7 @@ public abstract class WebSocketClientHandshaker {
                 private void tryFinishHandshake(FullHttpResponse fullHttpResponse) {
                     try {
                         finishHandshake(channel, fullHttpResponse);
-                        promise.setSuccess();
+                        promise.setSuccess(null);
                     } catch (Throwable cause) {
                         promise.setFailure(cause);
                     }
@@ -623,7 +621,7 @@ public abstract class WebSocketClientHandshaker {
      * @param frame
      *            Closing Frame that was received
      */
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame) {
+    public Future<Void> close(Channel channel, CloseWebSocketFrame frame) {
         ObjectUtil.checkNotNull(channel, "channel");
         return close(channel, frame, channel.newPromise());
     }
@@ -632,16 +630,16 @@ public abstract class WebSocketClientHandshaker {
      * Performs the closing handshake
      *
      * When called from within a {@link ChannelHandler} you most likely want to use
-     * {@link #close(ChannelHandlerContext, CloseWebSocketFrame, ChannelPromise)}.
+     * {@link #close(ChannelHandlerContext, CloseWebSocketFrame, Promise)}.
      *
      * @param channel
      *            Channel
      * @param frame
      *            Closing Frame that was received
      * @param promise
-     *            the {@link ChannelPromise} to be notified when the closing handshake is done
+     *            the {@link Promise} to be notified when the closing handshake is done
      */
-    public ChannelFuture close(Channel channel, CloseWebSocketFrame frame, ChannelPromise promise) {
+    public Future<Void> close(Channel channel, CloseWebSocketFrame frame, Promise<Void> promise) {
         ObjectUtil.checkNotNull(channel, "channel");
         return close0(channel, channel, frame, promise);
     }
@@ -654,7 +652,7 @@ public abstract class WebSocketClientHandshaker {
      * @param frame
      *            Closing Frame that was received
      */
-    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
+    public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame) {
         ObjectUtil.checkNotNull(ctx, "ctx");
         return close(ctx, frame, ctx.newPromise());
     }
@@ -667,15 +665,15 @@ public abstract class WebSocketClientHandshaker {
      * @param frame
      *            Closing Frame that was received
      * @param promise
-     *            the {@link ChannelPromise} to be notified when the closing handshake is done
+     *            the {@link Promise} to be notified when the closing handshake is done
      */
-    public ChannelFuture close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, ChannelPromise promise) {
+    public Future<Void> close(ChannelHandlerContext ctx, CloseWebSocketFrame frame, Promise<Void> promise) {
         ObjectUtil.checkNotNull(ctx, "ctx");
         return close0(ctx, ctx.channel(), frame, promise);
     }
 
-    private ChannelFuture close0(final ChannelOutboundInvoker invoker, final Channel channel,
-                                 CloseWebSocketFrame frame, ChannelPromise promise) {
+    private Future<Void> close0(final ChannelOutboundInvoker invoker, final Channel channel,
+                                 CloseWebSocketFrame frame, Promise<Void> promise) {
         invoker.writeAndFlush(frame, promise);
         final long forceCloseTimeoutMillis = this.forceCloseTimeoutMillis;
         final WebSocketClientHandshaker handshaker = this;

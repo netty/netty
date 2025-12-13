@@ -207,7 +207,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    }).bind(new InetSocketAddress(0)).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -256,7 +256,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             donePromise.get();
         } finally {
@@ -337,7 +337,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    }).bind(new InetSocketAddress(0)).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -356,7 +356,7 @@ public class ParameterizedSslHandlerTest {
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             promise.syncUninterruptibly();
         } finally {
@@ -441,7 +441,7 @@ public class ParameterizedSslHandlerTest {
                             });
                             ch.pipeline().addLast(handler);
                         }
-                    }).bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                    }).bind(new InetSocketAddress(0)).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -479,7 +479,7 @@ public class ParameterizedSslHandlerTest {
                             });
                             ch.pipeline().addLast(handler);
                         }
-                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             serverPromise.awaitUninterruptibly();
             clientPromise.awaitUninterruptibly();
@@ -589,7 +589,7 @@ public class ParameterizedSslHandlerTest {
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, serverQueue,
                                     serverLatch));
                         }
-                    }).bind(bindAddress).syncUninterruptibly().channel();
+                    }).bind(bindAddress).get();
 
             cc = new Bootstrap()
                     .group(group)
@@ -602,7 +602,7 @@ public class ParameterizedSslHandlerTest {
                             ch.pipeline().addLast(new ReentryWriteSslHandshakeHandler(expectedContent, clientQueue,
                                     clientLatch));
                         }
-                    }).connect(sc.localAddress()).syncUninterruptibly().channel();
+                    }).connect(sc.localAddress()).get();
 
             serverLatch.await();
             assertEquals(expectedContent, serverQueue.toString());

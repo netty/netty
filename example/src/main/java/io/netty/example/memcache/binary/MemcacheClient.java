@@ -17,7 +17,6 @@ package io.netty.example.memcache.binary;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
@@ -30,6 +29,7 @@ import io.netty.handler.codec.memcache.binary.BinaryMemcacheObjectAggregator;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.util.concurrent.Future;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -72,13 +72,13 @@ public final class MemcacheClient {
                     });
 
             // Start the connection attempt.
-            Channel ch = b.connect(HOST, PORT).sync().channel();
+            Channel ch = b.connect(HOST, PORT).get();
 
             // Read commands from the stdin.
             System.out.println("Enter commands (quit to end)");
             System.out.println("get <key>");
             System.out.println("set <key> <value>");
-            ChannelFuture lastWriteFuture = null;
+            Future<Void> lastWriteFuture = null;
             BufferedReader in = new BufferedReader(new InputStreamReader(System.in));
             for (;;) {
                 String line = in.readLine();

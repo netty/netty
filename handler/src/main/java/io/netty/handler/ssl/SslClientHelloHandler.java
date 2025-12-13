@@ -19,13 +19,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
@@ -224,7 +224,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
             } else {
                 suppressRead = true;
                 final ByteBuf finalClientHello = clientHello;
-                future.addListener((FutureListener<T>) future1 -> {
+                future.addListener(future1 -> {
                     releaseIfNotNull(finalClientHello);
                     try {
                         suppressRead = false;
@@ -293,7 +293,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
      *
      * @see #lookup(ChannelHandlerContext, ByteBuf)
      */
-    protected abstract void onLookupComplete(ChannelHandlerContext ctx, Future<T> future) throws Exception;
+    protected abstract void onLookupComplete(ChannelHandlerContext ctx, Future<? extends T> future) throws Exception;
 
     @Override
     public void read(ChannelHandlerContext ctx) {
@@ -305,38 +305,38 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
     }
 
     @Override
-    public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.register(promise);
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
         ctx.bind(localAddress, promise);
     }
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) {
+                        Promise<Void> promise) {
         ctx.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.disconnect(promise);
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.close(promise);
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
         ctx.deregister(promise);
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         ctx.write(msg, promise);
     }
 
@@ -347,7 +347,7 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
 
     @Override
     public void shutdown(ChannelHandlerContext ctx,
-                         ChannelShutdownType type, ChannelPromise promise) {
+                         ChannelShutdownType type, Promise<Void> promise) {
         ctx.shutdown(type, promise);
     }
 }
