@@ -107,11 +107,14 @@ public final class HttpUtil {
         int lenBytes = token.length();
         for (int i = 0; i < lenBytes; i++) {
             char ch = token.charAt(i);
-            switch (ch) {
-                case '\n':
-                case '\r':
-                case ' ':
-                    return false;
+            // this is to help AOT compiled code which cannot profile the switch
+            if (ch <= ' ') {
+                switch (ch) {
+                    case '\n':
+                    case '\r':
+                    case ' ':
+                        return false;
+                }
             }
         }
         return true;
