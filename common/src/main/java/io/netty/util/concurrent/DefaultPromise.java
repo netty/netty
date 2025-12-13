@@ -203,47 +203,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
     }
 
     @Override
-    public Promise<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
-        checkNotNull(listeners, "listeners");
-
-        synchronized (this) {
-            for (GenericFutureListener<? extends Future<? super V>> listener : listeners) {
-                if (listener == null) {
-                    break;
-                }
-                addListener0(listener);
-            }
-        }
-
-        if (isDone()) {
-            notifyListeners();
-        }
-
-        return this;
-    }
-
-    @Override
     public Promise<V> removeListener(final GenericFutureListener<? extends Future<? super V>> listener) {
         checkNotNull(listener, "listener");
 
         synchronized (this) {
             removeListener0(listener);
-        }
-
-        return this;
-    }
-
-    @Override
-    public Promise<V> removeListeners(final GenericFutureListener<? extends Future<? super V>>... listeners) {
-        checkNotNull(listeners, "listeners");
-
-        synchronized (this) {
-            for (GenericFutureListener<? extends Future<? super V>> listener : listeners) {
-                if (listener == null) {
-                    break;
-                }
-                removeListener0(listener);
-            }
         }
 
         return this;

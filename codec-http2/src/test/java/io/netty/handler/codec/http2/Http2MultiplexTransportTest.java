@@ -795,7 +795,7 @@ public class Http2MultiplexTransportTest {
                                                     new DefaultFullHttpResponse(
                                                             msg.protocolVersion(), HttpResponseStatus.OK,
                                                             Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII)))
-                                                    .addListeners(ChannelFutureListener.CLOSE);
+                                                    .addListener(ChannelFutureListener.CLOSE);
                                         }
                                     });
                                 }
