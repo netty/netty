@@ -78,6 +78,13 @@ public class LocalChannel extends AbstractChannel {
         }
     };
 
+    private final Runnable finishReadTask = new Runnable() {
+        @Override
+        public void run() {
+            finishPeerRead0(LocalChannel.this);
+        }
+    };
+
     private volatile State state;
     private volatile LocalChannel peer;
     private volatile LocalAddress localAddress;
@@ -418,21 +425,19 @@ public class LocalChannel extends AbstractChannel {
         }
     }
 
-    private void runFinishPeerReadTask(final LocalChannel peer) {
+    private void runFinishTask0() {
         // If the peer is writing, we must wait until after reads are completed for that peer before we can read. So
         // we keep track of the task, and coordinate later that our read can't happen until the peer is done.
-        final Runnable finishPeerReadTask = new Runnable() {
-            @Override
-            public void run() {
-                finishPeerRead0(peer);
-            }
-        };
+        if (writeInProgress) {
+            finishReadFuture = eventLoop().submit(finishReadTask);
+        } else {
+            eventLoop().execute(finishReadTask);
+        }
+    }
+
+    private void runFinishPeerReadTask(final LocalChannel peer) {
         try {
-            if (peer.writeInProgress) {
-                peer.finishReadFuture = peer.eventLoop().submit(finishPeerReadTask);
-            } else {
-                peer.eventLoop().execute(finishPeerReadTask);
-            }
+            peer.runFinishTask0();
         } catch (Throwable cause) {
             logger.warn("Closing Local channels {}-{} because exception occurred!", this, peer, cause);
             close();
