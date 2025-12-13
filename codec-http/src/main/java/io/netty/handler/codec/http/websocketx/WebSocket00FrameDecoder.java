@@ -17,7 +17,7 @@ package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.ReplayingDecoder;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.TooLongFrameException;
 import io.netty.util.internal.ObjectUtil;
 
@@ -31,7 +31,7 @@ import static io.netty.buffer.ByteBufUtil.readBytes;
  * For the detailed instruction on adding add Web Socket support to your HTTP server, take a look into the
  * <tt>WebSocketServer</tt> example located in the {@code io.netty.example.http.websocket} package.
  */
-public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements WebSocketFrameDecoder {
+public class WebSocket00FrameDecoder extends ByteToMessageDecoder implements WebSocketFrameDecoder {
 
     static final int DEFAULT_MAX_FRAME_SIZE = 16384;
 
@@ -68,10 +68,13 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         // Discard all data received if closing handshake was received before.
         if (receivedClosingHandshake) {
-            in.skipBytes(actualReadableBytes());
+            in.skipBytes(in.readableBytes());
             return;
         }
-
+        if (in.readableBytes() < 1) {
+            return;
+        }
+        int readerIndex = in.readerIndex();
         // Decode a frame otherwise.
         byte type = in.readByte();
         WebSocketFrame frame;
@@ -85,6 +88,8 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
 
         if (frame != null) {
             out.add(frame);
+        } else {
+            in.readerIndex(readerIndex);
         }
     }
 
@@ -93,6 +98,9 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
         int lengthFieldSize = 0;
         byte b;
         do {
+            if (buffer.readableBytes() < 1) {
+                return null;
+            }
             b = buffer.readByte();
             frameSize <<= 7;
             frameSize |= b & 0x7f;
@@ -110,13 +118,16 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
             receivedClosingHandshake = true;
             return new CloseWebSocketFrame(true, 0, ctx.alloc().buffer(0));
         }
+        if (buffer.readableBytes() < frameSize) {
+            return null;
+        }
         ByteBuf payload = readBytes(ctx.alloc(), buffer, (int) frameSize);
         return new BinaryWebSocketFrame(payload);
     }
 
     private WebSocketFrame decodeTextFrame(ChannelHandlerContext ctx, ByteBuf buffer) {
         int ridx = buffer.readerIndex();
-        int rbytes = actualReadableBytes();
+        int rbytes = buffer.readableBytes();
         int delimPos = buffer.indexOf(ridx, ridx + rbytes, (byte) 0xFF);
         if (delimPos == -1) {
             // Frame delimiter (0xFF) not found
@@ -133,7 +144,9 @@ public class WebSocket00FrameDecoder extends ReplayingDecoder<Void> implements W
         if (frameSize > maxFrameSize) {
             throw new TooLongFrameException("frame length exceeds " + maxFrameSize + ": " + frameSize);
         }
-
+        if (buffer.readableBytes() < frameSize) {
+            return null;
+        }
         ByteBuf binaryData = readBytes(ctx.alloc(), buffer, frameSize);
         buffer.skipBytes(1);
 

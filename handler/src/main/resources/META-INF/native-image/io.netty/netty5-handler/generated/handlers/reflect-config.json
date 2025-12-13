@@ -176,13 +176,6 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.handler.codec.ReplayingDecoder",
-    "condition": {
-      "typeReachable": "io.netty.handler.codec.ReplayingDecoder"
-    },
-    "queryAllPublicMethods": true
-  },
-  {
     "name": "io.netty.handler.codec.string.LineEncoder",
     "condition": {
       "typeReachable": "io.netty.handler.codec.string.LineEncoder"

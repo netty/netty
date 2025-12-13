@@ -19,13 +19,11 @@ package io.netty.handler.codec.socksx.v5;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.ReplayingDecoder;
 import io.netty.handler.codec.socksx.SocksVersion;
-import io.netty.handler.codec.socksx.v5.Socks5CommandResponseDecoder.State;
 import io.netty.util.internal.ObjectUtil;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -35,14 +33,14 @@ import java.util.List;
  * other handler can remove or replace this decoder later.  On failed decode, this decoder will
  * discard the received data, so that other handler closes the connection later.
  */
-public class Socks5CommandResponseDecoder extends ReplayingDecoder<State> {
+public class Socks5CommandResponseDecoder extends ByteToMessageDecoder {
 
-    @UnstableApi
-    public enum State {
+    private enum State {
         INIT,
         SUCCESS,
         FAILURE
     }
+    private State state = State.INIT;
 
     private final Socks5AddressDecoder addressDecoder;
 
@@ -51,15 +49,18 @@ public class Socks5CommandResponseDecoder extends ReplayingDecoder<State> {
     }
 
     public Socks5CommandResponseDecoder(Socks5AddressDecoder addressDecoder) {
-        super(State.INIT);
         this.addressDecoder = ObjectUtil.checkNotNull(addressDecoder, "addressDecoder");
     }
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         try {
-            switch (state()) {
+            switch (state) {
             case INIT: {
+                if (in.readableBytes() < 6) {
+                    return;
+                }
+                int readerIndex = in.readerIndex();
                 final byte version = in.readByte();
                 if (version != SocksVersion.SOCKS5.byteValue()) {
                     throw new DecoderException(
@@ -69,10 +70,14 @@ public class Socks5CommandResponseDecoder extends ReplayingDecoder<State> {
                 in.skipBytes(1); // Reserved
                 final Socks5AddressType addrType = Socks5AddressType.valueOf(in.readByte());
                 final String addr = addressDecoder.decodeAddress(addrType, in);
+                if (addr == null || in.readableBytes() < 2) {
+                    in.readerIndex(readerIndex);
+                    return;
+                }
                 final int port = ByteBufUtil.readUnsignedShortBE(in);
 
                 out.add(new DefaultSocks5CommandResponse(status, addrType, addr, port));
-                checkpoint(State.SUCCESS);
+                state = State.SUCCESS;
             }
             case SUCCESS: {
                 int readableBytes = actualReadableBytes();
@@ -96,7 +101,7 @@ public class Socks5CommandResponseDecoder extends ReplayingDecoder<State> {
             cause = new DecoderException(cause);
         }
 
-        checkpoint(State.FAILURE);
+        state = State.FAILURE;
 
         Socks5Message m = new DefaultSocks5CommandResponse(
                 Socks5CommandStatus.FAILURE, Socks5AddressType.IPv4, null, 0);

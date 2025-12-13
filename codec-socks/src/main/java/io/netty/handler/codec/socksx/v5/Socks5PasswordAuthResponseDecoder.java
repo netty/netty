@@ -18,11 +18,9 @@ package io.netty.handler.codec.socksx.v5;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.ByteToMessageDecoder;
 import io.netty.handler.codec.DecoderException;
 import io.netty.handler.codec.DecoderResult;
-import io.netty.handler.codec.ReplayingDecoder;
-import io.netty.handler.codec.socksx.v5.Socks5PasswordAuthResponseDecoder.State;
-import io.netty.util.internal.UnstableApi;
 
 import java.util.List;
 
@@ -32,41 +30,41 @@ import java.util.List;
  * other handler can remove or replace this decoder later.  On failed decode, this decoder will
  * discard the received data, so that other handler closes the connection later.
  */
-public class Socks5PasswordAuthResponseDecoder extends ReplayingDecoder<State> {
+public class Socks5PasswordAuthResponseDecoder extends ByteToMessageDecoder {
 
-    @UnstableApi
-    public enum State {
+    private enum State {
         INIT,
         SUCCESS,
         FAILURE
     }
 
-    public Socks5PasswordAuthResponseDecoder() {
-        super(State.INIT);
-    }
+    private State state = State.INIT;
 
     @Override
     protected void decode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) throws Exception {
         try {
-            switch (state()) {
+            switch (state) {
             case INIT: {
+                if (in.readableBytes() < 2) {
+                    return;
+                }
                 final byte version = in.readByte();
                 if (version != 1) {
                     throw new DecoderException("unsupported subnegotiation version: " + version + " (expected: 1)");
                 }
 
                 out.add(new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.valueOf(in.readByte())));
-                checkpoint(State.SUCCESS);
+                state = State.SUCCESS;
             }
             case SUCCESS: {
-                int readableBytes = actualReadableBytes();
+                int readableBytes = in.readableBytes();
                 if (readableBytes > 0) {
                     out.add(in.readRetainedSlice(readableBytes));
                 }
                 break;
             }
             case FAILURE: {
-                in.skipBytes(actualReadableBytes());
+                in.skipBytes(in.readableBytes());
                 break;
             }
             }
@@ -80,7 +78,7 @@ public class Socks5PasswordAuthResponseDecoder extends ReplayingDecoder<State> {
             cause = new DecoderException(cause);
         }
 
-        checkpoint(State.FAILURE);
+        state = State.FAILURE;
 
         Socks5Message m = new DefaultSocks5PasswordAuthResponse(Socks5PasswordAuthStatus.FAILURE);
         m.setDecoderResult(DecoderResult.failure(cause));

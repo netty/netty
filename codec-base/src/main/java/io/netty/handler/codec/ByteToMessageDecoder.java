@@ -345,7 +345,7 @@ public abstract class ByteToMessageDecoder implements ChannelInboundHandler {
     /**
      * Get {@code numElements} out of the {@link List} and forward these through the pipeline.
      */
-    static void fireChannelRead(ChannelHandlerContext ctx, List<Object> msgs, int numElements) {
+    private static void fireChannelRead(ChannelHandlerContext ctx, List<Object> msgs, int numElements) {
         if (msgs instanceof CodecOutputList) {
             fireChannelRead(ctx, (CodecOutputList) msgs, numElements);
         } else {
@@ -358,7 +358,7 @@ public abstract class ByteToMessageDecoder implements ChannelInboundHandler {
     /**
      * Get {@code numElements} out of the {@link CodecOutputList} and forward these through the pipeline.
      */
-    static void fireChannelRead(ChannelHandlerContext ctx, CodecOutputList msgs, int numElements) {
+    private static void fireChannelRead(ChannelHandlerContext ctx, CodecOutputList msgs, int numElements) {
         for (int i = 0; i < numElements; i ++) {
             ctx.fireChannelRead(msgs.getUnsafe(i));
         }
@@ -441,7 +441,7 @@ public abstract class ByteToMessageDecoder implements ChannelInboundHandler {
      * Called when the input of the channel was closed which may be because it changed to inactive or because of
      * {@link #channelShutdown(ChannelHandlerContext, ChannelShutdownType}.
      */
-    void channelInputClosed(ChannelHandlerContext ctx, List<Object> out) throws Exception {
+    private void channelInputClosed(ChannelHandlerContext ctx, List<Object> out) throws Exception {
         if (cumulation != null) {
             callDecode(ctx, cumulation, out);
             // If callDecode(...) removed the handle from the pipeline we should not call decodeLast(...) as this would
@@ -465,7 +465,7 @@ public abstract class ByteToMessageDecoder implements ChannelInboundHandler {
      * @param in            the {@link ByteBuf} from which to read data
      * @param out           the {@link List} to which decoded messages should be added
      */
-    protected void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
+    private void callDecode(ChannelHandlerContext ctx, ByteBuf in, List<Object> out) {
         try {
             while (in.isReadable()) {
                 final int outSize = out.size();
@@ -542,7 +542,7 @@ public abstract class ByteToMessageDecoder implements ChannelInboundHandler {
      * @param out           the {@link List} to which decoded messages should be added
      * @throws Exception    is thrown if an error occurs
      */
-    final void decodeRemovalReentryProtection(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
+    private void decodeRemovalReentryProtection(ChannelHandlerContext ctx, ByteBuf in, List<Object> out)
             throws Exception {
         decodeState = STATE_CALLING_CHILD_DECODE;
         try {
@@ -575,7 +575,7 @@ public abstract class ByteToMessageDecoder implements ChannelInboundHandler {
         }
     }
 
-    static ByteBuf expandCumulation(ByteBufAllocator alloc, ByteBuf oldCumulation, ByteBuf in) {
+    private static ByteBuf expandCumulation(ByteBufAllocator alloc, ByteBuf oldCumulation, ByteBuf in) {
         int oldBytes = oldCumulation.readableBytes();
         int newBytes = in.readableBytes();
         int totalBytes = oldBytes + newBytes;
