@@ -16,22 +16,23 @@
 package io.netty.channel.socket.nio;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.group.DefaultChannelGroup;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.DatagramChannel;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.GlobalEventExecutor;
 import org.junit.jupiter.api.Test;
 
 import java.net.InetSocketAddress;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.channels.NetworkChannel;
+import java.util.HashSet;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -42,7 +43,7 @@ public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramCh
      */
     @Test
     public void testBindMultiple() throws Exception {
-        DefaultChannelGroup channelGroup = new DefaultChannelGroup(GlobalEventExecutor.INSTANCE);
+        Set<Channel> channelGroup = new HashSet<>();
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(NioIoHandler.newFactory());
         try {
             for (int i = 0; i < 100; i++) {
@@ -62,7 +63,9 @@ public class NioDatagramChannelTest extends AbstractNioChannelTest<NioDatagramCh
             }
             assertEquals(100, channelGroup.size());
         } finally {
-            channelGroup.close().sync();
+            for (Channel channel : channelGroup) {
+                channel.close().sync();
+            }
             group.shutdownGracefully().sync();
         }
     }
