@@ -23,6 +23,7 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -31,6 +32,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.SplittableRandom;
 
 import static io.netty.handler.codec.http.HttpConstants.CR;
 import static io.netty.handler.codec.http.HttpConstants.LF;
@@ -48,6 +50,9 @@ public class HttpRequestEncoderInsertBenchmark extends AbstractMicrobenchmark {
             "limit=10",
             "offset=0"
     };
+    @Param({"1024", "128000"})
+    private int samples;
+
     private String[] uris;
     private int index;
     private final OldHttpRequestEncoder encoderOld = new OldHttpRequestEncoder();
@@ -58,7 +63,7 @@ public class HttpRequestEncoderInsertBenchmark extends AbstractMicrobenchmark {
         List<String[]> permutations = new ArrayList<>();
         permute(PARAMS.clone(), 0, permutations);
 
-        uris = new String[permutations.size()];
+        String[] allCombinations = new String[permutations.size()];
         String base = "http://localhost?";
         for (int i = 0; i < permutations.size(); i++) {
             StringBuilder sb = new StringBuilder(base);
@@ -69,8 +74,14 @@ public class HttpRequestEncoderInsertBenchmark extends AbstractMicrobenchmark {
                 }
                 sb.append(p[j]);
             }
-            uris[i] = sb.toString();
+            allCombinations[i] = sb.toString();
         }
+        uris = new String[samples];
+        SplittableRandom rand = new SplittableRandom(42);
+        for (int i = 0; i < uris.length; i++) {
+            uris[i] = allCombinations[rand.nextInt(allCombinations.length)];
+        }
+        index = 0;
     }
 
     private static void permute(String[] arr, int start, List<String[]> out) {
