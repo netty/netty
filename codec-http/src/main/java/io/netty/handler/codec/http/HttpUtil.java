@@ -109,16 +109,16 @@ public final class HttpUtil {
         int modulo = lenBytes % 4;
         int lenInts = modulo == 0 ? lenBytes : lenBytes - modulo;
         for (; i < lenInts; i += 4) {
-            long chars = 1L << token.charAt(i) |
-                    1L << token.charAt(i + 1) |
-                    1L << token.charAt(i + 2) |
-                    1L << token.charAt(i + 3);
+            long chars = charMask(token, i) |
+                    charMask(token, i + 1) |
+                    charMask(token, i + 2) |
+                    charMask(token, i + 3);
             if ((chars & ILLEGAL_REQUEST_LINE_TOKEN_OCTET_MASK) != 0) {
                 return false;
             }
         }
         for (; i < lenBytes; i++) {
-            long ch = 1L << token.charAt(i);
+            long ch = charMask(token, i);
             if ((ch & ILLEGAL_REQUEST_LINE_TOKEN_OCTET_MASK) != 0) {
                 return false;
             }
@@ -126,10 +126,14 @@ public final class HttpUtil {
         return true;
     }
 
+    private static long charMask(CharSequence token, int i) {
+        char c = token.charAt(i);
+        return c < 64 ? 1L << c : 0;
+    }
+
     /**
      * Returns {@code true} if and only if the connection can remain open and
-     * thus 'kept alive'.  This methods respects the value of the.
-     *
+     * thus 'kept alive'. This method respects the value of the
      * {@code "Connection"} header first and then the return value of
      * {@link HttpVersion#isKeepAliveDefault()}.
      */
