@@ -190,8 +190,7 @@ final class AdaptivePoolingAllocator {
         chunkRegistry = new ChunkRegistry();
         sizeClassedMagazineGroups = createMagazineGroupSizeClasses(this, false);
         largeBufferMagazineGroup = new MagazineGroup(
-                this, chunkAllocator, new BuddyChunkControllerFactory(true), false);
-//                this, chunkAllocator, new HistogramChunkControllerFactory(true), false);
+                this, chunkAllocator, new BuddyChunkControllerFactory(), false);
 
         boolean disableThreadLocalGroups = IS_LOW_MEM && DISABLE_THREAD_LOCAL_MAGAZINES_ON_LOW_MEM;
         threadLocalGroup = disableThreadLocalGroups ? null : new FastThreadLocal<MagazineGroup[]>() {
@@ -589,15 +588,9 @@ final class AdaptivePoolingAllocator {
     }
 
     private static final class BuddyChunkControllerFactory implements ChunkControllerFactory {
-        private final boolean shareable;
-
-        private BuddyChunkControllerFactory(boolean shareable) {
-            this.shareable = shareable;
-        }
-
         @Override
         public ChunkController create(MagazineGroup group) {
-            return new BuddyChunkController(group, shareable);
+            return new BuddyChunkController(group);
         }
     }
 
@@ -605,7 +598,7 @@ final class AdaptivePoolingAllocator {
         private final ChunkAllocator chunkAllocator;
         private final ChunkRegistry chunkRegistry;
 
-        BuddyChunkController(MagazineGroup group, boolean shareable) {
+        BuddyChunkController(MagazineGroup group) {
             chunkAllocator = group.chunkAllocator;
             chunkRegistry = group.allocator.chunkRegistry;
         }
@@ -1033,7 +1026,6 @@ final class AdaptivePoolingAllocator {
             } else {
                 RefCnt.resetRefCnt(refCnt);
                 delegate.setIndex(0, 0);
-                allocatedBytes = 0;
                 if (!mag.trySetNextInLine(this)) {
                     // As this Chunk does not belong to the mag anymore we need to decrease the used memory .
                     detachFromMagazine();
@@ -1269,10 +1261,9 @@ final class AdaptivePoolingAllocator {
 
         @Override
         boolean releaseSegment(int startingIndex, int size) {
-            boolean released = release();
             int packed = startingIndex / MIN_BUDDY_SIZE | Integer.numberOfTrailingZeros(size / MIN_BUDDY_SIZE) << 16;
             freeList.offer(packed);
-            return released;
+            return release();
         }
 
         /**
@@ -1325,7 +1316,7 @@ final class AdaptivePoolingAllocator {
                     }
                     return found;
                 }
-                index = (index << 1) + 1;
+                index++;
                 currOffset += currValue;
             }
             return -1;
