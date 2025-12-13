@@ -50,26 +50,7 @@ public abstract class CompleteFuture<V> extends AbstractFuture<V> {
     }
 
     @Override
-    public Future<V> addListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
-        for (GenericFutureListener<? extends Future<? super V>> l:
-                ObjectUtil.checkNotNull(listeners, "listeners")) {
-
-            if (l == null) {
-                break;
-            }
-            DefaultPromise.notifyListener(executor(), this, l);
-        }
-        return this;
-    }
-
-    @Override
     public Future<V> removeListener(GenericFutureListener<? extends Future<? super V>> listener) {
-        // NOOP
-        return this;
-    }
-
-    @Override
-    public Future<V> removeListeners(GenericFutureListener<? extends Future<? super V>>... listeners) {
         // NOOP
         return this;
     }

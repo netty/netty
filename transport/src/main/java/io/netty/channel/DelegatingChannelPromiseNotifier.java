@@ -98,20 +98,8 @@ public final class DelegatingChannelPromiseNotifier implements ChannelPromise, C
     }
 
     @Override
-    public ChannelPromise addListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
-        delegate.addListeners(listeners);
-        return this;
-    }
-
-    @Override
     public ChannelPromise removeListener(GenericFutureListener<? extends Future<? super Void>> listener) {
         delegate.removeListener(listener);
-        return this;
-    }
-
-    @Override
-    public ChannelPromise removeListeners(GenericFutureListener<? extends Future<? super Void>>... listeners) {
-        delegate.removeListeners(listeners);
         return this;
     }
 
