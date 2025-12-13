@@ -104,31 +104,17 @@ public final class HttpUtil {
      * otherwise {@code false}.
      */
     public static boolean isEncodingSafeStartLineToken(CharSequence token) {
-        int i = 0;
         int lenBytes = token.length();
-        int modulo = lenBytes % 4;
-        int lenInts = modulo == 0 ? lenBytes : lenBytes - modulo;
-        for (; i < lenInts; i += 4) {
-            long chars = charMask(token, i) |
-                    charMask(token, i + 1) |
-                    charMask(token, i + 2) |
-                    charMask(token, i + 3);
-            if ((chars & ILLEGAL_REQUEST_LINE_TOKEN_OCTET_MASK) != 0) {
-                return false;
-            }
-        }
-        for (; i < lenBytes; i++) {
-            long ch = charMask(token, i);
-            if ((ch & ILLEGAL_REQUEST_LINE_TOKEN_OCTET_MASK) != 0) {
-                return false;
+        for (int i = 0; i < lenBytes; i++) {
+            char ch = token.charAt(i);
+            switch (ch) {
+                case '\n':
+                case '\r':
+                case ' ':
+                    return false;
             }
         }
         return true;
-    }
-
-    private static long charMask(CharSequence token, int i) {
-        char c = token.charAt(i);
-        return c < 64 ? 1L << c : 0;
     }
 
     /**
