@@ -17,7 +17,6 @@ package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -99,15 +98,6 @@ import java.util.concurrent.TimeUnit;
 public class IdleStateHandler implements ChannelInboundHandler, ChannelOutboundHandler {
     private static final long MIN_TIMEOUT_NANOS = TimeUnit.MILLISECONDS.toNanos(1);
 
-    // Not create a new ChannelFutureListener per write operation to reduce GC pressure.
-    private final ChannelFutureListener writeListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) {
-            lastWriteTime = ticker.nanoTime();
-            firstWriterIdleEvent = firstAllIdleEvent = true;
-        }
-    };
-
     private final long readerIdleTimeNanos;
     private final long writerIdleTimeNanos;
     private final long allIdleTimeNanos;
@@ -130,6 +120,12 @@ public class IdleStateHandler implements ChannelInboundHandler, ChannelOutboundH
     private static final byte ST_DESTROYED = 2;
 
     private boolean reading;
+
+    // Not create a new ChannelFutureListener per write operation to reduce GC pressure.
+    private final ChannelFutureListener writeListener = future -> {
+        lastWriteTime = ticker.nanoTime();
+        firstWriterIdleEvent = firstAllIdleEvent = true;
+    };
 
     /**
      * Creates a new instance firing {@link IdleStateEvent}s.

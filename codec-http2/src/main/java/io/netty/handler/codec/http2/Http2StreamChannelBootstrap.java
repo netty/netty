@@ -17,7 +17,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
@@ -187,17 +186,14 @@ public final class Http2StreamChannelBootstrap {
         }
 
         ChannelFuture future = streamChannel.register();
-        future.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                if (future.isSuccess()) {
-                    promise.setSuccess(streamChannel);
-                } else if (future.isCancelled()) {
-                    promise.cancel(false);
-                } else {
-                    streamChannel.close();
-                    promise.setFailure(future.cause());
-                }
+        future.addListener(f -> {
+            if (f.isSuccess()) {
+                promise.setSuccess(streamChannel);
+            } else if (f.isCancelled()) {
+                promise.cancel(false);
+            } else {
+                streamChannel.close();
+                promise.setFailure(f.cause());
             }
         });
     }

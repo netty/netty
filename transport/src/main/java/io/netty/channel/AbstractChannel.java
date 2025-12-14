@@ -420,34 +420,31 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             ChannelPromise registerPromise = newPromise();
             boolean firstRegistration = neverRegistered;
-            registerPromise.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    if (future.isSuccess()) {
-                        neverRegistered = false;
-                        registered = true;
+            registerPromise.addListener(future -> {
+                if (future.isSuccess()) {
+                    neverRegistered = false;
+                    registered = true;
 
-                        safeSetSuccess(promise);
-                        pipeline.fireChannelRegistered();
-                        // Only fire a channelActive if the channel has never been registered. This prevents firing
-                        // multiple channel actives if the channel is deregistered and re-registered.
-                        if (isActive()) {
-                            if (firstRegistration) {
-                                pipeline.fireChannelActive();
-                            } else if (config().isAutoRead()) {
-                                // This channel was registered before and autoRead() is set. This means we need to
-                                // begin read again so that we process inbound data.
-                                //
-                                // See https://github.com/netty/netty/issues/4805
-                                read();
-                            }
+                    safeSetSuccess(promise);
+                    pipeline.fireChannelRegistered();
+                    // Only fire a channelActive if the channel has never been registered. This prevents firing
+                    // multiple channel actives if the channel is deregistered and re-registered.
+                    if (isActive()) {
+                        if (firstRegistration) {
+                            pipeline.fireChannelActive();
+                        } else if (config().isAutoRead()) {
+                            // This channel was registered before and autoRead() is set. This means we need to
+                            // begin read again so that we process inbound data.
+                            //
+                            // See https://github.com/netty/netty/issues/4805
+                            read();
                         }
-                    } else {
-                        // Close the channel directly to avoid FD leak.
-                        close(newPromise());
-                        closeFuture.setClosed();
-                        safeSetFailure(promise, future.cause());
                     }
+                } else {
+                    // Close the channel directly to avoid FD leak.
+                    close(newPromise());
+                    closeFuture.setClosed();
+                    safeSetFailure(promise, future.cause());
                 }
             });
             doRegister(registerPromise);
@@ -634,12 +631,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                     safeSetSuccess(promise);
                 } else {
                     // This means close() was called before so we just register a listener and return
-                    closeFuture.addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) {
-                            promise.setSuccess();
-                        }
-                    });
+                    closeFuture.addListener(future -> promise.setSuccess());
                 }
                 return;
             }

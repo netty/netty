@@ -295,20 +295,18 @@ public class Http2MultiplexTransportTest {
                                     public void run() {
                                         ctx.writeAndFlush(new DefaultHttp2HeadersFrame(
                                                 new DefaultHttp2Headers(), false)).addListener(
-                                                        new ChannelFutureListener() {
-                                            @Override
-                                            public void operationComplete(ChannelFuture future) {
-                                                ctx.write(new DefaultHttp2DataFrame(
-                                                        Unpooled.copiedBuffer("Hello World", CharsetUtil.US_ASCII),
-                                                        true));
-                                                ctx.channel().executor().execute(new Runnable() {
-                                                    @Override
-                                                    public void run() {
-                                                        ctx.flush();
-                                                    }
+                                                (ChannelFutureListener) future -> {
+                                                    ctx.write(new DefaultHttp2DataFrame(
+                                                            Unpooled.copiedBuffer(
+                                                                    "Hello World", CharsetUtil.US_ASCII),
+                                                            true));
+                                                    ctx.channel().executor().execute(new Runnable() {
+                                                        @Override
+                                                        public void run() {
+                                                            ctx.flush();
+                                                        }
+                                                    });
                                                 });
-                                            }
-                                        });
                                     }
                                 }, 500, MILLISECONDS);
                             }
@@ -489,13 +487,10 @@ public class Http2MultiplexTransportTest {
                                         latch.countDown();
                                     }
                                 });
-                                h2Bootstrap.open().addListener(new FutureListener<Channel>() {
-                                    @Override
-                                    public void operationComplete(Future<Channel> future) {
-                                        if (future.isSuccess()) {
-                                            future.getNow().writeAndFlush(new DefaultHttp2HeadersFrame(
-                                                    new DefaultHttp2Headers(), false));
-                                        }
+                                h2Bootstrap.open().addListener((FutureListener<Channel>) future -> {
+                                    if (future.isSuccess()) {
+                                        future.getNow().writeAndFlush(new DefaultHttp2HeadersFrame(
+                                                new DefaultHttp2Headers(), false));
                                     }
                                 });
 
@@ -574,14 +569,10 @@ public class Http2MultiplexTransportTest {
                                 if (msg instanceof Http2HeadersFrame && ((Http2HeadersFrame) msg).isEndStream()) {
                                     ctx.writeAndFlush(new DefaultHttp2HeadersFrame(
                                                     new DefaultHttp2Headers(), false))
-                                            .addListener(new ChannelFutureListener() {
-                                                @Override
-                                                public void operationComplete(ChannelFuture future) {
+                                            .addListener((ChannelFutureListener) future ->
                                                     ctx.writeAndFlush(new DefaultHttp2DataFrame(
                                                             Unpooled.copiedBuffer("Hello World", CharsetUtil.US_ASCII),
-                                                            true));
-                                                }
-                                            });
+                                                            true)));
                                 }
                                 ReferenceCountUtil.release(msg);
                             }
@@ -632,13 +623,10 @@ public class Http2MultiplexTransportTest {
                                         ReferenceCountUtil.release(msg);
                                     }
                                 });
-                                h2Bootstrap.open().addListener(new FutureListener<Channel>() {
-                                    @Override
-                                    public void operationComplete(Future<Channel> future) {
-                                        if (future.isSuccess()) {
-                                            future.getNow().writeAndFlush(new DefaultHttp2HeadersFrame(
-                                                    new DefaultHttp2Headers(), true));
-                                        }
+                                h2Bootstrap.open().addListener((FutureListener<Channel>) future -> {
+                                    if (future.isSuccess()) {
+                                        future.getNow().writeAndFlush(new DefaultHttp2HeadersFrame(
+                                                new DefaultHttp2Headers(), true));
                                     }
                                 });
                             }

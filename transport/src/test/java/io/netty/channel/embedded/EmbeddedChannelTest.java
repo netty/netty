@@ -93,12 +93,7 @@ public class EmbeddedChannelTest {
     @Timeout(value = 2000, unit = TimeUnit.MILLISECONDS)
     public void promiseDoesNotInfiniteLoop() throws InterruptedException {
         EmbeddedChannel channel = new EmbeddedChannel();
-        channel.closeFuture().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                future.channel().close();
-            }
-        });
+        channel.closeFuture().addListener((ChannelFutureListener) future -> future.channel().close());
 
         channel.close().syncUninterruptibly();
     }
@@ -141,12 +136,7 @@ public class EmbeddedChannelTest {
                 latch.countDown();
             }
         }, 1, TimeUnit.SECONDS);
-        future.addListener(new FutureListener() {
-            @Override
-            public void operationComplete(Future future) {
-                latch.countDown();
-            }
-        });
+        future.addListener((FutureListener) future1 -> latch.countDown());
         long next = ch.runScheduledPendingTasks();
         assertTrue(next > 0);
         // Sleep for the nanoseconds but also give extra 50ms as the clock my not be very precise and so fail the test
@@ -627,12 +617,7 @@ public class EmbeddedChannelTest {
         });
 
         final EmbeddedEventLoop embeddedEventLoop = new EmbeddedEventLoop(new EmbeddedEventLoop.FreezableTicker());
-        channel.deregister().addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                channel.register();
-            }
-        });
+        channel.deregister().addListener(f -> channel.register());
 
         if (!unregisteredLatch.await(5, TimeUnit.SECONDS)) {
             fail("Channel was not unregistered in time.");

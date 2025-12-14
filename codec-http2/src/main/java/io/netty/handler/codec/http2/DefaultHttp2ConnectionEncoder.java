@@ -522,13 +522,10 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
     }
 
     private void notifyLifecycleManagerOnError(ChannelFuture future, final ChannelHandlerContext ctx) {
-        future.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                Throwable cause = future.cause();
-                if (cause != null) {
-                    lifecycleManager.onError(ctx, true, cause);
-                }
+        future.addListener(future1 -> {
+            Throwable cause = future1.cause();
+            if (cause != null) {
+                lifecycleManager.onError(ctx, true, cause);
             }
         });
     }

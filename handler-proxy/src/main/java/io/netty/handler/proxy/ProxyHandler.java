@@ -64,12 +64,9 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
     private boolean flushedPrematurely;
     private final LazyChannelPromise connectPromise = new LazyChannelPromise();
     private Future<?> connectTimeoutFuture;
-    private final ChannelFutureListener writeListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) {
-            if (!future.isSuccess()) {
-                setConnectFailure(future.cause());
-            }
+    private final ChannelFutureListener writeListener = future -> {
+        if (!future.isSuccess()) {
+            setConnectFailure(future.cause());
         }
     };
 

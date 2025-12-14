@@ -366,12 +366,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
                             buf.writerIndex(buf.capacity());
-                            ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture future) {
-                                    future.channel().shutdown(ChannelShutdownType.newOutbound());
-                                }
-                            });
+                            ctx.writeAndFlush(buf).addListener((ChannelFutureListener) future ->
+                                    future.channel().shutdown(ChannelShutdownType.newOutbound()));
                             serverInitializedLatch.countDown();
                         }
 
@@ -559,27 +555,20 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 // We write a reply and immediately close our end of the socket.
                 ByteBuf buf = ctx.alloc().buffer(expectedBytes);
                 buf.writerIndex(buf.writerIndex() + expectedBytes);
-                ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) {
-                        future.channel().close().addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(final ChannelFuture future) {
-                                // This is a bit racy but there is no better way how to handle this in Java11.
-                                // The problem is that on close() the underlying FD will not actually be closed directly
-                                // but the close will be done after the Selector did process all events. Because of
-                                // this we will need to give it a bit time to ensure the FD is actual closed before we
-                                // count down the latch and try to write.
-                                future.channel().executor().schedule(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        followerCloseLatch.countDown();
-                                    }
-                                }, 200, TimeUnit.MILLISECONDS);
-                            }
-                        });
-                    }
-                });
+                ctx.writeAndFlush(buf).addListener(future ->
+                        ctx.close().addListener(f -> {
+                            // This is a bit racy but there is no better way how to handle this in Java11.
+                            // The problem is that on close() the underlying FD will not actually be closed directly
+                            // but the close will be done after the Selector did process all events. Because of
+                            // this we will need to give it a bit time to ensure the FD is actual closed before we
+                            // count down the latch and try to write.
+                            ctx.executor().schedule(new Runnable() {
+                                @Override
+                                public void run() {
+                                    followerCloseLatch.countDown();
+                                }
+                            }, 200, MILLISECONDS);
+                        }));
             }
         }
 
@@ -618,13 +607,10 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
             followerCloseLatch.await();
 
             // This write should fail, but we should still be allowed to read the peer's data
-            ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    if (future.cause() == null) {
-                        causeRef.set(new IllegalStateException("second write should have failed!"));
-                        doneLatch.countDown();
-                    }
+            ctx.writeAndFlush(buf).addListener(future -> {
+                if (future.cause() == null) {
+                    causeRef.set(new IllegalStateException("second write should have failed!"));
+                    doneLatch.countDown();
                 }
             });
         }

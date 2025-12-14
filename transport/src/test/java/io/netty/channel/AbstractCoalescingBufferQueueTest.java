@@ -67,12 +67,9 @@ public class AbstractCoalescingBufferQueueTest {
         };
 
         final byte[] bytes = new byte[128];
-        queue.add(Unpooled.wrappedBuffer(bytes), new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                queue.add(Unpooled.wrappedBuffer(bytes));
-                assertEquals(bytes.length, queue.readableBytes());
-            }
+        queue.add(Unpooled.wrappedBuffer(bytes), future -> {
+            queue.add(Unpooled.wrappedBuffer(bytes));
+            assertEquals(bytes.length, queue.readableBytes());
         });
 
         assertEquals(bytes.length, queue.readableBytes());

@@ -280,16 +280,13 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
                     final int size = 27;
                     ByteBuf buf = ByteBufAllocator.DEFAULT.buffer(size, size);
                     finalClientChannel.writeAndFlush(buf.writerIndex(buf.writerIndex() + size))
-                            .addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) {
-                            try {
-                                writeFailCauseRef.set(future.cause());
-                            } finally {
-                                latch.countDown();
-                            }
-                        }
-                    });
+                            .addListener(future -> {
+                                try {
+                                    writeFailCauseRef.set(future.cause());
+                                } finally {
+                                    latch.countDown();
+                                }
+                            });
                 }
             });
             latch.await();

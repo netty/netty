@@ -72,13 +72,10 @@ public class KQueueDomainSocketFdTest extends AbstractSocketTest {
                 final KQueueSocketChannel ch = new KQueueSocketChannel(
                         ctx.channel().executor(), SocketProtocolFamily.UNIX);
 
-                ctx.writeAndFlush(ch.fd()).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) {
-                        if (!future.isSuccess()) {
-                            Throwable cause = future.cause();
-                            queue.offer(cause);
-                        }
+                ctx.writeAndFlush(ch.fd()).addListener(future -> {
+                    if (!future.isSuccess()) {
+                        Throwable cause = future.cause();
+                        queue.offer(cause);
                     }
                 });
             }
