@@ -18,8 +18,6 @@ package io.netty.channel.epoll;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.unix.DomainSocketReadMode;
@@ -70,13 +68,10 @@ public class EpollDomainSocketFdTest extends AbstractSocketTest {
                 // Create new channel and obtain a file descriptor from it.
                 final EpollDomainSocketChannel ch = new EpollDomainSocketChannel();
 
-                ctx.writeAndFlush(ch.fd()).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            Throwable cause = future.cause();
-                            queue.offer(cause);
-                        }
+                ctx.writeAndFlush(ch.fd()).addListener(future -> {
+                    if (!future.isSuccess()) {
+                        Throwable cause = future.cause();
+                        queue.offer(cause);
                     }
                 });
             }

@@ -839,12 +839,7 @@ public class Http2ConnectionHandlerTest {
                 new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
         final ChannelPromise promise2 =
                 new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise2);
-            }
-        });
+        promise.addListener(f -> handler.resetStream(ctx, STREAM_ID, STREAM_CLOSED.code(), promise2));
 
         handler.resetStream(ctx, STREAM_ID, CANCEL.code(), promise);
         verify(frameWriter).writeRstStream(eq(ctx), eq(STREAM_ID), anyLong(), any(ChannelPromise.class));

@@ -16,7 +16,6 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
@@ -37,14 +36,11 @@ final class EncoderUtil {
                 }
             }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
 
-            finishFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture f)  {
-                    // Cancel the scheduled timeout.
-                    future.cancel(true);
-                    if (!promise.isDone()) {
-                        ctx.close(promise);
-                    }
+            finishFuture.addListener(f -> {
+                // Cancel the scheduled timeout.
+                future.cancel(true);
+                if (!promise.isDone()) {
+                    ctx.close(promise);
                 }
             });
         } else {
