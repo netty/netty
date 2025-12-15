@@ -187,7 +187,8 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
                     uncompressed = allocator.buffer(decompressedLength, decompressedLength);
 
                     ByteBuffer inBuffer = CompressionUtil.safeReadableNioBuffer(in);
-                    ByteBuffer outBuffer = uncompressed.internalNioBuffer(uncompressed.writerIndex(), decompressedLength);
+                    ByteBuffer outBuffer = uncompressed.internalNioBuffer(
+                            uncompressed.writerIndex(), decompressedLength);
                     if (inBuffer.remaining() < compressedLength || outBuffer.remaining() < decompressedLength) {
                         throw new DecompressionException("Weird compressedLength");
                     }
