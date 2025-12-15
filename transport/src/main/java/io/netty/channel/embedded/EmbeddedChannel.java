@@ -366,7 +366,7 @@ public class EmbeddedChannel extends AbstractChannel {
                 p.fireChannelRead(m);
             }
 
-            flushInbound(false, newPromise()).syncUninterruptibly();
+            flushInbound(false);
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -381,7 +381,9 @@ public class EmbeddedChannel extends AbstractChannel {
      * @see #writeOneOutbound(Object)
      */
     public Future<Void> writeOneInbound(Object msg) {
-        return writeOneInbound(msg, newPromise());
+        Promise<Void> promise = newPromise();
+        writeOneInbound(msg, promise);
+        return promise;
     }
 
     /**
@@ -390,7 +392,7 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @see #writeOneOutbound(Object, Promise)
      */
-    public Future<Void> writeOneInbound(Object msg, Promise<Void> promise) {
+    public void writeOneInbound(Object msg, Promise<Void> promise) {
         executingStackCnt++;
         try {
             if (checkOpen(true)) {
@@ -400,7 +402,7 @@ public class EmbeddedChannel extends AbstractChannel {
             executingStackCnt--;
             maybeRunPendingTasks();
         }
-        return checkException(promise);
+        checkException(promise);
     }
 
     /**
@@ -409,11 +411,11 @@ public class EmbeddedChannel extends AbstractChannel {
      * @see #flushOutbound()
      */
     public EmbeddedChannel flushInbound() {
-        flushInbound(true, newPromise());
+        flushInbound(true);
         return this;
     }
 
-    private Future<Void> flushInbound(boolean recordException, Promise<Void> promise) {
+    private void flushInbound(boolean recordException) {
         executingStackCnt++;
         try {
             if (checkOpen(recordException)) {
@@ -424,8 +426,7 @@ public class EmbeddedChannel extends AbstractChannel {
             executingStackCnt--;
             maybeRunPendingTasks();
         }
-
-      return checkException(promise);
+        checkException();
     }
 
     /**
@@ -481,7 +482,9 @@ public class EmbeddedChannel extends AbstractChannel {
      * @see #writeOneInbound(Object)
      */
     public Future<Void> writeOneOutbound(Object msg) {
-        return writeOneOutbound(msg, newPromise());
+        Promise<Void> promise = newPromise();
+        writeOneOutbound(msg, promise);
+        return promise;
     }
 
     /**
@@ -490,18 +493,19 @@ public class EmbeddedChannel extends AbstractChannel {
      *
      * @see #writeOneInbound(Object, Promise)
      */
-    public Future<Void> writeOneOutbound(Object msg, Promise<Void> promise) {
+    public void writeOneOutbound(Object msg, Promise<Void> promise) {
         executingStackCnt++;
         try {
             if (checkOpen(true)) {
-                return write(msg, promise);
+                write(msg, promise);
+                return;
             }
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
         }
 
-        return checkException(promise);
+        checkException(promise);
     }
 
     /**
@@ -519,7 +523,7 @@ public class EmbeddedChannel extends AbstractChannel {
             executingStackCnt--;
             maybeRunPendingTasks();
         }
-        checkException(newPromise()).syncUninterruptibly();
+        checkException();
         return this;
     }
 
@@ -607,38 +611,39 @@ public class EmbeddedChannel extends AbstractChannel {
 
     @Override
     public final Future<Void> close() {
-        return close(newPromise());
+        Promise<Void> promise = newPromise();
+        close(promise);
+        return promise;
     }
 
     @Override
     public final Future<Void> disconnect() {
-        return disconnect(newPromise());
+        Promise<Void> promise = newPromise();
+        disconnect(promise);
+        return promise;
     }
 
     @Override
-    public final Future<Void> close(Promise<Void> promise) {
+    public final void close(Promise<Void> promise) {
         // We need to call runPendingTasks() before calling super.close() as there may be something in the queue
         // that needs to be run before the actual close takes place.
         executingStackCnt++;
-        Future<Void> future;
         try {
             runPendingTasks();
-            future = super.close(promise);
+            super.close(promise);
 
             cancelRemainingScheduledTasks = true;
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
         }
-        return future;
     }
 
     @Override
-    public final Future<Void> disconnect(Promise<Void> promise) {
+    public final void disconnect(Promise<Void> promise) {
         executingStackCnt++;
-        Future<Void> future;
         try {
-            future = super.disconnect(promise);
+            super.disconnect(promise);
 
             if (!hasDisconnect) {
                 cancelRemainingScheduledTasks = true;
@@ -647,7 +652,6 @@ public class EmbeddedChannel extends AbstractChannel {
             executingStackCnt--;
             maybeRunPendingTasks();
         }
-        return future;
     }
 
     @Override
@@ -707,10 +711,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
+    public void bind(SocketAddress localAddress, Promise<Void> promise) {
         executingStackCnt++;
         try {
-            return super.bind(localAddress, promise);
+            super.bind(localAddress, promise);
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -718,10 +722,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
+    public void connect(SocketAddress remoteAddress, Promise<Void> promise) {
         executingStackCnt++;
         try {
-            return super.connect(remoteAddress, promise);
+            super.connect(remoteAddress, promise);
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -729,10 +733,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+    public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         executingStackCnt++;
         try {
-            return super.connect(remoteAddress, localAddress, promise);
+            super.connect(remoteAddress, localAddress, promise);
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -740,10 +744,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public Future<Void> deregister(Promise<Void> promise) {
+    public void deregister(Promise<Void> promise) {
         executingStackCnt++;
         try {
-            return super.deregister(promise);
+            super.deregister(promise);
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -774,10 +778,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public Future<Void> write(Object msg, Promise<Void> promise) {
+    public void write(Object msg, Promise<Void> promise) {
         executingStackCnt++;
         try {
-            return super.write(msg, promise);
+            super.write(msg, promise);
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -796,10 +800,10 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
+    public void writeAndFlush(Object msg, Promise<Void> promise) {
         executingStackCnt++;
         try {
-            return super.writeAndFlush(msg, promise);
+            super.writeAndFlush(msg, promise);
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
@@ -926,21 +930,24 @@ public class EmbeddedChannel extends AbstractChannel {
     /**
      * Checks for the presence of an {@link Exception}.
      */
-    private Future<Void> checkException(Promise<Void> promise) {
+    private void checkException(Promise<Void> promise) {
       Throwable t = lastException;
       if (t != null) {
           lastException = null;
-          return promise.setFailure(t);
+          promise.setFailure(t);
+          return;
       }
 
-      return promise.setSuccess(null);
+      promise.setSuccess(null);
     }
 
     /**
      * Check if there was any {@link Throwable} received and if so rethrow it.
      */
     public void checkException() {
-      checkException(newPromise()).syncUninterruptibly();
+        Promise<Void> promise = newPromise();
+        checkException(promise);
+        promise.syncUninterruptibly();
     }
 
     /**

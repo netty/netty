@@ -48,6 +48,6 @@ public abstract class ZlibEncoder extends MessageToByteEncoder<ByteBuf> {
      * The given {@link Promise} will be notified once the operation
      * completes and will also be returned.
      */
-    public abstract Future<Void> close(Promise<Void> promise);
+    public abstract void close(Promise<Void> promise);
 
 }

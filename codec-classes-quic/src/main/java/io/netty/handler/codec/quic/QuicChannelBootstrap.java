@@ -188,17 +188,17 @@ public final class QuicChannelBootstrap {
      * @return {@link Future} which is notified once the operation completes.
      */
     public Future<QuicChannel> connect() {
-        return connect(parent.executor().newPromise());
+        Promise<QuicChannel> promise = parent.executor().newPromise();
+        connect(promise);
+        return promise;
     }
 
     /**
      * Connects a {@link QuicChannel} to the remote peer and notifies the promise once done.
      *
-     * @param promise   the {@link Promise} which is notified once the operations completes.
-     * @return          {@link Future} which is notified once the operation completes.
-
+     * @param promise the {@link Promise} which is notified once the operations completes.
      */
-    public Future<QuicChannel> connect(Promise<QuicChannel> promise) {
+    public void connect(Promise<QuicChannel> promise) {
         if (handler == null && streamHandler == null) {
             throw new IllegalStateException("handler and streamHandler not set");
         }
@@ -239,6 +239,5 @@ public final class QuicChannelBootstrap {
                 });
             }
         });
-        return promise;
     }
 }

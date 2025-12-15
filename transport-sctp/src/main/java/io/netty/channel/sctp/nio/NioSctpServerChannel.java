@@ -33,7 +33,6 @@ import io.netty.channel.nio.NioIoHandle;
 import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.sctp.SctpChannelOption;
 import io.netty.util.NetUtil;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
@@ -188,12 +187,7 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
     }
 
     @Override
-    public Future<Void> bindAddress(InetAddress localAddress) {
-        return bindAddress(localAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> bindAddress(final InetAddress localAddress, final Promise<Void> promise) {
+    public void bindAddress(final InetAddress localAddress, final Promise<Void> promise) {
         if (executor().inEventLoop()) {
             try {
                 javaChannel().bindAddress(localAddress);
@@ -209,16 +203,10 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
                 }
             });
         }
-        return promise;
     }
 
     @Override
-    public Future<Void> unbindAddress(InetAddress localAddress) {
-        return unbindAddress(localAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> unbindAddress(final InetAddress localAddress, final Promise<Void> promise) {
+    public void unbindAddress(final InetAddress localAddress, final Promise<Void> promise) {
         if (executor().inEventLoop()) {
             try {
                 javaChannel().unbindAddress(localAddress);
@@ -234,7 +222,6 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
                 }
             });
         }
-        return promise;
     }
 
     // Unnecessary stuff

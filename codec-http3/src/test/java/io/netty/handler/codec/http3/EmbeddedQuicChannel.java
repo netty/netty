@@ -35,7 +35,6 @@ import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.handler.codec.quic.QuicTransportParameters;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
 
@@ -144,33 +143,33 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     }
 
     @Override
-    public Future<QuicStreamChannel> createStream(QuicStreamType type, ChannelHandler handler,
-                                                  Promise<QuicStreamChannel> promise) {
+    public void createStream(QuicStreamType type, ChannelHandler handler,
+                             Promise<QuicStreamChannel> promise) {
         final AtomicLong streamIdGenerator = attr(streamIdGeneratorKey).get();
-        return promise.setSuccess(new EmbeddedQuicStreamChannel(this, true, type,
+        promise.setSuccess(new EmbeddedQuicStreamChannel(this, true, type,
                 streamIdGenerator.getAndAdd(2), handler));
     }
 
     @Override
-    public Future<Void> close(boolean applicationClose, int error, ByteBuf reason, Promise<Void> promise) {
+    public void close(boolean applicationClose, int error, ByteBuf reason, Promise<Void> promise) {
         closeErrorCodes.add(error);
         if (closed.compareAndSet(false, true)) {
             promise.addListener(__ -> reason.release());
         } else {
             reason.release();
         }
-        return close(promise);
+        close(promise);
     }
 
     @Override
-    public Future<QuicConnectionStats> collectStats(Promise<QuicConnectionStats> promise) {
-        return promise.setFailure(
+    public void collectStats(Promise<QuicConnectionStats> promise) {
+        promise.setFailure(
                 new UnsupportedOperationException("Collect stats not supported for embedded channel."));
     }
 
     @Override
-    public Future<QuicConnectionPathStats> collectPathStats(int i, Promise<QuicConnectionPathStats> promise) {
-        return promise.setFailure(
+    public void collectPathStats(int i, Promise<QuicConnectionPathStats> promise) {
+        promise.setFailure(
                 new UnsupportedOperationException("Collect path stats not supported for embedded channel."));
     }
 

@@ -35,7 +35,6 @@ import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.channel.sctp.SctpNotificationHandler;
 import io.netty.channel.sctp.SctpServerChannel;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -397,12 +396,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    public Future<Void> bindAddress(InetAddress localAddress) {
-        return bindAddress(localAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> bindAddress(final InetAddress localAddress, final Promise<Void> promise) {
+    public void bindAddress(final InetAddress localAddress, final Promise<Void> promise) {
         if (executor().inEventLoop()) {
             try {
                 javaChannel().bindAddress(localAddress);
@@ -418,16 +412,10 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 }
             });
         }
-        return promise;
     }
 
     @Override
-    public Future<Void> unbindAddress(InetAddress localAddress) {
-        return unbindAddress(localAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> unbindAddress(final InetAddress localAddress, final Promise<Void> promise) {
+    public void unbindAddress(final InetAddress localAddress, final Promise<Void> promise) {
         if (executor().inEventLoop()) {
             try {
                 javaChannel().unbindAddress(localAddress);
@@ -443,7 +431,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
                 }
             });
         }
-        return promise;
     }
 
     private final class NioSctpChannelConfig extends DefaultChannelConfig {

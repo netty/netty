@@ -206,6 +206,7 @@ public class WebSocketServerHandshakerFactory {
                 HttpResponseStatus.UPGRADE_REQUIRED, channel.alloc().buffer(0));
         res.headers().set(HttpHeaderNames.SEC_WEBSOCKET_VERSION, WebSocketVersion.V13.toHttpHeaderValue());
         HttpUtil.setContentLength(res, 0);
-        return channel.writeAndFlush(res, promise);
+        channel.writeAndFlush(res, promise);
+        return promise;
     }
 }

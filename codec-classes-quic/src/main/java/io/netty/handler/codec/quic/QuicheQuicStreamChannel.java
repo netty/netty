@@ -130,13 +130,12 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     @Override
-    public Future<Void> updatePriority(QuicStreamPriority priority, Promise<Void> promise) {
+    public void updatePriority(QuicStreamPriority priority, Promise<Void> promise) {
         if (executor().inEventLoop()) {
             updatePriority0(priority, promise);
         } else {
             executor().execute(() -> updatePriority0(priority, promise));
         }
-        return promise;
     }
 
     private void updatePriority0(QuicStreamPriority priority, Promise<Void> promise) {

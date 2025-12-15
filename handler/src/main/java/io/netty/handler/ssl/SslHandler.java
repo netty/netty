@@ -645,29 +645,15 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     }
 
     /**
-     * Use {@link #closeOutbound()}
-     */
-    @Deprecated
-    public Future<Void> close() {
-        return closeOutbound();
-    }
-
-    /**
-     * Use {@link #closeOutbound(Promise)}
-     */
-    @Deprecated
-    public Future<Void> close(Promise<Void> promise) {
-        return closeOutbound(promise);
-    }
-
-    /**
      * Sends an SSL {@code close_notify} message to the specified channel and
      * destroys the underlying {@link SSLEngine}. This will <strong>not</strong> close the underlying
      * {@link Channel}. If you want to also close the {@link Channel} use {@link Channel#close()} or
      * {@link ChannelHandlerContext#close()}
      */
     public Future<Void> closeOutbound() {
-        return closeOutbound(ctx.newPromise());
+        Promise<Void> promise = ctx.newPromise();
+        closeOutbound(promise);
+        return promise;
     }
 
     /**
@@ -676,7 +662,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
      * {@link Channel}. If you want to also close the {@link Channel} use {@link Channel#close()} or
      * {@link ChannelHandlerContext#close()}
      */
-    public Future<Void> closeOutbound(final Promise<Void> promise) {
+    public void closeOutbound(final Promise<Void> promise) {
         final ChannelHandlerContext ctx = this.ctx;
         if (ctx.executor().inEventLoop()) {
             closeOutbound0(promise);
@@ -688,7 +674,6 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                 }
             });
         }
-        return promise;
     }
 
     private void closeOutbound0(Promise<Void> promise) {
@@ -2352,7 +2337,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                         if (!flushFuture.isDone()) {
                             logger.warn("{} Last write attempt timed out; force-closing the connection.",
                                     ctx.channel());
-                            addCloseListener(ctx.close(ctx.newPromise()), promise);
+                            addCloseListener(ctx.close(), promise);
                         }
                     }
                 }, closeNotifyTimeout, TimeUnit.MILLISECONDS);
@@ -2372,7 +2357,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
             if (closeNotifyReadTimeout <= 0) {
                 // Trigger the close in all cases to make sure the promise is notified
                 // See https://github.com/netty/netty/issues/2358
-                addCloseListener(ctx.close(ctx.newPromise()), promise);
+                addCloseListener(ctx.close(), promise);
             } else {
                 final Future<?> closeNotifyReadTimeoutFuture;
 
@@ -2386,7 +2371,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                                         ctx.channel(), closeNotifyReadTimeout);
 
                                 // Do the close now...
-                                addCloseListener(ctx.close(ctx.newPromise()), promise);
+                                addCloseListener(ctx.close(), promise);
                             }
                         }
                     }, closeNotifyReadTimeout, TimeUnit.MILLISECONDS);
@@ -2399,7 +2384,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
                     if (closeNotifyReadTimeoutFuture != null) {
                         closeNotifyReadTimeoutFuture.cancel(false);
                     }
-                    addCloseListener(ctx.close(ctx.newPromise()), promise);
+                    addCloseListener(ctx.close(), promise);
                 });
             }
         });

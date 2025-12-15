@@ -83,18 +83,19 @@ public interface QuicStreamChannel extends Channel {
      * @return          future that is notified once the operation completes.
      */
     default Future<Void> updatePriority(QuicStreamPriority priority) {
-        return updatePriority(priority, newPromise());
+        Promise<Void> promise = newPromise();
+        updatePriority(priority, promise);
+        return promise;
     }
 
     /**
      * Update the priority of the stream. A stream's priority determines the order in which stream data is sent
      * on the wire (streams with lower priority are sent first).
      *
-     * @param priority  the priority.
-     * @param promise   notified once operations completes.
-     * @return          future that is notified once the operation completes.
+     * @param priority the priority.
+     * @param promise  notified once operations completes.
      */
-    Future<Void> updatePriority(QuicStreamPriority priority, Promise<Void> promise);
+    void updatePriority(QuicStreamPriority priority, Promise<Void> promise);
 
     @Override
     QuicChannel parent();

@@ -152,12 +152,14 @@ public class SimpleChannelPool implements ChannelPool {
 
     @Override
     public final Future<Channel> acquire() {
-        return acquire(bootstrap.config().group().next().<Channel>newPromise());
+        Promise<Channel> promise = bootstrap.config().group().next().<Channel>newPromise();
+        acquire(promise);
+        return promise;
     }
 
     @Override
-    public Future<Channel> acquire(final Promise<Channel> promise) {
-        return acquireHealthyFromPoolOrNew(checkNotNull(promise, "promise"));
+    public void acquire(final Promise<Channel> promise) {
+        acquireHealthyFromPoolOrNew(checkNotNull(promise, "promise"));
     }
 
     /**
@@ -257,11 +259,13 @@ public class SimpleChannelPool implements ChannelPool {
 
     @Override
     public final Future<Void> release(Channel channel) {
-        return release(channel, channel.executor().<Void>newPromise());
+        Promise<Void> promise = channel.newPromise();
+        release(channel, promise);
+        return promise;
     }
 
     @Override
-    public Future<Void> release(final Channel channel, final Promise<Void> promise) {
+    public void release(final Channel channel, final Promise<Void> promise) {
         try {
             checkNotNull(channel, "channel");
             checkNotNull(promise, "promise");
@@ -279,7 +283,6 @@ public class SimpleChannelPool implements ChannelPool {
         } catch (Throwable cause) {
             closeAndFail(channel, cause, promise);
         }
-        return promise;
     }
 
     private void doReleaseChannel(Channel channel, Promise<Void> promise) {

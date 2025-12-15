@@ -15,7 +15,6 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
@@ -49,35 +48,36 @@ final class Http2ControlFrameLimitEncoder extends DecoratingHttp2ConnectionEncod
     }
 
     @Override
-    public Future<Void> writeSettingsAck(ChannelHandlerContext ctx, Promise<Void> promise) {
+    public void writeSettingsAck(ChannelHandlerContext ctx, Promise<Void> promise) {
         Promise<Void> newPromise = handleOutstandingControlFrames(ctx, promise);
         if (newPromise == null) {
-            return promise;
+            return;
         }
-        return super.writeSettingsAck(ctx, newPromise);
+        super.writeSettingsAck(ctx, newPromise);
     }
 
     @Override
-    public Future<Void> writePing(ChannelHandlerContext ctx, boolean ack, long data, Promise<Void> promise) {
+    public void writePing(ChannelHandlerContext ctx, boolean ack, long data, Promise<Void> promise) {
         // Only apply the limit to ping acks.
         if (ack) {
             Promise<Void> newPromise = handleOutstandingControlFrames(ctx, promise);
             if (newPromise == null) {
-                return promise;
+                return;
             }
-            return super.writePing(ctx, ack, data, newPromise);
+            super.writePing(ctx, ack, data, newPromise);
+            return;
         }
-        return super.writePing(ctx, ack, data, promise);
+        super.writePing(ctx, ack, data, promise);
     }
 
     @Override
-    public Future<Void> writeRstStream(
+    public void writeRstStream(
             ChannelHandlerContext ctx, int streamId, long errorCode, Promise<Void> promise) {
         Promise<Void> newPromise = handleOutstandingControlFrames(ctx, promise);
         if (newPromise == null) {
-            return promise;
+            return;
         }
-        return super.writeRstStream(ctx, streamId, errorCode, newPromise);
+        super.writeRstStream(ctx, streamId, errorCode, newPromise);
     }
 
     private Promise<Void> handleOutstandingControlFrames(ChannelHandlerContext ctx, Promise<Void> promise) {

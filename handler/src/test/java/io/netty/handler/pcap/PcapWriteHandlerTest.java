@@ -1390,7 +1390,7 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public Future<Void> joinGroup(InetAddress multicastAddress, Promise<Void> future) {
+        public void joinGroup(InetAddress multicastAddress, Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
@@ -1400,7 +1400,7 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public Future<Void> joinGroup(
+        public void joinGroup(
                 InetSocketAddress multicastAddress,
                 NetworkInterface networkInterface,
                 Promise<Void> future) {
@@ -1416,7 +1416,7 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public Future<Void> joinGroup(
+        public void joinGroup(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress source,
@@ -1430,7 +1430,7 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public Future<Void> leaveGroup(InetAddress multicastAddress, Promise<Void> future) {
+        public void leaveGroup(InetAddress multicastAddress, Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
@@ -1440,7 +1440,7 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public Future<Void> leaveGroup(
+        public void leaveGroup(
                 InetSocketAddress multicastAddress,
                 NetworkInterface networkInterface,
                 Promise<Void> future) {
@@ -1456,7 +1456,7 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public Future<Void> leaveGroup(
+        public void leaveGroup(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress source,
@@ -1473,7 +1473,7 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public Future<Void> block(
+        public void block(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress sourceToBlock,
@@ -1487,7 +1487,7 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> future) {
+        public void block(InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
     }

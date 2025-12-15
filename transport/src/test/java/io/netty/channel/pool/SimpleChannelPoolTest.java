@@ -232,7 +232,7 @@ public class SimpleChannelPoolTest {
         Channel channel1 = pool.acquire().get();
         channel1.close().syncUninterruptibly();
         Future<Void> releaseFuture =
-                pool.release(channel1, channel1.executor().<Void>newPromise()).syncUninterruptibly();
+                pool.release(channel1).syncUninterruptibly();
         assertTrue(releaseFuture.isSuccess());
 
         Channel channel2 = pool.acquire().get();

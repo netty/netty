@@ -790,11 +790,12 @@ public class SpdySessionHandler implements ChannelInboundHandler, ChannelOutboun
 
                 // The transfer window size is pre-decremented when sending a data frame downstream.
                 // Close the session on write failures that leave the transfer window in a corrupt state.
-                ctx.writeAndFlush(spdyDataFrame, pendingWrite.promise).addListener(future -> {
+                pendingWrite.promise.addListener(future -> {
                     if (!future.isSuccess()) {
                         issueSessionError(ctx, SpdySessionStatus.INTERNAL_ERROR);
                     }
                 });
+                ctx.writeAndFlush(spdyDataFrame, pendingWrite.promise);
             }
         }
     }

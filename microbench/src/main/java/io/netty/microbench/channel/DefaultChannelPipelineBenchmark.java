@@ -358,10 +358,10 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
         hole.consume(pipeline.fireChannelActive());             // 1
         hole.consume(pipeline.fireChannelRead(MESSAGE));        // 2
         hole.consume(pipeline.fireChannelRead(MESSAGE));        // 3
-        hole.consume(pipeline.write(MESSAGE, promises[index])); // 4
+        pipeline.write(MESSAGE, promises[index]);               // 4
         hole.consume(pipeline.fireChannelRead(MESSAGE));        // 5
         hole.consume(pipeline.fireChannelRead(MESSAGE));        // 6
-        hole.consume(pipeline.write(MESSAGE, promises[index])); // 7
+        pipeline.write(MESSAGE, promises[index]);               // 7
         hole.consume(pipeline.fireChannelReadComplete());       // 8
         hole.consume(pipeline.fireUserEventTriggered(MESSAGE)); // 9
         hole.consume(pipeline.fireChannelWritabilityChanged()); // 10

@@ -254,13 +254,13 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     @Override
-    default Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-        return pipeline().writeAndFlush(msg, promise);
+    default void writeAndFlush(Object msg, Promise<Void> promise) {
+        pipeline().writeAndFlush(msg, promise);
     }
 
     @Override
-    default Future<Void> write(Object msg, Promise<Void> promise) {
-        return pipeline().write(msg, promise);
+    default void write(Object msg, Promise<Void> promise) {
+        pipeline().write(msg, promise);
     }
 
     @Override
@@ -269,33 +269,33 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     @Override
-    default Future<Void> deregister(Promise<Void> promise) {
-        return pipeline().deregister(promise);
+    default void deregister(Promise<Void> promise) {
+        pipeline().deregister(promise);
     }
 
     @Override
-    default Future<Void> close(Promise<Void> promise) {
-        return pipeline().close(promise);
+    default void close(Promise<Void> promise) {
+        pipeline().close(promise);
     }
 
     @Override
-    default Future<Void> disconnect(Promise<Void> promise) {
-        return pipeline().disconnect(promise);
+    default void disconnect(Promise<Void> promise) {
+        pipeline().disconnect(promise);
     }
 
     @Override
-    default Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline().connect(remoteAddress, localAddress, promise);
+    default void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        pipeline().connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    default Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-        return pipeline().connect(remoteAddress, promise);
+    default void connect(SocketAddress remoteAddress, Promise<Void> promise) {
+        pipeline().connect(remoteAddress, promise);
     }
 
     @Override
-    default Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline().bind(localAddress, promise);
+    default void bind(SocketAddress localAddress, Promise<Void> promise) {
+        pipeline().bind(localAddress, promise);
     }
 
     @Override
@@ -349,13 +349,13 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     @Override
-    default Future<Void> register(Promise<Void> promise) {
-        return pipeline().register(promise);
+    default void register(Promise<Void> promise) {
+        pipeline().register(promise);
     }
 
     @Override
-    default Future<Void> shutdown(ChannelShutdownType type, Promise<Void> promise) {
-        return pipeline().shutdown(type, promise);
+    default void shutdown(ChannelShutdownType type, Promise<Void> promise) {
+        pipeline().shutdown(type, promise);
     }
 
     @Override

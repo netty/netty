@@ -106,18 +106,17 @@ public class StreamBufferingEncoderTest {
         when(writer.configuration()).thenReturn(configuration);
         when(configuration.frameSizePolicy()).thenReturn(frameSizePolicy);
         when(frameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
-        when(writer.writeData(any(ChannelHandlerContext.class), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(),
-                any(Promise.class))).thenAnswer(successAnswer());
-        when(writer.writeRstStream(eq(ctx), anyInt(), anyLong(), any(Promise.class))).thenAnswer(
-                successAnswer());
-        when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class),
-                any(Promise.class)))
-                .thenAnswer(successAnswer());
-        when(writer.writeHeaders(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
-            anyInt(), anyBoolean(), any(Promise.class))).thenAnswer(noopAnswer());
-        when(writer.writeHeaders(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class),
-            anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean(), any(Promise.class)))
-            .thenAnswer(noopAnswer());
+        doAnswer(successAnswer()).when(writer).writeData(
+                any(ChannelHandlerContext.class), anyInt(), any(ByteBuf.class), anyInt(),
+                anyBoolean(), any(Promise.class));
+        doAnswer(successAnswer()).when(writer).writeRstStream(eq(ctx), anyInt(), anyLong(), any(Promise.class));
+        doAnswer(successAnswer()).when(writer).writeGoAway(any(ChannelHandlerContext.class),
+                anyInt(), anyLong(), any(ByteBuf.class), any(Promise.class));
+        doAnswer(noopAnswer()).when(writer).writeHeaders(any(ChannelHandlerContext.class),
+                anyInt(), any(Http2Headers.class), anyInt(), anyBoolean(), any(Promise.class));
+        doAnswer(noopAnswer()).when(writer).writeHeaders(any(ChannelHandlerContext.class), anyInt(),
+                any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(), anyInt(),
+                anyBoolean(), any(Promise.class));
 
         connection = new DefaultHttp2Connection(false);
         connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
@@ -278,12 +277,14 @@ public class StreamBufferingEncoderTest {
     public void sendingGoAwayShouldNotFailStreams() {
         setMaxConcurrentStreams(1);
 
-        when(writer.writeHeaders(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class), anyInt(),
-              anyBoolean(), any(Promise.class))).thenAnswer(successAnswer());
-        when(writer.writeHeaders(any(ChannelHandlerContext.class), anyInt(), any(Http2Headers.class), anyInt(),
-              anyShort(), anyBoolean(), anyInt(), anyBoolean(), any(Promise.class))).thenAnswer(successAnswer());
+        doAnswer(successAnswer()).when(writer).writeHeaders(any(ChannelHandlerContext.class), anyInt(),
+                any(Http2Headers.class), anyInt(), anyBoolean(), any(Promise.class));
+        doAnswer(successAnswer()).when(writer).writeHeaders(any(ChannelHandlerContext.class), anyInt(),
+                any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(), anyInt(), anyBoolean(),
+                any(Promise.class));
 
         Future<Void> f1 = encoderWriteHeaders(3, newPromise());
+        assertTrue(f1.isSuccess());
         assertEquals(0, encoder.numBufferedStreams());
         Future<Void> f2 = encoderWriteHeaders(5, newPromise());
         assertEquals(1, encoder.numBufferedStreams());
@@ -295,7 +296,6 @@ public class StreamBufferingEncoderTest {
 
         assertEquals(1, connection.numActiveStreams());
         assertEquals(2, encoder.numBufferedStreams());
-        assertFalse(f1.isDone());
         assertFalse(f2.isDone());
         assertFalse(f3.isDone());
     }
@@ -465,7 +465,8 @@ public class StreamBufferingEncoderTest {
         ByteBuf data = mock(ByteBuf.class);
         Future<Void> f1 = encoderWriteHeaders(3, newPromise());
         assertEquals(1, encoder.numBufferedStreams());
-        Future<Void> f2 = encoder.writeData(ctx, 3, data, 0, false, newPromise());
+        Promise<Void> p2 = newPromise();
+        encoder.writeData(ctx, 3, data, 0, false, p2);
 
         Promise<Void> rstPromise = mock(Promise.class);
         encoder.writeRstStream(ctx, 3, CANCEL.code(), rstPromise);
@@ -473,7 +474,7 @@ public class StreamBufferingEncoderTest {
         assertEquals(0, encoder.numBufferedStreams());
         verify(rstPromise).setSuccess(null);
         assertTrue(f1.isSuccess());
-        assertTrue(f2.isSuccess());
+        assertTrue(p2.isSuccess());
         verify(data).release();
     }
 
@@ -509,8 +510,9 @@ public class StreamBufferingEncoderTest {
 
     private void testStreamId(int nextStreamId) throws Http2Exception {
         connection.local().createStream(nextStreamId, false);
-        Future<Void> channelFuture = encoder.writeData(ctx, nextStreamId, EMPTY_BUFFER, 0, false, newPromise());
-        assertNull(channelFuture.cause());
+        Promise<Void> promise = newPromise();
+        encoder.writeData(ctx, nextStreamId, EMPTY_BUFFER, 0, false, promise);
+        assertNull(promise.cause());
     }
 
     private void setMaxConcurrentStreams(int newValue) {
@@ -569,31 +571,26 @@ public class StreamBufferingEncoderTest {
         }
     }
 
-    private Answer<Future<Void>> successAnswer() {
+    private Answer<Void> successAnswer() {
         return new Answer<>() {
             @Override
-            public Future<Void> answer(InvocationOnMock invocation) throws Throwable {
+            public Void answer(InvocationOnMock invocation) throws Throwable {
                 for (Object a : invocation.getArguments()) {
+                    if (a instanceof Promise) {
+                        ((Promise<?>) a).setSuccess(null);
+                    }
                     ReferenceCountUtil.safeRelease(a);
                 }
-
-                Promise<Void> future = newPromise();
-                future.setSuccess(null);
-                return future;
+                return null;
             }
         };
     }
 
-    private Answer<Future<Void>> noopAnswer() {
+    private Answer<Void> noopAnswer() {
         return new Answer<>() {
             @Override
-            public Future<Void> answer(InvocationOnMock invocation) throws Throwable {
-                for (Object a : invocation.getArguments()) {
-                    if (a instanceof Future<?>) {
-                        return (Future<Void>) a;
-                    }
-                }
-                return newPromise();
+            public Void answer(InvocationOnMock invocation) throws Throwable {
+                return null;
             }
         };
     }

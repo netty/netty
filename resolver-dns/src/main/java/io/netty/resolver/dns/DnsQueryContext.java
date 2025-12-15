@@ -241,12 +241,15 @@ abstract class DnsQueryContext {
 
     private void writeQuery(final DnsQuery query,
                             final boolean flush, Promise<Void> promise) {
-        final Future<Void> writeFuture = flush ? channel.writeAndFlush(query, promise) :
-                channel.write(query, promise);
-        if (writeFuture.isDone()) {
-            onQueryWriteCompletion(queryTimeoutMillis, writeFuture);
+        if (flush) {
+            channel.writeAndFlush(query, promise);
         } else {
-            writeFuture.addListener(future ->
+            channel.write(query, promise);
+        }
+        if (promise.isDone()) {
+            onQueryWriteCompletion(queryTimeoutMillis, promise);
+        } else {
+            promise.addListener(future ->
                     onQueryWriteCompletion(queryTimeoutMillis, future));
         }
     }

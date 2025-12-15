@@ -25,7 +25,6 @@ import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ObjectUtil;
 import net.jpountz.lz4.LZ4Compressor;
 import net.jpountz.lz4.LZ4Exception;
@@ -303,10 +302,10 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
         ctx.flush();
     }
 
-    private Future<Void> finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {
+    private void finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {
         if (finished) {
             promise.setSuccess(null);
-            return promise;
+            return;
         }
         finished = true;
 
@@ -324,7 +323,7 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
 
         footer.writerIndex(idx + HEADER_LENGTH);
 
-        return ctx.writeAndFlush(footer, promise);
+        ctx.writeAndFlush(footer, promise);
     }
 
     /**
@@ -340,7 +339,9 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
      * The returned {@link Future} will be notified once the operation completes.
      */
     public Future<Void> close() {
-        return close(ctx().newPromise());
+        Promise<Void> promise = ctx.newPromise();
+        close(promise);
+        return promise;
     }
 
     /**
@@ -348,28 +349,27 @@ public class Lz4FrameEncoder extends MessageToByteEncoder<ByteBuf> {
      * The given {@link Promise} will be notified once the operation
      * completes and will also be returned.
      */
-    public Future<Void> close(final Promise<Void> promise) {
+    public void close(final Promise<Void> promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
+            finishEncode(ctx, promise);
         } else {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    Future<Void> f = finishEncode(ctx(), promise);
-                    PromiseNotifier.cascade(f, promise);
+                    finishEncode(ctx(), promise);
                 }
             });
-            return promise;
         }
     }
 
     @Override
     public void close(final ChannelHandlerContext ctx, final Promise<Void> promise) {
-        Future<Void> f = finishEncode(ctx, ctx.newPromise());
+        Promise<Void> p = ctx.newPromise();
+        finishEncode(ctx, p);
 
-        EncoderUtil.closeAfterFinishEncode(ctx, f, promise);
+        EncoderUtil.closeAfterFinishEncode(ctx, p, promise);
     }
 
     private ChannelHandlerContext ctx() {

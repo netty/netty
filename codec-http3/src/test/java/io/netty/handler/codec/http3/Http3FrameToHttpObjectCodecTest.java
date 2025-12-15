@@ -765,7 +765,7 @@ public class Http3FrameToHttpObjectCodecTest {
                 new Http3FrameToHttpObjectCodec(false)
         );
 
-        Future<Void> fullPromise = ch.writeOneOutbound(msg, ch.newPromise());
+        Future<Void> fullPromise = ch.writeOneOutbound(msg);
         ch.flushOutbound();
 
         if (headers) {

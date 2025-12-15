@@ -223,7 +223,7 @@ public class FixedChannelPool extends SimpleChannelPool {
     }
 
     @Override
-    public Future<Channel> acquire(final Promise<Channel> promise) {
+    public void acquire(final Promise<Channel> promise) {
         try {
             if (executor.inEventLoop()) {
                 acquire0(promise);
@@ -238,7 +238,6 @@ public class FixedChannelPool extends SimpleChannelPool {
         } catch (Throwable cause) {
             promise.tryFailure(cause);
         }
-        return promise;
     }
 
     private void acquire0(final Promise<Channel> promise) {
@@ -288,7 +287,7 @@ public class FixedChannelPool extends SimpleChannelPool {
     }
 
     @Override
-    public Future<Void> release(final Channel channel, final Promise<Void> promise) {
+    public void release(final Channel channel, final Promise<Void> promise) {
         ObjectUtil.checkNotNull(promise, "promise");
         final Promise<Void> p = executor.newPromise();
         super.release(channel, p.addListener((FutureListener<Void>) future -> {
@@ -317,7 +316,6 @@ public class FixedChannelPool extends SimpleChannelPool {
                 promise.tryFailure(cause);
             }
         }));
-        return promise;
     }
 
     private void decrementAndRunTaskQueue() {

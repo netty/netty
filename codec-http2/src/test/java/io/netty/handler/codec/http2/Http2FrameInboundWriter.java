@@ -49,59 +49,83 @@ final class Http2FrameInboundWriter {
     }
 
     void writeInboundData(int streamId, ByteBuf data, int padding, boolean endStream) {
-        writer.writeData(ctx, streamId, data, padding, endStream, ctx.newPromise()).syncUninterruptibly();
+        Promise<Void> promise = ctx.newPromise();
+        writer.writeData(ctx, streamId, data, padding, endStream, promise);
+        promise.syncUninterruptibly();
     }
 
     void writeInboundHeaders(int streamId, Http2Headers headers,
                          int padding, boolean endStream) {
-        writer.writeHeaders(ctx, streamId, headers, padding, endStream, ctx.newPromise()).syncUninterruptibly();
+        Promise<Void> promise = ctx.newPromise();
+        writer.writeHeaders(ctx, streamId, headers, padding, endStream, promise);
+        promise.syncUninterruptibly();
     }
 
     void writeInboundHeaders(int streamId, Http2Headers headers,
                                int streamDependency, short weight, boolean exclusive, int padding, boolean endStream) {
+        Promise<Void> promise = ctx.newPromise();
         writer.writeHeaders(ctx, streamId, headers, streamDependency,
-                weight, exclusive, padding, endStream, ctx.newPromise()).syncUninterruptibly();
+                weight, exclusive, padding, endStream, promise);
+        promise.syncUninterruptibly();
     }
 
     void writeInboundPriority(int streamId, int streamDependency,
                                 short weight, boolean exclusive) {
+        Promise<Void> promise = ctx.newPromise();
         writer.writePriority(ctx, streamId, streamDependency, weight,
-                exclusive, ctx.newPromise()).syncUninterruptibly();
+                exclusive, promise);
+        promise.syncUninterruptibly();
     }
 
     void writeInboundRstStream(int streamId, long errorCode) {
-        writer.writeRstStream(ctx, streamId, errorCode, ctx.newPromise()).syncUninterruptibly();
+        Promise<Void> promise = ctx.newPromise();
+        writer.writeRstStream(ctx, streamId, errorCode, promise);
+        promise.syncUninterruptibly();
     }
 
     void writeInboundSettings(Http2Settings settings) {
-        writer.writeSettings(ctx, settings, ctx.newPromise()).syncUninterruptibly();
+        Promise<Void> promise = ctx.newPromise();
+        writer.writeSettings(ctx, settings, promise);
+        promise.syncUninterruptibly();
     }
 
     void writeInboundSettingsAck() {
-        writer.writeSettingsAck(ctx, ctx.newPromise()).syncUninterruptibly();
+        Promise<Void> promise = ctx.newPromise();
+        writer.writeSettingsAck(ctx, promise);
+        promise.syncUninterruptibly();
     }
 
     void writeInboundPing(boolean ack, long data) {
-        writer.writePing(ctx, ack, data, ctx.newPromise()).syncUninterruptibly();
+        Promise<Void> promise = ctx.newPromise();
+        writer.writePing(ctx, ack, data, promise);
+        promise.syncUninterruptibly();
     }
 
     void writePushPromise(int streamId, int promisedStreamId,
                                    Http2Headers headers, int padding) {
-           writer.writePushPromise(ctx, streamId, promisedStreamId,
-                   headers, padding, ctx.newPromise()).syncUninterruptibly();
+        Promise<Void> promise = ctx.newPromise();
+        writer.writePushPromise(ctx, streamId, promisedStreamId,
+                   headers, padding, promise);
+        promise.syncUninterruptibly();
     }
 
     void writeInboundGoAway(int lastStreamId, long errorCode, ByteBuf debugData) {
-        writer.writeGoAway(ctx, lastStreamId, errorCode, debugData, ctx.newPromise()).syncUninterruptibly();
+        Promise<Void> promise = ctx.newPromise();
+        writer.writeGoAway(ctx, lastStreamId, errorCode, debugData, promise);
+        promise.syncUninterruptibly();
     }
 
     void writeInboundWindowUpdate(int streamId, int windowSizeIncrement) {
-        writer.writeWindowUpdate(ctx, streamId, windowSizeIncrement, ctx.newPromise()).syncUninterruptibly();
+        Promise<Void> promise = ctx.newPromise();
+        writer.writeWindowUpdate(ctx, streamId, windowSizeIncrement, promise);
+        promise.syncUninterruptibly();
     }
 
     void writeInboundFrame(byte frameType, int streamId,
                              Http2Flags flags, ByteBuf payload) {
-        writer.writeFrame(ctx, frameType, streamId, flags, payload, ctx.newPromise()).syncUninterruptibly();
+        Promise<Void> promise = ctx.newPromise();
+        writer.writeFrame(ctx, frameType, streamId, flags, payload, promise);
+        promise.syncUninterruptibly();
     }
 
     private static final class WriteInboundChannelHandlerContext
@@ -198,8 +222,8 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public Future<Void> shutdown(ChannelShutdownType type, Promise<Void> promise) {
-            return channel.shutdown(type, promise);
+        public void shutdown(ChannelShutdownType type, Promise<Void> promise) {
+            channel.shutdown(type, promise);
         }
 
         @Override
@@ -225,8 +249,8 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public Future<Void> register(Promise<Void> promise) {
-            return channel.register(promise);
+        public void register(Promise<Void> promise) {
+            channel.register(promise);
         }
 
         @Override
@@ -265,47 +289,49 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-            return channel.bind(localAddress, promise);
+        public void bind(SocketAddress localAddress, Promise<Void> promise) {
+            channel.bind(localAddress, promise);
         }
 
         @Override
-        public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-            return channel.connect(remoteAddress, promise);
+        public void connect(SocketAddress remoteAddress, Promise<Void> promise) {
+            channel.connect(remoteAddress, promise);
         }
 
         @Override
-        public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            return channel.connect(remoteAddress, localAddress, promise);
+        public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+            channel.connect(remoteAddress, localAddress, promise);
         }
 
         @Override
-        public Future<Void> disconnect(Promise<Void> promise) {
-            return channel.disconnect(promise);
+        public void disconnect(Promise<Void> promise) {
+            channel.disconnect(promise);
         }
 
         @Override
-        public Future<Void> close(Promise<Void> promise) {
-            return channel.close(promise);
+        public void close(Promise<Void> promise) {
+            channel.close(promise);
         }
 
         @Override
-        public Future<Void> deregister(Promise<Void> promise) {
-            return channel.deregister(promise);
+        public void deregister(Promise<Void> promise) {
+            channel.deregister(promise);
         }
 
         @Override
         public Future<Void> write(Object msg) {
-            return write(msg, newPromise());
+            Promise<Void> promise = newPromise();
+            write(msg, promise);
+            return promise;
         }
 
         @Override
-        public Future<Void> write(Object msg, Promise<Void> promise) {
-            return writeAndFlush(msg, promise);
+        public void write(Object msg, Promise<Void> promise) {
+            writeAndFlush(msg, promise);
         }
 
         @Override
-        public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
+        public void writeAndFlush(Object msg, Promise<Void> promise) {
             try {
                 channel.writeInbound(msg);
                 channel.runPendingTasks();
@@ -313,12 +339,13 @@ final class Http2FrameInboundWriter {
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
-            return promise;
         }
 
         @Override
         public Future<Void> writeAndFlush(Object msg) {
-            return writeAndFlush(msg, newPromise());
+            Promise<Void> promise = newPromise();
+            writeAndFlush(msg, promise);
+            return promise;
         }
 
         @Override

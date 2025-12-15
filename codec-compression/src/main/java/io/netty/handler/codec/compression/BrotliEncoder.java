@@ -24,7 +24,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.AttributeKey;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
@@ -155,7 +154,7 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
         finishEncode(ctx, ctx.newPromise());
     }
 
-    private Future<Void> finishEncode(ChannelHandlerContext ctx, Promise<Void> promise) {
+    private void finishEncode(ChannelHandlerContext ctx, Promise<Void> promise) {
         Writer writer;
 
         if (isSharable) {
@@ -168,13 +167,13 @@ public final class BrotliEncoder extends MessageToByteEncoder<ByteBuf> {
             writer.close();
             this.writer = null;
         }
-        return promise;
     }
 
     @Override
     public void close(final ChannelHandlerContext ctx, final Promise<Void> promise) {
-        Future<Void> f = finishEncode(ctx, ctx.newPromise());
-        EncoderUtil.closeAfterFinishEncode(ctx, f, promise);
+        Promise<Void> p = ctx.newPromise();
+        finishEncode(ctx, p);
+        EncoderUtil.closeAfterFinishEncode(ctx, p, promise);
     }
 
     /**

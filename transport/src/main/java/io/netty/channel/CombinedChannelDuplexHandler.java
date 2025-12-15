@@ -502,39 +502,39 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
-        public Future<Void> register(Promise<Void> promise) {
-            return ctx.register(promise);
+        public void register(Promise<Void> promise) {
+            ctx.register(promise);
         }
 
         @Override
-        public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-            return ctx.bind(localAddress, promise);
+        public void bind(SocketAddress localAddress, Promise<Void> promise) {
+            ctx.bind(localAddress, promise);
         }
 
         @Override
-        public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-            return ctx.connect(remoteAddress, promise);
+        public void connect(SocketAddress remoteAddress, Promise<Void> promise) {
+            ctx.connect(remoteAddress, promise);
         }
 
         @Override
-        public Future<Void> connect(
+        public void connect(
                 SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-            return ctx.connect(remoteAddress, localAddress, promise);
+            ctx.connect(remoteAddress, localAddress, promise);
         }
 
         @Override
-        public Future<Void> disconnect(Promise<Void> promise) {
-            return ctx.disconnect(promise);
+        public void disconnect(Promise<Void> promise) {
+            ctx.disconnect(promise);
         }
 
         @Override
-        public Future<Void> close(Promise<Void> promise) {
-            return ctx.close(promise);
+        public void close(Promise<Void> promise) {
+            ctx.close(promise);
         }
 
         @Override
-        public Future<Void> deregister(Promise<Void> promise) {
-            return ctx.deregister(promise);
+        public void deregister(Promise<Void> promise) {
+            ctx.deregister(promise);
         }
 
         @Override
@@ -549,8 +549,8 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
-        public Future<Void> write(Object msg, Promise<Void> promise) {
-            return ctx.write(msg, promise);
+        public void write(Object msg, Promise<Void> promise) {
+            ctx.write(msg, promise);
         }
 
         @Override
@@ -560,8 +560,8 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
-        public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-            return ctx.writeAndFlush(msg, promise);
+        public void writeAndFlush(Object msg, Promise<Void> promise) {
+            ctx.writeAndFlush(msg, promise);
         }
 
         @Override
@@ -570,8 +570,8 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
-        public Future<Void> shutdown(ChannelShutdownType type, Promise<Void> promise) {
-            return ctx.shutdown(type, promise);
+        public void shutdown(ChannelShutdownType type, Promise<Void> promise) {
+            ctx.shutdown(type, promise);
         }
 
         @Override

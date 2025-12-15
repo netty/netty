@@ -20,7 +20,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
-import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.SystemPropertyUtil;
@@ -178,22 +177,21 @@ public class JdkZlibEncoder extends ZlibEncoder {
 
     @Override
     public Future<Void> close() {
-        return close(ctx().newPromise());
+        Promise<Void> promise = ctx().channel().newPromise();
+        close(promise);
+        return promise;
     }
 
     @Override
-    public Future<Void> close(final Promise<Void> promise) {
+    public void close(final Promise<Void> promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
-            return finishEncode(ctx, promise);
+            finishEncode(ctx, promise);
         } else {
-            final Promise<Void> p = ctx.newPromise();
             executor.execute(() -> {
-                Future<Void> f = finishEncode(ctx(), p);
-                PromiseNotifier.cascade(f, promise);
+                finishEncode(ctx(), promise);
             });
-            return p;
         }
     }
 
@@ -301,14 +299,15 @@ public class JdkZlibEncoder extends ZlibEncoder {
 
     @Override
     public void close(final ChannelHandlerContext ctx, final Promise<Void> promise) {
-        Future<Void> f = finishEncode(ctx, ctx.newPromise());
-        EncoderUtil.closeAfterFinishEncode(ctx, f, promise);
+        Promise<Void> p = ctx().newPromise();
+        finishEncode(ctx, p);
+        EncoderUtil.closeAfterFinishEncode(ctx, p, promise);
     }
 
-    private Future<Void> finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {
+    private void finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {
         if (finished) {
             promise.setSuccess(null);
-            return promise;
+            return;
         }
 
         finished = true;
@@ -336,7 +335,7 @@ public class JdkZlibEncoder extends ZlibEncoder {
             footer.writeIntLE(uncBytes);
         }
         deflater.end();
-        return ctx.writeAndFlush(footer, promise);
+        ctx.writeAndFlush(footer, promise);
     }
 
     private void deflate(ByteBuf out) {

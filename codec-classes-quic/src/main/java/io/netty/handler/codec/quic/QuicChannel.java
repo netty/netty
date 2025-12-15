@@ -143,7 +143,9 @@ public interface QuicChannel extends Channel {
      * @return          the {@link Future} that will be notified once the operation completes.
      */
     default Future<QuicStreamChannel> createStream(QuicStreamType type, @Nullable ChannelHandler handler) {
-        return createStream(type, handler, executor().newPromise());
+        Promise<QuicStreamChannel> promise = executor().newPromise();
+        createStream(type, handler, promise);
+        return promise;
     }
 
     /**
@@ -151,14 +153,13 @@ public interface QuicChannel extends Channel {
      * The {@link ChannelHandler} (if not {@code null}) is added to the {@link io.netty.channel.ChannelPipeline} of the
      * {@link QuicStreamChannel} automatically.
      *
-     * @param type      the {@link QuicStreamType} of the {@link QuicStreamChannel}.
-     * @param handler   the {@link ChannelHandler} that will be added to the {@link QuicStreamChannel}s
-     *                  {@link io.netty.channel.ChannelPipeline} during the stream creation.
-     * @param promise   the {@link Promise} that will be notified once the operation completes.
-     * @return          the {@link Future} that will be notified once the operation completes.
+     * @param type    the {@link QuicStreamType} of the {@link QuicStreamChannel}.
+     * @param handler the {@link ChannelHandler} that will be added to the {@link QuicStreamChannel}s
+     *                {@link io.netty.channel.ChannelPipeline} during the stream creation.
+     * @param promise the {@link Promise} that will be notified once the operation completes.
      */
-    Future<QuicStreamChannel> createStream(QuicStreamType type, @Nullable ChannelHandler handler,
-                                           Promise<QuicStreamChannel> promise);
+    void createStream(QuicStreamType type, @Nullable ChannelHandler handler,
+                      Promise<QuicStreamChannel> promise);
 
     /**
      * Returns a new {@link QuicStreamChannelBootstrap} which makes it easy to bootstrap new {@link QuicStreamChannel}s
@@ -182,20 +183,21 @@ public interface QuicChannel extends Channel {
      * @return                  the future that is notified.
      */
     default Future<Void> close(boolean applicationClose, int error, ByteBuf reason) {
-        return close(applicationClose, error, reason, newPromise());
+        Promise<Void> promise = newPromise();
+        close(applicationClose, error, reason, promise);
+        return promise;
     }
 
     /**
      * Close the {@link QuicChannel}
      *
-     * @param applicationClose  {@code true} if an application close should be used,
-     *                          {@code false} if a normal close should be used.
-     * @param error             the application error number, or {@code 0} if no special error should be signaled.
-     * @param reason            the reason for the closure (which may be an empty {@link ByteBuf}.
-     * @param promise           the {@link Promise} that will be notified.
-     * @return                  the future that is notified.
+     * @param applicationClose {@code true} if an application close should be used,
+     *                         {@code false} if a normal close should be used.
+     * @param error            the application error number, or {@code 0} if no special error should be signaled.
+     * @param reason           the reason for the closure (which may be an empty {@link ByteBuf}.
+     * @param promise          the {@link Promise} that will be notified.
      */
-    Future<Void> close(boolean applicationClose, int error, ByteBuf reason, Promise<Void> promise);
+    void close(boolean applicationClose, int error, ByteBuf reason, Promise<Void> promise);
 
     /**
      * Collects statistics about the connection and notifies the {@link Future} once done.
@@ -203,16 +205,17 @@ public interface QuicChannel extends Channel {
      * @return the {@link Future} that is notified once the stats were collected.
      */
     default Future<QuicConnectionStats> collectStats() {
-        return collectStats(executor().newPromise());
+        Promise<QuicConnectionStats> promise = executor().newPromise();
+        collectStats(promise);
+        return promise;
     }
 
     /**
      * Collects statistics about the connection and notifies the {@link Promise} once done.
      *
-     * @param   promise the {@link Promise} that is notified once the stats were collected.
-     * @return          the {@link Future} that is notified once the stats were collected.
+     * @param promise the {@link Promise} that is notified once the stats were collected.
      */
-    Future<QuicConnectionStats> collectStats(Promise<QuicConnectionStats> promise);
+    void collectStats(Promise<QuicConnectionStats> promise);
 
     /**
      * Collects statistics about the path of the connection and notifies the {@link Future} once done.
@@ -220,16 +223,17 @@ public interface QuicChannel extends Channel {
      * @return the {@link Future} that is notified once the stats were collected.
      */
     default Future<QuicConnectionPathStats> collectPathStats(int pathIdx) {
-        return collectPathStats(pathIdx, executor().newPromise());
+        Promise<QuicConnectionPathStats> promise = executor().newPromise();
+        collectPathStats(pathIdx, promise);
+        return promise;
     }
 
     /**
      * Collects statistics about the path of the connection and notifies the {@link Promise} once done.
      *
-     * @param   promise the {@link Promise} that is notified once the stats were collected.
-     * @return          the {@link Future} that is notified once the stats were collected.
+     * @param promise the {@link Promise} that is notified once the stats were collected.
      */
-    Future<QuicConnectionPathStats> collectPathStats(int pathIdx, Promise<QuicConnectionPathStats> promise);
+    void collectPathStats(int pathIdx, Promise<QuicConnectionPathStats> promise);
 
     /**
      * Creates a new {@link QuicChannelBootstrap} that can be used to create and connect new {@link QuicChannel}s to

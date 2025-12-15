@@ -76,7 +76,9 @@ public interface SctpServerChannel extends ServerChannel {
      * The Channel must be bound and yet to be connected.
      */
     default Future<Void> bindAddress(InetAddress localAddress) {
-        return bindAddress(localAddress, newPromise());
+        Promise<Void> promise = newPromise();
+        bindAddress(localAddress, promise);
+        return promise;
     }
 
     /**
@@ -85,14 +87,16 @@ public interface SctpServerChannel extends ServerChannel {
      * <p>
      * Will notify the given {@link Promise} and return a {@link Future}
      */
-    Future<Void> bindAddress(InetAddress localAddress, Promise<Void> promise);
+    void bindAddress(InetAddress localAddress, Promise<Void> promise);
 
     /**
      * Unbind the address from channel's multi-homing address list.
      * The address should be added already in multi-homing address list.
      */
     default Future<Void> unbindAddress(InetAddress localAddress) {
-        return  unbindAddress(localAddress, newPromise());
+        Promise<Void> promise = newPromise();
+        unbindAddress(localAddress, promise);
+        return promise;
     }
 
     /**
@@ -101,5 +105,5 @@ public interface SctpServerChannel extends ServerChannel {
      * <p>
      * Will notify the given {@link Promise} and return a {@link Future}
      */
-    Future<Void> unbindAddress(InetAddress localAddress, Promise<Void> promise);
+    void unbindAddress(InetAddress localAddress, Promise<Void> promise);
 }

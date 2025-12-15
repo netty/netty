@@ -37,7 +37,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    Future<Void> register(Promise<Void> promise);
+    void register(Promise<Void> promise);
 
     /**
      * Request to bind to the given {@link SocketAddress} and notify the {@link Future} once the operation
@@ -49,7 +49,9 @@ public interface ChannelOutboundInvoker {
      * {@link Channel}.
      */
     default Future<Void> bind(SocketAddress localAddress) {
-        return bind(localAddress, newPromise());
+        Promise<Void> promise = newPromise();
+        bind(localAddress, promise);
+        return promise;
     }
 
     /**
@@ -66,7 +68,9 @@ public interface ChannelOutboundInvoker {
      * {@link Channel}.
      */
     default Future<Void> connect(SocketAddress remoteAddress) {
-        return connect(remoteAddress, newPromise());
+        Promise<Void> promise = newPromise();
+        connect(remoteAddress, promise);
+        return promise;
     }
 
     /**
@@ -80,7 +84,9 @@ public interface ChannelOutboundInvoker {
      * {@link Channel}.
      */
     default Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return connect(remoteAddress, localAddress, newPromise());
+        Promise<Void> promise = newPromise();
+        connect(remoteAddress, localAddress, promise);
+        return promise;
     }
 
     /**
@@ -93,7 +99,9 @@ public interface ChannelOutboundInvoker {
      * {@link Channel}.
      */
     default Future<Void> disconnect() {
-        return disconnect(newPromise());
+        Promise<Void> promise = newPromise();
+        disconnect(promise);
+        return promise;
     }
 
     /**
@@ -109,7 +117,9 @@ public interface ChannelOutboundInvoker {
      * {@link Channel}.
      */
     default Future<Void> close() {
-        return close(newPromise());
+        Promise<Void> promise = newPromise();
+        close(promise);
+        return promise;
     }
 
     /**
@@ -124,7 +134,9 @@ public interface ChannelOutboundInvoker {
      *
      */
     default Future<Void> deregister() {
-        return deregister(newPromise());
+        Promise<Void> promise = newPromise();
+        deregister(promise);
+        return promise;
     }
 
     /**
@@ -140,7 +152,9 @@ public interface ChannelOutboundInvoker {
      * {@link Channel}.
      */
     default Future<Void> register() {
-        return register(newPromise());
+        Promise<Void> promise = newPromise();
+        register(promise);
+        return promise;
     }
 
     /**
@@ -154,7 +168,7 @@ public interface ChannelOutboundInvoker {
      * called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    Future<Void> bind(SocketAddress localAddress, Promise<Void> promise);
+    void bind(SocketAddress localAddress, Promise<Void> promise);
 
     /**
      * Request to connect to the given {@link SocketAddress} and notify the {@link Future} once the operation
@@ -172,7 +186,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise);
+    void connect(SocketAddress remoteAddress, Promise<Void> promise);
 
     /**
      * Request to connect to the given {@link SocketAddress} while bind to the localAddress and notify the
@@ -186,7 +200,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise);
+    void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise);
 
     /**
      * Request to disconnect from the remote peer and notify the {@link Future} once the operation completes,
@@ -199,7 +213,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    Future<Void> disconnect(Promise<Void> promise);
+    void disconnect(Promise<Void> promise);
 
     /**
      * Request to close the {@link Channel} and notify the {@link Future} once the operation completes,
@@ -214,7 +228,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    Future<Void> close(Promise<Void> promise);
+    void close(Promise<Void> promise);
 
     /**
      * Request to deregister from the previous assigned {@link EventExecutor} and notify the
@@ -228,7 +242,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    Future<Void> deregister(Promise<Void> promise);
+    void deregister(Promise<Void> promise);
 
     /**
      * Request to Read data from the {@link Channel} into the first inbound buffer, triggers an
@@ -250,7 +264,9 @@ public interface ChannelOutboundInvoker {
      * once you want to request to flush all pending data to the actual transport.
      */
     default Future<Void> write(Object msg) {
-        return write(msg, newPromise());
+        Promise<Void> promise = newPromise();
+        write(msg, promise);
+        return promise;
     }
 
     /**
@@ -258,7 +274,7 @@ public interface ChannelOutboundInvoker {
      * This method will not request to actual flush, so be sure to call {@link #flush()}
      * once you want to request to flush all pending data to the actual transport.
      */
-    Future<Void> write(Object msg, Promise<Void> promise);
+    void write(Object msg, Promise<Void> promise);
 
     /**
      * Request to flush all pending messages via this ChannelOutboundInvoker.
@@ -268,13 +284,15 @@ public interface ChannelOutboundInvoker {
     /**
      * Shortcut for call {@link #write(Object, Promise)} and {@link #flush()}.
      */
-    Future<Void> writeAndFlush(Object msg, Promise<Void> promise);
+    void writeAndFlush(Object msg, Promise<Void> promise);
 
     /**
      * Shortcut for call {@link #write(Object)} and {@link #flush()}.
      */
     default Future<Void> writeAndFlush(Object msg) {
-        return writeAndFlush(msg, newPromise());
+        Promise<Void> promise = newPromise();
+        writeAndFlush(msg, promise);
+        return promise;
     }
 
     /**
@@ -295,7 +313,9 @@ public interface ChannelOutboundInvoker {
      * {@link Channel}.
      */
     default Future<Void> shutdown(ChannelShutdownType type) {
-        return shutdown(type, newPromise());
+        Promise<Void> promise = newPromise();
+        shutdown(type, promise);
+        return promise;
     }
 
     /**
@@ -315,7 +335,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    Future<Void> shutdown(ChannelShutdownType type, Promise<Void> promise);
+    void shutdown(ChannelShutdownType type, Promise<Void> promise);
 
     /**
      * Return a new {@link Promise}.
