@@ -32,7 +32,7 @@ import org.openjdk.jmh.annotations.Warmup;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.SplittableRandom;
+import java.util.Random;
 
 import static io.netty.handler.codec.http.HttpConstants.CR;
 import static io.netty.handler.codec.http.HttpConstants.LF;
@@ -77,7 +77,7 @@ public class HttpRequestEncoderInsertBenchmark extends AbstractMicrobenchmark {
             allCombinations[i] = sb.toString();
         }
         uris = new String[samples];
-        SplittableRandom rand = new SplittableRandom(42);
+        Random rand = new Random(42);
         for (int i = 0; i < uris.length; i++) {
             uris[i] = allCombinations[rand.nextInt(allCombinations.length)];
         }
