@@ -123,4 +123,10 @@ public interface SctpChannel extends Channel {
      * Will notify the given {@link ChannelPromise} and return a {@link ChannelFuture}
      */
     ChannelFuture unbindAddress(InetAddress localAddress, ChannelPromise promise);
+
+    @Override
+    SctpChannel read();
+
+    @Override
+    SctpChannel flush();
 }

@@ -28,6 +28,7 @@ import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.ServerChannel;
 import io.netty.channel.ServerChannelRecvByteBufAllocator;
 import io.netty.channel.nio.AbstractNioMessageChannel;
 import io.netty.channel.nio.NioIoHandle;
@@ -78,6 +79,18 @@ public class NioSctpServerChannel extends AbstractNioMessageChannel
         this.childEventLoopGroup =
                 validateEventLoopGroup(childEventLoopGroup, "childEventLoopGroup", NioIoHandle.class);
         config = new NioSctpServerChannelConfig(this, javaChannel());
+    }
+
+    @Override
+    public ServerChannel read() {
+        super.read();
+        return this;
+    }
+
+    @Override
+    public ServerChannel flush() {
+        super.flush();
+        return this;
     }
 
     @Override

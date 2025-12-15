@@ -218,6 +218,18 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
         return config;
     }
 
+    @Override
+    public ServerSocketChannel read() {
+        super.read();
+        return this;
+    }
+
+    @Override
+    public ServerSocketChannel flush() {
+        super.flush();
+        return this;
+    }
+
     private Channel newChildChannel(EventLoop eventLoop, int fd, byte[] address, int offset, int len) {
         if (socket.protocolFamily() ==  SocketProtocolFamily.UNIX) {
             return new EpollSocketChannel(eventLoop, this, new LinuxSocket(fd, SocketProtocolFamily.UNIX));

@@ -16,6 +16,7 @@
 package io.netty.channel.socket;
 
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelShutdownDirection;
 
 /**
  * A socket {@link Channel}.
@@ -49,4 +50,13 @@ import io.netty.channel.Channel;
 public interface SocketChannel extends Channel {
     @Override
     ServerSocketChannel parent();
+
+    @Override
+    boolean isShutdown(ChannelShutdownDirection direction);
+
+    @Override
+    SocketChannel read();
+
+    @Override
+    SocketChannel flush();
 }

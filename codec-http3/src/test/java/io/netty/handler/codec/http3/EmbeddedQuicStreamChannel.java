@@ -92,13 +92,13 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     @Override
-    public QuicStreamChannel flush() {
+    public EmbeddedQuicStreamChannel flush() {
         super.flush();
         return this;
     }
 
     @Override
-    public QuicStreamChannel read() {
+    public EmbeddedQuicStreamChannel read() {
         super.read();
         return this;
     }

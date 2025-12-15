@@ -695,14 +695,15 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public Channel flush() {
+    public EmbeddedChannel flush() {
         executingStackCnt++;
         try {
-            return super.flush();
+            super.flush();
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
         }
+        return this;
     }
 
     @Override
@@ -753,11 +754,12 @@ public class EmbeddedChannel extends AbstractChannel {
     public Channel read() {
         executingStackCnt++;
         try {
-            return super.read();
+            super.read();
         } finally {
             executingStackCnt--;
             maybeRunPendingTasks();
         }
+        return this;
     }
 
     @Override

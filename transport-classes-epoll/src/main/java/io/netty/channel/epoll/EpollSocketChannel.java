@@ -133,6 +133,18 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
     }
 
     @Override
+    public SocketChannel read() {
+        super.read();
+        return this;
+    }
+
+    @Override
+    public SocketChannel flush() {
+        super.flush();
+        return this;
+    }
+
+    @Override
     protected boolean isAllowHalfClosure() {
         return this.config.isAllowHalfClosure();
     }

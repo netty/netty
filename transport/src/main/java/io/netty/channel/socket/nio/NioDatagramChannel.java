@@ -23,7 +23,6 @@ import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
@@ -587,6 +586,18 @@ public final class NioDatagramChannel
             promise.setFailure(e);
         }
         return promise;
+    }
+
+    @Override
+    public io.netty.channel.socket.DatagramChannel read() {
+        super.read();
+        return this;
+    }
+
+    @Override
+    public io.netty.channel.socket.DatagramChannel flush() {
+        super.flush();
+        return this;
     }
 
     @Override

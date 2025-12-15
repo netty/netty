@@ -187,4 +187,10 @@ public interface DatagramChannel extends Channel {
      */
     ChannelFuture block(
             InetAddress multicastAddress, InetAddress sourceToBlock, ChannelPromise future);
+
+    @Override
+    DatagramChannel read();
+
+    @Override
+    DatagramChannel flush();
 }
