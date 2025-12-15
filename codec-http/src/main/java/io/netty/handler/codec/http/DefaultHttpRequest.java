@@ -92,7 +92,7 @@ public class DefaultHttpRequest extends DefaultHttpMessage implements HttpReques
         this.method = checkNotNull(method, "method");
         this.uri = checkNotNull(uri, "uri");
         if (validateRequestLine) {
-            HttpUtil.validateRequestLineTokens(httpVersion, method, uri);
+            HttpUtil.validateRequestLineTokens(method, uri);
         }
     }
 

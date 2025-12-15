@@ -40,7 +40,6 @@ public final class HttpUtil {
     private static final AsciiString CHARSET_EQUALS = AsciiString.of(HttpHeaderValues.CHARSET + "=");
     private static final AsciiString SEMICOLON = AsciiString.cached(";");
     private static final String COMMA_STRING = String.valueOf(COMMA);
-    private static final long ILLEGAL_REQUEST_LINE_TOKEN_OCTET_MASK = 1L << '\n' | 1L << '\r' | 1L << ' ';
 
     private HttpUtil() { }
 
@@ -76,7 +75,7 @@ public final class HttpUtil {
         return "*".equals(uri);
     }
 
-    static void validateRequestLineTokens(HttpVersion httpVersion, HttpMethod method, String uri) {
+    static void validateRequestLineTokens(HttpMethod method, String uri) {
         // The HttpVersion class does its own validation, and it's not possible for subclasses to circumvent it.
         // The HttpMethod class does its own validation, but subclasses might circumvent it.
         if (method.getClass() != HttpMethod.class) {
