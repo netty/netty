@@ -40,7 +40,6 @@ public final class HttpUtil {
     private static final AsciiString CHARSET_EQUALS = AsciiString.of(HttpHeaderValues.CHARSET + "=");
     private static final AsciiString SEMICOLON = AsciiString.cached(";");
     private static final String COMMA_STRING = String.valueOf(COMMA);
-    private static final long ILLEGAL_REQUEST_LINE_TOKEN_OCTET_MASK = 1L << '\n' | 1L << '\r' | 1L << ' ';
 
     private HttpUtil() { }
 
@@ -76,7 +75,7 @@ public final class HttpUtil {
         return "*".equals(uri);
     }
 
-    static void validateRequestLineTokens(HttpVersion httpVersion, HttpMethod method, String uri) {
+    static void validateRequestLineTokens(HttpMethod method, String uri) {
         // The HttpVersion class does its own validation, and it's not possible for subclasses to circumvent it.
         // The HttpMethod class does its own validation, but subclasses might circumvent it.
         if (method.getClass() != HttpMethod.class) {
@@ -104,31 +103,20 @@ public final class HttpUtil {
      * otherwise {@code false}.
      */
     public static boolean isEncodingSafeStartLineToken(CharSequence token) {
-        int i = 0;
         int lenBytes = token.length();
-        int modulo = lenBytes % 4;
-        int lenInts = modulo == 0 ? lenBytes : lenBytes - modulo;
-        for (; i < lenInts; i += 4) {
-            long chars = charMask(token, i) |
-                    charMask(token, i + 1) |
-                    charMask(token, i + 2) |
-                    charMask(token, i + 3);
-            if ((chars & ILLEGAL_REQUEST_LINE_TOKEN_OCTET_MASK) != 0) {
-                return false;
-            }
-        }
-        for (; i < lenBytes; i++) {
-            long ch = charMask(token, i);
-            if ((ch & ILLEGAL_REQUEST_LINE_TOKEN_OCTET_MASK) != 0) {
-                return false;
+        for (int i = 0; i < lenBytes; i++) {
+            char ch = token.charAt(i);
+            // this is to help AOT compiled code which cannot profile the switch
+            if (ch <= ' ') {
+                switch (ch) {
+                    case '\n':
+                    case '\r':
+                    case ' ':
+                        return false;
+                }
             }
         }
         return true;
-    }
-
-    private static long charMask(CharSequence token, int i) {
-        char c = token.charAt(i);
-        return c < 64 ? 1L << c : 0;
     }
 
     /**
