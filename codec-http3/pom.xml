@@ -130,7 +130,7 @@
       <artifactId>netty-codec-native-quic</artifactId>
       <version>${project.version}</version>
       <classifier>${netty.quic.classifier}</classifier>
-      <scope>runtime</scope>
+      <scope>provided</scope>
       <optional>true</optional>
     </dependency>
     <dependency>

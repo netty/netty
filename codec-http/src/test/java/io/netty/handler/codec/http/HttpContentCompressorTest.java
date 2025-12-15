@@ -15,11 +15,33 @@
  */
 package io.netty.handler.codec.http;
 
+import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
+import java.nio.charset.StandardCharsets;
+import java.util.UUID;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
+
 import com.aayushatharva.brotli4j.decoder.DecoderJNI;
 import com.aayushatharva.brotli4j.decoder.DirectDecompress;
+
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufHolder;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.Unpooled;
@@ -43,27 +65,7 @@ import io.netty.handler.codec.compression.CompressionOptions;
 import io.netty.handler.codec.compression.ZlibWrapper;
 import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
-
-import java.util.UUID;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.TimeUnit;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIf;
-
-import java.nio.charset.StandardCharsets;
-
-import static io.netty.handler.codec.http.HttpHeadersTestUtils.of;
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
+import io.netty.util.ReferenceCounted;
 
 public class HttpContentCompressorTest {
 
@@ -338,20 +340,20 @@ public class HttpContentCompressorTest {
         chunk.release();
 
         chunk = ch.readOutbound();
-        assertEquals("ca2fca4901000000ffff", ByteBufUtil.hexDump(chunk.content()));
-        chunk.release();
+        assertEquals("ca2fca4901000000ffff", ByteBufUtil.hexDump(((ByteBufHolder) chunk).content()));
+        ((ReferenceCounted) chunk).release();
 
         chunk = ch.readOutbound();
-        assertEquals("0300c2a99ae70c000000", ByteBufUtil.hexDump(chunk.content()));
+        assertEquals("0300c2a99ae70c000000", ByteBufUtil.hexDump(((ByteBufHolder) chunk).content()));
         assertInstanceOf(HttpContent.class, chunk);
-        chunk.release();
+        ((ReferenceCounted) chunk).release();
 
         chunk = ch.readOutbound();
-        assertFalse(chunk.content().isReadable());
+        assertFalse(((ByteBufHolder) chunk).content().isReadable());
         assertInstanceOf(LastHttpContent.class, chunk);
         assertEquals("Netty", ((LastHttpContent) chunk).trailingHeaders().get(of("X-Test")));
         assertEquals(DecoderResult.SUCCESS, chunk.decoderResult());
-        chunk.release();
+        ((ReferenceCounted) chunk).release();
 
         assertNull(ch.readOutbound());
     }

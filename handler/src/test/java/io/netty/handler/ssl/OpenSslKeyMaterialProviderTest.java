@@ -16,6 +16,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.ReferenceCounted;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.internal.tcnative.SSL;
 import io.netty.util.ReferenceCountUtil;
@@ -157,7 +158,7 @@ public class OpenSslKeyMaterialProviderTest {
             OpenSslPrivateKey sslPrivateKey;
             try {
                 pemKey = PemPrivateKey.toPEM(ByteBufAllocator.DEFAULT, true, privateKey);
-                pkeyBio = ReferenceCountedOpenSslContext.toBIO(ByteBufAllocator.DEFAULT, pemKey.retain());
+                pkeyBio = ReferenceCountedOpenSslContext.toBIO((io.netty.buffer.ByteBufAllocator) ByteBufAllocator.DEFAULT, pemKey.retain());
                 sslPrivateKey = new OpenSslPrivateKey(SSL.parsePrivateKey(pkeyBio, null));
             } finally {
                 ReferenceCountUtil.safeRelease(pemKey);
@@ -170,14 +171,14 @@ public class OpenSslKeyMaterialProviderTest {
             OpenSslKeyMaterialProvider provider = new OpenSslKeyMaterialProvider(
                     new SingleKeyManager(keyAlias, sslPrivateKey, certChain),
                     null);
-            OpenSslKeyMaterial material = provider.chooseKeyMaterial(ByteBufAllocator.DEFAULT, keyAlias);
+            OpenSslKeyMaterial material = provider.chooseKeyMaterial((io.netty.buffer.ByteBufAllocator) ByteBufAllocator.DEFAULT, keyAlias);
             assertNotNull(material);
             assertEquals(2, sslPrivateKey.refCnt());
             assertEquals(1, material.refCnt());
             assertTrue(material.release());
             assertEquals(1, sslPrivateKey.refCnt());
             // Can get material multiple times from the same key
-            material = provider.chooseKeyMaterial(ByteBufAllocator.DEFAULT, keyAlias);
+            material = provider.chooseKeyMaterial((io.netty.buffer.ByteBufAllocator) ByteBufAllocator.DEFAULT, keyAlias);
             assertNotNull(material);
             assertEquals(2, sslPrivateKey.refCnt());
             assertTrue(material.release());
