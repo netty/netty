@@ -19,8 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import net.jpountz.lz4.LZ4Exception;
 import net.jpountz.lz4.LZ4Factory;
-import net.jpountz.lz4.LZ4FastDecompressor;
+import net.jpountz.lz4.LZ4SafeDecompressor;
 
+import java.nio.ByteBuffer;
 import java.util.zip.Checksum;
 
 import static io.netty.handler.codec.compression.Lz4Constants.BLOCK_TYPE_COMPRESSED;
@@ -62,7 +63,7 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
     /**
      * Underlying decompressor in use.
      */
-    private LZ4FastDecompressor decompressor;
+    private LZ4SafeDecompressor decompressor;
 
     /**
      * Underlying checksum calculator in use.
@@ -91,7 +92,7 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
 
     Lz4FrameDecompressor(Builder builder, ByteBufAllocator allocator) {
         super(allocator);
-        this.decompressor = builder.factory.fastDecompressor();
+        this.decompressor = builder.factory.safeDecompressor();
         this.checksum = builder.checksum == null ? null : ByteBufChecksum.wrapChecksum(builder.checksum);
     }
 
@@ -185,9 +186,15 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
                 case BLOCK_TYPE_COMPRESSED:
                     uncompressed = allocator.buffer(decompressedLength, decompressedLength);
 
+                    ByteBuffer inBuffer = CompressionUtil.safeReadableNioBuffer(in);
+                    ByteBuffer outBuffer = uncompressed.internalNioBuffer(uncompressed.writerIndex(), decompressedLength);
+                    if (inBuffer.remaining() < compressedLength || outBuffer.remaining() < decompressedLength) {
+                        throw new DecompressionException("Weird compressedLength");
+                    }
                     try {
-                        decompressor.decompress(CompressionUtil.safeReadableNioBuffer(in),
-                                uncompressed.internalNioBuffer(uncompressed.writerIndex(), decompressedLength));
+                        decompressor.decompress(
+                                inBuffer, inBuffer.position(), compressedLength,
+                                outBuffer, outBuffer.position(), decompressedLength);
                     } catch (LZ4Exception e) {
                         throw new DecompressionException(e);
                     }
@@ -219,7 +226,7 @@ public final class Lz4FrameDecompressor extends InputBufferingDecompressor {
     }
 
     public static final class Builder extends AbstractDecompressorBuilder {
-        private LZ4Factory factory = LZ4Factory.fastestJavaInstance();
+        private LZ4Factory factory = LZ4Factory.fastestInstance();
         private Checksum checksum;
 
         Builder() {
