@@ -25,7 +25,7 @@ import jdk.jfr.Name;
 @Description("Triggered when a memory chunk is prepared for re-use by an allocator")
 final class ReturnChunkEvent extends AbstractChunkEvent {
     static final String NAME = "io.netty.ReturnChunk";
-    private static final FreeChunkEvent INSTANCE = new FreeChunkEvent();
+    private static final ReturnChunkEvent INSTANCE = new ReturnChunkEvent();
 
     /**
      * Statically check if this event is enabled.

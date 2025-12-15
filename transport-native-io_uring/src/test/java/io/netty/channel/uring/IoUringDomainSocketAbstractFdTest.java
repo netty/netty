@@ -13,9 +13,13 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package io.netty.channel.uring;
 
-/**
- * SVM substitutions for classes that will cause trouble while compiling
- * into native image.
- */
-package io.netty.buffer.svm;
+import java.net.SocketAddress;
+
+public class IoUringDomainSocketAbstractFdTest extends IoUringDomainSocketFdTest {
+    @Override
+    protected SocketAddress newSocketAddress() {
+        return IoUringSocketTestPermutation.newAbstractSocketAddress();
+    }
+}

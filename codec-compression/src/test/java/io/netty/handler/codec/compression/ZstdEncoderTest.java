@@ -22,13 +22,17 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.util.CharsetUtil;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -43,6 +47,14 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
         when(ctx.alloc()).thenReturn(ByteBufAllocator.DEFAULT);
     }
 
+    public static ByteBuf[] hugeData() {
+        final byte[] bytesHuge = new byte[36 * 1024 * 1024];
+        ByteBuf heap = Unpooled.wrappedBuffer(bytesHuge);
+        ByteBuf direct = Unpooled.directBuffer(bytesHuge.length);
+        direct.writeBytes(bytesHuge);
+        return new ByteBuf[] {heap, direct};
+    }
+
     @Override
     public EmbeddedChannel createChannel() {
         return new EmbeddedChannel(new ZstdEncoder());
@@ -51,6 +63,16 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     @ParameterizedTest
     @MethodSource("largeData")
     public void testCompressionOfLargeBatchedFlow(final ByteBuf data) throws Exception {
+        testCompressionOfLargeDataBatchedFlow(data);
+    }
+
+    @ParameterizedTest
+    @MethodSource("hugeData")
+    public void testCompressionOfHugeBatchedFlow(final ByteBuf data) throws Exception {
+        testCompressionOfLargeDataBatchedFlow(data);
+    }
+
+    private void testCompressionOfLargeDataBatchedFlow(final ByteBuf data) throws Exception {
         final int dataLength = data.readableBytes();
         int written = 0;
 
@@ -73,6 +95,18 @@ public class ZstdEncoderTest extends AbstractEncoderTest {
     @MethodSource("smallData")
     public void testCompressionOfSmallBatchedFlow(final ByteBuf data) throws Exception {
         testCompressionOfBatchedFlow(data);
+    }
+
+    @Test
+    public void testCompressionOfTinyData() throws Exception {
+        ByteBuf data = Unpooled.copiedBuffer("Hello, World", CharsetUtil.UTF_8);
+        assertTrue(channel.writeOutbound(data));
+        assertTrue(channel.finish());
+
+        ByteBuf out = channel.readOutbound();
+        assertThat(out.readableBytes()).isPositive();
+        out.release();
+        assertNull(channel.readOutbound());
     }
 
     @Override

@@ -55,7 +55,7 @@ final class CompletionQueue {
 
     CompletionQueue(ByteBuffer kHead, ByteBuffer kTail, int ringMask, int ringEntries, ByteBuffer kflags,
                     ByteBuffer completionQueueArray, int ringSize, long ringAddress,
-                    int ringFd, int ringCapacity, int cqeLength) {
+                    int ringFd, int ringCapacity, int cqeLength, boolean extraCqeDataNeeded) {
         this.khead = kHead;
         this.ktail = kTail;
         this.completionQueueArray = completionQueueArray;
@@ -69,19 +69,18 @@ final class CompletionQueue {
         this.ringMask = ringMask;
         ringHead = (int) INT_HANDLE.getVolatile(kHead, 0);
 
-        if (cqeLength == Native.CQE32_SIZE) {
+        if (extraCqeDataNeeded) {
             // Let's create the slices up front to reduce GC-pressure and also ensure that the user
             // can not escape the memory range.
+            // We slice every Native.CQE_SIZE to support IORING_SETUP_CQE32 and IORING_SETUP_CQE_MIXED.
             this.extraCqeData = new ByteBuffer[ringEntries];
             for (int i = 0; i < ringEntries; i++) {
-                int position = i * cqeLength + Native.CQE_SIZE;
+                int position = i * cqeLength;
                 completionQueueArray.position(position).limit(position + Native.CQE_SIZE);
                 extraCqeData[i] = completionQueueArray.slice();
                 completionQueueArray.clear();
             }
-            completionQueueArray.clear();
         } else {
-            assert cqeLength == Native.CQE_SIZE;
             this.extraCqeData = null;
         }
     }
@@ -126,19 +125,30 @@ final class CompletionQueue {
             int i = 0;
             while (ringHead != tail) {
                 int cqeIdx = cqeIdx(ringHead, ringMask);
-                int cqePosition = cqeIdx *  cqeLength;
+                int cqePosition = cqeIdx * cqeLength;
 
                 long udata = completionQueueArray.getLong(cqePosition + CQE_USER_DATA_FIELD);
                 int res = completionQueueArray.getInt(cqePosition + CQE_RES_FIELD);
                 int flags = completionQueueArray.getInt(cqePosition + CQE_FLAGS_FIELD);
 
                 ringHead++;
-
-                i++;
-                if (!callback.handle(res, flags, udata, extraCqeData(cqeIdx))) {
-                    // Stop processing. as the callback can not handle any more completions for now,
-                    break;
+                final ByteBuffer extraCqeData;
+                if ((flags & Native.IORING_CQE_F_32) != 0) {
+                    extraCqeData = extraCqeData(cqeIdx + 1);
+                    // We used mixed mode and this was a 32 byte CQE, let's increment the head once more.
+                    ringHead++;
+                } else if (cqeLength == Native.CQE32_SIZE) {
+                    extraCqeData = extraCqeData(cqeIdx + 1);
+                } else {
+                    extraCqeData = null;
                 }
+                // Check if we should just skip it.
+                if ((flags & Native.IORING_CQE_F_SKIP) == 0) {
+                    i++;
+
+                    callback.handle(res, flags, udata, extraCqeData);
+                }
+
                 if (ringHead == tail) {
                     // Let's fetch the tail one more time as it might have changed because a completion might have
                     // triggered a submission (io_uring_enter). This can happen as we automatically submit once we
@@ -175,7 +185,10 @@ final class CompletionQueue {
                 long udata = completionQueueArray.getLong(cqePosition + CQE_USER_DATA_FIELD);
                 int res = completionQueueArray.getInt(cqePosition + CQE_RES_FIELD);
                 int flags = completionQueueArray.getInt(cqePosition + CQE_FLAGS_FIELD);
-
+                if ((flags & Native.IORING_CQE_F_32) != 0) {
+                    // We used mixed mode and this was a 32 byte CQE, let's increment the head once more.
+                    head++;
+                }
                 sb.add("(res=" + res).add(", flags=" + flags).add(", udata=" + udata).add(")");
             }
         }

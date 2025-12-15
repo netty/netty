@@ -173,13 +173,23 @@ public final class OpenSsl {
             boolean useKeyManagerFactory = false;
             boolean tlsv13Supported = false;
             String[] namedGroups = DEFAULT_NAMED_GROUPS;
+
+            String versionString = versionString();
+            IS_BORINGSSL = "BoringSSL".equals(versionString);
+            IS_AWSLC = versionString != null && versionString.startsWith("AWS-LC");
+
             Set<String> defaultConvertedNamedGroups = new LinkedHashSet<>(namedGroups.length);
+            if (IS_BORINGSSL || IS_AWSLC) {
+                // BoringSSL and AWS-LC both support the hybrid-post-quantum X25519MLKEM768 key exchange.
+                // When we enable this at the first preference *in addition to* all the other existing groups,
+                // then it will be used by default when the peer supports it, without compromising compatibility
+                // for peers that don't support it.
+                defaultConvertedNamedGroups.add("X25519MLKEM768");
+            }
             for (String group : namedGroups) {
                 defaultConvertedNamedGroups.add(GroupsConverter.toOpenSsl(group));
             }
 
-            IS_BORINGSSL = "BoringSSL".equals(versionString());
-            IS_AWSLC = versionString().startsWith("AWS-LC");
             if (IS_BORINGSSL) {
                 EXTRA_SUPPORTED_TLS_1_3_CIPHERS = new String [] { "TLS_AES_128_GCM_SHA256",
                         "TLS_AES_256_GCM_SHA384" ,
@@ -187,7 +197,7 @@ public final class OpenSsl {
 
                 StringBuilder ciphersBuilder = new StringBuilder(128);
                 for (String cipher: EXTRA_SUPPORTED_TLS_1_3_CIPHERS) {
-                    ciphersBuilder.append(cipher).append(":");
+                    ciphersBuilder.append(cipher).append(':');
                 }
                 ciphersBuilder.setLength(ciphersBuilder.length() - 1);
                 EXTRA_SUPPORTED_TLS_1_3_CIPHERS_STRING = ciphersBuilder.toString();

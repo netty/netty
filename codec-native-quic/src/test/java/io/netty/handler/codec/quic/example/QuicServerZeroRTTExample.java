@@ -25,7 +25,9 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
@@ -49,7 +51,7 @@ public final class QuicServerZeroRTTExample {
         QuicSslContext context = QuicSslContextBuilder.forServer(
                 selfSignedCertificate.privateKey(), null, selfSignedCertificate.certificate())
                 .applicationProtocols("http/0.9").earlyData(true).build();
-        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         ChannelHandler codec = new QuicServerCodecBuilder().sslContext(context)
                 .maxIdleTimeout(5000, TimeUnit.MILLISECONDS)
                 // Configure some limits for the maximal number of streams (and the data) that we want to handle.

@@ -13,23 +13,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package io.netty.buffer.svm;
+package io.netty.channel.uring;
 
-import com.oracle.svm.core.annotate.Alias;
-import com.oracle.svm.core.annotate.RecomputeFieldValue;
-import com.oracle.svm.core.annotate.TargetClass;
+import io.netty.bootstrap.Bootstrap;
+import io.netty.bootstrap.ServerBootstrap;
+import io.netty.testsuite.transport.TestsuitePermutation;
 
-@TargetClass(className = "io.netty.buffer.AdaptivePoolingAllocator$Chunk")
-final class AdaptivePoolingAllocatorSubstitution {
-    private AdaptivePoolingAllocatorSubstitution() {
+import java.net.SocketAddress;
+import java.util.List;
+
+public class IoUringDomainSocketAbstractEchoTest extends IoUringSocketEchoTest {
+    @Override
+    protected SocketAddress newSocketAddress() {
+        return IoUringSocketTestPermutation.newAbstractSocketAddress();
     }
 
-    @Alias
-    @RecomputeFieldValue(
-            kind = RecomputeFieldValue.Kind.FieldOffset,
-            declClassName = "io.netty.buffer.AdaptivePoolingAllocator$Chunk",
-            name = "refCnt"
-    )
-    public static long REFCNT_FIELD_OFFSET;
-
+    @Override
+    protected List<TestsuitePermutation.BootstrapComboFactory<ServerBootstrap, Bootstrap>> newFactories() {
+        return IoUringSocketTestPermutation.INSTANCE.domainSocket();
+    }
 }

@@ -21,6 +21,7 @@ import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -50,7 +51,7 @@ public class EpollSocketChannelConfigTest {
     @BeforeAll
     public static void beforeClass() {
         rand = new Random();
-        group = new EpollEventLoopGroup(1);
+        group = new MultiThreadIoEventLoopGroup(1, EpollIoHandler.newFactory());
     }
 
     @AfterAll

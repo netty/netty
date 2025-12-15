@@ -40,6 +40,7 @@ public final class IoUring {
     private static final boolean IORING_POLL_ADD_MULTISHOT_SUPPORTED;
     private static final boolean IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED;
     private static final boolean IORING_SETUP_SUBMIT_ALL_SUPPORTED;
+    private static final boolean IORING_SETUP_CQE_MIXED_SUPPORTED;
     private static final boolean IORING_SETUP_CQ_SIZE_SUPPORTED;
     private static final boolean IORING_SETUP_SINGLE_ISSUER_SUPPORTED;
     private static final boolean IORING_SETUP_DEFER_TASKRUN_SUPPORTED;
@@ -71,6 +72,7 @@ public final class IoUring {
         boolean pollAddMultishotSupported = false;
         boolean registerIowqWorkersSupported = false;
         boolean submitAllSupported = false;
+        boolean cqeMixedSupported = false;
         boolean setUpCqSizeSupported = false;
         boolean singleIssuerSupported = false;
         boolean deferTaskrunSupported = false;
@@ -114,6 +116,7 @@ public final class IoUring {
                         pollAddMultishotSupported = Native.isPollAddMultiShotSupported(ioUringProbe);
                         registerIowqWorkersSupported = Native.isRegisterIoWqWorkerSupported(ringBuffer.fd());
                         submitAllSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SUBMIT_ALL);
+                        cqeMixedSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_CQE_MIXED);
                         setUpCqSizeSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_CQSIZE);
                         singleIssuerSupported = Native.ioUringSetupSupportsFlags(Native.IORING_SETUP_SINGLE_ISSUER);
                         // IORING_SETUP_DEFER_TASKRUN requires to also set IORING_SETUP_SINGLE_ISSUER.
@@ -140,39 +143,7 @@ public final class IoUring {
         } catch (Throwable t) {
             cause = t;
         }
-        if (cause != null) {
-            if (logger.isTraceEnabled()) {
-                logger.debug("IoUring support is not available using kernel {}", kernelVersion, cause);
-            } else if (logger.isDebugEnabled()) {
-                logger.debug("IoUring support is not available using kernel {}: {}", kernelVersion, cause.getMessage());
-            }
-        } else {
-            if (logger.isDebugEnabled()) {
-                logger.debug("IoUring support is available using kernel {} (" +
-                        "CQE_F_SOCK_NONEMPTY_SUPPORTED={}, " +
-                        "SPLICE_SUPPORTED={}, " +
-                        "ACCEPT_NO_WAIT_SUPPORTED={}, " +
-                        "ACCEPT_MULTISHOT_SUPPORTED={}, " +
-                        "POLL_ADD_MULTISHOT_SUPPORTED={} " +
-                        "RECV_MULTISHOT_SUPPORTED={}, " +
-                        "IORING_RECVSEND_BUNDLE_SUPPORTED={}, " +
-                        "REGISTER_IOWQ_MAX_WORKERS_SUPPORTED={}, " +
-                        "SETUP_SUBMIT_ALL_SUPPORTED={}, " +
-                        "SETUP_SINGLE_ISSUER_SUPPORTED={}, " +
-                        "SETUP_DEFER_TASKRUN_SUPPORTED={}, " +
-                        "REGISTER_BUFFER_RING_SUPPORTED={}, " +
-                        "REGISTER_BUFFER_RING_INC_SUPPORTED={}, " +
-                        "SEND_ZC_SUPPORTED={}, " +
-                        "SENDMSG_ZC_SUPPORTED={}" +
-                        ")", kernelVersion, socketNonEmptySupported, spliceSupported, acceptSupportNoWait,
-                        acceptMultishotSupported, pollAddMultishotSupported, recvMultishotSupported,
-                        recvsendBundleSupported, registerIowqWorkersSupported, submitAllSupported,
-                        singleIssuerSupported, deferTaskrunSupported,
-                        registerBufferRingSupported, registerBufferRingIncSupported,
-                        sendZcSupported, sendmsgZcSupported
-                );
-            }
-        }
+        // Assign static finals first so printFeatures() (no-arg) can read them.
         UNAVAILABILITY_CAUSE = cause;
         IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED = socketNonEmptySupported;
         IORING_SPLICE_SUPPORTED = spliceSupported;
@@ -185,6 +156,7 @@ public final class IoUring {
         IORING_POLL_ADD_MULTISHOT_SUPPORTED = pollAddMultishotSupported;
         IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED = registerIowqWorkersSupported;
         IORING_SETUP_SUBMIT_ALL_SUPPORTED = submitAllSupported;
+        IORING_SETUP_CQE_MIXED_SUPPORTED = cqeMixedSupported;
         IORING_SETUP_CQ_SIZE_SUPPORTED = setUpCqSizeSupported;
         IORING_SETUP_SINGLE_ISSUER_SUPPORTED = singleIssuerSupported;
         IORING_SETUP_DEFER_TASKRUN_SUPPORTED = deferTaskrunSupported;
@@ -212,6 +184,18 @@ public final class IoUring {
                     SystemPropertyUtil.getInt("io.netty.iouring.cqSize", 4096));
         } else {
             DEFAULT_CQ_SIZE = DISABLE_SETUP_CQ_SIZE;
+        }
+        // Now that all static fields are assigned, emit the debug log using the shared printFeatures()
+        if (cause != null) {
+            if (logger.isTraceEnabled()) {
+                logger.debug("IoUring support is not available using kernel {}", kernelVersion, cause);
+            } else if (logger.isDebugEnabled()) {
+                logger.debug("IoUring support is not available using kernel {}: {}", kernelVersion, cause.getMessage());
+            }
+        } else {
+            if (logger.isDebugEnabled()) {
+                logger.debug("IoUring support is available using kernel {}: {}", kernelVersion, supportedFeatures());
+            }
         }
     }
 
@@ -302,6 +286,10 @@ public final class IoUring {
         return IORING_SETUP_SUBMIT_ALL_SUPPORTED;
     }
 
+    static boolean isSetupCqeMixedSupported() {
+        return IORING_SETUP_CQE_MIXED_SUPPORTED;
+    }
+
     static boolean isSetupSingleIssuerSupported() {
         return IORING_SETUP_SINGLE_ISSUER_SUPPORTED;
     }
@@ -387,6 +375,47 @@ public final class IoUring {
 
     public static Throwable unavailabilityCause() {
         return UNAVAILABILITY_CAUSE;
+    }
+
+    private static String supportedFeatures() {
+        if (!isAvailable()) {
+            return "";
+        }
+        return "CQE_F_SOCK_NONEMPTY_SUPPORTED=" + IORING_CQE_F_SOCK_NONEMPTY_SUPPORTED
+                + ", SPLICE_SUPPORTED=" + IORING_SPLICE_SUPPORTED
+                + ", ACCEPT_NO_WAIT_SUPPORTED=" + IORING_ACCEPT_NO_WAIT_SUPPORTED
+                + ", ACCEPT_MULTISHOT_SUPPORTED=" + IORING_ACCEPT_MULTISHOT_SUPPORTED
+                + ", POLL_ADD_MULTISHOT_SUPPORTED=" + IORING_POLL_ADD_MULTISHOT_SUPPORTED
+                + ", RECV_MULTISHOT_SUPPORTED=" + IORING_RECV_MULTISHOT_SUPPORTED
+                + ", IORING_RECVSEND_BUNDLE_SUPPORTED=" + IORING_RECVSEND_BUNDLE_SUPPORTED
+                + ", REGISTER_IOWQ_MAX_WORKERS_SUPPORTED=" + IORING_REGISTER_IOWQ_MAX_WORKERS_SUPPORTED
+                + ", SETUP_SUBMIT_ALL_SUPPORTED=" + IORING_SETUP_SUBMIT_ALL_SUPPORTED
+                + ", SETUP_CQE_MIXED_SUPPORTED=" + IORING_SETUP_CQE_MIXED_SUPPORTED
+                + ", SETUP_CQ_SIZE_SUPPORTED=" + IORING_SETUP_CQ_SIZE_SUPPORTED
+                + ", SETUP_SINGLE_ISSUER_SUPPORTED=" + IORING_SETUP_SINGLE_ISSUER_SUPPORTED
+                + ", SETUP_DEFER_TASKRUN_SUPPORTED=" + IORING_SETUP_DEFER_TASKRUN_SUPPORTED
+                + ", SETUP_NO_SQARRAY_SUPPORTED=" + IORING_SETUP_NO_SQARRAY_SUPPORTED
+                + ", REGISTER_BUFFER_RING_SUPPORTED=" + IORING_REGISTER_BUFFER_RING_SUPPORTED
+                + ", REGISTER_BUFFER_RING_INC_SUPPORTED=" + IORING_REGISTER_BUFFER_RING_INC_SUPPORTED
+                + ", SEND_ZC_SUPPORTED=" + IORING_SEND_ZC_SUPPORTED
+                + ", SENDMSG_ZC_SUPPORTED=" + IORING_SENDMSG_ZC_SUPPORTED;
+    }
+
+    /**
+     * Returns a string representation of the io_uring support and feature set. This mirrors the
+     * debug logging output that reports each individual feature's availability.
+     */
+    public static String featureString() {
+        if (!isAvailable()) {
+            Throwable t = unavailabilityCause();
+            return "IoUring unavailable: " + (t == null ? "unknown cause" : t.toString());
+        }
+        return "IoUring features: " + supportedFeatures();
+    }
+
+    @Override
+    public String toString() {
+        return featureString();
     }
 
     private IoUring() {

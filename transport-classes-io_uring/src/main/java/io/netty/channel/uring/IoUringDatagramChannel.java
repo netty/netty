@@ -35,6 +35,9 @@ import io.netty.channel.unix.Socket;
 import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -48,6 +51,9 @@ import java.nio.channels.UnresolvedAddressException;
 import static io.netty.channel.unix.Errors.ioResult;
 
 public final class IoUringDatagramChannel extends AbstractIoUringChannel implements DatagramChannel {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(IoUringDatagramChannel.class);
+    private static final boolean IP_MULTICAST_ALL =
+            SystemPropertyUtil.getBoolean("io.netty.channel.iouring.ipMulticastAll", false);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
@@ -58,6 +64,12 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
 
     private final IoUringDatagramChannelConfig config;
     private volatile boolean connected;
+
+    static {
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.channel.iouring.ipMulticastAll: {}", IP_MULTICAST_ALL);
+        }
+    }
 
     // These buffers are used for msghdr, iov, sockaddr_in / sockaddr_in6 when doing recvmsg / sendmsg
     //
@@ -103,6 +115,14 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     private IoUringDatagramChannel(LinuxSocket fd, boolean active) {
         // Always use a blocking fd and so make use of fast-poll.
         super(null, fd, active);
+
+        // Configure IP_MULTICAST_ALL - disable by default to match the behaviour of NIO.
+        try {
+            fd.setIpMulticastAll(IP_MULTICAST_ALL);
+        } catch (IOException e) {
+            logger.debug("Failed to set IP_MULTICAST_ALL to {}", IP_MULTICAST_ALL, e);
+        }
+
         config = new IoUringDatagramChannelConfig(this);
     }
 

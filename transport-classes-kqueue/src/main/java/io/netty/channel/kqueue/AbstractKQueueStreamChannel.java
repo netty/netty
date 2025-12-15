@@ -33,6 +33,7 @@ import io.netty.channel.socket.DuplexChannel;
 import io.netty.channel.unix.IovArray;
 import io.netty.channel.unix.SocketWritableByteChannel;
 import io.netty.channel.unix.UnixChannelUtil;
+import io.netty.util.LeakPresenceDetector;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
@@ -591,7 +592,10 @@ public abstract class AbstractKQueueStreamChannel extends AbstractKQueueChannel 
 
                 // If oom will close the read event, release connection.
                 // See https://github.com/netty/netty/issues/10434
-                if (close || cause instanceof OutOfMemoryError || cause instanceof IOException) {
+                if (close ||
+                        cause instanceof OutOfMemoryError ||
+                        cause instanceof LeakPresenceDetector.AllocationProhibitedException ||
+                        cause instanceof IOException) {
                     shutdownInput(false);
                 }
             }

@@ -214,12 +214,13 @@ final class Native {
     static final byte IORING_OP_FIXED_FD_INSTALL = 54;
     static final byte IORING_OP_FTRUNCATE = 55;
     static final byte IORING_OP_BIND = 56;
-    static final byte IORING_CQE_F_BUFFER = 1 << 0;
-    static final byte IORING_CQE_F_MORE = 1 << 1;
-    static final byte IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
-    static final byte IORING_CQE_F_NOTIF = 1 << 3;
-    static final byte IORING_CQE_F_BUF_MORE = 1 << 4;
-
+    static final int IORING_CQE_F_BUFFER = 1 << 0;
+    static final int IORING_CQE_F_MORE = 1 << 1;
+    static final int IORING_CQE_F_SOCK_NONEMPTY = 1 << 2;
+    static final int IORING_CQE_F_NOTIF = 1 << 3;
+    static final int IORING_CQE_F_BUF_MORE = 1 << 4;
+    static final int IORING_CQE_F_SKIP = 1 << 5;
+    static final int IORING_CQE_F_32 = 1 << 15;
     static final int IORING_SETUP_CQSIZE = 1 << 3;
     static final int IORING_SETUP_CLAMP = 1 << 4;
 
@@ -230,6 +231,7 @@ final class Native {
     static final int IORING_SETUP_SINGLE_ISSUER = 1 << 12;
     static final int IORING_SETUP_DEFER_TASKRUN = 1 << 13;
     static final int IORING_SETUP_NO_SQARRAY = 1 << 16;
+    static final int IORING_SETUP_CQE_MIXED = 1 << 18;
     static final int IORING_CQE_BUFFER_SHIFT = 16;
 
     static final short IORING_POLL_ADD_MULTI = 1 << 0;
@@ -244,6 +246,8 @@ final class Native {
     static final short IORING_ACCEPT_MULTISHOT = 1 << 0;
     static final short IORING_ACCEPT_DONTWAIT = 1 << 1;
     static final short IORING_ACCEPT_POLL_FIRST = 1 << 2;
+
+    static final short IORING_NOP_CQE32 = 1 << 5;
 
     static final int IORING_FEAT_NODROP = 1 << 1;
     static final int IORING_FEAT_SUBMIT_STABLE = 1 << 2;
@@ -378,6 +382,11 @@ final class Native {
         if (IoUring.isIoringSetupNoSqarraySupported()) {
             flags  |= Native.IORING_SETUP_NO_SQARRAY;
         }
+
+        // Use IORING_SETUP_CQE_MIXED by default if supported so we can support any OP in the future.
+        if (IoUring.isSetupCqeMixedSupported()) {
+            flags |= Native.IORING_SETUP_CQE_MIXED;
+        }
         return flags;
     }
 
@@ -401,6 +410,7 @@ final class Native {
         int cqringFd = (int) values[8];
         int cqringCapacity = (int) values[9];
         int cqeLength = (setupFlags & IORING_SETUP_CQE32) == 0 ? CQE_SIZE : CQE32_SIZE;
+        boolean extraCqeDataNeeded = (setupFlags & (IORING_SETUP_CQE32 | IORING_SETUP_CQE_MIXED)) != 0;
         CompletionQueue completionQueue = new CompletionQueue(
                 Buffer.wrapMemoryAddressWithNativeOrder(cqkhead, Integer.BYTES),
                 Buffer.wrapMemoryAddressWithNativeOrder(cqktail, Integer.BYTES),
@@ -411,7 +421,7 @@ final class Native {
                 cqringSize,
                 cqringAddress,
                 cqringFd,
-                cqringCapacity, cqeLength);
+                cqringCapacity, cqeLength, extraCqeDataNeeded);
 
         long sqkhead = values[10];
         long sqktail = values[11];
@@ -588,7 +598,7 @@ final class Native {
         return true;
     }
 
-    static native boolean ioUringSetupSupportsFlags(int setupFlags);;
+    static native boolean ioUringSetupSupportsFlags(int setupFlags);
     private static native long[] ioUringSetup(int entries, int cqeSize, int setupFlags);
 
     static IoUringProbe ioUringProbe(int ringfd) {
