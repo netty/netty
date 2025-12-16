@@ -548,24 +548,15 @@ final class AdaptivePoolingAllocator {
         private static final int MIN_SEGMENTS_PER_CHUNK = 32;
         private final int segmentSize;
         private final int chunkSize;
-        // this is stored from big to small segment offsets
-        private final int[] segmentOffsets;
 
         private SizeClassChunkControllerFactory(int segmentSize) {
             this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
             chunkSize = Math.max(MIN_CHUNK_SIZE, segmentSize * MIN_SEGMENTS_PER_CHUNK);
-            final int segmentsCount = chunkSize / segmentSize;
-            segmentOffsets = new int[segmentsCount];
-            int segmentOffset = 0;
-            for (int i = segmentsCount - 1; i >= 0; i--) {
-                segmentOffsets[i] = segmentOffset;
-                segmentOffset += segmentSize;
-            }
         }
 
         @Override
         public ChunkController create(MagazineGroup group) {
-            return new SizeClassChunkController(group, segmentSize, chunkSize, segmentOffsets);
+            return new SizeClassChunkController(group, segmentSize, chunkSize);
         }
     }
 
@@ -575,14 +566,38 @@ final class AdaptivePoolingAllocator {
         private final int segmentSize;
         private final int chunkSize;
         private final ChunkRegistry chunkRegistry;
-        private final int[] segmentOffsets;
 
-        private SizeClassChunkController(MagazineGroup group, int segmentSize, int chunkSize, int[] segmentOffsets) {
+        private SizeClassChunkController(MagazineGroup group, int segmentSize, int chunkSize) {
             chunkAllocator = group.chunkAllocator;
             this.segmentSize = segmentSize;
             this.chunkSize = chunkSize;
             chunkRegistry = group.allocator.chunkRegistry;
-            this.segmentOffsets = segmentOffsets;
+        }
+
+        private MpscIntQueue createEmptyFreeList() {
+            return MpscIntQueue.create(chunkSize / segmentSize, SizeClassedChunk.FREE_LIST_EMPTY);
+        }
+
+        private MpscIntQueue createFreeList() {
+            final int segmentsCount = chunkSize / segmentSize;
+            final MpscIntQueue freeList = MpscIntQueue.create(segmentsCount, SizeClassedChunk.FREE_LIST_EMPTY);
+            int segmentOffset = 0;
+            for (int i = 0; i < segmentsCount; i++) {
+                freeList.offer(segmentOffset);
+                segmentOffset += segmentSize;
+            }
+            return freeList;
+        }
+
+        private IntStack createLocalFreeList() {
+            final int segmentsCount = chunkSize / segmentSize;
+            int segmentOffset = chunkSize;
+            int[] offsets = new int[segmentsCount];
+            for (int i = 0; i < segmentsCount; i++) {
+                segmentOffset -= segmentSize;
+                offsets[i] = segmentOffset;
+            }
+            return new IntStack(offsets);
         }
 
         @Override
@@ -600,8 +615,7 @@ final class AdaptivePoolingAllocator {
         public Chunk newChunkAllocation(int promptingSize, Magazine magazine) {
             AbstractByteBuf chunkBuffer = chunkAllocator.allocate(chunkSize, chunkSize);
             assert chunkBuffer.capacity() == chunkSize;
-            SizeClassedChunk chunk = new SizeClassedChunk(chunkBuffer, magazine, true,
-                                                          segmentSize, segmentOffsets, size -> false);
+            SizeClassedChunk chunk = new SizeClassedChunk(chunkBuffer, magazine, this);
             chunkRegistry.add(chunk);
             return chunk;
         }
@@ -1321,7 +1335,7 @@ final class AdaptivePoolingAllocator {
         private int top;
 
         IntStack(int[] initialValues) {
-            stack = initialValues.clone();
+            stack = initialValues;
             top = initialValues.length - 1;
         }
 
@@ -1352,27 +1366,17 @@ final class AdaptivePoolingAllocator {
         private final IntStack localFreeList;
         private Thread ownerThread;
 
-        SizeClassedChunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled, int segmentSize,
-                         int[] segmentOffsets, ChunkReleasePredicate shouldReleaseChunk) {
-            super(delegate, magazine, pooled, shouldReleaseChunk);
-            this.segmentSize = segmentSize;
-            int segmentCount = segmentOffsets.length;
-            assert delegate.capacity() / segmentSize == segmentCount;
-            assert segmentCount > 0 : "Chunk must have a positive number of segments";
-            externalFreeList = MpscIntQueue.create(segmentCount, FREE_LIST_EMPTY);
+        SizeClassedChunk(AbstractByteBuf delegate, Magazine magazine,
+                         SizeClassChunkController controller) {
+            super(delegate, magazine, true, ignoredSize -> false);
+            this.segmentSize = controller.segmentSize;
             this.ownerThread = magazine.group.ownerThread;
             if (ownerThread == null) {
-                externalFreeList.fill(segmentCount, new IntSupplier() {
-                    int counter = segmentCount - 1;
-
-                    @Override
-                    public int getAsInt() {
-                        return segmentOffsets[counter--];
-                    }
-                });
+                externalFreeList = controller.createFreeList();
                 localFreeList = null;
             } else {
-                localFreeList = new IntStack(segmentOffsets);
+                externalFreeList = controller.createEmptyFreeList();
+                localFreeList = controller.createLocalFreeList();
             }
         }
 
