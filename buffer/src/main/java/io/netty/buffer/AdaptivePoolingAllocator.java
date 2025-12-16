@@ -24,7 +24,6 @@ import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.MpscIntQueue;
-import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.RefCnt;
@@ -549,8 +548,8 @@ final class AdaptivePoolingAllocator {
         private static final int MIN_SEGMENTS_PER_CHUNK = 32;
         private final int segmentSize;
         private final int chunkSize;
+        // this is stored from big to small segment offsets
         private final int[] segmentOffsets;
-        private final short[] reversedCompressedOffsets;
 
         private SizeClassChunkControllerFactory(int segmentSize) {
             this.segmentSize = ObjectUtil.checkPositive(segmentSize, "segmentSize");
@@ -558,35 +557,15 @@ final class AdaptivePoolingAllocator {
             final int segmentsCount = chunkSize / segmentSize;
             segmentOffsets = new int[segmentsCount];
             int segmentOffset = 0;
-            for (int i = 0; i < segmentsCount; i++) {
+            for (int i = segmentsCount - 1; i >= 0; i--) {
                 segmentOffsets[i] = segmentOffset;
                 segmentOffset += segmentSize;
             }
-            // chunkSize has a range of [128 KiB, 528 kiB] and segment count [32, 4096]
-            assert (segmentSize & 31) == 0;
-            assert compressSegmentOffset(chunkSize) > 0;
-            final short compressedSegmentSize = compressSegmentOffset(segmentSize);
-            assert compressedSegmentSize > 0;
-            reversedCompressedOffsets = new short[segmentsCount];
-            short compressedOffset = 0;
-            for (int i = 0; i < segmentsCount; i++) {
-                reversedCompressedOffsets[(segmentsCount - i) - 1] = compressedOffset;
-                compressedOffset += compressedSegmentSize;
-            }
-        }
-
-        public static short compressSegmentOffset(int segmentOffset) {
-            return (short) (segmentOffset >> 5);
-        }
-
-        public static int uncompressSegmentOffset(short compressedOffset) {
-            return compressedOffset << 5;
         }
 
         @Override
         public ChunkController create(MagazineGroup group) {
-            return new SizeClassChunkController(group, segmentSize, chunkSize,
-                                                segmentOffsets, reversedCompressedOffsets);
+            return new SizeClassChunkController(group, segmentSize, chunkSize, segmentOffsets);
         }
     }
 
@@ -597,16 +576,13 @@ final class AdaptivePoolingAllocator {
         private final int chunkSize;
         private final ChunkRegistry chunkRegistry;
         private final int[] segmentOffsets;
-        private final short[] reversedCompressedOffsets;
 
-        private SizeClassChunkController(MagazineGroup group, int segmentSize, int chunkSize,
-                                         int[] segmentOffsets, short[] reversedCompressedOffsets) {
+        private SizeClassChunkController(MagazineGroup group, int segmentSize, int chunkSize, int[] segmentOffsets) {
             chunkAllocator = group.chunkAllocator;
             this.segmentSize = segmentSize;
             this.chunkSize = chunkSize;
             chunkRegistry = group.allocator.chunkRegistry;
             this.segmentOffsets = segmentOffsets;
-            this.reversedCompressedOffsets = reversedCompressedOffsets;
         }
 
         @Override
@@ -625,8 +601,7 @@ final class AdaptivePoolingAllocator {
             AbstractByteBuf chunkBuffer = chunkAllocator.allocate(chunkSize, chunkSize);
             assert chunkBuffer.capacity() == chunkSize;
             SizeClassedChunk chunk = new SizeClassedChunk(chunkBuffer, magazine, true,
-                                                          segmentSize, segmentOffsets, reversedCompressedOffsets,
-                                                          size -> false);
+                                                          segmentSize, segmentOffsets, size -> false);
             chunkRegistry.add(chunk);
             return chunk;
         }
@@ -1340,12 +1315,12 @@ final class AdaptivePoolingAllocator {
         }
     }
 
-    private static final class ShortStack {
+    private static final class IntStack {
 
-        private final short[] stack;
+        private final int[] stack;
         private int top;
 
-        ShortStack(short[] initialValues) {
+        IntStack(int[] initialValues) {
             stack = initialValues.clone();
             top = initialValues.length - 1;
         }
@@ -1354,13 +1329,13 @@ final class AdaptivePoolingAllocator {
             return top == -1;
         }
 
-        public short pop() {
-            final short last = stack[top];
+        public int pop() {
+            final int last = stack[top];
             top--;
             return last;
         }
 
-        public void push(short value) {
+        public void push(int value) {
             stack[top + 1] = value;
             top++;
         }
@@ -1374,12 +1349,11 @@ final class AdaptivePoolingAllocator {
         private static final int FREE_LIST_EMPTY = -1;
         private final int segmentSize;
         private final MpscIntQueue externalFreeList;
-        private final ShortStack localFreeList;
+        private final IntStack localFreeList;
         private Thread ownerThread;
 
         SizeClassedChunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled, int segmentSize,
-                         int[] segmentOffsets, short[] reversedCompressedOffsets,
-                         ChunkReleasePredicate shouldReleaseChunk) {
+                         int[] segmentOffsets, ChunkReleasePredicate shouldReleaseChunk) {
             super(delegate, magazine, pooled, shouldReleaseChunk);
             this.segmentSize = segmentSize;
             int segmentCount = segmentOffsets.length;
@@ -1389,16 +1363,16 @@ final class AdaptivePoolingAllocator {
             this.ownerThread = magazine.group.ownerThread;
             if (ownerThread == null) {
                 externalFreeList.fill(segmentCount, new IntSupplier() {
-                    int counter;
+                    int counter = segmentCount - 1;
 
                     @Override
                     public int getAsInt() {
-                        return segmentOffsets[counter++];
+                        return segmentOffsets[counter--];
                     }
                 });
                 localFreeList = null;
             } else {
-                localFreeList = new ShortStack(reversedCompressedOffsets);
+                localFreeList = new IntStack(segmentOffsets);
             }
         }
 
@@ -1424,7 +1398,7 @@ final class AdaptivePoolingAllocator {
 
         private int nextAvailableSegmentOffset() {
             final int startIndex;
-            ShortStack localFreeList = this.localFreeList;
+            IntStack localFreeList = this.localFreeList;
             if (localFreeList != null) {
                 assert Thread.currentThread() == ownerThread;
                 if (localFreeList.isEmpty()) {
@@ -1433,7 +1407,7 @@ final class AdaptivePoolingAllocator {
                         throw new IllegalStateException("Free list is empty");
                     }
                 } else {
-                    startIndex = SizeClassChunkControllerFactory.uncompressSegmentOffset(localFreeList.pop());
+                    startIndex = localFreeList.pop();
                 }
             } else {
                 startIndex = externalFreeList.poll();
@@ -1447,7 +1421,7 @@ final class AdaptivePoolingAllocator {
         private int remainingCapacityOnFreeList() {
             final int segmentSize = this.segmentSize;
             int remainingCapacity = externalFreeList.size() * segmentSize;
-            ShortStack localFreeList = this.localFreeList;
+            IntStack localFreeList = this.localFreeList;
             if (localFreeList != null) {
                 assert Thread.currentThread() == ownerThread;
                 remainingCapacity += localFreeList.size() * segmentSize;
@@ -1483,9 +1457,9 @@ final class AdaptivePoolingAllocator {
         }
 
         private void releaseSegmentOffsetIntoFreeList(int startIndex) {
-            ShortStack localFreeList = this.localFreeList;
+            IntStack localFreeList = this.localFreeList;
             if (localFreeList != null && Thread.currentThread() == ownerThread) {
-                localFreeList.push(SizeClassChunkControllerFactory.compressSegmentOffset(startIndex));
+                localFreeList.push(startIndex);
             } else {
                 boolean segmentReturned = externalFreeList.offer(startIndex);
                 assert segmentReturned : "Unable to return segment " + startIndex + " to free list";
