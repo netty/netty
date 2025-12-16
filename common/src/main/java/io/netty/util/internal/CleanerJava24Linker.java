@@ -206,7 +206,9 @@ public class CleanerJava24Linker implements Cleaner {
     static long malloc(int capacity) {
         final long addr;
         try {
-            addr = (long) INVOKE_MALLOC.invokeExact((long) capacity);
+            // Always allocate at least 1 byte, to avoid relying on non-portable behavior
+            // of malloc(3) for zero size allocations.
+            addr = (long) INVOKE_MALLOC.invokeExact(Math.max(capacity, 1L));
         } catch (Throwable e) {
             throw new Error(e); // Should not happen.
         }
