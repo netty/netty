@@ -1266,6 +1266,14 @@ final class AdaptivePoolingAllocator {
             return release();
         }
 
+        @Override
+        public int remainingCapacity() {
+            if (!freeList.isEmpty()) {
+                freeList.drain(256, this);
+            }
+            return super.remainingCapacity();
+        }
+
         /**
          * Claim a suitable buddy and return its start offset into the delegate chunk, or return -1 if nothing claimed.
          */
