@@ -337,6 +337,18 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
     }
 
     @Override
+    public DatagramChannel read() {
+        super.read();
+        return this;
+    }
+
+    @Override
+    public DatagramChannel flush() {
+        super.flush();
+        return this;
+    }
+
+    @Override
     protected void doDisconnect(ChannelPromise promise) {
         try {
             // TODO: use io_uring for this too...

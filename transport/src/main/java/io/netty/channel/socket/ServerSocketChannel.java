@@ -15,10 +15,7 @@
  */
 package io.netty.channel.socket;
 
-import io.netty.channel.ChannelConfig;
 import io.netty.channel.ServerChannel;
-
-import java.net.InetSocketAddress;
 
 /**
  * A {@link ServerChannel} which accepts incoming connections.
@@ -43,4 +40,9 @@ import java.net.InetSocketAddress;
  */
 public interface ServerSocketChannel extends ServerChannel {
 
+    @Override
+    ServerSocketChannel read();
+
+    @Override
+    ServerSocketChannel flush();
 }

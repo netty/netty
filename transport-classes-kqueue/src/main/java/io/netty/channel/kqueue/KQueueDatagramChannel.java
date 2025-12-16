@@ -328,6 +328,18 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
         }
     }
 
+    @Override
+    public DatagramChannel read() {
+        super.read();
+        return this;
+    }
+
+    @Override
+    public DatagramChannel flush() {
+        super.flush();
+        return this;
+    }
+
     private boolean doWriteMessage(Object msg) throws Exception {
         final ByteBuf data;
         SocketAddress remoteAddress;

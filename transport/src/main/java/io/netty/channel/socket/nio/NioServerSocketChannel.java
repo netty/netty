@@ -250,6 +250,18 @@ public class NioServerSocketChannel extends AbstractNioMessageChannel
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public io.netty.channel.socket.ServerSocketChannel read() {
+        super.read();
+        return this;
+    }
+
+    @Override
+    public io.netty.channel.socket.ServerSocketChannel flush() {
+        super.flush();
+        return this;
+    }
+
     private static final class NioServerSocketChannelConfig extends DefaultChannelConfig {
 
         final NetworkChannel jdkChannel;

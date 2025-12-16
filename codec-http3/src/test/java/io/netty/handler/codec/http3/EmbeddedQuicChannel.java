@@ -125,13 +125,13 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     }
 
     @Override
-    public QuicChannel flush() {
+    public EmbeddedQuicChannel flush() {
         super.flush();
         return this;
     }
 
     @Override
-    public QuicChannel read() {
+    public EmbeddedQuicChannel read() {
         super.read();
         return this;
     }

@@ -26,4 +26,10 @@ public interface ServerChannel extends Channel {
      * @return  the used child group.
      */
     EventLoopGroup childEventExecutorGroup();
+
+    @Override
+    ServerChannel read();
+
+    @Override
+    ServerChannel flush();
 }

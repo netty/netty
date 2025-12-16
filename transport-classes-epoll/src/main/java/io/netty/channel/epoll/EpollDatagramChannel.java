@@ -18,6 +18,7 @@ package io.netty.channel.epoll;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
+import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
@@ -501,8 +502,20 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    public EpollDatagramChannelConfig config() {
+    public ChannelConfig config() {
         return config;
+    }
+
+    @Override
+    public DatagramChannel read() {
+        super.read();
+        return this;
+    }
+
+    @Override
+    public DatagramChannel flush() {
+        super.flush();
+        return this;
     }
 
     @Override
@@ -542,7 +555,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     @Override
     void epollInReady() {
         assert executor().inEventLoop();
-        EpollDatagramChannelConfig config = config();
         if (shouldBreakEpollInReady(config)) {
             clearEpollIn0();
             return;
@@ -561,7 +573,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                 } else {
                     do {
                         final boolean read;
-                        int datagramSize = config().getMaxDatagramPayloadSize();
+                        int datagramSize = config.getMaxDatagramPayloadSize();
 
                         ByteBuf byteBuf = allocHandle.allocate(allocator);
                         // Only try to use recvmmsg if its really supported by the running system.

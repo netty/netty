@@ -318,6 +318,18 @@ public final class IoUringServerSocketChannel extends AbstractIoUringChannel imp
         return config;
     }
 
+    @Override
+    public ServerSocketChannel read() {
+        super.read();
+        return this;
+    }
+
+    @Override
+    public ServerSocketChannel flush() {
+        super.flush();
+        return this;
+    }
+
     private Channel newChildChannel(EventLoop eventLoop, int fd, ByteBuffer acceptedAddressMemory) {
         IoUringIoHandler handler = registration().attachment();
         LinuxSocket socket = new LinuxSocket(fd, this.socket.protocolFamily());
