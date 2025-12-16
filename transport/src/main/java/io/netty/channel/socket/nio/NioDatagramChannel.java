@@ -555,7 +555,7 @@ public final class NioDatagramChannel
                         try {
                             key.block(sourceToBlock);
                         } catch (IOException e) {
-                            promise.setFailure(e);
+                            return promise.setFailure(e);
                         }
                     }
                 }
