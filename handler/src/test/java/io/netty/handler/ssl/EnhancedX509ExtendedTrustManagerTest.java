@@ -19,11 +19,9 @@ package io.netty.handler.ssl;
 import io.netty.util.internal.EmptyArrays;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.X509ExtendedTrustManager;
 import java.math.BigInteger;
 import java.net.Socket;
 import java.security.Principal;
@@ -35,20 +33,38 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSocket;
+import javax.net.ssl.X509ExtendedTrustManager;
+import javax.security.auth.x500.X500Principal;
 
+import static io.netty.handler.ssl.EnhancingX509ExtendedTrustManager.ALTNAME_DNS;
+import static io.netty.handler.ssl.EnhancingX509ExtendedTrustManager.ALTNAME_IP;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Named.named;
+import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 public class EnhancedX509ExtendedTrustManagerTest {
+
+    private static final String SAN_ENTRY_DNS = "some.netty.io";
+    private static final String SAN_ENTRY_IP = "127.0.0.1";
+    private static final String COMMON_NAME = "leaf.netty.io";
 
     private static final X509Certificate TEST_CERT = new X509Certificate() {
 
         @Override
         public Collection<List<?>> getSubjectAlternativeNames() {
-            return Arrays.asList(Arrays.asList(1, new Object()), Arrays.asList(2, "some.netty.io"));
+            return Arrays.asList(Arrays.asList(1, new Object()),
+                    Arrays.asList(ALTNAME_DNS, "some.netty.io"), Arrays.asList(ALTNAME_IP, "127.0.0.1"));
+        }
+
+        @Override
+        public X500Principal getSubjectX500Principal() {
+            return new X500Principal("CN=" + COMMON_NAME + ", O=Netty");
         }
 
         @Override
@@ -223,23 +239,23 @@ public class EnhancedX509ExtendedTrustManagerTest {
         }
     });
 
-    static List<Executable> throwingMatchingExecutables() {
-        return Arrays.asList(new Executable() {
+    static List<Arguments> throwingMatchingExecutables() {
+        return Arrays.asList(arguments(named("checkServerTrusted", new Executable() {
             @Override
             public void execute() throws Throwable {
                 MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null);
             }
-        }, new Executable() {
+        })), arguments(named("checkServerTrusted with SSLEngine", new Executable() {
             @Override
             public void execute() throws Throwable {
                 MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLEngine) null);
             }
-        }, new Executable() {
+        })), arguments(named("checkServerTrusted with SSLSocket", new Executable() {
             @Override
             public void execute() throws Throwable {
                 MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLSocket) null);
             }
-        });
+        })));
     }
 
     private static final EnhancingX509ExtendedTrustManager NON_MATCHING_MANAGER =
@@ -286,23 +302,23 @@ public class EnhancedX509ExtendedTrustManagerTest {
                 }
             });
 
-    static List<Executable> throwingNonMatchingExecutables() {
-        return Arrays.asList(new Executable() {
+    static List<Arguments> throwingNonMatchingExecutables() {
+        return Arrays.asList(arguments(named("checkServerTrusted", new Executable() {
             @Override
             public void execute() throws Throwable {
                 NON_MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null);
             }
-        }, new Executable() {
+        })), arguments(named("checkServerTrusted with SSLEngine", new Executable() {
             @Override
             public void execute() throws Throwable {
                 NON_MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLEngine) null);
             }
-        }, new Executable() {
+        })), arguments(named("checkServerTrusted with SSLSocket", new Executable() {
             @Override
             public void execute() throws Throwable {
                 NON_MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLSocket) null);
             }
-        });
+        })));
     }
 
     @ParameterizedTest
@@ -311,7 +327,10 @@ public class EnhancedX509ExtendedTrustManagerTest {
         CertificateException exception = assertThrows(CertificateException.class, executable);
         // We should wrap the original cause with our own.
         assertInstanceOf(CertificateException.class, exception.getCause());
-        assertThat(exception.getMessage()).contains("some.netty.io");
+        String message = exception.getMessage();
+        assertThat(message).contains(SAN_ENTRY_DNS);
+        assertThat(message).contains(SAN_ENTRY_IP);
+        assertThat(message).contains("CN=" + COMMON_NAME);
     }
 
     @ParameterizedTest

@@ -21,15 +21,24 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.List;
+import javax.naming.ldap.LdapName;
+import javax.naming.ldap.Rdn;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
+import javax.security.auth.x500.X500Principal;
 
 /**
  * Wraps an existing {@link X509ExtendedTrustManager} and enhances the {@link CertificateException} that is thrown
  * because of hostname validation.
  */
 final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
+
+    // Constants for subject alt names of type DNS and IP. See X509Certificate#getSubjectAlternativeNames() javadocs.
+    static final int ALTNAME_DNS = 2;
+    static final int ALTNAME_IP = 7;
+    private static final String SEPARATOR = ", ";
+
     private final X509ExtendedTrustManager wrapped;
 
     EnhancingX509ExtendedTrustManager(X509TrustManager wrapped) {
@@ -93,28 +102,55 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
             throws CertificateException {
         // Matching the message is the best we can do sadly.
         String message = e.getMessage();
-        if (message != null && e.getMessage().startsWith("No subject alternative DNS name matching")) {
-            StringBuilder names = new StringBuilder(64);
+        if (message != null &&
+                (message.startsWith("No subject alternative") || message.startsWith("No name matching"))) {
+            StringBuilder sb = new StringBuilder(128);
+            sb.append(message);
+            // Some exception messages from sun.security.util.HostnameChecker do not end witha dot.
+            if (message.charAt(message.length() - 1) != '.') {
+                sb.append('.');
+            }
+            sb.append(" Chain of ").append(chain.length).append(" certificate(s):");
             for (int i = 0; i < chain.length; i++) {
                 X509Certificate cert = chain[i];
                 Collection<List<?>> collection = cert.getSubjectAlternativeNames();
+                sb.append(' ').append(i + 1).append(". subjectAlternativeNames=[");
                 if (collection != null) {
+                    boolean hasNames = false;
                     for (List<?> altNames : collection) {
-                        // 2 is dNSName. See X509Certificate javadocs.
-                        if (altNames.size() >= 2 && ((Integer) altNames.get(0)).intValue() == 2) {
-                            names.append((String) altNames.get(1)).append(",");
+                        final int nameType = ((Integer) altNames.get(0)).intValue();
+                        if (nameType == ALTNAME_DNS || nameType == ALTNAME_IP) {
+                            sb.append((String) altNames.get(1)).append(SEPARATOR);
+                            hasNames = true;
                         }
                     }
+                    if (hasNames) {
+                        // Strip of the last separator
+                        sb.setLength(sb.length() - SEPARATOR.length());
+                    }
                 }
+                sb.append("], CN=").append(getCommonName(cert)).append('.');
             }
-            if (names.length() != 0) {
-                // Strip of ,
-                names.setLength(names.length() - 1);
-                throw new CertificateException(message +
-                        " Subject alternative DNS names in the certificate chain of " + chain.length +
-                        " certificate(s): " + names, e);
-            }
+            throw new CertificateException(sb.toString(), e);
         }
         throw e;
+    }
+
+    private static String getCommonName(X509Certificate cert) {
+        try {
+            // 1. Get the X500Principal (better than getSubjectDN which is implementation dependent and deprecated)
+            X500Principal principal = cert.getSubjectX500Principal();
+            // 2. Parse the DN using LdapName
+            LdapName ldapName = new LdapName(principal.getName());
+            // 3. Iterate over the Relative Distinguished Names (RDNs) to find CN
+            for (Rdn rdn : ldapName.getRdns()) {
+                if (rdn.getType().equalsIgnoreCase("CN")) {
+                    return rdn.getValue().toString();
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return "null";
     }
 }
