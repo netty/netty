@@ -157,7 +157,7 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.register().sync();
         pipeline.addLast(new ChannelOutboundHandler() {
-            int pending = 0;
+            int pending;
             @Override
             public long pendingOutboundBytes(ChannelHandlerContext ctx) {
                 return pending;
