@@ -148,7 +148,7 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
                     return rdn.getValue().toString();
                 }
             }
-        } catch (Exception e) {
+        } catch (Exception ignore) {
             // ignore
         }
         return "null";
