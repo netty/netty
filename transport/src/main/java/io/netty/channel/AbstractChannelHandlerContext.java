@@ -1132,6 +1132,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     task.size = ctx.pipeline.estimatorHandle().size(msg) + WRITE_TASK_OVERHEAD;
                     ctx.pipeline.incrementPendingOutboundBytes(task.size);
                 } catch (Throwable t) {
+                    ReferenceCountUtil.release(msg);
+                    promise.setFailure(t);
                     task.recycle();
                     return null;
                 }
