@@ -18,6 +18,7 @@ package io.netty.channel;
 import java.net.SocketAddress;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.concurrent.CountDownLatch;
 
 final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
@@ -26,7 +27,7 @@ final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHand
         USER, REGISTER, SHUTDOWN }
 
     private StringBuilder log = new StringBuilder();
-
+    private final CountDownLatch latch = new CountDownLatch(1);
     private final EnumSet<Event> interest = EnumSet.allOf(Event.class);
 
     @Override
@@ -98,6 +99,7 @@ final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHand
     @Override
     public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
         log(Event.HANDLER_REMOVED);
+        latch.countDown();
     }
 
     @Override
@@ -160,7 +162,8 @@ final class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHand
         ctx.shutdown(type, promise);
     }
 
-    String getLog() {
+    String getLog() throws InterruptedException {
+        latch.await();
         return log.toString();
     }
 
