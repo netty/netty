@@ -102,8 +102,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         this.name = ObjectUtil.checkNotNull(name, "name");
         this.pipeline = pipeline;
         executionMask = mask(handlerClass);
-
-        // Wrap the executor so we are sure that the pending bytes will be updated correctly in all cases.
         this.executor = pipeline.executor();
     }
 
