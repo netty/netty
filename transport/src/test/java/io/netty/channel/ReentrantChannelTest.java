@@ -92,6 +92,31 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.close().sync();
 
         assertLog(
+                // --- Start case 1 ---
+
+                // start with writability false as the write from outside the EventLoop will increment the pending
+                // bytes before it is submitted for execution
+                "WRITABILITY: writable=false\n" +
+
+                // Now our executor will pick up the write and so decrement the pending bytes before doing so which
+                // will cause a writability event
+                "WRITABILITY: writable=true\n" +
+
+                // The actual write is executed and so we observe a write event.
+                "WRITE\n" +
+
+                // This causes the writability to change to false again as now everything is buffered in
+                // our outbound buffer.
+                "WRITABILITY: writable=false\n" +
+
+                // Flush is submitted an executed.
+                "FLUSH\n" +
+
+                // Everything is written so writability is true again.
+                "WRITABILITY: writable=true\n",
+
+                // --- Start case 2 ---
+
                 // start with writability false as the write from outside the EventLoop will increment the pending
                 // bytes before it is submitted for execution
                 "WRITABILITY: writable=false\n" +
