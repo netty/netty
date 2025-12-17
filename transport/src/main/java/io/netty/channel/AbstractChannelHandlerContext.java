@@ -1034,12 +1034,16 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         try {
             // Only call handlerRemoved(...) if we called handlerAdded(...) before.
             if (handlerState == ADD_COMPLETE) {
+                ChannelOutboundHandler handler = asOutboundHandler();
+                long pending = 0;
                 try {
-                    handler().handlerRemoved(this);
-                } finally {
-                    ChannelOutboundHandler handler = asOutboundHandler();
                     if (handler != null) {
-                        long pending = currentPendingBytes(handler);
+                        pending = currentPendingBytes(handler);
+                    }
+                } finally {
+                    try {
+                        handler().handlerRemoved(this);
+                    } finally {
                         if (pending > 0) {
                             pipeline.decrementPendingOutboundBytes(pending);
                         }
