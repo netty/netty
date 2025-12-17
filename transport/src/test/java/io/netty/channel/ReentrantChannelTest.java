@@ -17,16 +17,26 @@ package io.netty.channel;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.LoggingHandler.Event;
 import io.netty.channel.local.LocalAddress;
+import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
+import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.GenericFutureListener;
 import org.junit.jupiter.api.Test;
 
-
 import java.nio.channels.ClosedChannelException;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayDeque;
+import java.util.Queue;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -284,5 +294,113 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.closeFuture().sync();
 
         assertLog("WRITE\nCLOSE\n");
+    }
+
+    @Test
+    public void nestReentrancy() throws Exception {
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
+        try {
+            LocalAddress addr = new LocalAddress("nestReentrancy");
+
+            BlockingQueue<Object> received = new LinkedBlockingQueue<>();
+
+            Channel server = new ServerBootstrap()
+                    .group(group)
+                    .channel(LocalServerChannel.class)
+                    .childHandler(new ChannelInitializer<Channel>() {
+                        @Override
+                        protected void initChannel(Channel ch) throws Exception {
+                            ch.config().setAutoRead(false);
+                            // first handler splits input by \n and into strings
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                    String string = ((ByteBuf) msg).toString(StandardCharsets.UTF_8);
+                                    ((ByteBuf) msg).release();
+                                    for (String s : string.split("\n")) {
+                                        ctx.fireChannelRead(s);
+                                    }
+                                }
+                            });
+                            // second handler buffers messages, sends them on in channelReadComplete, and acts as flow
+                            // control
+                            ch.pipeline().addLast(new ChannelDuplexHandler() {
+                                final Queue<Object> queue = new ArrayDeque<>();
+                                boolean demand = true;
+
+                                @Override
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                    queue.add(msg);
+                                }
+
+                                @Override
+                                public void channelReadComplete(ChannelHandlerContext ctx) {
+                                    while (demand) {
+                                        Object item = queue.poll();
+                                        if (item == null) {
+                                            break;
+                                        }
+                                        demand = false;
+                                        ctx.fireChannelRead(item);
+                                    }
+                                    ctx.fireChannelReadComplete();
+                                }
+
+                                @Override
+                                public void read(ChannelHandlerContext ctx) {
+                                    Object item = queue.poll();
+                                    if (item != null) {
+                                        ctx.fireChannelRead(item);
+                                    } else {
+                                        demand = true;
+                                        ctx.read();
+                                    }
+                                }
+
+                                @Override
+                                public void handlerAdded(ChannelHandlerContext ctx) {
+                                    ctx.read();
+                                }
+                            });
+                            // third handler saves incoming packets so that we can test their order
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                    received.add(msg);
+                                    ctx.fireChannelRead(msg);
+                                }
+                            });
+                            // final handler relieves backpressure, triggering reentrant channelReads
+                            ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                                @Override
+                                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                                    ctx.read();
+                                }
+
+                                @Override
+                                public void channelReadComplete(ChannelHandlerContext ctx) {
+                                    ctx.read();
+                                }
+                            });
+                        }
+                    }).bind(addr).sync().channel();
+            Channel client = new Bootstrap()
+                    .group(group)
+                    .channel(LocalChannel.class)
+                    .handler(new ChannelInboundHandlerAdapter())
+                    .connect(addr).sync().channel();
+
+            client.writeAndFlush(Unpooled.copiedBuffer("A\nB\nC", StandardCharsets.UTF_8)).sync();
+
+            // order should be unchanged
+            assertEquals("A", received.take());
+            assertEquals("B", received.take());
+            assertEquals("C", received.take());
+
+            client.close().sync();
+            server.close().sync();
+        } finally {
+            group.shutdownGracefully();
+        }
     }
 }

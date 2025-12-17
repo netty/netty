@@ -25,7 +25,9 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
+import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
@@ -68,7 +70,7 @@ public final class QuicClientZeroRTTExample {
     }
 
     static void newChannelAndSendData(QuicSslContext context, ChannelHandler earlyDataSendHandler) throws Exception {
-        NioEventLoopGroup group = new NioEventLoopGroup(1);
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         try {
             ChannelHandler codec = new QuicClientCodecBuilder()
                     .sslEngineProvider(q -> context.newEngine(q.alloc(), "localhost", 9999))

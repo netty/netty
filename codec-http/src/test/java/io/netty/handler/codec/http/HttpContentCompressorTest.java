@@ -29,11 +29,12 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.EncoderException;
@@ -421,8 +422,8 @@ public class HttpContentCompressorTest {
 
     @Test
     public void testExecutorPreserveOrdering() throws Exception {
-        final EventLoopGroup compressorGroup = new DefaultEventLoopGroup(1);
-        EventLoopGroup localGroup = new DefaultEventLoopGroup(1);
+        final EventLoopGroup compressorGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
+        EventLoopGroup localGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         Channel server = null;
         Channel client = null;
         try {

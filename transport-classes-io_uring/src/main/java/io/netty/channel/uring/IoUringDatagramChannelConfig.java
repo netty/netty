@@ -51,7 +51,8 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
                 ChannelOption.IP_MULTICAST_ADDR, ChannelOption.IP_MULTICAST_IF, ChannelOption.IP_MULTICAST_TTL,
                 ChannelOption.IP_TOS, ChannelOption.DATAGRAM_CHANNEL_ACTIVE_ON_REGISTRATION,
                 IoUringChannelOption.SO_REUSEPORT, IoUringChannelOption.IP_FREEBIND,
-                IoUringChannelOption.IP_TRANSPARENT, IoUringChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE);
+                IoUringChannelOption.IP_TRANSPARENT, IoUringChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE,
+                IoUringChannelOption.IP_MULTICAST_ALL);
     }
 
     @SuppressWarnings({ "unchecked", "deprecation" })
@@ -99,6 +100,9 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
         if (option == IoUringChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE) {
             return (T) Integer.valueOf(getMaxDatagramPayloadSize());
         }
+        if (option == IoUringChannelOption.IP_MULTICAST_ALL) {
+            return (T) Boolean.valueOf(isIpMulticastAll());
+        }
         return super.getOption(option);
     }
 
@@ -135,6 +139,8 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
             setIpTransparent((Boolean) value);
         } else if (option == IoUringChannelOption.MAX_DATAGRAM_PAYLOAD_SIZE) {
             setMaxDatagramPayloadSize((Integer) value);
+        } else if (option == IoUringChannelOption.IP_MULTICAST_ALL) {
+            setIpMulticastAll((Boolean) value);
         } else {
             return super.setOption(option, value);
         }
@@ -490,5 +496,30 @@ final class IoUringDatagramChannelConfig extends IoUringChannelConfig implements
      */
     public int getMaxDatagramPayloadSize() {
         return maxDatagramSize;
+    }
+
+    /**
+     * If {@code true} is used <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> is
+     * enabled (or IPV6_MULTICAST_ALL for IPV6), {@code false} for disable it. Default is enabled.
+     */
+    public IoUringDatagramChannelConfig setIpMulticastAll(boolean multicastAll) {
+        try {
+            ((IoUringDatagramChannel) channel).socket.setIpMulticastAll(multicastAll);
+            return this;
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
+    }
+
+    /**
+     * Returns {@code true} if <a href="https://man7.org/linux/man-pages/man7/ip.7.html">IP_MULTICAST_ALL</a> (or
+     * IPV6_MULTICAST_ALL for IPV6) is enabled, {@code false} otherwise.
+     */
+    public boolean isIpMulticastAll() {
+        try {
+            return ((IoUringDatagramChannel) channel).socket.isIpMulticastAll();
+        } catch (IOException e) {
+            throw new ChannelException(e);
+        }
     }
 }

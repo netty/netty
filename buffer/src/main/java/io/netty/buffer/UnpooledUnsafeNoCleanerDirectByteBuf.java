@@ -21,9 +21,8 @@ import io.netty.util.internal.PlatformDependent;
 import java.nio.ByteBuffer;
 
 class UnpooledUnsafeNoCleanerDirectByteBuf extends UnpooledUnsafeDirectByteBuf {
-    UnpooledUnsafeNoCleanerDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity,
-                                         boolean allowSectionedInternalNioBufferAccess) {
-        super(alloc, initialCapacity, maxCapacity, allowSectionedInternalNioBufferAccess);
+    UnpooledUnsafeNoCleanerDirectByteBuf(ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
+        super(alloc, initialCapacity, maxCapacity);
     }
 
     @Override

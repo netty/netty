@@ -37,6 +37,9 @@ import io.netty.util.UncheckedBooleanSupplier;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.RecyclableArrayList;
 import io.netty.util.internal.StringUtil;
+import io.netty.util.internal.SystemPropertyUtil;
+import io.netty.util.internal.logging.InternalLogger;
+import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -55,6 +58,9 @@ import static io.netty.channel.epoll.LinuxSocket.newSocketDgram;
  * maximal performance.
  */
 public final class EpollDatagramChannel extends AbstractEpollChannel implements DatagramChannel {
+    private static final InternalLogger logger = InternalLoggerFactory.getInstance(EpollDatagramChannel.class);
+    private static final boolean IP_MULTICAST_ALL =
+            SystemPropertyUtil.getBoolean("io.netty.channel.epoll.ipMulticastAll", false);
     private static final ChannelMetadata METADATA = new ChannelMetadata(true, 16);
     private static final String EXPECTED_TYPES =
             " (expected: " + StringUtil.simpleClassName(DatagramPacket.class) + ", " +
@@ -65,6 +71,12 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     private final EpollDatagramChannelConfig config;
     private volatile boolean connected;
+
+    static {
+        if (logger.isDebugEnabled()) {
+            logger.debug("-Dio.netty.channel.epoll.ipMulticastAll: {}", IP_MULTICAST_ALL);
+        }
+    }
 
     /**
      * Returns {@code true} if {@link io.netty.channel.unix.SegmentedDatagramPacket} is supported natively.
@@ -114,6 +126,14 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
 
     private EpollDatagramChannel(LinuxSocket fd, boolean active) {
         super(null, fd, active, EpollIoOps.valueOf(0));
+
+        // Configure IP_MULTICAST_ALL - disable by default to match the behaviour of NIO.
+        try {
+            fd.setIpMulticastAll(IP_MULTICAST_ALL);
+        } catch (IOException e) {
+            logger.debug("Failed to set IP_MULTICAST_ALL to {}", IP_MULTICAST_ALL, e);
+        }
+
         config = new EpollDatagramChannelConfig(this);
     }
 

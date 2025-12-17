@@ -874,6 +874,8 @@ public abstract class SingleThreadEventExecutor extends AbstractScheduledEventEx
             if (STATE_UPDATER.compareAndSet(this, ST_STARTED, ST_SUSPENDING)) {
                 wakeup(inEventLoop());
                 return true;
+            } else if (STATE_UPDATER.compareAndSet(this, ST_NOT_STARTED, ST_SUSPENDED)) {
+                return true;
             }
             int currentState = state;
             return currentState == ST_SUSPENDED || currentState == ST_SUSPENDING;
