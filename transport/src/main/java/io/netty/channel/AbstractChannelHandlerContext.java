@@ -314,7 +314,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             next.invokeFireUserEventTriggered(event);
         } else {
-            next.executor().execute(() -> next.fireUserEventTriggered(event));
+            next.executor().execute(() -> next.invokeFireUserEventTriggered(event));
         }
         return this;
     }
@@ -346,7 +346,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             next.invokeFireChannelRead(msg);
         } else {
-            next.executor().execute(() -> next.fireChannelRead(msg));
+            next.executor().execute(() -> next.invokeFireChannelRead(msg));
         }
         return this;
     }
