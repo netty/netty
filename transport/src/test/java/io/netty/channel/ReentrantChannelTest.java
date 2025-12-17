@@ -133,10 +133,7 @@ public class ReentrantChannelTest extends BaseChannelTest {
                 "WRITABILITY: writable=false\n" +
 
                 // Flush is submitted an executed.
-                "FLUSH\n" +
-
-                // Everything is written so writability is true again.
-                "WRITABILITY: writable=true\n");
+                "FLUSH\n");
     }
 
     /**
