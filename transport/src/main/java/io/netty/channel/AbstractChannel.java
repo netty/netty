@@ -107,7 +107,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.eventLoop = validateEventLoopGroup(eventLoop, "eventLoop", handleType);
         outboundBuffer = new ChannelOutboundBuffer(eventLoop);
         this.id = id == null ? DefaultChannelId.newInstance() : id;
-        fireChannelWritabilityChangedTask = () -> pipeline().fireChannelWritabilityChanged();
+        fireChannelWritabilityChangedTask = () -> {
+            if (isOpen()) {
+                pipeline().fireChannelWritabilityChanged();
+            }
+        };
         pipeline = newChannelPipeline();
         closeFuture.addListener(f -> {
             ChannelPromise connectPromise = this.connectPromise;
@@ -403,7 +407,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         if (notifyLater) {
             executor().execute(fireChannelWritabilityChangedTask);
         } else {
-            pipeline().fireChannelWritabilityChanged();
+            fireChannelWritabilityChangedTask.run();
         }
     }
 

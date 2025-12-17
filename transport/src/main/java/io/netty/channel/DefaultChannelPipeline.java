@@ -518,7 +518,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             boolean removed = false;
             try {
                 atomicRemoveFromHandlerList(ctx);
-                ctx.callHandlerRemoved();
+                ctx.callHandlerRemoved(t);
                 removed = true;
             } catch (Throwable t2) {
                 if (logger.isWarnEnabled()) {
@@ -541,7 +541,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private void callHandlerRemoved0(final AbstractChannelHandlerContext ctx) {
         // Notify the complete removal.
         try {
-            ctx.callHandlerRemoved();
+            ctx.callHandlerRemoved(null);
         } catch (Throwable t) {
             fireExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() + ".handlerRemoved() has thrown an exception.", t));

@@ -134,15 +134,17 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.register().sync();
         pipeline.addLast(new ChannelOutboundHandler() {
+            private int pending;
 
             @Override
             public long pendingOutboundBytes(ChannelHandlerContext ctx) {
                 // Returning a negative value is illegal and should close the channel.
-                return -1;
+                return pending;
             }
 
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                pending = -1;
                 promise.setSuccess();
             }
         });
@@ -155,25 +157,29 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.register().sync();
         pipeline.addLast(new ChannelOutboundHandler() {
+            int pending = 0;
             @Override
             public long pendingOutboundBytes(ChannelHandlerContext ctx) {
-                // Returning a value that will result in an overflow
-                return 1;
+                return pending;
             }
 
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                // Returning a value that will result in an overflow
+                pending = 2;
                 promise.setSuccess();
             }
         }, new ChannelOutboundHandler() {
+            long pending;
             @Override
             public long pendingOutboundBytes(ChannelHandlerContext ctx) {
-                // Return a value which will overflow
-                return Long.MAX_VALUE;
+                return pending;
             }
 
             @Override
             public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                // Returning a value that will result in an overflow
+                pending = Long.MAX_VALUE;
                 ctx.write(msg, promise);
             }
         });
