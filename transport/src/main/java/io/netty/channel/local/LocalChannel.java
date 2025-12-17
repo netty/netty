@@ -57,7 +57,6 @@ public class LocalChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA = new ChannelMetadata(false);
     private static final int MAX_READER_STACK_DEPTH = 8;
     private static final int CHUNK_SIZE = SystemPropertyUtil.getInt("io.netty.local.channel.chunkSize", 4 * 1024);
-    private static final int MAX_CAPACITY = SystemPropertyUtil.getInt("io.netty.local.channel.maxCapacity", 64 * 1024);
 
     private enum State { OPEN, BOUND, CONNECTED, CLOSED }
 
@@ -145,7 +144,7 @@ public class LocalChannel extends AbstractChannel {
     }
 
     protected Queue<Object> newQueue() {
-        return PlatformDependent.newChunkedSpscQueue(CHUNK_SIZE, MAX_CAPACITY);
+        return PlatformDependent.newChunkedSpscQueue(CHUNK_SIZE);
     }
 
     @Override
