@@ -50,7 +50,7 @@ public class CoalescingBufferQueueTest {
         mouseDone = false;
         mouseSuccess = false;
         channel = new EmbeddedChannel();
-        writeQueue = new CoalescingBufferQueue(channel, 16, true);
+        writeQueue = new CoalescingBufferQueue(16);
         catPromise = newPromise();
         mouseListener = future -> {
             mouseDone = true;
@@ -133,7 +133,7 @@ public class CoalescingBufferQueueTest {
         writeQueue.add(mouse, mouseListener);
 
         ChannelPromise aggregatePromise = newPromise();
-        assertSame(cat, writeQueue.remove(3, aggregatePromise));
+        assertSame(cat, writeQueue.remove(channel.alloc(), 3, aggregatePromise));
         assertFalse(catPromise.isSuccess());
         aggregatePromise.setSuccess();
         assertTrue(catPromise.isSuccess());
@@ -141,7 +141,7 @@ public class CoalescingBufferQueueTest {
         cat.release();
 
         aggregatePromise = newPromise();
-        assertSame(mouse, writeQueue.remove(5, aggregatePromise));
+        assertSame(mouse, writeQueue.remove(channel.alloc(), 5, aggregatePromise));
         assertFalse(mouseDone);
         aggregatePromise.setSuccess();
         assertTrue(mouseSuccess);
@@ -166,7 +166,7 @@ public class CoalescingBufferQueueTest {
         writeQueue.add(cat, catPromise);
         writeQueue.add(mouse, mouseListener);
         RuntimeException cause = new RuntimeException("ooops");
-        writeQueue.releaseAndFailAll(cause);
+        writeQueue.releaseAndFailAll(channel, cause);
         ChannelPromise aggregatePromise = newPromise();
         assertQueueSize(0, true);
         assertEquals(0, cat.refCnt());
@@ -198,7 +198,7 @@ public class CoalescingBufferQueueTest {
     @Test
     public void testMerge() {
         writeQueue.add(cat, catPromise);
-        CoalescingBufferQueue otherQueue = new CoalescingBufferQueue(channel);
+        CoalescingBufferQueue otherQueue = new CoalescingBufferQueue();
         otherQueue.add(mouse, mouseListener);
         otherQueue.copyTo(writeQueue);
         assertQueueSize(8, false);
@@ -212,47 +212,6 @@ public class CoalescingBufferQueueTest {
         assertTrue(mouseSuccess);
         assertEquals(0, cat.refCnt());
         assertEquals(0, mouse.refCnt());
-    }
-
-    @Test
-    public void testWritabilityChanged() {
-        testWritabilityChanged0(false);
-    }
-
-    @Test
-    public void testWritabilityChangedFailAll() {
-        testWritabilityChanged0(true);
-    }
-
-    private void testWritabilityChanged0(boolean fail) {
-        channel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(3, 4));
-        assertTrue(channel.isWritable());
-        writeQueue.add(Unpooled.wrappedBuffer(new byte[] {1 , 2, 3}));
-        assertTrue(channel.isWritable());
-        writeQueue.add(Unpooled.wrappedBuffer(new byte[] {4, 5}));
-        assertFalse(channel.isWritable());
-        assertEquals(5, writeQueue.readableBytes());
-
-        if (fail) {
-            writeQueue.releaseAndFailAll(new IllegalStateException());
-        } else {
-            ByteBuf buffer = writeQueue.removeFirst(newPromise());
-            assertEquals(1, buffer.readByte());
-            assertEquals(2, buffer.readByte());
-            assertEquals(3, buffer.readByte());
-            assertFalse(buffer.isReadable());
-            buffer.release();
-            assertTrue(channel.isWritable());
-
-            buffer = writeQueue.removeFirst(newPromise());
-            assertEquals(4, buffer.readByte());
-            assertEquals(5, buffer.readByte());
-            assertFalse(buffer.isReadable());
-            buffer.release();
-        }
-
-        assertTrue(channel.isWritable());
-        assertTrue(writeQueue.isEmpty());
     }
 
     private ChannelPromise newPromise() {
@@ -269,7 +228,7 @@ public class CoalescingBufferQueueTest {
     }
 
     private String dequeue(int numBytes, ChannelPromise aggregatePromise) {
-        ByteBuf removed = writeQueue.remove(numBytes, aggregatePromise);
+        ByteBuf removed = writeQueue.remove(channel.alloc(), numBytes, aggregatePromise);
         String result = removed.toString(CharsetUtil.US_ASCII);
         ReferenceCountUtil.safeRelease(removed);
         return result;

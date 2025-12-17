@@ -130,6 +130,58 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
+    public void testPendingOutboundBytesNegative() throws InterruptedException {
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+        pipeline.register().sync();
+        pipeline.addLast(new ChannelOutboundHandler() {
+
+            @Override
+            public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+                // Returning a negative value is illegal and should close the channel.
+                return -1;
+            }
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                promise.setSuccess();
+            }
+        });
+        pipeline.channel().write(new Object());
+        pipeline.channel().closeFuture().sync();
+    }
+
+    @Test
+    public void testPendingOutboundBytesOverflow() throws InterruptedException {
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+        pipeline.register().sync();
+        pipeline.addLast(new ChannelOutboundHandler() {
+            @Override
+            public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+                // Returning a value that will result in an overflow
+                return 1;
+            }
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                promise.setSuccess();
+            }
+        }, new ChannelOutboundHandler() {
+            @Override
+            public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+                // Return a value which will overflow
+                return Long.MAX_VALUE;
+            }
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                ctx.write(msg, promise);
+            }
+        });
+        pipeline.channel().write(new Object());
+        pipeline.channel().closeFuture().sync();
+    }
+
+    @Test
     public void testFreeCalled() throws Exception {
         final CountDownLatch free = new CountDownLatch(1);
 

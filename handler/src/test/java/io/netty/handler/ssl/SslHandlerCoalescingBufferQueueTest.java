@@ -98,7 +98,7 @@ public class SslHandlerCoalescingBufferQueueTest {
     @EnumSource(CumulationTestScenario.class)
     public void testCumulation(CumulationTestScenario testScenario) {
         EmbeddedChannel channel = new EmbeddedChannel();
-        SslHandlerCoalescingBufferQueue queue = new SslHandlerCoalescingBufferQueue(channel, 16, false) {
+        SslHandlerCoalescingBufferQueue queue = new SslHandlerCoalescingBufferQueue(16, false) {
             @Override
             protected int wrapDataSize() {
                 return 128;

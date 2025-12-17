@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.ImmediateEventExecutor;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -36,8 +37,7 @@ public class ChannelOutboundBufferTest {
 
     @Test
     public void testEmptyNioBuffers() {
-        TestChannel channel = new TestChannel();
-        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(ImmediateEventExecutor.INSTANCE);
         assertEquals(0, buffer.nioBufferCount());
         ByteBuffer[] buffers = buffer.nioBuffers();
         assertNotNull(buffers);
@@ -51,7 +51,7 @@ public class ChannelOutboundBufferTest {
     @Test
     public void testNioBuffersCancelledRemoveBytes() {
         TestChannel channel = new TestChannel();
-        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel.executor());
         ByteBuf b1 = wrappedBuffer(new byte[] { 0 });
         int r1 = b1.readableBytes();
         ChannelPromise p1 = channel.newPromise();
@@ -88,7 +88,7 @@ public class ChannelOutboundBufferTest {
     public void testNioBuffersSingleBacked() {
         TestChannel channel = new TestChannel();
 
-        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel.executor());
         assertEquals(0, buffer.nioBufferCount());
 
         ByteBuf buf = copiedBuffer("buf1", CharsetUtil.US_ASCII);
@@ -113,7 +113,7 @@ public class ChannelOutboundBufferTest {
     public void testNioBuffersExpand() {
         TestChannel channel = new TestChannel();
 
-        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel.executor());
 
         ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));
         for (int i = 0; i < 64; i++) {
@@ -134,7 +134,7 @@ public class ChannelOutboundBufferTest {
     public void testNioBuffersExpand2() {
         TestChannel channel = new TestChannel();
 
-        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel.executor());
 
         CompositeByteBuf comp = compositeBuffer(256);
         ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));
@@ -162,7 +162,7 @@ public class ChannelOutboundBufferTest {
     public void testNioBuffersMaxCount() {
         TestChannel channel = new TestChannel();
 
-        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel);
+        ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel.executor());
 
         CompositeByteBuf comp = compositeBuffer(256);
         ByteBuf buf = directBuffer().writeBytes("buf1".getBytes(CharsetUtil.US_ASCII));
@@ -194,8 +194,14 @@ public class ChannelOutboundBufferTest {
     private static final class TestChannel extends AbstractChannel {
         private final ChannelConfig config = new DefaultChannelConfig(this);
 
+        private static EventLoop newMockedEventLoop() {
+            EventLoop loop = Mockito.mock(EventLoop.class);
+            Mockito.when(loop.inEventLoop()).thenReturn(true);
+            return loop;
+        }
+
         TestChannel() {
-            super(Mockito.mock(EventLoop.class), null, null);
+            super(newMockedEventLoop(), null, null);
         }
 
         @Override
@@ -267,152 +273,6 @@ public class ChannelOutboundBufferTest {
         public boolean isActive() {
             return true;
         }
-    }
-
-    @Test
-    public void testWritability() {
-        final StringBuilder buf = new StringBuilder();
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandler() {
-            @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
-                buf.append(ctx.channel().isWritable());
-                buf.append(' ');
-            }
-        });
-
-        ch.config().setWriteBufferWaterMark(
-                new WriteBufferWaterMark(128 + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD,
-                        256 + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD));
-
-        ch.write(buffer().writeZero(128));
-        // Ensure exceeding the low watermark does not make channel unwritable.
-        ch.write(buffer().writeZero(2));
-        assertEquals("", buf.toString());
-
-        ch.outboundBuffer().addFlush();
-
-        // Ensure exceeding the high watermark makes channel unwritable.
-        ch.write(buffer().writeZero(127));
-        assertEquals("false ", buf.toString());
-
-        // Ensure going down to the low watermark makes channel writable again by flushing the first write.
-        assertTrue(ch.outboundBuffer().remove());
-        assertTrue(ch.outboundBuffer().remove());
-        assertEquals(127L + ChannelOutboundBuffer.CHANNEL_OUTBOUND_BUFFER_ENTRY_OVERHEAD,
-                ch.outboundBuffer().totalPendingWriteBytes());
-        assertEquals("false true ", buf.toString());
-
-        safeClose(ch);
-    }
-
-    @Test
-    public void testUserDefinedWritability() {
-        final StringBuilder buf = new StringBuilder();
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandler() {
-            @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
-                buf.append(ctx.channel().isWritable());
-                buf.append(' ');
-            }
-        });
-
-        ch.config().setWriteBufferWaterMark(new WriteBufferWaterMark(128, 256));
-
-        ChannelOutboundBuffer cob = ch.outboundBuffer();
-
-        // Ensure that the default value of a user-defined writability flag is true.
-        for (int i = 1; i <= 30; i ++) {
-            assertTrue(cob.getUserDefinedWritability(i));
-        }
-
-        // Ensure that setting a user-defined writability flag to false affects channel.isWritable();
-        cob.setUserDefinedWritability(1, false);
-        ch.runPendingTasks();
-        assertEquals("false ", buf.toString());
-
-        // Ensure that setting a user-defined writability flag to true affects channel.isWritable();
-        cob.setUserDefinedWritability(1, true);
-        ch.runPendingTasks();
-        assertEquals("false true ", buf.toString());
-
-        safeClose(ch);
-    }
-
-    @Test
-    public void testUserDefinedWritability2() {
-        final StringBuilder buf = new StringBuilder();
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandler() {
-            @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
-                buf.append(ctx.channel().isWritable());
-                buf.append(' ');
-            }
-        });
-
-        ch.config().setWriteBufferWaterMark(new WriteBufferWaterMark(128, 256));
-
-        ChannelOutboundBuffer cob = ch.outboundBuffer();
-
-        // Ensure that setting a user-defined writability flag to false affects channel.isWritable()
-        cob.setUserDefinedWritability(1, false);
-        ch.runPendingTasks();
-        assertEquals("false ", buf.toString());
-
-        // Ensure that setting another user-defined writability flag to false does not trigger
-        // channelWritabilityChanged.
-        cob.setUserDefinedWritability(2, false);
-        ch.runPendingTasks();
-        assertEquals("false ", buf.toString());
-
-        // Ensure that setting only one user-defined writability flag to true does not affect channel.isWritable()
-        cob.setUserDefinedWritability(1, true);
-        ch.runPendingTasks();
-        assertEquals("false ", buf.toString());
-
-        // Ensure that setting all user-defined writability flags to true affects channel.isWritable()
-        cob.setUserDefinedWritability(2, true);
-        ch.runPendingTasks();
-        assertEquals("false true ", buf.toString());
-
-        safeClose(ch);
-    }
-
-    @Test
-    public void testMixedWritability() {
-        final StringBuilder buf = new StringBuilder();
-        EmbeddedChannel ch = new EmbeddedChannel(new ChannelInboundHandler() {
-            @Override
-            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
-                buf.append(ctx.channel().isWritable());
-                buf.append(' ');
-            }
-        });
-
-        ch.config().setWriteBufferWaterMark(new WriteBufferWaterMark(128, 256));
-
-        ChannelOutboundBuffer cob = ch.outboundBuffer();
-
-        // Trigger channelWritabilityChanged() by writing a lot.
-        ch.write(buffer().writeZero(257));
-        assertEquals("false ", buf.toString());
-
-        // Ensure that setting a user-defined writability flag to false does not trigger channelWritabilityChanged()
-        cob.setUserDefinedWritability(1, false);
-        ch.runPendingTasks();
-        assertEquals("false ", buf.toString());
-
-        // Ensure reducing the totalPendingWriteBytes down to zero does not trigger channelWritabilityChanged()
-        // because of the user-defined writability flag.
-        ch.flush();
-        assertEquals(0L, cob.totalPendingWriteBytes());
-        assertEquals("false ", buf.toString());
-
-        // Ensure that setting the user-defined writability flag to true triggers channelWritabilityChanged()
-        cob.setUserDefinedWritability(1, true);
-        ch.runPendingTasks();
-        assertEquals("false true ", buf.toString());
-
-        safeClose(ch);
     }
 
     private static void safeClose(EmbeddedChannel ch) {

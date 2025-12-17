@@ -54,7 +54,7 @@ public class AbstractCoalescingBufferQueueTest {
                 promise.setSuccess();
             }
         }, new ChannelHandler() { });
-        final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(channel, 128) {
+        final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(128) {
             @Override
             protected ByteBuf compose(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf next) {
                 return composeIntoComposite(alloc, cumulation, next);
@@ -94,7 +94,7 @@ public class AbstractCoalescingBufferQueueTest {
     public void testKeepStateConsistentOnError() {
         final IllegalReferenceCountException exception = new IllegalReferenceCountException();
         final EmbeddedChannel channel = new EmbeddedChannel();
-        final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(channel, 128) {
+        final AbstractCoalescingBufferQueue queue = new AbstractCoalescingBufferQueue(128) {
             @Override
             protected ByteBuf compose(ByteBufAllocator alloc, ByteBuf cumulation, ByteBuf next) {
                 // Simulate throwing an IllegalReferenceCountException.

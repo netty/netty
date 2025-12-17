@@ -23,6 +23,20 @@ import java.net.SocketAddress;
 public interface ChannelOutboundHandler extends ChannelHandler {
 
     /**
+     * The number of the outbound bytes that are buffered / queued in this {@link ChannelOutboundHandler}.
+     * This number will affect the writability of the {@link Channel} together the buffered / queued bytes in the
+     * {@link Channel} itself.
+     * By default, this method returns {@code 0}. If the {@link ChannelOutboundHandler} implementation buffers / queues
+     * outbound data this methods should be implemented to return the correct value.
+     *
+     * @param ctx               the {@link ChannelHandlerContext} for which the operation is made.
+     * @return                  the number of buffered / queued bytes.
+     */
+    default long pendingOutboundBytes(ChannelHandlerContext ctx) {
+        return 0;
+    }
+
+    /**
      * Called once a register operation is made for an {@link EventLoop}.
      *
      * @param ctx               the {@link ChannelHandlerContext} for which the close operation is made

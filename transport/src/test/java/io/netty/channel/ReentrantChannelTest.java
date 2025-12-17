@@ -92,19 +92,25 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.close().sync();
 
         assertLog(
-                // Case 1:
+                // start with writability false as the write from outside the EventLoop will increment the pending
+                // bytes before it is submitted for execution
                 "WRITABILITY: writable=false\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n",
-                // Case 2:
-                "WRITABILITY: writable=false\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
+
+                // Now our executor will pick up the write and so decrement the pending bytes before doing so which
+                // will cause a writability event
                 "WRITABILITY: writable=true\n" +
+
+                // The actual write is executed and so we observe a write event.
+                "WRITE\n" +
+
+                // This causes the writability to change to false again as now everything is buffered in
+                // our outbound buffer.
+                "WRITABILITY: writable=false\n" +
+
+                // Flush is submitted an executed.
+                "FLUSH\n" +
+
+                // Everything is written so writability is true again.
                 "WRITABILITY: writable=true\n");
     }
 
@@ -121,16 +127,17 @@ public class ReentrantChannelTest extends BaseChannelTest {
 
         Bootstrap cb = getLocalClientBootstrap();
 
-        setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY);
+        setInterest(Event.WRITE, Event.FLUSH, Event.WRITABILITY, Event.CLOSE);
 
         Channel clientChannel = cb.connect(addr).sync().channel();
         clientChannel.config().setWriteBufferWaterMark(new WriteBufferWaterMark(512, 1024));
 
         clientChannel.pipeline().addLast(new ChannelInboundHandler() {
+
             @Override
             public void channelWritabilityChanged(ChannelHandlerContext ctx) throws Exception {
                 if (!ctx.channel().isWritable()) {
-                    ctx.channel().flush();
+                    ctx.flush();
                 }
                 ctx.fireChannelWritabilityChanged();
             }
@@ -142,22 +149,33 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.close().sync();
 
         assertLog(
-                // Case 1:
+                // start with writability false as the write from outside the EventLoop will increment the pending
+                // bytes before it is submitted for execution
                 "WRITABILITY: writable=false\n" +
+
+                // This will trigger a flush in our handler
                 "FLUSH\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITABILITY: writable=true\n",
-                // Case 2:
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
-                "WRITE\n" +
-                "WRITABILITY: writable=false\n" +
-                "FLUSH\n" +
+
+                // Now our executor will pick up the write and so decrement the pending bytes before doing so which
+                // will cause a writability event
                 "WRITABILITY: writable=true\n" +
-                "WRITABILITY: writable=true\n");
+
+                // The actual write is executed and so we observe a write event.
+                "WRITE\n" +
+
+                // This causes the writability to change to false again as now everything is buffered in
+                // our outbound buffer.
+                "WRITABILITY: writable=false\n" +
+
+                // This will trigger a flush in our handler
+                "FLUSH\n" +
+
+                // Everything is written so writability is true again.
+                "WRITABILITY: writable=true\n" +
+
+                // Channel is closed
+                 "CLOSE\n"
+        );
     }
 
     @Test

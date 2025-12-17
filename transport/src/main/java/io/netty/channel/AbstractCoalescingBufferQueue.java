@@ -32,19 +32,15 @@ import static io.netty.util.internal.PlatformDependent.throwException;
 public abstract class AbstractCoalescingBufferQueue {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractCoalescingBufferQueue.class);
     private final ArrayDeque<Object> bufAndListenerPairs;
-    private final PendingBytesTracker tracker;
     private int readableBytes;
 
     /**
      * Create a new instance.
      *
-     * @param channel the {@link Channel} which will have the {@link Channel#isWritable()} reflect the amount of queued
-     *                buffers or {@code null} if there is no writability state updated.
      * @param initSize the initial size of the underlying queue.
      */
-    protected AbstractCoalescingBufferQueue(Channel channel, int initSize) {
-        bufAndListenerPairs = new ArrayDeque<Object>(initSize);
-        tracker = channel == null ? null : PendingBytesTracker.newTracker(channel);
+    protected AbstractCoalescingBufferQueue(int initSize) {
+        bufAndListenerPairs = new ArrayDeque<>(initSize);
     }
 
     /**
@@ -413,17 +409,11 @@ public abstract class AbstractCoalescingBufferQueue {
             throw new IllegalStateException("buffer queue length overflow: " + readableBytes + " + " + increment);
         }
         readableBytes = nextReadableBytes;
-        if (tracker != null) {
-            tracker.incrementPendingOutboundBytes(increment);
-        }
     }
 
     private void decrementReadableBytes(int decrement) {
         readableBytes -= decrement;
         assert readableBytes >= 0;
-        if (tracker != null) {
-            tracker.decrementPendingOutboundBytes(decrement);
-        }
     }
 
     private static ChannelFutureListener toChannelFutureListener(ChannelPromise promise) {

@@ -441,7 +441,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
         FlowControlledData(Http2Stream stream, ByteBuf buf, int padding, boolean endOfStream,
                                    ChannelPromise promise) {
             super(stream, padding, endOfStream, promise);
-            queue = new CoalescingBufferQueue(promise.channel());
+            queue = new CoalescingBufferQueue();
             queue.add(buf, promise);
             dataSize = queue.readableBytes();
         }
@@ -453,7 +453,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
 
         @Override
         public void error(ChannelHandlerContext ctx, Throwable cause) {
-            queue.releaseAndFailAll(cause);
+            queue.releaseAndFailAll(ctx, cause);
             // Don't update dataSize because we need to ensure the size() method returns a consistent size even after
             // error so we don't invalidate flow control when returning bytes to flow control.
             //
@@ -480,7 +480,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
                         // queue and it is not end of stream yet. Just complete their promises by getting the buffer
                         // corresponding to 0 bytes and writing it to the channel (to preserve notification order).
                         ChannelPromise writePromise = ctx.newPromise().addListener(this);
-                        ctx.write(queue.remove(0, writePromise), writePromise);
+                        ctx.write(queue.remove(ctx.alloc(), 0, writePromise), writePromise);
                     }
                     return;
                 }
@@ -493,7 +493,7 @@ public class DefaultHttp2ConnectionEncoder implements Http2ConnectionEncoder, Ht
             // Determine how much data to write.
             int writableData = min(queuedData, allowedBytes);
             ChannelPromise writePromise = ctx.newPromise().addListener(this);
-            ByteBuf toWrite = queue.remove(writableData, writePromise);
+            ByteBuf toWrite = queue.remove(ctx.alloc(), writableData, writePromise);
             dataSize = queue.readableBytes();
 
             // Determine how much padding to write.
