@@ -86,7 +86,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         config = new QuicheQuicStreamChannelConfig(this);
         this.address = new QuicStreamAddress(streamId);
         this.closePromise = newPromise();
-        queue = new PendingWriteQueue(this);
+        queue = new PendingWriteQueue(parent().executor(), config.getMessageSizeEstimator().newHandle());
         // Local created unidirectional streams have the input shutdown by spec. There will never be any data for
         // these to be read.
         if (parent.streamType(streamId) == QuicStreamType.UNIDIRECTIONAL && parent.isStreamLocalCreated(streamId)) {

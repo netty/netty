@@ -652,6 +652,14 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
     }
 
     @Override
+    public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+        if (writeResumptionListener != null) {
+            return writeResumptionListener.pendingBytes();
+        }
+        return 0;
+    }
+
+    @Override
     public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type, ChannelPromise promise) {
         ctx.shutdown(type, promise);
     }
@@ -799,6 +807,10 @@ final class Http3FrameCodec extends ByteToMessageDecoder implements ChannelOutbo
                     codec.flush(ctx);
                 }
             }
+        }
+
+        long pendingBytes() {
+            return queue.bytes();
         }
 
         static WriteResumptionListener newListener(ChannelHandlerContext ctx, Http3FrameCodec codec) {

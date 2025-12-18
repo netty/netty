@@ -19,6 +19,7 @@ import io.netty.buffer.AbstractReferenceCountedByteBuf;
 import io.netty.util.Recycler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.ObjectPool;
 import io.netty.util.internal.ObjectUtil;
@@ -26,10 +27,30 @@ import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
+import java.util.Objects;
+import java.util.function.BiConsumer;
+
 /**
- * A queue of write operations which are pending for later execution. It also updates the
- * {@linkplain Channel#isWritable() writability} of the associated {@link Channel}, so that
- * the pending write operations are also considered to determine the writability.
+ * A queue of write operations which are pending for later execution.
+ * If used within your {@link ChannelOutboundHandler} you should override
+ * {@link ChannelOutboundHandler#pendingOutboundBytes(ChannelHandlerContext)} and return {@link #bytes()} to also
+ * affect the Channel writability:
+ *
+ * <pre>
+ * public class MyOutboundHandler implements {@link ChannelOutboundHandler} {
+ *     private {@link PendingWriteQueue} queue;
+ *
+ *     {@code @Override}
+ *     public void handlerAdded({@link ChannelHandlerContext} ctx) {
+ *         queue = new {@link PendingWriteQueue}();
+ *     }
+ *
+ *     {@code @Override}
+ *     public long pendingOutboundBytes({@link ChannelHandlerContext} ctx) {
+ *         return queue.bytes();
+ *     }
+ * }
+ * </pre>
  */
 public final class PendingWriteQueue {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PendingWriteQueue.class);
@@ -40,9 +61,8 @@ public final class PendingWriteQueue {
     private static final int PENDING_WRITE_OVERHEAD =
             SystemPropertyUtil.getInt("io.netty.transport.pendingWriteSizeOverhead", 64);
 
-    private final ChannelOutboundInvoker invoker;
     private final EventExecutor executor;
-    private final PendingBytesTracker tracker;
+    private final MessageSizeEstimator.Handle sizeEstimatorHandle;
 
     // head and tail pointers for the linked-list structure. If empty head and tail are null.
     private PendingWrite head;
@@ -51,15 +71,12 @@ public final class PendingWriteQueue {
     private long bytes;
 
     public PendingWriteQueue(ChannelHandlerContext ctx) {
-        tracker = PendingBytesTracker.newTracker(ctx.channel());
-        this.invoker = ctx;
-        this.executor = ctx.executor();
+        this(ctx.executor(), ctx.channel().config().getMessageSizeEstimator().newHandle());
     }
 
-    public PendingWriteQueue(Channel channel) {
-        tracker = PendingBytesTracker.newTracker(channel);
-        this.invoker = channel;
-        this.executor = channel.executor();
+    public PendingWriteQueue(EventExecutor executor, MessageSizeEstimator.Handle handle) {
+        this.executor = Objects.requireNonNull(executor, "executor");
+        this.sizeEstimatorHandle = Objects.requireNonNull(handle, "handle");
     }
 
     /**
@@ -90,7 +107,7 @@ public final class PendingWriteQueue {
     private int size(Object msg) {
         // It is possible for writes to be triggered from removeAndFailAll(). To preserve ordering,
         // we should add them to the queue and let removeAndFailAll() fail them later.
-        int messageSize = tracker.size(msg);
+        int messageSize = sizeEstimatorHandle.size(msg);
         if (messageSize < 0) {
             // Size may be unknown so just use 0
             messageSize = 0;
@@ -119,7 +136,6 @@ public final class PendingWriteQueue {
         }
         size ++;
         bytes += messageSize;
-        tracker.incrementPendingOutboundBytes(write.size);
         // Touch the message to make it easier to debug buffer leaks.
 
         // this save both checking against the ReferenceCounted interface
@@ -133,19 +149,19 @@ public final class PendingWriteQueue {
 
     /**
      * Remove all pending write operation and performs them via
-     * {@link ChannelHandlerContext#write(Object, ChannelPromise)}.
+      {@link BiConsumer#accept(Object, Object)}.
      *
-     * @return  {@link ChannelFuture} if something was written and {@code null}
+     * @return  {@link ChannelFuture} if something was transferred and {@code null}
      *          if the {@link PendingWriteQueue} is empty.
      */
-    public ChannelFuture removeAndWriteAll() {
+    public void removeAndTransferAll(BiConsumer<Object, ChannelPromise> transferFunc) {
         assert executor.inEventLoop();
 
         if (isEmpty()) {
-            return null;
+            return;
         }
 
-        ChannelPromise p = invoker.newPromise();
+        Promise<Void> p = executor.newPromise();
         PromiseCombiner combiner = new PromiseCombiner(executor);
         try {
             // It is possible for some of the written promises to trigger more writes. The new writes
@@ -162,7 +178,7 @@ public final class PendingWriteQueue {
                     recycle(write, false);
                     combiner.add(promise);
 
-                    invoker.write(msg, promise);
+                    transferFunc.accept(msg, promise);
                     write = next;
                 }
             }
@@ -171,7 +187,6 @@ public final class PendingWriteQueue {
             p.setFailure(cause);
         }
         assertEmpty();
-        return p;
     }
 
     /**
@@ -223,21 +238,18 @@ public final class PendingWriteQueue {
 
     /**
      * Removes a pending write operation and performs it via
-     * {@link ChannelHandlerContext#write(Object, ChannelPromise)}.
-     *
-     * @return  {@link ChannelFuture} if something was written and {@code null}
-     *          if the {@link PendingWriteQueue} is empty.
+     * {@link BiConsumer#accept(Object, Object)}.
      */
-    public ChannelFuture removeAndWrite() {
+    public void removeAndTransfer(BiConsumer<Object, ChannelPromise> transferFunc) {
         assert executor.inEventLoop();
         PendingWrite write = head;
         if (write == null) {
-            return null;
+            return;
         }
         Object msg = write.msg;
         ChannelPromise promise = write.promise;
         recycle(write, true);
-        return invoker.write(msg, promise);
+        transferFunc.accept(msg, promise);
     }
 
     /**
@@ -290,7 +302,6 @@ public final class PendingWriteQueue {
         }
 
         write.recycle();
-        tracker.decrementPendingOutboundBytes(writeSize);
     }
 
     private static void safeFail(ChannelPromise promise, Throwable cause) {

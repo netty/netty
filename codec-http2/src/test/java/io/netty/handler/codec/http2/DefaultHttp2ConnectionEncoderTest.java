@@ -194,6 +194,8 @@ public class DefaultHttp2ConnectionEncoderTest {
         payloadCaptor = ArgumentCaptor.forClass(Http2RemoteFlowController.FlowControlled.class);
         doNothing().when(remoteFlow).addFlowControlled(any(Http2Stream.class), payloadCaptor.capture());
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
+        when(ctx.newFailedFuture(any(Throwable.class))).then((Answer<ChannelFuture>) invocationOnMock ->
+                new DefaultChannelPromise(channel).setFailure((Throwable) invocationOnMock.getArguments()[0]));
         when(ctx.channel()).thenReturn(channel);
         doAnswer(new Answer<ChannelPromise>() {
             @Override

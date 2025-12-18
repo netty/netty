@@ -134,6 +134,64 @@ public class DefaultChannelPipelineTest {
     }
 
     @Test
+    public void testPendingOutboundBytesNegative() throws InterruptedException {
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+        pipeline.register().sync();
+        pipeline.addLast(new ChannelOutboundHandler() {
+            private int pending;
+
+            @Override
+            public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+                // Returning a negative value is illegal and should close the channel.
+                return pending;
+            }
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                pending = -1;
+                promise.setSuccess();
+            }
+        });
+        pipeline.channel().write(new Object());
+        pipeline.channel().closeFuture().sync();
+    }
+
+    @Test
+    public void testPendingOutboundBytesOverflow() throws InterruptedException {
+        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
+        pipeline.register().sync();
+        pipeline.addLast(new ChannelOutboundHandler() {
+            int pending;
+            @Override
+            public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+                return pending;
+            }
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                // Returning a value that will result in an overflow
+                pending = 2;
+                promise.setSuccess();
+            }
+        }, new ChannelOutboundHandler() {
+            long pending;
+            @Override
+            public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+                return pending;
+            }
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                // Returning a value that will result in an overflow
+                pending = Long.MAX_VALUE;
+                ctx.write(msg, promise);
+            }
+        });
+        pipeline.channel().write(new Object());
+        pipeline.channel().closeFuture().sync();
+    }
+
+    @Test
     public void testFreeCalled() throws Exception {
         final CountDownLatch free = new CountDownLatch(1);
 

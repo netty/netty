@@ -281,7 +281,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
 
         final long flushedAmount = socket.sendFile(region, region.position(), offset, regionCount - offset);
         if (flushedAmount > 0) {
-            in.progress(flushedAmount);
             if (region.transferred() >= regionCount) {
                 in.remove();
             }
@@ -317,7 +316,6 @@ public final class EpollSocketChannel extends AbstractEpollChannel implements So
         }
         final long flushedAmount = region.transferTo(byteChannel, region.transferred());
         if (flushedAmount > 0) {
-            in.progress(flushedAmount);
             if (region.transferred() >= region.count()) {
                 in.remove();
             }

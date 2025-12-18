@@ -64,7 +64,7 @@ class BaseChannelTest {
         return buf;
     }
 
-    void assertLog(String firstExpected, String... otherExpected) {
+    void assertLog(String firstExpected, String... otherExpected) throws Exception {
         String actual = loggingHandler.getLog();
         if (firstExpected.equals(actual)) {
             return;

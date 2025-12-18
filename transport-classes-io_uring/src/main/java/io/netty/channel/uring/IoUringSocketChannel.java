@@ -604,8 +604,6 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             if (progress == -1) {
                 // Done with writing
                 channelOutboundBuffer.remove();
-            } else if (progress > 0) {
-                channelOutboundBuffer.progress(progress);
             }
         } catch (Throwable cause) {
             handleWriteError(cause);
@@ -748,7 +746,6 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
                         int readable = currentBuffer.readableBytes();
                         int skip = Math.min(readable, res);
                         currentBuffer.skipBytes(skip);
-                        channelOutboundBuffer.progress(readable);
                         if (readable <= res) {
                             boolean removed = channelOutboundBuffer.remove();
                             assert removed;

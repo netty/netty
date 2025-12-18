@@ -49,6 +49,7 @@ import static io.netty.channel.ChannelHandlerMask.MASK_DEREGISTER;
 import static io.netty.channel.ChannelHandlerMask.MASK_DISCONNECT;
 import static io.netty.channel.ChannelHandlerMask.MASK_EXCEPTION_CAUGHT;
 import static io.netty.channel.ChannelHandlerMask.MASK_FLUSH;
+import static io.netty.channel.ChannelHandlerMask.MASK_PENDING_OUTBOUND_BYTES;
 import static io.netty.channel.ChannelHandlerMask.MASK_READ;
 import static io.netty.channel.ChannelHandlerMask.MASK_REGISTER;
 import static io.netty.channel.ChannelHandlerMask.MASK_SHUTDOWN;
@@ -87,24 +88,22 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private final String name;
     private final int executionMask;
 
-    // Cache the concrete value for the executor() method. This method is in the hot-path,
-    // and it's a profitable optimisation to avoid as many dependent-loads as possible.
-    // It does not need to be volatile, because it's always the same value for a given context,
-    // within the lifetime of its registration with an event loop, and deregistering will clear it.
-    EventExecutor contextExecutor;
     private ChannelFuture succeededFuture;
 
     // Lazily instantiated tasks used to trigger events to a handler with different executor.
     // There is no need to make this volatile as at worse it will just create a few more instances then needed.
-    private Tasks invokeTasks;
+    private Tasks contextTasks;
 
     private volatile int handlerState = INIT;
+    private final EventExecutor executor;
+    private long currentPendingBytes = -1;
 
     AbstractChannelHandlerContext(DefaultChannelPipeline pipeline,
                                   String name, Class<? extends ChannelHandler> handlerClass) {
         this.name = ObjectUtil.checkNotNull(name, "name");
         this.pipeline = pipeline;
         executionMask = mask(handlerClass);
+        this.executor = pipeline.executor();
     }
 
     @Override
@@ -124,11 +123,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public EventExecutor executor() {
-        EventExecutor ex = contextExecutor;
-        if (ex == null) {
-            ex = contextExecutor = channel().executor();
-        }
-        return ex;
+        return executor;
     }
 
     @Override
@@ -142,10 +137,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    final ChannelHandler handler = next.handler();
-                    ((ChannelInboundHandler) handler).channelRegistered(next);
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelInboundHandler) next.handler()).channelRegistered(next);
                 } catch (Throwable t) {
-                    next.invokeExceptionCaught(t);
+                    next.invokeFireExceptionCaught(t);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
             } else {
                 next.fireChannelRegistered();
@@ -162,10 +159,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    final ChannelHandler handler = next.handler();
-                    ((ChannelInboundHandler) handler).channelUnregistered(next);
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelInboundHandler) next.handler()).channelUnregistered(next);
                 } catch (Throwable t) {
-                    next.invokeExceptionCaught(t);
+                    next.invokeFireExceptionCaught(t);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
             } else {
                 next.fireChannelUnregistered();
@@ -182,10 +181,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    final ChannelHandler handler = next.handler();
-                    ((ChannelInboundHandler) handler).channelActive(next);
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelInboundHandler) next.handler()).channelActive(next);
                 } catch (Throwable t) {
-                    next.invokeExceptionCaught(t);
+                    next.invokeFireExceptionCaught(t);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
             } else {
                 next.fireChannelActive();
@@ -202,10 +203,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    final ChannelHandler handler = next.handler();
-                    ((ChannelInboundHandler) handler).channelInactive(next);
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelInboundHandler) next.handler()).channelInactive(next);
                 } catch (Throwable t) {
-                    next.invokeExceptionCaught(t);
+                    next.invokeFireExceptionCaught(t);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
             } else {
                 next.fireChannelInactive();
@@ -221,10 +224,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         AbstractChannelHandlerContext next = findContextInbound(MASK_EXCEPTION_CAUGHT);
         ObjectUtil.checkNotNull(cause, "cause");
         if (next.executor().inEventLoop()) {
-            next.invokeExceptionCaught(cause);
+            next.invokeFireExceptionCaught(cause);
         } else {
             try {
-                next.executor().execute(() -> next.invokeExceptionCaught(cause));
+                next.executor().execute(() -> fireExceptionCaught(cause));
             } catch (Throwable t) {
                 if (logger.isWarnEnabled()) {
                     logger.warn("Failed to submit an exceptionCaught() event.", t);
@@ -235,10 +238,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return this;
     }
 
-    @SuppressWarnings("deprecation")
-    private void invokeExceptionCaught(final Throwable cause) {
+    private void invokeFireExceptionCaught(final Throwable cause) {
         if (invokeHandler()) {
             try {
+                saveCurrentPendingBytesIfNeeded();
                 ((ChannelInboundHandler) handler()).exceptionCaught(this, cause);
             } catch (Throwable error) {
                 if (logger.isDebugEnabled()) {
@@ -252,6 +255,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                         "was thrown by a user handler's exceptionCaught() " +
                         "method while handling the following exception:", error, cause);
                 }
+            } finally {
+                updatePendingBytesIfNeeded();
             }
         } else {
             fireExceptionCaught(cause);
@@ -265,13 +270,15 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    final ChannelHandler handler = next.handler();
-                    ((ChannelInboundHandler) handler).userEventTriggered(next, event);
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelInboundHandler) next.handler()).userEventTriggered(next, event);
                 } catch (Throwable t) {
-                    next.invokeExceptionCaught(t);
+                    next.invokeFireExceptionCaught(t);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
             } else {
-                next.fireUserEventTriggered(event);
+                fireUserEventTriggered(event);
             }
         } else {
             next.executor().execute(() -> fireUserEventTriggered(event));
@@ -286,10 +293,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             final Object m = pipeline.touch(msg, next);
             if (next.invokeHandler()) {
                 try {
-                    final ChannelHandler handler = next.handler();
-                    ((ChannelInboundHandler) handler).channelRead(next, m);
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelInboundHandler) next.handler()).channelRead(next, m);
                 } catch (Throwable t) {
-                    next.invokeExceptionCaught(t);
+                    next.invokeFireExceptionCaught(t);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
             } else {
                 next.fireChannelRead(m);
@@ -306,16 +315,18 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    final ChannelHandler handler = next.handler();
-                    ((ChannelInboundHandler) handler).channelReadComplete(next);
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelInboundHandler) next.handler()).channelReadComplete(next);
                 } catch (Throwable t) {
-                    next.invokeExceptionCaught(t);
+                    next.invokeFireExceptionCaught(t);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
             } else {
                 next.fireChannelReadComplete();
             }
         } else {
-            next.executor().execute(getInvokeTasks().invokeChannelReadCompleteTask);
+            next.executor().execute(getContextTasks().fireChannelReadCompleteTask);
         }
         return this;
     }
@@ -326,16 +337,18 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    final ChannelHandler handler = next.handler();
-                    ((ChannelInboundHandler) handler).channelWritabilityChanged(next);
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelInboundHandler) next.handler()).channelWritabilityChanged(next);
                 } catch (Throwable t) {
-                    next.invokeExceptionCaught(t);
+                    next.invokeFireExceptionCaught(t);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
             } else {
                 next.fireChannelWritabilityChanged();
             }
         } else {
-            next.executor().execute(getInvokeTasks().invokeChannelWritableStateChangedTask);
+            next.executor().execute(getContextTasks().fireChannelWritabilityChangedTask);
         }
         return this;
     }
@@ -346,13 +359,12 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    // DON'T CHANGE
-                    // Duplex handlers implements both out/in interfaces causing a scalability issue
-                    // see https://bugs.openjdk.org/browse/JDK-8180450
-                    final ChannelHandler handler = next.handler();
-                    ((ChannelInboundHandler) handler).channelShutdown(next, type);
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelInboundHandler) next.handler()).channelShutdown(next, type);
                 } catch (Throwable t) {
-                    next.invokeExceptionCaught(t);
+                    next.invokeFireExceptionCaught(t);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
             } else {
                 next.fireChannelShutdown(type);
@@ -408,25 +420,23 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_REGISTER);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeRegister(promise);
+            if (next.invokeHandler()) {
+                try {
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelOutboundHandler) next.handler()).register(next, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
+                }
+            } else {
+                next.register(promise);
+            }
         } else {
-            safeExecute(executor, () -> next.invokeRegister(promise), promise, null, false);
+            safeExecute(executor, () -> register(promise), promise, null, false);
         }
 
         return promise;
-    }
-
-    private void invokeRegister(ChannelPromise promise) {
-        if (invokeHandler()) {
-            try {
-                final ChannelHandler handler = handler();
-                ((ChannelOutboundHandler) handler).register(this, promise);
-            } catch (Throwable t) {
-                notifyOutboundHandlerException(t, promise);
-            }
-        } else {
-            register(promise);
-        }
     }
 
     @Override
@@ -440,29 +450,22 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_BIND);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeBind(localAddress, promise);
-        } else {
-            safeExecute(executor, new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeBind(localAddress, promise);
+            if (next.invokeHandler()) {
+                try {
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelOutboundHandler) next.handler()).bind(next, localAddress, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
-            }, promise, null, false);
-        }
-        return promise;
-    }
-
-    private void invokeBind(SocketAddress localAddress, ChannelPromise promise) {
-        if (invokeHandler()) {
-            try {
-                final ChannelHandler handler = handler();
-                ((ChannelOutboundHandler) handler).bind(this, localAddress, promise);
-            } catch (Throwable t) {
-                notifyOutboundHandlerException(t, promise);
+            } else {
+                next.bind(localAddress, promise);
             }
         } else {
-            bind(localAddress, promise);
+            safeExecute(executor, () -> bind(localAddress, promise), promise, null, false);
         }
+        return promise;
     }
 
     @Override
@@ -483,29 +486,22 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_CONNECT);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeConnect(remoteAddress, localAddress, promise);
-        } else {
-            safeExecute(executor, new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeConnect(remoteAddress, localAddress, promise);
+            if (next.invokeHandler()) {
+                try {
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelOutboundHandler) next.handler()).connect(next, remoteAddress, localAddress, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
-            }, promise, null, false);
-        }
-        return promise;
-    }
-
-    private void invokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-        if (invokeHandler()) {
-            try {
-                final ChannelHandler handler = handler();
-                ((ChannelOutboundHandler) handler).connect(this, remoteAddress, localAddress, promise);
-            } catch (Throwable t) {
-                notifyOutboundHandlerException(t, promise);
+            } else {
+                next.connect(remoteAddress, localAddress, promise);
             }
         } else {
-            connect(remoteAddress, localAddress, promise);
+            safeExecute(executor, () -> connect(remoteAddress, localAddress, promise), promise, null, false);
         }
+        return promise;
     }
 
     @Override
@@ -523,29 +519,22 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_DISCONNECT);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeDisconnect(promise);
-        } else {
-            safeExecute(executor, new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeDisconnect(promise);
+            if (next.invokeHandler()) {
+                try {
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelOutboundHandler) next.handler()).disconnect(next, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
-            }, promise, null, false);
-        }
-        return promise;
-    }
-
-    private void invokeDisconnect(ChannelPromise promise) {
-        if (invokeHandler()) {
-            try {
-                final ChannelHandler handler = handler();
-                ((ChannelOutboundHandler) handler).disconnect(this, promise);
-            } catch (Throwable t) {
-                notifyOutboundHandlerException(t, promise);
+            } else {
+                next.disconnect(promise);
             }
         } else {
-            disconnect(promise);
+            safeExecute(executor, () -> disconnect(promise), promise, null, false);
         }
+        return promise;
     }
 
     @Override
@@ -558,30 +547,23 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_CLOSE);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeClose(promise);
-        } else {
-            safeExecute(executor, new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeClose(promise);
+            if (next.invokeHandler()) {
+                try {
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelOutboundHandler) next.handler()).close(next, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
-            }, promise, null, false);
+            } else {
+                next.close(promise);
+            }
+        } else {
+            safeExecute(executor, () -> close(promise), promise, null, false);
         }
 
         return promise;
-    }
-
-    private void invokeClose(ChannelPromise promise) {
-        if (invokeHandler()) {
-            try {
-                final ChannelHandler handler = handler();
-                ((ChannelOutboundHandler) handler).close(this, promise);
-            } catch (Throwable t) {
-                notifyOutboundHandlerException(t, promise);
-            }
-        } else {
-            close(promise);
-        }
     }
 
     @Override
@@ -594,30 +576,23 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_DEREGISTER);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeDeregister(promise);
-        } else {
-            safeExecute(executor, new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeDeregister(promise);
+            if (next.invokeHandler()) {
+                try {
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelOutboundHandler) next.handler()).deregister(next, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
-            }, promise, null, false);
+            } else {
+                next.deregister(promise);
+            }
+        } else {
+            safeExecute(executor, () -> deregister(promise), promise, null, false);
         }
 
         return promise;
-    }
-
-    private void invokeDeregister(ChannelPromise promise) {
-        if (invokeHandler()) {
-            try {
-                final ChannelHandler handler = handler();
-                ((ChannelOutboundHandler) handler).deregister(this, promise);
-            } catch (Throwable t) {
-                notifyOutboundHandlerException(t, promise);
-            }
-        } else {
-            deregister(promise);
-        }
     }
 
     @Override
@@ -632,30 +607,23 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_SHUTDOWN);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeShutdown(type, promise);
-        } else {
-            safeExecute(executor, new Runnable() {
-                @Override
-                public void run() {
-                    next.invokeShutdown(type, promise);
+            if (next.invokeHandler()) {
+                try {
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelOutboundHandler) next.handler()).shutdown(next, type, promise);
+                } catch (Throwable t) {
+                    notifyOutboundHandlerException(t, promise);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
-            }, promise, null, false);
+            } else {
+                next.shutdown(type, promise);
+            }
+        } else {
+            safeExecute(executor, () -> shutdown(type, promise), promise, null, false);
         }
 
         return promise;
-    }
-
-    private void invokeShutdown(ChannelShutdownType type, ChannelPromise promise) {
-        if (invokeHandler()) {
-            try {
-                final ChannelHandler handler = handler();
-                ((ChannelOutboundHandler) handler).shutdown(this, type, promise);
-            } catch (Throwable t) {
-                notifyOutboundHandlerException(t, promise);
-            }
-        } else {
-            shutdown(type, promise);
-        }
     }
 
     @Override
@@ -664,16 +632,18 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
                 try {
-                    final ChannelHandler handler = next.handler();
-                    ((ChannelOutboundHandler) handler).read(next);
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelOutboundHandler) next.handler()).read(next);
                 } catch (Throwable t) {
                     handleFatalOutboundHandlerException(t);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
                 }
             } else {
                 next.read();
             }
         } else {
-            next.executor().execute(getInvokeTasks().invokeReadTask);
+            next.executor().execute(getContextTasks().readTask);
         }
         return this;
     }
@@ -696,33 +666,23 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_FLUSH);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
-            next.invokeFlush();
-        } else {
-            Tasks tasks = next.invokeTasks;
-            if (tasks == null) {
-                next.invokeTasks = tasks = new Tasks(next);
+            if (next.invokeHandler()) {
+                try {
+                    next.saveCurrentPendingBytesIfNeeded();
+                    ((ChannelOutboundHandler) next.handler()).flush(next);
+                } catch (Throwable t) {
+                    handleFatalOutboundHandlerException(t);
+                } finally {
+                    next.updatePendingBytesIfNeeded();
+                }
+            } else {
+                next.flush();
             }
-            safeExecute(executor, tasks.invokeFlushTask, channel().newPromise(), null, false);
+        } else {
+            safeExecute(executor, getContextTasks().flushTask, channel().newPromise(), null, false);
         }
 
         return this;
-    }
-
-    private void invokeFlush() {
-        if (invokeHandler()) {
-            invokeFlush0();
-        } else {
-            flush();
-        }
-    }
-
-    private void invokeFlush0() {
-        try {
-            final ChannelHandler handler = handler();
-            ((ChannelOutboundHandler) handler).flush(this);
-        } catch (Throwable t) {
-            handleFatalOutboundHandlerException(t);
-        }
     }
 
     @Override
@@ -740,25 +700,36 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             if (executor.inEventLoop()) {
                 if (next.invokeHandler()) {
                     try {
-                        final ChannelHandler handler = next.handler();
-                        ((ChannelOutboundHandler) handler).write(next, msg, promise);
+                        next.saveCurrentPendingBytesIfNeeded();
+                        ((ChannelOutboundHandler) next.handler()).write(next, msg, promise);
                     } catch (Throwable t) {
                         notifyOutboundHandlerException(t, promise);
+                    } finally {
+                        next.updatePendingBytesIfNeeded();
                     }
                     if (flush) {
-                        next.invokeFlush0();
+                        try {
+                            next.saveCurrentPendingBytesIfNeeded();
+                            ((ChannelOutboundHandler) next.handler()).flush(next);
+                        } catch (Throwable t) {
+                            handleFatalOutboundHandlerException(t);
+                        } finally {
+                            next.updatePendingBytesIfNeeded();
+                        }
                     }
                 } else {
                     next.write(msg, flush, promise);
                 }
             } else {
                 final WriteTask task = WriteTask.newInstance(this, m, promise, flush);
-                if (!safeExecute(executor, task, promise, m, !flush)) {
-                    // We failed to submit the WriteTask. We need to cancel it so we decrement the pending bytes
-                    // and put it back in the Recycler for re-use later.
-                    //
-                    // See https://github.com/netty/netty/issues/8343.
-                    task.cancel();
+                if (task != null) {
+                    if (!safeExecute(executor, task, promise, m, !flush)) {
+                        // We failed to submit the WriteTask. We need to cancel it so we decrement the pending bytes
+                        // and put it back in the Recycler for re-use later.
+                        //
+                        // See https://github.com/netty/netty/issues/8343.
+                        task.cancel();
+                    }
                 }
             }
         }
@@ -908,11 +879,24 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
     }
 
-    final void callHandlerRemoved() throws Exception {
+    final void callHandlerRemoved(Throwable cause) throws Exception {
         try {
             // Only call handlerRemoved(...) if we called handlerAdded(...) before.
             if (handlerState == ADD_COMPLETE) {
-                handler().handlerRemoved(this);
+                long pending = 0;
+                try {
+                    if (cause == null && (executionMask & MASK_PENDING_OUTBOUND_BYTES) != 0) {
+                        pending = currentPendingBytes((ChannelOutboundHandler) handler());
+                    }
+                } finally {
+                    try {
+                        handler().handlerRemoved(this);
+                    } finally {
+                        if (pending > 0) {
+                            pipeline.decrementPendingOutboundBytes(pending);
+                        }
+                    }
+                }
             }
         } finally {
             // Mark the handler as removed in any case.
@@ -970,10 +954,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return StringUtil.simpleClassName(ChannelHandlerContext.class) + '(' + name + ", " + channel() + ')';
     }
 
-    Tasks getInvokeTasks() {
-        Tasks tasks = invokeTasks;
+    Tasks getContextTasks() {
+        Tasks tasks = contextTasks;
         if (tasks == null) {
-            invokeTasks = tasks = new Tasks(this);
+            contextTasks = tasks = new Tasks(this);
         }
         return tasks;
     }
@@ -990,6 +974,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 Object msg, ChannelPromise promise, boolean flush) {
             WriteTask task = RECYCLER.get();
             init(task, ctx, msg, promise, flush);
+
+            if (ESTIMATE_TASK_SIZE_ON_SUBMIT) {
+                try {
+                    task.size = ctx.pipeline.estimatorHandle().size(msg) + WRITE_TASK_OVERHEAD;
+                    ctx.pipeline.incrementPendingOutboundBytes(task.size);
+                } catch (Throwable t) {
+                    ReferenceCountUtil.release(msg);
+                    promise.setFailure(t);
+                    task.recycle();
+                    return null;
+                }
+            }
+
             return task;
         }
 
@@ -1004,7 +1001,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         private AbstractChannelHandlerContext ctx;
         private Object msg;
         private ChannelPromise promise;
-        private int size; // sign bit controls flush
+        private int size;
+        private boolean flush;
 
         private WriteTask(Handle<WriteTask> handle) {
             this.handle = handle;
@@ -1015,23 +1013,15 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             task.ctx = ctx;
             task.msg = msg;
             task.promise = promise;
-
-            if (ESTIMATE_TASK_SIZE_ON_SUBMIT) {
-                task.size = ctx.pipeline.estimatorHandle().size(msg) + WRITE_TASK_OVERHEAD;
-                ctx.pipeline.incrementPendingOutboundBytes(task.size);
-            } else {
-                task.size = 0;
-            }
-            if (flush) {
-                task.size |= Integer.MIN_VALUE;
-            }
+            task.flush = flush;
+            task.size = 0;
         }
 
         @Override
         public void run() {
             try {
                 decrementPendingOutboundBytes();
-                ctx.write(msg, size < 0, promise);
+                ctx.write(msg, flush, promise);
             } finally {
                 recycle();
             }
@@ -1047,7 +1037,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
         private void decrementPendingOutboundBytes() {
             if (ESTIMATE_TASK_SIZE_ON_SUBMIT) {
-                ctx.pipeline.decrementPendingOutboundBytes(size & Integer.MAX_VALUE);
+                ctx.pipeline.decrementPendingOutboundBytes(size);
             }
         }
 
@@ -1061,16 +1051,57 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     static final class Tasks {
-        final Runnable invokeChannelReadCompleteTask;
-        private final Runnable invokeReadTask;
-        private final Runnable invokeChannelWritableStateChangedTask;
-        private final Runnable invokeFlushTask;
+        private final Runnable fireChannelReadCompleteTask;
+        private final Runnable readTask;
+        private final Runnable fireChannelWritabilityChangedTask;
+        private final Runnable flushTask;
 
         Tasks(AbstractChannelHandlerContext ctx) {
-            invokeChannelReadCompleteTask = ctx::fireChannelReadComplete;
-            invokeReadTask = ctx::read;
-            invokeChannelWritableStateChangedTask = ctx::fireChannelWritabilityChanged;
-            invokeFlushTask = ctx::invokeFlush;
+            fireChannelReadCompleteTask = ctx::fireChannelReadComplete;
+            readTask = ctx::read;
+            fireChannelWritabilityChangedTask = ctx::fireChannelWritabilityChanged;
+            flushTask = ctx::flush;
+        }
+    }
+    private long currentPendingBytes(ChannelOutboundHandler handler) {
+        long pending = handler.pendingOutboundBytes(this);
+        if (pending < 0) {
+            pipeline.closeTransport();
+            throw new IllegalStateException(StringUtil.simpleClassName(handler().getClass()) +
+                    ".pendingOutboundBytes(ChannelHandlerContext) returned a negative value: " + pending +
+                    ". Force closed transport.");
+        }
+        return pending;
+    }
+
+    private void saveCurrentPendingBytesIfNeeded() {
+        // We only save the current pending bytes if not already done before.
+        // This is important as otherwise we might run into issues in case of reentrancy.
+        if (currentPendingBytes == -1 && (executionMask & MASK_PENDING_OUTBOUND_BYTES) != 0) {
+            currentPendingBytes = currentPendingBytes((ChannelOutboundHandler) handler());
+        }
+    }
+
+    private void updatePendingBytesIfNeeded() {
+        if ((executionMask & MASK_PENDING_OUTBOUND_BYTES) == 0) {
+            assert currentPendingBytes == -1;
+            return;
+        }
+        long current = currentPendingBytes;
+        if (current == -1) {
+            return;
+        }
+        this.currentPendingBytes = -1;
+        long newPendingBytes = currentPendingBytes((ChannelOutboundHandler) handler());
+        long delta = current - newPendingBytes;
+        if (delta == 0) {
+            // No changes
+            return;
+        }
+        if (delta > 0) {
+            pipeline.decrementPendingOutboundBytes(delta);
+        } else {
+            pipeline.incrementPendingOutboundBytes(-delta);
         }
     }
 }

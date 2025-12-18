@@ -1125,7 +1125,7 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // Add something to the ChannelOutboundBuffer of the parent to simulate queuing in the parents channel buffer
         // and verify that this only affect the writability of the parent channel while the child stays writable
         // until it used all of its credits.
-        parentChannel.addBuffer(Unpooled.buffer().writeZero(800));
+        parentChannel.pipeline().firstContext().write(Unpooled.buffer().writeZero(800));
         assertFalse(parentChannel.isWritable());
 
         assertTrue(childChannel.isWritable());

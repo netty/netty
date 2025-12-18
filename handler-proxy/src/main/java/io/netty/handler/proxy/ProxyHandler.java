@@ -17,7 +17,6 @@
 package io.netty.handler.proxy;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -294,7 +293,7 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
             removedCodec &= safeRemoveDecoder();
 
             if (removedCodec) {
-                writePendingWrites();
+                writePendingWrites(ctx);
 
                 if (flushedPrematurely) {
                     ctx.flush();
@@ -400,7 +399,7 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
     @Override
     public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
         if (finished) {
-            writePendingWrites();
+            writePendingWrites(ctx);
             ctx.write(msg, promise);
         } else {
             addPendingWrite(ctx, msg, promise);
@@ -410,11 +409,19 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
     @Override
     public final void flush(ChannelHandlerContext ctx) {
         if (finished) {
-            writePendingWrites();
+            writePendingWrites(ctx);
             ctx.flush();
         } else {
             flushedPrematurely = true;
         }
+    }
+
+    @Override
+    public final long pendingOutboundBytes(ChannelHandlerContext ctx) {
+        if (pendingWrites != null) {
+            return pendingWrites.bytes();
+        }
+        return 0;
     }
 
     private static void readIfNeeded(ChannelHandlerContext ctx) {
@@ -423,9 +430,9 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
         }
     }
 
-    private void writePendingWrites() {
+    private void writePendingWrites(ChannelHandlerContext ctx) {
         if (pendingWrites != null) {
-            pendingWrites.removeAndWriteAll();
+            pendingWrites.removeAndTransferAll(ctx::write);
             pendingWrites = null;
         }
     }

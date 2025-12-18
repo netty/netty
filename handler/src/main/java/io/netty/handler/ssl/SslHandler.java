@@ -2155,7 +2155,7 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void handlerAdded(final ChannelHandlerContext ctx) throws Exception {
         this.ctx = ctx;
         Channel channel = ctx.channel();
-        pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(channel, 16, engineType.wantsDirectBuffer) {
+        pendingUnencryptedWrites = new SslHandlerCoalescingBufferQueue(16, engineType.wantsDirectBuffer) {
             @Override
             protected int wrapDataSize() {
                 return SslHandler.this.wrapDataSize;
@@ -2479,5 +2479,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
     public void shutdown(ChannelHandlerContext ctx,
                          ChannelShutdownType type, ChannelPromise promise) {
         ctx.shutdown(type, promise);
+    }
+
+    @Override
+    public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+        return pendingUnencryptedWrites == null ? 0 : pendingUnencryptedWrites.readableBytes();
     }
 }

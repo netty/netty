@@ -29,6 +29,7 @@ import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
+import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.handler.ssl.SniCompletionEvent;
@@ -430,7 +431,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    protected ChannelPipeline newChannelPipeline() {
+    protected DefaultChannelPipeline newChannelPipeline() {
         return new DefaultAbstractChannelPipeline(this) {
             @Override
             protected void onUnhandledInboundMessage(ChannelHandlerContext ctx, Object msg) {

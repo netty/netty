@@ -56,6 +56,7 @@ final class ChannelHandlerMask {
     static final int MASK_FLUSH = 1 << 17;
     static final int MASK_REGISTER = 1 << 18;
     static final int MASK_SHUTDOWN = 1 << 19;
+    static final int MASK_PENDING_OUTBOUND_BYTES = 1 << 20;
 
     static final int MASK_ALL_INBOUND =  MASK_CHANNEL_REGISTERED | MASK_EXCEPTION_CAUGHT |
             MASK_CHANNEL_UNREGISTERED | MASK_CHANNEL_ACTIVE | MASK_CHANNEL_INACTIVE | MASK_CHANNEL_READ |
@@ -63,7 +64,7 @@ final class ChannelHandlerMask {
             MASK_CHANNEL_SHUTDOWN;
     static final int MASK_ALL_OUTBOUND =  MASK_BIND | MASK_CONNECT | MASK_DISCONNECT |
             MASK_CLOSE | MASK_DEREGISTER | MASK_READ | MASK_WRITE | MASK_FLUSH | MASK_REGISTER |
-            MASK_SHUTDOWN;
+            MASK_SHUTDOWN | MASK_PENDING_OUTBOUND_BYTES;
 
     private static final FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>> MASKS =
             new FastThreadLocal<Map<Class<? extends ChannelHandler>, Integer>>() {
@@ -166,6 +167,9 @@ final class ChannelHandlerMask {
                 if (isSkippable(handlerType, "shutdown", ChannelHandlerContext.class,
                         ChannelShutdownType.class, ChannelPromise.class)) {
                     mask &= ~MASK_SHUTDOWN;
+                }
+                if (isSkippable(handlerType, "pendingOutboundBytes", ChannelHandlerContext.class)) {
+                    mask &= ~MASK_PENDING_OUTBOUND_BYTES;
                 }
             }
         } catch (Exception e) {

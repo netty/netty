@@ -884,6 +884,10 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
         }
 
         boolean writtenAll = writeComplete0(op, res, flags, data, numOutstandingWrites);
+        // We might have consumed data from the ChannelOutboundBuffer lets call updateWritabilityIfNeeded() so
+        // we propagate changes related to the writability state if required.
+        updateWritabilityIfNeeded();
+
         if (!writtenAll && (ioState & POLL_OUT_SCHEDULED) == 0) {
 
             // We were not able to write everything, let's register for POLLOUT

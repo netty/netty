@@ -359,6 +359,15 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
     }
 
+    @Override
+    public long pendingOutboundBytes(ChannelHandlerContext ctx) {
+        assert ctx == outboundCtx.ctx;
+        if (!outboundCtx.removed) {
+            return outboundHandler.pendingOutboundBytes(outboundCtx);
+        }
+        return 0;
+    }
+
     private static class DelegatingChannelHandlerContext implements ChannelHandlerContext {
 
         private final ChannelHandlerContext ctx;

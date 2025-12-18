@@ -33,6 +33,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.WeakHashMap;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 /**
@@ -40,6 +41,11 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
  * by a {@link Channel} implementation when the {@link Channel} is created.
  */
 public class DefaultChannelPipeline implements ChannelPipeline {
+
+    private static final AtomicLongFieldUpdater<DefaultChannelPipeline> TOTAL_PENDING_OUTBOUND_BYTES_UPDATER =
+            AtomicLongFieldUpdater.newUpdater(DefaultChannelPipeline.class, "pendingOutboundBytes");
+
+    private volatile long pendingOutboundBytes;
 
     static final InternalLogger logger = InternalLoggerFactory.getInstance(DefaultChannelPipeline.class);
 
@@ -94,6 +100,19 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         head.next = tail;
         tail.prev = head;
+    }
+
+    /*
+     * Called once the {@link #pendingOutboundBytes()} were changed.
+     *
+     * @param pendingOutboundBytes          the new {@link #pendingOutboundBytes()}.
+     */
+    protected void pendingOutboundBytesUpdated(long pendingOutboundBytes) {
+        // NOOP.
+    }
+
+    public final long pendingOutboundBytes() {
+        return TOTAL_PENDING_OUTBOUND_BYTES_UPDATER.get(this);
     }
 
     final MessageSizeEstimator.Handle estimatorHandle() {
@@ -499,7 +518,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             boolean removed = false;
             try {
                 atomicRemoveFromHandlerList(ctx);
-                ctx.callHandlerRemoved();
+                ctx.callHandlerRemoved(t);
                 removed = true;
             } catch (Throwable t2) {
                 if (logger.isWarnEnabled()) {
@@ -522,7 +541,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private void callHandlerRemoved0(final AbstractChannelHandlerContext ctx) {
         // Notify the complete removal.
         try {
-            ctx.callHandlerRemoved();
+            ctx.callHandlerRemoved(null);
         } catch (Throwable t) {
             fireExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() + ".handlerRemoved() has thrown an exception.", t));
@@ -1211,12 +1230,31 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     protected void onUnhandledChannelWritabilityChanged() {
     }
 
-    protected void incrementPendingOutboundBytes(long size) {
-       // NOOP
+    private void updatePendingOutboundBytes(long delta) {
+        long pending = TOTAL_PENDING_OUTBOUND_BYTES_UPDATER.addAndGet(this, delta);
+        if (pending < 0) {
+            closeTransport();
+            throw new IllegalStateException("pendingOutboundBytes overflowed, force closed transport.");
+        }
+        pendingOutboundBytesUpdated(pending);
     }
 
-    protected void decrementPendingOutboundBytes(long size) {
-        // NOOP
+    final void incrementPendingOutboundBytes(long delta) {
+        assert delta > 0;
+        updatePendingOutboundBytes(delta);
+    }
+
+    final void decrementPendingOutboundBytes(long delta) {
+        assert delta > 0;
+        updatePendingOutboundBytes(-delta);
+    }
+
+    final void closeTransport() {
+        if (executor().inEventLoop()) {
+            head.close(head, newPromise());
+        }  else {
+            executor().execute(() ->  head.close(head, newPromise()));
+        }
     }
 
     // A special catch-all handler that handles both bytes and messages.
@@ -1316,13 +1354,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
             ChannelPromise registerPromise = newPromise();
             registerPromise.addListener(f -> {
                 if (f.isSuccess()) {
-                    // Clear any cached executors from prior event loop registrations.
-                    AbstractChannelHandlerContext context = tail;
-                    do {
-                        context.contextExecutor = null;
-                        context = context.prev;
-                    } while (context != null);
-
                     // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
                     // user may already fire events through the pipeline in the ChannelFutureListener that the user
                     // attached the the original promise.
