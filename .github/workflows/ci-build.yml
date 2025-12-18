@@ -49,6 +49,9 @@ jobs:
           - setup: linux-x86_64-java11-boringssl-snapshot
             docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build"
             docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build-boringssl-snapshot"
+          - setup: linux-x86_64-java25-semeru
+            docker-compose-build: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml build --build-arg java_version=25.0.1-sem"
+            docker-compose-run: "-f docker/docker-compose.yaml -f docker/docker-compose.centos-7.111.yaml run build"
 
     name: ${{ matrix.setup }}
     steps:

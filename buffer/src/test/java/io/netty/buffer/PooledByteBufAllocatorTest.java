@@ -997,6 +997,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void jfrChunkAllocation() throws Exception {
+        assumeTrue(PlatformDependent.isJfrEnabled());
         try (RecordingStream stream = new RecordingStream()) {
             CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
 
@@ -1020,6 +1021,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void shouldCreateTwoChunks() throws Exception {
+        assumeTrue(PlatformDependent.isJfrEnabled());
         try (RecordingStream stream = new RecordingStream()) {
             final CountDownLatch eventsFlushed = new CountDownLatch(2);
             stream.enable(AllocateChunkEvent.class);
@@ -1050,6 +1052,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void shouldReuseTheSameChunk() throws Exception {
+        assumeTrue(PlatformDependent.isJfrEnabled());
         try (RecordingStream stream = new RecordingStream()) {
             final CountDownLatch eventsFlushed = new CountDownLatch(1);
             final AtomicInteger chunksAllocations = new AtomicInteger();
@@ -1089,6 +1092,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void jfrBufferAllocation() throws Exception {
+        assumeTrue(PlatformDependent.isJfrEnabled());
         try (RecordingStream stream = new RecordingStream()) {
             CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
             CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
@@ -1123,6 +1127,7 @@ public class PooledByteBufAllocatorTest extends AbstractByteBufAllocatorTest<Poo
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void jfrBufferAllocationThreadLocal() throws Exception {
+        assumeTrue(PlatformDependent.isJfrEnabled());
         ByteBufAllocator alloc = newAllocator(true);
 
         Callable<Void> allocateAndRelease = () -> {

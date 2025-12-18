@@ -17,6 +17,7 @@ package io.netty.buffer;
 
 import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.FastThreadLocalThread;
+import io.netty.util.internal.PlatformDependent;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingStream;
 import org.junit.jupiter.api.RepeatedTest;
@@ -48,6 +49,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<AdaptiveByteBufAllocator> {
     @Override
@@ -228,6 +230,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void jfrChunkAllocation() throws Exception {
+        assumeTrue(PlatformDependent.isJfrEnabled());
         try (RecordingStream stream = new RecordingStream()) {
             CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
 
@@ -251,6 +254,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void shouldCreateTwoChunks() throws Exception {
+        assumeTrue(PlatformDependent.isJfrEnabled());
         try (RecordingStream stream = new RecordingStream()) {
             final CountDownLatch eventsFlushed = new CountDownLatch(2);
             stream.enable(AllocateChunkEvent.class);
@@ -282,6 +286,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void shouldReuseTheSameChunk() throws Exception {
+        assumeTrue(PlatformDependent.isJfrEnabled());
         try (RecordingStream stream = new RecordingStream()) {
             final CountDownLatch eventsFlushed = new CountDownLatch(1);
             final AtomicInteger chunksAllocations = new AtomicInteger();
@@ -317,6 +322,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void jfrBufferAllocation() throws Exception {
+        assumeTrue(PlatformDependent.isJfrEnabled());
         try (RecordingStream stream = new RecordingStream()) {
             CompletableFuture<RecordedEvent> allocateFuture = new CompletableFuture<>();
             CompletableFuture<RecordedEvent> releaseFuture = new CompletableFuture<>();
@@ -351,6 +357,7 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
     @EnabledForJreRange(min = JRE.JAVA_17) // RecordingStream
     @Timeout(10)
     public void jfrBufferAllocationThreadLocal() throws Exception {
+        assumeTrue(PlatformDependent.isJfrEnabled());
         ByteBufAllocator alloc = new AdaptiveByteBufAllocator(true, true);
 
         Callable<Void> allocateAndRelease = () -> {
