@@ -416,8 +416,10 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 return;
             case NOW:
                 fireChannelWritabilityChanged();
+                return;
             case LATER:
                 executor().execute(fireChannelWritabilityChangedTask);
+                return;
         }
     }
 
