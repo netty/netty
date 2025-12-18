@@ -31,9 +31,26 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 
 /**
- * A queue of write operations which are pending for later execution. It also updates the
- * {@linkplain Channel#isWritable() writability} of the associated {@link Channel}, so that
- * the pending write operations are also considered to determine the writability.
+ * A queue of write operations which are pending for later execution.
+ * If used within your {@link ChannelOutboundHandler} you should override
+ * {@link ChannelOutboundHandler#pendingOutboundBytes(ChannelHandlerContext)} and return {@link #bytes()} to also
+ * affect the Channel writability:
+ *
+ * <pre>
+ * public class MyOutboundHandler implements {@link ChannelOutboundHandler} {
+ *     private {@link PendingWriteQueue} queue;
+ *
+ *     {@code @Override}
+ *     public void handlerAdded({@link ChannelHandlerContext} ctx) {
+ *         queue = new {@link PendingWriteQueue}();
+ *     }
+ *
+ *     {@code @Override}
+ *     public long pendingOutboundBytes({@link ChannelHandlerContext} ctx) {
+ *         return queue.bytes();
+ *     }
+ * }
+ * </pre>
  */
 public final class PendingWriteQueue {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PendingWriteQueue.class);
