@@ -42,7 +42,7 @@ import io.netty.util.AttributeKey;
  * You can keep the {@link ChannelHandlerContext} for later use, such as
  * triggering an event outside the handler methods, even from a different thread.
  * <pre>
- * public class MyHandler extends {@link ChannelHandler} {
+ * public class MyHandler implements {@link ChannelHandler} {
  *
  *     <b>private {@link ChannelHandlerContext} ctx;</b>
  *
