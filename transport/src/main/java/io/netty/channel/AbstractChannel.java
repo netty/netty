@@ -388,6 +388,13 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
     }
 
+    /**
+     * Method that should be called to propagate writability state changes if required.
+     */
+    protected final void updateWritabilityIfNeeded() {
+        updateWritabilityIfNeeded(true, false);
+    }
+
     private void updateWritabilityIfNeeded(boolean notify, boolean notifyLater) {
         long totalPending = totalPendingBytes();
         WriteBufferWaterMark mark = config().getWriteBufferWaterMark();
