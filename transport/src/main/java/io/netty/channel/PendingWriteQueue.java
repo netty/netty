@@ -29,7 +29,6 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 import java.util.Objects;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 /**
  * A queue of write operations which are pending for later execution. It also updates the
@@ -133,7 +132,7 @@ public final class PendingWriteQueue {
 
     /**
      * Remove all pending write operation and performs them via
-      {@link Function#apply(Object)}.
+      {@link BiConsumer#accept(Object, Object)}.
      *
      * @return  {@link ChannelFuture} if something was transferred and {@code null}
      *          if the {@link PendingWriteQueue} is empty.
@@ -222,7 +221,7 @@ public final class PendingWriteQueue {
 
     /**
      * Removes a pending write operation and performs it via
-     * {@link ChannelHandlerContext#write(Object, ChannelPromise)}.
+     * {@link BiConsumer#accept(Object, Object)}.
      */
     public void removeAndTransfer(BiConsumer<Object, ChannelPromise> transferFunc) {
         assert executor.inEventLoop();

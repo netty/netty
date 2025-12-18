@@ -47,9 +47,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannel.class);
 
-    private static final AtomicIntegerFieldUpdater<AbstractChannel> WRITABLE_UPDATER =
-            AtomicIntegerFieldUpdater.newUpdater(AbstractChannel.class, "writable");
-    private volatile int writable = 1;
+    private static final int WRITABLE = 0;
+    private static final int UNWRITABLE = 1;
+    private static final AtomicIntegerFieldUpdater<AbstractChannel> WRITABLE_STATE_UPDATER =
+            AtomicIntegerFieldUpdater.newUpdater(AbstractChannel.class, "writableState");
+    private volatile int writableState;
 
     private final Runnable fireChannelWritabilityChangedTask;
     private final Channel parent;
@@ -175,7 +177,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     @Override
     public boolean isWritable() {
-        return WRITABLE_UPDATER.get(this) == 1;
+        return WRITABLE_STATE_UPDATER.get(this) == WRITABLE;
     }
 
     @Override
@@ -390,11 +392,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         long totalPending = totalPendingBytes();
         WriteBufferWaterMark mark = config().getWriteBufferWaterMark();
         if (totalPending > mark.high()) {
-            if (WRITABLE_UPDATER.compareAndSet(this, 1, 0)) {
+            if (WRITABLE_STATE_UPDATER.compareAndSet(this, WRITABLE, UNWRITABLE)) {
                 fireChannelWritabilityChangedIfNeeded(notify, notifyLater);
             }
         } else if (totalPending < mark.low()) {
-            if (WRITABLE_UPDATER.compareAndSet(this, 0, 1)) {
+            if (WRITABLE_STATE_UPDATER.compareAndSet(this, UNWRITABLE, WRITABLE)) {
                 fireChannelWritabilityChangedIfNeeded(notify, notifyLater);
             }
         }
