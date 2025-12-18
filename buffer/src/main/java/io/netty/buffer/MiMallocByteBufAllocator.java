@@ -1882,15 +1882,15 @@ final class MiMallocByteBufAllocator {
      * Allocate into the given buffer. Used by {@link AdaptivePoolingAllocator.AdaptiveByteBuf#capacity(int)}.
      */
     void reallocate(int size, int maxCapacity, MiByteBuf into) {
-        MiByteBuf result = allocate(size, maxCapacity, into);
+        MiByteBuf result = allocate(size, maxCapacity, into, true);
         assert result == into: "Re-allocation created separate buffer instance";
     }
 
     ByteBuf allocate(int size, int maxCapacity) {
-        return allocate(size, maxCapacity, null);
+        return allocate(size, maxCapacity, null, false);
     }
 
-    private MiByteBuf allocate(int size, int maxCapacity, MiByteBuf byteBuf) {
+    private MiByteBuf allocate(int size, int maxCapacity, MiByteBuf byteBuf, boolean isReAlloc) {
         LocalHeap localHeap = THREAD_LOCAL_HEAP.get();
         if (size <= PAGES_FREE_DIRECT_SIZE_MAX) {
             int wSize = toWordSize(size);
@@ -1902,15 +1902,15 @@ final class MiMallocByteBufAllocator {
                     byteBuf = block;
                 }
                 page.freeList = block.nextBlock;
-                byteBuf.init(block, size, maxCapacity);
+                byteBuf.init(block, size, maxCapacity, isReAlloc);
                 page.usedBlocks++;
                 return byteBuf;
             }
         }
-        return allocateGeneric(size, maxCapacity, byteBuf, localHeap);
+        return allocateGeneric(size, maxCapacity, byteBuf, localHeap, isReAlloc);
     }
 
-    private MiByteBuf allocateGeneric(int size, int maxCapacity, MiByteBuf byteBuf, LocalHeap heap) {
+    private MiByteBuf allocateGeneric(int size, int maxCapacity, MiByteBuf byteBuf, LocalHeap heap, boolean isReAlloc) {
         // Do administrative tasks every N generic allocations.
         if (++heap.genericCount >= 100) {
             heap.genericCollectCount += heap.genericCount;
@@ -1937,7 +1937,7 @@ final class MiMallocByteBufAllocator {
             byteBuf = block;
         }
         page.freeList = block.nextBlock;
-        byteBuf.init(block, size, maxCapacity);
+        byteBuf.init(block, size, maxCapacity, isReAlloc);
         page.usedBlocks++;
         // Move page to the full queue.
         if (page.reservedBlocks == page.usedBlocks) {
@@ -1993,13 +1993,17 @@ final class MiMallocByteBufAllocator {
         return ((s << 2) | ((sliceCount >> (s - 2)) & 0x03)) - 4;
     }
 
-    private static int alignUp(int sz, int alignment) {
+    private static int alignUp(int size, int alignment) {
+        assert size > 0;
         int mask = alignment - 1;
+        int alignedSize;
         if ((alignment & mask) == 0) {  // If alignment is power of two.
-            return (sz + mask) & ~mask;
+            alignedSize = (size + mask) & ~mask;
         } else {
-            return ((sz + mask) / alignment) * alignment;
+            alignedSize = ((size + mask) / alignment) * alignment;
         }
+        // If alignedSize overflowed, return size.
+        return alignedSize < 0 ? size : alignedSize;
     }
 
     // Round to a good OS allocation size (bounded by max 12.5% waste).
@@ -2046,14 +2050,16 @@ final class MiMallocByteBufAllocator {
             super(0);
         }
 
-        void init(Block block, int length, int maxCapacity) {
+        void init(Block block, int length, int maxCapacity, boolean isReAlloc) {
             assert block != null;
             block.nextBlock = null;
-            this.resetRefCnt();
-            this.discardMarks();
+            if (!isReAlloc) {
+                this.resetRefCnt();
+                this.discardMarks();
+            }
             this.block = block;
             this.length = length;
-            this.maxFastCapacity = block.blockBytes;
+            this.maxFastCapacity = Math.min(block.blockBytes, maxCapacity);
             this.adjustment = block.blockAdjustment;
             maxCapacity(maxCapacity);
             setIndex0(0, 0);
