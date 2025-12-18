@@ -285,7 +285,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return this;
     }
 
-
     @Override
     public ChannelHandlerContext fireChannelRead(final Object msg) {
         AbstractChannelHandlerContext next = findContextInbound(MASK_CHANNEL_READ);
@@ -316,7 +315,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             if (next.invokeHandler()) {
                 try {
                     next.saveCurrentPendingBytesIfNeeded();
-                    ((ChannelInboundHandler) handler()).channelReadComplete(next);
+                    ((ChannelInboundHandler) next.handler()).channelReadComplete(next);
                 } catch (Throwable t) {
                     next.invokeFireExceptionCaught(t);
                 } finally {
@@ -504,10 +503,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         return promise;
     }
 
-    private void invokeConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
-
-    }
-
     @Override
     public ChannelFuture disconnect(final ChannelPromise promise) {
         if (!pipeline.hasDisconnect) {
@@ -637,7 +632,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             if (next.invokeHandler()) {
                 try {
                     next.saveCurrentPendingBytesIfNeeded();
-                    ((ChannelOutboundHandler) next.handler()).read(this);
+                    ((ChannelOutboundHandler) next.handler()).read(next);
                 } catch (Throwable t) {
                     handleFatalOutboundHandlerException(t);
                 } finally {
@@ -651,7 +646,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
         return this;
     }
-
 
     @Override
     public ChannelFuture write(Object msg) {
@@ -726,7 +720,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                     next.write(msg, flush, promise);
                 }
             } else {
-                final WriteTask task = WriteTask.newInstance(next, m, promise, flush);
+                final WriteTask task = WriteTask.newInstance(this, m, promise, flush);
                 if (task != null) {
                     if (!safeExecute(executor, task, promise, m, !flush)) {
                         // We failed to submit the WriteTask. We need to cancel it so we decrement the pending bytes
@@ -1088,7 +1082,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     private void updatePendingBytesIfNeeded() {
-        if ((executionMask & MASK_ALL_OUTBOUND)== 0) {
+        if ((executionMask & MASK_ALL_OUTBOUND) == 0) {
             assert currentPendingBytes == -1;
             return;
         }
