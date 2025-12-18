@@ -165,7 +165,7 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
         if (!(session instanceof ExtendedSSLSession)) {
             return null;
         }
-        List<SNIServerName> names = ((ExtendedSSLSession)session).getRequestedServerNames();
+        List<SNIServerName> names = ((ExtendedSSLSession) session).getRequestedServerNames();
         for (SNIServerName sni : names) {
             if (sni instanceof SNIHostName) {
                 SNIHostName hostName = (SNIHostName) sni;
