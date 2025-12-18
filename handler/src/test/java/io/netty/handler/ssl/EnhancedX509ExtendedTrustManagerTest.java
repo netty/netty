@@ -40,6 +40,7 @@ import javax.security.auth.x500.X500Principal;
 
 import static io.netty.handler.ssl.EnhancingX509ExtendedTrustManager.ALTNAME_DNS;
 import static io.netty.handler.ssl.EnhancingX509ExtendedTrustManager.ALTNAME_IP;
+import static io.netty.handler.ssl.EnhancingX509ExtendedTrustManager.ALTNAME_URI;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -52,6 +53,8 @@ public class EnhancedX509ExtendedTrustManagerTest {
 
     private static final String SAN_ENTRY_DNS = "some.netty.io";
     private static final String SAN_ENTRY_IP = "127.0.0.1";
+    private static final String SAN_ENTRY_URI = "URI:https://uri.netty.io/profile";
+    private static final String SAN_ENTRY_RFC822 = "info@netty.io";
     private static final String COMMON_NAME = "leaf.netty.io";
 
     private static final X509Certificate TEST_CERT = new X509Certificate() {
@@ -59,7 +62,8 @@ public class EnhancedX509ExtendedTrustManagerTest {
         @Override
         public Collection<List<?>> getSubjectAlternativeNames() {
             return Arrays.asList(Arrays.asList(1, new Object()),
-                    Arrays.asList(ALTNAME_DNS, "some.netty.io"), Arrays.asList(ALTNAME_IP, "127.0.0.1"));
+                    Arrays.asList(ALTNAME_DNS, SAN_ENTRY_DNS), Arrays.asList(ALTNAME_IP, SAN_ENTRY_IP),
+                    Arrays.asList(ALTNAME_URI, SAN_ENTRY_URI), Arrays.asList(1 /* rfc822Name */, SAN_ENTRY_RFC822));
         }
 
         @Override
@@ -328,9 +332,11 @@ public class EnhancedX509ExtendedTrustManagerTest {
         // We should wrap the original cause with our own.
         assertInstanceOf(CertificateException.class, exception.getCause());
         String message = exception.getMessage();
-        assertThat(message).contains(SAN_ENTRY_DNS);
-        assertThat(message).contains(SAN_ENTRY_IP);
+        assertThat(message).contains("DNS:" + SAN_ENTRY_DNS);
+        assertThat(message).contains("IP:" + SAN_ENTRY_IP);
+        assertThat(message).contains("URI:" + SAN_ENTRY_URI);
         assertThat(message).contains("CN=" + COMMON_NAME);
+        assertThat(message).doesNotContain(SAN_ENTRY_RFC822);
     }
 
     @ParameterizedTest

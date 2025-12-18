@@ -36,6 +36,7 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
 
     // Constants for subject alt names of type DNS and IP. See X509Certificate#getSubjectAlternativeNames() javadocs.
     static final int ALTNAME_DNS = 2;
+    static final int ALTNAME_URI = 6;
     static final int ALTNAME_IP = 7;
     private static final String SEPARATOR = ", ";
 
@@ -106,7 +107,7 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
                 (message.startsWith("No subject alternative") || message.startsWith("No name matching"))) {
             StringBuilder sb = new StringBuilder(128);
             sb.append(message);
-            // Some exception messages from sun.security.util.HostnameChecker do not end witha dot.
+            // Some exception messages from sun.security.util.HostnameChecker do not end with a dot.
             if (message.charAt(message.length() - 1) != '.') {
                 sb.append('.');
             }
@@ -119,10 +120,20 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
                     boolean hasNames = false;
                     for (List<?> altNames : collection) {
                         final int nameType = ((Integer) altNames.get(0)).intValue();
-                        if (nameType == ALTNAME_DNS || nameType == ALTNAME_IP) {
-                            sb.append((String) altNames.get(1)).append(SEPARATOR);
-                            hasNames = true;
+                        if (nameType == ALTNAME_DNS) {
+                            sb.append("DNS");
+                        } else if (nameType == ALTNAME_IP) {
+                            sb.append("IP");
+                        } else if (nameType == ALTNAME_URI) {
+                            // URI names are common in some environments with gRPC services that use SPIFFEs.
+                            // Though the hostname matcher won't be looking at them, having them there can help
+                            // debugging cases where hostname verification was enabled when it shouldn't be.
+                            sb.append("URI");
+                        } else {
+                            continue;
                         }
+                        sb.append(':').append((String) altNames.get(1)).append(SEPARATOR);
+                        hasNames = true;
                     }
                     if (hasNames) {
                         // Strip of the last separator
