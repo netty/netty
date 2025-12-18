@@ -119,6 +119,10 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
                 if (collection != null) {
                     boolean hasNames = false;
                     for (List<?> altNames : collection) {
+                        if (altNames.size() < 2) {
+                            // We expect at least a pair of 'nameType:value' in that list.
+                            continue;
+                        }
                         final int nameType = ((Integer) altNames.get(0)).intValue();
                         if (nameType == ALTNAME_DNS) {
                             sb.append("DNS");
