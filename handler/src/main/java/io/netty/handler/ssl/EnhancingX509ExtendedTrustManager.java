@@ -23,7 +23,12 @@ import java.util.Collection;
 import java.util.List;
 import javax.naming.ldap.LdapName;
 import javax.naming.ldap.Rdn;
+import javax.net.ssl.ExtendedSSLSession;
+import javax.net.ssl.SNIHostName;
+import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocket;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509TrustManager;
 import javax.security.auth.x500.X500Principal;
@@ -58,7 +63,8 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
         try {
             wrapped.checkServerTrusted(chain, authType, socket);
         } catch (CertificateException e) {
-            throwEnhancedCertificateException(chain, e);
+            throwEnhancedCertificateException(e, chain,
+                    socket instanceof SSLSocket ? ((SSLSocket) socket).getHandshakeSession() : null);
         }
     }
 
@@ -74,7 +80,7 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
         try {
             wrapped.checkServerTrusted(chain, authType, engine);
         } catch (CertificateException e) {
-            throwEnhancedCertificateException(chain, e);
+            throwEnhancedCertificateException(e, chain, engine != null ? engine.getHandshakeSession() : null);
         }
     }
 
@@ -90,7 +96,7 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
         try {
             wrapped.checkServerTrusted(chain, authType);
         } catch (CertificateException e) {
-            throwEnhancedCertificateException(chain, e);
+            throwEnhancedCertificateException(e, chain, null);
         }
     }
 
@@ -99,19 +105,23 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
         return wrapped.getAcceptedIssuers();
     }
 
-    private static void throwEnhancedCertificateException(X509Certificate[] chain, CertificateException e)
-            throws CertificateException {
+    private static void throwEnhancedCertificateException(CertificateException e, X509Certificate[] chain,
+                                                          SSLSession session) throws CertificateException {
         // Matching the message is the best we can do sadly.
         String message = e.getMessage();
         if (message != null &&
                 (message.startsWith("No subject alternative") || message.startsWith("No name matching"))) {
             StringBuilder sb = new StringBuilder(128);
             sb.append(message);
-            // Some exception messages from sun.security.util.HostnameChecker do not end with a dot.
-            if (message.charAt(message.length() - 1) != '.') {
-                sb.append('.');
+            // Some exception messages from sun.security.util.HostnameChecker may end with a dot that we don't need
+            if (message.charAt(message.length() - 1) == '.') {
+                sb.setLength(sb.length() - 1);
             }
-            sb.append(" Chain of ").append(chain.length).append(" certificate(s):");
+            if (session != null) {
+                sb.append(" for SNIHostName=").append(getSNIHostName(session))
+                        .append(" and peerHost=").append(session.getPeerHost());
+            }
+            sb.append(" in the chain of ").append(chain.length).append(" certificate(s):");
             for (int i = 0; i < chain.length; i++) {
                 X509Certificate cert = chain[i];
                 Collection<List<?>> collection = cert.getSubjectAlternativeNames();
@@ -149,6 +159,20 @@ final class EnhancingX509ExtendedTrustManager extends X509ExtendedTrustManager {
             throw new CertificateException(sb.toString(), e);
         }
         throw e;
+    }
+
+    private static String getSNIHostName(SSLSession session) {
+        if (!(session instanceof ExtendedSSLSession)) {
+            return null;
+        }
+        List<SNIServerName> names = ((ExtendedSSLSession)session).getRequestedServerNames();
+        for (SNIServerName sni : names) {
+            if (sni instanceof SNIHostName) {
+                SNIHostName hostName = (SNIHostName) sni;
+                return hostName.getAsciiName();
+            }
+        }
+        return null;
     }
 
     private static String getCommonName(X509Certificate cert) {
