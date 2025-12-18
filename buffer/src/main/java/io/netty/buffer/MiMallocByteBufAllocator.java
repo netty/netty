@@ -288,6 +288,7 @@ final class MiMallocByteBufAllocator {
             // If during abandoning, mark all pages to no longer add to the delayed-free list
             if (collect == ABANDON) {
                 heapVisitPages(collect, VISIT_WORK_TYPE_MARK_PAGE_NEVER_DELAYED_FREE);
+                blockDeque.clear();
             }
             // Free all current thread's delayed blocks.
             // (If during abandoning, after this, there are no more thread-delayed references into the pages.)
@@ -2056,13 +2057,13 @@ final class MiMallocByteBufAllocator {
             if (!isReAlloc) {
                 this.resetRefCnt();
                 this.discardMarks();
+                setIndex0(0, 0);
             }
             this.block = block;
             this.length = length;
             this.maxFastCapacity = Math.min(block.blockBytes, maxCapacity);
             this.adjustment = block.blockAdjustment;
             maxCapacity(maxCapacity);
-            setIndex0(0, 0);
             this.rootParent = block.page.segment.delegate;
             this.tmpNioBuf = null;
             this.hasArray = rootParent.hasArray();
@@ -2113,8 +2114,6 @@ final class MiMallocByteBufAllocator {
                 oldBlock = this.block;
             }
             MiMallocByteBufAllocator allocator = oldBlock.page.segment.parent;
-            int readerIndex = this.readerIndex;
-            int writerIndex = this.writerIndex;
             int baseOldRootIndex = adjustment;
             int oldCapacity = length;
 
@@ -2122,8 +2121,6 @@ final class MiMallocByteBufAllocator {
             allocator.reallocate(newCapacity, maxCapacity(), this);
             oldRoot.getBytes(baseOldRootIndex, this, 0, oldCapacity);
             allocator.free(oldBlock);
-            this.readerIndex = readerIndex;
-            this.writerIndex = writerIndex;
             return this;
         }
 
