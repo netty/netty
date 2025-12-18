@@ -49,6 +49,7 @@ import static io.netty.channel.ChannelHandlerMask.MASK_DEREGISTER;
 import static io.netty.channel.ChannelHandlerMask.MASK_DISCONNECT;
 import static io.netty.channel.ChannelHandlerMask.MASK_EXCEPTION_CAUGHT;
 import static io.netty.channel.ChannelHandlerMask.MASK_FLUSH;
+import static io.netty.channel.ChannelHandlerMask.MASK_PENDING_OUTBOUND_BYTES;
 import static io.netty.channel.ChannelHandlerMask.MASK_READ;
 import static io.netty.channel.ChannelHandlerMask.MASK_REGISTER;
 import static io.netty.channel.ChannelHandlerMask.MASK_SHUTDOWN;
@@ -884,7 +885,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             if (handlerState == ADD_COMPLETE) {
                 long pending = 0;
                 try {
-                    if (cause == null && (executionMask & MASK_ALL_OUTBOUND) != 0) {
+                    if (cause == null && (executionMask & MASK_PENDING_OUTBOUND_BYTES) != 0) {
                         pending = currentPendingBytes((ChannelOutboundHandler) handler());
                     }
                 } finally {
@@ -1076,13 +1077,13 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     private void saveCurrentPendingBytesIfNeeded() {
         // We only save the current pending bytes if not already done before.
         // This is important as otherwise we might run into issues in case of reentrancy.
-        if (currentPendingBytes == -1 && (executionMask & MASK_ALL_OUTBOUND) != 0) {
+        if (currentPendingBytes == -1 && (executionMask & MASK_PENDING_OUTBOUND_BYTES) != 0) {
             currentPendingBytes = currentPendingBytes((ChannelOutboundHandler) handler());
         }
     }
 
     private void updatePendingBytesIfNeeded() {
-        if ((executionMask & MASK_ALL_OUTBOUND) == 0) {
+        if ((executionMask & MASK_PENDING_OUTBOUND_BYTES) == 0) {
             assert currentPendingBytes == -1;
             return;
         }
