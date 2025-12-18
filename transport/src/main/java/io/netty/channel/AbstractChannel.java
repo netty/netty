@@ -47,6 +47,11 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractChannel.class);
 
+    private enum WritabilityStateNotification {
+        NONE,
+        NOW,
+        LATER
+    }
     private static final int WRITABLE = 0;
     private static final int UNWRITABLE = 1;
     private static final AtomicIntegerFieldUpdater<AbstractChannel> WRITABLE_STATE_UPDATER =
@@ -109,11 +114,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         this.eventLoop = validateEventLoopGroup(eventLoop, "eventLoop", handleType);
         outboundBuffer = new ChannelOutboundBuffer(eventLoop);
         this.id = id == null ? DefaultChannelId.newInstance() : id;
-        fireChannelWritabilityChangedTask = () -> {
-            if (isOpen()) {
-                pipeline().fireChannelWritabilityChanged();
-            }
-        };
+        fireChannelWritabilityChangedTask = this::fireChannelWritabilityChanged;
         pipeline = newChannelPipeline();
         closeFuture.addListener(f -> {
             ChannelPromise connectPromise = this.connectPromise;
@@ -392,31 +393,37 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
      * Method that should be called to propagate writability state changes if required.
      */
     protected final void updateWritabilityIfNeeded() {
-        updateWritabilityIfNeeded(true, false);
+        updateWritabilityIfNeeded(WritabilityStateNotification.NOW);
     }
 
-    private void updateWritabilityIfNeeded(boolean notify, boolean notifyLater) {
+    private void updateWritabilityIfNeeded(WritabilityStateNotification notification) {
         long totalPending = totalPendingBytes();
         WriteBufferWaterMark mark = config().getWriteBufferWaterMark();
         if (totalPending > mark.high()) {
             if (WRITABLE_STATE_UPDATER.compareAndSet(this, WRITABLE, UNWRITABLE)) {
-                fireChannelWritabilityChangedIfNeeded(notify, notifyLater);
+                fireChannelWritabilityChangedIfNeeded(notification);
             }
         } else if (totalPending < mark.low()) {
             if (WRITABLE_STATE_UPDATER.compareAndSet(this, UNWRITABLE, WRITABLE)) {
-                fireChannelWritabilityChangedIfNeeded(notify, notifyLater);
+                fireChannelWritabilityChangedIfNeeded(notification);
             }
         }
     }
 
-    private void fireChannelWritabilityChangedIfNeeded(boolean notify, boolean notifyLater) {
-        if (!notify) {
-            return;
+    private void fireChannelWritabilityChangedIfNeeded(WritabilityStateNotification notification) {
+        switch (notification) {
+            case NONE:
+                return;
+            case NOW:
+                fireChannelWritabilityChanged();
+            case LATER:
+                executor().execute(fireChannelWritabilityChangedTask);
         }
-        if (notifyLater) {
-            executor().execute(fireChannelWritabilityChangedTask);
-        } else {
-            fireChannelWritabilityChangedTask.run();
+    }
+
+    private void fireChannelWritabilityChanged() {
+        if (isOpen()) {
+            pipeline().fireChannelWritabilityChanged();
         }
     }
 
@@ -754,7 +761,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             if (outboundBuffer != null) {
                 // Fail all the queued messages
                 outboundBuffer.failFlushedAndClose(cause, closeCause);
-                updateWritabilityIfNeeded(false, false);
+                updateWritabilityIfNeeded(WritabilityStateNotification.NONE);
             }
         }
 
@@ -871,7 +878,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             outboundBuffer.addMessage(msg, size, promise);
-            updateWritabilityIfNeeded(true, false);
+            updateWritabilityIfNeeded(WritabilityStateNotification.NOW);
         }
 
         @Override
@@ -884,7 +891,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
             }
 
             outboundBuffer.addFlush();
-            updateWritabilityIfNeeded(true, false);
+            updateWritabilityIfNeeded(WritabilityStateNotification.NOW);
             writeFlushed();
         }
 
@@ -1131,7 +1138,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
                 if (!outboundBuffer.isEmpty()) {
                     if (isOpen()) {
                         outboundBuffer.failFlushed(new NotYetConnectedException());
-                        updateWritabilityIfNeeded(true, true);
+                        updateWritabilityIfNeeded(WritabilityStateNotification.LATER);
                     } else {
                         // Do not trigger channelWritabilityChanged because the channel is closed already.
                         outboundBuffer.failFlushed(ioTransport.newClosedChannelException(
@@ -1149,9 +1156,9 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         } catch (Throwable t) {
             ioTransport.handleWriteError(t);
         } finally {
-            // It's important that we call this with notifyLater true so we not get into trouble when flush() is called
-            // again in channelWritabilityChanged(...).
-            updateWritabilityIfNeeded(true, true);
+            // It's important that we call this with WritabilityStateNotification.LATER so we don't get into trouble
+            // when flush() is called again in channelWritabilityChanged(...).
+            updateWritabilityIfNeeded(WritabilityStateNotification.LATER);
             inWriteFlushed = false;
         }
     }
@@ -1316,7 +1323,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         @Override
         protected void pendingOutboundBytesUpdated(long pendingOutboundBytes) {
-            AbstractChannel.this.updateWritabilityIfNeeded(true, false);
+            AbstractChannel.this.updateWritabilityIfNeeded(WritabilityStateNotification.NOW);
         }
     }
 }
