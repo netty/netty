@@ -52,12 +52,6 @@ import java.net.SocketAddress;
  */
 public interface QuicChannel extends Channel {
 
-    @Override
-    QuicChannel read();
-
-    @Override
-    QuicChannel flush();
-
     /**
      * Returns the used {@link SSLEngine} or {@code null} if none is used (yet).
      *

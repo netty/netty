@@ -131,10 +131,4 @@ public interface SctpChannel extends Channel {
      * Will notify the given {@link Promise} and return a {@link Future}
      */
     void unbindAddress(InetAddress localAddress, Promise<Void> promise);
-
-    @Override
-    SctpChannel read();
-
-    @Override
-    SctpChannel flush();
 }

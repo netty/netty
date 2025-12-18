@@ -127,18 +127,6 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
         config = new NioSocketChannelConfig(this, channel);
     }
 
-    @Override
-    public io.netty.channel.socket.SocketChannel read() {
-        super.read();
-        return this;
-    }
-
-    @Override
-    public io.netty.channel.socket.SocketChannel flush() {
-        super.flush();
-        return this;
-    }
-
     protected boolean isAllowHalfClosure() {
         return config.isAllowHalfClosure();
     }

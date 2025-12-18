@@ -193,18 +193,6 @@ public final class KQueueServerSocketChannel extends AbstractKQueueChannel imple
         return config;
     }
 
-    @Override
-    public ServerSocketChannel read() {
-        super.read();
-        return this;
-    }
-
-    @Override
-    public ServerSocketChannel flush() {
-        super.flush();
-        return this;
-    }
-
     private Channel newChildChannel(EventLoop eventLoop, int fd, byte[] address, int offset, int len) {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
             return new KQueueSocketChannel(eventLoop, this, new BsdSocket(fd, SocketProtocolFamily.UNIX), true);

@@ -1349,18 +1349,6 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public EmbeddedDatagramChannel flush() {
-            super.flush();
-            return this;
-        }
-
-        @Override
-        public EmbeddedDatagramChannel read() {
-            super.read();
-            return this;
-        }
-
-        @Override
         public boolean isConnected() {
             return true;
         }

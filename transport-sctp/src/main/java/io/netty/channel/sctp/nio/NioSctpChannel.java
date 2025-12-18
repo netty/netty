@@ -127,18 +127,6 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    public io.netty.channel.sctp.SctpChannel read() {
-        super.read();
-        return this;
-    }
-
-    @Override
-    public io.netty.channel.sctp.SctpChannel flush() {
-        super.flush();
-        return this;
-    }
-
-    @Override
     protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }

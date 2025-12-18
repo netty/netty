@@ -238,13 +238,10 @@ public class DefaultHttp2ConnectionDecoderTest {
         decode(decoder).onSettingsAckRead(ctx);
 
         // Disallow any further flushes now that settings ACK has been sent
-        when(ctx.flush()).then(new Answer<ChannelHandlerContext>() {
-            @Override
-            public ChannelHandlerContext answer(InvocationOnMock invocationOnMock) {
-                fail();
-                return null;
-            }
-        });
+        doAnswer(invocationOnMock -> {
+            fail();
+            return null;
+        }).when(ctx).flush();
     }
 
     @Test

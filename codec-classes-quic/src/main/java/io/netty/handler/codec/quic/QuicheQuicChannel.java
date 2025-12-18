@@ -445,18 +445,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    public QuicChannel flush() {
-        super.flush();
-        return this;
-    }
-
-    @Override
-    public QuicChannel read() {
-        super.read();
-        return this;
-    }
-
-    @Override
     public void createStream(QuicStreamType type, @Nullable ChannelHandler handler,
                              Promise<QuicStreamChannel> promise) {
         if (executor().inEventLoop()) {

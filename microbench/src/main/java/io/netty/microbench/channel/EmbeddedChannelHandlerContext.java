@@ -75,27 +75,27 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public final ChannelHandlerContext fireChannelRegistered() {
-        return this;
+    public final void fireChannelRegistered() {
+        // NOOP
     }
 
     @Override
-    public final ChannelHandlerContext fireChannelUnregistered() {
-        return this;
+    public final void fireChannelUnregistered() {
+        // NOOP
     }
 
     @Override
-    public final ChannelHandlerContext fireChannelActive() {
-        return this;
+    public final void fireChannelActive() {
+        // NOOP
     }
 
     @Override
-    public final ChannelHandlerContext fireChannelInactive() {
-        return this;
+    public final void fireChannelInactive() {
+        // NOOP
     }
 
     @Override
-    public final ChannelHandlerContext fireExceptionCaught(Throwable cause) {
+    public final void fireExceptionCaught(Throwable cause) {
         if (handler() instanceof ChannelInboundHandler) {
             try {
                 ((ChannelInboundHandler) handler()).exceptionCaught(this, cause);
@@ -103,29 +103,26 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
                 handleException(e);
             }
         }
-        return this;
     }
 
     @Override
-    public final ChannelHandlerContext fireUserEventTriggered(Object event) {
+    public final void fireUserEventTriggered(Object event) {
         ReferenceCountUtil.release(event);
-        return this;
     }
 
     @Override
-    public final ChannelHandlerContext fireChannelRead(Object msg) {
+    public final void fireChannelRead(Object msg) {
         ReferenceCountUtil.release(msg);
-        return this;
     }
 
     @Override
-    public final ChannelHandlerContext fireChannelReadComplete() {
-        return this;
+    public final void fireChannelReadComplete() {
+        // NOOP
     }
 
     @Override
-    public final ChannelHandlerContext fireChannelWritabilityChanged() {
-        return this;
+    public final void fireChannelWritabilityChanged() {
+        // NOOP
     }
 
     @Override
@@ -201,13 +198,12 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public final ChannelHandlerContext read() {
+    public final void read() {
         try {
             channel().read();
         } catch (Exception e) {
             handleException(e);
         }
-        return this;
     }
 
     @Override
@@ -221,9 +217,8 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public final ChannelHandlerContext flush() {
+    public final void flush() {
         channel().flush();
-        return this;
     }
 
     @Override
@@ -262,8 +257,8 @@ public abstract class EmbeddedChannelHandlerContext implements ChannelHandlerCon
     }
 
     @Override
-    public ChannelHandlerContext fireChannelShutdown(ChannelShutdownType type) {
-        return this;
+    public void fireChannelShutdown(ChannelShutdownType type) {
+        // NOOP
     }
 
     @Override

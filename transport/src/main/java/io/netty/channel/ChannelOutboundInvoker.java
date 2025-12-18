@@ -256,7 +256,7 @@ public interface ChannelOutboundInvoker {
      * method called of the next {@link ChannelOutboundHandler} contained in the {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelOutboundInvoker read();
+    void read();
 
     /**
      * Request to write a message via this {@link ChannelHandlerContext} through the {@link ChannelPipeline}.
@@ -279,7 +279,7 @@ public interface ChannelOutboundInvoker {
     /**
      * Request to flush all pending messages via this ChannelOutboundInvoker.
      */
-    ChannelOutboundInvoker flush();
+    void flush();
 
     /**
      * Shortcut for call {@link #write(Object, Promise)} and {@link #flush()}.

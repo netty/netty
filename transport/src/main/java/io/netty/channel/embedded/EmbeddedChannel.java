@@ -699,7 +699,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public EmbeddedChannel flush() {
+    public void flush() {
         executingStackCnt++;
         try {
             super.flush();
@@ -707,7 +707,6 @@ public class EmbeddedChannel extends AbstractChannel {
             executingStackCnt--;
             maybeRunPendingTasks();
         }
-        return this;
     }
 
     @Override
@@ -755,7 +754,7 @@ public class EmbeddedChannel extends AbstractChannel {
     }
 
     @Override
-    public Channel read() {
+    public void read() {
         executingStackCnt++;
         try {
             super.read();
@@ -763,7 +762,6 @@ public class EmbeddedChannel extends AbstractChannel {
             executingStackCnt--;
             maybeRunPendingTasks();
         }
-        return this;
     }
 
     @Override

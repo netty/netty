@@ -29,7 +29,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
-import org.openjdk.jmh.infra.Blackhole;
 
 @Warmup(iterations = 5, time = 1)
 @Measurement(iterations = 5, time = 1)
@@ -83,13 +82,13 @@ public class DefaultChannelPipelineDuplexHandlerBenchmark extends AbstractMicrob
     }
 
     @Benchmark
-    public void propagateEvent(Blackhole hole) {
-        hole.consume(pipeline.fireChannelReadComplete());
+    public void propagateEvent() {
+        pipeline.fireChannelReadComplete();
     }
 
     @Benchmark
     @Threads(4)
-    public void parallelPropagateEvent(Blackhole hole) {
-        hole.consume(pipeline.fireChannelReadComplete());
+    public void parallelPropagateEvent() {
+        pipeline.fireChannelReadComplete();
     }
 }

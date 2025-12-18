@@ -200,13 +200,10 @@ public class DefaultHttp2ConnectionEncoderTest {
                 return newSucceededFuture();
             }
         }).when(ctx).newSucceededFuture(eq(null));
-        when(ctx.flush()).thenAnswer(new Answer<ChannelHandlerContext>() {
-            @Override
-            public ChannelHandlerContext answer(InvocationOnMock invocationOnMock) {
-                fail("forbidden");
-                return null;
-            }
-        });
+        doAnswer(invocationOnMock -> {
+            fail("forbidden");
+            return null;
+        }).when(ctx).flush();
         when(channel.alloc()).thenReturn(PooledByteBufAllocator.DEFAULT);
 
         // Use a server-side connection so we can test server push.

@@ -99,10 +99,4 @@ public interface QuicStreamChannel extends Channel {
 
     @Override
     QuicChannel parent();
-
-    @Override
-    QuicStreamChannel read();
-
-    @Override
-    QuicStreamChannel flush();
 }

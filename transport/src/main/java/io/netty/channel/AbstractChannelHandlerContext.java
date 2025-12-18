@@ -133,7 +133,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelHandlerContext fireChannelRegistered() {
+    public void fireChannelRegistered() {
         AbstractChannelHandlerContext next = findContextInbound(MASK_CHANNEL_REGISTERED);
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
@@ -151,11 +151,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             next.executor().execute(this::fireChannelRegistered);
         }
-        return this;
     }
 
     @Override
-    public ChannelHandlerContext fireChannelUnregistered() {
+    public void fireChannelUnregistered() {
         final AbstractChannelHandlerContext next = findContextInbound(MASK_CHANNEL_UNREGISTERED);
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
@@ -173,11 +172,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             next.executor().execute(this::fireChannelUnregistered);
         }
-        return this;
     }
 
     @Override
-    public ChannelHandlerContext fireChannelActive() {
+    public void fireChannelActive() {
         AbstractChannelHandlerContext next = findContextInbound(MASK_CHANNEL_ACTIVE);
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
@@ -195,11 +193,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             next.executor().execute(this::fireChannelActive);
         }
-        return this;
     }
 
     @Override
-    public ChannelHandlerContext fireChannelInactive() {
+    public void fireChannelInactive() {
         AbstractChannelHandlerContext next = findContextInbound(MASK_CHANNEL_INACTIVE);
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
@@ -217,11 +214,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             next.executor().execute(this::fireChannelInactive);
         }
-        return this;
     }
 
     @Override
-    public ChannelHandlerContext fireExceptionCaught(final Throwable cause) {
+    public void fireExceptionCaught(final Throwable cause) {
         AbstractChannelHandlerContext next = findContextInbound(MASK_EXCEPTION_CAUGHT);
         ObjectUtil.checkNotNull(cause, "cause");
         if (next.executor().inEventLoop()) {
@@ -236,7 +232,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 }
             }
         }
-        return this;
     }
 
     private void invokeFireExceptionCaught(final Throwable cause) {
@@ -265,7 +260,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelHandlerContext fireUserEventTriggered(final Object event) {
+    public void fireUserEventTriggered(final Object event) {
         ObjectUtil.checkNotNull(event, "event");
         AbstractChannelHandlerContext next = findContextInbound(MASK_USER_EVENT_TRIGGERED);
         if (next.executor().inEventLoop()) {
@@ -284,11 +279,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             next.executor().execute(() -> fireUserEventTriggered(event));
         }
-        return this;
     }
 
     @Override
-    public ChannelHandlerContext fireChannelRead(final Object msg) {
+    public void fireChannelRead(final Object msg) {
         AbstractChannelHandlerContext next = findContextInbound(MASK_CHANNEL_READ);
         if (next.executor().inEventLoop()) {
             final Object m = pipeline.touch(msg, next);
@@ -307,11 +301,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             next.executor().execute(() -> fireChannelRead(msg));
         }
-        return this;
     }
 
     @Override
-    public ChannelHandlerContext fireChannelReadComplete() {
+    public void fireChannelReadComplete() {
         AbstractChannelHandlerContext next = findContextInbound(MASK_CHANNEL_READ_COMPLETE);
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
@@ -329,11 +322,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             next.executor().execute(getContextTasks().fireChannelReadCompleteTask);
         }
-        return this;
     }
 
     @Override
-    public ChannelHandlerContext fireChannelWritabilityChanged() {
+    public void fireChannelWritabilityChanged() {
         AbstractChannelHandlerContext next = findContextInbound(MASK_CHANNEL_WRITABILITY_CHANGED);
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
@@ -351,11 +343,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             next.executor().execute(getContextTasks().fireChannelWritabilityChangedTask);
         }
-        return this;
     }
 
     @Override
-    public ChannelHandlerContext fireChannelShutdown(ChannelShutdownType type) {
+    public void fireChannelShutdown(ChannelShutdownType type) {
         AbstractChannelHandlerContext next = findContextInbound(MASK_CHANNEL_SHUTDOWN);
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
@@ -373,7 +364,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             next.executor().execute(() -> fireChannelShutdown(type));
         }
-        return this;
     }
 
     @Override
@@ -583,7 +573,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelHandlerContext read() {
+    public void read() {
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_READ);
         if (next.executor().inEventLoop()) {
             if (next.invokeHandler()) {
@@ -601,7 +591,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             next.executor().execute(getContextTasks().readTask);
         }
-        return this;
     }
 
     @Override
@@ -617,7 +606,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public ChannelHandlerContext flush() {
+    public void flush() {
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_FLUSH);
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
@@ -636,8 +625,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             safeExecute(executor, getContextTasks().flushTask, channel().newPromise(), null, false);
         }
-
-        return this;
     }
 
     @Override

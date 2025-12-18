@@ -122,18 +122,6 @@ final class EmbeddedQuicChannel extends EmbeddedChannel implements QuicChannel {
     }
 
     @Override
-    public EmbeddedQuicChannel flush() {
-        super.flush();
-        return this;
-    }
-
-    @Override
-    public EmbeddedQuicChannel read() {
-        super.read();
-        return this;
-    }
-
-    @Override
     public long peerAllowedStreams(QuicStreamType type) {
         return peerAllowedStreams.getOrDefault(type, Long.MAX_VALUE);
     }

@@ -195,18 +195,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     @Override
-    public QuicStreamChannel flush() {
-        pipeline.flush();
-        return this;
-    }
-
-    @Override
-    public QuicStreamChannel read() {
-        pipeline.read();
-        return this;
-    }
-
-    @Override
     public ChannelConfig config() {
         return config;
     }
