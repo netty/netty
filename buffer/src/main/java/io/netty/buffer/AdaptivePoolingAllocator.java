@@ -1344,42 +1344,6 @@ final class AdaptivePoolingAllocator {
             }
             return true;
         }
-
-        private String dot() {
-            StringBuilder sb = new StringBuilder("digraph { node [shape=box] ; ");
-            dot(sb, 1, 0);
-            sb.append('}');
-            return sb.toString();
-        }
-
-        private void dot(StringBuilder sb, int index, int currOffset) {
-            byte[] buddies = this.buddies;
-            if (buddies.length <= index) {
-                return;
-            }
-            byte buddy = buddies[index];
-            int currSize = MIN_BUDDY_SIZE << (buddy & SHIFT_MASK);
-            boolean hasClaimedChildren = (buddy & HAS_CLAIMED_CHILDREN) == HAS_CLAIMED_CHILDREN;
-            boolean isClaimed = (buddy & IS_CLAIMED) == IS_CLAIMED;
-            sb.append('"').append(index).append("\" [label=\"")
-                    .append(index).append(" - ")
-                    .append(currSize / MIN_BUDDY_SIZE).append(':')
-                    .append(currOffset / MIN_BUDDY_SIZE);
-            if (isClaimed) {
-                sb.append(" C");
-            }
-            if (hasClaimedChildren) {
-                sb.append(" CC");
-            }
-            sb.append("\"] ; ");
-            int childIndex = index << 1;
-            if (childIndex < buddies.length) {
-                sb.append('"').append(index).append("\" -> \"").append(childIndex).append("\" ; ");
-                sb.append('"').append(index).append("\" -> \"").append(childIndex + 1).append("\" ; ");
-            }
-            dot(sb, childIndex, currOffset);
-            dot(sb, childIndex + 1, currOffset + (currSize >> 1));
-        }
     }
 
     static final class AdaptiveByteBuf extends AbstractReferenceCountedByteBuf {
