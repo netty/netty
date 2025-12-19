@@ -376,11 +376,13 @@ public class Http2ConnectionHandler extends ByteToMessageDecoder implements Http
             }
 
             // Both client and server must send their initial settings.
-            encoder.writeSettings(ctx, initialSettings, ctx.<Void>newPromise().addListener(f -> {
+            Promise<Void> settingsPromise = ctx.newPromise();
+            encoder.writeSettings(ctx, initialSettings, settingsPromise);
+            settingsPromise.addListener(f -> {
                 if (!f.isSuccess()) {
                     ctx.close();
                 }
-            }));
+            });
 
             if (isClient) {
                 // If this handler is extended by the user and we directly fire the userEvent from this context then
