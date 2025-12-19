@@ -22,8 +22,6 @@ import io.netty.handler.ssl.SslHandshakeCompletionEvent;
 import io.netty.resolver.dns.DnsNameResolver;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import io.netty.util.concurrent.Promise;
 import org.bouncycastle.cert.ocsp.BasicOCSPResp;
 import org.bouncycastle.cert.ocsp.OCSPException;
@@ -147,7 +145,7 @@ public class OcspServerCertificateValidator implements ChannelInboundHandler {
                 Promise<BasicOCSPResp> ocspRespPromise = OcspClient.query((X509Certificate) certificates[0],
                         (X509Certificate) certificates[1], validateNonce, ioTransport, dnsNameResolver);
 
-                ocspRespPromise.addListener((GenericFutureListener<Future<BasicOCSPResp>>) future -> {
+                ocspRespPromise.addListener(future -> {
                     // If Future is success then we have successfully received OCSP response
                     // from OCSP responder. We will validate it now and process.
                     if (future.isSuccess()) {

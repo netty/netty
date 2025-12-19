@@ -18,7 +18,6 @@ package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFactory;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
@@ -84,7 +83,7 @@ public class BootstrapTest {
 
     @Test
     public void testSetOptionsThrow() {
-        final ChannelFuture cf = new Bootstrap()
+        final Future<Channel> cf = new Bootstrap()
                 .group(groupA)
                 .channelFactory(TestChannel::new)
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
@@ -97,7 +96,6 @@ public class BootstrapTest {
                 cf.syncUninterruptibly();
             }
         });
-        assertFalse(cf.channel().isActive());
     }
 
     @Test
@@ -269,7 +267,7 @@ public class BootstrapTest {
         assertTrue(bootstrapA.config().toString().contains("resolver:"));
         assertInstanceOf(TestAddressResolverGroup.class, bootstrapA.resolver());
 
-        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).sync().channel().localAddress();
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).get().localAddress();
 
         // Connect to the server using the asynchronous resolver.
         bootstrapA.connect(localAddress).sync();
@@ -287,16 +285,14 @@ public class BootstrapTest {
         bootstrapB.group(groupB);
         bootstrapB.channel(LocalServerChannel.class);
         bootstrapB.childHandler(dummyHandler);
-        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).sync().channel().localAddress();
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).get().localAddress();
 
         // Connect to the server using the asynchronous resolver.
-        ChannelFuture connectFuture = bootstrapA.connect(localAddress);
+        Future<Channel> connectFuture = bootstrapA.connect(localAddress);
 
         // Should fail with the UnknownHostException.
         assertTrue(connectFuture.await(10000));
         assertInstanceOf(UnknownHostException.class, connectFuture.cause());
-        connectFuture.channel().closeFuture().await(10000);
-        assertFalse(connectFuture.channel().isOpen());
     }
 
     @Test
@@ -319,17 +315,15 @@ public class BootstrapTest {
         bootstrapB.group(groupB);
         bootstrapB.channel(LocalServerChannel.class);
         bootstrapB.childHandler(dummyHandler);
-        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).sync().channel().localAddress();
+        SocketAddress localAddress = bootstrapB.bind(LocalAddress.ANY).get().localAddress();
 
         // Connect to the server using the asynchronous resolver.
-        ChannelFuture connectFuture = bootstrapA.connect(localAddress);
+        Future<Channel> connectFuture = bootstrapA.connect(localAddress);
 
         // Should fail with the IllegalStateException.
         assertTrue(connectFuture.await(10000));
         assertInstanceOf(IllegalStateException.class, connectFuture.cause());
         assertInstanceOf(TestException.class, connectFuture.cause().getCause());
-        connectFuture.channel().closeFuture().await(10000);
-        assertFalse(connectFuture.channel().isOpen());
     }
 
     @Test
@@ -346,12 +340,11 @@ public class BootstrapTest {
             }
         });
 
-        ChannelFuture connectFuture = bootstrap.connect(LocalAddress.ANY);
+        Future<Channel> connectFuture = bootstrap.connect(LocalAddress.ANY);
 
         // Should fail with the RuntimeException.
         assertTrue(connectFuture.await(10000));
         assertSame(exception, connectFuture.cause());
-        assertNotNull(connectFuture.channel());
     }
 
     @Test
@@ -363,9 +356,9 @@ public class BootstrapTest {
 
         StubChannelInitializerExtension.clearThreadLocals();
 
-        ChannelFuture future = cb.register();
+        Future<Channel> future = cb.register();
         future.sync();
-        final Channel expectedChannel = future.channel();
+        final Channel expectedChannel = future.getNow();
 
         assertSame(expectedChannel, StubChannelInitializerExtension.lastSeenClientChannel.get());
         assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());

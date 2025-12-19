@@ -16,8 +16,8 @@
 package io.netty.handler.codec.http3;
 
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.StringUtil;
 import org.jetbrains.annotations.Nullable;
 
@@ -71,12 +71,12 @@ final class Http3FrameValidationUtils {
     }
 
     /**
-     * Handle unexpected frame type by failing the passed {@link ChannelPromise}.
+     * Handle unexpected frame type by failing the passed {@link Promise}.
      *
      * @param promise to fail.
      * @param frame which is unexpected.
      */
-    static void frameTypeUnexpected(ChannelPromise promise, Object frame) {
+    static void frameTypeUnexpected(Promise<Void> promise, Object frame) {
         String type = StringUtil.simpleClassName(frame);
         ReferenceCountUtil.release(frame);
         promise.setFailure(new Http3Exception(Http3ErrorCode.H3_FRAME_UNEXPECTED,

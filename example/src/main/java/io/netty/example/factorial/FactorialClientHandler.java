@@ -15,10 +15,10 @@
  */
 package io.netty.example.factorial;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 
 import java.math.BigInteger;
 import java.util.concurrent.BlockingQueue;
@@ -58,7 +58,7 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
     @Override
     public void channelActive(ChannelHandlerContext ctx) {
         this.ctx = ctx;
-        sendNumbers();
+        sendNumbers(null);
     }
 
     @Override
@@ -79,26 +79,30 @@ public class FactorialClientHandler extends SimpleChannelInboundHandler<BigInteg
         ctx.close();
     }
 
-    private void sendNumbers() {
+    private void sendNumbers(FutureListener<Void> listener) {
         // Do not send more than 4096 numbers.
-        ChannelFuture future = null;
+        Future<Void> future = null;
         for (int i = 0; i < 4096 && next <= FactorialClient.COUNT; i++) {
             future = ctx.write(Integer.valueOf(next));
             next++;
         }
         if (next <= FactorialClient.COUNT) {
             assert future != null;
-            future.addListener(numberSender);
+            if (listener == null) {
+                listener = new  FutureListener<>() {
+                    @Override
+                    public void operationComplete(Future<? extends Void> future) {
+                        if (future.isSuccess()) {
+                            sendNumbers(this);
+                        } else {
+                            future.cause().printStackTrace();
+                            ctx.close();
+                        }
+                    }
+                };
+            }
+            future.addListener(listener);
         }
         ctx.flush();
     }
-
-    private final ChannelFutureListener numberSender = future -> {
-        if (future.isSuccess()) {
-            sendNumbers();
-        } else {
-            future.cause().printStackTrace();
-            future.channel().close();
-        }
-    };
 }

@@ -16,11 +16,10 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Future;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -431,7 +430,7 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
         // of the write future and receiving data before the pipeline is
         // restructured.
         try {
-            final ChannelFuture writeComplete = ctx.writeAndFlush(upgradeResponse);
+            final Future<Void> writeComplete = ctx.writeAndFlush(upgradeResponse);
             // Perform the upgrade to the new protocol.
             sourceCodec.upgradeFrom(ctx);
             upgradeCodec.upgradeTo(ctx, request);
@@ -446,7 +445,11 @@ public class HttpServerUpgradeHandler extends HttpObjectAggregator {
             // Add the listener last to avoid firing upgrade logic after
             // the channel is already closed since the listener may fire
             // immediately if the write failed eagerly.
-            writeComplete.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+            writeComplete.addListener(f -> {
+                if (!f.isSuccess()) {
+                    ctx.close();
+                }
+            });
         } finally {
             // Release the event if the upgrade event wasn't fired.
             event.release();

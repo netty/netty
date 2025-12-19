@@ -15,7 +15,6 @@
  */
 package io.netty.example.stomp.websocket;
 
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -139,7 +138,7 @@ public final class StompWebSocketClientPageHandler extends SimpleChannelInboundH
             ctx.write(response);
         } else {
             response.headers().set(CONNECTION, CLOSE);
-            ctx.write(response).addListener(ChannelFutureListener.CLOSE);
+            ctx.write(response).addListener(f -> ctx.close());
         }
 
         if (autoFlush) {

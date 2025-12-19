@@ -18,9 +18,9 @@ package io.netty.handler.codec;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -78,7 +78,7 @@ public abstract class MessageToMessageEncoder<I> implements ChannelOutboundHandl
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         CodecOutputList out = null;
         try {
             if (acceptOutboundMessage(msg)) {
@@ -120,7 +120,7 @@ public abstract class MessageToMessageEncoder<I> implements ChannelOutboundHandl
         }
     }
 
-    private static void writePromiseCombiner(ChannelHandlerContext ctx, CodecOutputList out, ChannelPromise promise) {
+    private static void writePromiseCombiner(ChannelHandlerContext ctx, CodecOutputList out, Promise<Void> promise) {
         final PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
         for (int i = 0; i < out.size(); i++) {
             combiner.add(ctx.write(out.getUnsafe(i)));

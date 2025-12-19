@@ -18,11 +18,8 @@ package io.netty.resolver.dns;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.AddressedEnvelope;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.dns.AbstractDnsOptPseudoRrRecord;
 import io.netty.handler.codec.dns.DnsQuery;
 import io.netty.handler.codec.dns.DnsQuestion;
@@ -165,7 +162,7 @@ abstract class DnsQueryContext {
     protected abstract String protocol();
 
     /**
-     * Write the query and return the {@link ChannelFuture} that is completed once the write completes.
+     * Write the query and return the {@link Future} that is completed once the write completes.
      *
      * @param flush                 {@code true} if {@link Channel#flush()} should be called as well.
      */
@@ -226,7 +223,7 @@ abstract class DnsQueryContext {
                     channel, protocol(), id, nameServerAddr, question);
         }
 
-        ChannelFuture f = sendQuery(query, flush);
+        Future<Void> f = sendQuery(query, flush);
         queryLifecycleObserver.queryWritten(nameServerAddr, f);
     }
 
@@ -236,26 +233,26 @@ abstract class DnsQueryContext {
         assert self == this : "Removed DnsQueryContext is not the correct instance";
     }
 
-    private ChannelFuture sendQuery(final DnsQuery query, final boolean flush) {
-        final ChannelPromise writePromise = channel.newPromise();
+    private Future<Void> sendQuery(final DnsQuery query, final boolean flush) {
+        final Promise<Void> writePromise = channel.newPromise();
         writeQuery(query, flush, writePromise);
         return writePromise;
     }
 
     private void writeQuery(final DnsQuery query,
-                            final boolean flush, ChannelPromise promise) {
-        final ChannelFuture writeFuture = flush ? channel.writeAndFlush(query, promise) :
+                            final boolean flush, Promise<Void> promise) {
+        final Future<Void> writeFuture = flush ? channel.writeAndFlush(query, promise) :
                 channel.write(query, promise);
         if (writeFuture.isDone()) {
             onQueryWriteCompletion(queryTimeoutMillis, writeFuture);
         } else {
-            writeFuture.addListener((ChannelFutureListener) future ->
+            writeFuture.addListener(future ->
                     onQueryWriteCompletion(queryTimeoutMillis, future));
         }
     }
 
     private void onQueryWriteCompletion(final long queryTimeoutMillis,
-                                        ChannelFuture writeFuture) {
+                                        Future<? extends Void> writeFuture) {
         if (!writeFuture.isSuccess()) {
             finishFailure("failed to send a query '" + id + "' via " + protocol(), writeFuture.cause(), false);
             return;
@@ -351,16 +348,16 @@ abstract class DnsQueryContext {
             return false;
         }
 
-        socketBootstrap.connect(nameServerAddr).addListener((ChannelFutureListener) future -> {
+        socketBootstrap.connect(nameServerAddr).addListener((FutureListener<Channel>) future -> {
             if (!future.isSuccess()) {
-                logger.debug("{} Unable to fallback to TCP [{}: {}]",
-                        future.channel(), id, nameServerAddr, future.cause());
+                logger.debug("Unable to fallback to TCP [{}: {}]",
+                        id, nameServerAddr, future.cause());
 
                 // TCP fallback failed, just use the truncated response or error.
                 finishOriginal(originalResult, future);
                 return;
             }
-            final Channel tcpCh = future.channel();
+            final Channel tcpCh = future.getNow();
             Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise =
                     tcpCh.executor().newPromise();
             final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(tcpCh,

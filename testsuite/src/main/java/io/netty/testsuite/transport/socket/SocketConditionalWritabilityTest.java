@@ -60,7 +60,7 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().syncUninterruptibly().channel();
+            serverChannel = sb.bind().get();
 
             cb.handler(new ChannelInitializer<Channel>() {
                 @Override
@@ -85,7 +85,7 @@ public class SocketConditionalWritabilityTest extends AbstractSocketTest {
                     });
                 }
             });
-            clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             latch.await();
         } finally {
             if (serverChannel != null) {

@@ -31,7 +31,7 @@ public class PromiseNotifierTest {
         assertThrows(NullPointerException.class, new Executable() {
             @Override
             public void execute() {
-                new PromiseNotifier<Void, Future<Void>>((Promise<Void>[]) null);
+                new PromiseNotifier<Void>((Promise<Void>[]) null);
             }
         });
     }
@@ -42,7 +42,7 @@ public class PromiseNotifierTest {
         assertThrows(IllegalArgumentException.class, new Executable() {
             @Override
             public void execute() {
-                new PromiseNotifier<Void, Future<Void>>((Promise<Void>) null);
+                new PromiseNotifier<Void>((Promise<Void>) null);
             }
         });
     }
@@ -55,8 +55,8 @@ public class PromiseNotifierTest {
         Promise<Void> p2 = mock(Promise.class);
 
         @SuppressWarnings("unchecked")
-        PromiseNotifier<Void, Future<Void>> notifier =
-                new PromiseNotifier<Void, Future<Void>>(p1, p2);
+        PromiseNotifier<Void> notifier =
+                new PromiseNotifier<>(p1, p2);
 
         @SuppressWarnings("unchecked")
         Future<Void> future = mock(Future.class);
@@ -78,8 +78,8 @@ public class PromiseNotifierTest {
         Promise<Void> p2 = mock(Promise.class);
 
         @SuppressWarnings("unchecked")
-        PromiseNotifier<Void, Future<Void>> notifier =
-                new PromiseNotifier<Void, Future<Void>>(p1, p2);
+        PromiseNotifier<Void> notifier =
+                new PromiseNotifier<>(p1, p2);
 
         @SuppressWarnings("unchecked")
         Future<Void> future = mock(Future.class);
@@ -100,7 +100,7 @@ public class PromiseNotifierTest {
         Promise<Void> p1 = ImmediateEventExecutor.INSTANCE.newPromise();
         Promise<Void> p2 = ImmediateEventExecutor.INSTANCE.newPromise();
 
-        Promise<Void> returned = PromiseNotifier.cascade(p1, p2);
+        Future<Void> returned = PromiseNotifier.cascade(p1, p2);
         assertSame(p1, returned);
 
         assertTrue(returned.cancel(false));

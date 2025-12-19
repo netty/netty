@@ -89,7 +89,7 @@ public final class HttpNativeServer {
                     .childOption(ChannelOption.ALLOCATOR, chooseAllocator(allocatorType))
                     .childHandler(new HttpNativeServerInitializer(httpRequestFuture));
 
-            Channel channel = b.bind(0).sync().channel();
+            Channel channel = b.bind(0).get();
             System.err.println("Server started, will shutdown now.");
 
             Channel httpClient = new HttpNativeClient(

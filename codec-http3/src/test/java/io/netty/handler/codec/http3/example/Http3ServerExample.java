@@ -21,6 +21,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
@@ -101,8 +102,8 @@ public final class Http3ServerExample {
                                                 headersFrame.headers().addInt("content-length", CONTENT.length);
                                                 ctx.write(headersFrame);
                                                 ctx.writeAndFlush(new DefaultHttp3DataFrame(
-                                                                Unpooled.wrappedBuffer(CONTENT)))
-                                                        .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                                                        Unpooled.wrappedBuffer(CONTENT))).addListener(
+                                                                f -> ctx.shutdown(ChannelShutdownType.newOutbound()));
                                             }
                                         });
                                     }
@@ -114,7 +115,7 @@ public final class Http3ServerExample {
             Channel channel = bs.group(group)
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
-                    .bind(new InetSocketAddress(port)).sync().channel();
+                    .bind(new InetSocketAddress(port)).get();
             channel.closeFuture().sync();
         } finally {
             group.shutdownGracefully();

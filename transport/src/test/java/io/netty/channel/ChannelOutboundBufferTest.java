@@ -20,6 +20,8 @@ import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
@@ -54,18 +56,18 @@ public class ChannelOutboundBufferTest {
         ChannelOutboundBuffer buffer = new ChannelOutboundBuffer(channel.executor());
         ByteBuf b1 = wrappedBuffer(new byte[] { 0 });
         int r1 = b1.readableBytes();
-        ChannelPromise p1 = channel.newPromise();
+        Promise<Void> p1 = channel.newPromise();
         buffer.addMessage(b1, r1, p1);
 
         ByteBuf b2 = wrappedBuffer(new byte[] { 0, 1 });
         int r2 = b2.readableBytes();
-        ChannelPromise p2 = channel.newPromise();
+        Promise<Void> p2 = channel.newPromise();
         buffer.addMessage(b2, r2, p2);
         p2.cancel(false);
 
         ByteBuf b3 = wrappedBuffer(new byte[] { 0 });
         int r3 = b3.readableBytes();
-        ChannelPromise p3 = channel.newPromise();
+        Promise<Void> p3 = channel.newPromise();
         buffer.addMessage(b3, r3, p3);
         buffer.addFlush();
 
@@ -215,37 +217,37 @@ public class ChannelOutboundBufferTest {
         }
 
         @Override
-        protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
 
         @Override
-        protected void doDeregister(ChannelPromise promise) {
-            promise.setSuccess();
+        protected void doDeregister(Promise<Void> promise) {
+            promise.setSuccess(null);
         }
 
         @Override
-        protected void doRegister(ChannelPromise promise) {
+        protected void doRegister(Promise<Void> promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
 
         @Override
-        protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
 
         @Override
-        protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
 
         @Override
-        protected void doDisconnect(ChannelPromise promise) {
+        protected void doDisconnect(Promise<Void> promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
 
         @Override
-        protected void doClose(ChannelPromise promise) {
+        protected void doClose(Promise<Void> promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
 
@@ -272,6 +274,11 @@ public class ChannelOutboundBufferTest {
         @Override
         public boolean isActive() {
             return true;
+        }
+
+        @Override
+        public <T> Promise<T> newPromise() {
+            return new DefaultPromise<T>(executor());
         }
     }
 

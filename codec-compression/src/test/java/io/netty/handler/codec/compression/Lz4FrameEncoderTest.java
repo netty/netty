@@ -22,8 +22,6 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
@@ -243,7 +241,7 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void writingAfterClosedChannelDoesNotNPE() throws InterruptedException {
+    public void writingAfterClosedChannelDoesNotNPE() throws Exception {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(2, NioIoHandler.newFactory());
         Channel serverChannel = null;
         Channel clientChannel = null;
@@ -269,8 +267,8 @@ public class Lz4FrameEncoderTest extends AbstractEncoderTest {
                 }
             });
 
-            serverChannel = sb.bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
-            clientChannel = bs.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            serverChannel = sb.bind(new InetSocketAddress(0)).get();
+            clientChannel = bs.connect(serverChannel.localAddress()).get();
 
             final Channel finalClientChannel = clientChannel;
             clientChannel.executor().execute(new Runnable() {

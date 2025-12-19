@@ -84,11 +84,6 @@ final class ScheduledFutureTask<V> extends PromiseTask<V> implements ScheduledFu
         return id;
     }
 
-    @Override
-    protected EventExecutor executor() {
-        return super.executor();
-    }
-
     public long deadlineNanos() {
         return deadlineNanos;
     }

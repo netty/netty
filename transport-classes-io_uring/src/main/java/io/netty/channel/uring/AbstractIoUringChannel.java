@@ -25,7 +25,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
@@ -41,6 +40,7 @@ import io.netty.channel.unix.FileDescriptor;
 import io.netty.channel.unix.UnixChannel;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.CleanableDirectBuffer;
 import io.netty.util.internal.StringUtil;
@@ -97,14 +97,14 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     private boolean inReadComplete;
     private boolean socketHasMoreData;
 
-    private ChannelPromise delayedClose;
+    private Promise<Void> delayedClose;
     private boolean inputClosedSeenErrorOnRead;
     private boolean socketIsEmpty;
 
     /**
      * The future of the current connection attempt.  If not null, subsequent connection attempts will fail.
      */
-    private ChannelPromise connectPromise;
+    private Promise<Void> connectPromise;
     private SocketAddress requestedRemoteAddress;
     private CleanableDirectBuffer cleanable;
     private ByteBuffer remoteAddressMemory;
@@ -254,7 +254,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     protected abstract void cancelOutstandingWrites(IoRegistration registration, int numOutstandingWrites);
 
     @Override
-    protected void doDisconnect(ChannelPromise promise) {
+    protected void doDisconnect(Promise<Void> promise) {
         doClose(promise);
     }
 
@@ -274,7 +274,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected void doClose(ChannelPromise promise) {
+    protected void doClose(Promise<Void> promise) {
         if (registration != null) {
             if (delayedClose == null) {
                 // We have a write operation pending that should be completed asap.
@@ -284,7 +284,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 delayedClose.addListener(f -> {
                     if (delayedClose.isSuccess()) {
                         active = false;
-                        promise.setSuccess();
+                        promise.setSuccess(null);
                     } else {
                         promise.setFailure(f.cause());
                     }
@@ -296,7 +296,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
             boolean cancelConnect = false;
             try {
-                ChannelPromise connectPromise = AbstractIoUringChannel.this.connectPromise;
+                Promise<Void> connectPromise = AbstractIoUringChannel.this.connectPromise;
                 if (connectPromise != null) {
                     // Use tryFailure() instead of setFailure() to avoid the race against cancel().
                     connectPromise.tryFailure(new ClosedChannelException());
@@ -326,7 +326,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 return;
             }
             active = false;
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
     }
 
@@ -547,7 +547,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     private void handleDelayedClosed() {
         if (delayedClose != null && canCloseNow()) {
-            delayedClose.trySuccess();
+            delayedClose.trySuccess(null);
         }
     }
 
@@ -815,7 +815,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             // neither cancelled nor timed out.
             assert executor().inEventLoop();
 
-            ChannelPromise promise = connectPromise;
+            Promise<Void> promise = connectPromise;
             final boolean connected;
             try {
                 connected = socket.finishConnect();
@@ -835,7 +835,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 // Register POLLRDHUP
                 schedulePollRdHup();
 
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 // The connect was not done yet, register for POLLOUT again
                 schedulePollOut();
@@ -944,7 +944,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             // connect not complete yet need to wait for poll_out event
             schedulePollOut();
         } else {
-            ChannelPromise promise = connectPromise;
+            Promise<Void> promise = connectPromise;
             connectPromise = null;
             if (res == 0) {
                 active = true;
@@ -956,7 +956,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
                 // Register POLLRDHUP
                 schedulePollRdHup();
 
-                promise.setSuccess();
+                promise.setSuccess(null);
                 if (readPending) {
                     doBeginReadNow();
                 }
@@ -973,7 +973,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
 
     @Override
     protected void doConnect(
-            final SocketAddress remoteAddress, final SocketAddress localAddress, final ChannelPromise promise) {
+            final SocketAddress remoteAddress, final SocketAddress localAddress, final Promise<Void> promise) {
         if (delayedClose != null) {
             promise.tryFailure(new ClosedChannelException());
             return;
@@ -1092,12 +1092,12 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected void doRegister(ChannelPromise promise) {
+    protected void doRegister(Promise<Void> promise) {
         EventLoop eventLoop = executor();
         eventLoop.register(ioHandle).addListener(f -> {
             if (f.isSuccess()) {
                 registration = (IoRegistration) f.getNow();
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
             }
@@ -1105,14 +1105,14 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
     }
 
     @Override
-    protected final void doDeregister(ChannelPromise promise) {
+    protected final void doDeregister(Promise<Void> promise) {
         // Cancel all previous submitted ops.
         cancelOps(connectPromise != null);
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doBind(final SocketAddress local, ChannelPromise promise) {
+    protected void doBind(final SocketAddress local, Promise<Void> promise) {
         try {
             if (local instanceof InetSocketAddress) {
                 checkResolvable((InetSocketAddress) local);
@@ -1123,7 +1123,7 @@ abstract class AbstractIoUringChannel extends AbstractChannel implements UnixCha
             promise.setFailure(cause);
             return;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     protected static void checkResolvable(InetSocketAddress addr) {

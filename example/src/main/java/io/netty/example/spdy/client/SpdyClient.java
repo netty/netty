@@ -77,7 +77,7 @@ public final class SpdyClient {
             b.handler(new SpdyClientInitializer(sslCtx, httpResponseHandler));
 
             // Start the client.
-            Channel channel = b.connect().syncUninterruptibly().channel();
+            Channel channel = b.connect().get();
             System.out.println("Connected to " + HOST + ':' + PORT);
 
             // Create a GET request.

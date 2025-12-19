@@ -57,7 +57,7 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
         Socket s = newSocket();
         Channel sc = null;
         try {
-            sc = sb.childHandler(h).childOption(ChannelOption.ALLOW_HALF_CLOSURE, true).bind().sync().channel();
+            sc = sb.childHandler(h).childOption(ChannelOption.ALLOW_HALF_CLOSURE, true).bind().get();
 
             connect(s, sc.localAddress());
             write(s, 1);
@@ -105,7 +105,7 @@ public abstract class AbstractSocketShutdownOutputByPeerTest<Socket> extends Abs
         Socket s = newSocket();
         Channel sc = null;
         try {
-            sc = sb.childHandler(h).bind().sync().channel();
+            sc = sb.childHandler(h).bind().get();
 
             connect(s, sc.localAddress());
             write(s, 1);

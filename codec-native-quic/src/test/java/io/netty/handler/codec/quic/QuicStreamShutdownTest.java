@@ -18,14 +18,13 @@ package io.netty.handler.codec.quic;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutputShutdownException;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.ByteToMessageDecoder;
+import io.netty.util.concurrent.FutureListener;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
@@ -54,8 +53,8 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                     new ChannelInboundHandler() {
                         @Override
                         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                            ChannelFutureListener futureListener = channelFuture -> {
-                                Throwable cause = channelFuture.cause();
+                            FutureListener<Void> futureListener = f -> {
+                                Throwable cause = f.cause();
                                 if (cause instanceof ChannelOutputShutdownException) {
                                     latch.countDown();
                                 }
@@ -74,7 +73,7 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                     .get();
 
             QuicStreamChannel streamChannel = quicChannel.createStream(QuicStreamType.BIDIRECTIONAL,
-                    new ChannelInboundHandler() { }).sync().getNow();
+                    new ChannelInboundHandler() { }).get();
             streamChannel.shutdown(ChannelShutdownType.newInbound()).sync();
             assertTrue(streamChannel.isShutdown(ChannelShutdownDirection.Inbound));
             streamChannel.writeAndFlush(Unpooled.buffer().writeLong(8)).sync();
@@ -137,7 +136,7 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                                 ctx.close();
                             }
                         }
-                    }).sync().getNow();
+                    }).get();
 
             streamChannel.writeAndFlush(Unpooled.buffer().writeInt(4)).sync();
 
@@ -202,7 +201,7 @@ public class QuicStreamShutdownTest extends AbstractQuicTest {
                             }
                             latch.countDown();
                         }
-                    }).sync().getNow();
+                    }).get();
 
             streamChannel.writeAndFlush(Unpooled.buffer().writeInt(4)).sync();
 

@@ -19,7 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.TypeParameterMatcher;
 
 import java.util.List;
@@ -108,7 +108,7 @@ public abstract class ByteToMessageCodec<I> implements ChannelInboundHandler, Ch
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         encoder.write(ctx, msg, promise);
     }
 

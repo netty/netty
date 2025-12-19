@@ -16,7 +16,7 @@
 package io.netty.example.file;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
@@ -34,6 +34,7 @@ import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.stream.ChunkedWriteHandler;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
 
 /**
  * Server that accept the path of a file an echo back its content.
@@ -73,10 +74,10 @@ public final class FileServer {
              });
 
             // Start the server.
-            ChannelFuture f = b.bind(PORT).sync();
+            Future<Channel> f = b.bind(PORT).sync();
 
             // Wait until the server socket is closed.
-            f.channel().closeFuture().sync();
+            f.getNow().closeFuture().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
             group.shutdownGracefully();

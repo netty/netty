@@ -69,17 +69,17 @@ public abstract class SocketAddressesTest extends AbstractSocketTest {
                     localAddressPromise.setSuccess(ctx.channel().localAddress());
                     remoteAddressPromise.setSuccess(ctx.channel().remoteAddress());
                 }
-            }).bind().syncUninterruptibly().channel();
+            }).bind().get();
 
-            clientChannel = cb.handler(new ChannelInboundHandler() { }).register().syncUninterruptibly().channel();
+            clientChannel = cb.handler(new ChannelInboundHandler() { }).register().get();
 
             assertNull(clientChannel.localAddress());
             assertNull(clientChannel.remoteAddress());
 
             if (withLocalAddress) {
-                clientChannel.connect(serverChannel.localAddress(), newSocketAddress()).syncUninterruptibly().channel();
+                clientChannel.connect(serverChannel.localAddress(), newSocketAddress()).get();
             } else {
-                clientChannel.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+                clientChannel.connect(serverChannel.localAddress()).get();
             }
 
             assertAddress(clientChannel.localAddress());

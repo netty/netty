@@ -25,8 +25,7 @@ import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
+import io.netty.util.concurrent.FutureListener;
 import org.jetbrains.annotations.Nullable;
 
 import java.nio.channels.ClosedChannelException;
@@ -140,7 +139,7 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
         final QuicChannel quicChannel = (QuicChannel) ctx.channel().parent();
         final QpackAttributes qpackAttributes = Http3.getQpackAttributes(quicChannel);
         assert qpackAttributes != null;
-        final GenericFutureListener<Future<? super QuicStreamChannel>> closeOnFailure = future -> {
+        final FutureListener<? super QuicStreamChannel> closeOnFailure = future -> {
             if (!future.isSuccess()) {
                 criticalStreamClosed(ctx);
             }
@@ -240,7 +239,7 @@ final class Http3ControlStreamInboundHandler extends Http3FrameTypeInboundValida
             // Just allocate 8 bytes which would be the max needed.
             ByteBuf buffer = ctx.alloc().buffer(8);
             Http3CodecUtils.writeVariableLengthInteger(buffer, streamType);
-            closeOnFailure(ctx.writeAndFlush(buffer));
+            closeOnFailure(ctx.writeAndFlush(buffer), ctx);
             streamAvailable(ctx);
             ctx.fireChannelActive();
         }

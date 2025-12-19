@@ -96,7 +96,7 @@ public class FlowControlHandlerTest {
 
         return serverBootstrap.bind(0)
                 .syncUninterruptibly()
-                .channel();
+                .getNow();
     }
 
     private static Channel newClient(SocketAddress server) {
@@ -114,7 +114,7 @@ public class FlowControlHandlerTest {
 
         return bootstrap.connect(server)
                 .syncUninterruptibly()
-                .channel();
+                .getNow();
     }
 
     /**

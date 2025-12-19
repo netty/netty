@@ -20,8 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -121,7 +119,7 @@ public class Http2MultiplexTransportTest {
     private Channel serverConnectedChannel;
 
     private static final class MultiplexInboundStream implements ChannelInboundHandler {
-        ChannelFuture responseFuture;
+        Future<Void> responseFuture;
         final AtomicInteger handlerInactivatedFlushed;
         final AtomicInteger handleInactivatedNotFlushed;
         final CountDownLatch latchHandlerInactive;
@@ -231,7 +229,7 @@ public class Http2MultiplexTransportTest {
                 });
             }
         });
-        serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).awaitUninterruptibly().channel();
+        serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).awaitUninterruptibly().getNow();
 
         Bootstrap bs = new Bootstrap();
         bs.group(eventLoopGroup);
@@ -252,7 +250,7 @@ public class Http2MultiplexTransportTest {
                 });
             }
         });
-        clientChannel = bs.connect(serverChannel.localAddress()).awaitUninterruptibly().channel();
+        clientChannel = bs.connect(serverChannel.localAddress()).awaitUninterruptibly().getNow();
         serverConnectedChannelLatch.await();
         serverConnectedChannel = serverConnectedChannelRef.get();
 
@@ -275,7 +273,7 @@ public class Http2MultiplexTransportTest {
     @Test
     @Timeout(value = 5000L, unit = MILLISECONDS)
     public void testFlushNotDiscarded()
-            throws InterruptedException {
+            throws Exception {
         final ScheduledExecutorService executorService = Executors.newScheduledThreadPool(1);
 
         try {
@@ -294,8 +292,7 @@ public class Http2MultiplexTransportTest {
                                     @Override
                                     public void run() {
                                         ctx.writeAndFlush(new DefaultHttp2HeadersFrame(
-                                                new DefaultHttp2Headers(), false)).addListener(
-                                                (ChannelFutureListener) future -> {
+                                                new DefaultHttp2Headers(), false)).addListener(future -> {
                                                     ctx.write(new DefaultHttp2DataFrame(
                                                             Unpooled.copiedBuffer(
                                                                     "Hello World", CharsetUtil.US_ASCII),
@@ -315,7 +312,7 @@ public class Http2MultiplexTransportTest {
                     }));
                 }
             });
-            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly().channel();
+            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).get();
 
             final CountDownLatch latch = new CountDownLatch(1);
             Bootstrap bs = new Bootstrap();
@@ -328,7 +325,7 @@ public class Http2MultiplexTransportTest {
                     ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
                 }
             });
-            clientChannel = bs.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            clientChannel = bs.connect(serverChannel.localAddress()).get();
             Http2StreamChannelBootstrap h2Bootstrap = new Http2StreamChannelBootstrap(clientChannel);
             h2Bootstrap.handler(new ChannelInboundHandler() {
                 @Override
@@ -339,7 +336,7 @@ public class Http2MultiplexTransportTest {
                     ReferenceCountUtil.release(msg);
                 }
             });
-            Http2StreamChannel streamChannel = h2Bootstrap.open().syncUninterruptibly().getNow();
+            Http2StreamChannel streamChannel = h2Bootstrap.open().get();
             streamChannel.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true))
                     .syncUninterruptibly();
 
@@ -428,7 +425,7 @@ public class Http2MultiplexTransportTest {
                 ch.pipeline().addLast(new Http2MultiplexHandler(DISCARD_HANDLER));
             }
         });
-        serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly().channel();
+        serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).get();
 
         final SslContext clientCtx = SslContextBuilder.forClient()
                 .keyManager(cert.getKeyPair().getPrivate(), cert.getCertificatePath())
@@ -508,7 +505,7 @@ public class Http2MultiplexTransportTest {
                 });
             }
         });
-        clientChannel = bs.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+        clientChannel = bs.connect(serverChannel.localAddress()).get();
         latch.await();
         AssertionError error = errorRef.get();
         if (error != null) {
@@ -569,7 +566,7 @@ public class Http2MultiplexTransportTest {
                                 if (msg instanceof Http2HeadersFrame && ((Http2HeadersFrame) msg).isEndStream()) {
                                     ctx.writeAndFlush(new DefaultHttp2HeadersFrame(
                                                     new DefaultHttp2Headers(), false))
-                                            .addListener((ChannelFutureListener) future ->
+                                            .addListener(future ->
                                                     ctx.writeAndFlush(new DefaultHttp2DataFrame(
                                                             Unpooled.copiedBuffer("Hello World", CharsetUtil.US_ASCII),
                                                             true)));
@@ -581,7 +578,7 @@ public class Http2MultiplexTransportTest {
                 });
             }
         });
-        serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).sync().channel();
+        serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).get();
 
         final SslContext clientCtx = SslContextBuilder.forClient()
                 .sslProvider(provider)
@@ -635,7 +632,7 @@ public class Http2MultiplexTransportTest {
                 });
             }
         });
-        clientChannel = bs.connect(serverChannel.localAddress()).sync().channel();
+        clientChannel = bs.connect(serverChannel.localAddress()).get();
 
         latch.await();
 
@@ -646,12 +643,12 @@ public class Http2MultiplexTransportTest {
     /**
      * When an HTTP/2 server stream channel receives a frame with EOS flag, and when it responds with a EOS
      * flag, then the server side stream will be closed, hence the stream handler will be inactivated. This test
-     * verifies that the ChannelFuture of the server response is successful at the time the server stream handler is
+     * verifies that the Future<Void> of the server response is successful at the time the server stream handler is
      * inactivated.
      */
     @Test
     @Timeout(value = 120000L, unit = MILLISECONDS)
-    public void streamHandlerInactivatedResponseFlushed() throws InterruptedException {
+    public void streamHandlerInactivatedResponseFlushed() throws Exception {
         EventLoopGroup serverEventLoopGroup = null;
         EventLoopGroup clientEventLoopGroup = null;
 
@@ -696,7 +693,7 @@ public class Http2MultiplexTransportTest {
                     }));
                 }
             });
-            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).syncUninterruptibly().channel();
+            serverChannel = sb.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).get();
 
             final Bootstrap bs = new Bootstrap();
 
@@ -710,7 +707,7 @@ public class Http2MultiplexTransportTest {
                 }
             });
 
-            clientChannel = bs.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            clientChannel = bs.connect(serverChannel.localAddress()).get();
             final Http2StreamChannelBootstrap h2Bootstrap = new Http2StreamChannelBootstrap(clientChannel);
             h2Bootstrap.handler(new ChannelInboundHandler() {
                 @Override
@@ -726,9 +723,9 @@ public class Http2MultiplexTransportTest {
                 }
             });
 
-            List<ChannelFuture> streamFutures = new ArrayList<ChannelFuture>();
+            List<Future<Void>> streamFutures = new ArrayList<>();
             for (int i = 0; i < streams; i ++) {
-                Http2StreamChannel stream = h2Bootstrap.open().syncUninterruptibly().getNow();
+                Http2StreamChannel stream = h2Bootstrap.open().get();
                 streamFutures.add(stream.writeAndFlush(new DefaultHttp2HeadersFrame(new DefaultHttp2Headers(), true)));
             }
             for (int i = 0; i < streams; i ++) {
@@ -783,14 +780,14 @@ public class Http2MultiplexTransportTest {
                                                     new DefaultFullHttpResponse(
                                                             msg.protocolVersion(), HttpResponseStatus.OK,
                                                             Unpooled.copiedBuffer("hello", CharsetUtil.US_ASCII)))
-                                                    .addListener(ChannelFutureListener.CLOSE);
+                                                    .addListener(f -> ctx.close());
                                         }
                                     });
                                 }
                             }));
                         }
                     });
-            serverChannel = sb.bind(serverAddress).sync().channel();
+            serverChannel = sb.bind(serverAddress).get();
 
             Bootstrap cb = new Bootstrap()
                     .channel(LocalChannel.class)
@@ -811,7 +808,7 @@ public class Http2MultiplexTransportTest {
                         }
                     });
 
-            clientChannel = cb.connect(serverAddress).sync().channel();
+            clientChannel = cb.connect(serverAddress).get();
             clientStreamChannel = new Http2StreamChannelBootstrap(clientChannel)
                     .handler(new ChannelInitializer<Channel>() {
                         @Override

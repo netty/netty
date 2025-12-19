@@ -21,8 +21,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -37,6 +35,8 @@ import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -106,7 +106,11 @@ abstract class ProxyServer {
             }
         });
 
-        ch = (ServerSocketChannel) b.bind(NetUtil.LOCALHOST, 0).syncUninterruptibly().channel();
+        try {
+            ch = (ServerSocketChannel) b.bind(NetUtil.LOCALHOST, 0).get();
+        } catch (Exception t) {
+            throw new IllegalStateException(t);
+        }
     }
 
     public final InetSocketAddress address() {
@@ -168,13 +172,13 @@ abstract class ProxyServer {
             boolean finished = handleProxyProtocol(ctx, msg);
             if (finished) {
                 this.finished = true;
-                ChannelFuture f = connectToDestination(ctx.channel().executor(), new BackendHandler(ctx));
-                f.addListener((ChannelFutureListener) future -> {
+                Future<Channel> f = connectToDestination(ctx.channel().executor(), new BackendHandler(ctx));
+                f.addListener((FutureListener<Channel>) future -> {
                     if (!future.isSuccess()) {
                         recordException(future.cause());
                         ctx.close();
                     } else {
-                        backend = future.channel();
+                        backend = future.getNow();
                         flush();
                     }
                 });
@@ -203,7 +207,7 @@ abstract class ProxyServer {
 
         protected abstract SocketAddress intermediaryDestination();
 
-        private ChannelFuture connectToDestination(EventLoop loop, ChannelHandler handler) {
+        private Future<Channel> connectToDestination(EventLoop loop, ChannelHandler handler) {
             Bootstrap b = new Bootstrap();
             b.channel(NioSocketChannel.class);
             b.group(loop);
@@ -274,7 +278,9 @@ abstract class ProxyServer {
                     ctx.write(Unpooled.copiedBuffer("2\n", CharsetUtil.US_ASCII));
                 } else if ("C\n".equals(str)) {
                     ctx.write(Unpooled.copiedBuffer("3\n", CharsetUtil.US_ASCII))
-                       .addListener(ChannelFutureListener.CLOSE);
+                       .addListener(f -> {
+                           ctx.close();
+                       });
                 } else {
                     throw new IllegalStateException("unexpected message: " + str);
                 }

@@ -20,10 +20,10 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.util.AttributeKey;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.Nullable;
@@ -281,7 +281,7 @@ final class QuicheQuicServerCodec extends QuicheQuicCodec {
     protected void connectQuicChannel(QuicheQuicChannel channel, SocketAddress remoteAddress,
                                       SocketAddress localAddress, ByteBuf senderSockaddrMemory,
                                       ByteBuf recipientSockaddrMemory, Consumer<QuicheQuicChannel> freeTask,
-                                      int localConnIdLength, QuicheConfig config, ChannelPromise promise) {
+                                      int localConnIdLength, QuicheConfig config, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 }

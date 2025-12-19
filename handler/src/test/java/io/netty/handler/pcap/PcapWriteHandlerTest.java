@@ -23,14 +23,12 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.EventLoopGroup;
@@ -46,6 +44,8 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.NetUtil;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
@@ -107,7 +107,7 @@ public class PcapWriteHandlerTest {
                         }
                     });
 
-            ChannelFuture channelFutureServer = server.bind(serverAddr).sync();
+            Future<Channel> channelFutureServer = server.bind(serverAddr).sync();
             assertTrue(channelFutureServer.isSuccess());
 
             CloseDetectingByteBufOutputStream outputStream = new CloseDetectingByteBufOutputStream(byteBuf);
@@ -121,20 +121,20 @@ public class PcapWriteHandlerTest {
                             .writePcapGlobalHeader(writeGlobalHeaders)
                             .build(outputStream));
 
-            ChannelFuture channelFutureClient =
+            Future<Channel> channelFutureClient =
                     client.bind(clientAddr).sync();
             assertTrue(channelFutureClient.isSuccess());
 
-            Channel clientChannel = channelFutureClient.channel();
+            Channel clientChannel = channelFutureClient.getNow();
             DatagramPacket datagram = new DatagramPacket(payload.copy(),
-                    (InetSocketAddress) channelFutureServer.channel().localAddress());
+                    (InetSocketAddress) channelFutureServer.getNow().localAddress());
             assertTrue(clientChannel.writeAndFlush(datagram).sync().isSuccess());
             assertTrue(eventLoopGroup.shutdownGracefully().sync().isSuccess());
 
             // if sharedOutputStream is true or writeGlobalHeaders is false, we don't verify the global headers.
             verifyUdpCapture(!sharedOutputStream && writeGlobalHeaders,
                     byteBuf, payload,
-                    (InetSocketAddress) channelFutureServer.channel().localAddress(),
+                    (InetSocketAddress) channelFutureServer.getNow().localAddress(),
                     (InetSocketAddress) clientChannel.localAddress()
             );
 
@@ -511,7 +511,7 @@ public class PcapWriteHandlerTest {
                     });
 
             // Start the server.
-            ChannelFuture serverChannelFuture = sb.bind(new InetSocketAddress("127.0.0.1", 0)).sync();
+            Future<Channel> serverChannelFuture = sb.bind(new InetSocketAddress("127.0.0.1", 0)).sync();
             assertTrue(serverChannelFuture.isSuccess());
 
             // configure the client
@@ -549,18 +549,18 @@ public class PcapWriteHandlerTest {
                         }
                     });
 
-            InetSocketAddress serverAddress = (InetSocketAddress) serverChannelFuture.channel().localAddress();
+            InetSocketAddress serverAddress = (InetSocketAddress) serverChannelFuture.getNow().localAddress();
             // Start the client.
-            ChannelFuture clientChannelFuture = cb.connect(serverAddress).sync();
+            Future<Channel> clientChannelFuture = cb.connect(serverAddress).sync();
             assertTrue(clientChannelFuture.isSuccess());
 
-            InetSocketAddress clientAddress = (InetSocketAddress) clientChannelFuture.channel().localAddress();
+            InetSocketAddress clientAddress = (InetSocketAddress) clientChannelFuture.getNow().localAddress();
 
             assertTrue(serverLatch.await(5, TimeUnit.SECONDS));
             assertTrue(clientLatch.await(5, TimeUnit.SECONDS));
 
-            clientChannelFuture.channel().close().sync();
-            serverChannelFuture.channel().close().sync();
+            clientChannelFuture.getNow().close().sync();
+            serverChannelFuture.getNow().close().sync();
 
             // Shut down all event loops to terminate all threads.
             assertTrue(group.shutdownGracefully().sync().isSuccess());
@@ -1385,30 +1385,30 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public ChannelFuture joinGroup(InetAddress multicastAddress) {
+        public Future<Void> joinGroup(InetAddress multicastAddress) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture joinGroup(InetAddress multicastAddress, ChannelPromise future) {
+        public Future<Void> joinGroup(InetAddress multicastAddress, Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
+        public Future<Void> joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture joinGroup(
+        public Future<Void> joinGroup(
                 InetSocketAddress multicastAddress,
                 NetworkInterface networkInterface,
-                ChannelPromise future) {
+                Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture joinGroup(
+        public Future<Void> joinGroup(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress source) {
@@ -1416,39 +1416,39 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public ChannelFuture joinGroup(
+        public Future<Void> joinGroup(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress source,
-                ChannelPromise future) {
+                Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture leaveGroup(InetAddress multicastAddress) {
+        public Future<Void> leaveGroup(InetAddress multicastAddress) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture leaveGroup(InetAddress multicastAddress, ChannelPromise future) {
+        public Future<Void> leaveGroup(InetAddress multicastAddress, Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
+        public Future<Void> leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture leaveGroup(
+        public Future<Void> leaveGroup(
                 InetSocketAddress multicastAddress,
                 NetworkInterface networkInterface,
-                ChannelPromise future) {
+                Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture leaveGroup(
+        public Future<Void> leaveGroup(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress source) {
@@ -1456,16 +1456,16 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public ChannelFuture leaveGroup(
+        public Future<Void> leaveGroup(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress source,
-                ChannelPromise future) {
+                Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture block(
+        public Future<Void> block(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress sourceToBlock) {
@@ -1473,21 +1473,21 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public ChannelFuture block(
+        public Future<Void> block(
                 InetAddress multicastAddress,
                 NetworkInterface networkInterface,
                 InetAddress sourceToBlock,
-                ChannelPromise future) {
+                Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock) {
+        public Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
             throw new UnsupportedOperationException();
         }
 
         @Override
-        public ChannelFuture block(InetAddress multicastAddress, InetAddress sourceToBlock, ChannelPromise future) {
+        public Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> future) {
             throw new UnsupportedOperationException();
         }
     }
@@ -1507,10 +1507,10 @@ public class PcapWriteHandlerTest {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             //Discard
             ReferenceCountUtil.release(msg);
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
     }
 

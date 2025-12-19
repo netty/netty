@@ -143,7 +143,7 @@ public class MultiThreadIoEventLoopGroupTest {
 
     @Test
     @Timeout(30)
-    public void testScalingWithIoRegistrationLifecycle() throws InterruptedException {
+    public void testScalingWithIoRegistrationLifecycle() throws Exception {
         TestMultiThreadIoEventLoopGroup group = new TestMultiThreadIoEventLoopGroup(0, 2, 200, TimeUnit.MILLISECONDS);
         try {
             startAllExecutors(group);
@@ -155,7 +155,7 @@ public class MultiThreadIoEventLoopGroupTest {
             TestableIoEventLoop activeExecutor = (TestableIoEventLoop) findActiveExecutor(group);
             assertNotNull(activeExecutor, "One executor should remain active");
 
-            IoRegistration registration = activeExecutor.register(new TestIoHandle()).syncUninterruptibly().getNow();
+            IoRegistration registration = activeExecutor.register(new TestIoHandle()).get();
             activeExecutor.setSimulateWorkload(true);
 
             Thread.sleep(450);
@@ -176,7 +176,7 @@ public class MultiThreadIoEventLoopGroupTest {
 
     @Test
     @Timeout(30)
-    public void testShouldNotSuspendExecutorWithActiveRegistration() throws InterruptedException {
+    public void testShouldNotSuspendExecutorWithActiveRegistration() throws Exception {
         TestMultiThreadIoEventLoopGroup group = new TestMultiThreadIoEventLoopGroup(0, 2, 200, TimeUnit.MILLISECONDS);
         try {
             startAllExecutors(group);
@@ -187,7 +187,7 @@ public class MultiThreadIoEventLoopGroupTest {
             assertNotNull(activeExecutor, "One executor should remain active");
 
             // Register a handle with the active executor. This makes registeredChannels() return 1.
-            IoRegistration registration = activeExecutor.register(new TestIoHandle()).syncUninterruptibly().getNow();
+            IoRegistration registration = activeExecutor.register(new TestIoHandle()).get();
 
             // The executor is now a candidate for suspension based on utilization,
             // but not based on registered channels.

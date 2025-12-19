@@ -28,7 +28,10 @@ import org.junit.jupiter.api.TestInfo;
 
 import java.io.FileNotFoundException;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -39,13 +42,10 @@ class EpollDomainDatagramPathTest extends AbstractClientSocketTest {
         run(testInfo, new Runner<Bootstrap>() {
             @Override
             public void run(Bootstrap bootstrap) {
-                try {
-                    bootstrap.handler(new ChannelInboundHandler() { })
-                             .connect(EpollSocketTestPermutation.newDomainSocketAddress()).sync().channel();
-                    fail("Expected FileNotFoundException");
-                } catch (Exception e) {
-                    assertTrue(e instanceof FileNotFoundException);
-                }
+                Throwable cause = assertThrows(ExecutionException.class, () ->
+                        bootstrap.handler(new ChannelInboundHandler() { })
+                                .connect(EpollSocketTestPermutation.newDomainSocketAddress()).get());
+                assertInstanceOf(FileNotFoundException.class, cause.getCause());
             }
         });
     }
@@ -57,7 +57,7 @@ class EpollDomainDatagramPathTest extends AbstractClientSocketTest {
             public void run(Bootstrap bootstrap) {
                 try {
                     Channel ch = bootstrap.handler(new ChannelInboundHandler() { })
-                                          .bind(EpollSocketTestPermutation.newDomainSocketAddress()).sync().channel();
+                                          .bind(EpollSocketTestPermutation.newDomainSocketAddress()).get();
                     ch.writeAndFlush(new DatagramPacket(
                             Unpooled.copiedBuffer("test", CharsetUtil.US_ASCII),
                             EpollSocketTestPermutation.newDomainSocketAddress())).sync();

@@ -20,13 +20,13 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.websocketx.BinaryWebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocket08FrameEncoder;
 import io.netty.microbench.channel.EmbeddedChannelWriteReleaseHandlerContext;
 import io.netty.microbench.util.AbstractMicrobenchmark;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Level;
@@ -94,13 +94,13 @@ public class WebSocketFrame08EncoderBenchmark extends AbstractMicrobenchmark {
     }
 
     @Benchmark
-    public ChannelFuture writeWebSocketFrame() throws Exception {
-        ChannelPromise promise = newPromise();
+    public Future<Void> writeWebSocketFrame() throws Exception {
+        Promise<Void> promise = newPromise();
         websocketEncoder.write(context, webSocketFrame, promise);
         return promise;
     }
 
-    private ChannelPromise newPromise() {
+    private Promise<Void> newPromise() {
         return context.newPromise();
     }
 

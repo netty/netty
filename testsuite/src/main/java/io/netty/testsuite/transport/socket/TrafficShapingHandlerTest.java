@@ -381,8 +381,8 @@ public class TrafficShapingHandlerTest extends AbstractSocketTest {
             }
         });
 
-        Channel sc = sb.bind().sync().channel();
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        Channel sc = sb.bind().get();
+        Channel cc = cb.connect(sc.localAddress()).get();
 
         int totalNb = 0;
         for (int i = 1; i < multipleMessage.length; i++) {

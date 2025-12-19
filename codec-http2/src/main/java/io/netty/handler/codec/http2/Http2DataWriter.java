@@ -15,9 +15,9 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 /**
  * Interface that defines an object capable of producing HTTP/2 data frames.
@@ -38,6 +38,6 @@ public interface Http2DataWriter {
      * @param promise the promise for the write.
      * @return the future for the write.
      */
-    ChannelFuture writeData(ChannelHandlerContext ctx, int streamId,
-            ByteBuf data, int padding, boolean endStream, ChannelPromise promise);
+    Future<Void> writeData(ChannelHandlerContext ctx, int streamId,
+                           ByteBuf data, int padding, boolean endStream, Promise<Void> promise);
 }

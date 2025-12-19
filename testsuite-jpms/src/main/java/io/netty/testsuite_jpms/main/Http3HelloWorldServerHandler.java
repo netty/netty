@@ -18,6 +18,7 @@ package io.netty.testsuite_jpms.main;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.http3.DefaultHttp3DataFrame;
 import io.netty.handler.codec.http3.DefaultHttp3HeadersFrame;
 import io.netty.handler.codec.http3.Http3DataFrame;
@@ -52,6 +53,6 @@ public class Http3HelloWorldServerHandler extends Http3RequestStreamInboundHandl
         headersFrame.headers().addInt("content-length", data.readableBytes());
         ctx.write(headersFrame);
         ctx.writeAndFlush(new DefaultHttp3DataFrame(data))
-                .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                .addListener(f -> ctx.shutdown(ChannelShutdownType.newOutbound()));
     }
 }

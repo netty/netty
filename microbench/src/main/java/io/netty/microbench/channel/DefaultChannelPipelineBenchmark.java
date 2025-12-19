@@ -20,9 +20,10 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.microbench.util.AbstractMicrobenchmark;
+import io.netty.util.concurrent.DefaultPromise;
+import io.netty.util.concurrent.Promise;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.CompilerControl;
 import org.openjdk.jmh.annotations.Fork;
@@ -94,7 +95,7 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
         }
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             // NOOP
         }
 
@@ -253,7 +254,7 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
             },
             new SharableOutboundHandlerAdapter() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                     ctx.write(msg, promise);
                 }
             },
@@ -270,7 +271,7 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
                 }
 
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                     ctx.write(msg, promise);
                 }
             },
@@ -287,7 +288,7 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
             },
             new SharableOutboundHandlerAdapter() {
                 @Override
-                public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                     ctx.write(msg, promise);
                 }
 
@@ -308,7 +309,7 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
     public int extraHandlers;
 
     private ChannelPipeline[] pipelines;
-    private ChannelPromise[] promises;
+    private Promise[] promises;
     private int pipelineCounter;
 
     private int[] callTypes;
@@ -319,7 +320,7 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
         SplittableRandom rng = new SplittableRandom();
         pipelineArrayMask = pipelineArrayLength - 1;
         pipelines = new ChannelPipeline[pipelineArrayLength];
-        promises = new ChannelPromise[pipelineArrayLength];
+        promises = new DefaultPromise[pipelineArrayLength];
         for (int i = 0; i < pipelineArrayLength; i++) {
             EmbeddedChannel channel = new EmbeddedChannel();
             channel.config().setAutoRead(false);

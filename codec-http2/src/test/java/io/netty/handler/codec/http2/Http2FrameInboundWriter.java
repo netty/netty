@@ -19,16 +19,15 @@ package io.netty.handler.codec.http2;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
 
@@ -199,7 +198,7 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public ChannelFuture shutdown(ChannelShutdownType type, ChannelPromise promise) {
+        public Future<Void> shutdown(ChannelShutdownType type, Promise<Void> promise) {
             return channel.shutdown(type, promise);
         }
 
@@ -226,91 +225,91 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public ChannelFuture register(ChannelPromise promise) {
+        public Future<Void> register(Promise<Void> promise) {
             return channel.register(promise);
         }
 
         @Override
-        public ChannelFuture register() {
+        public Future<Void> register() {
             return channel.register();
         }
 
         @Override
-        public ChannelFuture bind(SocketAddress localAddress) {
+        public Future<Void> bind(SocketAddress localAddress) {
             return channel.bind(localAddress);
         }
 
         @Override
-        public ChannelFuture connect(SocketAddress remoteAddress) {
+        public Future<Void> connect(SocketAddress remoteAddress) {
             return channel.connect(remoteAddress);
         }
 
         @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+        public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
             return channel.connect(remoteAddress, localAddress);
         }
 
         @Override
-        public ChannelFuture disconnect() {
+        public Future<Void> disconnect() {
             return channel.disconnect();
         }
 
         @Override
-        public ChannelFuture close() {
+        public Future<Void> close() {
             return channel.close();
         }
 
         @Override
-        public ChannelFuture deregister() {
+        public Future<Void> deregister() {
             return channel.deregister();
         }
 
         @Override
-        public ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+        public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
             return channel.bind(localAddress, promise);
         }
 
         @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+        public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
             return channel.connect(remoteAddress, promise);
         }
 
         @Override
-        public ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
             return channel.connect(remoteAddress, localAddress, promise);
         }
 
         @Override
-        public ChannelFuture disconnect(ChannelPromise promise) {
+        public Future<Void> disconnect(Promise<Void> promise) {
             return channel.disconnect(promise);
         }
 
         @Override
-        public ChannelFuture close(ChannelPromise promise) {
+        public Future<Void> close(Promise<Void> promise) {
             return channel.close(promise);
         }
 
         @Override
-        public ChannelFuture deregister(ChannelPromise promise) {
+        public Future<Void> deregister(Promise<Void> promise) {
             return channel.deregister(promise);
         }
 
         @Override
-        public ChannelFuture write(Object msg) {
+        public Future<Void> write(Object msg) {
             return write(msg, newPromise());
         }
 
         @Override
-        public ChannelFuture write(Object msg, ChannelPromise promise) {
+        public Future<Void> write(Object msg, Promise<Void> promise) {
             return writeAndFlush(msg, promise);
         }
 
         @Override
-        public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+        public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
             try {
                 channel.writeInbound(msg);
                 channel.runPendingTasks();
-                promise.setSuccess();
+                promise.setSuccess(null);
             } catch (Throwable cause) {
                 promise.setFailure(cause);
             }
@@ -318,22 +317,22 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public ChannelFuture writeAndFlush(Object msg) {
+        public Future<Void> writeAndFlush(Object msg) {
             return writeAndFlush(msg, newPromise());
         }
 
         @Override
-        public ChannelPromise newPromise() {
+        public <T> Promise<T> newPromise() {
             return channel.newPromise();
         }
 
         @Override
-        public ChannelFuture newSucceededFuture() {
-            return channel.newSucceededFuture();
+        public <T> Future<T> newSucceededFuture(T result) {
+            return channel.newSucceededFuture(result);
         }
 
         @Override
-        public ChannelFuture newFailedFuture(Throwable cause) {
+        public <T> Future<T> newFailedFuture(Throwable cause) {
             return channel.newFailedFuture(cause);
         }
     }

@@ -19,13 +19,13 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.FileRegion;
 import io.netty.handler.codec.EncoderException;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import io.netty.util.CharsetUtil;
 import io.netty.util.LeakPresenceDetector;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseCombiner;
 import io.netty.util.internal.StringUtil;
 
@@ -99,7 +99,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         try {
             if (acceptOutboundMessage(msg)) {
                 encode(ctx, msg, out);
@@ -119,7 +119,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         }
     }
 
-    private static void writeOutList(ChannelHandlerContext ctx, List<Object> out, ChannelPromise promise) {
+    private static void writeOutList(ChannelHandlerContext ctx, List<Object> out, Promise<Void> promise) {
         final int size = out.size();
         try {
             if (size == 1) {
@@ -132,7 +132,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
         }
     }
 
-    private static void writePromiseCombiner(ChannelHandlerContext ctx, List<Object> out, ChannelPromise promise) {
+    private static void writePromiseCombiner(ChannelHandlerContext ctx, List<Object> out, Promise<Void> promise) {
         final PromiseCombiner combiner = new PromiseCombiner(ctx.executor());
         for (int i = 0; i < out.size(); i++) {
             combiner.add(ctx.write(out.get(i)));
@@ -391,7 +391,7 @@ public abstract class HttpObjectEncoder<H extends HttpMessage> extends MessageTo
 
     // Bypass the encoder in case of an empty buffer, so that the following idiom works:
     //
-    //     ch.write(Unpooled.EMPTY_BUFFER).addListener(ChannelFutureListener.CLOSE);
+    //     ch.write(Unpooled.EMPTY_BUFFER).addListener(f -> ch.close());
     //
     // See https://github.com/netty/netty/issues/2983 for more information.
     private static boolean bypassEncoderIfEmpty(ByteBuf msg, List<Object> out) {

@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http;
 
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.util.ReferenceCountUtil;
@@ -84,11 +83,19 @@ public class HttpServerExpectContinueHandler implements ChannelInboundHandler {
                     // the expectation failed so we refuse the request.
                     HttpResponse rejection = rejectResponse(req);
                     ReferenceCountUtil.release(msg);
-                    ctx.writeAndFlush(rejection).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                    ctx.writeAndFlush(rejection).addListener(f -> {
+                        if (!f.isSuccess()) {
+                            ctx.close();
+                        }
+                    });
                     return;
                 }
 
-                ctx.writeAndFlush(accept).addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+                ctx.writeAndFlush(accept).addListener(f -> {
+                    if (!f.isSuccess()) {
+                        ctx.close();
+                    }
+                });
                 req.headers().remove(HttpHeaderNames.EXPECT);
             }
         }

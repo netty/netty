@@ -21,11 +21,9 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.SocketChannel;
@@ -51,6 +49,8 @@ import io.netty.handler.codec.http2.Http2Stream;
 import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandlerBuilder;
 import io.netty.handler.codec.http2.DelegatingDecompressorFrameListener;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
@@ -92,7 +92,7 @@ public class CodecHttp2Test {
                 });
             }
         });
-        ChannelFuture server = serverBootstrap.bind("localhost", 8080).sync();
+        Future<Channel> server = serverBootstrap.bind("localhost", 8080).sync();
 
         try {
             Bootstrap clientBootstrap = new Bootstrap()
@@ -129,7 +129,7 @@ public class CodecHttp2Test {
                                     .method("GET")
                                     .path("/")
                                     .scheme("http");
-                            ChannelPromise promise = ctx.newPromise();
+                            Promise<Void> promise = ctx.newPromise();
                             Http2ConnectionEncoder encoder = connectionHandler.encoder();
                             encoder.writeHeaders(ctx, 1, headers, 0, true, promise);
                         }
@@ -150,13 +150,13 @@ public class CodecHttp2Test {
                             .build();
                     ch.pipeline().addLast(connectionHandler);
                 }
-            }).connect("localhost", 8080).syncUninterruptibly().channel();
+            }).connect("localhost", 8080).get();
 
             String resp = responseFut.get(20, TimeUnit.SECONDS);
             assertEquals("Hello World", resp);
 
             // Wait until the connection is closed.
-            server.channel().close().syncUninterruptibly();
+            server.getNow().close().syncUninterruptibly();
             client.close().syncUninterruptibly();
         } finally {
             eventLoopGroup.shutdownGracefully();

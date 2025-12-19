@@ -15,7 +15,6 @@
  */
 package io.netty.channel.socket.nio;
 
-import io.netty.channel.Channel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
@@ -70,14 +69,14 @@ public class NioServerDomainSocketChannelTest extends AbstractNioDomainChannelTe
         File file = newRandomTmpFile();
         try {
             serverSocketChannel.register().syncUninterruptibly();
-            Channel channel = serverSocketChannel.bind(
+            serverSocketChannel.bind(
                     UnixDomainSocketAddress.of(file.getAbsolutePath()))
-                    .syncUninterruptibly().channel();
-            assertTrue(channel.isActive());
-            assertTrue(channel.isOpen());
-            channel.close().syncUninterruptibly();
-            assertFalse(channel.isOpen());
-            assertFalse(channel.isActive());
+                    .syncUninterruptibly();
+            assertTrue(serverSocketChannel.isActive());
+            assertTrue(serverSocketChannel.isOpen());
+            serverSocketChannel.close().syncUninterruptibly();
+            assertFalse(serverSocketChannel.isOpen());
+            assertFalse(serverSocketChannel.isActive());
         } finally {
             group.shutdownGracefully();
             file.delete();

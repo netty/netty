@@ -19,15 +19,14 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultChannelPromise;
 import io.netty.channel.DefaultMessageSizeEstimator;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,7 +70,7 @@ public class Http2ControlFrameLimitEncoderTest {
 
     private int numWrites;
 
-    private final Queue<ChannelPromise> goAwayPromises = new ArrayDeque<ChannelPromise>();
+    private final Queue<Promise<Void>> goAwayPromises = new ArrayDeque<>();
 
     /**
      * Init fields and do mocking.
@@ -88,37 +87,37 @@ public class Http2ControlFrameLimitEncoderTest {
         when(configuration.frameSizePolicy()).thenReturn(frameSizePolicy);
         when(frameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
 
-        when(writer.writeRstStream(eq(ctx), anyInt(), anyLong(), any(ChannelPromise.class)))
-                .thenAnswer(new Answer<ChannelFuture>() {
+        when(writer.writeRstStream(eq(ctx), anyInt(), anyLong(), any(Promise.class)))
+                .thenAnswer(new Answer<Future<Void>>() {
                     @Override
-                    public ChannelFuture answer(InvocationOnMock invocationOnMock) {
+                    public Future<Void> answer(InvocationOnMock invocationOnMock) {
                         return handlePromise(invocationOnMock, 3);
                     }
                 });
-        when(writer.writeSettingsAck(any(ChannelHandlerContext.class), any(ChannelPromise.class)))
-                .thenAnswer(new Answer<ChannelFuture>() {
+        when(writer.writeSettingsAck(any(ChannelHandlerContext.class), any(Promise.class)))
+                .thenAnswer(new Answer<>() {
                     @Override
-                    public ChannelFuture answer(InvocationOnMock invocationOnMock) {
+                    public Future<Void> answer(InvocationOnMock invocationOnMock) {
                         return handlePromise(invocationOnMock, 1);
                     }
         });
-        when(writer.writePing(any(ChannelHandlerContext.class), anyBoolean(), anyLong(), any(ChannelPromise.class)))
-                .thenAnswer(new Answer<ChannelFuture>() {
+        when(writer.writePing(any(ChannelHandlerContext.class), anyBoolean(), anyLong(), any(Promise.class)))
+                .thenAnswer(new Answer<>() {
                     @Override
-                    public ChannelFuture answer(InvocationOnMock invocationOnMock) {
-                        ChannelPromise promise = handlePromise(invocationOnMock, 3);
+                    public Future<Void> answer(InvocationOnMock invocationOnMock) {
+                        Promise<Void> promise = handlePromise(invocationOnMock, 3);
                         if (invocationOnMock.getArgument(1) == Boolean.FALSE) {
-                            promise.trySuccess();
+                            promise.trySuccess(null);
                         }
                         return promise;
                     }
                 });
         when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class),
-                any(ChannelPromise.class))).thenAnswer(new Answer<ChannelFuture>() {
+                any(Promise.class))).thenAnswer(new Answer<>() {
             @Override
-            public ChannelFuture answer(InvocationOnMock invocationOnMock) {
+            public Future<Void> answer(InvocationOnMock invocationOnMock) {
                 ReferenceCountUtil.release(invocationOnMock.getArgument(3));
-                ChannelPromise promise = invocationOnMock.getArgument(4);
+                Promise<Void> promise = invocationOnMock.getArgument(4);
                 goAwayPromises.offer(promise);
                 return promise;
             }
@@ -141,9 +140,9 @@ public class Http2ControlFrameLimitEncoderTest {
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(channel.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(executor.inEventLoop()).thenReturn(true);
-        doAnswer(new Answer<ChannelPromise>() {
+        doAnswer(new Answer<>() {
             @Override
-            public ChannelPromise answer(InvocationOnMock invocation) throws Throwable {
+            public Promise<Void> answer(InvocationOnMock invocation) throws Throwable {
                 return newPromise();
             }
         }).when(ctx).newPromise();
@@ -157,10 +156,10 @@ public class Http2ControlFrameLimitEncoderTest {
         handler.handlerAdded(ctx);
     }
 
-    private ChannelPromise handlePromise(InvocationOnMock invocationOnMock, int promiseIdx) {
-        ChannelPromise promise = invocationOnMock.getArgument(promiseIdx);
+    private Promise<Void> handlePromise(InvocationOnMock invocationOnMock, int promiseIdx) {
+        Promise<Void> promise = invocationOnMock.getArgument(promiseIdx);
         if (++numWrites == 2) {
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
         return promise;
     }
@@ -170,14 +169,14 @@ public class Http2ControlFrameLimitEncoderTest {
         // Close and release any buffered frames.
         encoder.close();
 
-        // Notify all goAway ChannelPromise instances now as these will also release the retained ByteBuf for the
+        // Notify all goAway Promise<Void> instances now as these will also release the retained ByteBuf for the
         // debugData.
         for (;;) {
-            ChannelPromise promise = goAwayPromises.poll();
+            Promise<Void> promise = goAwayPromises.poll();
             if (promise == null) {
                 break;
             }
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
     }
 
@@ -261,11 +260,11 @@ public class Http2ControlFrameLimitEncoderTest {
         verify(ctx, times(invocations)).close();
         if (failed) {
             verify(writer, times(1)).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(ENHANCE_YOUR_CALM.code()),
-                    any(ByteBuf.class), any(ChannelPromise.class));
+                    any(ByteBuf.class), any(Promise.class));
         }
     }
 
-    private ChannelPromise newPromise() {
-        return new DefaultChannelPromise(channel, ImmediateEventExecutor.INSTANCE);
+    private Promise<Void> newPromise() {
+        return ImmediateEventExecutor.INSTANCE.newPromise();
     }
 }

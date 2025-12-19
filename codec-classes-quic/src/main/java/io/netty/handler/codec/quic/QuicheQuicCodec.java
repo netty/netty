@@ -19,9 +19,9 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.MessageSizeEstimator;
 import io.netty.channel.socket.DatagramPacket;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 import org.jetbrains.annotations.Nullable;
@@ -278,7 +278,7 @@ abstract class QuicheQuicCodec implements ChannelInboundHandler, ChannelOutbound
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public final void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         pendingPackets ++;
         int size = estimatorHandle.size(msg);
         if (size > 0) {
@@ -304,7 +304,7 @@ abstract class QuicheQuicCodec implements ChannelInboundHandler, ChannelOutbound
 
     @Override
     public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                        ChannelPromise promise) {
+                        Promise<Void> promise) {
         if (remoteAddress instanceof QuicheQuicChannelAddress) {
             QuicheQuicChannelAddress addr = (QuicheQuicChannelAddress) remoteAddress;
             QuicheQuicChannel channel = addr.channel;
@@ -328,12 +328,12 @@ abstract class QuicheQuicCodec implements ChannelInboundHandler, ChannelOutbound
      *                                  the ids.
      * @param localConnIdLength         the length of the local connection ids.
      * @param config                    the {@link QuicheConfig} that is used.
-     * @param promise                   the {@link ChannelPromise} to notify once the connect is done.
+     * @param promise                   the {@link Promise} to notify once the connect is done.
      */
     protected abstract void connectQuicChannel(QuicheQuicChannel channel, SocketAddress remoteAddress,
                                                SocketAddress localAddress, ByteBuf senderSockaddrMemory,
                                                ByteBuf recipientSockaddrMemory, Consumer<QuicheQuicChannel> freeTask,
-                                               int localConnIdLength, QuicheConfig config, ChannelPromise promise);
+                                               int localConnIdLength, QuicheConfig config, Promise<Void> promise);
 
     private void flushIfNeeded(ChannelHandlerContext ctx) {
         // Check if we should force a flush() and so ensure the packets are delivered in a timely

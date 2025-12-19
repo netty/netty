@@ -17,7 +17,6 @@ package io.netty.handler.codec.quic;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelShutdownDirection;
@@ -92,7 +91,7 @@ public class QuicStreamHalfClosureTest extends AbstractQuicTest {
                 public void channelActive(ChannelHandlerContext ctx)  {
                     // Do the write and close the channel
                     ctx.writeAndFlush(Unpooled.buffer().writeZero(8))
-                            .addListener(ChannelFutureListener.CLOSE);
+                            .addListener(f -> ctx.close());
                 }
             });
         }

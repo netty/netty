@@ -207,9 +207,9 @@ public class SocketSpdyEchoTest extends AbstractSocketTest {
 
         cb.handler(ch);
 
-        Channel sc = sb.bind().sync().channel();
+        Channel sc = sb.bind().get();
 
-        Channel cc = cb.connect(sc.localAddress()).sync().channel();
+        Channel cc = cb.connect(sc.localAddress()).get();
         cc.writeAndFlush(frames);
 
         while (ch.counter < frames.writerIndex() - ignoredBytes) {

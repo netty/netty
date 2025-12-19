@@ -16,9 +16,9 @@
 package io.netty.testsuite_jpms.test;
 
 import io.netty.bootstrap.Bootstrap;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -33,6 +33,7 @@ import io.netty.handler.ssl.ocsp.OcspResponse;
 import io.netty.handler.ssl.ocsp.OcspServerCertificateValidator;
 import io.netty.handler.ssl.ocsp.OcspValidationEvent;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;
@@ -84,7 +85,7 @@ public class OCSPTest {
                         }
                     });
 
-            ChannelFuture channelFuture = bootstrap.connect("netty.io", 443);
+            Future<Channel> channelFuture = bootstrap.connect("netty.io", 443);
             channelFuture.sync();
 
             // Wait for maximum of 1 minute for Ocsp validation to happen
@@ -92,7 +93,7 @@ public class OCSPTest {
             assertTrue(ocspStatus.get());
 
             // Wait for Channel to be closed
-            channelFuture.channel().closeFuture().sync();
+            channelFuture.getNow().closeFuture().sync();
         } finally {
             eventLoopGroup.shutdownGracefully();
         }

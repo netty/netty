@@ -403,7 +403,7 @@ public class OcspTest {
 
         return bootstrap.bind(address)
                 .syncUninterruptibly()
-                .channel();
+                .getNow();
     }
 
     private static Channel newClient(EventLoopGroup group, SocketAddress address,
@@ -416,7 +416,7 @@ public class OcspTest {
 
         return bootstrap.connect(address)
                 .syncUninterruptibly()
-                .channel();
+                .getNow();
     }
 
     private static ChannelHandler newServerHandler(final SslContext context,

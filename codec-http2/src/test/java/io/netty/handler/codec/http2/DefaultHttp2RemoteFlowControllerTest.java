@@ -18,9 +18,9 @@ package io.netty.handler.codec.http2;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
@@ -81,7 +81,7 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
     private EventExecutor executor;
 
     @Mock
-    private ChannelPromise promise;
+    private Promise promise;
 
     @Mock
     private Http2RemoteFlowController.Listener listener;

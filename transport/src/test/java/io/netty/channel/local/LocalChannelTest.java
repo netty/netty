@@ -21,19 +21,17 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultMaxMessagesRecvByteBufAllocator;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -108,11 +106,11 @@ public class LocalChannelTest {
             Channel cc = null;
             try {
                 // Start server
-                sc = sb.bind(TEST_ADDRESS).sync().channel();
+                sc = sb.bind(TEST_ADDRESS).get();
 
                 final CountDownLatch latch = new CountDownLatch(1);
                 // Connect to the server
-                cc = cb.connect(sc.localAddress()).sync().channel();
+                cc = cb.connect(sc.localAddress()).get();
                 final Channel ccCpy = cc;
                 cc.executor().execute(new Runnable() {
                     @Override
@@ -161,10 +159,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            sc = sb.bind(TEST_ADDRESS).get();
 
             // Connect to the server
-            cc = cb.connect(sc.localAddress()).sync().channel();
+            cc = cb.connect(sc.localAddress()).get();
 
             // Close the channel and write something.
             cc.close().sync();
@@ -202,7 +200,7 @@ public class LocalChannelTest {
         Channel sc = null;
         Channel cc = null;
         try {
-            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            sc = sb.bind(TEST_ADDRESS).get();
 
             Bootstrap b = new Bootstrap()
                     .group(group2)
@@ -213,7 +211,7 @@ public class LocalChannelTest {
                             // discard
                         }
                     });
-            cc = b.connect(sc.localAddress()).sync().channel();
+            cc = b.connect(sc.localAddress()).get();
             cc.writeAndFlush(new Object());
             assertTrue(latch.await(5, SECONDS));
         } finally {
@@ -270,7 +268,7 @@ public class LocalChannelTest {
                         }
                     }).
                     bind(TEST_ADDRESS).
-                    sync().channel();
+                    get();
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.group(clientGroup).
                     channel(LocalChannel.class).
@@ -280,7 +278,7 @@ public class LocalChannelTest {
                             // Do nothing
                         }
                     });
-            ChannelFuture future = bootstrap.connect(sc.localAddress());
+            Future<Void> future = bootstrap.connect(sc.localAddress());
             assertTrue(future.await(2000), "Connection should finish, not time out");
             cc = future.channel();
         } finally {
@@ -292,7 +290,7 @@ public class LocalChannelTest {
     */
 
     @Test
-    public void testReRegister() {
+    public void testReRegister() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
 
@@ -313,10 +311,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).syncUninterruptibly().channel();
+            sc = sb.bind(TEST_ADDRESS).get();
 
             // Connect to the server
-            cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
+            cc = cb.connect(sc.localAddress()).get();
 
             cc.deregister().syncUninterruptibly();
         } finally {
@@ -326,7 +324,7 @@ public class LocalChannelTest {
     }
 
     @Test
-    public void testCloseInWritePromiseCompletePreservesOrder() throws InterruptedException {
+    public void testCloseInWritePromiseCompletePreservesOrder() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -360,17 +358,17 @@ public class LocalChannelTest {
             Channel cc = null;
             try {
                 // Start server
-                sc = sb.bind(TEST_ADDRESS).syncUninterruptibly().channel();
+                sc = sb.bind(TEST_ADDRESS).get();
 
                 // Connect to the server
-                cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
+                cc = cb.connect(sc.localAddress()).get();
 
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
                 cc.pipeline().lastContext().executor().execute(new Runnable() {
                     @Override
                     public void run() {
-                        ChannelPromise promise = ccCpy.newPromise();
+                        Promise<Void> promise = ccCpy.newPromise();
                         promise.addListener(future -> ccCpy.pipeline().lastContext().close());
                         ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
                     }
@@ -388,7 +386,7 @@ public class LocalChannelTest {
     }
 
     @Test
-    public void testCloseAfterWriteInSameEventLoopPreservesOrder() throws InterruptedException {
+    public void testCloseAfterWriteInSameEventLoopPreservesOrder() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(3);
@@ -439,10 +437,10 @@ public class LocalChannelTest {
             Channel cc = null;
             try {
                 // Start server
-                sc = sb.bind(TEST_ADDRESS).syncUninterruptibly().channel();
+                sc = sb.bind(TEST_ADDRESS).get();
 
                 // Connect to the server
-                cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
+                cc = cb.connect(sc.localAddress()).get();
                 assertTrue(messageLatch.await(5, SECONDS));
                 assertFalse(cc.isOpen());
             } finally {
@@ -455,7 +453,7 @@ public class LocalChannelTest {
     }
 
     @Test
-    public void testWriteInWritePromiseCompletePreservesOrder() throws InterruptedException {
+    public void testWriteInWritePromiseCompletePreservesOrder() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -498,17 +496,17 @@ public class LocalChannelTest {
             Channel cc = null;
             try {
                 // Start server
-                sc = sb.bind(TEST_ADDRESS).syncUninterruptibly().channel();
+                sc = sb.bind(TEST_ADDRESS).get();
 
                 // Connect to the server
-                cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
+                cc = cb.connect(sc.localAddress()).get();
 
                 final Channel ccCpy = cc;
                 // Make sure a write operation is executed in the eventloop
                 cc.pipeline().lastContext().executor().execute(new Runnable() {
                     @Override
                     public void run() {
-                        ChannelPromise promise = ccCpy.newPromise();
+                        Promise<Void> promise = ccCpy.newPromise();
                         promise.addListener(future ->
                                 ccCpy.writeAndFlush(data2.retainedDuplicate(), ccCpy.newPromise()));
                         ccCpy.writeAndFlush(data.retainedDuplicate(), promise);
@@ -527,7 +525,7 @@ public class LocalChannelTest {
     }
 
     @Test
-    public void testPeerWriteInWritePromiseCompleteDifferentEventLoopPreservesOrder() throws InterruptedException {
+    public void testPeerWriteInWritePromiseCompleteDifferentEventLoopPreservesOrder() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -575,10 +573,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).syncUninterruptibly().channel();
+            sc = sb.bind(TEST_ADDRESS).get();
 
             // Connect to the server
-            cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
+            cc = cb.connect(sc.localAddress()).get();
             assertTrue(serverChannelLatch.await(5, SECONDS));
 
             final Channel ccCpy = cc;
@@ -586,7 +584,7 @@ public class LocalChannelTest {
             cc.pipeline().lastContext().executor().execute(new Runnable() {
                 @Override
                 public void run() {
-                    ChannelPromise promise = ccCpy.newPromise();
+                    Promise<Void> promise = ccCpy.newPromise();
                     promise.addListener(future -> {
                         Channel serverChannelCpy = serverChannelRef.get();
                         serverChannelCpy.writeAndFlush(data2.retainedDuplicate(), serverChannelCpy.newPromise());
@@ -605,7 +603,7 @@ public class LocalChannelTest {
     }
 
     @Test
-    public void testPeerWriteInWritePromiseCompleteSameEventLoopPreservesOrder() throws InterruptedException {
+    public void testPeerWriteInWritePromiseCompleteSameEventLoopPreservesOrder() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch messageLatch = new CountDownLatch(2);
@@ -654,10 +652,10 @@ public class LocalChannelTest {
             Channel cc = null;
             try {
                 // Start server
-                sc = sb.bind(TEST_ADDRESS).syncUninterruptibly().channel();
+                sc = sb.bind(TEST_ADDRESS).get();
 
                 // Connect to the server
-                cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
+                cc = cb.connect(sc.localAddress()).get();
                 assertTrue(serverChannelLatch.await(5, SECONDS));
 
                 final Channel ccCpy = cc;
@@ -665,7 +663,7 @@ public class LocalChannelTest {
                 cc.pipeline().lastContext().executor().execute(new Runnable() {
                     @Override
                     public void run() {
-                        ChannelPromise promise = ccCpy.newPromise();
+                        Promise<Void> promise = ccCpy.newPromise();
                         promise.addListener(future -> {
                             Channel serverChannelCpy = serverChannelRef.get();
                             serverChannelCpy.writeAndFlush(
@@ -687,7 +685,7 @@ public class LocalChannelTest {
     }
 
     @Test
-    public void testWriteWhilePeerIsClosedReleaseObjectAndFailPromise() throws InterruptedException {
+    public void testWriteWhilePeerIsClosedReleaseObjectAndFailPromise() throws Exception {
         Bootstrap cb = new Bootstrap();
         ServerBootstrap sb = new ServerBootstrap();
         final CountDownLatch serverMessageLatch = new CountDownLatch(1);
@@ -729,10 +727,10 @@ public class LocalChannelTest {
             Channel cc = null;
             try {
                 // Start server
-                sc = sb.bind(TEST_ADDRESS).syncUninterruptibly().channel();
+                sc = sb.bind(TEST_ADDRESS).get();
 
                 // Connect to the server
-                cc = cb.connect(sc.localAddress()).syncUninterruptibly().channel();
+                cc = cb.connect(sc.localAddress()).get();
                 assertTrue(serverChannelLatch.await(5, SECONDS));
 
                 final Channel ccCpy = cc;
@@ -816,11 +814,11 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            sc = sb.bind(TEST_ADDRESS).get();
 
-            cc = cb.register().sync().channel();
+            cc = cb.register().get();
 
-            final ChannelPromise promise = cc.newPromise();
+            final Promise<Void> promise = cc.newPromise();
             final Promise<Void> assertPromise = cc.executor().newPromise();
 
             cc.pipeline().addLast(new TestHandler() {
@@ -859,13 +857,13 @@ public class LocalChannelTest {
         });
     }
 
-    private static final class LatchChannelFutureListener extends CountDownLatch implements ChannelFutureListener {
+    private static final class LatchChannelFutureListener extends CountDownLatch implements FutureListener<Void> {
         private LatchChannelFutureListener(int count) {
             super(count);
         }
 
         @Override
-        public void operationComplete(ChannelFuture future) {
+        public void operationComplete(Future<? extends Void> future) {
             countDown();
         }
     }
@@ -930,10 +928,10 @@ public class LocalChannelTest {
         LocalChannel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            sc = sb.bind(TEST_ADDRESS).get();
 
             // Connect to the server
-            cc = (LocalChannel) cb.connect(sc.localAddress()).sync().channel();
+            cc = (LocalChannel) cb.connect(sc.localAddress()).get();
 
             // Close the channel
             closeChannel(cc);
@@ -1008,8 +1006,8 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).sync().channel();
-            cc = cb.connect(TEST_ADDRESS).sync().channel();
+            sc = sb.bind(TEST_ADDRESS).get();
+            cc = cb.connect(TEST_ADDRESS).get();
 
             latch.await();
         } finally {
@@ -1069,8 +1067,8 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).sync().channel();
-            cc = cb.connect(TEST_ADDRESS).sync().channel();
+            sc = sb.bind(TEST_ADDRESS).get();
+            cc = cb.connect(TEST_ADDRESS).get();
 
             countDownLatch.await();
         } finally {
@@ -1134,10 +1132,10 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            sc = sb.bind(TEST_ADDRESS).get();
             for (int i = 0; i < 5; i++) {
                 try {
-                    cc = cb.connect(TEST_ADDRESS).sync().channel();
+                    cc = cb.connect(TEST_ADDRESS).get();
                 } finally {
                     closeChannel(cc);
                 }
@@ -1238,9 +1236,9 @@ public class LocalChannelTest {
         Channel cc = null;
         try {
             // Start server
-            sc = sb.bind(TEST_ADDRESS).sync().channel();
+            sc = sb.bind(TEST_ADDRESS).get();
             try {
-                cc = cb.connect(TEST_ADDRESS).sync().channel();
+                cc = cb.connect(TEST_ADDRESS).get();
                 cc.writeAndFlush("msg").sync();
             } finally {
                 closeChannel(cc);

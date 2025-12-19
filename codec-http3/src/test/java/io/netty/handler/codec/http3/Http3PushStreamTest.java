@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.ExecutionException;
 
-import static io.netty.channel.ChannelFutureListener.CLOSE_ON_FAILURE;
 import static io.netty.handler.codec.http3.Http3ErrorCode.H3_ID_ERROR;
 import static io.netty.handler.codec.http3.Http3TestUtils.assertFrameEquals;
 import static io.netty.handler.codec.http3.Http3TestUtils.verifyClose;
@@ -80,7 +79,11 @@ public class Http3PushStreamTest {
         serverConnectionHandler.localControlStreamHandler.channelRead(serverControlStreamHandlerCtx, maxPushIdFrame);
         assertTrue(serverChannel.isActive());
 
-        clientLocalControlStream.writeAndFlush(maxPushIdFrame).addListener(CLOSE_ON_FAILURE);
+        clientLocalControlStream.writeAndFlush(maxPushIdFrame).addListener(f -> {
+            if (!f.isSuccess()) {
+                clientLocalControlStream.close();
+            }
+        });
         assertTrue(clientChannel.isActive());
         assertTrue(clientLocalControlStream.releaseOutbound());
     }

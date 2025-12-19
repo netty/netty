@@ -18,15 +18,14 @@ package io.netty.handler.codec.http3;
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import org.jetbrains.annotations.Nullable;
 
 import static io.netty.handler.codec.http3.Http3CodecUtils.closeOnFailure;
-import static io.netty.handler.codec.http3.Http3CodecUtils.criticalStreamClosed;
 
 final class Http3ControlStreamOutboundHandler
         extends Http3FrameTypeDuplexValidationHandler<Http3ControlStreamFrame> {
@@ -67,7 +66,7 @@ final class Http3ControlStreamOutboundHandler
 
         assert localSettings != null;
         // If writing of the local settings fails let's just teardown the connection.
-        closeOnFailure(ctx.writeAndFlush(localSettings));
+        closeOnFailure(ctx.writeAndFlush(localSettings), ctx);
 
         // Let the GC collect localSettings.
         localSettings = null;
@@ -92,7 +91,7 @@ final class Http3ControlStreamOutboundHandler
     }
 
     @Override
-    void write(ChannelHandlerContext ctx, Http3ControlStreamFrame msg, ChannelPromise promise) {
+    void write(ChannelHandlerContext ctx, Http3ControlStreamFrame msg, Promise<Void> promise) {
         if (msg instanceof Http3MaxPushIdFrame && !handleHttp3MaxPushIdFrame(promise, (Http3MaxPushIdFrame) msg)) {
             ReferenceCountUtil.release(msg);
             return;
@@ -104,7 +103,7 @@ final class Http3ControlStreamOutboundHandler
         ctx.write(msg, promise);
     }
 
-    private boolean handleHttp3MaxPushIdFrame(ChannelPromise promise, Http3MaxPushIdFrame maxPushIdFrame) {
+    private boolean handleHttp3MaxPushIdFrame(Promise<Void> promise, Http3MaxPushIdFrame maxPushIdFrame) {
         long id = maxPushIdFrame.id();
 
         // See https://datatracker.ietf.org/doc/html/draft-ietf-quic-http-32#section-7.2.7
@@ -117,7 +116,7 @@ final class Http3ControlStreamOutboundHandler
         return true;
     }
 
-    private boolean handleHttp3GoAwayFrame(ChannelPromise promise, Http3GoAwayFrame goAwayFrame) {
+    private boolean handleHttp3GoAwayFrame(Promise<Void> promise, Http3GoAwayFrame goAwayFrame) {
         long id = goAwayFrame.id();
 
         // See https://tools.ietf.org/html/draft-ietf-quic-http-32#section-5.2

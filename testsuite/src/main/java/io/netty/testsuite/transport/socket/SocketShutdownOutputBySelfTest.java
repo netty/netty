@@ -18,7 +18,7 @@ package io.netty.testsuite.transport.socket;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
@@ -27,6 +27,7 @@ import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.WriteBufferWaterMark;
 import io.netty.channel.socket.SocketChannel;
+import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -69,7 +70,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         SocketChannel ch = null;
         try {
             ss.bind(newSocketAddress());
-            ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).sync().channel();
+            ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).get();
             assertTrue(ch.isActive());
             assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
@@ -122,7 +123,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         Socket s = null;
         try {
             ss.bind(newSocketAddress());
-            SocketChannel ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).sync().channel();
+            SocketChannel ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).get();
             assertTrue(ch.isActive());
             s = ss.accept();
 
@@ -167,14 +168,14 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         try {
             ss.bind(newSocketAddress());
             cb.option(ChannelOption.WRITE_BUFFER_WATER_MARK, new WriteBufferWaterMark(2, 4));
-            ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).sync().channel();
+            ch = (SocketChannel) cb.handler(h).connect(ss.getLocalSocketAddress()).get();
             assertTrue(ch.isActive());
             assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
 
             s = ss.accept();
 
             byte[] expectedBytes = new byte[]{ 1, 2, 3, 4, 5, 6 };
-            ChannelFuture writeFuture = ch.write(Unpooled.wrappedBuffer(expectedBytes));
+            Future<Void> writeFuture = ch.write(Unpooled.wrappedBuffer(expectedBytes));
             h.assertWritability(false);
             ch.flush();
             writeFuture.sync();
@@ -235,7 +236,7 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
         ServerSocket ss = new ServerSocket();
         Socket s = null;
 
-        ChannelFuture cf = null;
+        Future<Channel> cf = null;
         try {
             ss.bind(newSocketAddress());
             cf = cb.option(ChannelOption.SO_LINGER, 1).handler(new ChannelInboundHandler() { })
@@ -244,13 +245,13 @@ public class SocketShutdownOutputBySelfTest extends AbstractClientSocketTest {
 
             cf.sync();
 
-            cf.channel().shutdown(ChannelShutdownType.newOutbound()).sync();
+            cf.getNow().shutdown(ChannelShutdownType.newOutbound()).sync();
         } finally {
             if (s != null) {
                 s.close();
             }
-            if (cf != null) {
-                cf.channel().close();
+            if (cf != null && cf.isSuccess()) {
+                cf.getNow().close();
             }
             ss.close();
         }

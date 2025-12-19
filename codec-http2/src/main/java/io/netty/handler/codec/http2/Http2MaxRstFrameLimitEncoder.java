@@ -14,9 +14,9 @@
  */
 package io.netty.handler.codec.http2;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.Ticker;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -58,9 +58,9 @@ final class Http2MaxRstFrameLimitEncoder extends DecoratingHttp2ConnectionEncode
     }
 
     @Override
-    public ChannelFuture writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
-                                        ChannelPromise promise) {
-        ChannelFuture future = super.writeRstStream(ctx, streamId, errorCode, promise);
+    public Future<Void> writeRstStream(ChannelHandlerContext ctx, int streamId, long errorCode,
+                                       Promise<Void> promise) {
+        Future<Void> future = super.writeRstStream(ctx, streamId, errorCode, promise);
         if (countRstFrameErrorCode(errorCode)) {
             long currentNano = ticker.nanoTime();
             if (currentNano - lastRstFrameNano >= nanosPerWindow) {

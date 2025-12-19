@@ -16,12 +16,12 @@
 package io.netty.handler.codec.compression;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.MessageToByteEncoder;
 import io.netty.util.concurrent.EventExecutor;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 
 import static io.netty.handler.codec.compression.Bzip2Constants.BASE_BLOCK_SIZE;
@@ -170,18 +170,18 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     /**
      * Close this {@link Bzip2Encoder} and so finish the encoding.
      *
-     * The returned {@link ChannelFuture} will be notified once the operation completes.
+     * The returned {@link Future} will be notified once the operation completes.
      */
-    public ChannelFuture close() {
+    public Future<Void> close() {
         return close(ctx().newPromise());
     }
 
     /**
      * Close this {@link Bzip2Encoder} and so finish the encoding.
-     * The given {@link ChannelFuture} will be notified once the operation
+     * The given {@link Future} will be notified once the operation
      * completes and will also be returned.
      */
-    public ChannelFuture close(final ChannelPromise promise) {
+    public Future<Void> close(final Promise<Void> promise) {
         ChannelHandlerContext ctx = ctx();
         EventExecutor executor = ctx.executor();
         if (executor.inEventLoop()) {
@@ -190,7 +190,7 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    ChannelFuture f = finishEncode(ctx(), promise);
+                    Future<Void> f = finishEncode(ctx(), promise);
                     PromiseNotifier.cascade(f, promise);
                 }
             });
@@ -199,14 +199,14 @@ public class Bzip2Encoder extends MessageToByteEncoder<ByteBuf> {
     }
 
     @Override
-    public void close(final ChannelHandlerContext ctx, final ChannelPromise promise) {
-        ChannelFuture f = finishEncode(ctx, ctx.newPromise());
+    public void close(final ChannelHandlerContext ctx, final Promise<Void> promise) {
+        Future<Void> f = finishEncode(ctx, ctx.newPromise());
         EncoderUtil.closeAfterFinishEncode(ctx, f, promise);
     }
 
-    private ChannelFuture finishEncode(final ChannelHandlerContext ctx, ChannelPromise promise) {
+    private Future<Void> finishEncode(final ChannelHandlerContext ctx, Promise<Void> promise) {
         if (finished) {
-            promise.setSuccess();
+            promise.setSuccess(null);
             return promise;
         }
         finished = true;

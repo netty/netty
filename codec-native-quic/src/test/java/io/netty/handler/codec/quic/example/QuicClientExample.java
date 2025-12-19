@@ -63,7 +63,7 @@ public final class QuicClientExample {
             Channel channel = bs.group(group)
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
-                    .bind(0).sync().channel();
+                    .bind(0).get();
 
             QuicChannel quicChannel = QuicChannel.newBootstrap(channel)
                     .streamHandler(new ChannelInboundHandler() {
@@ -97,10 +97,10 @@ public final class QuicClientExample {
                                                 .writeBytes(new byte[]{'k', 't', 'h', 'x', 'b', 'y', 'e'}));
                             }
                         }
-                    }).sync().getNow();
+                    }).get();
             // Write the data and send the FIN. After this its not possible anymore to write any more data.
             streamChannel.writeAndFlush(Unpooled.copiedBuffer("GET /\r\n", CharsetUtil.US_ASCII))
-                    .addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                    .addListener(f -> streamChannel.shutdown(ChannelShutdownType.newOutbound()));
 
             // Wait for the stream channel and quic channel to be closed (this will happen after we received the FIN).
             // After this is done we will close the underlying datagram channel.

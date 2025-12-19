@@ -18,18 +18,18 @@ package io.netty.handler.codec.http3;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelOutboundInvoker;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.handler.codec.quic.QuicChannel;
 import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.StringUtil;
 import org.jetbrains.annotations.Nullable;
 
-import static io.netty.channel.ChannelFutureListener.CLOSE_ON_FAILURE;
 import static io.netty.handler.codec.http3.Http3ErrorCode.H3_INTERNAL_ERROR;
 import static io.netty.handler.codec.quic.QuicStreamType.UNIDIRECTIONAL;
 
@@ -245,16 +245,21 @@ final class Http3CodecUtils {
     }
 
     /**
-     * Closes the channel if the passed {@link ChannelFuture} fails or has already failed.
+     * Closes the channel if the passed {@link Future} fails or has already failed.
      *
-     * @param future {@link ChannelFuture} which if fails will close the channel.
+     * @param future    {@link Future} which if fails will close the channel.
+     * @param invoker   the {@link ChannelOutboundInvoker} to close.
      */
-    static void closeOnFailure(ChannelFuture future) {
+    static void closeOnFailure(Future<Void> future, ChannelOutboundInvoker invoker) {
         if (future.isDone() && !future.isSuccess()) {
-            future.channel().close();
+            invoker.close();
             return;
         }
-        future.addListener(CLOSE_ON_FAILURE);
+        future.addListener(f -> {
+            if (!f.isSuccess()) {
+                invoker.close();
+            }
+        });
     }
 
     /**

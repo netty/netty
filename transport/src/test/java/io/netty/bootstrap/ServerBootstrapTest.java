@@ -16,13 +16,11 @@
 package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOption;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -32,6 +30,8 @@ import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
@@ -57,7 +57,7 @@ public class ServerBootstrapTest {
     public void testSetOptionsThrow() {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         try {
-            final ChannelFuture cf = new ServerBootstrap()
+            final Future<Channel> cf = new ServerBootstrap()
                     .group(group)
                     .channelFactory((e, c) -> new TestServerChannel(e))
                     .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4242)
@@ -71,7 +71,6 @@ public class ServerBootstrapTest {
                     cf.syncUninterruptibly();
                 }
             });
-            assertFalse(cf.channel().isActive());
         } finally {
             group.shutdownGracefully();
         }
@@ -162,9 +161,9 @@ public class ServerBootstrapTest {
                     .channel(LocalChannel.class)
                     .handler(new ChannelInboundHandler() { });
 
-            sch = sb.bind(addr).syncUninterruptibly().channel();
+            sch = sb.bind(addr).get();
 
-            cch = cb.connect(addr).syncUninterruptibly().channel();
+            cch = cb.connect(addr).get();
 
             initLatch.await();
             readLatch.await();
@@ -180,7 +179,7 @@ public class ServerBootstrapTest {
     }
 
     @Test
-    public void optionsAndAttributesMustBeAvailableOnChildChannelInit() throws InterruptedException {
+    public void optionsAndAttributesMustBeAvailableOnChildChannelInit() throws Exception {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         LocalAddress addr = new LocalAddress(UUID.randomUUID().toString());
         final AttributeKey<String> key = AttributeKey.valueOf(UUID.randomUUID().toString());
@@ -199,13 +198,13 @@ public class ServerBootstrapTest {
                         requestServed.set(true);
                     }
                 });
-        Channel serverChannel = sb.bind(addr).syncUninterruptibly().channel();
+        Channel serverChannel = sb.bind(addr).get();
 
         Bootstrap cb = new Bootstrap();
         cb.group(group)
                 .channel(LocalChannel.class)
                 .handler(new ChannelInboundHandler() { });
-        Channel clientChannel = cb.connect(addr).syncUninterruptibly().channel();
+        Channel clientChannel = cb.connect(addr).get();
         serverChannel.close().syncUninterruptibly();
         clientChannel.close().syncUninterruptibly();
         group.shutdownGracefully();
@@ -242,7 +241,7 @@ public class ServerBootstrapTest {
             }
         }).sync();
 
-        Channel serverChannel = sb.bind(addr).syncUninterruptibly().channel();
+        Channel serverChannel = sb.bind(addr).get();
 
         assertNull(StubChannelInitializerExtension.lastSeenClientChannel.get());
         assertNull(StubChannelInitializerExtension.lastSeenChildChannel.get());
@@ -253,7 +252,7 @@ public class ServerBootstrapTest {
         cb.group(group)
                 .channel(LocalChannel.class)
                 .handler(new ChannelInboundHandler() { });
-        Channel clientChannel = cb.connect(addr).syncUninterruptibly().channel();
+        Channel clientChannel = cb.connect(addr).get();
 
         assertSame(clientChannel, StubChannelInitializerExtension.lastSeenClientChannel.get());
         group.submit(new Callable<Object>() {
@@ -289,9 +288,9 @@ public class ServerBootstrapTest {
         }
 
         @Override
-        protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+        protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
             active = true;
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
 
         @Override

@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.epoll.EpollChannelOption;
@@ -127,8 +128,9 @@ public final class QuicServerSoReusePortExample {
                                                                             "Hello World!\r\n", CharsetUtil.US_ASCII);
                                                                     // Write the buffer and shutdown the output
                                                                     // by writing a FIN.
-                                                                    ctx.writeAndFlush(buffer).addListener(
-                                                                            QuicStreamChannel.SHUTDOWN_OUTPUT);
+                                                                    ctx.writeAndFlush(buffer)
+                                                                            .addListener(f -> ctx.shutdown(
+                                                                                    ChannelShutdownType.newOutbound()));
                                                                 }
                                                             } finally {
                                                                 byteBuf.release();
@@ -146,7 +148,7 @@ public final class QuicServerSoReusePortExample {
             InetSocketAddress bindAddress = new InetSocketAddress(9999);
             for (int i = 0; i < numCores; i++) {
                 // Bind one socket per EventLoopGroup.
-                channels.add(bs.bind(bindAddress).sync().channel());
+                channels.add(bs.bind(bindAddress).get());
             }
             for (Channel channel: channels) {
                 channel.closeFuture().sync();

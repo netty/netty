@@ -21,7 +21,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogLevel;
 import io.netty.util.internal.logging.InternalLogger;
@@ -226,7 +226,7 @@ public class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHan
     }
 
     @Override
-    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+    public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "BIND", localAddress));
         }
@@ -236,7 +236,7 @@ public class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHan
     @Override
     public void connect(
             ChannelHandlerContext ctx,
-            SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+            SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CONNECT", remoteAddress, localAddress));
         }
@@ -244,7 +244,7 @@ public class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHan
     }
 
     @Override
-    public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DISCONNECT"));
         }
@@ -252,7 +252,7 @@ public class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHan
     }
 
     @Override
-    public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "CLOSE"));
         }
@@ -260,7 +260,7 @@ public class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHan
     }
 
     @Override
-    public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+    public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "DEREGISTER"));
         }
@@ -284,7 +284,7 @@ public class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHan
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (logger.isEnabled(internalLevel)) {
             logger.log(internalLevel, format(ctx, "WRITE", msg));
         }
@@ -339,7 +339,7 @@ public class LoggingHandler implements ChannelInboundHandler, ChannelOutboundHan
 
     /**
      * Formats an event and returns the formatted message.  This method is currently only used for formatting
-     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, ChannelPromise)}.
+     * {@link ChannelOutboundHandler#connect(ChannelHandlerContext, SocketAddress, SocketAddress, Promise)}.
      *
      * @param eventName the name of the event
      * @param firstArg  the first argument of the event

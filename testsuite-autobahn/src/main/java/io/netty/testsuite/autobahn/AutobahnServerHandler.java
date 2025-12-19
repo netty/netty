@@ -17,8 +17,6 @@ package io.netty.testsuite.autobahn;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -35,6 +33,7 @@ import io.netty.handler.codec.http.websocketx.WebSocketFrame;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker;
 import io.netty.handler.codec.http.websocketx.WebSocketServerHandshakerFactory;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.StringUtil;
 
 import java.util.logging.Level;
@@ -128,9 +127,9 @@ public class AutobahnServerHandler implements ChannelInboundHandler {
         }
 
         // Send the response and close the connection if necessary.
-        ChannelFuture f = ctx.channel().writeAndFlush(res);
+        Future<Void> f = ctx.writeAndFlush(res);
         if (!isKeepAlive(req) || res.status().code() != 200) {
-            f.addListener(ChannelFutureListener.CLOSE);
+            f.addListener(future -> ctx.close());
         }
     }
 

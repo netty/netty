@@ -20,7 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
@@ -322,8 +321,8 @@ public class JdkDelegatingPrivateKeyMethodTest {
                     }
                 });
 
-        ChannelFuture serverChannelFuture = serverBootstrap.bind(0).sync();
-        Channel serverChannel = serverChannelFuture.channel();
+        Future<Channel> serverChannelFuture = serverBootstrap.bind(0).sync();
+        Channel serverChannel = serverChannelFuture.getNow();
         int serverPort = ((java.net.InetSocketAddress) serverChannel.localAddress()).getPort();
 
         try {
@@ -452,8 +451,8 @@ public class JdkDelegatingPrivateKeyMethodTest {
                     }
                 });
 
-        ChannelFuture serverChannelFuture = serverBootstrap.bind(0).sync();
-        Channel serverChannel = serverChannelFuture.channel();
+        Future<Channel> serverChannelFuture = serverBootstrap.bind(0).sync();
+        Channel serverChannel = serverChannelFuture.getNow();
         int serverPort = ((java.net.InetSocketAddress) serverChannel.localAddress()).getPort();
 
         try {

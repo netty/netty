@@ -22,6 +22,7 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
+import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
@@ -103,7 +104,8 @@ public final class QuicServerExample {
                                         ByteBuf buffer = ctx.alloc().directBuffer();
                                         buffer.writeCharSequence("Hello World!\r\n", CharsetUtil.US_ASCII);
                                         // Write the buffer and shutdown the output by writing a FIN.
-                                        ctx.writeAndFlush(buffer).addListener(QuicStreamChannel.SHUTDOWN_OUTPUT);
+                                        ctx.writeAndFlush(buffer).addListener(
+                                                f -> ctx.shutdown(ChannelShutdownType.newOutbound()));
                                     }
                                 } finally {
                                     byteBuf.release();
@@ -117,7 +119,7 @@ public final class QuicServerExample {
             Channel channel = bs.group(group)
                     .channel(NioDatagramChannel.class)
                     .handler(codec)
-                    .bind(new InetSocketAddress(9999)).sync().channel();
+                    .bind(new InetSocketAddress(9999)).get();
             channel.closeFuture().sync();
         } finally {
             group.shutdownGracefully();

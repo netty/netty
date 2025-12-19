@@ -17,12 +17,12 @@ package io.netty.handler.codec.http;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPipeline;
 import io.netty.handler.codec.DecoderResult;
 import io.netty.handler.codec.MessageAggregator;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -247,7 +247,7 @@ public class HttpObjectAggregator
             // If keep-alive is off and 'Expect: 100-continue' is missing, no need to leave the connection open.
             if (oversized instanceof FullHttpMessage ||
                 !HttpUtil.is100ContinueExpected(oversized) && !HttpUtil.isKeepAlive(oversized)) {
-                ChannelFuture future = ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate());
+                Future<Void> future = ctx.writeAndFlush(TOO_LARGE_CLOSE.retainedDuplicate());
                 future.addListener(f -> {
                     if (!f.isSuccess()) {
                         logger.debug("Failed to send a 413 Request Entity Too Large.", f.cause());

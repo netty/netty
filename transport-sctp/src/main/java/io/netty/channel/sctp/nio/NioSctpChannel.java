@@ -24,10 +24,8 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
@@ -37,6 +35,8 @@ import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.sctp.SctpMessage;
 import io.netty.channel.sctp.SctpNotificationHandler;
 import io.netty.channel.sctp.SctpServerChannel;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.StringUtil;
@@ -48,7 +48,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -141,7 +140,7 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -240,14 +239,14 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
         try {
             javaChannel().bind(localAddress);
         } catch (Throwable cause) {
             promise.setFailure(cause);
             return;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
@@ -279,19 +278,19 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    protected void doDisconnect(ChannelPromise promise)  {
+    protected void doDisconnect(Promise<Void> promise)  {
         doClose(promise);
     }
 
     @Override
-    protected void doClose(ChannelPromise promise) {
+    protected void doClose(Promise<Void> promise) {
         try {
             javaChannel().close();
         } catch (Throwable cause) {
             promise.setFailure(cause);
             return;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
@@ -398,16 +397,16 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    public ChannelFuture bindAddress(InetAddress localAddress) {
+    public Future<Void> bindAddress(InetAddress localAddress) {
         return bindAddress(localAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture bindAddress(final InetAddress localAddress, final ChannelPromise promise) {
+    public Future<Void> bindAddress(final InetAddress localAddress, final Promise<Void> promise) {
         if (executor().inEventLoop()) {
             try {
                 javaChannel().bindAddress(localAddress);
-                promise.setSuccess();
+                promise.setSuccess(null);
             } catch (Throwable t) {
                 promise.setFailure(t);
             }
@@ -423,16 +422,16 @@ public class NioSctpChannel extends AbstractNioMessageChannel implements io.nett
     }
 
     @Override
-    public ChannelFuture unbindAddress(InetAddress localAddress) {
+    public Future<Void> unbindAddress(InetAddress localAddress) {
         return unbindAddress(localAddress, newPromise());
     }
 
     @Override
-    public ChannelFuture unbindAddress(final InetAddress localAddress, final ChannelPromise promise) {
+    public Future<Void> unbindAddress(final InetAddress localAddress, final Promise<Void> promise) {
         if (executor().inEventLoop()) {
             try {
                 javaChannel().unbindAddress(localAddress);
-                promise.setSuccess();
+                promise.setSuccess(null);
             } catch (Throwable t) {
                 promise.setFailure(t);
             }

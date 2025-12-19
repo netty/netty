@@ -20,7 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
@@ -314,7 +313,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
             }
         });
 
-        final Channel sc = sb.bind().sync().channel();
+        final Channel sc = sb.bind().get();
         cb.connect(sc.localAddress()).sync();
 
         final Future<Channel> clientHandshakeFuture = clientSslHandler.handshakeFuture();
@@ -336,7 +335,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
                 buf = Unpooled.compositeBuffer().addComponent(true, buf);
             }
 
-            ChannelFuture future = clientChannel.writeAndFlush(buf);
+            Future<Void> future = clientChannel.writeAndFlush(buf);
             clientSendCounter.set(clientSendCounterVal += length);
             future.sync();
 

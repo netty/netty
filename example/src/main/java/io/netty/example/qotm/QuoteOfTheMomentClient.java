@@ -47,7 +47,7 @@ public final class QuoteOfTheMomentClient {
              .option(ChannelOption.SO_BROADCAST, true)
              .handler(new QuoteOfTheMomentClientHandler());
 
-            Channel ch = b.bind(0).sync().channel();
+            Channel ch = b.bind(0).get();
 
             // Broadcast the QOTM request to port 8080.
             ch.writeAndFlush(new DatagramPacket(

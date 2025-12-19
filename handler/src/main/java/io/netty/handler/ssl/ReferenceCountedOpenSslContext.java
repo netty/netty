@@ -1188,7 +1188,7 @@ public abstract class ReferenceCountedOpenSslContext extends SslContext implemen
             }
 
             @Override
-            public void operationComplete(Future<byte[]> future) {
+            public void operationComplete(Future<? extends byte[]> future) {
                 Throwable cause = future.cause();
                 if (cause == null) {
                     try {

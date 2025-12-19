@@ -42,6 +42,8 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     private final EventExecutorGroup parent;
     private final Collection<EventExecutor> selfCollection = Collections.<EventExecutor>singleton(this);
 
+    private final Future<?> succeededFuture = new SucceededFuture<>(this, null);
+
     protected AbstractEventExecutor() {
         this(null);
     }
@@ -131,6 +133,15 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
         throw new UnsupportedOperationException();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public <V> Future<V> newSucceededFuture(V result) {
+        if (result == null) {
+            return (Future<V>) succeededFuture;
+        }
+        return EventExecutor.super.newSucceededFuture(result);
     }
 
     /**

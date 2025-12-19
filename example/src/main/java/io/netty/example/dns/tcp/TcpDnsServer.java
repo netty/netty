@@ -95,7 +95,7 @@ public final class TcpDnsServer {
                                 });
                     }
                 });
-        final Channel channel = bootstrap.bind(DNS_SERVER_PORT).channel();
+        final Channel channel = bootstrap.bind(DNS_SERVER_PORT).get();
         Executors.newSingleThreadScheduledExecutor().schedule(new Runnable() {
             @Override
             public void run() {
@@ -135,7 +135,7 @@ public final class TcpDnsServer {
                         }
                     });
 
-            final Channel ch = b.connect(DNS_SERVER_HOST, DNS_SERVER_PORT).sync().channel();
+            final Channel ch = b.connect(DNS_SERVER_HOST, DNS_SERVER_PORT).get();
 
             int randomID = new Random().nextInt(60000 - 1000) + 1000;
             DnsQuery query = new DefaultDnsQuery(randomID, DnsOpCode.QUERY)

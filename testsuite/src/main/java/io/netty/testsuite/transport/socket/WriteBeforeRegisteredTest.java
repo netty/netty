@@ -44,7 +44,8 @@ public class WriteBeforeRegisteredTest extends AbstractClientSocketTest {
         TestHandler h = new TestHandler();
         SocketChannel ch = null;
         try {
-            ch = (SocketChannel) cb.handler(h).connect(newSocketAddress()).channel();
+            ch = (SocketChannel) cb.handler(h).register().get();
+            ch.connect(newSocketAddress());
             ch.writeAndFlush(randomBufferType(ch.alloc(), new byte[] { 1 }, 0, 1));
         } finally {
             if (ch != null) {

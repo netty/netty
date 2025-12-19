@@ -17,13 +17,13 @@ package io.netty.handler.timeout;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.Ticker;
 import io.netty.util.internal.ObjectUtil;
 
@@ -121,8 +121,8 @@ public class IdleStateHandler implements ChannelInboundHandler, ChannelOutboundH
 
     private boolean reading;
 
-    // Not create a new ChannelFutureListener per write operation to reduce GC pressure.
-    private final ChannelFutureListener writeListener = future -> {
+    // Not create a new FutureListener per write operation to reduce GC pressure.
+    private final FutureListener<Void> writeListener = future -> {
         lastWriteTime = ticker.nanoTime();
         firstWriterIdleEvent = firstAllIdleEvent = true;
     };
@@ -277,7 +277,7 @@ public class IdleStateHandler implements ChannelInboundHandler, ChannelOutboundH
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         // Allow writing with void promise if handler is only configured for read timeout events.
         if (writerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
             ctx.write(msg, promise).addListener(writeListener);

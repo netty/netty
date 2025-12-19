@@ -20,7 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
@@ -33,6 +32,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -98,8 +98,8 @@ public class FileRegionThrottleTest {
                 ch.pipeline().addLast(gtsh);
             }
         });
-        Channel sc = bs.bind(0).sync().channel();
-        Channel cc = clientConnect(sc.localAddress(), new ReadHandler(latch)).channel();
+        Channel sc = bs.bind(0).get();
+        Channel cc = clientConnect(sc.localAddress(), new ReadHandler(latch)).getNow();
 
         long start = TrafficCounter.milliSecondFromNano();
         cc.writeAndFlush(Unpooled.copiedBuffer("send-file\n", CharsetUtil.US_ASCII)).sync();
@@ -110,7 +110,7 @@ public class FileRegionThrottleTest {
         cc.close().sync();
     }
 
-    private ChannelFuture clientConnect(final SocketAddress server, final ReadHandler readHandler) throws Exception {
+    private Future<Channel> clientConnect(final SocketAddress server, final ReadHandler readHandler) throws Exception {
         Bootstrap bc = new Bootstrap();
         bc.group(group).channel(NioSocketChannel.class).handler(new ChannelInitializer<SocketChannel>() {
             @Override

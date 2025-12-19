@@ -17,8 +17,6 @@ package io.netty.example.http.file;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultFileRegion;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -36,6 +34,7 @@ import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.stream.ChunkedFile;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.internal.SystemPropertyUtil;
 
 import javax.activation.MimetypesFileTypeMap;
@@ -191,8 +190,8 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
         ctx.write(response);
 
         // Write the content.
-        ChannelFuture sendFileFuture;
-        ChannelFuture lastContentFuture;
+        Future<Void> sendFileFuture;
+        Future<Void> lastContentFuture;
         if (ctx.pipeline().get(SslHandler.class) == null) {
             sendFileFuture =
                     ctx.write(new DefaultFileRegion(raf.getChannel(), 0, fileLength));
@@ -205,13 +204,13 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             lastContentFuture = sendFileFuture;
         }
 
-        sendFileFuture.addListener((ChannelFutureListener) future ->
-                System.err.println(future.channel() + " Transfer complete."));
+        sendFileFuture.addListener(future ->
+                System.err.println(ctx.channel() + " Transfer complete."));
 
         // Decide whether to close the connection or not.
         if (!keepAlive) {
             // Close the connection when the whole content is written out.
-            lastContentFuture.addListener(ChannelFutureListener.CLOSE);
+            lastContentFuture.addListener(f -> ctx.close());
         }
     }
 
@@ -345,11 +344,11 @@ public class HttpStaticFileServerHandler extends SimpleChannelInboundHandler<Ful
             response.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.KEEP_ALIVE);
         }
 
-        ChannelFuture flushPromise = ctx.writeAndFlush(response);
+        Future<Void> flushPromise = ctx.writeAndFlush(response);
 
         if (!keepAlive) {
             // Close the connection as soon as the response is sent.
-            flushPromise.addListener(ChannelFutureListener.CLOSE);
+            flushPromise.addListener(f -> ctx.close());
         }
     }
 

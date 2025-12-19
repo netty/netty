@@ -54,10 +54,10 @@ public class SocketExceptionHandlingTest extends AbstractSocketTest {
             sb.option(ChannelOption.SO_BACKLOG, 1024);
             sb.childHandler(serverInitializer);
 
-            serverChannel = sb.bind().syncUninterruptibly().channel();
+            serverChannel = sb.bind().get();
 
             cb.handler(new MyInitializer());
-            clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
 
             clientChannel.writeAndFlush(randomBufferType(clientChannel.alloc(), new byte[1024], 0, 1024));
 

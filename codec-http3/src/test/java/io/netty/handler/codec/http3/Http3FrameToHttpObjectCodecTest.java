@@ -21,12 +21,10 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoopGroup;
@@ -63,6 +61,8 @@ import io.netty.handler.codec.quic.QuicStreamChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.CharsetUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -595,7 +595,7 @@ public class Http3FrameToHttpObjectCodecTest {
     @Test
     public void testEncodeFullPromiseCompletes() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
-        ChannelFuture writeFuture = ch.writeOneOutbound(new DefaultFullHttpRequest(
+        Future<Void> writeFuture = ch.writeOneOutbound(new DefaultFullHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
         ch.flushOutbound();
         assertTrue(writeFuture.isSuccess());
@@ -614,9 +614,9 @@ public class Http3FrameToHttpObjectCodecTest {
     @Test
     public void testEncodeEmptyLastPromiseCompletes() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
-        ChannelFuture f1 = ch.writeOneOutbound(new DefaultHttpRequest(
+        Future<Void> f1 = ch.writeOneOutbound(new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
-        ChannelFuture f2 = ch.writeOneOutbound(new DefaultLastHttpContent());
+        Future<Void> f2 = ch.writeOneOutbound(new DefaultLastHttpContent());
         ch.flushOutbound();
         assertTrue(f1.isSuccess());
         assertTrue(f2.isSuccess());
@@ -642,9 +642,9 @@ public class Http3FrameToHttpObjectCodecTest {
     @Test
     public void testEncodeMultiplePromiseCompletes() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
-        ChannelFuture f1 = ch.writeOneOutbound(new DefaultHttpRequest(
+        Future<Void> f1 = ch.writeOneOutbound(new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
-        ChannelFuture f2 = ch.writeOneOutbound(new DefaultLastHttpContent(
+        Future<Void> f2 = ch.writeOneOutbound(new DefaultLastHttpContent(
                 Unpooled.wrappedBuffer("foo".getBytes(StandardCharsets.UTF_8))));
         ch.flushOutbound();
         assertTrue(f1.isSuccess());
@@ -667,12 +667,12 @@ public class Http3FrameToHttpObjectCodecTest {
     @Test
     public void testEncodeTrailersCompletes() {
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(new Http3FrameToHttpObjectCodec(false));
-        ChannelFuture f1 = ch.writeOneOutbound(new DefaultHttpRequest(
+        Future<Void> f1 = ch.writeOneOutbound(new DefaultHttpRequest(
                 HttpVersion.HTTP_1_1, HttpMethod.GET, "/hello/world"));
         LastHttpContent last = new DefaultLastHttpContent(
                 Unpooled.wrappedBuffer("foo".getBytes(StandardCharsets.UTF_8)));
         last.trailingHeaders().add("foo", "bar");
-        ChannelFuture f2 = ch.writeOneOutbound(last);
+        Future<Void> f2 = ch.writeOneOutbound(last);
         ch.flushOutbound();
         assertTrue(f1.isSuccess());
         assertTrue(f2.isSuccess());
@@ -753,11 +753,11 @@ public class Http3FrameToHttpObjectCodecTest {
             }
         }
 
-        List<ChannelPromise> framePromises = new ArrayList<>();
+        List<Promise<Void>> framePromises = new ArrayList<>();
         EmbeddedQuicStreamChannel ch = new EmbeddedQuicStreamChannel(
                 new ChannelOutboundHandler() {
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                         framePromises.add(promise);
                         ctx.write(msg, ctx.newPromise());
                     }
@@ -765,7 +765,7 @@ public class Http3FrameToHttpObjectCodecTest {
                 new Http3FrameToHttpObjectCodec(false)
         );
 
-        ChannelFuture fullPromise = ch.writeOneOutbound(msg, ch.newPromise());
+        Future<Void> fullPromise = ch.writeOneOutbound(msg, ch.newPromise());
         ch.flushOutbound();
 
         if (headers) {
@@ -791,8 +791,8 @@ public class Http3FrameToHttpObjectCodecTest {
         assertFalse(fullPromise.isDone());
 
         assertFalse(ch.isShutdown(ChannelShutdownDirection.Outbound));
-        for (ChannelPromise framePromise : framePromises) {
-            framePromise.trySuccess();
+        for (Promise<Void> framePromise : framePromises) {
+            framePromise.trySuccess(null);
         }
         if (last) {
             assertTrue(ch.isShutdown(ChannelShutdownDirection.Outbound));
@@ -959,7 +959,7 @@ public class Http3FrameToHttpObjectCodecTest {
 
             SelfSignedCertificate cert = new SelfSignedCertificate();
 
-            Channel server = bootstrap.bind("127.0.0.1", 0).sync().channel();
+            Channel server = bootstrap.bind("127.0.0.1", 0).get();
             server.pipeline().addLast(Http3.newQuicServerCodecBuilder()
                     .initialMaxData(10000000)
                     .initialMaxStreamDataBidirectionalLocal(1000000)
@@ -992,7 +992,7 @@ public class Http3FrameToHttpObjectCodecTest {
                     })
                     .build());
 
-            Channel client = bootstrap.bind("127.0.0.1", 0).sync().channel();
+            Channel client = bootstrap.bind("127.0.0.1", 0).get();
             client.config().setAutoRead(true);
             client.pipeline().addLast(Http3.newQuicClientCodecBuilder()
                     .initialMaxData(10000000)

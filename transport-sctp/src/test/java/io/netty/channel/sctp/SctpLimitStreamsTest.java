@@ -64,9 +64,9 @@ public abstract class SctpLimitStreamsTest {
                     .handler(new ChannelInboundHandler() { });
 
             Channel serverChannel = serverBootstrap.bind()
-                    .syncUninterruptibly().channel();
+                    .get();
             SctpChannel clientChannel = (SctpChannel) clientBootstrap.connect(serverChannel.localAddress())
-                    .syncUninterruptibly().channel();
+                    .get();
             assertEquals(1, clientChannel.association().maxOutboundStreams());
             assertEquals(1, clientChannel.association().maxInboundStreams());
             serverChannel.close().syncUninterruptibly();

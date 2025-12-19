@@ -21,8 +21,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
@@ -41,7 +39,6 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -167,8 +164,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             clientChannel.read();
 
             clientReadAllDataLatch.await();
@@ -235,15 +232,15 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                           public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
                               if (type.direction() == ChannelShutdownDirection.Inbound) {
                                   ctx.writeAndFlush(ctx.alloc().buffer().writeZero(16))
-                                          .addListener(ChannelFutureListener.CLOSE);
+                                          .addListener(f -> ctx.close());
                               }
                           }
                       });
                   }
               });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             waitHalfClosureDone.await();
         } finally {
             if (clientChannel != null) {
@@ -316,8 +313,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            Channel clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            Channel clientChannel = cb.connect(serverChannel.localAddress()).get();
             clientChannel.closeFuture().await();
             assertEquals(1, shutdownReceivedCounter.get());
         } finally {
@@ -366,8 +363,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
                             buf.writerIndex(buf.capacity());
-                            ctx.writeAndFlush(buf).addListener((ChannelFutureListener) future ->
-                                    future.channel().shutdown(ChannelShutdownType.newOutbound()));
+                            ctx.writeAndFlush(buf).addListener(future ->
+                                    ctx.shutdown(ChannelShutdownType.newOutbound()));
                             serverInitializedLatch.countDown();
                         }
 
@@ -426,8 +423,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             clientChannel.read();
 
             serverInitializedLatch.await();
@@ -473,7 +470,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
     private static void testAutoCloseFalseDoesShutdownOutput(boolean allowHalfClosed,
                                                              final boolean clientIsLeader,
                                                              ServerBootstrap sb,
-                                                             Bootstrap cb) throws InterruptedException {
+                                                             Bootstrap cb) throws Exception {
         final int expectedBytes = 100;
         final CountDownLatch serverReadExpectedLatch = new CountDownLatch(1);
         final CountDownLatch doneLatch = new CountDownLatch(2);
@@ -506,8 +503,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
 
             doneLatch.await();
             assertNull(causeRef.get());
@@ -690,7 +687,7 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                         public void channelActive(ChannelHandlerContext ctx) throws Exception {
                             ByteBuf buf = ctx.alloc().buffer(totalServerBytesWritten);
                             buf.writerIndex(buf.capacity());
-                            ctx.writeAndFlush(buf).addListener(ChannelFutureListener.CLOSE);
+                            ctx.writeAndFlush(buf).addListener(f -> ctx.close());
                             serverInitializedLatch.countDown();
                         }
 
@@ -749,8 +746,8 @@ public class SocketHalfClosedTest extends AbstractSocketTest {
                 }
             });
 
-            serverChannel = sb.bind().sync().channel();
-            clientChannel = cb.connect(serverChannel.localAddress()).sync().channel();
+            serverChannel = sb.bind().get();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
             clientChannel.read();
 
             serverInitializedLatch.await();

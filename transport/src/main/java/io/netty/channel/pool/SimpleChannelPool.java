@@ -17,8 +17,6 @@ package io.netty.channel.pool;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
@@ -174,11 +172,11 @@ public class SimpleChannelPool implements ChannelPool {
                 // No Channel left in the pool bootstrap a new Channel
                 Bootstrap bs = bootstrap.clone();
                 bs.attr(POOL_KEY, this);
-                ChannelFuture f = connectChannel(bs);
+                Future<Channel> f = connectChannel(bs);
                 if (f.isDone()) {
                     notifyConnect(f, promise);
                 } else {
-                    f.addListener((ChannelFutureListener) future -> notifyConnect(future, promise));
+                    f.addListener(future -> notifyConnect(future, promise));
                 }
             } else {
                 EventLoop loop = ch.executor();
@@ -199,11 +197,11 @@ public class SimpleChannelPool implements ChannelPool {
         return promise;
     }
 
-    private void notifyConnect(ChannelFuture future, Promise<Channel> promise) {
+    private void notifyConnect(Future<? extends Channel> future, Promise<Channel> promise) {
         Channel channel = null;
         try {
             if (future.isSuccess()) {
-                channel = future.channel();
+                channel = future.getNow();
                 handler.channelAcquired(channel);
                 if (!promise.trySuccess(channel)) {
                     // Promise was completed in the meantime (like cancelled), just release the channel again
@@ -224,14 +222,14 @@ public class SimpleChannelPool implements ChannelPool {
             if (f.isDone()) {
                 notifyHealthCheck(f, channel, promise);
             } else {
-                f.addListener((FutureListener<Boolean>) future -> notifyHealthCheck(future, channel, promise));
+                f.addListener(future -> notifyHealthCheck(future, channel, promise));
             }
         } catch (Throwable cause) {
             closeAndFail(channel, cause, promise);
         }
     }
 
-    private void notifyHealthCheck(Future<Boolean> future, Channel channel, Promise<Channel> promise) {
+    private void notifyHealthCheck(Future<? extends Boolean> future, Channel channel, Promise<Channel> promise) {
         try {
             assert channel.executor().inEventLoop();
             if (future.isSuccess() && future.getNow()) {
@@ -253,7 +251,7 @@ public class SimpleChannelPool implements ChannelPool {
      * <p>
      * The {@link Bootstrap} that is passed in here is cloned via {@link Bootstrap#clone()}, so it is safe to modify.
      */
-    protected ChannelFuture connectChannel(Bootstrap bs) {
+    protected Future<Channel> connectChannel(Bootstrap bs) {
         return bs.connect();
     }
 

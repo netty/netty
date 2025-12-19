@@ -42,7 +42,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
@@ -456,11 +455,11 @@ public class SniHandlerTest {
                     }
                 });
 
-                serverChannel = sb.bind(new InetSocketAddress(0)).sync().channel();
+                serverChannel = sb.bind(new InetSocketAddress(0)).get();
 
-                ChannelFuture ccf = cb.connect(serverChannel.localAddress());
+                Future<Channel> ccf = cb.connect(serverChannel.localAddress());
                 assertTrue(ccf.awaitUninterruptibly().isSuccess());
-                clientChannel = ccf.channel();
+                clientChannel = ccf.getNow();
 
                 assertTrue(serverAlpnDoneLatch.await(5, TimeUnit.SECONDS));
                 assertTrue(clientAlpnDoneLatch.await(5, TimeUnit.SECONDS));
@@ -563,7 +562,7 @@ public class SniHandlerTest {
                         protected void initChannel(Channel ch) throws Exception {
                             ch.pipeline().addFirst(handler);
                         }
-                    }).bind(address).syncUninterruptibly().channel();
+                    }).bind(address).get();
 
                     sslContext = SslContextBuilder.forClient().sslProvider(provider)
                             .trustManager(InsecureTrustManagerFactory.INSTANCE).build();
@@ -571,7 +570,7 @@ public class SniHandlerTest {
                     Bootstrap cb = new Bootstrap();
                     cc = cb.group(group).channel(LocalChannel.class).handler(new SslHandler(
                             sslContext.newEngine(ByteBufAllocator.DEFAULT, sniHost, -1)))
-                            .connect(address).syncUninterruptibly().channel();
+                            .connect(address).get();
 
                     cc.writeAndFlush(Unpooled.wrappedBuffer("Hello, World!".getBytes()))
                             .syncUninterruptibly();

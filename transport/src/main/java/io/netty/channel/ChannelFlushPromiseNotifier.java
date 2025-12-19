@@ -15,6 +15,9 @@
  */
 package io.netty.channel;
 
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
 import static io.netty.util.internal.ObjectUtil.checkPositiveOrZero;
@@ -23,7 +26,7 @@ import java.util.ArrayDeque;
 import java.util.Queue;
 
 /**
- * This implementation allows to register {@link ChannelFuture} instances which will get notified once some amount of
+ * This implementation allows to register {@link Future} instances which will get notified once some amount of
  * data was written and so a checkpoint was reached.
  */
 public final class ChannelFlushPromiseNotifier {
@@ -35,9 +38,9 @@ public final class ChannelFlushPromiseNotifier {
     /**
      * Create a new instance
      *
-     * @param tryNotify if {@code true} the {@link ChannelPromise}s will get notified with
-     *                  {@link ChannelPromise#trySuccess()} and {@link ChannelPromise#tryFailure(Throwable)}.
-     *                  Otherwise {@link ChannelPromise#setSuccess()} and {@link ChannelPromise#setFailure(Throwable)}
+     * @param tryNotify if {@code true} the {@link Promise}s will get notified with
+     *                  {@link Promise#trySuccess(Object)} and {@link Promise#tryFailure(Throwable)}.
+     *                  Otherwise {@link Promise#setSuccess(Object)} and {@link Promise#setFailure(Throwable)}
      *                  is used
      */
     public ChannelFlushPromiseNotifier(boolean tryNotify) {
@@ -45,26 +48,26 @@ public final class ChannelFlushPromiseNotifier {
     }
 
     /**
-     * Create a new instance which will use {@link ChannelPromise#setSuccess()} and
-     * {@link ChannelPromise#setFailure(Throwable)} to notify the {@link ChannelPromise}s.
+     * Create a new instance which will use {@link Promise#setSuccess(Object)} and
+     * {@link Promise#setFailure(Throwable)} to notify the {@link Promise}s.
      */
     public ChannelFlushPromiseNotifier() {
         this(false);
     }
 
     /**
-     * @deprecated use {@link #add(ChannelPromise, long)}
+     * @deprecated use {@link #add(Promise, long)}
      */
     @Deprecated
-    public ChannelFlushPromiseNotifier add(ChannelPromise promise, int pendingDataSize) {
+    public ChannelFlushPromiseNotifier add(Promise<Void> promise, int pendingDataSize) {
         return add(promise, (long) pendingDataSize);
     }
 
     /**
-     * Add a {@link ChannelPromise} to this {@link ChannelFlushPromiseNotifier} which will be notified after the given
+     * Add a {@link Promise} to this {@link ChannelFlushPromiseNotifier} which will be notified after the given
      * {@code pendingDataSize} was reached.
      */
-    public ChannelFlushPromiseNotifier add(ChannelPromise promise, long pendingDataSize) {
+    public ChannelFlushPromiseNotifier add(Promise<Void> promise, long pendingDataSize) {
         ObjectUtil.checkNotNull(promise, "promise");
         checkPositiveOrZero(pendingDataSize, "pendingDataSize");
         long checkpoint = writeCounter + pendingDataSize;
@@ -94,10 +97,10 @@ public final class ChannelFlushPromiseNotifier {
     }
 
     /**
-     * Notify all {@link ChannelFuture}s that were registered with {@link #add(ChannelPromise, int)} and
+     * Notify all {@link Future}s that were registered with {@link #add(Promise, int)} and
      * their pendingDatasize is smaller after the current writeCounter returned by {@link #writeCounter()}.
      *
-     * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushPromiseNotifier} and
+     * After a {@link Future} was notified it will be removed from this {@link ChannelFlushPromiseNotifier} and
      * so not receive anymore notification.
      */
     public ChannelFlushPromiseNotifier notifyPromises() {
@@ -114,15 +117,15 @@ public final class ChannelFlushPromiseNotifier {
     }
 
     /**
-     * Notify all {@link ChannelFuture}s that were registered with {@link #add(ChannelPromise, int)} and
+     * Notify all {@link Future}s that were registered with {@link #add(Promise, int)} and
      * their pendingDatasize isis smaller then the current writeCounter returned by {@link #writeCounter()}.
      *
-     * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushPromiseNotifier} and
+     * After a {@link Future} was notified it will be removed from this {@link ChannelFlushPromiseNotifier} and
      * so not receive anymore notification.
      *
-     * The rest of the remaining {@link ChannelFuture}s will be failed with the given {@link Throwable}.
+     * The rest of the remaining {@link Future}s will be failed with the given {@link Throwable}.
      *
-     * So after this operation this {@link ChannelFutureListener} is empty.
+     * So after this operation this {@link io.netty.util.concurrent.FutureListener} is empty.
      */
     public ChannelFlushPromiseNotifier notifyPromises(Throwable cause) {
         notifyPromises();
@@ -149,20 +152,20 @@ public final class ChannelFlushPromiseNotifier {
     }
 
     /**
-     * Notify all {@link ChannelFuture}s that were registered with {@link #add(ChannelPromise, int)} and
+     * Notify all {@link Future}s that were registered with {@link #add(Promise, int)} and
      * their pendingDatasize is smaller then the current writeCounter returned by {@link #writeCounter()} using
      * the given cause1.
      *
-     * After a {@link ChannelFuture} was notified it will be removed from this {@link ChannelFlushPromiseNotifier} and
+     * After a {@link Future} was notified it will be removed from this {@link ChannelFlushPromiseNotifier} and
      * so not receive anymore notification.
      *
-     * The rest of the remaining {@link ChannelFuture}s will be failed with the given {@link Throwable}.
+     * The rest of the remaining {@link Future}s will be failed with the given {@link Throwable}.
      *
-     * So after this operation this {@link ChannelFutureListener} is empty.
+     * So after this operation this {@link FutureListener} is empty.
      *
-     * @param cause1    the {@link Throwable} which will be used to fail all of the {@link ChannelFuture}s which
+     * @param cause1    the {@link Throwable} which will be used to fail all of the {@link Future}s which
      *                  pendingDataSize is smaller then the current writeCounter returned by {@link #writeCounter()}
-     * @param cause2    the {@link Throwable} which will be used to fail the remaining {@link ChannelFuture}s
+     * @param cause2    the {@link Throwable} which will be used to fail the remaining {@link Future}s
      */
     public ChannelFlushPromiseNotifier notifyPromises(Throwable cause1, Throwable cause2) {
         notifyPromises0(cause1);
@@ -212,12 +215,12 @@ public final class ChannelFlushPromiseNotifier {
             }
 
             flushCheckpoints.remove();
-            ChannelPromise promise = cp.promise();
+            Promise<Void> promise = cp.promise();
             if (cause == null) {
                 if (tryNotify) {
-                    promise.trySuccess();
+                    promise.trySuccess(null);
                 } else {
-                    promise.setSuccess();
+                    promise.setSuccess(null);
                 }
             } else {
                 if (tryNotify) {
@@ -243,14 +246,14 @@ public final class ChannelFlushPromiseNotifier {
     interface FlushCheckpoint {
         long flushCheckpoint();
         void flushCheckpoint(long checkpoint);
-        ChannelPromise promise();
+        Promise<Void> promise();
     }
 
     private static class DefaultFlushCheckpoint implements FlushCheckpoint {
         private long checkpoint;
-        private final ChannelPromise future;
+        private final Promise<Void> future;
 
-        DefaultFlushCheckpoint(long checkpoint, ChannelPromise future) {
+        DefaultFlushCheckpoint(long checkpoint, Promise<Void> future) {
             this.checkpoint = checkpoint;
             this.future = future;
         }
@@ -266,7 +269,7 @@ public final class ChannelFlushPromiseNotifier {
         }
 
         @Override
-        public ChannelPromise promise() {
+        public Promise<Void> promise() {
             return future;
         }
     }

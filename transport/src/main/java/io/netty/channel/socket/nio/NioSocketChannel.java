@@ -21,7 +21,6 @@ import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelConfig;
 import io.netty.channel.EventLoop;
@@ -32,6 +31,7 @@ import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.concurrent.GlobalEventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SocketUtils;
@@ -165,7 +165,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         if (type.data() != null) {
             promise.setFailure(new IllegalArgumentException("ChannelShutdownType with data is not supported: " + type));
             return;
@@ -178,7 +178,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     promise.setFailure(cause);
                     return;
                 }
-                promise.setSuccess();
+                promise.setSuccess(null);
                 return;
             case Inbound:
                 try {
@@ -187,7 +187,7 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
                     promise.setFailure(cause);
                     return;
                 }
-                promise.setSuccess();
+                promise.setSuccess(null);
                 return;
             default:
                 promise.setFailure(new UnsupportedOperationException());
@@ -205,14 +205,14 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
         try {
             doBind0(localAddress);
         } catch (Throwable t) {
             promise.setFailure(t);
             return;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     private void doBind0(SocketAddress localAddress) throws Exception {
@@ -248,19 +248,19 @@ public class NioSocketChannel extends AbstractNioByteChannel implements io.netty
     }
 
     @Override
-    protected void doDisconnect(ChannelPromise promise) {
+    protected void doDisconnect(Promise<Void> promise) {
         doClose(promise);
     }
 
     @Override
-    protected void doClose(ChannelPromise promise) {
+    protected void doClose(Promise<Void> promise) {
         try {
             javaChannel().close();
         } catch (Throwable cause) {
             promise.setFailure(cause);
             return;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override

@@ -20,10 +20,8 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelId;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownDirection;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelId;
@@ -35,6 +33,8 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.ChannelOutputShutdownException;
 import io.netty.util.DefaultAttributeMap;
 import io.netty.util.ReferenceCountUtil;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.StringUtil;
 import io.netty.util.internal.logging.InternalLogger;
@@ -54,7 +54,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     private final ChannelId id;
     private final ChannelPipeline pipeline;
     private final QuicStreamIoTransport ioTransport;
-    private final ChannelPromise closePromise;
+    private final Promise<Void> closePromise;
     private final PendingWriteQueue queue;
 
     private final QuicheQuicStreamChannelConfig config;
@@ -130,7 +130,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     @Override
-    public ChannelFuture updatePriority(QuicStreamPriority priority, ChannelPromise promise) {
+    public Future<Void> updatePriority(QuicStreamPriority priority, Promise<Void> promise) {
         if (executor().inEventLoop()) {
             updatePriority0(priority, promise);
         } else {
@@ -139,7 +139,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         return promise;
     }
 
-    private void updatePriority0(QuicStreamPriority priority, ChannelPromise promise) {
+    private void updatePriority0(QuicStreamPriority priority, Promise<Void> promise) {
         assert executor().inEventLoop();
         if (!promise.setUncancellable()) {
             return;
@@ -151,7 +151,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             return;
         }
         this.priority = priority;
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     @Override
@@ -238,7 +238,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
     }
 
     @Override
-    public ChannelFuture closeFuture() {
+    public Future<Void> closeFuture() {
         return closePromise;
     }
 
@@ -361,7 +361,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         private RecvByteBufAllocator.Handle recvHandle;
 
         @Override
-        public void connect(SocketAddress remote, SocketAddress local, ChannelPromise promise) {
+        public void connect(SocketAddress remote, SocketAddress local, Promise<Void> promise) {
             assert executor().inEventLoop();
             promise.setFailure(new UnsupportedOperationException());
         }
@@ -375,7 +375,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         @Override
-        public void shutdown(ChannelShutdownType type, ChannelPromise promise) {
+        public void shutdown(ChannelShutdownType type, Promise<Void> promise) {
             if (type.data() != null && !(type.data() instanceof Integer)) {
                 promise.setFailure(new IllegalArgumentException(
                         "ChannelShutdownType with data if non integer type is allowed: " + type));
@@ -399,14 +399,14 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
             if (write) {
                 if (outputShutdown) {
-                    promise.setSuccess();
+                    promise.setSuccess(null);
                     return;
                 }
-                ioTransport.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN, newPromise()
-                        .addListener(f -> {
+                ioTransport.writeWithoutCheckChannelState(QuicStreamFrame.EMPTY_FIN,
+                        QuicheQuicStreamChannel.this.<Void>newPromise().addListener(f -> {
                             if (f.isSuccess()) {
                                 if (type.data() == null) {
-                                    promise.setSuccess();
+                                    promise.setSuccess(null);
                                 } else {
                                     shutdown0(read, write, (Integer) type.data(), promise);
                                 }
@@ -417,7 +417,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 ioTransport.flush();
             } else {
                 if (inputShutdown) {
-                    promise.setSuccess();
+                    promise.setSuccess(null);
                     return;
                 }
                 int error;
@@ -430,8 +430,9 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             }
         }
 
-        private void shutdown0(boolean read, boolean write, int error, ChannelPromise promise) {
-            parent().streamShutdown(streamId(), read, write, error, newPromise().addListener(f -> {
+        private void shutdown0(boolean read, boolean write, int error, Promise<Void> promise) {
+            parent().streamShutdown(streamId(), read, write, error,
+                    QuicheQuicStreamChannel.this.<Void>newPromise().addListener(f -> {
                 if (f.isSuccess()) {
                     // Update fields before notify promise
                     if (write) {
@@ -440,7 +441,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     if (read) {
                         inputShutdown = true;
                     }
-                    promise.setSuccess();
+                    promise.setSuccess(null);
                 } else {
                     promise.setFailure(f.cause());
                 }
@@ -449,7 +450,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         @Override
-        public void register(ChannelPromise promise) {
+        public void register(Promise<Void> promise) {
             if (!promise.setUncancellable()) {
                 return;
             }
@@ -458,13 +459,13 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 return;
             }
             registered = true;
-            promise.setSuccess();
+            promise.setSuccess(null);
             pipeline.fireChannelRegistered();
             pipeline.fireChannelActive();
         }
 
         @Override
-        public void bind(SocketAddress localAddress, ChannelPromise promise) {
+        public void bind(SocketAddress localAddress, Promise<Void> promise) {
             assert executor().inEventLoop();
             if (!promise.setUncancellable()) {
                 return;
@@ -473,17 +474,17 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         @Override
-        public void disconnect(ChannelPromise promise) {
+        public void disconnect(Promise<Void> promise) {
             assert executor().inEventLoop();
             close(promise);
         }
 
         @Override
-        public void close(ChannelPromise promise) {
+        public void close(Promise<Void> promise) {
             close(null, promise);
         }
 
-        void close(@Nullable ClosedChannelException writeFailCause, ChannelPromise promise) {
+        void close(@Nullable ClosedChannelException writeFailCause, Promise<Void> promise) {
             assert executor().inEventLoop();
             if (!promise.setUncancellable()) {
                 return;
@@ -507,8 +508,8 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     queue.removeAndFailAll(writeFailCause);
                 }
 
-                promise.trySuccess();
-                closePromise.trySuccess();
+                promise.trySuccess(null);
+                closePromise.trySuccess(null);
                 if (type() == QuicStreamType.UNIDIRECTIONAL && isLocalCreated()) {
                     inputShutdown = true;
                     outputShutdown = true;
@@ -526,14 +527,14 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             }
         }
 
-        private void deregister(final ChannelPromise promise, final boolean fireChannelInactive) {
+        private void deregister(final Promise<Void> promise, final boolean fireChannelInactive) {
             assert executor().inEventLoop();
             if (!promise.setUncancellable()) {
                 return;
             }
 
             if (!registered) {
-                promise.trySuccess();
+                promise.trySuccess(null);
                 return;
             }
 
@@ -558,7 +559,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     registered = false;
                     pipeline.fireChannelUnregistered();
                 }
-                promise.setSuccess();
+                promise.setSuccess(null);
             });
         }
 
@@ -582,7 +583,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         @Override
-        public void deregister(ChannelPromise promise) {
+        public void deregister(Promise<Void> promise) {
             assert executor().inEventLoop();
             deregister(promise, false);
         }
@@ -632,7 +633,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                     try {
                         int res = write0(msg);
                         if (res == 1) {
-                            queue.remove().setSuccess();
+                            queue.remove().setSuccess(null);
                             written = true;
                         } else if (res == 0 || res == Quiche.QUICHE_ERR_DONE) {
                             break;
@@ -662,7 +663,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         }
 
         @Override
-        public void write(Object msg, ChannelPromise promise) {
+        public void write(Object msg, Promise<Void> promise) {
             assert executor().inEventLoop();
             if (!promise.setUncancellable()) {
                 ReferenceCountUtil.release(msg);
@@ -697,7 +698,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             }
         }
 
-        private void queueAndFailAll(Object msg, ChannelPromise promise, Throwable cause) {
+        private void queueAndFailAll(Object msg, Promise<Void> promise, Throwable cause) {
             // Touch the message to make things easier in terms of debugging buffer leaks.
             ReferenceCountUtil.touch(msg);
 
@@ -737,7 +738,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
             return msg;
         }
 
-        void writeWithoutCheckChannelState(Object msg, ChannelPromise promise) {
+        void writeWithoutCheckChannelState(Object msg, Promise<Void> promise) {
             try {
                 msg = filterMsg(msg);
             } catch (UnsupportedOperationException e) {
@@ -751,7 +752,7 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
                 int res = write0(msg);
                 if (res > 0) {
                     ReferenceCountUtil.release(msg);
-                    promise.setSuccess();
+                    promise.setSuccess(null);
                     mayNeedWritabilityUpdate = capacity == 0;
                 } else if (res == 0 || res == Quiche.QUICHE_ERR_DONE) {
                     // Touch the message to make things easier in terms of debugging buffer leaks.

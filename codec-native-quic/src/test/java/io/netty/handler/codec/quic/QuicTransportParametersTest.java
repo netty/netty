@@ -62,7 +62,7 @@ public class QuicTransportParametersTest extends AbstractQuicTest {
                     .remoteAddress(server.localAddress())
                     .connect().get();
             assertTransportParameters(quicChannel.peerTransportParameters());
-            assertTransportParameters(serverParams.sync().getNow());
+            assertTransportParameters(serverParams.get());
 
             quicChannel.close().sync();
             serverHandler.assertState();

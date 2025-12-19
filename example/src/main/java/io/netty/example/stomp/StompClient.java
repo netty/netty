@@ -57,7 +57,7 @@ public final class StompClient {
                 }
             });
 
-            b.connect(HOST, PORT).sync().channel().closeFuture().sync();
+            b.connect(HOST, PORT).get().closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }

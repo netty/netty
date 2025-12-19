@@ -16,8 +16,6 @@
 package io.netty.example.stomp.websocket;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.nio.NioIoHandler;
@@ -40,7 +38,7 @@ public class StompWebSocketChatServer {
                 } else {
                     System.out.println("Cannot start server, follows exception " + future.cause());
                 }
-            }).channel().closeFuture().sync();
+            }).get().closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }

@@ -16,8 +16,6 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpUtil;
@@ -25,6 +23,8 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpResponseStatus;
 import io.netty.handler.codec.http.HttpVersion;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 
 /**
@@ -193,14 +193,14 @@ public class WebSocketServerHandshakerFactory {
     /**
      * Return that we need cannot support the web socket version
      */
-    public static ChannelFuture sendUnsupportedVersionResponse(Channel channel) {
+    public static Future<Void> sendUnsupportedVersionResponse(Channel channel) {
         return sendUnsupportedVersionResponse(channel, channel.newPromise());
     }
 
     /**
      * Return that we need cannot support the web socket version
      */
-    public static ChannelFuture sendUnsupportedVersionResponse(Channel channel, ChannelPromise promise) {
+    public static Future<Void> sendUnsupportedVersionResponse(Channel channel, Promise<Void> promise) {
         HttpResponse res = new DefaultFullHttpResponse(
                 HttpVersion.HTTP_1_1,
                 HttpResponseStatus.UPGRADE_REQUIRED, channel.alloc().buffer(0));

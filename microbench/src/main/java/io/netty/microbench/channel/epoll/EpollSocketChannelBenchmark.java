@@ -23,7 +23,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.epoll.EpollIoHandler;
@@ -31,6 +30,7 @@ import io.netty.channel.epoll.EpollServerSocketChannel;
 import io.netty.channel.epoll.EpollSocketChannel;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.GroupThreads;
 import org.openjdk.jmh.annotations.Setup;
@@ -81,10 +81,10 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
             })
             .bind(0)
             .sync()
-            .channel();
+            .getNow();
         class ClientHandler implements ChannelInboundHandler, ChannelOutboundHandler {
 
-            private ChannelPromise lastWritePromise;
+            private Promise<Void> lastWritePromise;
 
             @Override
             public void channelRead(ChannelHandlerContext ctx, Object msg) {
@@ -93,7 +93,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                     ByteBuf buf = (ByteBuf) msg;
                     try {
                         if (buf.readableBytes() == 1) {
-                            lastWritePromise.trySuccess();
+                            lastWritePromise.trySuccess(null);
                             lastWritePromise = null;
                         } else {
                             throw new AssertionError();
@@ -107,7 +107,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 if (lastWritePromise != null) {
                     throw new IllegalStateException();
                 }
@@ -127,7 +127,7 @@ public class EpollSocketChannelBenchmark extends AbstractMicrobenchmark {
                 .group(group)
                 .connect(serverChan.localAddress())
                 .sync()
-                .channel();
+                .getNow();
 
         abyte = chan.alloc().directBuffer(1);
         abyte.writeByte('a');

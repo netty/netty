@@ -18,7 +18,7 @@ package io.netty.channel.epoll;
 import io.netty.bootstrap.AbstractBootstrap;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
@@ -89,27 +89,28 @@ public class EpollReuseAddrTest {
     }
 
     @Test
-    public void testMultipleBindSocketChannelWithoutReusePortFails() {
+    public void testMultipleBindSocketChannelWithoutReusePortFails() throws Exception {
         assumeTrue(versionEqOrGt(3, 9, 0));
         testMultipleBindDatagramChannelWithoutReusePortFails0(createServerBootstrap());
     }
 
     @Test
-    public void testMultipleBindDatagramChannelWithoutReusePortFails() {
+    public void testMultipleBindDatagramChannelWithoutReusePortFails() throws Exception {
         assumeTrue(versionEqOrGt(3, 9, 0));
         testMultipleBindDatagramChannelWithoutReusePortFails0(createBootstrap());
     }
 
-    private static void testMultipleBindDatagramChannelWithoutReusePortFails0(AbstractBootstrap<?, ?> bootstrap) {
+    private static void testMultipleBindDatagramChannelWithoutReusePortFails0(AbstractBootstrap<?, ?> bootstrap)
+            throws Exception {
         bootstrap.handler(new LoggingHandler(LogLevel.ERROR));
-        ChannelFuture future = bootstrap.bind().syncUninterruptibly();
+        Channel ch = bootstrap.bind().get();
         try {
-            bootstrap.bind(future.channel().localAddress()).syncUninterruptibly();
+            bootstrap.bind(ch.localAddress()).syncUninterruptibly();
             fail();
         } catch (Exception e) {
             assertTrue(e instanceof IOException);
         }
-        future.channel().close().syncUninterruptibly();
+        ch.close().syncUninterruptibly();
     }
 
     @Test
@@ -120,13 +121,13 @@ public class EpollReuseAddrTest {
         bootstrap.option(EpollChannelOption.SO_REUSEPORT, true);
         final AtomicBoolean accepted1 = new AtomicBoolean();
         bootstrap.childHandler(new ServerSocketTestHandler(accepted1));
-        ChannelFuture future = bootstrap.bind().syncUninterruptibly();
-        InetSocketAddress address1 = (InetSocketAddress) future.channel().localAddress();
+        Channel ch = bootstrap.bind().get();
+        InetSocketAddress address1 = (InetSocketAddress) ch.localAddress();
 
         final AtomicBoolean accepted2 = new AtomicBoolean();
         bootstrap.childHandler(new ServerSocketTestHandler(accepted2));
-        ChannelFuture future2 = bootstrap.bind(address1).syncUninterruptibly();
-        InetSocketAddress address2 = (InetSocketAddress) future2.channel().localAddress();
+        Channel ch2 = bootstrap.bind(address1).get();
+        InetSocketAddress address2 = (InetSocketAddress) ch2.localAddress();
 
         assertEquals(address1, address2);
         while (!accepted1.get() || !accepted2.get()) {
@@ -134,8 +135,8 @@ public class EpollReuseAddrTest {
             socket.setReuseAddress(true);
             socket.close();
         }
-        future.channel().close().syncUninterruptibly();
-        future2.channel().close().syncUninterruptibly();
+        ch.close().syncUninterruptibly();
+        ch2.close().syncUninterruptibly();
     }
 
     @Test
@@ -148,13 +149,13 @@ public class EpollReuseAddrTest {
         bootstrap.option(EpollChannelOption.SO_REUSEPORT, true);
         final AtomicBoolean received1 = new AtomicBoolean();
         bootstrap.handler(new DatagramSocketTestHandler(received1));
-        ChannelFuture future = bootstrap.bind().syncUninterruptibly();
-        final InetSocketAddress address1 = (InetSocketAddress) future.channel().localAddress();
+        Channel ch = bootstrap.bind().get();
+        final InetSocketAddress address1 = (InetSocketAddress) ch.localAddress();
 
         final AtomicBoolean received2 = new AtomicBoolean();
         bootstrap.handler(new DatagramSocketTestHandler(received2));
-        ChannelFuture future2 = bootstrap.bind(address1).syncUninterruptibly();
-        final InetSocketAddress address2 = (InetSocketAddress) future2.channel().localAddress();
+        Channel ch2 = bootstrap.bind(address1).get();
+        final InetSocketAddress address2 = (InetSocketAddress) ch2.localAddress();
 
         assertEquals(address1, address2);
         final byte[] bytes = "data".getBytes();
@@ -186,8 +187,8 @@ public class EpollReuseAddrTest {
         }
         latch.await();
         executor.shutdown();
-        future.channel().close().syncUninterruptibly();
-        future2.channel().close().syncUninterruptibly();
+        ch.close().syncUninterruptibly();
+        ch2.close().syncUninterruptibly();
         assertTrue(received1.get());
         assertTrue(received2.get());
     }

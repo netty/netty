@@ -16,7 +16,7 @@
 package io.netty.example.uptime;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
@@ -25,6 +25,7 @@ import io.netty.channel.socket.SocketChannel;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.logging.LogLevel;
 import io.netty.handler.logging.LoggingHandler;
+import io.netty.util.concurrent.Future;
 
 /**
  * Uptime server is served as a connection server.
@@ -52,12 +53,12 @@ public final class UptimeServer {
                     });
 
             // Bind and start to accept incoming connections.
-            ChannelFuture f = b.bind(PORT).sync();
+            Future<Channel> f = b.bind(PORT).sync();
 
             // Wait until the server socket is closed.
             // In this example, this does not happen, but you can do that to gracefully
             // shut down your server.
-            f.channel().closeFuture().sync();
+            f.getNow().closeFuture().sync();
         } finally {
             group.shutdownGracefully();
         }

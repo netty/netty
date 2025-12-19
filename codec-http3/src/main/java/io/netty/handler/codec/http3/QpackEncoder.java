@@ -126,7 +126,7 @@ final class QpackEncoder {
             // | 0 | 0 | 1 |   Capacity (5+)   |
             // +---+---+---+-------------------+
             encodePrefixedInteger(tableCapacity, (byte) 0b0010_0000, 5, maxTableCapacity);
-            closeOnFailure(encoderStream.writeAndFlush(tableCapacity));
+            closeOnFailure(encoderStream.writeAndFlush(tableCapacity), encoderStream);
 
             streamSectionTrackers = new LongObjectHashMap<>();
             maxBlockedStreams = blockedStreams;
@@ -305,7 +305,7 @@ final class QpackEncoder {
                 ByteBuf duplicate = encoderStream.alloc().buffer(8);
                 encodePrefixedInteger(duplicate, (byte) 0b0000_0000, 5,
                         dynamicTable.relativeIndexForEncoderInstructions(idx));
-                closeOnFailure(encoderStream.writeAndFlush(duplicate));
+                closeOnFailure(encoderStream.writeAndFlush(duplicate), encoderStream);
                 if (mayNotBlockStream()) {
                     // Add to the table but do not use the entry in the header block to avoid blocking.
                     return DYNAMIC_TABLE_ENCODE_NOT_POSSIBLE;
@@ -390,7 +390,7 @@ final class QpackEncoder {
                 ReferenceCountUtil.release(insert);
                 return DYNAMIC_TABLE_ENCODE_NOT_DONE;
             }
-            closeOnFailure(encoderStream.writeAndFlush(insert));
+            closeOnFailure(encoderStream.writeAndFlush(insert), encoderStream);
             if (mayNotBlockStream()) {
                 // Add to the table but do not use the entry in the header block to avoid blocking.
                 return DYNAMIC_TABLE_ENCODE_NOT_DONE;

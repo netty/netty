@@ -64,16 +64,16 @@ public class SimpleChannelPoolTest {
           });
 
         // Start server
-        Channel sc = sb.bind(addr).sync().channel();
+        Channel sc = sb.bind(addr).get();
         CountingChannelPoolHandler handler = new CountingChannelPoolHandler();
 
         final ChannelPool pool = new SimpleChannelPool(cb, handler);
 
-        Channel channel = pool.acquire().sync().getNow();
+        Channel channel = pool.acquire().get();
 
         pool.release(channel).syncUninterruptibly();
 
-        final Channel channel2 = pool.acquire().sync().getNow();
+        final Channel channel2 = pool.acquire().get();
         assertSame(channel, channel2);
         assertEquals(1, handler.channelCount());
         pool.release(channel2).syncUninterruptibly();
@@ -115,7 +115,7 @@ public class SimpleChannelPoolTest {
           });
 
         // Start server
-        Channel sc = sb.bind(addr).sync().channel();
+        Channel sc = sb.bind(addr).get();
         CountingChannelPoolHandler handler = new CountingChannelPoolHandler();
 
         final ChannelPool pool = new SimpleChannelPool(cb, handler, ChannelHealthChecker.ACTIVE) {
@@ -132,10 +132,10 @@ public class SimpleChannelPoolTest {
             }
         };
 
-        Channel channel = pool.acquire().sync().getNow();
-        final Channel channel2 = pool.acquire().sync().getNow();
+        Channel channel = pool.acquire().get();
+        final Channel channel2 = pool.acquire().get();
 
-        pool.release(channel).syncUninterruptibly().getNow();
+        pool.release(channel).get();
         assertThrows(IllegalStateException.class, new Executable() {
             @Override
             public void execute() throws Throwable {
@@ -179,19 +179,19 @@ public class SimpleChannelPoolTest {
           });
 
         // Start server
-        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        Channel sc = sb.bind(addr).get();
         ChannelPoolHandler handler = new CountingChannelPoolHandler();
         ChannelPool pool = new SimpleChannelPool(cb, handler);
-        Channel channel1 = pool.acquire().syncUninterruptibly().getNow();
+        Channel channel1 = pool.acquire().get();
         pool.release(channel1).syncUninterruptibly();
-        Channel channel2 = pool.acquire().syncUninterruptibly().getNow();
+        Channel channel2 = pool.acquire().get();
         //first check that when returned healthy then it actually offered back to the pool.
         assertSame(channel1, channel2);
 
         channel1.close().syncUninterruptibly();
 
         pool.release(channel1).syncUninterruptibly();
-        Channel channel3 = pool.acquire().syncUninterruptibly().getNow();
+        Channel channel3 = pool.acquire().get();
         //channel1 was not healthy anymore so it should not get acquired anymore.
         assertNotSame(channel1, channel3);
         sc.close().syncUninterruptibly();
@@ -226,16 +226,16 @@ public class SimpleChannelPoolTest {
           });
 
         // Start server
-        Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        Channel sc = sb.bind(addr).get();
         ChannelPoolHandler handler = new CountingChannelPoolHandler();
         ChannelPool pool = new SimpleChannelPool(cb, handler, ChannelHealthChecker.ACTIVE, false);
-        Channel channel1 = pool.acquire().syncUninterruptibly().getNow();
+        Channel channel1 = pool.acquire().get();
         channel1.close().syncUninterruptibly();
         Future<Void> releaseFuture =
                 pool.release(channel1, channel1.executor().<Void>newPromise()).syncUninterruptibly();
         assertTrue(releaseFuture.isSuccess());
 
-        Channel channel2 = pool.acquire().syncUninterruptibly().getNow();
+        Channel channel2 = pool.acquire().get();
         //verifying that in fact the channel2 is different that means is not pulled from the pool
         assertNotSame(channel1, channel2);
         sc.close().syncUninterruptibly();
@@ -326,14 +326,14 @@ public class SimpleChannelPoolTest {
                         ch.pipeline().addLast(new ChannelInboundHandler() { });
                     }
                 });
-        final Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        final Channel sc = sb.bind(addr).get();
 
         // Create pool, acquire and return channels
         final Bootstrap bootstrap = new Bootstrap()
                 .channel(LocalChannel.class).group(group).remoteAddress(addr);
         final SimpleChannelPool pool = new SimpleChannelPool(bootstrap, new CountingChannelPoolHandler());
-        Channel ch1 = pool.acquire().syncUninterruptibly().getNow();
-        Channel ch2 = pool.acquire().syncUninterruptibly().getNow();
+        Channel ch1 = pool.acquire().get();
+        Channel ch2 = pool.acquire().get();
         pool.release(ch1).get(1, TimeUnit.SECONDS);
         pool.release(ch2).get(1, TimeUnit.SECONDS);
 
@@ -354,7 +354,7 @@ public class SimpleChannelPoolTest {
     }
 
     @Test
-    public void testChannelAcquiredException() throws InterruptedException {
+    public void testChannelAcquiredException() throws Exception {
         final LocalAddress addr = new LocalAddress(getLocalAddrId());
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
 
@@ -368,7 +368,7 @@ public class SimpleChannelPoolTest {
                       ch.pipeline().addLast(new ChannelInboundHandler() { });
                   }
               });
-        final Channel sc = sb.bind(addr).syncUninterruptibly().channel();
+        final Channel sc = sb.bind(addr).get();
 
         // Create pool, acquire and return channels
         final Bootstrap bootstrap = new Bootstrap()

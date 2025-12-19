@@ -15,13 +15,12 @@
  */
 package io.netty.handler.codec.http.websocketx;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.websocketx.WebSocketClientProtocolHandler.ClientHandshakeStateEvent;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import java.util.concurrent.TimeUnit;
 
@@ -33,7 +32,7 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelInboundHandler {
     private final WebSocketClientHandshaker handshaker;
     private final long handshakeTimeoutMillis;
     private ChannelHandlerContext ctx;
-    private ChannelPromise handshakePromise;
+    private Promise<Void> handshakePromise;
 
     WebSocketClientProtocolHandshakeHandler(WebSocketClientHandshaker handshaker) {
         this(handshaker, DEFAULT_HANDSHAKE_TIMEOUT_MS);
@@ -86,7 +85,7 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelInboundHandler {
         try {
             if (!handshaker.isHandshakeComplete()) {
                 handshaker.finishHandshake(ctx.channel(), response);
-                handshakePromise.trySuccess();
+                handshakePromise.trySuccess(null);
                 ctx.fireUserEventTriggered(
                         WebSocketClientProtocolHandler.ClientHandshakeStateEvent.HANDSHAKE_COMPLETE);
                 ctx.pipeline().remove(this);
@@ -99,7 +98,7 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelInboundHandler {
     }
 
     private void applyHandshakeTimeout() {
-        final ChannelPromise localHandshakePromise = handshakePromise;
+        final Promise<Void> localHandshakePromise = handshakePromise;
         if (handshakeTimeoutMillis <= 0 || localHandshakePromise.isDone()) {
             return;
         }
@@ -128,7 +127,7 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelInboundHandler {
      *
      * @return current handshake future
      */
-    ChannelFuture getHandshakeFuture() {
+    Future<Void> getHandshakeFuture() {
         return handshakePromise;
     }
 }

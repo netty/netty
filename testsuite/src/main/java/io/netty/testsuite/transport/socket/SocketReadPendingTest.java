@@ -66,13 +66,13 @@ public class SocketReadPendingTest extends AbstractSocketTest {
               .childOption(ChannelOption.RECVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(2))
               .childHandler(serverInitializer);
 
-            serverChannel = sb.bind().syncUninterruptibly().channel();
+            serverChannel = sb.bind().get();
 
             cb.option(ChannelOption.AUTO_READ, false)
               // We intend to do 2 reads per read loop wakeup
               .option(ChannelOption.RECVBUF_ALLOCATOR, new TestNumReadsRecvByteBufAllocator(2))
               .handler(clientInitializer);
-            clientChannel = cb.connect(serverChannel.localAddress()).syncUninterruptibly().channel();
+            clientChannel = cb.connect(serverChannel.localAddress()).get();
 
             // 4 bytes means 2 read loops for TestNumReadsRecvByteBufAllocator
             clientChannel.writeAndFlush(randomBufferType(clientChannel.alloc(), new byte[4], 0, 4));

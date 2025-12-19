@@ -15,9 +15,9 @@
  */
 package io.netty.resolver.dns;
 
-import io.netty.channel.ChannelFuture;
 import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsResponseCode;
+import io.netty.util.concurrent.Future;
 
 import java.net.InetSocketAddress;
 import java.util.List;
@@ -29,7 +29,7 @@ final class NoopDnsQueryLifecycleObserver implements DnsQueryLifecycleObserver {
     }
 
     @Override
-    public void queryWritten(InetSocketAddress dnsServerAddress, ChannelFuture future) {
+    public void queryWritten(InetSocketAddress dnsServerAddress, Future<Void> future) {
     }
 
     @Override

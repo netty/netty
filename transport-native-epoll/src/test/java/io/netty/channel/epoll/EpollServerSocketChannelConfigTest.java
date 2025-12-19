@@ -40,13 +40,13 @@ public class EpollServerSocketChannelConfigTest {
     private static EpollServerSocketChannel ch;
 
     @BeforeAll
-    public static void before() {
+    public static void before() throws Exception {
         group = new MultiThreadIoEventLoopGroup(1, EpollIoHandler.newFactory());
         ServerBootstrap bootstrap = new ServerBootstrap();
         ch = (EpollServerSocketChannel) bootstrap.group(group)
                 .channel(EpollServerSocketChannel.class)
                 .childHandler(new ChannelInboundHandler() { })
-                .bind(new InetSocketAddress(0)).syncUninterruptibly().channel();
+                .bind(new InetSocketAddress(0)).get();
     }
 
     @AfterAll

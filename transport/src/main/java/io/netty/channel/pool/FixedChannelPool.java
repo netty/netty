@@ -326,7 +326,7 @@ public class FixedChannelPool extends SimpleChannelPool {
         assert currentCount >= 0;
 
         // Run the pending acquire tasks before notify the original promise so if the user would
-        // try to acquire again from the ChannelFutureListener and the pendingAcquireCount is >=
+        // try to acquire again from the FutureListener and the pendingAcquireCount is >=
         // maxPendingAcquires we may be able to run some pending tasks first and so allow to add
         // more.
         runTaskQueue();
@@ -403,7 +403,7 @@ public class FixedChannelPool extends SimpleChannelPool {
         }
 
         @Override
-        public void operationComplete(Future<Channel> future) {
+        public void operationComplete(Future<? extends Channel> future) {
             try {
                 assert executor.inEventLoop();
 

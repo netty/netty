@@ -23,13 +23,12 @@ import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 
 /**
- * {@link GenericFutureListener} implementation which takes other {@link Promise}s
+ * {@link FutureListener} implementation which takes other {@link Promise}s
  * and notifies them on completion.
  *
  * @param <V> the type of value returned by the future
- * @param <F> the type of future
  */
-public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureListener<F> {
+public class PromiseNotifier<V> implements FutureListener<V> {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(PromiseNotifier.class);
     private final Promise<? super V>[] promises;
@@ -38,7 +37,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
     /**
      * Create a new instance.
      *
-     * @param promises  the {@link Promise}s to notify once this {@link GenericFutureListener} is notified.
+     * @param promises  the {@link Promise}s to notify once this {@link FutureListener} is notified.
      */
     @SafeVarargs
     public PromiseNotifier(Promise<? super V>... promises) {
@@ -49,7 +48,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
      * Create a new instance.
      *
      * @param logNotifyFailure {@code true} if logging should be done in case notification fails.
-     * @param promises  the {@link Promise}s to notify once this {@link GenericFutureListener} is notified.
+     * @param promises  the {@link Promise}s to notify once this {@link FutureListener} is notified.
      */
     @SafeVarargs
     public PromiseNotifier(boolean logNotifyFailure, Promise<? super V>... promises) {
@@ -69,10 +68,9 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
      * @param future    the {@link Future} which will be used to listen to for notifying the {@link Promise}.
      * @param promise   the {@link Promise} which will be notified
      * @param <V>       the type of the value.
-     * @param <F>       the type of the {@link Future}
      * @return          the passed in {@link Future}
      */
-    public static <V, F extends Future<V>> F cascade(final F future, final Promise<? super V> promise) {
+    public static <V> Future<V> cascade(final Future<V> future, final Promise<V> promise) {
         return cascade(true, future, promise);
     }
 
@@ -85,20 +83,19 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
      * @param future            the {@link Future} which will be used to listen to for notifying the {@link Promise}.
      * @param promise           the {@link Promise} which will be notified
      * @param <V>               the type of the value.
-     * @param <F>               the type of the {@link Future}
      * @return                  the passed in {@link Future}
      */
     @SuppressWarnings({"unchecked", "rawtypes"})
-    public static <V, F extends Future<V>> F cascade(boolean logNotifyFailure, final F future,
-                                                     final Promise<? super V> promise) {
-        promise.addListener((FutureListener) f -> {
+    public static <V, T extends Future<V>> T cascade(boolean logNotifyFailure, final T future,
+                                                     final Promise<V> promise) {
+        promise.addListener(f -> {
             if (f.isCancelled()) {
                 future.cancel(false);
             }
         });
-        future.addListener(new PromiseNotifier(logNotifyFailure, promise) {
+        future.addListener(new PromiseNotifier<>(logNotifyFailure, promise) {
             @Override
-            public void operationComplete(Future f) {
+            public void operationComplete(Future<? extends V> f) {
                 if (promise.isCancelled() && f.isCancelled()) {
                     // Just return if we propagate a cancel from the promise to the future and both are notified already
                     return;
@@ -110,7 +107,7 @@ public class PromiseNotifier<V, F extends Future<V>> implements GenericFutureLis
     }
 
     @Override
-    public void operationComplete(F future) {
+    public void operationComplete(Future<? extends V> future) {
         InternalLogger internalLogger = logNotifyFailure ? logger : null;
         if (future.isSuccess()) {
             V result = future.getNow();

@@ -105,7 +105,7 @@ public class DefaultChannelPipelineTest {
             }
         });
 
-        ChannelFuture bindFuture = sb.bind(LocalAddress.ANY).sync();
+        Future<Channel> bindFuture = sb.bind(LocalAddress.ANY).sync();
 
         Bootstrap b = new Bootstrap();
         b.group(group).channel(LocalChannel.class);
@@ -116,10 +116,10 @@ public class DefaultChannelPipelineTest {
             }
         });
 
-        self = b.connect(bindFuture.channel().localAddress()).sync().channel();
+        self = b.connect(bindFuture.get().localAddress()).get();
         peer = peerRef.get();
 
-        bindFuture.channel().close().sync();
+        bindFuture.getNow().close().sync();
     }
 
     @AfterEach
@@ -147,9 +147,9 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 pending = -1;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
         });
         pipeline.channel().write(new Object());
@@ -168,10 +168,10 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 // Returning a value that will result in an overflow
                 pending = 2;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
         }, new ChannelOutboundHandler() {
             long pending;
@@ -181,7 +181,7 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 // Returning a value that will result in an overflow
                 pending = Long.MAX_VALUE;
                 ctx.write(msg, promise);
@@ -601,28 +601,28 @@ public class DefaultChannelPipelineTest {
         final BlockingQueue<String> events = new LinkedBlockingQueue<>();
         pipeline.addFirst(new ChannelOutboundHandler() {
             @Override
-            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
                 events.add("bind");
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-                                ChannelPromise promise)  {
+                                Promise<Void> promise)  {
                 events.add("connect");
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
                 events.add("close");
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
-            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise)  {
+            public void deregister(ChannelHandlerContext ctx, Promise<Void> promise)  {
                 events.add("deregister");
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
@@ -631,9 +631,9 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 events.add("write");
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
@@ -907,9 +907,9 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.channel().register();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.bind(new LocalAddress("test"), promise);
+        Future<Void> future = pipeline.bind(new LocalAddress("test"), promise);
         assertTrue(future.isCancelled());
     }
 
@@ -918,9 +918,9 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.channel().register();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.connect(new LocalAddress("test"), promise);
+        Future<Void> future = pipeline.connect(new LocalAddress("test"), promise);
         assertTrue(future.isCancelled());
     }
 
@@ -929,9 +929,9 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.channel().register();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.disconnect(promise);
+        Future<Void> future = pipeline.disconnect(promise);
         assertTrue(future.isCancelled());
     }
 
@@ -940,32 +940,10 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.channel().register();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.close(promise);
+        Future<Void> future = pipeline.close(promise);
         assertTrue(future.isCancelled());
-    }
-
-    @Test
-    public void testWrongPromiseChannel() throws Exception {
-        final ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
-        pipeline.channel().register().sync();
-
-        ChannelPipeline pipeline2 = new LocalChannel(group.next()).pipeline();
-        pipeline2.channel().register().sync();
-
-        try {
-            final ChannelPromise promise2 = pipeline2.channel().newPromise();
-            assertThrows(IllegalArgumentException.class, new Executable() {
-                @Override
-                public void execute() {
-                    pipeline.close(promise2);
-                }
-            });
-        } finally {
-            pipeline.close();
-            pipeline2.close();
-        }
     }
 
     @Test
@@ -974,7 +952,7 @@ public class DefaultChannelPipelineTest {
         pipeline.channel().register().sync();
 
         try {
-            final ChannelPromise promise = (ChannelPromise) pipeline.channel().closeFuture();
+            final Promise<Void> promise = (Promise<Void>) pipeline.channel().closeFuture();
             assertThrows(IllegalArgumentException.class, new Executable() {
                 @Override
                 public void execute() {
@@ -991,9 +969,9 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.channel().register();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
-        ChannelFuture future = pipeline.deregister(promise);
+        Future<Void> future = pipeline.deregister(promise);
         assertTrue(future.isCancelled());
     }
 
@@ -1002,11 +980,11 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.channel().register();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
         ByteBuf buffer = Unpooled.buffer();
         assertEquals(1, buffer.refCnt());
-        ChannelFuture future = pipeline.write(buffer, promise);
+        Future<Void> future = pipeline.write(buffer, promise);
         assertTrue(future.isCancelled());
         assertEquals(0, buffer.refCnt());
     }
@@ -1016,11 +994,11 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
         pipeline.channel().register();
 
-        ChannelPromise promise = pipeline.channel().newPromise();
+        Promise<Void> promise = pipeline.channel().newPromise();
         assertTrue(promise.cancel(false));
         ByteBuf buffer = Unpooled.buffer();
         assertEquals(1, buffer.refCnt());
-        ChannelFuture future = pipeline.writeAndFlush(buffer, promise);
+        Future<Void> future = pipeline.writeAndFlush(buffer, promise);
         assertTrue(future.isCancelled());
         assertEquals(0, buffer.refCnt());
     }
@@ -1220,7 +1198,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testAddInListenerNio() {
+    public void testAddInListenerNio() throws Exception {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory());
         try {
             testAddInListener(new NioSocketChannel(group.next()));
@@ -1231,7 +1209,7 @@ public class DefaultChannelPipelineTest {
 
     @Test
     @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testAddInListenerLocal() {
+    public void testAddInListenerLocal() throws Exception {
         EventLoopGroup group = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         try {
             testAddInListener(new LocalChannel(group.next()));
@@ -1240,7 +1218,7 @@ public class DefaultChannelPipelineTest {
         }
     }
 
-    private static void testAddInListener(Channel channel) {
+    private static void testAddInListener(Channel channel) throws Exception {
         ChannelPipeline pipeline1 = channel.pipeline();
         try {
             final Object event = new Object();
@@ -1271,7 +1249,7 @@ public class DefaultChannelPipelineTest {
                 // This event must be captured by the added handler.
                 pipeline.fireUserEventTriggered(event);
             });
-            assertSame(event, promise.syncUninterruptibly().getNow());
+            assertSame(event, promise.get());
         } finally {
             pipeline1.channel().close().syncUninterruptibly();
         }
@@ -1371,14 +1349,14 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void register(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void register(ChannelHandlerContext ctx, Promise<Void> promise) {
                 fail();
                 ctx.register(promise);
             }
 
             @Skip
             @Override
-            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
                 fail();
                 ctx.bind(localAddress, promise);
             }
@@ -1386,28 +1364,28 @@ public class DefaultChannelPipelineTest {
             @Skip
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                SocketAddress localAddress, ChannelPromise promise) {
+                                SocketAddress localAddress, Promise<Void> promise) {
                 fail();
                 ctx.connect(remoteAddress, localAddress, promise);
             }
 
             @Skip
             @Override
-            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
                 fail();
                 ctx.disconnect(promise);
             }
 
             @Skip
             @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
                 fail();
                 ctx.close(promise);
             }
 
             @Skip
             @Override
-            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
                 fail();
                 ctx.deregister(promise);
             }
@@ -1421,7 +1399,7 @@ public class DefaultChannelPipelineTest {
 
             @Skip
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 fail();
                 ctx.write(msg, promise);
             }
@@ -1435,7 +1413,7 @@ public class DefaultChannelPipelineTest {
 
             @Override
             public void shutdown(ChannelHandlerContext ctx, ChannelShutdownType type,
-                                 ChannelPromise promise) {
+                                 Promise<Void> promise) {
                 fail();
                 ctx.shutdown(type, promise);
             }
@@ -1554,34 +1532,34 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, Promise<Void> promise) {
                 executionMask |= MASK_BIND;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
             public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress,
-                                SocketAddress localAddress, ChannelPromise promise) {
+                                SocketAddress localAddress, Promise<Void> promise) {
                 executionMask |= MASK_CONNECT;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
-            public void disconnect(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void disconnect(ChannelHandlerContext ctx, Promise<Void> promise) {
                 executionMask |= MASK_DISCONNECT;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
-            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void close(ChannelHandlerContext ctx, Promise<Void> promise) {
                 executionMask |= MASK_CLOSE;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
-            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise) {
+            public void deregister(ChannelHandlerContext ctx, Promise<Void> promise) {
                 executionMask |= MASK_DEREGISTER;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
@@ -1590,9 +1568,9 @@ public class DefaultChannelPipelineTest {
             }
 
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 executionMask |= MASK_WRITE;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
 
             @Override
@@ -1775,10 +1753,13 @@ public class DefaultChannelPipelineTest {
         channel2.register().syncUninterruptibly();
 
         try {
+            // Create a promise and complete it so our write methods throw
+            Promise<Void> promise = channel2.newPromise();
+            promise.setSuccess(null);
             if (flush) {
-                channel.writeAndFlush(referenceCounted, channel2.newPromise());
+                channel.writeAndFlush(referenceCounted, promise);
             } else {
-                channel.write(referenceCounted, channel2.newPromise());
+                channel.write(referenceCounted, promise);
             }
             fail();
         } catch (IllegalArgumentException expected) {
@@ -1830,7 +1811,7 @@ public class DefaultChannelPipelineTest {
                     }
 
                     @Override
-                    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                         if (msg == writeObject) {
                             doneLatch.countDown();
                         }
@@ -2017,7 +1998,7 @@ public class DefaultChannelPipelineTest {
         final Queue<Object> outboundBuffer = new ArrayDeque<Object>();
 
         @Override
-        public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+        public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
             outboundBuffer.add(msg);
         }
 

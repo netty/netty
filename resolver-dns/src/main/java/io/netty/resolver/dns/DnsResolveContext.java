@@ -238,10 +238,10 @@ abstract class DnsResolveContext<T> {
             final int initialSearchDomainIdx = startWithoutSearchDomain ? 0 : 1;
 
             final Promise<List<T>> searchDomainPromise = parent.executor().newPromise();
-            searchDomainPromise.addListener(new FutureListener<List<T>>() {
+            searchDomainPromise.addListener(new FutureListener<>() {
                 private int searchDomainIdx = initialSearchDomainIdx;
                 @Override
-                public void operationComplete(Future<List<T>> future) {
+                public void operationComplete(Future<? extends List<T>> future) {
                     Throwable cause = future.cause();
                     if (cause == null) {
                         final List<T> result = future.getNow();

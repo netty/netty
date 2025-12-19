@@ -93,7 +93,7 @@ public class TrafficShapingHandlerTest {
                         }
                     });
             final LocalAddress svrAddr = new LocalAddress("foo");
-            svrChannel = serverBootstrap.bind(svrAddr).sync().channel();
+            svrChannel = serverBootstrap.bind(svrAddr).get();
             Bootstrap bootstrap = new Bootstrap();
             bootstrap.channel(LocalChannel.class).group(GROUP).handler(new ChannelInitializer<Channel>() {
                 @Override
@@ -101,7 +101,7 @@ public class TrafficShapingHandlerTest {
                     ch.pipeline().addLast("traffic-shaping", trafficHandler);
                 }
             });
-            ch = bootstrap.connect(svrAddr).sync().channel();
+            ch = bootstrap.connect(svrAddr).get();
             Attribute<Runnable> attr = ch.attr(AbstractTrafficShapingHandler.REOPEN_TASK);
             assertNull(attr.get());
             ch.writeAndFlush(Unpooled.wrappedBuffer("foo".getBytes(CharsetUtil.UTF_8)));

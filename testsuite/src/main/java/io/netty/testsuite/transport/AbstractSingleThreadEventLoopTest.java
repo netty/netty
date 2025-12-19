@@ -17,7 +17,6 @@ package io.netty.testsuite.transport;
 
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -146,9 +145,9 @@ public abstract class AbstractSingleThreadEventLoopTest {
         .childHandler(new ChannelInboundHandler() { });
 
         // Not close the Channel to ensure the EventLoop is still shutdown in time.
-        ChannelFuture cf = serverChannelClass() == LocalServerChannel.class
+        Future<Channel> cf = serverChannelClass() == LocalServerChannel.class
                 ? b.bind(new LocalAddress("local")) : b.bind(0);
-        cf.sync().channel();
+        cf.get();
 
         Future<?> f = loop.shutdownGracefully(0, 1, TimeUnit.MINUTES);
         assertTrue(loop.awaitTermination(600, TimeUnit.MILLISECONDS));

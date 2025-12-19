@@ -24,7 +24,6 @@ import io.netty.channel.ChannelPipeline;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.channel.socket.nio.NioSocketChannel;
@@ -184,7 +183,7 @@ public class HandlerSslTest {
                         // through we just want to verify the local failure condition. This way we don't have to worry
                         // about verifying the payload and releasing the content on the server side.
                         if (failureExpected) {
-                            ChannelFuture f = ctx.write(ctx.alloc().buffer(1).writeByte(1));
+                            Future<Void> f = ctx.write(ctx.alloc().buffer(1).writeByte(1));
                             PromiseNotifier.cascade(f, clientWritePromise);
                         }
                     }
@@ -216,12 +215,12 @@ public class HandlerSslTest {
             }
         });
 
-        serverChannel = sb.bind(new InetSocketAddress(expectedHost, 0)).sync().channel();
+        serverChannel = sb.bind(new InetSocketAddress(expectedHost, 0)).get();
         final int port = ((InetSocketAddress) serverChannel.localAddress()).getPort();
 
-        ChannelFuture ccf = cb.connect(new InetSocketAddress(expectedHost, port));
+        Future<Channel> ccf = cb.connect(new InetSocketAddress(expectedHost, port));
         assertTrue(ccf.awaitUninterruptibly().isSuccess());
-        clientChannel = ccf.channel();
+        clientChannel = ccf.getNow();
         return clientWritePromise;
     }
 

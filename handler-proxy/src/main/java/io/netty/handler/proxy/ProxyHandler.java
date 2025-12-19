@@ -17,16 +17,15 @@
 package io.netty.handler.proxy;
 
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.PendingWriteQueue;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.ImmediateEventExecutor;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -61,9 +60,9 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
     private boolean finished;
     private boolean suppressChannelReadComplete;
     private boolean flushedPrematurely;
-    private final LazyChannelPromise connectPromise = new LazyChannelPromise();
+    private final Promise<Channel> connectPromise = ImmediateEventExecutor.INSTANCE.newPromise();
     private Future<?> connectTimeoutFuture;
-    private final ChannelFutureListener writeListener = future -> {
+    private final FutureListener<Void> writeListener = future -> {
         if (!future.isSuccess()) {
             setConnectFailure(future.cause());
         }
@@ -167,7 +166,7 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
     @Override
     public final void connect(
             ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
-            ChannelPromise promise) {
+            Promise<Void> promise) {
 
         if (destinationAddress != null) {
             promise.setFailure(new ConnectionPendingException());
@@ -397,7 +396,7 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
     }
 
     @Override
-    public final void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public final void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         if (finished) {
             writePendingWrites(ctx);
             ctx.write(msg, promise);
@@ -444,21 +443,11 @@ public abstract class ProxyHandler implements ChannelInboundHandler, ChannelOutb
         }
     }
 
-    private void addPendingWrite(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    private void addPendingWrite(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         PendingWriteQueue pendingWrites = this.pendingWrites;
         if (pendingWrites == null) {
             this.pendingWrites = pendingWrites = new PendingWriteQueue(ctx);
         }
         pendingWrites.add(msg, promise);
-    }
-
-    private final class LazyChannelPromise extends DefaultPromise<Channel> {
-        @Override
-        protected EventExecutor executor() {
-            if (ctx == null) {
-                throw new IllegalStateException();
-            }
-            return ctx.executor();
-        }
     }
 }

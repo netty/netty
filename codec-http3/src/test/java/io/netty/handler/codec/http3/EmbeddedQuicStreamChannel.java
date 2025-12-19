@@ -17,12 +17,10 @@ package io.netty.handler.codec.http3;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundHandler;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelId;
 import io.netty.channel.MessageSizeEstimator;
@@ -36,6 +34,8 @@ import io.netty.handler.codec.quic.QuicStreamFrame;
 import io.netty.handler.codec.quic.QuicStreamPriority;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.AttributeKey;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Map;
@@ -65,7 +65,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
                 }, handlers));
         pipeline().addFirst(new ChannelOutboundHandler() {
             @Override
-            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+            public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
                 if (msg instanceof QuicStreamFrame && ((QuicStreamFrame) msg).hasFin()) {
                     // Mimic the API.
                     promise.addListener(f -> outputShutdown = 0);
@@ -110,7 +110,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     @Override
-    public ChannelFuture updatePriority(QuicStreamPriority priority, ChannelPromise promise) {
+    public Future<Void> updatePriority(QuicStreamPriority priority, Promise<Void> promise) {
         return promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -155,7 +155,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         if (type.data() != null && !(type.data() instanceof Integer)) {
             promise.setFailure(new IllegalArgumentException(
                     "ChannelShutdownType with data if non integer type is allowed: " + type));
@@ -171,7 +171,7 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
             default:
                 break;
         }
-        promise.setSuccess();
+        promise.setSuccess(null);
     }
 
     Integer outputShutdownError() {

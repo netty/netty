@@ -19,13 +19,13 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -77,7 +77,7 @@ public final class KQueueServerSocketChannel extends AbstractKQueueChannel imple
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -152,8 +152,8 @@ public final class KQueueServerSocketChannel extends AbstractKQueueChannel imple
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
-        super.doBind(localAddress, newPromise().addListener(f -> {
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        super.doBind(localAddress, this.<Void>newPromise().addListener(f -> {
             if (f.isSuccess()) {
                 try {
                     socket.listen(config.getBacklog());
@@ -165,12 +165,12 @@ public final class KQueueServerSocketChannel extends AbstractKQueueChannel imple
                     promise.setFailure(cause);
                     return;
                 }
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
         }));
     }
     @Override
-    protected void doClose(ChannelPromise promise) {
+    protected void doClose(Promise<Void> promise) {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
             DomainSocketAddress local = (DomainSocketAddress) localAddress();
             super.doClose(promise.addListener(f -> {

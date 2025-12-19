@@ -19,7 +19,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
@@ -27,6 +26,7 @@ import io.netty.channel.RecvByteBufAllocator;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.channel.unix.DomainSocketAddress;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
 
@@ -90,7 +90,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -115,7 +115,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
     }
 
     @Override
-    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+    protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         // Connect not supported by ServerChannel implementations
         promise.setFailure(new UnsupportedOperationException());
     }
@@ -173,8 +173,8 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
     }
 
     @Override
-    protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
-        super.doBind(localAddress, newPromise().addListener(f -> {
+    protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+        super.doBind(localAddress, this.<Void>newPromise().addListener(f -> {
             if (f.isSuccess()) {
                 try {
                     final int tcpFastopen;
@@ -187,7 +187,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
                     promise.setFailure(cause);
                     return;
                 }
-                promise.setSuccess();
+                promise.setSuccess(null);
             } else {
                 promise.setFailure(f.cause());
             }
@@ -195,7 +195,7 @@ public final class EpollServerSocketChannel extends AbstractEpollChannel impleme
     }
 
     @Override
-    protected void doClose(ChannelPromise promise) {
+    protected void doClose(Promise<Void> promise) {
         if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
             DomainSocketAddress local = (DomainSocketAddress) localAddress();
             super.doClose(promise.addListener(f -> {

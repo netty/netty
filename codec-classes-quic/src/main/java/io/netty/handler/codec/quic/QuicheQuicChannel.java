@@ -20,14 +20,11 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.AbstractChannel;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
 import io.netty.channel.ChannelShutdownType;
 import io.netty.channel.DefaultChannelPipeline;
 import io.netty.channel.RecvByteBufAllocator;
@@ -38,6 +35,7 @@ import io.netty.util.AttributeKey;
 import io.netty.util.collection.LongObjectHashMap;
 import io.netty.util.collection.LongObjectMap;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
 import io.netty.util.concurrent.Promise;
@@ -104,7 +102,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         CLOSE
     }
 
-    private static final class CloseData implements ChannelFutureListener {
+    private static final class CloseData implements FutureListener<Void> {
         final boolean applicationClose;
         final int err;
         final ByteBuf reason;
@@ -116,7 +114,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         }
 
         @Override
-        public void operationComplete(ChannelFuture future) {
+        public void operationComplete(Future<? extends Void> future) {
             reason.release();
         }
     }
@@ -141,7 +139,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private boolean fireChannelReadCompletePending;
     private ByteBuf finBuffer;
     private ByteBuf outErrorCodeBuffer;
-    private ChannelPromise connectPromise;
+    private Promise<Void> connectPromise;
     private QuicConnectionAddress connectAddress;
     private CloseData closeData;
     private QuicConnectionCloseEvent connectionCloseEvent;
@@ -164,7 +162,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     private volatile InetSocketAddress local;
     private volatile InetSocketAddress remote;
 
-    private final ChannelFutureListener continueSendingListener = f -> {
+    private final FutureListener<Void> continueSendingListener = f -> {
         if (connectionSend(connection) != SendResult.NONE) {
             flushParent();
         }
@@ -243,7 +241,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+    protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
@@ -397,7 +395,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private boolean tryFailConnectPromise(Exception e) {
-        ChannelPromise promise = connectPromise;
+        Promise<Void> promise = connectPromise;
         if (promise != null) {
             connectPromise = null;
             promise.tryFailure(e);
@@ -419,7 +417,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private void failPendingConnectPromise() {
-        ChannelPromise promise = QuicheQuicChannel.this.connectPromise;
+        Promise<Void> promise = QuicheQuicChannel.this.connectPromise;
         if (promise != null) {
             QuicheQuicChannel.this.connectPromise = null;
             promise.tryFailure(new QuicClosedChannelException(this.connectionCloseEvent));
@@ -470,7 +468,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    public ChannelFuture close(boolean applicationClose, int error, ByteBuf reason, ChannelPromise promise) {
+    public Future<Void> close(boolean applicationClose, int error, ByteBuf reason, Promise<Void> promise) {
         if (executor().inEventLoop()) {
             close0(applicationClose, error, reason, promise);
         } else {
@@ -479,7 +477,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return promise;
     }
 
-    private void close0(boolean applicationClose, int error, ByteBuf reason, ChannelPromise promise) {
+    private void close0(boolean applicationClose, int error, ByteBuf reason, Promise<Void> promise) {
         if (closeData == null) {
             if (!reason.hasMemoryAddress()) {
                 // Copy to direct buffer as that's what we need.
@@ -547,29 +545,29 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    protected void doRegister(ChannelPromise promise) {
-        promise.setSuccess();
+    protected void doRegister(Promise<Void> promise) {
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doDeregister(ChannelPromise promise) {
-        promise.setSuccess();
+    protected void doDeregister(Promise<Void> promise) {
+        promise.setSuccess(null);
     }
 
     @Override
-    protected void doBind(SocketAddress socketAddress, ChannelPromise promise) {
+    protected void doBind(SocketAddress socketAddress, Promise<Void> promise) {
         promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override
-    protected void doDisconnect(ChannelPromise promise) {
+    protected void doDisconnect(Promise<Void> promise) {
         doClose(promise);
     }
 
     @Override
-    protected void doClose(ChannelPromise promise) {
+    protected void doClose(Promise<Void> promise) {
         if (state == ChannelState.CLOSED) {
-            promise.setSuccess();
+            promise.setSuccess(null);
             return;
         }
         state = ChannelState.CLOSED;
@@ -581,7 +579,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 closeData = null;
             }
             failPendingConnectPromise();
-            promise.setSuccess();
+            promise.setSuccess(null);
             return;
         }
 
@@ -648,7 +646,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
                 local = null;
                 remote = null;
-                promise.setSuccess();
+                promise.setSuccess(null);
             }
         }
     }
@@ -840,7 +838,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         return (streamId & 0x2) == 0 ? QuicStreamType.BIDIRECTIONAL : QuicStreamType.UNIDIRECTIONAL;
     }
 
-    void streamShutdown(long streamId, boolean read, boolean write, int err, ChannelPromise promise) {
+    void streamShutdown(long streamId, boolean read, boolean write, int err, Promise<Void> promise) {
         QuicheQuicConnection conn = this.connection;
         final long connectionAddress;
         try {
@@ -868,7 +866,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (res < 0 && res != Quiche.QUICHE_ERR_DONE) {
             promise.setFailure(Quiche.convertToException(res));
         } else {
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
     }
 
@@ -1393,7 +1391,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     private boolean writePacket(DatagramPacket packet, int maxDatagramSize, int len) {
-        ChannelFuture future = parent().write(packet);
+        Future<Void> future = parent().write(packet);
         if (isSendWindowUsed(maxDatagramSize, len)) {
             // Nothing left in the window, continue later
             future.addListener(continueSendingListener);
@@ -1484,7 +1482,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    protected void doConnect(SocketAddress remote, SocketAddress local, ChannelPromise channelPromise) {
+    protected void doConnect(SocketAddress remote, SocketAddress local, Promise<Void> channelPromise) {
         assert executor().inEventLoop();
         if (server) {
             channelPromise.setFailure(new UnsupportedOperationException());
@@ -1508,7 +1506,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
             parent().connect(new QuicheQuicChannelAddress(QuicheQuicChannel.this))
                     .addListener(f -> {
-                        ChannelPromise connectPromise = QuicheQuicChannel.this.connectPromise;
+                        Promise<Void> connectPromise = QuicheQuicChannel.this.connectPromise;
                         if (connectPromise != null && !f.isSuccess()) {
                             connectPromise.tryFailure(f.cause());
                             // close everything after notify about failure.
@@ -1546,7 +1544,7 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
         if (handler != null) {
             streamChannel.pipeline().addLast(handler);
         }
-        streamChannel.register().addListener((ChannelFuture f) -> {
+        streamChannel.register().addListener(f -> {
             if (f.isSuccess()) {
                 promise.setSuccess(streamChannel);
             } else {
@@ -1902,11 +1900,11 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
                 fireDatagramExtensionEvent(conn);
             }
         } else if (connectPromise != null && Quiche.quiche_conn_is_established(conn.address())) {
-            ChannelPromise promise = connectPromise;
+            Promise<Void> promise = connectPromise;
             connectPromise = null;
             state = ChannelState.ACTIVE;
 
-            boolean promiseSet = promise.trySuccess();
+            boolean promiseSet = promise.trySuccess(null);
             notifyAboutHandshakeCompletionIfNeeded(conn, null);
             fireDatagramExtensionEvent(conn);
             if (!promiseSet) {

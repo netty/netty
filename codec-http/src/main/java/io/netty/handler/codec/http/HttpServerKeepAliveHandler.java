@@ -15,12 +15,11 @@
  */
 package io.netty.handler.codec.http;
 
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOutboundHandler;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.ChannelPromise;
+import io.netty.util.concurrent.Promise;
 
 import static io.netty.handler.codec.http.HttpUtil.*;
 
@@ -66,7 +65,7 @@ public class HttpServerKeepAliveHandler implements ChannelInboundHandler, Channe
     }
 
     @Override
-    public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+    public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
         // modify message on way out to add headers if needed
         if (msg instanceof HttpResponse) {
             final HttpResponse response = (HttpResponse) msg;
@@ -83,7 +82,9 @@ public class HttpServerKeepAliveHandler implements ChannelInboundHandler, Channe
             }
         }
         if (msg instanceof LastHttpContent && !shouldKeepAlive()) {
-            promise.addListener(ChannelFutureListener.CLOSE);
+            promise.addListener(f -> {
+                ctx.close();
+            });
         }
         ctx.write(msg, promise);
     }

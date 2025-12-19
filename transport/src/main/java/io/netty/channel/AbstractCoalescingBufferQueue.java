@@ -17,6 +17,9 @@ package io.netty.channel;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.CompositeByteBuf;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
+import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.UnstableApi;
 import io.netty.util.internal.logging.InternalLogger;
 import io.netty.util.internal.logging.InternalLoggerFactory;
@@ -49,11 +52,11 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param buf to add to the head of the queue
      * @param promise to complete when all the bytes have been consumed and written, can be void.
      */
-    public final void addFirst(ByteBuf buf, ChannelPromise promise) {
+    public final void addFirst(ByteBuf buf, Promise<Void> promise) {
         addFirst(buf, toChannelFutureListener(promise));
     }
 
-    private void addFirst(ByteBuf buf, ChannelFutureListener listener) {
+    private void addFirst(ByteBuf buf, FutureListener<Void> listener) {
         // Touch the message to make it easier to debug buffer leaks.
         buf.touch();
 
@@ -68,7 +71,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * Add a buffer to the end of the queue.
      */
     public final void add(ByteBuf buf) {
-        add(buf, (ChannelFutureListener) null);
+        add(buf, (FutureListener<Void>) null);
     }
 
     /**
@@ -77,7 +80,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param buf to add to the tail of the queue
      * @param promise to complete when all the bytes have been consumed and written, can be void.
      */
-    public final void add(ByteBuf buf, ChannelPromise promise) {
+    public final void add(ByteBuf buf, Promise<Void> promise) {
         // buffers are added before promises so that we naturally 'consume' the entire buffer during removal
         // before we complete it's promise.
         add(buf, toChannelFutureListener(promise));
@@ -89,7 +92,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param buf to add to the tail of the queue
      * @param listener to notify when all the bytes have been consumed and written, can be {@code null}.
      */
-    public final void add(ByteBuf buf, ChannelFutureListener listener) {
+    public final void add(ByteBuf buf, FutureListener<Void> listener) {
         // Touch the message to make it easier to debug buffer leaks.
         buf.touch();
 
@@ -107,7 +110,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param aggregatePromise used to aggregate the promises and listeners for the returned buffer.
      * @return the first {@link ByteBuf} from the queue.
      */
-    public final ByteBuf removeFirst(ChannelPromise aggregatePromise) {
+    public final ByteBuf removeFirst(Promise aggregatePromise) {
         Object entry = bufAndListenerPairs.poll();
         if (entry == null) {
             return null;
@@ -118,8 +121,8 @@ public abstract class AbstractCoalescingBufferQueue {
         decrementReadableBytes(result.readableBytes());
 
         entry = bufAndListenerPairs.peek();
-        if (entry instanceof ChannelFutureListener) {
-            aggregatePromise.addListener((ChannelFutureListener) entry);
+        if (entry instanceof FutureListener) {
+            aggregatePromise.addListener((FutureListener<Void>) entry);
             bufAndListenerPairs.poll();
         }
         return result;
@@ -127,7 +130,7 @@ public abstract class AbstractCoalescingBufferQueue {
 
     /**
      * Remove a {@link ByteBuf} from the queue with the specified number of bytes. Any added buffer who's bytes are
-     * fully consumed during removal will have it's promise completed when the passed aggregate {@link ChannelPromise}
+     * fully consumed during removal will have it's promise completed when the passed aggregate {@link Promise}
      * completes.
      *
      * @param alloc The allocator used if a new {@link ByteBuf} is generated during the aggregation process.
@@ -136,7 +139,7 @@ public abstract class AbstractCoalescingBufferQueue {
      * @param aggregatePromise used to aggregate the promises and listeners for the constituent buffers.
      * @return a {@link ByteBuf} composed of the enqueued buffers.
      */
-    public final ByteBuf remove(ByteBufAllocator alloc, int bytes, ChannelPromise aggregatePromise) {
+    public final ByteBuf remove(ByteBufAllocator alloc, int bytes, Promise<Void> aggregatePromise) {
         checkPositiveOrZero(bytes, "bytes");
         checkNotNull(aggregatePromise, "aggregatePromise");
 
@@ -188,8 +191,8 @@ public abstract class AbstractCoalescingBufferQueue {
                     entryBuffer = null;
                 } else if (entry instanceof DelegatingChannelPromiseNotifier) {
                     aggregatePromise.addListener((DelegatingChannelPromiseNotifier) entry);
-                } else if (entry instanceof ChannelFutureListener) {
-                    aggregatePromise.addListener((ChannelFutureListener) entry);
+                } else if (entry instanceof FutureListener<?>) {
+                    aggregatePromise.addListener((FutureListener<Void>) entry);
                 }
             }
         } catch (Throwable cause) {
@@ -200,8 +203,8 @@ public abstract class AbstractCoalescingBufferQueue {
 
             // Poll the next element if it's a listener that belongs to the ByteBuf.
             entry = bufAndListenerPairs.peek();
-            if (entry instanceof ChannelFutureListener) {
-                aggregatePromise.addListener((ChannelFutureListener) entry);
+            if (entry instanceof FutureListener<?>) {
+                aggregatePromise.addListener((FutureListener<Void>) entry);
                 bufAndListenerPairs.poll();
             }
 
@@ -268,13 +271,13 @@ public abstract class AbstractCoalescingBufferQueue {
                         ctx.write(previousBuf, ctx.newPromise());
                     }
                     previousBuf = (ByteBuf) entry;
-                } else if (entry instanceof ChannelPromise) {
+                } else if (entry instanceof Promise<?>) {
                     decrementReadableBytes(previousBuf.readableBytes());
-                    ctx.write(previousBuf, (ChannelPromise) entry);
+                    ctx.write(previousBuf, (Promise<Void>) entry);
                     previousBuf = null;
                 } else {
                     decrementReadableBytes(previousBuf.readableBytes());
-                    ctx.write(previousBuf).addListener((ChannelFutureListener) entry);
+                    ctx.write(previousBuf).addListener((FutureListener<Void>) entry);
                     previousBuf = null;
                 }
             } catch (Throwable t) {
@@ -362,7 +365,7 @@ public abstract class AbstractCoalescingBufferQueue {
     }
 
     /**
-     * The value to return when {@link #remove(ByteBufAllocator, int, ChannelPromise)} is called but the queue is empty.
+     * The value to return when {@link #remove(ByteBufAllocator, int, Promise)} is called but the queue is empty.
      * @return the {@link ByteBuf} which represents an empty queue.
      */
     protected abstract ByteBuf removeEmptyValue();
@@ -375,7 +378,7 @@ public abstract class AbstractCoalescingBufferQueue {
         return bufAndListenerPairs.size();
     }
 
-    private void releaseAndCompleteAll(ChannelFuture future) {
+    private void releaseAndCompleteAll(Future<Void> future) {
         Throwable pending = null;
         for (;;) {
             Object entry = bufAndListenerPairs.poll();
@@ -388,7 +391,7 @@ public abstract class AbstractCoalescingBufferQueue {
                     decrementReadableBytes(buffer.readableBytes());
                     safeRelease(buffer);
                 } else {
-                    ((ChannelFutureListener) entry).operationComplete(future);
+                    ((FutureListener<Void>) entry).operationComplete(future);
                 }
             } catch (Throwable t) {
                 if (pending == null) {
@@ -416,7 +419,7 @@ public abstract class AbstractCoalescingBufferQueue {
         assert readableBytes >= 0;
     }
 
-    private static ChannelFutureListener toChannelFutureListener(ChannelPromise promise) {
+    private static FutureListener<Void> toChannelFutureListener(Promise<Void> promise) {
         return new DelegatingChannelPromiseNotifier(promise);
     }
 }

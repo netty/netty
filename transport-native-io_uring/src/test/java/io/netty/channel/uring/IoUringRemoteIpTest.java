@@ -16,12 +16,13 @@
 package io.netty.channel.uring;
 
 import io.netty.bootstrap.ServerBootstrap;
-import io.netty.channel.ChannelFuture;
+import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.Assumptions;
@@ -81,19 +82,19 @@ public class IoUringRemoteIpTest {
                     });
 
             // Start the server.
-            ChannelFuture f;
+            Future<Channel> f;
             InetSocketAddress connectAddress;
             if (server == null) {
                 f = b.bind(0).sync();
                 connectAddress = new InetSocketAddress(client,
-                        ((InetSocketAddress) f.channel().localAddress()).getPort());
+                        ((InetSocketAddress) f.getNow().localAddress()).getPort());
             } else {
                 try {
                     f = b.bind(server, 0).sync();
                 } catch (Throwable cause) {
                     throw new TestAbortedException("Bind failed, address family not supported ?", cause);
                 }
-                connectAddress = (InetSocketAddress) f.channel().localAddress();
+                connectAddress = (InetSocketAddress) f.getNow().localAddress();
             }
 
             try {
@@ -105,7 +106,7 @@ public class IoUringRemoteIpTest {
 
             InetSocketAddress addr = (InetSocketAddress) promise.get();
             assertEquals(socket.getLocalSocketAddress(), addr);
-            f.channel().close().sync();
+            f.getNow().close().sync();
         } finally {
             // Shut down all event loops to terminate all threads.
             bossGroup.shutdownGracefully();

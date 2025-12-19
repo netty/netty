@@ -15,10 +15,9 @@
  */
 package io.netty.example.telnet;
 
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.SimpleChannelInboundHandler;
+import io.netty.util.concurrent.Future;
 
 import java.net.InetAddress;
 import java.util.Date;
@@ -57,12 +56,12 @@ public class TelnetServerHandler extends SimpleChannelInboundHandler<String> {
 
         // We do not need to write a ChannelBuffer here.
         // We know the encoder inserted at TelnetPipelineFactory will do the conversion.
-        ChannelFuture future = ctx.write(response);
+        Future<Void> future = ctx.write(response);
 
         // Close the connection after sending 'Have a good day!'
         // if the client has sent 'bye'.
         if (close) {
-            future.addListener(ChannelFutureListener.CLOSE);
+            future.addListener(f -> ctx.close());
         }
     }
 

@@ -17,8 +17,6 @@ package io.netty.example.socksproxy;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -52,7 +50,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                     (FutureListener<Channel>) future -> {
                         final Channel outboundChannel = future.getNow();
                         if (future.isSuccess()) {
-                            ChannelFuture responseFuture = ctx.channel().writeAndFlush(
+                            Future<Void> responseFuture = ctx.channel().writeAndFlush(
                                     new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS));
 
                             responseFuture.addListener(channelFuture -> {
@@ -92,7 +90,7 @@ public final class SocksServerConnectHandler extends SimpleChannelInboundHandler
                     (FutureListener<Channel>) future -> {
                         final Channel outboundChannel = future.getNow();
                         if (future.isSuccess()) {
-                            ChannelFuture responseFuture =
+                            Future<Void> responseFuture =
                                     ctx.channel().writeAndFlush(new DefaultSocks5CommandResponse(
                                             Socks5CommandStatus.SUCCESS,
                                             request.dstAddrType(),

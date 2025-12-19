@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import io.netty.channel.local.LocalIoHandler;
+import io.netty.util.concurrent.Promise;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -61,7 +62,7 @@ public class DefaultChannelPipelineTailTest {
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         try {
             assertTrue(latch.await(1L, TimeUnit.SECONDS));
@@ -85,7 +86,7 @@ public class DefaultChannelPipelineTailTest {
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         channel.close().syncUninterruptibly();
 
@@ -109,7 +110,7 @@ public class DefaultChannelPipelineTailTest {
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         try {
             IOException ex = new IOException("testOnUnhandledInboundException");
@@ -136,7 +137,7 @@ public class DefaultChannelPipelineTailTest {
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         try {
             channel.pipeline().fireChannelRead("testOnUnhandledInboundMessage");
@@ -161,7 +162,7 @@ public class DefaultChannelPipelineTailTest {
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         try {
             channel.pipeline().fireChannelReadComplete();
@@ -186,7 +187,7 @@ public class DefaultChannelPipelineTailTest {
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         try {
             channel.pipeline().fireUserEventTriggered("testOnUnhandledInboundUserEventTriggered");
@@ -211,7 +212,7 @@ public class DefaultChannelPipelineTailTest {
                 .remoteAddress(new InetSocketAddress(0));
 
         Channel channel = bootstrap.connect()
-                .sync().channel();
+                .get();
 
         try {
             channel.pipeline().fireChannelWritabilityChanged();
@@ -233,7 +234,7 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected void doShutdown(ChannelShutdownType type, ChannelPromise promise) {
+        protected void doShutdown(ChannelShutdownType type, Promise<Void> promise) {
             promise.setFailure(new UnsupportedOperationException());
         }
 
@@ -268,38 +269,38 @@ public class DefaultChannelPipelineTailTest {
         }
 
         @Override
-        protected void doDeregister(ChannelPromise promise) {
-            promise.setSuccess();
+        protected void doDeregister(Promise<Void> promise) {
+            promise.setSuccess(null);
         }
 
         @Override
-        protected void doRegister(ChannelPromise promise) {
-            promise.setSuccess();
+        protected void doRegister(Promise<Void> promise) {
+            promise.setSuccess(null);
         }
 
         @Override
-        protected void doBind(SocketAddress localAddress, ChannelPromise promise) {
-            promise.setSuccess();
+        protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
+            promise.setSuccess(null);
         }
 
         @Override
-        protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+        protected void doConnect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
             if (!active) {
                 active = true;
             }
 
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
 
         @Override
-        protected void doDisconnect(ChannelPromise promise) {
-            promise.setSuccess();
+        protected void doDisconnect(Promise<Void> promise) {
+            promise.setSuccess(null);
         }
 
         @Override
-        protected void doClose(ChannelPromise promise) {
+        protected void doClose(Promise<Void> promise) {
             closed = true;
-            promise.setSuccess();
+            promise.setSuccess(null);
         }
 
         @Override

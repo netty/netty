@@ -22,6 +22,8 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.channel.socket.SocketChannel;
 import io.netty.util.AttributeMap;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.Promise;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
@@ -45,7 +47,7 @@ import java.net.SocketAddress;
  * All I/O operations in Netty are asynchronous.  It means any I/O calls will
  * return immediately with no guarantee that the requested I/O operation has
  * been completed at the end of the call.  Instead, you will be returned with
- * a {@link ChannelFuture} instance which will notify you when the requested I/O
+ * a {@link Future} instance which will notify you when the requested I/O
  * operation has succeeded, failed, or canceled.
  *
  * <h3>Channels are hierarchical</h3>
@@ -70,7 +72,7 @@ import java.net.SocketAddress;
  *
  * <h3>Release resources</h3>
  * <p>
- * It is important to call {@link #close()} or {@link #close(ChannelPromise)} to release all
+ * It is important to call {@link #close()} or {@link ChannelOutboundInvoker#close(Promise)} to release all
  * resources once you are done with the {@link Channel}. This ensures all resources are
  * released in a proper way, i.e. filehandles.
  */
@@ -151,10 +153,10 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     SocketAddress remoteAddress();
 
     /**
-     * Returns the {@link ChannelFuture} which will be notified when this
+     * Returns the {@link Future} which will be notified when this
      * channel is closed.  This method always returns the same future instance.
      */
-    ChannelFuture closeFuture();
+    Future<Void> closeFuture();
 
     /**
      * Returns {@code true} if this {@link Channel} has any pending bytes stored that were not written
@@ -247,117 +249,117 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     @Override
-    default ChannelFuture writeAndFlush(Object msg) {
+    default Future<Void> writeAndFlush(Object msg) {
         return pipeline().writeAndFlush(msg);
     }
 
     @Override
-    default ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
+    default Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
         return pipeline().writeAndFlush(msg, promise);
     }
 
     @Override
-    default ChannelFuture write(Object msg, ChannelPromise promise) {
+    default Future<Void> write(Object msg, Promise<Void> promise) {
         return pipeline().write(msg, promise);
     }
 
     @Override
-    default ChannelFuture write(Object msg) {
+    default Future<Void> write(Object msg) {
         return pipeline().write(msg);
     }
 
     @Override
-    default ChannelFuture deregister(ChannelPromise promise) {
+    default Future<Void> deregister(Promise<Void> promise) {
         return pipeline().deregister(promise);
     }
 
     @Override
-    default ChannelFuture close(ChannelPromise promise) {
+    default Future<Void> close(Promise<Void> promise) {
         return pipeline().close(promise);
     }
 
     @Override
-    default ChannelFuture disconnect(ChannelPromise promise) {
+    default Future<Void> disconnect(Promise<Void> promise) {
         return pipeline().disconnect(promise);
     }
 
     @Override
-    default ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress, ChannelPromise promise) {
+    default Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
         return pipeline().connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    default ChannelFuture connect(SocketAddress remoteAddress, ChannelPromise promise) {
+    default Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
         return pipeline().connect(remoteAddress, promise);
     }
 
     @Override
-    default ChannelFuture bind(SocketAddress localAddress, ChannelPromise promise) {
+    default Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
         return pipeline().bind(localAddress, promise);
     }
 
     @Override
-    default ChannelFuture deregister() {
+    default Future<Void> deregister() {
         return pipeline().deregister();
     }
 
     @Override
-    default ChannelFuture close() {
+    default Future<Void> close() {
         return pipeline().close();
     }
 
     @Override
-    default ChannelFuture disconnect() {
+    default Future<Void> disconnect() {
         return pipeline().disconnect();
     }
 
     @Override
-    default ChannelFuture connect(SocketAddress remoteAddress, SocketAddress localAddress) {
+    default Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
         return pipeline().connect(remoteAddress, localAddress);
     }
 
     @Override
-    default ChannelFuture connect(SocketAddress remoteAddress) {
+    default Future<Void> connect(SocketAddress remoteAddress) {
         return pipeline().connect(remoteAddress);
     }
 
     @Override
-    default ChannelFuture bind(SocketAddress localAddress) {
+    default Future<Void> bind(SocketAddress localAddress) {
         return pipeline().bind(localAddress);
     }
 
     @Override
-    default ChannelPromise newPromise() {
+    default <T> Promise<T> newPromise() {
         return pipeline().newPromise();
     }
 
     @Override
-    default ChannelFuture newSucceededFuture() {
-        return pipeline().newSucceededFuture();
+    default <T> Future<T> newSucceededFuture(T result) {
+        return pipeline().newSucceededFuture(result);
     }
 
     @Override
-    default ChannelFuture newFailedFuture(Throwable cause) {
+    default <T> Future<T> newFailedFuture(Throwable cause) {
         return pipeline().newFailedFuture(cause);
     }
 
     @Override
-    default ChannelFuture register() {
+    default Future<Void> register() {
         return pipeline().register();
     }
 
     @Override
-    default ChannelFuture register(ChannelPromise promise) {
+    default Future<Void> register(Promise<Void> promise) {
         return pipeline().register(promise);
     }
 
     @Override
-    default ChannelFuture shutdown(ChannelShutdownType type, ChannelPromise promise) {
+    default Future<Void> shutdown(ChannelShutdownType type, Promise<Void> promise) {
         return pipeline().shutdown(type, promise);
     }
 
     @Override
-    default ChannelFuture shutdown(ChannelShutdownType type) {
+    default Future<Void> shutdown(ChannelShutdownType type) {
         return pipeline().shutdown(type);
     }
 }

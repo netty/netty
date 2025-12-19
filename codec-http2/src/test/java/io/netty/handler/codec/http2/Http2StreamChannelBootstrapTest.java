@@ -76,7 +76,7 @@ public class Http2StreamChannelBootstrapTest {
                             serverChannelLatch.countDown();
                         }
                     });
-            serverChannel = sb.bind(serverAddress).sync().channel();
+            serverChannel = sb.bind(serverAddress).get();
 
             Bootstrap cb = new Bootstrap()
                     .channel(LocalChannel.class)
@@ -87,7 +87,7 @@ public class Http2StreamChannelBootstrapTest {
                             ch.pipeline().addLast(forClient().build(), newMultiplexedHandler());
                         }
                     });
-            clientChannel = cb.connect(serverAddress).sync().channel();
+            clientChannel = cb.connect(serverAddress).get();
             assertTrue(serverChannelLatch.await(3, SECONDS));
 
             final CountDownLatch closeLatch = new CountDownLatch(1);

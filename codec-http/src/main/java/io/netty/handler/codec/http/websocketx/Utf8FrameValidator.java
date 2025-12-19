@@ -16,7 +16,6 @@
 package io.netty.handler.codec.http.websocketx;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 
@@ -116,7 +115,7 @@ public class Utf8FrameValidator implements ChannelInboundHandler {
             }
 
             CloseWebSocketFrame closeFrame = new CloseWebSocketFrame(closeStatus.code(), reasonText);
-            ctx.writeAndFlush(closeFrame).addListener(ChannelFutureListener.CLOSE);
+            ctx.writeAndFlush(closeFrame).addListener(f -> ctx.close());
         }
 
         throw ex;

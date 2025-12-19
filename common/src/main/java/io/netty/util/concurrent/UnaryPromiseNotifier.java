@@ -33,7 +33,7 @@ public final class UnaryPromiseNotifier<T> implements FutureListener<T> {
     }
 
     @Override
-    public void operationComplete(Future<T> future) {
+    public void operationComplete(Future<? extends T> future) {
         cascadeTo(future, promise);
     }
 
