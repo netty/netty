@@ -1254,9 +1254,8 @@ final class AdaptivePoolingAllocator {
             // Called by allocating thread when draining freeList.
             int size = MIN_BUDDY_SIZE << (packed >> 16);
             int offset = (packed & 0xFFFF) * MIN_BUDDY_SIZE;
-            int index = unreserveMatchingBuddy(1, size, offset, 0);
+            unreserveMatchingBuddy(1, size, offset, 0);
             allocatedBytes -= size;
-            assert index != -1;
         }
 
         @Override
@@ -1301,12 +1300,12 @@ final class AdaptivePoolingAllocator {
         }
 
         /**
-         * Un-reserve the matching buddy and return its corresponding buddy index, or -1 on corrupt state.
+         * Un-reserve the matching buddy and return whether there are any other child or sibling reservations.
          */
-        private int unreserveMatchingBuddy(int index, int size, int offset, int currOffset) {
+        private boolean unreserveMatchingBuddy(int index, int size, int offset, int currOffset) {
             byte[] buddies = this.buddies;
             if (buddies.length <= index) {
-                return -1;
+                return false;
             }
             byte buddy = buddies[index];
             int currSize = MIN_BUDDY_SIZE << (buddy & SHIFT_MASK);
@@ -1315,33 +1314,35 @@ final class AdaptivePoolingAllocator {
                 // We're at the right size level.
                 if (currOffset == offset) {
                     buddies[index] &= SHIFT_MASK;
-                    return index;
+                    return false;
                 } else {
-                    return -1;
+                    throw new IllegalStateException("The intended segment was not found at index " +
+                            index + ", for size " + size + " and offset " + offset);
                 }
             }
 
             // We're at a parent size level. Use the target offset to guide our drill-down path.
-            int found;
+            boolean claims;
             int siblingIndex;
             if (offset < currOffset + (currSize >> 1)) {
                 // Must be down the left path.
-                found = unreserveMatchingBuddy(index << 1, size, offset, currOffset);
+                claims = unreserveMatchingBuddy(index << 1, size, offset, currOffset);
                 siblingIndex = (index << 1) + 1;
             } else {
                 // Must be down the rigth path.
-                found = unreserveMatchingBuddy((index << 1) + 1, size, offset, currOffset + (currSize >> 1));
+                claims = unreserveMatchingBuddy((index << 1) + 1, size, offset, currOffset + (currSize >> 1));
                 siblingIndex = index << 1;
             }
-            if (found != -1) {
+            if (!claims) {
+                // No other claims down the path we took. Check if the sibling has claims.
                 byte sibling = buddies[siblingIndex];
                 if ((sibling & SHIFT_MASK) == sibling) {
                     // No claims in the sibling. We can clear this level as well.
                     buddies[index] &= SHIFT_MASK;
+                    return false;
                 }
-                return found;
             }
-            return -1;
+            return true;
         }
 
         private String dot() {
