@@ -43,6 +43,7 @@ import org.bouncycastle.asn1.x509.AccessDescription;
 import org.bouncycastle.asn1.x509.AuthorityInformationAccess;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
+import org.bouncycastle.cert.CertException;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.bouncycastle.cert.ocsp.BasicOCSPResp;
@@ -59,7 +60,12 @@ import java.net.InetAddress;
 import java.net.URL;
 import java.security.SecureRandom;
 import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.Set;
 
 import static io.netty.handler.codec.http.HttpMethod.POST;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
@@ -271,14 +277,90 @@ final class OcspClient {
     /**
      * Validate OCSP response signature
      */
-    private static void validateSignature(BasicOCSPResp resp, X509Certificate certificate) throws OCSPException {
+    static void validateSignature(BasicOCSPResp resp, X509Certificate issuerCertificate) throws OCSPException {
         try {
-            ContentVerifierProvider verifier = new JcaContentVerifierProviderBuilder().build(certificate);
-            if (!resp.isSignatureValid(verifier)) {
-                throw new OCSPException("OCSP signature is not valid");
+            X509CertificateHolder[] certs = resp.getCerts();
+            JcaContentVerifierProviderBuilder providerBuilder = new JcaContentVerifierProviderBuilder();
+
+            // If responder certificate is included, validate the chain
+            if (certs != null && certs.length > 0) {
+
+                // Use the first included certificate to verify the OCSP response signature.
+                X509CertificateHolder responderCert = certs[0];
+
+                // Verify OCSP response signature using responder cert
+                ContentVerifierProvider responderVerifier = providerBuilder.build(responderCert);
+
+                if (!resp.isSignatureValid(responderVerifier)) {
+                    throw new OCSPException("OCSP response signature is not valid");
+                }
+
+                // Verify responder cert is trusted by issuer
+                ContentVerifierProvider issuerVerifier = providerBuilder.build(issuerCertificate);
+
+                // Check if responder cert is directly signed by issuer
+                if (responderCert.isSignatureValid(issuerVerifier)) {
+                    return;
+                }
+
+                // Perform DFS to find a chain of trust from issuer to responder
+                Set<X509CertificateHolder> visited = new HashSet<>();
+                Deque<X509CertificateHolder> stack = new ArrayDeque<>();
+
+                // Find certificates signed directly by issuer
+                for (int i = 0; i < certs.length; i++) {
+                    X509CertificateHolder cert = certs[i];
+                    if (cert.isSignatureValid(issuerVerifier)) {
+                        visited.add(cert);
+                        stack.push(cert);
+                    }
+                }
+
+                boolean trusted = false;
+
+                // DFS through included certificates
+                while (!stack.isEmpty() && !trusted) {
+                    X509CertificateHolder current = stack.pop();
+
+                    if (current.equals(responderCert)) {
+                        trusted = true;
+                        break;
+                    }
+
+                    ContentVerifierProvider currentVerifier = providerBuilder.build(current);
+
+                    for (int i = 0; i < certs.length; i++) {
+                        X509CertificateHolder next = certs[i];
+                        if (visited.contains(next)) {
+                            continue;
+                        }
+
+                        if (next.isSignatureValid(currentVerifier)) {
+                            if (next.equals(responderCert)) {
+                                trusted = true;
+                                break;
+                            }
+                            visited.add(next);
+                            stack.push(next);
+                        }
+                    }
+                }
+
+                if (!trusted) {
+                    throw new OCSPException("OCSP responder certificate is not trusted by issuer");
+                }
+            } else {
+                // Validate signature using issuer certificate
+                ContentVerifierProvider issuerVerifier = providerBuilder.build(issuerCertificate);
+
+                if (!resp.isSignatureValid(issuerVerifier)) {
+                    throw new OCSPException("OCSP response signature is not valid");
+                }
             }
         } catch (OperatorCreationException e) {
             throw new OCSPException("Error validating OCSP-Signature", e);
+        } catch (CertificateException | CertException e) {
+            throw new OCSPException("Error while processing certificates for OCSP signature validation", e);
         }
     }
 
