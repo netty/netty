@@ -16,7 +16,6 @@ package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 
@@ -61,6 +60,6 @@ public interface Http2ConnectionEncoder extends Http2FrameWriter {
      * state checks on the connection/stream.
      */
     @Override
-    Future<Void> writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
+    void writeFrame(ChannelHandlerContext ctx, byte frameType, int streamId,
                             Http2Flags flags, ByteBuf payload, Promise<Void> promise);
 }

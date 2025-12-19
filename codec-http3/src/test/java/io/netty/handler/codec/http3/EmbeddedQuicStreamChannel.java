@@ -34,7 +34,6 @@ import io.netty.handler.codec.quic.QuicStreamFrame;
 import io.netty.handler.codec.quic.QuicStreamPriority;
 import io.netty.handler.codec.quic.QuicStreamType;
 import io.netty.util.AttributeKey;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import org.jetbrains.annotations.Nullable;
 
@@ -110,8 +109,8 @@ final class EmbeddedQuicStreamChannel extends EmbeddedChannel implements QuicStr
     }
 
     @Override
-    public Future<Void> updatePriority(QuicStreamPriority priority, Promise<Void> promise) {
-        return promise.setFailure(new UnsupportedOperationException());
+    public void updatePriority(QuicStreamPriority priority, Promise<Void> promise) {
+        promise.setFailure(new UnsupportedOperationException());
     }
 
     @Override

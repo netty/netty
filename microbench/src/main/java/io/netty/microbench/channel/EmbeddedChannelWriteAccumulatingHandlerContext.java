@@ -52,11 +52,13 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
 
     @Override
     public final Future<Void> write(Object msg) {
-        return write(msg, newPromise());
+        Promise<Void> promise = newPromise();
+        write(msg, promise);
+        return promise;
     }
 
     @Override
-    public final Future<Void> write(Object msg, Promise<Void> promise) {
+    public final void write(Object msg, Promise<Void> promise) {
         try {
             if (msg instanceof ByteBuf) {
                 if (cumulation == null) {
@@ -72,11 +74,10 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
             promise.setFailure(e);
             handleException(e);
         }
-        return promise;
     }
 
     @Override
-    public final Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
+    public final void writeAndFlush(Object msg, Promise<Void> promise) {
         try {
             if (msg instanceof ByteBuf) {
                 ByteBuf buf = (ByteBuf) msg;
@@ -93,11 +94,12 @@ public abstract class EmbeddedChannelWriteAccumulatingHandlerContext extends Emb
             promise.setFailure(e);
             handleException(e);
         }
-        return promise;
     }
 
     @Override
     public final Future<Void> writeAndFlush(Object msg) {
-        return writeAndFlush(msg, newPromise());
+        Promise<Void> promise = newPromise();
+        writeAndFlush(msg, promise);
+        return promise;
     }
 }

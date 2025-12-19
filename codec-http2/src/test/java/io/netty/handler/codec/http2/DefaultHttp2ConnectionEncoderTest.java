@@ -141,55 +141,47 @@ public class DefaultHttp2ConnectionEncoderTest {
         }).when(writer).writeGoAway(eq(ctx), anyInt(), anyInt(), any(ByteBuf.class), any(Promise.class));
         writtenData = new ArrayList<String>();
         writtenPadding = new ArrayList<Integer>();
-        when(writer.writeData(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(),
-                any(Promise.class))).then(new Answer<Future<Void>>() {
-                    @Override
-                    public Future<Void> answer(InvocationOnMock in) throws Throwable {
-                        // Make sure we only receive stream closure on the last frame and that void promises
-                        // are used for all writes except the last one.
-                        Promise<Void> promise = (Promise<Void>) in.getArguments()[5];
-                        if (streamClosed) {
-                            fail("Stream already closed");
-                        } else {
-                            streamClosed = (Boolean) in.getArguments()[4];
-                        }
-                        writtenPadding.add((Integer) in.getArguments()[3]);
-                        ByteBuf data = (ByteBuf) in.getArguments()[2];
-                        writtenData.add(data.toString(UTF_8));
-                        // Release the buffer just as DefaultHttp2FrameWriter does
-                        data.release();
-                        // Let the promise succeed to trigger listeners.
-                        return promise.setSuccess(null);
-                    }
-                });
-        when(writer.writeHeaders(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(),
-                anyInt(), anyBoolean(), any(Promise.class)))
-                .then(new Answer<Future>() {
-                    @Override
-                    public Future<Void> answer(InvocationOnMock invocationOnMock) {
-                        Promise<Void> promise = invocationOnMock.getArgument(8);
-                        if (streamClosed) {
-                            fail("Stream already closed");
-                        } else {
-                            streamClosed = invocationOnMock.getArgument(5);
-                        }
-                        return promise.setSuccess(null);
-                    }
-                });
-        when(writer.writeHeaders(eq(ctx), anyInt(), any(Http2Headers.class),
-                anyInt(), anyBoolean(), any(Promise.class)))
-                .then(new Answer<Future<Void>>() {
-                    @Override
-                    public Future<Void> answer(InvocationOnMock invocationOnMock) {
-                        Promise<Void> promise = invocationOnMock.getArgument(5);
-                        if (streamClosed) {
-                            fail("Stream already closed");
-                        } else {
-                            streamClosed = invocationOnMock.getArgument(4);
-                        }
-                        return promise.setSuccess(null);
-                    }
-                });
+        doAnswer(in -> {
+            // Make sure we only receive stream closure on the last frame and that void promises
+            // are used for all writes except the last one.
+            Promise<Void> promise = (Promise<Void>) in.getArguments()[5];
+            if (streamClosed) {
+                fail("Stream already closed");
+            } else {
+                streamClosed = (Boolean) in.getArguments()[4];
+            }
+            writtenPadding.add((Integer) in.getArguments()[3]);
+            ByteBuf data = (ByteBuf) in.getArguments()[2];
+            writtenData.add(data.toString(UTF_8));
+            // Release the buffer just as DefaultHttp2FrameWriter does
+            data.release();
+            // Let the promise succeed to trigger listeners.
+            promise.setSuccess(null);
+            return null;
+        }).when(writer).writeData(eq(ctx), anyInt(), any(ByteBuf.class), anyInt(), anyBoolean(),
+                any(Promise.class));
+        doAnswer(invocationOnMock -> {
+            Promise<Void> promise = invocationOnMock.getArgument(8);
+            if (streamClosed) {
+                fail("Stream already closed");
+            } else {
+                streamClosed = invocationOnMock.getArgument(5);
+            }
+            promise.setSuccess(null);
+            return null;
+        }).when(writer).writeHeaders(eq(ctx), anyInt(), any(Http2Headers.class), anyInt(), anyShort(), anyBoolean(),
+                anyInt(), anyBoolean(), any(Promise.class));
+        doAnswer(invocationOnMock -> {
+            Promise<Void> promise = invocationOnMock.getArgument(5);
+            if (streamClosed) {
+                fail("Stream already closed");
+            } else {
+                streamClosed = invocationOnMock.getArgument(4);
+            }
+            promise.setSuccess(null);
+            return null;
+        }).when(writer).writeHeaders(eq(ctx), anyInt(), any(Http2Headers.class),
+                anyInt(), anyBoolean(), any(Promise.class));
         payloadCaptor = ArgumentCaptor.forClass(Http2RemoteFlowController.FlowControlled.class);
         doNothing().when(remoteFlow).addFlowControlled(any(Http2Stream.class), payloadCaptor.capture());
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
@@ -361,9 +353,9 @@ public class DefaultHttp2ConnectionEncoderTest {
         encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise);
 
         Promise<Void> promise2 = newPromise();
-        Future<Void> future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise2);
-        assertTrue(future.isDone());
-        assertFalse(future.isSuccess());
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise2);
+        assertTrue(promise2.isDone());
+        assertFalse(promise2.isSuccess());
 
         verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
                 eq(0), eq(false), eq(promise));
@@ -380,9 +372,9 @@ public class DefaultHttp2ConnectionEncoderTest {
         when(remoteFlow.hasFlowControlled(eq(stream))).thenReturn(true);
 
         Promise<Void> promise2 = newPromise();
-        Future<Void> future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise2);
-        assertTrue(future.isDone());
-        assertFalse(future.isSuccess());
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise2);
+        assertTrue(promise2.isDone());
+        assertFalse(promise2.isSuccess());
 
         verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
                 eq(0), eq(false), eq(promise));
@@ -407,9 +399,9 @@ public class DefaultHttp2ConnectionEncoderTest {
         encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, true, promise2);
 
         Promise<Void> promise3 = newPromise();
-        Future<Void> future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos, promise3);
-        assertTrue(future.isDone());
-        assertFalse(future.isSuccess());
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos, promise3);
+        assertTrue(promise3.isDone());
+        assertFalse(promise3.isSuccess());
 
         verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
                 eq(0), eq(false), eq(promise));
@@ -448,9 +440,9 @@ public class DefaultHttp2ConnectionEncoderTest {
         encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise2);
 
         Promise<Void> promise3 = newPromise();
-        Future<Void> future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos, promise3);
-        assertTrue(future.isDone());
-        assertEquals(eos, future.isSuccess());
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos, promise3);
+        assertTrue(promise3.isDone());
+        assertEquals(eos, promise3.isSuccess());
 
         verify(writer, times(infoHeaderCount)).writeHeaders(eq(ctx), eq(streamId), eq(infoHeaders),
                 eq(0), eq(false), any(Promise.class));
@@ -491,9 +483,9 @@ public class DefaultHttp2ConnectionEncoderTest {
         encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, true, promise2);
 
         Promise<Void> promise3 = newPromise();
-        Future<Void> future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos, promise3);
-        assertTrue(future.isDone());
-        assertFalse(future.isSuccess());
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos, promise3);
+        assertTrue(promise3.isDone());
+        assertFalse(promise3.isSuccess());
 
         verify(writer, times(1)).writeHeaders(eq(ctx), eq(streamId), eq(EmptyHttp2Headers.INSTANCE),
                 eq(0), eq(false), eq(promise));
@@ -536,9 +528,9 @@ public class DefaultHttp2ConnectionEncoderTest {
         encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, false, promise2);
 
         Promise<Void> promise3 = newPromise();
-        Future<Void> future = encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos, promise3);
-        assertTrue(future.isDone());
-        assertEquals(eos, future.isSuccess());
+        encoder.writeHeaders(ctx, streamId, EmptyHttp2Headers.INSTANCE, 0, eos, promise3);
+        assertTrue(promise3.isDone());
+        assertEquals(eos, promise3.isSuccess());
 
         verify(writer, times(infoHeaderCount)).writeHeaders(eq(ctx), eq(streamId), eq(infoHeaders),
                 eq(0), eq(false), any(Promise.class));
@@ -554,10 +546,11 @@ public class DefaultHttp2ConnectionEncoderTest {
     public void pushPromiseWriteAfterGoAwayReceivedShouldFail() throws Exception {
         createStream(STREAM_ID, false);
         goAwayReceived(0);
-        Future<Void> future = encoder.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0,
-                newPromise());
-        assertTrue(future.isDone());
-        assertFalse(future.isSuccess());
+        Promise<Void> promise = newPromise();
+        encoder.writePushPromise(ctx, STREAM_ID, PUSH_STREAM_ID, EmptyHttp2Headers.INSTANCE, 0,
+                promise);
+        assertTrue(promise.isDone());
+        assertFalse(promise.isSuccess());
     }
 
     @Test
@@ -711,14 +704,11 @@ public class DefaultHttp2ConnectionEncoderTest {
         final Promise<Void> promise = newPromise();
         final Throwable ex = new RuntimeException();
         // Fake an encoding error, like HPACK's HeaderListSizeException
-        when(writer.writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0), eq(true), eq(promise)))
-            .thenAnswer(new Answer<Future<Void>>() {
-                @Override
-                public Future<Void> answer(InvocationOnMock invocation) {
-                    promise.setFailure(ex);
-                    return promise;
-                }
-            });
+        doAnswer(invocation -> {
+            promise.setFailure(ex);
+            return null;
+        }).when(writer).writeHeaders(eq(ctx), eq(STREAM_ID),
+                eq(EmptyHttp2Headers.INSTANCE), eq(0), eq(true), eq(promise));
 
         writeAllFlowControlledFrames();
         Http2Stream stream = createStream(STREAM_ID, false);
@@ -737,14 +727,11 @@ public class DefaultHttp2ConnectionEncoderTest {
         final Promise<Void> promise = newPromise();
         final Throwable ex = new RuntimeException();
         // Fake an encoding error, like HPACK's HeaderListSizeException
-        when(writer.writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE), eq(0), eq(true), eq(promise)))
-            .thenAnswer(new Answer<Future<Void>>() {
-                @Override
-                public Future<Void> answer(InvocationOnMock invocation) {
-                    promise.setFailure(ex);
-                    return promise;
-                }
-            });
+        doAnswer(invocation -> {
+            promise.setFailure(ex);
+            return null;
+        }).when(writer).writeHeaders(eq(ctx), eq(STREAM_ID), eq(EmptyHttp2Headers.INSTANCE),
+                eq(0), eq(true), eq(promise));
 
         writeAllFlowControlledFrames();
         encoder.writeHeaders(ctx, STREAM_ID, EmptyHttp2Headers.INSTANCE, 0, true, promise);

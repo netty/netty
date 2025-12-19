@@ -288,14 +288,16 @@ public class Http2ConnectionRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() throws Http2Exception {
-                http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, false, newPromise())
-                        .addListener(future -> clientHeadersWriteException.set(future.cause()));
+                Promise<Void> headersPromise = newPromise();
+                http2Client.encoder().writeHeaders(ctx(), 3, headers, 0, false, headersPromise);
+                headersPromise.addListener(future -> clientHeadersWriteException.set(future.cause()));
                 // It is expected that this write should fail locally and the remote peer will never see this.
-                http2Client.encoder().writeData(ctx(), 3, Unpooled.buffer(), 0, true, newPromise())
-                    .addListener(future -> {
-                        clientDataWriteException.set(future.cause());
-                        clientDataWrite.countDown();
-                    });
+                Promise<Void> dataPromise = newPromise();
+                http2Client.encoder().writeData(ctx(), 3, Unpooled.buffer(), 0, true, dataPromise);
+                dataPromise.addListener(future -> {
+                    clientDataWriteException.set(future.cause());
+                    clientDataWrite.countDown();
+                });
                 http2Client.flush(ctx());
             }
         });
@@ -322,11 +324,12 @@ public class Http2ConnectionRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() throws Http2Exception {
-                http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, true,
-                        newPromise()).addListener(future -> {
-                            clientHeadersWriteException2.set(future.cause());
-                            clientHeadersLatch.countDown();
-                        });
+                Promise<Void> headersPromise = newPromise();
+                http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, true, headersPromise);
+                headersPromise.addListener(future -> {
+                    clientHeadersWriteException2.set(future.cause());
+                    clientHeadersLatch.countDown();
+                });
                 http2Client.flush(ctx());
             }
         });
@@ -543,11 +546,12 @@ public class Http2ConnectionRoundtripTest {
         runInChannel(serverConnectedChannel, new Http2Runnable() {
             @Override
             public void run() throws Http2Exception {
-                http2Server.encoder().writeHeaders(serverCtx(), streamId, headers, 0, true, serverNewPromise())
-                        .addListener(future -> {
-                            serverWriteHeadersCauseRef.set(future.cause());
-                            serverWriteHeadersLatch.countDown();
-                        });
+                Promise<Void> headersPromise = serverNewPromise();
+                http2Server.encoder().writeHeaders(serverCtx(), streamId, headers, 0, true, headersPromise);
+                headersPromise.addListener(future -> {
+                    serverWriteHeadersCauseRef.set(future.cause());
+                    serverWriteHeadersLatch.countDown();
+                });
                 http2Server.flush(serverCtx());
             }
         });
@@ -889,11 +893,12 @@ public class Http2ConnectionRoundtripTest {
         runInChannel(clientChannel, new Http2Runnable() {
             @Override
             public void run() throws Http2Exception {
-                Future<Void> f = http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, (short) 16, false, 0,
-                        true, newPromise());
-                clientWriteAfterGoAwayFutureRef.set(f);
+                Promise<Void> promise = newPromise();
+                http2Client.encoder().writeHeaders(ctx(), 5, headers, 0, (short) 16, false, 0,
+                        true, promise);
+                clientWriteAfterGoAwayFutureRef.set(promise);
                 http2Client.flush(ctx());
-                f.addListener(future -> clientWriteAfterGoAwayLatch.countDown());
+                promise.addListener(future -> clientWriteAfterGoAwayLatch.countDown());
             }
         });
 

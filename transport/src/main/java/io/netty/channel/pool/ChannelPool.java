@@ -42,7 +42,7 @@ public interface ChannelPool extends Closeable {
      * <strong>Its important that an acquired is always released to the pool again, even if the {@link Channel}
      * is explicitly closed..</strong>
      */
-    Future<Channel> acquire(Promise<Channel> promise);
+    void acquire(Promise<Channel> promise);
 
     /**
      * Release a {@link Channel} back to this {@link ChannelPool}. The returned {@link Future} is notified once
@@ -54,7 +54,7 @@ public interface ChannelPool extends Closeable {
      * Release a {@link Channel} back to this {@link ChannelPool}. The given {@link Promise} is notified once
      * the release is successful and failed otherwise. When failed the {@link Channel} will automatically closed.
      */
-    Future<Void> release(Channel channel, Promise<Void> promise);
+    void release(Channel channel, Promise<Void> promise);
 
     @Override
     void close();

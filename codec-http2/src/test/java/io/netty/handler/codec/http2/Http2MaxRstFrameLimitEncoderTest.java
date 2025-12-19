@@ -46,6 +46,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_MAX_FRAME_SIZE
 import static io.netty.handler.codec.http2.Http2Error.CANCEL;
 import static io.netty.handler.codec.http2.Http2Error.ENHANCE_YOUR_CALM;
 import static io.netty.handler.codec.http2.Http2Error.NO_ERROR;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
@@ -96,23 +97,17 @@ public class Http2MaxRstFrameLimitEncoderTest {
         when(configuration.frameSizePolicy()).thenReturn(frameSizePolicy);
         when(frameSizePolicy.maxFrameSize()).thenReturn(DEFAULT_MAX_FRAME_SIZE);
 
-        when(writer.writeRstStream(eq(ctx), anyInt(), anyLong(), any(Promise.class)))
-                .thenAnswer(new Answer<>() {
-                    @Override
-                    public Future<Void> answer(InvocationOnMock invocationOnMock) {
-                        return handlePromise(invocationOnMock, 3);
-                    }
-                });
-        when(writer.writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class),
-                any(Promise.class))).thenAnswer(new Answer<>() {
-            @Override
-            public Future<Void> answer(InvocationOnMock invocationOnMock) {
-                ReferenceCountUtil.release(invocationOnMock.getArgument(3));
-                Promise<Void> promise = invocationOnMock.getArgument(4);
-                goAwayPromises.offer(promise);
-                return promise;
-            }
-        });
+        doAnswer(invocationOnMock -> {
+            handlePromise(invocationOnMock, 3);
+            return null;
+        }).when(writer).writeRstStream(eq(ctx), anyInt(), anyLong(), any(Promise.class));
+        doAnswer(invocationOnMock -> {
+            ReferenceCountUtil.release(invocationOnMock.getArgument(3));
+            Promise<Void> promise = invocationOnMock.getArgument(4);
+            goAwayPromises.offer(promise);
+            return null;
+        }).when(writer).writeGoAway(any(ChannelHandlerContext.class), anyInt(), anyLong(), any(ByteBuf.class),
+                any(Promise.class));
         Http2Connection connection = new DefaultHttp2Connection(false);
         connection.remote().flowController(new DefaultHttp2RemoteFlowController(connection));
         connection.local().flowController(new DefaultHttp2LocalFlowController(connection).frameWriter(writer));
@@ -171,10 +166,16 @@ public class Http2MaxRstFrameLimitEncoderTest {
     @ParameterizedTest
     @EnumSource(Http2Error.class)
     public void testLimitRst(Http2Error error) {
-        assertTrue(encoder.writeRstStream(ctx, 1, error.code(), newPromise()).isSuccess());
-        assertTrue(encoder.writeRstStream(ctx, 1, error.code(), newPromise()).isSuccess());
+        Promise<Void> promise = newPromise();
+        encoder.writeRstStream(ctx, 1, error.code(), promise);
+        assertTrue(promise.isSuccess());
+        promise = newPromise();
+        encoder.writeRstStream(ctx, 1, error.code(), promise);
+        assertTrue(promise.isSuccess());
         verifyFlushAndClose(0, false);
-        assertTrue(encoder.writeRstStream(ctx, 1, error.code(), newPromise()).isSuccess());
+        promise = newPromise();
+        encoder.writeRstStream(ctx, 1, error.code(), promise);
+        assertTrue(promise.isSuccess());
         if (error == CANCEL || error == NO_ERROR) {
             // CANCEL and NO_ERROR are ignored as these will not be caused by a stream error.
             verifyFlushAndClose(0, false);
@@ -186,11 +187,17 @@ public class Http2MaxRstFrameLimitEncoderTest {
     @ParameterizedTest
     @EnumSource(Http2Error.class)
     public void testLimitRstReset(Http2Error error) throws Exception {
-        assertTrue(encoder.writeRstStream(ctx, 1, error.code(), newPromise()).isSuccess());
-        assertTrue(encoder.writeRstStream(ctx, 1, error.code(), newPromise()).isSuccess());
+        Promise<Void> promise = newPromise();
+        encoder.writeRstStream(ctx, 1, error.code(), promise);
+        assertTrue(promise.isSuccess());
+        promise = newPromise();
+        encoder.writeRstStream(ctx, 1, error.code(), promise);
+        assertTrue(promise.isSuccess());
         verifyFlushAndClose(0, false);
         ticker.advance(1, TimeUnit.SECONDS);
-        assertTrue(encoder.writeRstStream(ctx, 1, error.code(), newPromise()).isSuccess());
+        promise = newPromise();
+        encoder.writeRstStream(ctx, 1, error.code(), promise);
+        assertTrue(promise.isSuccess());
         verifyFlushAndClose(0, false);
     }
 

@@ -500,33 +500,33 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     @Override
-    public Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline().bind(localAddress, promise);
+    public void bind(SocketAddress localAddress, Promise<Void> promise) {
+        pipeline().bind(localAddress, promise);
     }
 
     @Override
-    public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-        return pipeline().connect(remoteAddress, promise);
+    public void connect(SocketAddress remoteAddress, Promise<Void> promise) {
+        pipeline().connect(remoteAddress, promise);
     }
 
     @Override
-    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        return pipeline().connect(remoteAddress, localAddress, promise);
+    public void connect(SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
+        pipeline().connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public Future<Void> disconnect(Promise<Void> promise) {
-        return pipeline().disconnect(promise);
+    public void disconnect(Promise<Void> promise) {
+        pipeline().disconnect(promise);
     }
 
     @Override
-    public Future<Void> close(Promise<Void> promise) {
-        return pipeline().close(promise);
+    public void close(Promise<Void> promise) {
+        pipeline().close(promise);
     }
 
     @Override
-    public Future<Void> deregister(Promise<Void> promise) {
-        return pipeline().deregister(promise);
+    public void deregister(Promise<Void> promise) {
+        pipeline().deregister(promise);
     }
 
     @Override
@@ -535,13 +535,13 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     @Override
-    public Future<Void> write(Object msg, Promise<Void> promise) {
-        return pipeline().write(msg, promise);
+    public void write(Object msg, Promise<Void> promise) {
+        pipeline().write(msg, promise);
     }
 
     @Override
-    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-        return pipeline().writeAndFlush(msg, promise);
+    public void writeAndFlush(Object msg, Promise<Void> promise) {
+        pipeline().writeAndFlush(msg, promise);
     }
 
     @Override

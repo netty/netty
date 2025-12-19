@@ -213,7 +213,9 @@ public class EmbeddedChannelTest {
         testFireChannelInactiveAndUnregistered(new Action() {
             @Override
             public Future<Void> doRun(Channel channel) {
-                return channel.close(channel.newPromise());
+                Promise<Void> promise = channel.newPromise();
+                channel.close(promise);
+                return promise;
             }
         });
     }
@@ -231,7 +233,9 @@ public class EmbeddedChannelTest {
         testFireChannelInactiveAndUnregistered(new Action() {
             @Override
             public Future<Void> doRun(Channel channel) {
-                return channel.disconnect(channel.newPromise());
+                Promise<Void> promise = channel.newPromise();
+                channel.disconnect(promise);
+                return promise;
             }
         });
     }

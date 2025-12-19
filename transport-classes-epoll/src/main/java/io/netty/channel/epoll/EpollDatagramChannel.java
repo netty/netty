@@ -33,7 +33,6 @@ import io.netty.channel.unix.Errors.NativeIoException;
 import io.netty.channel.unix.UnixChannelUtil;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.UncheckedBooleanSupplier;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.RecyclableArrayList;
@@ -142,12 +141,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    public Future<Void> joinGroup(InetAddress multicastAddress) {
-        return joinGroup(multicastAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
+    public void joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
         SocketProtocolFamily family = socket.protocolFamily();
         switch (family) {
             case INET6:
@@ -157,38 +151,26 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                     if (iface == null) {
                         iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
                     }
-                    return joinGroup(multicastAddress, iface, null, promise);
+                    joinGroup(multicastAddress, iface, null, promise);
                 } catch (SocketException e) {
                     promise.setFailure(e);
                 }
-                return promise;
+                return;
             default:
-                return promise.setFailure(
+                promise.setFailure(
                         new UnsupportedOperationException("Not supported for SocketProtocolFamily: " + family));
         }
     }
 
     @Override
-    public Future<Void> joinGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return joinGroup(multicastAddress, networkInterface, newPromise());
-    }
-
-    @Override
-    public Future<Void> joinGroup(
+    public void joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface,
             Promise<Void> promise) {
-        return joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
+        joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public Future<Void> joinGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return joinGroup(multicastAddress, networkInterface, source, newPromise());
-    }
-
-    @Override
-    public Future<Void> joinGroup(
+    public void joinGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
             final InetAddress source, final Promise<Void> promise) {
 
@@ -209,9 +191,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         }
                     });
                 }
-                return promise;
+                return;
             default:
-                return promise.setFailure(
+                promise.setFailure(
                         new UnsupportedOperationException("Not supported for SocketProtocolFamily: " + family));
         }
     }
@@ -230,43 +212,25 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    public Future<Void> leaveGroup(InetAddress multicastAddress) {
-        return leaveGroup(multicastAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
+    public void leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
-            return leaveGroup(
+            leaveGroup(
                     multicastAddress, NetworkInterface.getByInetAddress(
                             ((InetSocketAddress) localAddress()).getAddress()), null, promise);
         } catch (IOException e) {
             promise.setFailure(e);
         }
-        return promise;
     }
 
     @Override
-    public Future<Void> leaveGroup(
-            InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return leaveGroup(multicastAddress, networkInterface, newPromise());
-    }
-
-    @Override
-    public Future<Void> leaveGroup(
+    public void leaveGroup(
             InetSocketAddress multicastAddress,
             NetworkInterface networkInterface, Promise<Void> promise) {
-        return leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
+        leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public Future<Void> leaveGroup(
-            InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return leaveGroup(multicastAddress, networkInterface, source, newPromise());
-    }
-
-    @Override
-    public Future<Void> leaveGroup(
+    public void leaveGroup(
             final InetAddress multicastAddress, final NetworkInterface networkInterface, final InetAddress source,
             final Promise<Void> promise) {
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
@@ -287,9 +251,9 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
                         }
                     });
                 }
-                return promise;
+                return;
             default:
-                return promise.setFailure(
+                promise.setFailure(
                         new UnsupportedOperationException("Not supported for SocketProtocolFamily: " + family));
         }
     }
@@ -308,14 +272,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    public Future<Void> block(
-            InetAddress multicastAddress, NetworkInterface networkInterface,
-            InetAddress sourceToBlock) {
-        return block(multicastAddress, networkInterface, sourceToBlock, newPromise());
-    }
-
-    @Override
-    public Future<Void> block(
+    public void block(
             final InetAddress multicastAddress, final NetworkInterface networkInterface,
             final InetAddress sourceToBlock, final Promise<Void> promise) {
         ObjectUtil.checkNotNull(multicastAddress, "multicastAddress");
@@ -323,16 +280,10 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
         ObjectUtil.checkNotNull(networkInterface, "networkInterface");
 
         promise.setFailure(new UnsupportedOperationException("Multicast block not supported"));
-        return promise;
     }
 
     @Override
-    public Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
-        return block(multicastAddress, sourceToBlock, newPromise());
-    }
-
-    @Override
-    public Future<Void> block(
+    public void block(
             InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> promise) {
 
         SocketProtocolFamily family = socket.protocolFamily();
@@ -340,16 +291,15 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             case INET6:
             case INET:
                 try {
-                    return block(
-                            multicastAddress,
+                    block(multicastAddress,
                             NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress()),
                             sourceToBlock, promise);
                 } catch (Throwable e) {
                     promise.setFailure(e);
                 }
-                return promise;
+                return;
             default:
-                return promise.setFailure(
+                promise.setFailure(
                         new UnsupportedOperationException("Not supported for SocketProtocolFamily: " + family));
         }
     }

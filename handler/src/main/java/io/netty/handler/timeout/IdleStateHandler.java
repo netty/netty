@@ -278,11 +278,10 @@ public class IdleStateHandler implements ChannelInboundHandler, ChannelOutboundH
 
     @Override
     public void write(ChannelHandlerContext ctx, Object msg, Promise<Void> promise) {
+        ctx.write(msg, promise);
         // Allow writing with void promise if handler is only configured for read timeout events.
         if (writerIdleTimeNanos > 0 || allIdleTimeNanos > 0) {
-            ctx.write(msg, promise).addListener(writeListener);
-        } else {
-            ctx.write(msg, promise);
+            promise.addListener(writeListener);
         }
     }
 

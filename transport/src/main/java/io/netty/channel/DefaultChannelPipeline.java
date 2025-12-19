@@ -967,39 +967,39 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final Future<Void> register(Promise<Void> promise) {
-        return tail.register(promise);
+    public final void register(Promise<Void> promise) {
+        tail.register(promise);
     }
 
     @Override
-    public final Future<Void> bind(SocketAddress localAddress, Promise<Void> promise) {
-        return tail.bind(localAddress, promise);
+    public final void bind(SocketAddress localAddress, Promise<Void> promise) {
+        tail.bind(localAddress, promise);
     }
 
     @Override
-    public final Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-        return tail.connect(remoteAddress, promise);
+    public final void connect(SocketAddress remoteAddress, Promise<Void> promise) {
+        tail.connect(remoteAddress, promise);
     }
 
     @Override
-    public final Future<Void> connect(
+    public final void connect(
             SocketAddress remoteAddress, SocketAddress localAddress, Promise<Void> promise) {
-        return tail.connect(remoteAddress, localAddress, promise);
+        tail.connect(remoteAddress, localAddress, promise);
     }
 
     @Override
-    public final Future<Void> disconnect(Promise<Void> promise) {
-        return tail.disconnect(promise);
+    public final void disconnect(Promise<Void> promise) {
+        tail.disconnect(promise);
     }
 
     @Override
-    public final Future<Void> close(Promise<Void> promise) {
-        return tail.close(promise);
+    public final void close(Promise<Void> promise) {
+        tail.close(promise);
     }
 
     @Override
-    public final Future<Void> deregister(final Promise<Void> promise) {
-        return tail.deregister(promise);
+    public final void deregister(final Promise<Void> promise) {
+        tail.deregister(promise);
     }
 
     @Override
@@ -1014,13 +1014,13 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final Future<Void> write(Object msg, Promise<Void> promise) {
-        return tail.write(msg, promise);
+    public final void write(Object msg, Promise<Void> promise) {
+        tail.write(msg, promise);
     }
 
     @Override
-    public final Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
-        return tail.writeAndFlush(msg, promise);
+    public final void writeAndFlush(Object msg, Promise<Void> promise) {
+        tail.writeAndFlush(msg, promise);
     }
 
     @Override
@@ -1029,8 +1029,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final Future<Void> shutdown(ChannelShutdownType type, Promise<Void> promise) {
-        return tail.shutdown(type, promise);
+    public final void shutdown(ChannelShutdownType type, Promise<Void> promise) {
+        tail.shutdown(type, promise);
     }
 
     private void checkDuplicateName(String name) {

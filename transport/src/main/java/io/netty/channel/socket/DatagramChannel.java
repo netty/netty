@@ -68,7 +68,9 @@ public interface DatagramChannel extends Channel {
      * Joins a multicast group and notifies the {@link Future} once the operation completes.
      */
     default Future<Void> joinGroup(InetAddress multicastAddress) {
-        return joinGroup(multicastAddress, newPromise());
+        Promise<Void> promise = newPromise();
+        joinGroup(multicastAddress, promise);
+        return promise;
     }
 
     /**
@@ -76,14 +78,16 @@ public interface DatagramChannel extends Channel {
      * <p>
      * The given {@link Future} will be notified and also returned.
      */
-    Future<Void> joinGroup(InetAddress multicastAddress, Promise<Void> future);
+    void joinGroup(InetAddress multicastAddress, Promise<Void> future);
 
     /**
      * Joins the specified multicast group at the specified interface and notifies the {@link Future}
      * once the operation completes.
      */
     default Future<Void> joinGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return joinGroup(multicastAddress, networkInterface, newPromise());
+        Promise<Void> promise = newPromise();
+        joinGroup(multicastAddress, networkInterface, promise);
+        return promise;
     }
 
     /**
@@ -92,7 +96,7 @@ public interface DatagramChannel extends Channel {
      * <p>
      * The given {@link Future} will be notified and also returned.
      */
-    Future<Void> joinGroup(
+    void joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface, Promise<Void> future);
 
     /**
@@ -101,7 +105,9 @@ public interface DatagramChannel extends Channel {
      */
     default Future<Void> joinGroup(InetAddress multicastAddress,
                                    NetworkInterface networkInterface, InetAddress source) {
-        return  joinGroup(multicastAddress, networkInterface, source, newPromise());
+        Promise<Void> promise = newPromise();
+        joinGroup(multicastAddress, networkInterface, source, promise);
+        return promise;
     }
 
     /**
@@ -110,14 +116,16 @@ public interface DatagramChannel extends Channel {
      * <p>
      * The given {@link Future} will be notified and also returned.
      */
-    Future<Void> joinGroup(
+    void joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source, Promise<Void> future);
 
     /**
      * Leaves a multicast group and notifies the {@link Future} once the operation completes.
      */
     default Future<Void> leaveGroup(InetAddress multicastAddress) {
-        return leaveGroup(multicastAddress, newPromise());
+        Promise<Void> promise = newPromise();
+        leaveGroup(multicastAddress, promise);
+        return promise;
     }
 
     /**
@@ -125,14 +133,16 @@ public interface DatagramChannel extends Channel {
      * <p>
      * The given {@link Future} will be notified and also returned.
      */
-    Future<Void> leaveGroup(InetAddress multicastAddress, Promise<Void> future);
+    void leaveGroup(InetAddress multicastAddress, Promise<Void> future);
 
     /**
      * Leaves a multicast group on a specified local interface and notifies the {@link Future} once the
      * operation completes.
      */
     default Future<Void> leaveGroup(InetSocketAddress multicastAddress, NetworkInterface networkInterface) {
-        return leaveGroup(multicastAddress, networkInterface, newPromise());
+        Promise<Void> promise = newPromise();
+        leaveGroup(multicastAddress, networkInterface, promise);
+        return promise;
     }
 
     /**
@@ -141,7 +151,7 @@ public interface DatagramChannel extends Channel {
      * <p>
      * The given {@link Future} will be notified and also returned.
      */
-    Future<Void> leaveGroup(
+    void leaveGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface, Promise<Void> future);
 
     /**
@@ -151,7 +161,9 @@ public interface DatagramChannel extends Channel {
      */
     default Future<Void> leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source) {
-        return leaveGroup(multicastAddress, networkInterface, source, newPromise());
+        Promise<Void> promise = newPromise();
+        leaveGroup(multicastAddress, networkInterface, source, promise);
+        return promise;
     }
 
     /**
@@ -160,7 +172,7 @@ public interface DatagramChannel extends Channel {
      * <p>
      * The given {@link Future} will be notified and also returned.
      */
-    Future<Void> leaveGroup(
+    void leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
             Promise<Void> future);
 
@@ -173,7 +185,9 @@ public interface DatagramChannel extends Channel {
     default Future<Void> block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress sourceToBlock) {
-        return block(multicastAddress, networkInterface, sourceToBlock, newPromise());
+        Promise<Void> promise = newPromise();
+        block(multicastAddress, networkInterface, sourceToBlock, promise);
+        return promise;
     }
 
     /**
@@ -182,7 +196,7 @@ public interface DatagramChannel extends Channel {
      * <p>
      * The given {@link Future} will be notified and also returned.
      */
-    Future<Void> block(
+    void block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress sourceToBlock, Promise<Void> future);
 
@@ -193,7 +207,9 @@ public interface DatagramChannel extends Channel {
      * The given {@link Future} will be notified and also returned.
      */
     default Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
-        return block(multicastAddress, sourceToBlock, newPromise());
+        Promise<Void> promise = newPromise();
+        block(multicastAddress, sourceToBlock, promise);
+        return promise;
     }
 
     /**
@@ -202,8 +218,7 @@ public interface DatagramChannel extends Channel {
      * <p>
      * The given {@link Future} will be notified and also returned.
      */
-    Future<Void> block(
-                    InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> future);
+    void block(InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> future);
 
     @Override
     DatagramChannel read();

@@ -85,11 +85,11 @@ public class DefaultHttp2FrameWriterTest {
                     outbound.writeBytes((ByteBuf) msg);
                 }
                 ReferenceCountUtil.release(msg);
-                return future;
+                return null;
             }
         };
         when(ctx.write(any())).then(answer);
-        when(ctx.write(any(), any(Promise.class))).then(answer);
+        doAnswer(answer).when(ctx).write(any(), any(Promise.class));
         when(ctx.alloc()).thenReturn(UnpooledByteBufAllocator.DEFAULT);
         when(ctx.channel()).thenReturn(channel);
         when(ctx.executor()).thenReturn(ImmediateEventExecutor.INSTANCE);

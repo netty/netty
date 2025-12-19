@@ -377,45 +377,10 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public Future<Void> register() {
-        return register(newPromise());
-    }
-
-    @Override
-    public Future<Void> bind(SocketAddress localAddress) {
-        return bind(localAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> connect(SocketAddress remoteAddress) {
-        return connect(remoteAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> connect(SocketAddress remoteAddress, SocketAddress localAddress) {
-        return connect(remoteAddress, localAddress, newPromise());
-    }
-
-    @Override
-    public Future<Void> disconnect() {
-        return disconnect(newPromise());
-    }
-
-    @Override
-    public Future<Void> close() {
-        return close(newPromise());
-    }
-
-    @Override
-    public Future<Void> deregister() {
-        return deregister(newPromise());
-    }
-
-    @Override
-    public Future<Void> register(final Promise<Void> promise) {
+    public void register(final Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise;
+            return;
         }
 
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_REGISTER);
@@ -436,16 +401,14 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             safeExecute(executor, () -> register(promise), promise, null, false);
         }
-
-        return promise;
     }
 
     @Override
-    public Future<Void> bind(final SocketAddress localAddress, final Promise<Void> promise) {
+    public void bind(final SocketAddress localAddress, final Promise<Void> promise) {
         ObjectUtil.checkNotNull(localAddress, "localAddress");
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise;
+            return;
         }
 
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_BIND);
@@ -466,22 +429,21 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             safeExecute(executor, () -> bind(localAddress, promise), promise, null, false);
         }
-        return promise;
     }
 
     @Override
-    public Future<Void> connect(SocketAddress remoteAddress, Promise<Void> promise) {
-        return connect(remoteAddress, null, promise);
+    public void connect(SocketAddress remoteAddress, Promise<Void> promise) {
+        connect(remoteAddress, null, promise);
     }
 
     @Override
-    public Future<Void> connect(
+    public void connect(
             final SocketAddress remoteAddress, final SocketAddress localAddress, final Promise<Void> promise) {
         ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
 
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise;
+            return;
         }
 
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_CONNECT);
@@ -502,19 +464,19 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             safeExecute(executor, () -> connect(remoteAddress, localAddress, promise), promise, null, false);
         }
-        return promise;
     }
 
     @Override
-    public Future<Void> disconnect(final Promise<Void> promise) {
+    public void disconnect(final Promise<Void> promise) {
         if (!pipeline.hasDisconnect) {
             // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
             // So far, UDP/IP is the only transport that has such behavior.
-            return close(promise);
+            close(promise);
+            return;
         }
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise;
+            return;
         }
 
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_DISCONNECT);
@@ -535,14 +497,13 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             safeExecute(executor, () -> disconnect(promise), promise, null, false);
         }
-        return promise;
     }
 
     @Override
-    public Future<Void> close(final Promise<Void> promise) {
+    public void close(final Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise;
+            return;
         }
 
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_CLOSE);
@@ -563,15 +524,13 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             safeExecute(executor, () -> close(promise), promise, null, false);
         }
-
-        return promise;
     }
 
     @Override
-    public Future<Void> deregister(final Promise<Void> promise) {
+    public void deregister(final Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise;
+            return;
         }
 
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_DEREGISTER);
@@ -592,17 +551,15 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             safeExecute(executor, () -> deregister(promise), promise, null, false);
         }
-
-        return promise;
     }
 
     @Override
-    public Future<Void> shutdown(ChannelShutdownType type, Promise<Void> promise) {
+    public void shutdown(ChannelShutdownType type, Promise<Void> promise) {
         ObjectUtil.checkNotNull(type, "type");
 
         if (isNotValidPromise(promise)) {
             // cancelled
-            return promise;
+            return;
         }
 
         final AbstractChannelHandlerContext next = findContextOutbound(MASK_SHUTDOWN);
@@ -623,8 +580,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             safeExecute(executor, () -> shutdown(type, promise), promise, null, false);
         }
-
-        return promise;
     }
 
     @Override
@@ -657,9 +612,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public Future<Void> write(final Object msg, final Promise<Void> promise) {
+    public void write(final Object msg, final Promise<Void> promise) {
         write(msg, false, promise);
-        return promise;
     }
 
     @Override
@@ -687,9 +641,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
     }
 
     @Override
-    public Future<Void> writeAndFlush(Object msg, Promise<Void> promise) {
+    public void writeAndFlush(Object msg, Promise<Void> promise) {
         write(msg, true, promise);
-        return promise;
     }
 
     void write(Object msg, boolean flush, Promise<Void> promise) {
@@ -748,11 +701,6 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             throw e;
         }
         return true;
-    }
-
-    @Override
-    public Future<Void> writeAndFlush(Object msg) {
-        return writeAndFlush(msg, newPromise());
     }
 
     private static void notifyOutboundHandlerException(Throwable cause, Promise<Void> promise) {

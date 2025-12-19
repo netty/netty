@@ -742,7 +742,7 @@ public class LocalChannelTest {
                 cc.pipeline().lastContext().executor().execute(new Runnable() {
                     @Override
                     public void run() {
-                        ccCpy.writeAndFlush(data.retainedDuplicate(), ccCpy.newPromise())
+                        ccCpy.writeAndFlush(data.retainedDuplicate())
                         .addListener(future -> {
                             serverChannelCpy.executor().execute(new Runnable() {
                                 @Override
@@ -760,8 +760,7 @@ public class LocalChannelTest {
                                             fail();
                                         }
                                     }
-                                    serverChannelCpy.writeAndFlush(data2.retainedDuplicate(),
-                                                                   serverChannelCpy.newPromise())
+                                    serverChannelCpy.writeAndFlush(data2.retainedDuplicate())
                                         .addListener(f -> {
                                             if (!f.isSuccess() &&
                                                 f.cause() instanceof ClosedChannelException) {
@@ -833,7 +832,8 @@ public class LocalChannelTest {
                 }
             });
             // Connect to the server
-            cc.connect(sc.localAddress(), promise).sync();
+            cc.connect(sc.localAddress(), promise);
+            promise.sync();
 
             assertPromise.syncUninterruptibly();
             assertTrue(promise.isSuccess());

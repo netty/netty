@@ -457,24 +457,22 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    public Future<QuicStreamChannel> createStream(QuicStreamType type, @Nullable ChannelHandler handler,
-                                                  Promise<QuicStreamChannel> promise) {
+    public void createStream(QuicStreamType type, @Nullable ChannelHandler handler,
+                             Promise<QuicStreamChannel> promise) {
         if (executor().inEventLoop()) {
             connectStream(type, handler, promise);
         } else {
             executor().execute(() -> connectStream(type, handler, promise));
         }
-        return promise;
     }
 
     @Override
-    public Future<Void> close(boolean applicationClose, int error, ByteBuf reason, Promise<Void> promise) {
+    public void close(boolean applicationClose, int error, ByteBuf reason, Promise<Void> promise) {
         if (executor().inEventLoop()) {
             close0(applicationClose, error, reason, promise);
         } else {
             executor().execute(() -> close0(applicationClose, error, reason, promise));
         }
-        return promise;
     }
 
     private void close0(boolean applicationClose, int error, ByteBuf reason, Promise<Void> promise) {
@@ -2032,13 +2030,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    public Future<QuicConnectionStats> collectStats(Promise<QuicConnectionStats> promise) {
+    public void collectStats(Promise<QuicConnectionStats> promise) {
         if (executor().inEventLoop()) {
             collectStats0(promise);
         } else {
             executor().execute(() -> collectStats0(promise));
         }
-        return promise;
     }
 
     private void collectStats0(Promise<QuicConnectionStats> promise) {
@@ -2066,13 +2063,12 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
     }
 
     @Override
-    public Future<QuicConnectionPathStats> collectPathStats(int pathIdx, Promise<QuicConnectionPathStats> promise) {
+    public void collectPathStats(int pathIdx, Promise<QuicConnectionPathStats> promise) {
         if (executor().inEventLoop()) {
             collectPathStats0(pathIdx, promise);
         } else {
             executor().execute(() -> collectPathStats0(pathIdx, promise));
         }
-        return promise;
     }
 
     private void collectPathStats0(int pathIdx, Promise<QuicConnectionPathStats> promise) {

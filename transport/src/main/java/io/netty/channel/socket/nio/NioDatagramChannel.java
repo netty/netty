@@ -31,7 +31,6 @@ import io.netty.channel.nio.NioIoOps;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.SocketProtocolFamily;
 import io.netty.util.UncheckedBooleanSupplier;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PlatformDependent;
@@ -374,29 +373,27 @@ public final class NioDatagramChannel
     }
 
     @Override
-    public Future<Void> joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
+    public void joinGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
             NetworkInterface iface = config.getNetworkInterface();
             if (iface == null) {
                 iface = NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress());
             }
-            return joinGroup(
-                    multicastAddress, iface, null, promise);
+            joinGroup(multicastAddress, iface, null, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
-        return promise;
     }
 
     @Override
-    public Future<Void> joinGroup(
+    public void joinGroup(
             InetSocketAddress multicastAddress, NetworkInterface networkInterface,
             Promise<Void> promise) {
-        return joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
+        joinGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public Future<Void> joinGroup(
+    public void joinGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress source, Promise<Void> promise) {
 
@@ -429,31 +426,28 @@ public final class NioDatagramChannel
         } catch (Throwable e) {
             promise.setFailure(e);
         }
-
-        return promise;
     }
 
     @Override
-    public Future<Void> leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
+    public void leaveGroup(InetAddress multicastAddress, Promise<Void> promise) {
         try {
-            return leaveGroup(
+            leaveGroup(
                     multicastAddress, NetworkInterface.getByInetAddress(
                             ((InetSocketAddress) localAddress()).getAddress()), null, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
-        return promise;
     }
 
     @Override
-    public Future<Void> leaveGroup(
+    public void leaveGroup(
             InetSocketAddress multicastAddress,
             NetworkInterface networkInterface, Promise<Void> promise) {
-        return leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
+        leaveGroup(multicastAddress.getAddress(), networkInterface, null, promise);
     }
 
     @Override
-    public Future<Void> leaveGroup(
+    public void leaveGroup(
             InetAddress multicastAddress, NetworkInterface networkInterface, InetAddress source,
             Promise<Void> promise) {
 
@@ -484,14 +478,13 @@ public final class NioDatagramChannel
         }
 
         promise.setSuccess(null);
-        return promise;
     }
 
     /**
      * Block the given sourceToBlock address for the given multicastAddress on the given networkInterface
      */
     @Override
-    public Future<Void> block(
+    public void block(
             InetAddress multicastAddress, NetworkInterface networkInterface,
             InetAddress sourceToBlock, Promise<Void> promise) {
 
@@ -507,14 +500,14 @@ public final class NioDatagramChannel
                         try {
                             key.block(sourceToBlock);
                         } catch (IOException e) {
-                            return promise.setFailure(e);
+                            promise.setFailure(e);
+                            return;
                         }
                     }
                 }
             }
         }
         promise.setSuccess(null);
-        return promise;
     }
 
     /**
@@ -522,26 +515,15 @@ public final class NioDatagramChannel
      *
      */
     @Override
-    public Future<Void> block(InetAddress multicastAddress, InetAddress sourceToBlock) {
-        return block(multicastAddress, sourceToBlock, newPromise());
-    }
-
-    /**
-     * Block the given sourceToBlock address for the given multicastAddress
-     *
-     */
-    @Override
-    public Future<Void> block(
+    public void block(
             InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> promise) {
         try {
-            return block(
-                    multicastAddress,
+            block(multicastAddress,
                     NetworkInterface.getByInetAddress(((InetSocketAddress) localAddress()).getAddress()),
                     sourceToBlock, promise);
         } catch (SocketException e) {
             promise.setFailure(e);
         }
-        return promise;
     }
 
     @Override
