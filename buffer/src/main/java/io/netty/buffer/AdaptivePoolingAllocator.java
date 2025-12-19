@@ -1305,29 +1305,79 @@ final class AdaptivePoolingAllocator {
          */
         private int unreserveMatchingBuddy(int index, int size, int offset, int currOffset) {
             byte[] buddies = this.buddies;
-            while (index < buddies.length) {
-                byte buddy = buddies[index];
-                int currValue = MIN_BUDDY_SIZE << (buddy & SHIFT_MASK);
-                if (currValue < size) {
-                    return -1;
-                }
-                if (currValue == size && currOffset == offset) {
+            if (buddies.length <= index) {
+                return -1;
+            }
+            byte buddy = buddies[index];
+            int currSize = MIN_BUDDY_SIZE << (buddy & SHIFT_MASK);
+
+            if (currSize == size) {
+                // We're at the right size level.
+                if (currOffset == offset) {
                     buddies[index] &= SHIFT_MASK;
                     return index;
+                } else {
+                    return -1;
                 }
-                int found = unreserveMatchingBuddy(index << 1, size, offset, currOffset);
-                if (found != -1) {
-                    byte sibling = (index & 1) == 1 ? buddies[index << 1] : buddies[(index << 1) + 1];
-                    if ((sibling & SHIFT_MASK) == sibling) {
-                        // No claims in the sibling. We can clear this level as well.
-                        buddies[index] &= SHIFT_MASK;
-                    }
-                    return found;
+            }
+
+            // We're at a parent size level. Use the target offset to guide our drill-down path.
+            int found;
+            int siblingIndex;
+            if (offset < currOffset + (currSize >> 1)) {
+                // Must be down the left path.
+                found = unreserveMatchingBuddy(index << 1, size, offset, currOffset);
+                siblingIndex = (index << 1) + 1;
+            } else {
+                // Must be down the rigth path.
+                found = unreserveMatchingBuddy((index << 1) + 1, size, offset, currOffset + (currSize >> 1));
+                siblingIndex = index << 1;
+            }
+            if (found != -1) {
+                byte sibling = buddies[siblingIndex];
+                if ((sibling & SHIFT_MASK) == sibling) {
+                    // No claims in the sibling. We can clear this level as well.
+                    buddies[index] &= SHIFT_MASK;
                 }
-                index++;
-                currOffset += currValue;
+                return found;
             }
             return -1;
+        }
+
+        private String dot() {
+            StringBuilder sb = new StringBuilder("digraph { node [shape=box] ; ");
+            dot(sb, 1, 0);
+            sb.append('}');
+            return sb.toString();
+        }
+
+        private void dot(StringBuilder sb, int index, int currOffset) {
+            byte[] buddies = this.buddies;
+            if (buddies.length <= index) {
+                return;
+            }
+            byte buddy = buddies[index];
+            int currSize = MIN_BUDDY_SIZE << (buddy & SHIFT_MASK);
+            boolean hasClaimedChildren = (buddy & HAS_CLAIMED_CHILDREN) == HAS_CLAIMED_CHILDREN;
+            boolean isClaimed = (buddy & IS_CLAIMED) == IS_CLAIMED;
+            sb.append('"').append(index).append("\" [label=\"")
+                    .append(index).append(" - ")
+                    .append(currSize / MIN_BUDDY_SIZE).append(':')
+                    .append(currOffset / MIN_BUDDY_SIZE);
+            if (isClaimed) {
+                sb.append(" C");
+            }
+            if (hasClaimedChildren) {
+                sb.append(" CC");
+            }
+            sb.append("\"] ; ");
+            int childIndex = index << 1;
+            if (childIndex < buddies.length) {
+                sb.append('"').append(index).append("\" -> \"").append(childIndex).append("\" ; ");
+                sb.append('"').append(index).append("\" -> \"").append(childIndex + 1).append("\" ; ");
+            }
+            dot(sb, childIndex, currOffset);
+            dot(sb, childIndex + 1, currOffset + (currSize >> 1));
         }
     }
 
