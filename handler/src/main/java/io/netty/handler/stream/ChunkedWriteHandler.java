@@ -297,24 +297,16 @@ public class ChunkedWriteHandler extends ChannelDuplexHandler {
                         // be closed before it's not written.
                         //
                         // See https://github.com/netty/netty/issues/303
-                        f.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) {
-                                handleEndOfInputFuture(future, chunks, currentWrite);
-                            }
-                        });
+                        f.addListener((ChannelFutureListener) future ->
+                                handleEndOfInputFuture(future, chunks, currentWrite));
                     }
                 } else {
                     final boolean resume = !channel.isWritable();
                     if (f.isDone()) {
                         handleFuture(f, chunks, currentWrite, resume);
                     } else {
-                        f.addListener(new ChannelFutureListener() {
-                            @Override
-                            public void operationComplete(ChannelFuture future) {
-                                handleFuture(future, chunks, currentWrite, resume);
-                            }
-                        });
+                        f.addListener((ChannelFutureListener) future ->
+                                handleFuture(future, chunks, currentWrite, resume));
                     }
                 }
                 requiresFlush = false;

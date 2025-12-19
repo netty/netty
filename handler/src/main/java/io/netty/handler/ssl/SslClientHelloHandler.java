@@ -223,26 +223,23 @@ public abstract class SslClientHelloHandler<T> extends ByteToMessageDecoder impl
             } else {
                 suppressRead = true;
                 final ByteBuf finalClientHello = clientHello;
-                future.addListener(new FutureListener<T>() {
-                    @Override
-                    public void operationComplete(Future<T> future) {
-                        releaseIfNotNull(finalClientHello);
+                future.addListener((FutureListener<T>) future1 -> {
+                    releaseIfNotNull(finalClientHello);
+                    try {
+                        suppressRead = false;
                         try {
-                            suppressRead = false;
-                            try {
-                                onLookupComplete(ctx, future);
-                            } catch (DecoderException err) {
-                                ctx.fireExceptionCaught(err);
-                            } catch (Exception cause) {
-                                ctx.fireExceptionCaught(new DecoderException(cause));
-                            } catch (Throwable cause) {
-                                ctx.fireExceptionCaught(cause);
-                            }
-                        } finally {
-                            if (readPending) {
-                                readPending = false;
-                                ctx.read();
-                            }
+                            onLookupComplete(ctx, future1);
+                        } catch (DecoderException err) {
+                            ctx.fireExceptionCaught(err);
+                        } catch (Exception cause) {
+                            ctx.fireExceptionCaught(new DecoderException(cause));
+                        } catch (Throwable cause) {
+                            ctx.fireExceptionCaught(cause);
+                        }
+                    } finally {
+                        if (readPending) {
+                            readPending = false;
+                            ctx.read();
                         }
                     }
                 });

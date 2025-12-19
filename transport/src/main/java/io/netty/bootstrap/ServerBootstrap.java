@@ -17,8 +17,6 @@ package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -246,12 +244,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             }
 
             try {
-                childGroup.register(child).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            forceClose(child, future.cause());
-                        }
+                childGroup.register(child).addListener(future -> {
+                    if (!future.isSuccess()) {
+                        forceClose(child, future.cause());
                     }
                 });
             } catch (Throwable t) {

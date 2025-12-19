@@ -337,14 +337,11 @@ public class JZlibEncoder extends ZlibEncoder {
                 }
             }, THREAD_POOL_DELAY_SECONDS, TimeUnit.SECONDS);
 
-            f.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture f) {
-                    // Cancel the scheduled timeout.
-                    future.cancel(true);
-                    if (!promise.isDone()) {
-                        ctx.close(promise);
-                    }
+            f.addListener(f1 -> {
+                // Cancel the scheduled timeout.
+                future.cancel(true);
+                if (!promise.isDone()) {
+                    ctx.close(promise);
                 }
             });
         } else {
