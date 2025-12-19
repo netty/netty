@@ -63,12 +63,7 @@ public class EmbeddedChannel extends AbstractChannel {
     private static final ChannelMetadata METADATA_DISCONNECT = new ChannelMetadata(true);
 
     private final EmbeddedEventLoop loop;
-    private final ChannelFutureListener recordExceptionListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            recordException(future);
-        }
-    };
+    private final ChannelFutureListener recordExceptionListener = this::recordException;
 
     private final ChannelMetadata metadata;
     private final ChannelConfig config;

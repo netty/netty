@@ -18,7 +18,6 @@ package io.netty.handler.proxy;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
@@ -63,12 +62,9 @@ public abstract class ProxyHandler extends ChannelDuplexHandler {
     private boolean flushedPrematurely;
     private final LazyChannelPromise connectPromise = new LazyChannelPromise();
     private Future<?> connectTimeoutFuture;
-    private final ChannelFutureListener writeListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) throws Exception {
-            if (!future.isSuccess()) {
-                setConnectFailure(future.cause());
-            }
+    private final ChannelFutureListener writeListener = future -> {
+        if (!future.isSuccess()) {
+            setConnectFailure(future.cause());
         }
     };
 

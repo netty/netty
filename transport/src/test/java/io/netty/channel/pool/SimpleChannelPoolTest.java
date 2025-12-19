@@ -20,10 +20,11 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.util.concurrent.Future;
 import org.junit.jupiter.api.Test;
@@ -45,7 +46,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 public class SimpleChannelPoolTest {
     @Test
     public void testAcquire() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
         LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
@@ -96,7 +97,7 @@ public class SimpleChannelPoolTest {
 
     @Test
     public void testBoundedChannelPoolSegment() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
         LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
@@ -160,7 +161,7 @@ public class SimpleChannelPoolTest {
      */
     @Test
     public void testUnhealthyChannelIsNotOffered() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
         LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
@@ -207,7 +208,7 @@ public class SimpleChannelPoolTest {
      */
     @Test
     public void testUnhealthyChannelIsOfferedWhenNoHealthCheckRequested() throws Exception {
-        EventLoopGroup group = new DefaultEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
         LocalAddress addr = new LocalAddress(getLocalAddrId());
         Bootstrap cb = new Bootstrap();
         cb.remoteAddress(addr);
@@ -313,7 +314,7 @@ public class SimpleChannelPoolTest {
     @Test
     public void testCloseAsync() throws Exception {
         final LocalAddress addr = new LocalAddress(getLocalAddrId());
-        final EventLoopGroup group = new DefaultEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
 
         // Start server
         final ServerBootstrap sb = new ServerBootstrap()
@@ -355,7 +356,7 @@ public class SimpleChannelPoolTest {
     @Test
     public void testChannelAcquiredException() throws InterruptedException {
         final LocalAddress addr = new LocalAddress(getLocalAddrId());
-        final EventLoopGroup group = new DefaultEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
 
         // Start server
         final ServerBootstrap sb = new ServerBootstrap()

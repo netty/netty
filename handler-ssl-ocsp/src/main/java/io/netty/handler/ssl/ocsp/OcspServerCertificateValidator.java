@@ -147,44 +147,41 @@ public class OcspServerCertificateValidator extends ChannelInboundHandlerAdapter
                 Promise<BasicOCSPResp> ocspRespPromise = OcspClient.query((X509Certificate) certificates[0],
                         (X509Certificate) certificates[1], validateNonce, ioTransport, dnsNameResolver);
 
-                ocspRespPromise.addListener(new GenericFutureListener<Future<BasicOCSPResp>>() {
-                    @Override
-                    public void operationComplete(Future<BasicOCSPResp> future) throws Exception {
-                        // If Future is success then we have successfully received OCSP response
-                        // from OCSP responder. We will validate it now and process.
-                        if (future.isSuccess()) {
-                            SingleResp response = future.get().getResponses()[0];
+                ocspRespPromise.addListener((GenericFutureListener<Future<BasicOCSPResp>>) future -> {
+                    // If Future is success then we have successfully received OCSP response
+                    // from OCSP responder. We will validate it now and process.
+                    if (future.isSuccess()) {
+                        SingleResp response = future.getNow().getResponses()[0];
 
-                            Date current = new Date();
-                            if (!(current.after(response.getThisUpdate()) &&
-                                    current.before(response.getNextUpdate()))) {
-                                ctx.fireExceptionCaught(new IllegalStateException("OCSP Response is out-of-date"));
-                            }
-
-                            OcspResponse.Status status;
-                            if (response.getCertStatus() == null) {
-                                // 'null' means certificate is valid
-                                status = OcspResponse.Status.VALID;
-                            } else if (response.getCertStatus() instanceof RevokedStatus) {
-                                status = OcspResponse.Status.REVOKED;
-                            } else {
-                                status = OcspResponse.Status.UNKNOWN;
-                            }
-
-                            ctx.fireUserEventTriggered(new OcspValidationEvent(
-                                    new OcspResponse(status, response.getThisUpdate(), response.getNextUpdate())));
-
-                            // If Certificate is not VALID and 'closeAndThrowIfNotValid' is set
-                            // to 'true' then close the channel and throw an exception.
-                            if (status != OcspResponse.Status.VALID && closeAndThrowIfNotValid) {
-                                ctx.channel().close();
-                                // Certificate is not valid. Throw
-                                ctx.fireExceptionCaught(new OCSPException(
-                                        "Certificate not valid. Status: " + status));
-                            }
-                        } else {
-                            ctx.fireExceptionCaught(future.cause());
+                        Date current = new Date();
+                        if (!(current.after(response.getThisUpdate()) &&
+                                current.before(response.getNextUpdate()))) {
+                            ctx.fireExceptionCaught(new IllegalStateException("OCSP Response is out-of-date"));
                         }
+
+                        OcspResponse.Status status;
+                        if (response.getCertStatus() == null) {
+                            // 'null' means certificate is valid
+                            status = OcspResponse.Status.VALID;
+                        } else if (response.getCertStatus() instanceof RevokedStatus) {
+                            status = OcspResponse.Status.REVOKED;
+                        } else {
+                            status = OcspResponse.Status.UNKNOWN;
+                        }
+
+                        ctx.fireUserEventTriggered(new OcspValidationEvent(
+                                new OcspResponse(status, response.getThisUpdate(), response.getNextUpdate())));
+
+                        // If Certificate is not VALID and 'closeAndThrowIfNotValid' is set
+                        // to 'true' then close the channel and throw an exception.
+                        if (status != OcspResponse.Status.VALID && closeAndThrowIfNotValid) {
+                            ctx.channel().close();
+                            // Certificate is not valid. Throw
+                            ctx.fireExceptionCaught(new OCSPException(
+                                    "Certificate not valid. Status: " + status));
+                        }
+                    } else {
+                        ctx.fireExceptionCaught(future.cause());
                     }
                 });
             }

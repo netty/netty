@@ -21,12 +21,17 @@ import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
+import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.DefaultHttpHeadersFactory;
+import io.netty.handler.codec.http.DefaultHttpContent;
+import io.netty.handler.codec.http.HttpContent;
+import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http.HttpMethod;
 import io.netty.handler.codec.http.HttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.util.AsciiString;
+import io.netty.util.CharsetUtil;
 import io.netty.util.ReferenceCountUtil;
 import org.junit.jupiter.api.Test;
 
@@ -510,6 +515,154 @@ public class CorsHandlerTest {
 
         assertEquals("false", response.headers().get(ACCESS_CONTROL_ALLOW_PRIVATE_NETWORK));
         assertTrue(ReferenceCountUtil.release(response));
+    }
+
+    @Test
+    public void preflightEmptyLastDiscarded() {
+        CorsConfig config = forOrigin("http://allowed").build();
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
+
+        FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/test");
+        preflight.headers().set(ORIGIN, "http://allowed");
+        preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
+
+        assertFalse(ch.writeInbound(preflight));
+
+        Object outbound = ch.readOutbound();
+        assertNotNull(outbound); // preflight response
+
+        LastHttpContent lastHttpContent = LastHttpContent.EMPTY_LAST_CONTENT;
+        assertFalse(ch.writeInbound(lastHttpContent));
+
+        // Nothing should have been forwarded
+        assertNull(ch.readInbound());
+
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void preflightSecondEmptyLastForwardedAfterFirstDiscard() {
+        CorsConfig config = forOrigin("http://allowed").build();
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
+
+        FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/test");
+        preflight.headers().set(ORIGIN, "http://allowed");
+        preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
+
+        assertFalse(ch.writeInbound(preflight));
+        ReferenceCountUtil.release(ch.readOutbound());
+
+        LastHttpContent first = LastHttpContent.EMPTY_LAST_CONTENT;
+        LastHttpContent second = LastHttpContent.EMPTY_LAST_CONTENT;
+
+        assertFalse(ch.writeInbound(first));
+
+        assertFalse(ch.writeInbound(second));
+
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void preflightSecondNonEmptyLastDiscarded() {
+        CorsConfig config = forOrigin("http://allowed").build();
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
+
+        FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/test");
+        preflight.headers().set(ORIGIN, "http://allowed");
+        preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
+
+        assertFalse(ch.writeInbound(preflight));
+        ReferenceCountUtil.release(ch.readOutbound());
+
+        LastHttpContent first = LastHttpContent.EMPTY_LAST_CONTENT;
+        LastHttpContent second = new DefaultLastHttpContent(
+                Unpooled.copiedBuffer("test message", CharsetUtil.UTF_8));
+
+        assertFalse(ch.writeInbound(first));
+        assertFalse(ch.writeInbound(second));
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void preflightNonEmptyLastForwarded() {
+        CorsConfig config = forOrigin("http://allowed").build();
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
+
+        FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/x");
+        preflight.headers().set(ORIGIN, "http://allowed");
+        preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
+
+        assertFalse(ch.writeInbound(preflight));
+        Object outbound = ch.releaseOutbound();
+        assertNotNull(outbound);
+
+        LastHttpContent nonEmpty = new DefaultLastHttpContent(Unpooled.copiedBuffer("x", CharsetUtil.UTF_8));
+        assertFalse(ch.writeInbound(nonEmpty));
+
+        Object inbound = ch.readInbound();
+        assertNull(inbound);
+
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void testNormalRequestForwarded() {
+        CorsConfig config = forOrigin("http://allowed").build();
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
+
+        FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, GET, "/test");
+        req.headers().set(ORIGIN, "http://allowed");
+
+        assertTrue(ch.writeInbound(req));
+
+        LastHttpContent last = LastHttpContent.EMPTY_LAST_CONTENT;
+        assertTrue(ch.writeInbound(last));
+
+        Object firstInbound = ch.readInbound();
+        Object secondInbound = ch.readInbound();
+
+        assertNotNull(firstInbound);
+        assertNotNull(secondInbound);
+
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
+    }
+
+    @Test
+    public void preflightEmptyLastDiscardedThenNewRequestForwarded() {
+        CorsConfig config = forOrigin("http://allowed").build();
+        EmbeddedChannel ch = new EmbeddedChannel(new CorsHandler(config));
+
+        // Preflight request
+        FullHttpRequest preflight = new DefaultFullHttpRequest(HTTP_1_1, OPTIONS, "/pre");
+        preflight.headers().set(ORIGIN, "http://allowed");
+        preflight.headers().set(ACCESS_CONTROL_REQUEST_METHOD, "GET");
+        assertFalse(ch.writeInbound(preflight));
+        Object preflightResp = ch.readOutbound();
+        assertNotNull(preflightResp);
+        ReferenceCountUtil.release(preflightResp);
+
+        // Empty last content should be discarded
+        assertFalse(ch.writeInbound(LastHttpContent.EMPTY_LAST_CONTENT));
+        assertNull(ch.readInbound());
+
+        // New request should be forwarded
+        FullHttpRequest req = new DefaultFullHttpRequest(HTTP_1_1, GET, "/next");
+        req.headers().set(ORIGIN, "http://allowed");
+        assertTrue(ch.writeInbound(req));
+
+        Object firstInbound = ch.readInbound();
+        assertNotNull(firstInbound);
+
+        HttpContent content = new DefaultHttpContent(Unpooled.copiedBuffer("test message", CharsetUtil.UTF_8));
+        assertTrue(ch.writeInbound(content));
+        Object secondInbound = ch.readInbound();
+        assertNotNull(secondInbound);
+
+        assertNull(ch.readInbound());
+        assertFalse(ch.finish());
     }
 
     private static HttpResponse simpleRequest(final CorsConfig config, final String origin) {

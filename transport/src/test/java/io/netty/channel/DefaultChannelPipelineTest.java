@@ -48,6 +48,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.function.Executable;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.net.SocketAddress;
 import java.util.ArrayDeque;
@@ -58,7 +60,6 @@ import java.util.NoSuchElementException;
 import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingQueue;
@@ -449,6 +450,173 @@ public class DefaultChannelPipelineTest {
         });
         group.register(pipeline.channel());
         assertTrue(latch.await(2, TimeUnit.SECONDS));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void testInboundOperationsViaContext(boolean inEventLoop) throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        final ChannelHandler handler = new ChannelHandlerAdapter() { };
+        pipeline.addLast(handler);
+        group.register(pipeline.channel()).syncUninterruptibly();
+        final BlockingQueue<String> events = new LinkedBlockingQueue<>();
+        pipeline.addLast(new ChannelInboundHandlerAdapter() {
+            @Override
+            public void channelRegistered(ChannelHandlerContext ctx) {
+                events.add("channelRegistered");
+            }
+
+            @Override
+            public void channelUnregistered(ChannelHandlerContext ctx) {
+                events.add("channelUnregistered");
+            }
+
+            @Override
+            public void channelActive(ChannelHandlerContext ctx) {
+                events.add("channelActive");
+            }
+
+            @Override
+            public void channelInactive(ChannelHandlerContext ctx) {
+                events.add("channelInactive");
+            }
+
+            @Override
+            public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                events.add("channelRead");
+            }
+
+            @Override
+            public void channelReadComplete(ChannelHandlerContext ctx) {
+                events.add("channelReadComplete");
+            }
+
+            @Override
+            public void userEventTriggered(ChannelHandlerContext ctx, Object evt)  {
+                events.add("userEventTriggered");
+            }
+
+            @Override
+            public void channelWritabilityChanged(ChannelHandlerContext ctx) {
+                events.add("channelWritabilityChanged");
+            }
+
+            @Override
+            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                events.add("exceptionCaught");
+            }
+        });
+        final ChannelHandlerContext ctx = pipeline.context(handler);
+        if (inEventLoop) {
+            pipeline.channel().eventLoop().execute(() -> executeInboundOperations(ctx));
+        } else {
+            executeInboundOperations(ctx);
+        }
+
+        assertEquals("channelRegistered", events.take());
+        assertEquals("channelUnregistered", events.take());
+        assertEquals("channelActive", events.take());
+        assertEquals("channelInactive", events.take());
+        assertEquals("channelRead", events.take());
+        assertEquals("channelReadComplete", events.take());
+        assertEquals("userEventTriggered", events.take());
+        assertEquals("channelWritabilityChanged", events.take());
+        assertEquals("exceptionCaught", events.take());
+        assertTrue(events.isEmpty());
+        pipeline.removeLast();
+        pipeline.channel().close().syncUninterruptibly();
+    }
+
+    private static void executeInboundOperations(ChannelHandlerContext ctx) {
+        ctx.fireChannelRegistered();
+        ctx.fireChannelUnregistered();
+        ctx.fireChannelActive();
+        ctx.fireChannelInactive();
+        ctx.fireChannelRead("");
+        ctx.fireChannelReadComplete();
+        ctx.fireUserEventTriggered("");
+        ctx.fireChannelWritabilityChanged();
+        ctx.fireExceptionCaught(new Exception());
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    public void testOutboundOperationsViaContext(boolean inEventLoop) throws Exception {
+        ChannelPipeline pipeline = new LocalChannel().pipeline();
+        final ChannelHandler handler = new ChannelHandlerAdapter() { };
+        pipeline.addLast(handler);
+        group.register(pipeline.channel()).syncUninterruptibly();
+        final BlockingQueue<String> events = new LinkedBlockingQueue<>();
+        pipeline.addFirst(new ChannelOutboundHandlerAdapter() {
+            @Override
+            public void bind(ChannelHandlerContext ctx, SocketAddress localAddress, ChannelPromise promise) {
+                events.add("bind");
+                promise.setSuccess();
+            }
+
+            @Override
+            public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
+                                ChannelPromise promise)  {
+                events.add("connect");
+                promise.setSuccess();
+            }
+
+            @Override
+            public void close(ChannelHandlerContext ctx, ChannelPromise promise) {
+                events.add("close");
+                promise.setSuccess();
+            }
+
+            @Override
+            public void deregister(ChannelHandlerContext ctx, ChannelPromise promise)  {
+                events.add("deregister");
+                promise.setSuccess();
+            }
+
+            @Override
+            public void read(ChannelHandlerContext ctx)  {
+                events.add("read");
+            }
+
+            @Override
+            public void write(ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                events.add("write");
+                promise.setSuccess();
+            }
+
+            @Override
+            public void flush(ChannelHandlerContext ctx) {
+                events.add("flush");
+                ctx.flush();
+            }
+        });
+        ChannelHandlerContext ctx = pipeline.context(handler);
+        if (inEventLoop) {
+            pipeline.channel().eventLoop().execute(() -> executeOutboundOperations(ctx));
+        } else {
+            executeOutboundOperations(ctx);
+        }
+
+        assertEquals("bind", events.take());
+        assertEquals("connect", events.take());
+        assertEquals("close", events.take());
+        assertEquals("deregister", events.take());
+        assertEquals("read", events.take());
+        assertEquals("write", events.take());
+        assertEquals("flush", events.take());
+        assertTrue(events.isEmpty());
+        pipeline.removeFirst();
+        pipeline.channel().close().syncUninterruptibly();
+    }
+
+    private static void executeOutboundOperations(ChannelHandlerContext ctx) {
+        ctx.bind(new SocketAddress() { });
+        ctx.connect(new SocketAddress() { });
+        ctx.close();
+        ctx.deregister();
+        ctx.read();
+        ctx.write("");
+        ctx.flush();
     }
 
     @Test
@@ -1162,7 +1330,7 @@ public class DefaultChannelPipelineTest {
         ChannelPipeline pipeline1 = new LocalChannel().pipeline();
         ChannelPipeline pipeline2 = new LocalChannel().pipeline();
 
-        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(2);
+        EventLoopGroup defaultGroup = new MultiThreadIoEventLoopGroup(2, LocalIoHandler.newFactory());
         try {
             EventLoop eventLoop1 = defaultGroup.next();
             EventLoop eventLoop2 = defaultGroup.next();
@@ -1205,34 +1373,31 @@ public class DefaultChannelPipelineTest {
         try {
             final Object event = new Object();
             final Promise<Object> promise = ImmediateEventExecutor.INSTANCE.newPromise();
-            group.register(pipeline1.channel()).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    ChannelPipeline pipeline = future.channel().pipeline();
-                    final AtomicBoolean handlerAddedCalled = new AtomicBoolean();
-                    pipeline.addLast(new ChannelInboundHandlerAdapter() {
-                        @Override
-                        public void handlerAdded(ChannelHandlerContext ctx) {
-                            handlerAddedCalled.set(true);
-                        }
-
-                        @Override
-                        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
-                            promise.setSuccess(event);
-                        }
-
-                        @Override
-                        public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                            promise.setFailure(cause);
-                        }
-                    });
-                    if (!handlerAddedCalled.get()) {
-                        promise.setFailure(new AssertionError("handlerAdded(...) should have been called"));
-                        return;
+            group.register(pipeline1.channel()).addListener(future -> {
+                ChannelPipeline pipeline = channel.pipeline();
+                final AtomicBoolean handlerAddedCalled = new AtomicBoolean();
+                pipeline.addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void handlerAdded(ChannelHandlerContext ctx) {
+                        handlerAddedCalled.set(true);
                     }
-                    // This event must be captured by the added handler.
-                    pipeline.fireUserEventTriggered(event);
+
+                    @Override
+                    public void userEventTriggered(ChannelHandlerContext ctx, Object evt) {
+                        promise.setSuccess(event);
+                    }
+
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                        promise.setFailure(cause);
+                    }
+                });
+                if (!handlerAddedCalled.get()) {
+                    promise.setFailure(new AssertionError("handlerAdded(...) should have been called"));
+                    return;
                 }
+                // This event must be captured by the added handler.
+                pipeline.fireUserEventTriggered(event);
             });
             assertSame(event, promise.syncUninterruptibly().getNow());
         } finally {
@@ -1260,7 +1425,7 @@ public class DefaultChannelPipelineTest {
     public void testUnorderedEventExecutor() throws Throwable {
         ChannelPipeline pipeline1 = new LocalChannel().pipeline();
         EventExecutorGroup eventExecutors = new UnorderedThreadPoolEventExecutor(2);
-        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(1);
+        EventLoopGroup defaultGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         try {
             EventLoop eventLoop1 = defaultGroup.next();
             eventLoop1.register(pipeline1.channel()).syncUninterruptibly();
@@ -1330,7 +1495,7 @@ public class DefaultChannelPipelineTest {
     public void testVoidPromiseNotify() {
         ChannelPipeline pipeline1 = new LocalChannel().pipeline();
 
-        EventLoopGroup defaultGroup = new DefaultEventLoopGroup(1);
+        EventLoopGroup defaultGroup = new MultiThreadIoEventLoopGroup(1, LocalIoHandler.newFactory());
         EventLoop eventLoop1 = defaultGroup.next();
         final Promise<Throwable> promise = eventLoop1.newPromise();
         final Exception exception = new IllegalArgumentException();

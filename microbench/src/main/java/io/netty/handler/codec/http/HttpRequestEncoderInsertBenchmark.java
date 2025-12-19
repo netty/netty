@@ -23,27 +23,98 @@ import io.netty.util.AsciiString;
 import io.netty.util.CharsetUtil;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
+import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
-import static io.netty.handler.codec.http.HttpConstants.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.SplittableRandom;
+
+import static io.netty.handler.codec.http.HttpConstants.CR;
+import static io.netty.handler.codec.http.HttpConstants.LF;
+import static io.netty.handler.codec.http.HttpConstants.SP;
 
 @State(Scope.Benchmark)
 @Warmup(iterations = 10)
 @Measurement(iterations = 20)
 public class HttpRequestEncoderInsertBenchmark extends AbstractMicrobenchmark {
 
-    private final String uri = "http://localhost?eventType=CRITICAL&from=0&to=1497437160327&limit=10&offset=0";
+    private static final String[] PARAMS = {
+            "eventType=CRITICAL",
+            "from=0",
+            "to=1497437160327",
+            "limit=10",
+            "offset=0"
+    };
+    @Param({"1024", "128000"})
+    private int samples;
+
+    private String[] uris;
+    private int index;
     private final OldHttpRequestEncoder encoderOld = new OldHttpRequestEncoder();
     private final HttpRequestEncoder encoderNew = new HttpRequestEncoder();
+
+    @Setup
+    public void setup() {
+        List<String[]> permutations = new ArrayList<>();
+        permute(PARAMS.clone(), 0, permutations);
+
+        String[] allCombinations = new String[permutations.size()];
+        String base = "http://localhost?";
+        for (int i = 0; i < permutations.size(); i++) {
+            StringBuilder sb = new StringBuilder(base);
+            String[] p = permutations.get(i);
+            for (int j = 0; j < p.length; j++) {
+                if (j != 0) {
+                    sb.append('&');
+                }
+                sb.append(p[j]);
+            }
+            allCombinations[i] = sb.toString();
+        }
+        uris = new String[samples];
+        SplittableRandom rand = new SplittableRandom(42);
+        for (int i = 0; i < uris.length; i++) {
+            uris[i] = allCombinations[rand.nextInt(allCombinations.length)];
+        }
+        index = 0;
+    }
+
+    private static void permute(String[] arr, int start, List<String[]> out) {
+        if (start == arr.length - 1) {
+            out.add(Arrays.copyOf(arr, arr.length));
+            return;
+        }
+        for (int i = start; i < arr.length; i++) {
+            swap(arr, start, i);
+            permute(arr, start + 1, out);
+            swap(arr, start, i);
+        }
+    }
+
+    private static void swap(String[] a, int i, int j) {
+        String t = a[i];
+        a[i] = a[j];
+        a[j] = t;
+    }
+
+    private String nextUri() {
+        if (index >= uris.length) {
+            index = 0;
+        }
+        return uris[index++];
+    }
 
     @Benchmark
     public ByteBuf oldEncoder() throws Exception {
         ByteBuf buffer = Unpooled.buffer(100);
         try {
             encoderOld.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                    HttpMethod.GET, uri));
+                    HttpMethod.GET, nextUri()));
             return buffer;
         } finally {
             buffer.release();
@@ -55,7 +126,7 @@ public class HttpRequestEncoderInsertBenchmark extends AbstractMicrobenchmark {
         ByteBuf buffer = Unpooled.buffer(100);
         try {
             encoderNew.encodeInitialLine(buffer, new DefaultHttpRequest(HttpVersion.HTTP_1_1,
-                    HttpMethod.GET, uri));
+                    HttpMethod.GET, nextUri()));
             return buffer;
         } finally {
             buffer.release();

@@ -988,12 +988,9 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
         // Create a promise before actually doing the close, because otherwise we would be adding a listener to a future
         // that is already completed because we are using EmbeddedChannel which executes code in the JUnit thread.
         ChannelPromise p = childChannel.newPromise();
-        p.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                channelOpen.set(future.channel().isOpen());
-                channelActive.set(future.channel().isActive());
-            }
+        p.addListener((ChannelFutureListener) future -> {
+            channelOpen.set(future.channel().isOpen());
+            channelActive.set(future.channel().isActive());
         });
         childChannel.close(p).syncUninterruptibly();
 
@@ -1013,12 +1010,9 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
          final AtomicBoolean channelOpen = new AtomicBoolean(true);
          final AtomicBoolean channelActive = new AtomicBoolean(true);
 
-         childChannel.closeFuture().addListener(new ChannelFutureListener() {
-             @Override
-             public void operationComplete(ChannelFuture future) {
-                 channelOpen.set(future.channel().isOpen());
-                 channelActive.set(future.channel().isActive());
-             }
+         childChannel.closeFuture().addListener((ChannelFutureListener) future -> {
+             channelOpen.set(future.channel().isOpen());
+             channelActive.set(future.channel().isActive());
          });
          childChannel.close().syncUninterruptibly();
 
@@ -1054,12 +1048,9 @@ public abstract class Http2MultiplexTest<C extends Http2FrameCodec> {
 
         ChannelFuture f = childChannel.writeAndFlush(new DefaultHttp2HeadersFrame(headers));
         assertFalse(f.isDone());
-        f.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) throws Exception {
-                channelOpen.set(future.channel().isOpen());
-                channelActive.set(future.channel().isActive());
-            }
+        f.addListener((ChannelFutureListener) future -> {
+            channelOpen.set(future.channel().isOpen());
+            channelActive.set(future.channel().isActive());
         });
 
         ChannelPromise first = writePromises.poll();

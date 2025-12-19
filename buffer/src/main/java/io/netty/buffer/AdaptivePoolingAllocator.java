@@ -1679,24 +1679,46 @@ final class AdaptivePoolingAllocator {
         @Override
         public ByteBuf setBytes(int index, byte[] src, int srcIndex, int length) {
             checkIndex(index, length);
-            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
-            tmp.put(src, srcIndex, length);
+            if (tmpNioBuf == null && PlatformDependent.javaVersion() >= 13) {
+                ByteBuffer dstBuffer = rootParent()._internalNioBuffer();
+                PlatformDependent.absolutePut(dstBuffer, idx(index), src, srcIndex, length);
+            } else {
+                ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
+                tmp.put(src, srcIndex, length);
+            }
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuf src, int srcIndex, int length) {
             checkIndex(index, length);
-            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
-            tmp.put(src.nioBuffer(srcIndex, length));
+            if (src instanceof AdaptiveByteBuf && PlatformDependent.javaVersion() >= 16) {
+                AdaptiveByteBuf srcBuf = (AdaptiveByteBuf) src;
+                srcBuf.checkIndex(srcIndex, length);
+                ByteBuffer dstBuffer = rootParent()._internalNioBuffer();
+                ByteBuffer srcBuffer = srcBuf.rootParent()._internalNioBuffer();
+                PlatformDependent.absolutePut(dstBuffer, idx(index), srcBuffer, srcBuf.idx(srcIndex), length);
+            } else {
+                ByteBuffer tmp = internalNioBuffer();
+                tmp.position(index);
+                tmp.put(src.nioBuffer(srcIndex, length));
+            }
             return this;
         }
 
         @Override
         public ByteBuf setBytes(int index, ByteBuffer src) {
-            checkIndex(index, src.remaining());
-            ByteBuffer tmp = (ByteBuffer) internalNioBuffer().clear().position(index);
-            tmp.put(src);
+            int length = src.remaining();
+            checkIndex(index, length);
+            ByteBuffer tmp = internalNioBuffer();
+            if (PlatformDependent.javaVersion() >= 16) {
+                int offset = src.position();
+                PlatformDependent.absolutePut(tmp, index, src, offset, length);
+                src.position(offset + length);
+            } else {
+                tmp.position(index);
+                tmp.put(src);
+            }
             return this;
         }
 
@@ -1705,7 +1727,8 @@ final class AdaptivePoolingAllocator {
                 throws IOException {
             checkIndex(index, length);
             if (length != 0) {
-                ByteBufUtil.readBytes(alloc(), internalNioBuffer().duplicate(), index, length, out);
+                ByteBuffer tmp = internalNioBuffer();
+                ByteBufUtil.readBytes(alloc(), tmp.hasArray() ? tmp : tmp.duplicate(), index, length, out);
             }
             return this;
         }

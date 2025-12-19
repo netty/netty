@@ -92,7 +92,15 @@ public class DefaultFullHttpRequest extends DefaultHttpRequest implements FullHt
      */
     public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
             ByteBuf content, HttpHeaders headers, HttpHeaders trailingHeader) {
-        super(httpVersion, method, uri, headers);
+        this(httpVersion, method, uri, content, headers, trailingHeader, true);
+    }
+
+    /**
+     * Create a full HTTP response with the given HTTP version, method, URI, contents, and header and trailer objects.
+     */
+    public DefaultFullHttpRequest(HttpVersion httpVersion, HttpMethod method, String uri,
+            ByteBuf content, HttpHeaders headers, HttpHeaders trailingHeader, boolean validateRequestLine) {
+        super(httpVersion, method, uri, headers, validateRequestLine);
         this.content = checkNotNull(content, "content");
         this.trailingHeader = checkNotNull(trailingHeader, "trailingHeader");
     }

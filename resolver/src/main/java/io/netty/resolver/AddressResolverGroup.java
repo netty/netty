@@ -74,15 +74,12 @@ public abstract class AddressResolverGroup<T extends SocketAddress> implements C
 
                 resolvers.put(executor, newResolver);
 
-                final FutureListener<Object> terminationListener = new FutureListener<Object>() {
-                    @Override
-                    public void operationComplete(Future<Object> future) {
-                        synchronized (resolvers) {
-                            resolvers.remove(executor);
-                            executorTerminationListeners.remove(executor);
-                        }
-                        newResolver.close();
+                final FutureListener<Object> terminationListener = future -> {
+                    synchronized (resolvers) {
+                        resolvers.remove(executor);
+                        executorTerminationListeners.remove(executor);
                     }
+                    newResolver.close();
                 };
 
                 executorTerminationListeners.put(executor, terminationListener);

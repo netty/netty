@@ -16,9 +16,19 @@
 package io.netty.handler.codec.http3;
 
 /**
- * Different <a href="https://tools.ietf.org/html/draft-ietf-quic-http-32#section-8.1">HTTP3 error codes</a>.
+ * Different <a href="https://datatracker.ietf.org/doc/html/rfc9114#name-http-3-error-codes">HTTP3 error codes</a>.
  */
 public enum Http3ErrorCode {
+
+    /**
+     * Datagram or Capsule Protocol parse error
+     * <a href="https://www.rfc-editor.org/rfc/rfc9297.html#name-http-3-error-code">rfc9297</a>
+     * registered in IANA http3
+     * <a href="https://www.iana.org/assignments/http3-parameters/http3-parameters.xhtml#http3-parameters-error-codes"
+     * >
+     *     IANA Http3 Error Codes</a>
+     */
+    H3_DATAGRAM_ERROR(0x33),
 
     /**
      *  No error. This is used when the connection or stream needs to be closed, but there is no error to signal.

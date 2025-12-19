@@ -277,4 +277,9 @@ public class IoUringSocketTestPermutation extends SocketTestPermutation {
         return UnixTestUtils.newDomainSocketAddress();
     }
 
+    public static DomainSocketAddress newAbstractSocketAddress() {
+        // Abstract namespace sockets start with a null byte followed by a unique name
+        return new DomainSocketAddress("\0netty_test_abstract_" + System.nanoTime());
+    }
+
 }

@@ -56,7 +56,8 @@ public class HttpUtilTest {
         assertFalse(HttpUtil.isOriginForm(URI.create("*")));
     }
 
-    @Test public void testRecognizesAsteriskForm() {
+    @Test
+    public void testRecognizesAsteriskForm() {
         // Asterisk form: https://tools.ietf.org/html/rfc7230#section-5.3.4
         assertTrue(HttpUtil.isAsteriskForm(URI.create("*")));
         // Origin form: https://tools.ietf.org/html/rfc7230#section-5.3.1
@@ -65,6 +66,26 @@ public class HttpUtilTest {
         assertFalse(HttpUtil.isAsteriskForm(URI.create("http://www.example.org/pub/WWW/TheProject.html")));
         // Authority form: https://tools.ietf.org/html/rfc7230#section-5.3.3
         assertFalse(HttpUtil.isAsteriskForm(URI.create("www.example.com:80")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "http://localhost/\r\n",
+            "/r\r\n?q=1",
+            "http://localhost/\r\n?q=1",
+            "/r\r\n/?q=1",
+            "http://localhost/\r\n/?q=1",
+            "/r\r\n",
+            "http://localhost/ HTTP/1.1\r\n\r\nPOST /p HTTP/1.1\r\n\r\n",
+            "/r HTTP/1.1\r\n\r\nPOST /p HTTP/1.1\r\n\r\n",
+            "GET ",
+            " GET",
+            "HTTP/ 1.1",
+            "HTTP/\r0.9",
+            "HTTP/\n1.1",
+    })
+    public void requestLineTokenValidationMustRejectInvalidTokens(String token) throws Exception {
+        assertFalse(HttpUtil.isEncodingSafeStartLineToken(token));
     }
 
     @Test

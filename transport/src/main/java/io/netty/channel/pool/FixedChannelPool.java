@@ -291,34 +291,30 @@ public class FixedChannelPool extends SimpleChannelPool {
     public Future<Void> release(final Channel channel, final Promise<Void> promise) {
         ObjectUtil.checkNotNull(promise, "promise");
         final Promise<Void> p = executor.newPromise();
-        super.release(channel, p.addListener(new FutureListener<Void>() {
+        super.release(channel, p.addListener((FutureListener<Void>) future -> {
+            try {
+                assert executor.inEventLoop();
 
-            @Override
-            public void operationComplete(Future<Void> future) {
-                try {
-                    assert executor.inEventLoop();
-
-                    if (closed) {
-                        // Since the pool is closed, we have no choice but to close the channel
-                        channel.close();
-                        promise.setFailure(new IllegalStateException("FixedChannelPool was closed"));
-                        return;
-                    }
-
-                    if (future.isSuccess()) {
-                        decrementAndRunTaskQueue();
-                        promise.setSuccess(null);
-                    } else {
-                        Throwable cause = future.cause();
-                        // Check if the exception was not because of we passed the Channel to the wrong pool.
-                        if (!(cause instanceof IllegalArgumentException)) {
-                            decrementAndRunTaskQueue();
-                        }
-                        promise.setFailure(future.cause());
-                    }
-                } catch (Throwable cause) {
-                    promise.tryFailure(cause);
+                if (closed) {
+                    // Since the pool is closed, we have no choice but to close the channel
+                    channel.close();
+                    promise.setFailure(new IllegalStateException("FixedChannelPool was closed"));
+                    return;
                 }
+
+                if (future.isSuccess()) {
+                    decrementAndRunTaskQueue();
+                    promise.setSuccess(null);
+                } else {
+                    Throwable cause = future.cause();
+                    // Check if the exception was not because of we passed the Channel to the wrong pool.
+                    if (!(cause instanceof IllegalArgumentException)) {
+                        decrementAndRunTaskQueue();
+                    }
+                    promise.setFailure(future.cause());
+                }
+            } catch (Throwable cause) {
+                promise.tryFailure(cause);
             }
         }));
         return promise;
@@ -469,14 +465,11 @@ public class FixedChannelPool extends SimpleChannelPool {
             executor.execute(new Runnable() {
                 @Override
                 public void run() {
-                    close0().addListener(new FutureListener<Void>() {
-                        @Override
-                        public void operationComplete(Future<Void> f) throws Exception {
-                            if (f.isSuccess()) {
-                                closeComplete.setSuccess(null);
-                            } else {
-                                closeComplete.setFailure(f.cause());
-                            }
+                    close0().addListener((FutureListener<Void>) f -> {
+                        if (f.isSuccess()) {
+                            closeComplete.setSuccess(null);
+                        } else {
+                            closeComplete.setFailure(f.cause());
                         }
                     });
                 }
