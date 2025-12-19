@@ -34,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.WeakHashMap;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
@@ -73,17 +72,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     private final boolean touch = ResourceLeakDetector.isEnabled();
 
     private volatile MessageSizeEstimator.Handle estimatorHandle;
-    private boolean firstRegistration = true;
-
-    /**
-     * This is the head of a linked list that is processed by {@link #callHandlerAddedForAllHandlers()} and so process
-     * all the pending {@link #callHandlerAdded0(AbstractChannelHandlerContext)}.
-     * <p>
-     * We only keep the head because it is expected that the list is used infrequently and its size is small.
-     * Thus full iterations to do insertions is assumed to be a good compromised to saving memory and tail management
-     * complexity.
-     */
-    private PendingHandlerCallback pendingHandlerCallbackHead;
 
     /**
      * Set to {@code true} once the {@link AbstractChannel} is registered.Once set to {@code true} the value will never
@@ -181,15 +169,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                     break;
                 default:
                     throw new IllegalArgumentException("unknown add strategy: " + addStrategy);
-            }
-
-            // If the registered is false it means that the channel was not registered on an eventLoop yet.
-            // In this case we add the context to the pipeline and add a task that will call
-            // ChannelHandler.handlerAdded(...) once the channel is registered.
-            if (!registered) {
-                newCtx.setAddPending();
-                callHandlerCallbackLater(newCtx, true);
-                return this;
             }
 
             EventExecutor executor = newCtx.executor();
@@ -386,14 +365,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
                 return false;
             }
 
-            // If the registered is false it means that the channel was not registered on an eventloop yet.
-            // In this case we remove the context from the pipeline and add a task that will call
-            // ChannelHandler.handlerRemoved(...) once the channel is registered.
-            if (!registered) {
-                callHandlerCallbackLater(ctx, false);
-                return true;
-            }
-
             EventExecutor executor = ctx.executor();
             if (!executor.inEventLoop()) {
                 executor.execute(new Runnable() {
@@ -494,15 +465,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
             replace0(ctx, newCtx);
 
-            // If the registered is false it means that the channel was not registered on an eventloop yet.
-            // In this case we replace the context in the pipeline
-            // and add a task that will call ChannelHandler.handlerAdded(...) and
-            // ChannelHandler.handlerRemoved(...) once the channel is registered.
-            if (!registered) {
-                callHandlerCallbackLater(newCtx, true);
-                callHandlerCallbackLater(ctx, false);
-                return ctx.handler();
-            }
             EventExecutor executor = ctx.executor();
             if (!executor.inEventLoop()) {
                 executor.execute(new Runnable() {
@@ -585,16 +547,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } catch (Throwable t) {
             fireExceptionCaught(new ChannelPipelineException(
                     ctx.handler().getClass().getName() + ".handlerRemoved() has thrown an exception.", t));
-        }
-    }
-
-    final void invokeHandlerAddedIfNeeded() {
-        assert channel.executor().inEventLoop();
-        if (firstRegistration) {
-            firstRegistration = false;
-            // We are now registered to the EventLoop. It's time to call the callbacks for the ChannelHandlers,
-            // that were added before the registration was done.
-            callHandlerAddedForAllHandlers();
         }
     }
 
@@ -1107,45 +1059,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         }
     }
 
-    private void callHandlerAddedForAllHandlers() {
-        final PendingHandlerCallback pendingHandlerCallbackHead;
-        synchronized (this) {
-            assert !registered;
-
-            // This Channel itself was registered.
-            registered = true;
-
-            pendingHandlerCallbackHead = this.pendingHandlerCallbackHead;
-            // Null out so it can be GC'ed.
-            this.pendingHandlerCallbackHead = null;
-        }
-
-        // This must happen outside of the synchronized(...) block as otherwise handlerAdded(...) may be called while
-        // holding the lock and so produce a deadlock if handlerAdded(...) will try to add another handler from outside
-        // the EventLoop.
-        PendingHandlerCallback task = pendingHandlerCallbackHead;
-        while (task != null) {
-            task.execute();
-            task = task.next;
-        }
-    }
-
-    private void callHandlerCallbackLater(AbstractChannelHandlerContext ctx, boolean added) {
-        assert !registered;
-
-        PendingHandlerCallback task = added ? new PendingHandlerAddedTask(ctx) : new PendingHandlerRemovedTask(ctx);
-        PendingHandlerCallback pending = pendingHandlerCallbackHead;
-        if (pending == null) {
-            pendingHandlerCallbackHead = task;
-        } else {
-            // Find the tail of the linked-list.
-            while (pending.next != null) {
-                pending = pending.next;
-            }
-            pending.next = task;
-        }
-    }
-
     private void callHandlerAddedInEventLoop(final AbstractChannelHandlerContext newCtx, EventExecutor executor) {
         newCtx.setAddPending();
         executor.execute(new Runnable() {
@@ -1366,21 +1279,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void register(ChannelHandlerContext ctx, CompletionHandler<Void> handler) {
-            transport.register(new CompletionHandler<>() {
-                @Override
-                public void success(Void result) {
-                    // Ensure we call handlerAdded(...) before we actually notify the promise. This is needed as the
-                    // user may already fire events through the pipeline in the FutureListener that the user
-                    // attached the the original promise.
-                    invokeHandlerAddedIfNeeded();
-                    handler.success(null);
-                }
-
-                @Override
-                public void failure(Throwable cause) {
-                    handler.failure(cause);
-                }
-            });
+            transport.register(handler);
         }
 
         @Override
@@ -1439,7 +1338,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
 
         @Override
         public void channelRegistered(ChannelHandlerContext ctx) {
-            invokeHandlerAddedIfNeeded();
             ctx.fireChannelRegistered();
         }
 
@@ -1496,81 +1394,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         @Override
         public void channelShutdown(ChannelHandlerContext ctx, ChannelShutdownType type) {
             ctx.fireChannelShutdown(type);
-        }
-    }
-
-    private abstract static class PendingHandlerCallback implements Runnable {
-        final AbstractChannelHandlerContext ctx;
-        PendingHandlerCallback next;
-
-        PendingHandlerCallback(AbstractChannelHandlerContext ctx) {
-            this.ctx = ctx;
-        }
-
-        abstract void execute();
-    }
-
-    private final class PendingHandlerAddedTask extends PendingHandlerCallback {
-
-        PendingHandlerAddedTask(AbstractChannelHandlerContext ctx) {
-            super(ctx);
-        }
-
-        @Override
-        public void run() {
-            callHandlerAdded0(ctx);
-        }
-
-        @Override
-        void execute() {
-            EventExecutor executor = ctx.executor();
-            if (executor.inEventLoop()) {
-                callHandlerAdded0(ctx);
-            } else {
-                try {
-                    executor.execute(this);
-                } catch (RejectedExecutionException e) {
-                    if (logger.isWarnEnabled()) {
-                        logger.warn(
-                                "Can't invoke handlerAdded() as the EventExecutor {} rejected it, removing handler {}.",
-                                executor, ctx.name(), e);
-                    }
-                    atomicRemoveFromHandlerList(ctx);
-                    ctx.setRemoved();
-                }
-            }
-        }
-    }
-
-    private final class PendingHandlerRemovedTask extends PendingHandlerCallback {
-
-        PendingHandlerRemovedTask(AbstractChannelHandlerContext ctx) {
-            super(ctx);
-        }
-
-        @Override
-        public void run() {
-            callHandlerRemoved0(ctx);
-        }
-
-        @Override
-        void execute() {
-            EventExecutor executor = ctx.executor();
-            if (executor.inEventLoop()) {
-                callHandlerRemoved0(ctx);
-            } else {
-                try {
-                    executor.execute(this);
-                } catch (RejectedExecutionException e) {
-                    if (logger.isWarnEnabled()) {
-                        logger.warn(
-                                "Can't invoke handlerRemoved() as the EventExecutor {} rejected it," +
-                                        " removing handler {}.", executor, ctx.name(), e);
-                    }
-                    // remove0(...) was call before so just call AbstractChannelHandlerContext.setRemoved().
-                    ctx.setRemoved();
-                }
-            }
         }
     }
 }
