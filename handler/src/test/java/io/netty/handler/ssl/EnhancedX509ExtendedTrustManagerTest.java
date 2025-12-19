@@ -33,6 +33,7 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -255,6 +256,9 @@ public class EnhancedX509ExtendedTrustManagerTest {
     });
 
     static List<Arguments> throwingMatchingExecutables() {
+        if (PlatformDependent.javaVersion() < 8) {
+            return Collections.emptyList();
+        }
         return Arrays.asList(arguments(named("checkServerTrusted", new Executable() {
             @Override
             public void execute() throws Throwable {
