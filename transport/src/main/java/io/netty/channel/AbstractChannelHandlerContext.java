@@ -763,10 +763,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         } else {
             safeExecute(executor, getInvokeTasks().flushTask, channel().voidPromise(), null, false);
         }
-
         return this;
     }
-
 
     @Override
     public ChannelFuture writeAndFlush(Object msg, ChannelPromise promise) {
