@@ -35,6 +35,7 @@ import io.netty.util.ReferenceCountUtil;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.internal.EmptyArrays;
 import io.netty.util.internal.ThrowableUtil;
+import org.mockito.Mockito;
 
 import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.KeyManager;
@@ -64,6 +65,7 @@ import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -344,5 +346,12 @@ final class SniClientJava8TestUtil {
                 }
             }, factory.getProvider(), factory.getAlgorithm());
         }
+    }
+
+    static SSLSession mockSSLSessionWithSNIHostNameAndPeerHost(String hostname) {
+        ExtendedSSLSession session = Mockito.mock(ExtendedSSLSession.class);
+        Mockito.when(session.getRequestedServerNames()).thenReturn(Arrays.asList(new SNIHostName(hostname)));
+        Mockito.when(session.getPeerHost()).thenReturn(hostname);
+        return session;
     }
 }

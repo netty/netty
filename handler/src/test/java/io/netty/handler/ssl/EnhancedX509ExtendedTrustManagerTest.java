@@ -17,6 +17,7 @@
 package io.netty.handler.ssl;
 
 import io.netty.util.internal.EmptyArrays;
+import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -35,8 +36,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
-import javax.net.ssl.ExtendedSSLSession;
-import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocket;
@@ -46,11 +45,13 @@ import javax.security.auth.x500.X500Principal;
 import static io.netty.handler.ssl.EnhancingX509ExtendedTrustManager.ALTNAME_DNS;
 import static io.netty.handler.ssl.EnhancingX509ExtendedTrustManager.ALTNAME_IP;
 import static io.netty.handler.ssl.EnhancingX509ExtendedTrustManager.ALTNAME_URI;
+import static io.netty.handler.ssl.SniClientJava8TestUtil.mockSSLSessionWithSNIHostNameAndPeerHost;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 import static org.junit.jupiter.api.Named.named;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 
@@ -262,7 +263,7 @@ public class EnhancedX509ExtendedTrustManagerTest {
         })), arguments(named("checkServerTrusted with SSLEngine", new Executable() {
             @Override
             public void execute() throws Throwable {
-                SSLSession session = mockSSLSession();
+                SSLSession session = mockSSLSessionWithSNIHostNameAndPeerHost(HOSTNAME);
                 SSLEngine engine = Mockito.mock(SSLEngine.class);
                 Mockito.when(engine.getHandshakeSession()).thenReturn(session);
                 MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, engine);
@@ -270,19 +271,12 @@ public class EnhancedX509ExtendedTrustManagerTest {
         })), arguments(named("checkServerTrusted with SSLSocket", new Executable() {
             @Override
             public void execute() throws Throwable {
-                SSLSession session = mockSSLSession();
+                SSLSession session = mockSSLSessionWithSNIHostNameAndPeerHost(HOSTNAME);
                 SSLSocket socket = Mockito.mock(SSLSocket.class);
                 Mockito.when(socket.getHandshakeSession()).thenReturn(session);
                 MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, socket);
             }
         })));
-    }
-
-    private static SSLSession mockSSLSession() {
-        ExtendedSSLSession session = Mockito.mock(ExtendedSSLSession.class);
-        Mockito.when(session.getRequestedServerNames()).thenReturn(Arrays.asList(new SNIHostName(HOSTNAME)));
-        Mockito.when(session.getPeerHost()).thenReturn(HOSTNAME);
-        return session;
     }
 
     private static final EnhancingX509ExtendedTrustManager NON_MATCHING_MANAGER =
@@ -351,6 +345,7 @@ public class EnhancedX509ExtendedTrustManagerTest {
     @ParameterizedTest
     @MethodSource("throwingMatchingExecutables")
     void testEnhanceException(Executable executable, TestInfo testInfo)  {
+        assumeTrue(PlatformDependent.javaVersion() >= 8);
         CertificateException exception = assertThrows(CertificateException.class, executable);
         // We should wrap the original cause with our own.
         assertInstanceOf(CertificateException.class, exception.getCause());
@@ -370,6 +365,7 @@ public class EnhancedX509ExtendedTrustManagerTest {
     @ParameterizedTest
     @MethodSource("throwingNonMatchingExecutables")
     void testNotEnhanceException(Executable executable) {
+        assumeTrue(PlatformDependent.javaVersion() >= 8);
         CertificateException exception = assertThrows(CertificateException.class, executable);
         // We should not wrap the original cause with our own.
         assertNull(exception.getCause());
