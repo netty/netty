@@ -18,10 +18,12 @@ package io.netty.handler.ssl;
 import io.netty.util.internal.SuppressJava6Requirement;
 import io.netty.util.CharsetUtil;
 
+import javax.net.ssl.ExtendedSSLSession;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIMatcher;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLParameters;
+import javax.net.ssl.SSLSession;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -110,5 +112,19 @@ final class Java8SslUtils {
             return false;
         }
         return true;
+    }
+
+    static String getRequestedSNIHostName(SSLSession session) {
+        if (!(session instanceof ExtendedSSLSession)) {
+            return null;
+        }
+        List<SNIServerName> names = ((ExtendedSSLSession) session).getRequestedServerNames();
+        for (SNIServerName sni : names) {
+            if (sni instanceof SNIHostName) {
+                SNIHostName hostName = (SNIHostName) sni;
+                return hostName.getAsciiName();
+            }
+        }
+        return null;
     }
 }
