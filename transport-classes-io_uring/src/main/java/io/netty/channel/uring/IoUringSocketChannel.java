@@ -109,8 +109,9 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
         protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
             assert writeId == 0;
 
-            if (IoUring.isSendmsgZcSupported() && (
-                    (IoUringSocketChannelConfig) config()).shouldWriteZeroCopy((int) in.totalPendingWriteBytes())) {
+            Object currentMsg = in.current();
+            IoUringSocketChannelConfig ioUringSocketChannelConfig = (IoUringSocketChannelConfig) config();
+            if (IoUring.isSendmsgZcSupported() && (ioUringSocketChannelConfig.shouldWriteZeroCopy(((ByteBuf) currentMsg).readableBytes()))) {
                 IoUringIoHandler handler = registration().attachment();
 
                 IovArray iovArray = handler.iovArray();
@@ -119,10 +120,22 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
                 // buffers.
                 iovArray.maxCount(Native.MAX_SKB_FRAGS);
                 try {
-                    in.forEachFlushedMessage(iovArray);
+                    in.forEachFlushedMessage(new ChannelOutboundBuffer.MessageProcessor() {
+                        @Override
+                        public boolean processMessage(Object msg) throws Exception {
+                            if (msg instanceof ByteBuf) {
+                                ByteBuf buf = (ByteBuf) msg;
+                                int length = buf.readableBytes();
+                                if (ioUringSocketChannelConfig.shouldWriteZeroCopy(length)) {
+                                    return iovArray.processMessage(msg);
+                                }
+                            }
+                            return false;
+                        }
+                    });
                 } catch (Exception e) {
                     // This should never happen, anyway fallback to single write.
-                    return scheduleWriteSingle(in.current());
+                    return scheduleWriteSingle(currentMsg);
                 }
                 long iovArrayAddress = iovArray.memoryAddress(offset);
                 int iovArrayLength = iovArray.count() - offset;
@@ -142,6 +155,24 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
             }
             // Should not use sendmsg_zc, just use normal writev.
             return super.scheduleWriteMultiple(in);
+        }
+
+        @Override
+        protected ChannelOutboundBuffer.MessageProcessor filterWriteMultiple(IovArray iovArray) {
+            IoUringSocketChannelConfig ioUringSocketChannelConfig = (IoUringSocketChannelConfig) config();
+            return new ChannelOutboundBuffer.MessageProcessor() {
+                @Override
+                public boolean processMessage(Object msg) throws Exception {
+                    if (msg instanceof ByteBuf) {
+                        ByteBuf buf = (ByteBuf) msg;
+                        int length = buf.readableBytes();
+                        if (ioUringSocketChannelConfig.shouldWriteZeroCopy(length)) {
+                            return false;
+                        }
+                    }
+                    return iovArray.processMessage(msg);
+                }
+            };
         }
 
         @Override
