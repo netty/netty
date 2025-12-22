@@ -972,7 +972,7 @@ public final class CertificateBuilder {
         /**
          * The ML-KEM-512 algorithm is the NIST FIPS 203 version of the post-quantum Kyber algorithm.
          * It has 128-bits of classical security strength, and is claimed to meet NIST Level 1
-         * quantum security strength (equivalent to finding the key for an AES-1128 block).
+         * quantum security strength (equivalent to finding the key for an AES-128 block).
          * <p>
          * This algorithm was added in Java 24, and may not be supported everywhere.
          */
@@ -992,7 +992,104 @@ public final class CertificateBuilder {
          * <p>
          * This algorithm was added in Java 24, and may not be supported everywhere.
          */
-        mlKem1024("ML-KEM", namedParameterSpec("ML-KEM-1024"), UNSUPPORTED_SIGN);
+        mlKem1024("ML-KEM", namedParameterSpec("ML-KEM-1024"), UNSUPPORTED_SIGN),
+        /**
+         * The SLH-DSA-SHA2-128s algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 128-bits of classical security strength, and is claimed to meet NIST Level 1
+         * quantum security strength (equivalent to finding the key for an AES-128 block).
+         * <p>
+         * SLH-DSA algorithms with the 's' suffix have relatively smaller signatures but are much slower.
+         */
+        slhDsaSha2_128s("SLH-DSA", namedParameterSpec("SLH-DSA-SHA2-128s"), "SLH-DSA-SHA2-128s"),
+        /**
+         * The SLH-DSA-SHA2-128f algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 128-bits of classical security strength, and is claimed to meet NIST Level 1
+         * quantum security strength (equivalent to finding the key for an AES-128 block).
+         * <p>
+         * SLH-DSA algorithms with the 'f' suffix have larger signatures but are much faster.
+         */
+        slhDsaSha2_128f("SLH-DSA", namedParameterSpec("SLH-DSA-SHA2-128f"), "SLH-DSA-SHA2-128f"),
+        /**
+         * The SLH-DSA-SHAKE-128s algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 128-bits of classical security strength, and is claimed to meet NIST Level 1
+         * quantum security strength (equivalent to finding the key for an AES-128 block).
+         * <p>
+         * SLH-DSA algorithms with the 's' suffix have relatively smaller signatures but are much slower.
+         */
+        slhDsaShake_128s("SLH-DSA", namedParameterSpec("SLH-DSA-SHAKE-128s"), "SLH-DSA-SHAKE-128s"),
+        /**
+         * The SLH-DSA-SHAKE-128f algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 128-bits of classical security strength, and is claimed to meet NIST Level 1
+         * quantum security strength (equivalent to finding the key for an AES-128 block).
+         * <p>
+         * SLH-DSA algorithms with the 'f' suffix have larger signatures but are much faster.
+         */
+        slhDsaShake_128f("SLH-DSA", namedParameterSpec("SLH-DSA-SHAKE-128f"), "SLH-DSA-SHAKE-128f"),
+        /**
+         * The SLH-DSA-SHA2-192 algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 192-bits of classical security strength, and is claimed to meet NIST Level 3
+         * quantum security strength (equivalent to finding the key for an AES-192 block).
+         * <p>
+         * SLH-DSA algorithms with the 's' suffix have relatively smaller signatures but are much slower.
+         */
+        slhDsaSha2_192s("SLH-DSA", namedParameterSpec("SLH-DSA-SHA2-192s"), "SLH-DSA-SHA2-192s"),
+        /**
+         * The SLH-DSA-SHA2-192f algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 192-bits of classical security strength, and is claimed to meet NIST Level 3
+         * quantum security strength (equivalent to finding the key for an AES-192 block).
+         * <p>
+         * SLH-DSA algorithms with the 'f' suffix have larger signatures but are much faster.
+         */
+        slhDsaSha2_192f("SLH-DSA", namedParameterSpec("SLH-DSA-SHA2-192f"), "SLH-DSA-SHA2-192f"),
+        /**
+         * The SLH-DSA-SHAKE-192s algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 192-bits of classical security strength, and is claimed to meet NIST Level 3
+         * quantum security strength (equivalent to finding the key for an AES-192 block).
+         * <p>
+         * SLH-DSA algorithms with the 's' suffix have relatively smaller signatures but are much slower.
+         */
+        slhDsaShake_192s("SLH-DSA", namedParameterSpec("SLH-DSA-SHAKE-192s"), "SLH-DSA-SHAKE-192s"),
+        /**
+         * The SLH-DSA-SHAKE-192f algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 192-bits of classical security strength, and is claimed to meet NIST Level 3
+         * quantum security strength (equivalent to finding the key for an AES-192 block).
+         * <p>
+         * SLH-DSA algorithms with the 'f' suffix have larger signatures but are much faster.
+         */
+        slhDsaShake_192f("SLH-DSA", namedParameterSpec("SLH-DSA-SHAKE-192f"), "SLH-DSA-SHAKE-192f"),
+        /**
+         * The SLH-DSA-SHA2-256s algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 256-bits of classical security strength, and is claimed to meet NIST Level 5
+         * quantum security strength (equivalent to finding the key for an AES-256 block).
+         * <p>
+         * SLH-DSA algorithms with the 's' suffix have relatively smaller signatures but are much slower.
+         */
+        slhDsaSha2_256s("SLH-DSA", namedParameterSpec("SLH-DSA-SHA2-256s"), "SLH-DSA-SHA2-256s"),
+        /**
+         * The SLH-DSA-SHA2-256f algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 256-bits of classical security strength, and is claimed to meet NIST Level 5
+         * quantum security strength (equivalent to finding the key for an AES-256 block).
+         * <p>
+         * SLH-DSA algorithms with the 'f' suffix have larger signatures but are much faster.
+         */
+        slhDsaSha2_256f("SLH-DSA", namedParameterSpec("SLH-DSA-SHA2-256f"), "SLH-DSA-SHA2-256f"),
+        /**
+         * The SLH-DSA-SHAKE-256s algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 256-bits of classical security strength, and is claimed to meet NIST Level 5
+         * quantum security strength (equivalent to finding the key for an AES-256 block).
+         * <p>
+         * SLH-DSA algorithms with the 's' suffix have relatively smaller signatures but are much slower.
+         */
+        slhDsaShake_256s("SLH-DSA", namedParameterSpec("SLH-DSA-SHAKE-256s"), "SLH-DSA-SHAKE-256s"),
+        /**
+         * The SLH-DSA-SHAKE-256f algorithm is the NIST FIPS 205 of the post-quantum SPHINCS+ algorithm.
+         * It has 256-bits of classical security strength, and is claimed to meet NIST Level 5
+         * quantum security strength (equivalent to finding the key for an AES-256 block).
+         * <p>
+         * SLH-DSA algorithms with the 'f' suffix have larger signatures but are much faster.
+         */
+        slhDsaShake_256f("SLH-DSA", namedParameterSpec("SLH-DSA-SHAKE-256f"), "SLH-DSA-SHAKE-256f"),
+        ;
 
         final String keyType;
         final AlgorithmParameterSpec parameterSpec;
