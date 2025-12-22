@@ -53,7 +53,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
-import java.security.Provider;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
@@ -210,12 +209,7 @@ public class SocketSslLargeCertificateTest {
                                 if (receivedRead) {
                                     receivedRead = false;
                                     ctx.writeAndFlush(Unpooled.buffer()).addListener(ChannelFutureListener.CLOSE);
-                                    ctx.channel().closeFuture().addListener(new ChannelFutureListener() {
-                                        @Override
-                                        public void operationComplete(ChannelFuture future) throws Exception {
-                                            completion.setSuccess(null);
-                                        }
-                                    });
+                                    ctx.channel().closeFuture().addListener(future -> completion.setSuccess(null));
                                 }
                             }
 

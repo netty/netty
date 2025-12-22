@@ -21,8 +21,6 @@ import java.util.Collections;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelDuplexHandler;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -116,12 +114,7 @@ public class HttpServerUpgradeHandlerTest {
                         ctx.write(msg, promise);
                     }
                 });
-                promise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) {
-                        writeFlushed = true;
-                    }
-                });
+                promise.addListener(future -> writeFlushed = true);
             }
         };
 
