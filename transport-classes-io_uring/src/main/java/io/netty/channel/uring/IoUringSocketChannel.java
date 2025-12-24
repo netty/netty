@@ -111,6 +111,7 @@ public final class IoUringSocketChannel extends AbstractIoUringStreamChannel imp
 
             Object currentMsg = in.current();
             IoUringSocketChannelConfig ioUringSocketChannelConfig = (IoUringSocketChannelConfig) config();
+            //at least one buffer in the batch exceeds `IO_URING_WRITE_ZERO_COPY_THRESHOLD`.
             if (IoUring.isSendmsgZcSupported() && (ioUringSocketChannelConfig.shouldWriteZeroCopy(((ByteBuf) currentMsg).readableBytes()))) {
                 IoUringIoHandler handler = registration().attachment();
 
