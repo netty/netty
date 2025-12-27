@@ -18,7 +18,6 @@ package io.netty.handler.codec.http.websocketx;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -287,7 +286,7 @@ public abstract class WebSocketClientHandshaker {
      *            the {@link ChannelPromise} to be notified when the opening handshake is sent
      */
     public final ChannelFuture handshake(Channel channel, final ChannelPromise promise) {
-        ChannelPipeline pipeline = channel.pipeline();
+        final ChannelPipeline pipeline = channel.pipeline();
         HttpResponseDecoder decoder = pipeline.get(HttpResponseDecoder.class);
         if (decoder == null) {
             HttpClientCodec codec = pipeline.get(HttpClientCodec.class);
@@ -322,26 +321,22 @@ public abstract class WebSocketClientHandshaker {
 
         FullHttpRequest request = newHandshakeRequest();
 
-        channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                if (future.isSuccess()) {
-                    ChannelPipeline p = future.channel().pipeline();
-                    ChannelHandlerContext ctx = p.context(HttpRequestEncoder.class);
-                    if (ctx == null) {
-                        ctx = p.context(HttpClientCodec.class);
-                    }
-                    if (ctx == null) {
-                        promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
-                                "an HttpRequestEncoder or HttpClientCodec"));
-                        return;
-                    }
-                    p.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
-
-                    promise.setSuccess();
-                } else {
-                    promise.setFailure(future.cause());
+        channel.writeAndFlush(request).addListener(future -> {
+            if (future.isSuccess()) {
+                ChannelHandlerContext ctx = pipeline.context(HttpRequestEncoder.class);
+                if (ctx == null) {
+                    ctx = pipeline.context(HttpClientCodec.class);
                 }
+                if (ctx == null) {
+                    promise.setFailure(new IllegalStateException("ChannelPipeline does not contain " +
+                            "an HttpRequestEncoder or HttpClientCodec"));
+                    return;
+                }
+                pipeline.addAfter(ctx.name(), "ws-encoder", newWebSocketEncoder());
+
+                promise.setSuccess();
+            } else {
+                promise.setFailure(future.cause());
             }
         });
         return promise;
@@ -687,32 +682,23 @@ public abstract class WebSocketClientHandshaker {
             return promise;
         }
 
-        promise.addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                // If flush operation failed, there is no reason to expect
-                // a server to receive CloseFrame. Thus this should be handled
-                // by the application separately.
-                // Also, close might be called twice from different threads.
-                if (future.isSuccess() && channel.isActive() &&
-                        FORCE_CLOSE_INIT_UPDATER.compareAndSet(handshaker, 0, 1)) {
-                    final Future<?> forceCloseFuture = channel.eventLoop().schedule(new Runnable() {
-                        @Override
-                        public void run() {
-                            if (channel.isActive()) {
-                                invoker.close();
-                                forceCloseComplete = true;
-                            }
+        promise.addListener(future -> {
+            // If flush operation failed, there is no reason to expect
+            // a server to receive CloseFrame. Thus this should be handled
+            // by the application separately.
+            // Also, close might be called twice from different threads.
+            if (future.isSuccess() && channel.isActive() &&
+                    FORCE_CLOSE_INIT_UPDATER.compareAndSet(handshaker, 0, 1)) {
+                final Future<?> forceCloseFuture = channel.eventLoop().schedule(new Runnable() {
+                    @Override
+                    public void run() {
+                        if (channel.isActive()) {
+                            invoker.close();
+                            forceCloseComplete = true;
                         }
-                    }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
-
-                    channel.closeFuture().addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            forceCloseFuture.cancel(false);
-                        }
-                    });
-                }
+                    }
+                }, forceCloseTimeoutMillis, TimeUnit.MILLISECONDS);
+                channel.closeFuture().addListener(f -> forceCloseFuture.cancel(false));
             }
         });
         return promise;

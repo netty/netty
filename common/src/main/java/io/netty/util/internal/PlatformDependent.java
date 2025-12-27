@@ -1064,8 +1064,18 @@ public final class PlatformDependent {
         }
     }
 
+    public static ByteBuffer absolutePut(ByteBuffer dst, int dstOffset, byte[] src, int srcOffset, int length) {
+        if (PlatformDependent0.hasAbsolutePutArrayMethod()) {
+            return PlatformDependent0.absolutePut(dst, dstOffset, src, srcOffset, length);
+        } else {
+            ByteBuffer tmp = (ByteBuffer) dst.duplicate().clear().position(dstOffset).limit(dstOffset + length);
+            tmp.put(ByteBuffer.wrap(src, srcOffset, length));
+            return dst;
+        }
+    }
+
     public static ByteBuffer absolutePut(ByteBuffer dst, int dstOffset, ByteBuffer src, int srcOffset, int length) {
-        if (PlatformDependent0.hasAbsolutePutMethod()) {
+        if (PlatformDependent0.hasAbsolutePutBufferMethod()) {
             return PlatformDependent0.absolutePut(dst, dstOffset, src, srcOffset, length);
         } else {
             ByteBuffer a = (ByteBuffer) dst.duplicate().clear().position(dstOffset).limit(dstOffset + length);

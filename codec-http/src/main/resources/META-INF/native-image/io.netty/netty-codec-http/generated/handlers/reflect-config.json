@@ -308,9 +308,9 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker$4",
+    "name": "io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker$3",
     "condition": {
-      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker$4"
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketClientHandshaker$3"
     },
     "queryAllPublicMethods": true
   },
@@ -357,9 +357,9 @@
     "queryAllPublicMethods": true
   },
   {
-    "name": "io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker$2",
+    "name": "io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker$1",
     "condition": {
-      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker$2"
+      "typeReachable": "io.netty.handler.codec.http.websocketx.WebSocketServerHandshaker$1"
     },
     "queryAllPublicMethods": true
   },

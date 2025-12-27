@@ -24,8 +24,6 @@ import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
 import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 import org.junit.jupiter.api.Test;
 
 import java.nio.channels.ClosedChannelException;
@@ -238,14 +236,9 @@ public class ReentrantChannelTest extends BaseChannelTest {
         clientChannel.pipeline().addLast(new ChannelOutboundHandlerAdapter() {
 
             @Override
-            public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) throws Exception {
-                promise.addListener(new GenericFutureListener<Future<? super Void>>() {
-                    @Override
-                    public void operationComplete(Future<? super Void> future) throws Exception {
-                        ctx.channel().close();
-                    }
-                });
-                super.write(ctx, msg, promise);
+            public void write(final ChannelHandlerContext ctx, Object msg, ChannelPromise promise) {
+                promise.addListener(future -> ctx.channel().close());
+                ctx.write(msg, promise);
                 ctx.channel().flush();
             }
         });

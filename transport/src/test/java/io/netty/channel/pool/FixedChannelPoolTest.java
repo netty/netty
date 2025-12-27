@@ -29,7 +29,6 @@ import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.pool.FixedChannelPool.AcquireTimeoutAction;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -279,12 +278,9 @@ public class FixedChannelPoolTest {
         pool.acquire().get();
 
         final ChannelPromise closePromise = sc.newPromise();
-        pool.closeAsync().addListener(new GenericFutureListener<Future<? super Void>>() {
-            @Override
-            public void operationComplete(Future<? super Void> future) throws Exception {
-                assertEquals(0, pool.acquiredChannelCount());
-                sc.close(closePromise).syncUninterruptibly();
-            }
+        pool.closeAsync().addListener(future -> {
+            assertEquals(0, pool.acquiredChannelCount());
+            sc.close(closePromise).syncUninterruptibly();
         }).awaitUninterruptibly();
         closePromise.awaitUninterruptibly();
     }
