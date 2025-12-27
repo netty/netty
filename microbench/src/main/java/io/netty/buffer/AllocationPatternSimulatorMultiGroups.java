@@ -717,7 +717,8 @@ public class AllocationPatternSimulatorMultiGroups {
         }
 
         Thread start(String name) {
-            Thread thread = new FastThreadLocalThread(this, name + '-' + THREAD_NAMES.compute(name, (n, c) -> c == null ? 1 : c + 1));
+            Thread thread = new FastThreadLocalThread(this, name + '-' +
+                    THREAD_NAMES.compute(name, (n, c) -> c == null ? 1 : c + 1));
             thread.start();
             return thread;
         }
