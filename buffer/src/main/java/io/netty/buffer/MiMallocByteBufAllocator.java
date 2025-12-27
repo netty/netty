@@ -1698,15 +1698,6 @@ final class MiMallocByteBufAllocator {
         private Block nextBlock;
 
         Block() { }
-
-        static Block copyBlock(Block block) {
-            Block copy = new Block();
-            copy.page = block.page;
-            copy.blockBytes = block.blockBytes;
-            copy.blockAdjustment = block.blockAdjustment;
-            copy.nextBlock = block.nextBlock;
-            return copy;
-        }
     }
 
     private AbstractByteBuf newChunk(int size) {
@@ -2110,16 +2101,14 @@ final class MiMallocByteBufAllocator {
              *    pointing to the same allocation range, and release the copy instead.
              * 4. The reallocation will make this ByteBuf not share the same instance with its original block anymore.
              */
-            final Block oldBlock;
-            if (this == this.block) {
-                oldBlock = Block.copyBlock(this.block);
-            } else {
-                oldBlock = this.block;
+            MiMallocByteBufAllocator allocator = this.block.page.segment.parent;
+            Block oldBlock = this.block;
+            if (this == oldBlock) {
+                LocalHeap heap = allocator.THREAD_LOCAL_HEAP.get();
+                oldBlock = heap.getBlock(oldBlock.page, oldBlock.blockBytes, oldBlock.blockAdjustment);
             }
-            MiMallocByteBufAllocator allocator = oldBlock.page.segment.parent;
             int baseOldRootIndex = adjustment;
             int oldCapacity = length;
-
             AbstractByteBuf oldRoot = rootParent();
             allocator.reallocate(newCapacity, maxCapacity(), this);
             oldRoot.getBytes(baseOldRootIndex, this, 0, oldCapacity);
