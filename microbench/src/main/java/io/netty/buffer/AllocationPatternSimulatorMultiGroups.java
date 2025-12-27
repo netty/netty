@@ -15,6 +15,7 @@
  */
 package io.netty.buffer;
 
+import io.netty.util.concurrent.FastThreadLocalThread;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingFile;
 import org.jfree.chart.ChartFactory;
@@ -451,7 +452,6 @@ public class AllocationPatternSimulatorMultiGroups {
 
     public static void main(String[] args) throws Exception {
         int[] pattern = args.length == 0 ? WEB_SOCKET_PROXY_PATTERN : buildPattern(args[0]);
-//        int[] pattern = buildPattern("/Users/jason/Downloads/netty-allocator.jfr");
         AllocationPatternSimulatorMultiGroups runner = new AllocationPatternSimulatorMultiGroups();
         runner.setUp(pattern);
         runner.run(CONCURRENCY_LEVEL, RUNNING_TIME_SECONDS);
@@ -717,7 +717,7 @@ public class AllocationPatternSimulatorMultiGroups {
         }
 
         Thread start(String name) {
-            Thread thread = new Thread(this, name + '-' + THREAD_NAMES.compute(name, (n, c) -> c == null ? 1 : c + 1));
+            Thread thread = new FastThreadLocalThread(this, name + '-' + THREAD_NAMES.compute(name, (n, c) -> c == null ? 1 : c + 1));
             thread.start();
             return thread;
         }
