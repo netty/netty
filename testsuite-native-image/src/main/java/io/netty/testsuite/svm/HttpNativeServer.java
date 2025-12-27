@@ -18,6 +18,7 @@ package io.netty.testsuite.svm;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.MiByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.Channel;
@@ -141,6 +142,7 @@ public final class HttpNativeServer {
             case POOLED : return PooledByteBufAllocator.DEFAULT;
             case UNPOOLED : return UnpooledByteBufAllocator.DEFAULT;
             case ADAPTIVE: return new AdaptiveByteBufAllocator();
+            case MIMALLOC: return new MiByteBufAllocator();
             default: return PooledByteBufAllocator.DEFAULT;
         }
     }
@@ -178,6 +180,7 @@ public final class HttpNativeServer {
     enum AllocatorType {
         POOLED,
         UNPOOLED,
-        ADAPTIVE
+        ADAPTIVE,
+        MIMALLOC
     }
 }
