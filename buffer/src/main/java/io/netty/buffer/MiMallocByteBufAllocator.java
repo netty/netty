@@ -20,6 +20,7 @@ import io.netty.util.CharsetUtil;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.concurrent.FastThreadLocal;
 import io.netty.util.internal.PlatformDependent;
+import io.netty.util.internal.SystemPropertyUtil;
 import io.netty.util.internal.UnstableApi;
 
 import java.io.IOException;
@@ -126,12 +127,13 @@ final class MiMallocByteBufAllocator {
     private static final int KiB = 1024;
     private static final int MiB = KiB * KiB;
 
-    private static final int PAGE_RETIRE_CYCLES = 16;
+    private static final boolean DISABLE_PAGE_RETIRE = SystemPropertyUtil.getBoolean(
+            "io.netty.allocator.mimalloc.disablePageRetire", false);
+    private static final byte DEFAULT_PAGE_RETIRE_CYCLES = (byte) (DISABLE_PAGE_RETIRE ? 0 : 16);
+    private static final byte DEFAULT_INIT_PAGE_RETIRE_EXPIRE = 7;
 
     // Collect heaps every N(default 10000) generic allocation calls.
     private static final int HEAP_OPTION_GENERIC_COLLECT = 10000;
-
-    private static final int DEFAULT_PAGE_RETIRE_EXPIRE = 7;
 
     private static final int  BLOCK_ALIGNMENT_MAX = DEFAULT_SEGMENT_SIZE >> 1;
     // Maximum slice count(31)
@@ -640,7 +642,7 @@ final class MiMallocByteBufAllocator {
             page.blockSize = block_size;
             int page_size = page.sliceCount * SEGMENT_SLICE_SIZE;
             page.reservedBlocks = page_size / block_size;
-            page.retireExpire = DEFAULT_PAGE_RETIRE_EXPIRE;
+            page.retireExpire = DEFAULT_INIT_PAGE_RETIRE_EXPIRE;
             assert page.capacityBlocks == 0;
             assert page.freeList == null;
             assert page.localFreeList == null;
@@ -1515,7 +1517,7 @@ final class MiMallocByteBufAllocator {
         boolean isInFull;
         // Expiration count for retired blocks.
         // retireExpire = 0 means disable retirement.
-        byte retireExpire = DEFAULT_PAGE_RETIRE_EXPIRE;
+        byte retireExpire = DEFAULT_INIT_PAGE_RETIRE_EXPIRE;
         Block freeList;
         Block localFreeList;
         int usedBlocks; // number of blocks in use (including blocks in `thread-free list`)
@@ -1582,13 +1584,13 @@ final class MiMallocByteBufAllocator {
             // For now, we don't retire if it is the only page left of this size class.
             Page page = this;
             PageQueue pq = heap.heapPageQueueOf(page);
-            if (PAGE_RETIRE_CYCLES > 0) {
+            if (DEFAULT_PAGE_RETIRE_CYCLES > 0) {
                 int bSize = page.blockSize;
                 if (pq.index < PAGE_QUEUE_BIN_LARGE_INDEX) {  // not full && not huge queue
                     if (pq.lastPage == page && pq.firstPage == page) { // the only page in the queue
                         // Enable retirement
-                        page.retireExpire =
-                                (byte) (bSize <= SMALL_BLOCK_SIZE_MAX ? PAGE_RETIRE_CYCLES : PAGE_RETIRE_CYCLES / 4);
+                        page.retireExpire = (byte) (bSize <= SMALL_BLOCK_SIZE_MAX ?
+                                DEFAULT_PAGE_RETIRE_CYCLES : Math.max(1, DEFAULT_PAGE_RETIRE_CYCLES / 4));
                         int index = pq.index;
                         if (index < heap.pageRetiredMin) {
                             heap.pageRetiredMin = index;
