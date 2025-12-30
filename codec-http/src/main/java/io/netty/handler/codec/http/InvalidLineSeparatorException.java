@@ -19,7 +19,7 @@ import io.netty.handler.codec.DecoderException;
 
 /**
  * Thrown when {@linkplain HttpDecoderConfig#isStrictLineParsing() strict line parsing} is enabled,
- * and HTTP start- and header field-lines are not seperated by CR LF octet pairs.
+ * and HTTP start- and header field-lines are not separated by CR LF octet pairs.
  * <p>
  * Strict line parsing is enabled by default since Netty 4.1.124 and 4.2.4.
  * This default can be overridden by setting the {@value HttpObjectDecoder#PROP_DEFAULT_STRICT_LINE_PARSING} system
