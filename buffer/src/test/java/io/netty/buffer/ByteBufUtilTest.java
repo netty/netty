@@ -66,6 +66,22 @@ public class ByteBufUtilTest {
         }
     }
 
+    private CompositeByteBuf compositeByteBuf(BufferType bufferType) {
+        switch (bufferType) {
+
+            case DIRECT_UNPOOLED:
+                return  UnpooledByteBufAllocator.DEFAULT.compositeDirectBuffer();
+            case HEAP_UNPOOLED:
+                return  UnpooledByteBufAllocator.DEFAULT.compositeHeapBuffer();
+            case DIRECT_POOLED:
+                return PooledByteBufAllocator.DEFAULT.compositeDirectBuffer();
+            case HEAP_POOLED:
+                return PooledByteBufAllocator.DEFAULT.compositeHeapBuffer();
+            default:
+                throw new AssertionError("unexpected buffer type: " + bufferType);
+        }
+    }
+
     public static Collection<Object[]> noUnsafe() {
         return Arrays.asList(new Object[][] {
                 { BufferType.DIRECT_POOLED },
@@ -403,7 +419,7 @@ public class ByteBufUtilTest {
         String usAscii = "NettyRocks";
         ByteBuf buf = buffer(bufferType, 16);
         buf.writeBytes(usAscii.getBytes(CharsetUtil.US_ASCII));
-        ByteBuf buf2 = Unpooled.compositeBuffer().addComponent(
+        ByteBuf buf2 = compositeByteBuf(bufferType).addComponent(
                 buffer(bufferType, 8)).addComponent(buffer(bufferType, 24));
         // write some byte so we start writing with an offset.
         buf2.writeByte(1);
@@ -422,7 +438,7 @@ public class ByteBufUtilTest {
         String usAscii = "NettyRocks";
         ByteBuf buf = buffer(bufferType, 16);
         buf.writeBytes(usAscii.getBytes(CharsetUtil.US_ASCII));
-        ByteBuf buf2 = new WrappedCompositeByteBuf(Unpooled.compositeBuffer().addComponent(
+        ByteBuf buf2 = new WrappedCompositeByteBuf(compositeByteBuf(bufferType).addComponent(
                 buffer(bufferType, 8)).addComponent(buffer(bufferType, 24)));
         // write some byte so we start writing with an offset.
         buf2.writeByte(1);
@@ -456,7 +472,7 @@ public class ByteBufUtilTest {
         String utf8 = "Some UTF-8 like äÄ∏ŒŒ";
         ByteBuf buf = buffer(bufferType, 16);
         buf.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
-        ByteBuf buf2 = Unpooled.compositeBuffer().addComponent(
+        ByteBuf buf2 = compositeByteBuf(bufferType).addComponent(
                 buffer(bufferType, 8)).addComponent(buffer(bufferType, 24));
         // write some byte so we start writing with an offset.
         buf2.writeByte(1);
@@ -475,7 +491,7 @@ public class ByteBufUtilTest {
         String utf8 = "Some UTF-8 like äÄ∏ŒŒ";
         ByteBuf buf = buffer(bufferType, 16);
         buf.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
-        ByteBuf buf2 = new WrappedCompositeByteBuf(Unpooled.compositeBuffer().addComponent(
+        ByteBuf buf2 = new WrappedCompositeByteBuf(compositeByteBuf(bufferType).addComponent(
                 buffer(bufferType, 8)).addComponent(buffer(bufferType, 24)));
         // write some byte so we start writing with an offset.
         buf2.writeByte(1);
@@ -816,7 +832,7 @@ public class ByteBufUtilTest {
     @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("noUnsafe")
     public void testToStringDoesNotThrowIndexOutOfBounds(BufferType bufferType) {
-        CompositeByteBuf buffer = Unpooled.compositeBuffer();
+        CompositeByteBuf buffer = compositeByteBuf(bufferType);
         try {
             byte[] bytes = "1234".getBytes(CharsetUtil.UTF_8);
             buffer.addComponent(buffer(bufferType, bytes.length).writeBytes(bytes));
