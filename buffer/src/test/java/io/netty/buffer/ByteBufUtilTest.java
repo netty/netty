@@ -45,9 +45,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class ByteBufUtilTest {
     private static final String PARAMETERIZED_NAME = "bufferType = {0}";
+    private final AdaptiveByteBufAllocator adaptiveByteBufAllocator = new AdaptiveByteBufAllocator();
 
     private enum BufferType {
-        DIRECT_UNPOOLED, DIRECT_POOLED, HEAP_POOLED, HEAP_UNPOOLED
+        DIRECT_UNPOOLED, DIRECT_POOLED, DIRECT_ADAPTIVE, HEAP_POOLED, HEAP_UNPOOLED, HEAP_ADAPTIVE
     }
 
     private ByteBuf buffer(BufferType bufferType, int capacity) {
@@ -61,6 +62,10 @@ public class ByteBufUtilTest {
             return PooledByteBufAllocator.DEFAULT.directBuffer(capacity);
         case HEAP_POOLED:
             return PooledByteBufAllocator.DEFAULT.buffer(capacity);
+        case DIRECT_ADAPTIVE:
+            return adaptiveByteBufAllocator.directBuffer(capacity);
+        case HEAP_ADAPTIVE:
+            return adaptiveByteBufAllocator.heapBuffer(capacity);
         default:
             throw new AssertionError("unexpected buffer type: " + bufferType);
         }
@@ -77,6 +82,10 @@ public class ByteBufUtilTest {
                 return PooledByteBufAllocator.DEFAULT.compositeDirectBuffer();
             case HEAP_POOLED:
                 return PooledByteBufAllocator.DEFAULT.compositeHeapBuffer();
+            case DIRECT_ADAPTIVE:
+                return adaptiveByteBufAllocator.compositeDirectBuffer();
+            case HEAP_ADAPTIVE:
+                return adaptiveByteBufAllocator.compositeHeapBuffer();
             default:
                 throw new AssertionError("unexpected buffer type: " + bufferType);
         }
@@ -87,7 +96,9 @@ public class ByteBufUtilTest {
                 { BufferType.DIRECT_POOLED },
                 { BufferType.DIRECT_UNPOOLED },
                 { BufferType.HEAP_POOLED },
-                { BufferType.HEAP_UNPOOLED }
+                { BufferType.HEAP_UNPOOLED },
+                { BufferType.DIRECT_ADAPTIVE },
+                { BufferType.HEAP_ADAPTIVE }
         });
     }
 
