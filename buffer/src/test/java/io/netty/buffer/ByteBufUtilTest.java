@@ -45,9 +45,10 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class ByteBufUtilTest {
     private static final String PARAMETERIZED_NAME = "bufferType = {0}";
+    private final AdaptiveByteBufAllocator adaptiveByteBufAllocator = new AdaptiveByteBufAllocator();
 
     private enum BufferType {
-        DIRECT_UNPOOLED, DIRECT_POOLED, HEAP_POOLED, HEAP_UNPOOLED
+        DIRECT_UNPOOLED, DIRECT_POOLED, DIRECT_ADAPTIVE, HEAP_POOLED, HEAP_UNPOOLED, HEAP_ADAPTIVE
     }
 
     private ByteBuf buffer(BufferType bufferType, int capacity) {
@@ -61,8 +62,32 @@ public class ByteBufUtilTest {
             return PooledByteBufAllocator.DEFAULT.directBuffer(capacity);
         case HEAP_POOLED:
             return PooledByteBufAllocator.DEFAULT.buffer(capacity);
+        case DIRECT_ADAPTIVE:
+            return adaptiveByteBufAllocator.directBuffer(capacity);
+        case HEAP_ADAPTIVE:
+            return adaptiveByteBufAllocator.heapBuffer(capacity);
         default:
             throw new AssertionError("unexpected buffer type: " + bufferType);
+        }
+    }
+
+    private CompositeByteBuf compositeByteBuf(BufferType bufferType) {
+        switch (bufferType) {
+
+            case DIRECT_UNPOOLED:
+                return  UnpooledByteBufAllocator.DEFAULT.compositeDirectBuffer();
+            case HEAP_UNPOOLED:
+                return  UnpooledByteBufAllocator.DEFAULT.compositeHeapBuffer();
+            case DIRECT_POOLED:
+                return PooledByteBufAllocator.DEFAULT.compositeDirectBuffer();
+            case HEAP_POOLED:
+                return PooledByteBufAllocator.DEFAULT.compositeHeapBuffer();
+            case DIRECT_ADAPTIVE:
+                return adaptiveByteBufAllocator.compositeDirectBuffer();
+            case HEAP_ADAPTIVE:
+                return adaptiveByteBufAllocator.compositeHeapBuffer();
+            default:
+                throw new AssertionError("unexpected buffer type: " + bufferType);
         }
     }
 
@@ -71,7 +96,9 @@ public class ByteBufUtilTest {
                 { BufferType.DIRECT_POOLED },
                 { BufferType.DIRECT_UNPOOLED },
                 { BufferType.HEAP_POOLED },
-                { BufferType.HEAP_UNPOOLED }
+                { BufferType.HEAP_UNPOOLED },
+                { BufferType.DIRECT_ADAPTIVE },
+                { BufferType.HEAP_ADAPTIVE }
         });
     }
 
@@ -403,7 +430,7 @@ public class ByteBufUtilTest {
         String usAscii = "NettyRocks";
         ByteBuf buf = buffer(bufferType, 16);
         buf.writeBytes(usAscii.getBytes(CharsetUtil.US_ASCII));
-        ByteBuf buf2 = Unpooled.compositeBuffer().addComponent(
+        ByteBuf buf2 = compositeByteBuf(bufferType).addComponent(
                 buffer(bufferType, 8)).addComponent(buffer(bufferType, 24));
         // write some byte so we start writing with an offset.
         buf2.writeByte(1);
@@ -422,7 +449,7 @@ public class ByteBufUtilTest {
         String usAscii = "NettyRocks";
         ByteBuf buf = buffer(bufferType, 16);
         buf.writeBytes(usAscii.getBytes(CharsetUtil.US_ASCII));
-        ByteBuf buf2 = new WrappedCompositeByteBuf(Unpooled.compositeBuffer().addComponent(
+        ByteBuf buf2 = new WrappedCompositeByteBuf(compositeByteBuf(bufferType).addComponent(
                 buffer(bufferType, 8)).addComponent(buffer(bufferType, 24)));
         // write some byte so we start writing with an offset.
         buf2.writeByte(1);
@@ -456,7 +483,7 @@ public class ByteBufUtilTest {
         String utf8 = "Some UTF-8 like äÄ∏ŒŒ";
         ByteBuf buf = buffer(bufferType, 16);
         buf.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
-        ByteBuf buf2 = Unpooled.compositeBuffer().addComponent(
+        ByteBuf buf2 = compositeByteBuf(bufferType).addComponent(
                 buffer(bufferType, 8)).addComponent(buffer(bufferType, 24));
         // write some byte so we start writing with an offset.
         buf2.writeByte(1);
@@ -475,7 +502,7 @@ public class ByteBufUtilTest {
         String utf8 = "Some UTF-8 like äÄ∏ŒŒ";
         ByteBuf buf = buffer(bufferType, 16);
         buf.writeBytes(utf8.getBytes(CharsetUtil.UTF_8));
-        ByteBuf buf2 = new WrappedCompositeByteBuf(Unpooled.compositeBuffer().addComponent(
+        ByteBuf buf2 = new WrappedCompositeByteBuf(compositeByteBuf(bufferType).addComponent(
                 buffer(bufferType, 8)).addComponent(buffer(bufferType, 24)));
         // write some byte so we start writing with an offset.
         buf2.writeByte(1);
@@ -816,7 +843,7 @@ public class ByteBufUtilTest {
     @ParameterizedTest(name = PARAMETERIZED_NAME)
     @MethodSource("noUnsafe")
     public void testToStringDoesNotThrowIndexOutOfBounds(BufferType bufferType) {
-        CompositeByteBuf buffer = Unpooled.compositeBuffer();
+        CompositeByteBuf buffer = compositeByteBuf(bufferType);
         try {
             byte[] bytes = "1234".getBytes(CharsetUtil.UTF_8);
             buffer.addComponent(buffer(bufferType, bytes.length).writeBytes(bytes));
