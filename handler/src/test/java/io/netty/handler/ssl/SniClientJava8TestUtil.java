@@ -350,7 +350,8 @@ final class SniClientJava8TestUtil {
 
     static SSLSession mockSSLSessionWithSNIHostNameAndPeerHost(String hostname) {
         ExtendedSSLSession session = Mockito.mock(ExtendedSSLSession.class);
-        Mockito.when(session.getRequestedServerNames()).thenReturn(Arrays.asList(new SNIHostName(hostname)));
+        SNIServerName sniName = new SNIHostName(hostname);
+        Mockito.when(session.getRequestedServerNames()).thenReturn(Arrays.asList(sniName));
         Mockito.when(session.getPeerHost()).thenReturn(hostname);
         return session;
     }
