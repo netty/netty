@@ -133,7 +133,7 @@ public final class CertificateBuilder {
     X500Principal subject;
     boolean isCertificateAuthority;
     OptionalInt pathLengthConstraint = OptionalInt.empty();
-    PublicKey publicKey;
+    KeyPair keyPair;
     Set<String> extendedKeyUsage = new TreeSet<>();
     Extension keyUsage;
 
@@ -163,7 +163,7 @@ public final class CertificateBuilder {
         copy.subject = subject;
         copy.isCertificateAuthority = isCertificateAuthority;
         copy.pathLengthConstraint = pathLengthConstraint;
-        copy.publicKey = publicKey;
+        copy.keyPair = keyPair;
         copy.keyUsage = keyUsage;
         copy.extendedKeyUsage = new TreeSet<>(extendedKeyUsage);
         copy.provider = provider;
@@ -453,11 +453,42 @@ public final class CertificateBuilder {
      * <p>
      * If the given public key is {@code null} (the default) then a new key-pair will be generated instead.
      *
-     * @param key The public key to wrap in a certificate.
+     * @param publicKey The public key to wrap in a certificate.
      * @return This certificate builder.
      */
-    public CertificateBuilder publicKey(PublicKey key) {
-        publicKey = key;
+    public CertificateBuilder publicKey(PublicKey publicKey) {
+        if (publicKey == null) {
+            keyPair = null;
+        } else {
+            keyPair = new KeyPair(publicKey, null);
+        }
+        return this;
+    }
+
+    /**
+     * Instruct the certificate builder to not generate its own key pair, but to instead create a certificate that
+     * uses the given key pair.
+     * <p>
+     * This method is useful if you want to use an existing key-pair, e.g. to emulate a certificate authority
+     * responding to a Certificate Signing Request (CSR), or when creating cross-signed certificates.
+     * <p>
+     * Cross-signing is when two certificates have the same subject and public key, but are signed by different keys.
+     * In effect, it's the same logical certificate, but manifest as two different "concrete" certificate objects, i.e.
+     * two different {@link X509Bundle} objects. Cross-signing can be done to both leaf certificates and to issuers,
+     * and can create complicated certificate graphs. The technique is used for introducing new roots and issuers
+     * to a PKI system, in a backwards compatible way where certificates can be trusted by peers that aren't familiar
+     * with the new roots or issuers.
+     * <p>
+     * If the given key pair is {@code null} (the default) then a new key-pair will be generated instead.
+     *
+     * @param keyPair The key pair to use when creating a certificate.
+     * @return This certificate builder.
+     */
+    public CertificateBuilder keyPair(KeyPair keyPair) {
+        if (keyPair != null && keyPair.getPublic() == null) {
+            throw new IllegalArgumentException("The given key pair must have a public key");
+        }
+        this.keyPair = keyPair;
         return this;
     }
 
@@ -671,8 +702,8 @@ public final class CertificateBuilder {
      * @throws Exception If something went wrong in the process.
      */
     public X509Bundle buildSelfSigned() throws Exception {
-        if (publicKey != null) {
-            throw new IllegalStateException("Cannot create a self-signed certificate with a public key from a CSR.");
+        if (keyPair != null && (keyPair.getPublic() == null || keyPair.getPrivate() == null)) {
+            throw new IllegalStateException("Cannot create a self-signed certificate with an incomplete key pair.");
         }
         if (!algorithm.supportSigning()) {
             throw new IllegalStateException("Cannot create a self-signed certificate with a " +
@@ -709,10 +740,10 @@ public final class CertificateBuilder {
      */
     public X509Bundle buildIssuedBy(X509Bundle issuerBundle, String signAlg) throws Exception {
         final KeyPair keyPair;
-        if (publicKey == null) {
+        if (this.keyPair == null) {
             keyPair = generateKeyPair(provider);
         } else {
-            keyPair = new KeyPair(publicKey, null);
+            keyPair = this.keyPair;
         }
 
         X500Principal issuerPrincipal = issuerBundle.getCertificate().getSubjectX500Principal();
