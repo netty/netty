@@ -19,6 +19,7 @@ import io.netty.pkitesting.CertificateBuilder.Algorithm;
 import io.netty.pkitesting.CertificateBuilder.KeyUsage;
 import io.netty.util.internal.PlatformDependent;
 
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.jsse.provider.BouncyCastleJsseProvider;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
@@ -108,7 +109,7 @@ class CertificateBuilderTest {
     void createKeyPairWithProvider(Algorithm algorithm) throws Exception {
         assumeTrue(algorithm.isSupported());
 
-        KeyPair keyPair = algorithm.generateKeyPair(RNG, new BouncyCastleJsseProvider());
+        KeyPair keyPair = algorithm.generateKeyPair(RNG, new BouncyCastleProvider());
         assertNotNull(keyPair);
         assertNotNull(keyPair.getPrivate());
         assertNotNull(keyPair.getPublic());
