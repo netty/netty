@@ -21,7 +21,6 @@ import io.netty.util.internal.PlatformDependent;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mockito;
 
@@ -53,8 +52,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
-import static org.junit.jupiter.api.Named.named;
-import static org.junit.jupiter.params.provider.Arguments.arguments;
 
 public class EnhancedX509ExtendedTrustManagerTest {
 
@@ -255,16 +252,16 @@ public class EnhancedX509ExtendedTrustManagerTest {
         }
     });
 
-    static List<Arguments> throwingMatchingExecutables() {
+    static List<Executable> throwingMatchingExecutables() {
         if (PlatformDependent.javaVersion() < 8) {
             return Collections.emptyList();
         }
-        return Arrays.asList(arguments(named("checkServerTrusted", new Executable() {
+        return Arrays.asList(new Executable() {
             @Override
             public void execute() throws Throwable {
                 MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null);
             }
-        })), arguments(named("checkServerTrusted with SSLEngine", new Executable() {
+        }, new Executable() {
             @Override
             public void execute() throws Throwable {
                 SSLSession session = mockSSLSessionWithSNIHostNameAndPeerHost(HOSTNAME);
@@ -272,7 +269,7 @@ public class EnhancedX509ExtendedTrustManagerTest {
                 Mockito.when(engine.getHandshakeSession()).thenReturn(session);
                 MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, engine);
             }
-        })), arguments(named("checkServerTrusted with SSLSocket", new Executable() {
+        }, new Executable() {
             @Override
             public void execute() throws Throwable {
                 SSLSession session = mockSSLSessionWithSNIHostNameAndPeerHost(HOSTNAME);
@@ -280,7 +277,7 @@ public class EnhancedX509ExtendedTrustManagerTest {
                 Mockito.when(socket.getHandshakeSession()).thenReturn(session);
                 MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, socket);
             }
-        })));
+        });
     }
 
     private static final EnhancingX509ExtendedTrustManager NON_MATCHING_MANAGER =
@@ -327,23 +324,23 @@ public class EnhancedX509ExtendedTrustManagerTest {
                 }
             });
 
-    static List<Arguments> throwingNonMatchingExecutables() {
-        return Arrays.asList(arguments(named("checkServerTrusted", new Executable() {
+    static List<Executable> throwingNonMatchingExecutables() {
+        return Arrays.asList(new Executable() {
             @Override
             public void execute() throws Throwable {
                 NON_MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null);
             }
-        })), arguments(named("checkServerTrusted with SSLEngine", new Executable() {
+        }, new Executable() {
             @Override
             public void execute() throws Throwable {
                 NON_MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLEngine) null);
             }
-        })), arguments(named("checkServerTrusted with SSLSocket", new Executable() {
+        }, new Executable() {
             @Override
             public void execute() throws Throwable {
                 NON_MATCHING_MANAGER.checkServerTrusted(new X509Certificate[] { TEST_CERT }, null, (SSLSocket) null);
             }
-        })));
+        });
     }
 
     @ParameterizedTest
