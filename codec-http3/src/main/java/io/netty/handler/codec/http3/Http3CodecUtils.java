@@ -259,7 +259,7 @@ final class Http3CodecUtils {
     /**
      * A connection-error should be handled as defined in the HTTP3 spec.
      *
-     * @param channel       the {@link Channel} on which error has occured.
+     * @param channel       the {@link Channel} on which error has occurred.
      * @param errorCode     the {@link Http3ErrorCode} that caused the error.
      * @param msg           the message that should be used as reason for the error, may be {@code null}.
      */
