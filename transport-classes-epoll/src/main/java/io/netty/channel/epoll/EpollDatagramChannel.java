@@ -19,6 +19,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelConfig;
+import io.netty.channel.ChannelException;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelOutboundBuffer;
 import io.netty.channel.ChannelPipeline;
@@ -118,7 +119,7 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
             // Configure IP_MULTICAST_ALL - disable by default to match the behaviour of NIO.
             try {
                 fd.setIpMulticastAll(IP_MULTICAST_ALL);
-            } catch (IOException e) {
+        } catch (IOException | ChannelException e) {
                 logger.debug("Failed to set IP_MULTICAST_ALL to {}", IP_MULTICAST_ALL, e);
             }
         }
