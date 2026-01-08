@@ -817,7 +817,7 @@
                       <equals arg1="${platform}" arg2="android" />
                       <then>
                         <exec executable="cargo" failonerror="true" dir="${quicheSourceDir}" resolveexecutable="true">
-                          <arg line="ndk ${cargoTarget} -p ${androidNdkVersion} -- build -p quiche --features &quot;ffi qlog&quot; --release" />
+                          <arg line="ndk ${cargoTarget} --platform ${androidNdkVersion} -- build -p quiche --features &quot;ffi qlog&quot; --release" />
                           <env key="CFLAGS" value="${extraCflags}" />
                           <env key="CXXFLAGS" value="${extraCxxflags}" />
                           <env key="QUICHE_BSSL_PATH" value="${boringsslHomeDir}/" />
