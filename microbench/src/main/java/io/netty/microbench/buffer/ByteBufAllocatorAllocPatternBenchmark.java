@@ -18,18 +18,17 @@ package io.netty.microbench.buffer;
 import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.buffer.MiByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.microbench.util.AbstractMicrobenchmark;
+import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.MathUtil;
-import io.netty.util.internal.PlatformDependent;
-import jdk.jfr.consumer.RecordedEvent;
-import jdk.jfr.consumer.RecordingFile;
 import org.openjdk.jmh.annotations.Benchmark;
+import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.CompilerControl;
-import org.openjdk.jmh.annotations.Fork;
-import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Measurement;
+import org.openjdk.jmh.annotations.Mode;
+import org.openjdk.jmh.annotations.OutputTimeUnit;
+import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
@@ -37,26 +36,200 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.BenchmarkParams;
-import org.openjdk.jmh.infra.Blackhole;
-import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryMXBean;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.SplittableRandom;
-import java.util.TreeMap;
 
-@State(Scope.Thread)
-@Warmup(iterations = 5, time = 1)
-@Measurement(iterations = 5, time = 1)
-//@BenchmarkMode(Mode.AverageTime)
-//@OutputTimeUnit(TimeUnit.MILLISECONDS)
-@Threads(4)
-@Fork(1)
+import java.util.ArrayList;
+import java.util.SplittableRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+
+@Warmup(iterations = 10, time = 1)
+@Measurement(iterations = 10, time = 1)
+@OutputTimeUnit(TimeUnit.NANOSECONDS)
+@State(Scope.Benchmark)
+@BenchmarkMode(Mode.AverageTime)
+@Threads(1)
 public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmark {
+
+    public enum AllocatorType {
+        ADAPTIVE(AdaptiveByteBufAllocator::new),
+        POOLED(() -> PooledByteBufAllocator.DEFAULT);
+
+        private final Supplier<ByteBufAllocator> factory;
+
+        AllocatorType(Supplier<ByteBufAllocator> factory) {
+            this.factory = factory;
+        }
+
+        private ByteBufAllocator create() {
+            return factory.get();
+        }
+    }
+
+    @Param({ "ADAPTIVE" })
+    public AllocatorType allocatorType;
+
+    @Param({ "0", "200000" })
+    public int pollutionIterations;
+
+    private ByteBufAllocator allocator;
+
+    @State(Scope.Thread)
+    public static class AllocationPatternState {
+        private int[] releaseIndexes;
+        private int[] sizes;
+        private int nextReleaseIndex;
+        private int nextSizeIndex;
+        private ByteBuf[] buffers;
+        private ByteBufAllocator allocator;
+
+        @Setup
+        public void setup(ByteBufAllocatorAllocPatternBenchmark benchmark) {
+            this.allocator = benchmark.allocator;
+            releaseIndexes = new int[MAX_LIVE_BUFFERS];
+            sizes = new int[MathUtil.findNextPositivePowerOfTwo(FLATTEND_SIZE_ARRAY.length)];
+            SplittableRandom rand = new SplittableRandom(SEED);
+            // Pre-generate the to be released index.
+            for (int i = 0; i < releaseIndexes.length; i++) {
+                releaseIndexes[i] = rand.nextInt(releaseIndexes.length);
+            }
+            // Shuffle the `flattendSizeArray` to `sizes`.
+            for (int i = 0; i < sizes.length; i++) {
+                int sizeIndex = rand.nextInt(FLATTEND_SIZE_ARRAY.length);
+                sizes[i] = FLATTEND_SIZE_ARRAY[sizeIndex];
+            }
+            nextReleaseIndex = 0;
+            nextSizeIndex = 0;
+            buffers = new ByteBuf[MAX_LIVE_BUFFERS];
+        }
+
+        private int getNextReleaseIndex() {
+            int index = nextReleaseIndex;
+            nextReleaseIndex = (nextReleaseIndex + 1) & (releaseIndexes.length - 1);
+            return releaseIndexes[index];
+        }
+
+        private int getNextSizeIndex() {
+            int index = nextSizeIndex;
+            nextSizeIndex = (nextSizeIndex + 1) & (sizes.length - 1);
+            return index;
+        }
+
+        @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+        private static void release(ByteBuf buf) {
+            buf.release();
+        }
+
+        @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+        private static ByteBuf allocateHeap(ByteBufAllocator allocator, int size) {
+            return allocator.heapBuffer(size);
+        }
+
+        @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+        private static ByteBuf allocateDirect(ByteBufAllocator allocator, int size) {
+            return allocator.directBuffer(size);
+        }
+
+        @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+        public void performDirectAllocation() {
+            int size = sizes[getNextSizeIndex()];
+            int releaseIndex = getNextReleaseIndex();
+            ByteBuf[] buffers = this.buffers;
+            ByteBuf oldBuf = buffers[releaseIndex];
+            if (oldBuf != null) {
+                release(oldBuf);
+            }
+            ByteBuf newBuf = allocateDirect(allocator, size);
+            buffers[releaseIndex] = newBuf;
+        }
+
+        @CompilerControl(CompilerControl.Mode.DONT_INLINE)
+        public void performHeapAllocation() {
+            int size = sizes[getNextSizeIndex()];
+            int releaseIndex = getNextReleaseIndex();
+            ByteBuf oldBuf = buffers[releaseIndex];
+            if (oldBuf != null) {
+                release(oldBuf);
+            }
+            ByteBuf newBuf = allocateHeap(allocator, size);
+            buffers[releaseIndex] = newBuf;
+        }
+
+        private static void releaseBufferArray(ByteBuf[] buffers) {
+            if (buffers == null) {
+                return;
+            }
+            for (int i = 0; i < buffers.length; i++) {
+                if (buffers[i] != null && buffers[i].refCnt() > 0) {
+                    buffers[i].release();
+                    buffers[i] = null;
+                }
+            }
+        }
+
+        @TearDown
+        public void tearDown() {
+            releaseBufferArray(buffers);
+        }
+    }
+
+    @Setup
+    public void setupAllocatorAndPollute(BenchmarkParams params) throws InterruptedException {
+        allocator = allocatorType.create();
+        if (pollutionIterations == 0) {
+            return;
+        }
+
+        final boolean directAllocation = params.getBenchmark().contains("Direct");
+
+        int perThreadIterations = pollutionIterations / 2;
+
+        Runnable pollutionTask = () -> {
+            AllocationPatternState state = new AllocationPatternState();
+            state.setup(this);
+            try {
+                if (directAllocation) {
+                    for (int i = 0; i < perThreadIterations; i++) {
+                        state.performDirectAllocation();
+                    }
+                } else {
+                    for (int i = 0; i < perThreadIterations; i++) {
+                        state.performHeapAllocation();
+                    }
+                }
+            } finally {
+                state.tearDown();
+            }
+        };
+
+        Thread normalThread = new Thread(pollutionTask);
+        Thread fastThread = new FastThreadLocalThread(pollutionTask);
+
+        normalThread.start();
+        fastThread.start();
+        normalThread.join();
+        fastThread.join();
+    }
+
+    @Benchmark
+    public void directAllocation(AllocationPatternState state) {
+        state.performDirectAllocation();
+    }
+
+    @Benchmark
+    public void heapAllocation(AllocationPatternState state) {
+        state.performHeapAllocation();
+    }
+
+    private static final int SEED = 42;
+    // Allocation size array.
+    private static final int[] FLATTEND_SIZE_ARRAY;
+
+    private static final int MAX_LIVE_BUFFERS = 8192;
+
+    // Use event-loop threads.
+    public ByteBufAllocatorAllocPatternBenchmark() {
+        super(true, false);
+    }
 
     /**
      * Copied from AllocationPatternSimulator.
@@ -441,177 +614,16 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
             18432, 6,
     };
 
-    @SuppressWarnings("JvmTaintAnalysis")
-    private static Path toAbsolutePath(String jfrFile) {
-        return Paths.get(jfrFile).toAbsolutePath();
-    }
-
-    private static int[] buildPattern(String jfrFile) {
-        Path path = toAbsolutePath(jfrFile);
-        TreeMap<Integer, Integer> summation = new TreeMap<>();
-        try (RecordingFile eventReader = new RecordingFile(path)) {
-            while (eventReader.hasMoreEvents()) {
-                RecordedEvent event = eventReader.readEvent();
-                String name = event.getEventType().getName();
-                if (("AllocateBufferEvent".equals(name) || "io.netty.AllocateBuffer".equals(name)) &&
-                        event.hasField("size")) {
-                    int size = event.getInt("size");
-                    summation.compute(size, (k, v) -> v == null ? 1 : v + 1);
-                }
-            }
-        } catch (Throwable t) {
-            PlatformDependent.throwException(t);
-        }
-        if (summation.isEmpty()) {
-            throw new IllegalStateException("No 'AllocateBufferEvent' records found in JFR file: " + jfrFile);
-        }
-        int[] pattern = new int[summation.size() * 2];
-        int index = 0;
-        for (Map.Entry<Integer, Integer> entry : summation.entrySet()) {
-            pattern[index++] = entry.getKey();
-            pattern[index++] = entry.getValue();
-        }
-        return pattern;
-    }
-
     static {
-        int[] sizeArrray;
-        sizeArrray = WEB_SOCKET_PROXY_PATTERN;
-//        sizeArrray = buildPattern("/Users/jason/Downloads/netty-allocator.jfr");
         // Flat the WEB_SOCKET_PROXY_PATTERN.
         ArrayList<Integer> sizeList = new ArrayList<>();
-        for (int i = 0; i < sizeArrray.length; i += 2) {
-            int size = sizeArrray[i];
-            int frequency = sizeArrray[i + 1];
+        for (int i = 0; i < WEB_SOCKET_PROXY_PATTERN.length; i += 2) {
+            int size = WEB_SOCKET_PROXY_PATTERN[i];
+            int frequency = WEB_SOCKET_PROXY_PATTERN[i + 1];
             for (int j = 0; j < frequency; j++) {
                 sizeList.add(size);
             }
         }
-        flattendSizeArray = sizeList.stream().mapToInt(Integer::intValue).toArray();
-    }
-
-    private static final PooledByteBufAllocator pooledAlloc = PooledByteBufAllocator.DEFAULT;
-    private static final AdaptiveByteBufAllocator adaptiveAllocator = new AdaptiveByteBufAllocator();
-    private static final MiByteBufAllocator miMallocAllocator = new MiByteBufAllocator();
-
-    private final SplittableRandom rand = new SplittableRandom(42);
-    // Allocation size array.
-    private static final int[] flattendSizeArray;
-
-    private static final int MAX_LIVE_BUFFERS = 8192;
-    private final ByteBuf[] pooledDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
-    private final ByteBuf[] adaptiveDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
-    private final ByteBuf[] mimallocDirectBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
-    private final ByteBuf[] pooledHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
-    private final ByteBuf[] adaptiveHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
-    private final ByteBuf[] mimallocHeapBuffers = new ByteBuf[MAX_LIVE_BUFFERS];
-
-    private final int[] sizes = new int[MathUtil.findNextPositivePowerOfTwo(flattendSizeArray.length)];
-    private final int[] randomIndexes = new int[MathUtil.findNextPositivePowerOfTwo(flattendSizeArray.length)];
-
-    private final long[] memoryUsage = new long[20];
-    private int iterationIndex;
-    private final MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
-
-    // Use event-loop threads.
-    public ByteBufAllocatorAllocPatternBenchmark() {
-        super(true, false);
-    }
-
-    @Setup(Level.Invocation)
-    public void setup() {
-        // Shuffle the `flattendSizeArray` to `sizes`.
-        for (int i = 0; i < sizes.length; i++) {
-            int sizeIndex = rand.nextInt(flattendSizeArray.length);
-            sizes[i] = flattendSizeArray[sizeIndex];
-            randomIndexes[i] = sizeIndex;
-        }
-    }
-
-    private int getNextReleaseIndex(int randomIndex) {
-        return randomIndex & (MAX_LIVE_BUFFERS - 1);
-    }
-
-    private void directAlloc(Blackhole blackhole, ByteBufAllocator alloc, ByteBuf[] buffers) {
-        for (int i = 0; i < sizes.length; i++) {
-            int size = sizes[i];
-            int releaseIndex = getNextReleaseIndex(randomIndexes[i]);
-            ByteBuf oldBuf = buffers[releaseIndex];
-            if (oldBuf != null) {
-                oldBuf.release();
-            }
-            ByteBuf newBuf = alloc.directBuffer(size);
-            buffers[releaseIndex] = newBuf;
-            blackhole.consume(buffers);
-        }
-    }
-
-//    private void heapAlloc(Blackhole blackhole, ByteBufAllocator alloc, ByteBuf[] buffers) {
-//        for (int i = 0; i < sizes.length; i++) {
-//            int size = sizes[i];
-//            int releaseIndex = getNextReleaseIndex(randomIndexes[i]);
-//            ByteBuf oldBuf = buffers[releaseIndex];
-//            if (oldBuf != null) {
-//                oldBuf.release();
-//            }
-//            ByteBuf newBuf = alloc.heapBuffer(size);
-//            buffers[releaseIndex] = newBuf;
-//            blackhole.consume(buffers);
-//        }
-//    }
-
-    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
-    @Benchmark
-    public void pooledDirect(Blackhole blackhole) {
-        directAlloc(blackhole, pooledAlloc, pooledDirectBuffers);
-    }
-
-    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
-    @Benchmark
-    public void adaptiveDirect(Blackhole blackhole) {
-        directAlloc(blackhole, adaptiveAllocator, adaptiveDirectBuffers);
-    }
-
-    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
-    @Benchmark
-    public void mimallocDirect(Blackhole blackhole) {
-        directAlloc(blackhole, miMallocAllocator, mimallocDirectBuffers);
-    }
-
-//    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
-//    @Benchmark
-//    public void pooledHeap(Blackhole blackhole) {
-//        heapAlloc(blackhole, pooledAlloc, mimallocDirectBuffers);
-//    }
-//
-//    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
-//    @Benchmark
-//    public void adaptiveHeap(Blackhole blackhole) {
-//        heapAlloc(blackhole, adaptiveAllocator, adaptiveDirectBuffers);
-//    }
-//
-//    @CompilerControl(CompilerControl.Mode.DONT_INLINE)
-//    @Benchmark
-//    public void mimallocHeap(Blackhole blackhole) {
-//        heapAlloc(blackhole, miMallocAllocator, mimallocDirectBuffers);
-//    }
-
-    @TearDown
-    public void releaseBuffers(BenchmarkParams benchmarkParams) {
-        List<ByteBuf[]> bufferLists = Arrays.asList(
-                pooledDirectBuffers,
-                adaptiveDirectBuffers,
-                mimallocDirectBuffers,
-                pooledHeapBuffers,
-                adaptiveHeapBuffers,
-                mimallocHeapBuffers);
-        for (ByteBuf[] bufList : bufferLists) {
-            for (ByteBuf buf : bufList) {
-                if (buf != null && buf.refCnt() > 0) {
-                    buf.release();
-                }
-            }
-            Arrays.fill(bufList, null);
-        }
+        FLATTEND_SIZE_ARRAY = sizeList.stream().mapToInt(Integer::intValue).toArray();
     }
 }

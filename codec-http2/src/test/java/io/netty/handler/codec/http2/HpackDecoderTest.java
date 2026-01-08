@@ -404,7 +404,7 @@ public class HpackDecoderTest {
     }
 
     @Test
-    public void testDynamicTableSizeUpdateAfterTheBeginingOfTheBlock() throws Http2Exception {
+    public void testDynamicTableSizeUpdateAfterTheBeginningOfTheBlock() throws Http2Exception {
         assertThrows(Http2Exception.class, new Executable() {
             @Override
             public void execute() throws Throwable {
