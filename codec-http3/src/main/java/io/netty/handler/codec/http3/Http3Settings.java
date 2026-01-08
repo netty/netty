@@ -254,7 +254,7 @@ public final class Http3Settings implements Iterable<Map.Entry<Long, Long>> {
         return new Http3Settings()
                 .qpackMaxTableCapacity(0)
                 .qpackBlockedStreams(0)
-                .maxFieldSectionSize(Long.MAX_VALUE)
+                .maxFieldSectionSize(16 * 1024 * 1024)
                 .enableConnectProtocol(false)
                 .enableH3Datagram(false);
     }
