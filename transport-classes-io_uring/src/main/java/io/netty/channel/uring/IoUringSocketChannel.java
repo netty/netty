@@ -295,7 +295,7 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             int length = buf.readableBytes();
             short opsid = nextOpsId();
 
-            ops = IoUringIoOps.newWrite(fd, (byte) 0, 0, address, length, opsid);
+            ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, opsid);
         }
         byte opCode = ops.opcode();
         writeId = registration.submit(ops);
