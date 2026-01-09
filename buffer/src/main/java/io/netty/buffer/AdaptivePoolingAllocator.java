@@ -1295,10 +1295,13 @@ final class AdaptivePoolingAllocator {
         private static final byte IS_CLAIMED = (byte) (1 << 7);
         private static final byte HAS_CLAIMED_CHILDREN = 1 << 6;
         private static final byte SHIFT_MASK = ~(IS_CLAIMED | HAS_CLAIMED_CHILDREN);
+        private static final int PACK_OFFSET_MASK = 0xFFFF;
+        private static final int PACK_SIZE_SHIFT = Integer.SIZE - Integer.numberOfLeadingZeros(PACK_OFFSET_MASK);
 
         private final MpscIntQueue freeList;
         // The bits of each buddy: [1: is claimed][1: has claimed children][30: MIN_BUDDY_SIZE shift to get size]
         private final byte[] buddies;
+        private final int freeListCapacity;
 
         BuddyChunk(AbstractByteBuf delegate, Magazine magazine, ChunkReleasePredicate chunkReleasePredicate) {
             super(delegate, magazine, true, chunkReleasePredicate);
@@ -1307,7 +1310,8 @@ final class AdaptivePoolingAllocator {
             int tree = (capFactor << 1) - 1;
             int maxShift = Integer.numberOfTrailingZeros(capFactor);
             assert maxShift <= 30; // The top 2 bits are used for marking.
-            freeList = MpscIntQueue.create(tree >> 1, -1); // At most half of tree (all leaf nodes) can be freed.
+            freeListCapacity = tree >> 1;
+            freeList = MpscIntQueue.create(freeListCapacity, -1); // At most half of tree (all leaf nodes) can be freed.
             buddies = new byte[1 + tree];
 
             // Generate the buddies entries.
@@ -1327,7 +1331,7 @@ final class AdaptivePoolingAllocator {
         @Override
         public boolean readInitInto(AdaptiveByteBuf buf, int size, int startingCapacity, int maxCapacity) {
             if (!freeList.isEmpty()) {
-                freeList.drain(256, this);
+                freeList.drain(freeListCapacity, this);
             }
             int startIndex = chooseFirstFreeBuddy(1, startingCapacity, 0);
             if (startIndex == -1) {
@@ -1352,15 +1356,17 @@ final class AdaptivePoolingAllocator {
         @Override
         public void accept(int packed) {
             // Called by allocating thread when draining freeList.
-            int size = MIN_BUDDY_SIZE << (packed >> 16);
-            int offset = (packed & 0xFFFF) * MIN_BUDDY_SIZE;
+            int size = MIN_BUDDY_SIZE << (packed >> PACK_SIZE_SHIFT);
+            int offset = (packed & PACK_OFFSET_MASK) * MIN_BUDDY_SIZE;
             unreserveMatchingBuddy(1, size, offset, 0);
             allocatedBytes -= size;
         }
 
         @Override
         void releaseSegment(int startingIndex, int size) {
-            int packed = startingIndex / MIN_BUDDY_SIZE | Integer.numberOfTrailingZeros(size / MIN_BUDDY_SIZE) << 16;
+            int packedOffset = startingIndex / MIN_BUDDY_SIZE;
+            int packedSize = Integer.numberOfTrailingZeros(size / MIN_BUDDY_SIZE) << PACK_SIZE_SHIFT;
+            int packed = packedOffset | packedSize;
             freeList.offer(packed);
             release();
         }
@@ -1368,7 +1374,7 @@ final class AdaptivePoolingAllocator {
         @Override
         public int remainingCapacity() {
             if (!freeList.isEmpty()) {
-                freeList.drain(256, this);
+                freeList.drain(freeListCapacity, this);
             }
             return super.remainingCapacity();
         }
@@ -1415,10 +1421,9 @@ final class AdaptivePoolingAllocator {
                 if (currOffset == offset) {
                     buddies[index] &= SHIFT_MASK;
                     return false;
-                } else {
-                    throw new IllegalStateException("The intended segment was not found at index " +
-                            index + ", for size " + size + " and offset " + offset);
                 }
+                throw new IllegalStateException("The intended segment was not found at index " +
+                        index + ", for size " + size + " and offset " + offset);
             }
 
             // We're at a parent size level. Use the target offset to guide our drill-down path.
