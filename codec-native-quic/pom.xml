@@ -330,18 +330,21 @@
                     <itemWithProperty>
                       <name>arm64-v8a</name>
                       <properties>
+                        <android>${android}</android>
                         <skipIteration>true</skipIteration>
                       </properties>
                     </itemWithProperty>
                     <itemWithProperty>
                       <name>x86</name>
                       <properties>
+                        <android>${android}</android>
                         <skipIteration>true</skipIteration>
                       </properties>
                     </itemWithProperty>
                     <itemWithProperty>
                       <name>x86_64</name>
                       <properties>
+                        <android>${android}</android>
                         <skipIteration>true</skipIteration>
                       </properties>
                     </itemWithProperty>
