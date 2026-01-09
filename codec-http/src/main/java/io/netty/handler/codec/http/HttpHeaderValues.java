@@ -27,14 +27,34 @@ public final class HttpHeaderValues {
      */
     public static final AsciiString APPLICATION_JSON = AsciiString.cached("application/json");
     /**
-     * {@code "application/x-www-form-urlencoded"}
+     * {@code "application/manifest+json"}
      */
-    public static final AsciiString APPLICATION_X_WWW_FORM_URLENCODED =
-            AsciiString.cached("application/x-www-form-urlencoded");
+    public static final AsciiString APPLICATION_MANIFEST_JSON = AsciiString.cached("application/manifest+json");
     /**
      * {@code "application/octet-stream"}
      */
     public static final AsciiString APPLICATION_OCTET_STREAM = AsciiString.cached("application/octet-stream");
+    /**
+     * {@code "application/ogg"}
+     */
+    public static final AsciiString APPLICATION_OGG = AsciiString.cached("application/ogg");
+    /**
+     * {@code "application/pdf"}
+     */
+    public static final AsciiString APPLICATION_PDF = AsciiString.cached("application/pdf");
+    /**
+     * {@code "application/rtf"}
+     */
+    public static final AsciiString APPLICATION_RTF = AsciiString.cached("application/rtf");
+    /**
+     * {@code "application/wasm"}
+     */
+    public static final AsciiString APPLICATION_WASM = AsciiString.cached("application/wasm");
+    /**
+     * {@code "application/x-www-form-urlencoded"}
+     */
+    public static final AsciiString APPLICATION_X_WWW_FORM_URLENCODED =
+            AsciiString.cached("application/x-www-form-urlencoded");
     /**
      * {@code "application/xhtml+xml"}
      */
@@ -52,6 +72,34 @@ public final class HttpHeaderValues {
      * See {@link HttpHeaderNames#CONTENT_DISPOSITION}
      */
     public static final AsciiString ATTACHMENT = AsciiString.cached("attachment");
+    /**
+     * {@code "audio/aac"}
+     */
+    public static final AsciiString AUDIO_AAC = AsciiString.cached("audio/aac");
+    /**
+     * {@code "audio/midi"}
+     */
+    public static final AsciiString AUDIO_MIDI = AsciiString.cached("audio/midi");
+    /**
+     * {@code "audio/x-midi"}
+     */
+    public static final AsciiString AUDIO_X_MIDI = AsciiString.cached("audio/x-midi");
+    /**
+     * {@code "audio/mpeg"}
+     */
+    public static final AsciiString AUDIO_MPEG = AsciiString.cached("audio/mpeg");
+    /**
+     * {@code "audio/ogg"}
+     */
+    public static final AsciiString AUDIO_OGG = AsciiString.cached("audio/ogg");
+    /**
+     * {@code "audio/wav"}
+     */
+    public static final AsciiString AUDIO_WAV = AsciiString.cached("audio/wav");
+    /**
+     * {@code "audio/webm"}
+     */
+    public static final AsciiString AUDIO_WEBM = AsciiString.cached("audio/webm");
     /**
      * {@code "base64"}
      */
@@ -107,6 +155,22 @@ public final class HttpHeaderValues {
      */
     public static final AsciiString FILENAME = AsciiString.cached("filename");
     /**
+     * {@code "font/otf"}
+     */
+    public static final AsciiString FONT_OTF = AsciiString.cached("font/otf");
+    /**
+     * {@code "font/ttf"}
+     */
+    public static final AsciiString FONT_TTF = AsciiString.cached("font/ttf");
+    /**
+     * {@code "font/woff"}
+     */
+    public static final AsciiString FONT_WOFF = AsciiString.cached("font/woff");
+    /**
+     * {@code "font/woff2"}
+     */
+    public static final AsciiString FONT_WOFF2 = AsciiString.cached("font/woff2");
+    /**
      * {@code "form-data"}
      * See {@link HttpHeaderNames#CONTENT_DISPOSITION}
      */
@@ -141,6 +205,34 @@ public final class HttpHeaderValues {
      * {@code "identity"}
      */
     public static final AsciiString IDENTITY = AsciiString.cached("identity");
+    /**
+     * {@code "image/avif"}
+     */
+    public static final AsciiString IMAGE_AVIF = AsciiString.cached("image/avif");
+    /**
+     * {@code "image/bmp"}
+     */
+    public static final AsciiString IMAGE_BMP = AsciiString.cached("image/bmp");
+    /**
+     * {@code "image/jpeg"}
+     */
+    public static final AsciiString IMAGE_JPEG = AsciiString.cached("image/jpeg");
+    /**
+     * {@code "image/png"}
+     */
+    public static final AsciiString IMAGE_PNG = AsciiString.cached("image/png");
+    /**
+     * {@code "image/svg+xml"}
+     */
+    public static final AsciiString IMAGE_SVG_XML = AsciiString.cached("image/svg+xml");
+    /**
+     * {@code "image/tiff"}
+     */
+    public static final AsciiString IMAGE_TIFF = AsciiString.cached("image/tiff");
+    /**
+     * {@code "image/webp"}
+     */
+    public static final AsciiString IMAGE_WEBP = AsciiString.cached("image/webp");
     /**
      * {@code "keep-alive"}
      */
@@ -223,9 +315,21 @@ public final class HttpHeaderValues {
      */
     public static final AsciiString TEXT_CSS = AsciiString.cached("text/css");
     /**
+     * {@code "text/csv"}
+     */
+    public static final AsciiString TEXT_CSV = AsciiString.cached("text/csv");
+    /**
      * {@code "text/html"}
      */
     public static final AsciiString TEXT_HTML = AsciiString.cached("text/html");
+    /**
+     * {@code "text/javascript"}
+     */
+    public static final AsciiString TEXT_JAVASCRIPT = AsciiString.cached("text/javascript");
+    /**
+     * {@code "text/markdown"}
+     */
+    public static final AsciiString TEXT_MARKDOWN = AsciiString.cached("text/markdown");
     /**
      * {@code "text/event-stream"}
      */
@@ -242,6 +346,22 @@ public final class HttpHeaderValues {
      * {@code "upgrade"}
      */
     public static final AsciiString UPGRADE = AsciiString.cached("upgrade");
+    /**
+     * {@code "video/mp4"}
+     */
+    public static final AsciiString VIDEO_MP4 = AsciiString.cached("video/mp4");
+    /**
+     * {@code "video/mpeg"}
+     */
+    public static final AsciiString VIDEO_MPEG = AsciiString.cached("video/mpeg");
+    /**
+     * {@code "video/ogg"}
+     */
+    public static final AsciiString VIDEO_OGG = AsciiString.cached("video/ogg");
+    /**
+     * {@code "video/webm"}
+     */
+    public static final AsciiString VIDEO_WEBM = AsciiString.cached("video/webm");
     /**
      * {@code "websocket"}
      */
