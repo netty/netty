@@ -113,7 +113,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
                         in.duplicate().setIndex(offset + 2, offset + length));
 
                 // Build decompressed RDATA = [preference][expanded exchange name]
-                final ByteBuf out = Unpooled.buffer(2 + exchange.readableBytes());
+                final ByteBuf out = in.alloc().buffer(2 + exchange.readableBytes());
                 out.writeShort(pref);
                 out.writeBytes(exchange);
 
