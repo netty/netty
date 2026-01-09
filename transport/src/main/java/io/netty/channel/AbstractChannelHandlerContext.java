@@ -476,6 +476,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
         return promise;
     }
+
     @Override
     public ChannelFuture bind(final SocketAddress localAddress, ChannelPromise promise) {
         ObjectUtil.checkNotNull(localAddress, "localAddress");
