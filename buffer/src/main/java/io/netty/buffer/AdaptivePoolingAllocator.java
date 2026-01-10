@@ -1056,47 +1056,9 @@ final class AdaptivePoolingAllocator {
         }
 
         protected void deallocate() {
-            Magazine mag = magazine;
-            int chunkSize = delegate.capacity();
-            if (!pooled || chunkReleasePredicate.shouldReleaseChunk(chunkSize) || mag == null) {
-                // Drop the chunk if the parent allocator is closed,
-                // or if the chunk deviates too much from the preferred chunk size.
-                detachFromMagazine();
-                onRelease();
-                allocator.chunkRegistry.remove(this);
-                delegate.release();
-            } else {
-                RefCnt.resetRefCnt(refCnt);
-                delegate.setIndex(0, 0);
-                if (!mag.trySetNextInLine(this)) {
-                    // As this Chunk does not belong to the mag anymore we need to decrease the used memory .
-                    detachFromMagazine();
-                    if (!mag.offerToQueue(this)) {
-                        // The central queue is full. Ensure we release again as we previously did use resetRefCnt()
-                        // which did increase the reference count by 1.
-                        boolean released = RefCnt.release(refCnt);
-                        onRelease();
-                        allocator.chunkRegistry.remove(this);
-                        delegate.release();
-                        assert released;
-                    } else {
-                        onReturn(false);
-                    }
-                } else {
-                    onReturn(true);
-                }
-            }
-        }
-
-        private void onReturn(boolean returnedToMagazine) {
-            if (PlatformDependent.isJfrEnabled() && ReturnChunkEvent.isEventEnabled()) {
-                ReturnChunkEvent event = new ReturnChunkEvent();
-                if (event.shouldCommit()) {
-                    event.fill(this, AdaptiveByteBufAllocator.class);
-                    event.returnedToMagazine = returnedToMagazine;
-                    event.commit();
-                }
-            }
+            onRelease();
+            allocator.chunkRegistry.remove(this);
+            delegate.release();
         }
 
         private void onRelease() {
