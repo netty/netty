@@ -304,7 +304,7 @@ final class AdaptivePoolingAllocator {
         }
         // Create a one-off chunk for this allocation.
         AbstractByteBuf innerChunk = chunkAllocator.allocate(size, maxCapacity);
-        Chunk chunk = new Chunk(innerChunk, magazine, false, chunkSize -> true);
+        Chunk chunk = new Chunk(innerChunk, magazine, false);
         chunkRegistry.add(chunk);
         try {
             chunk.readInitInto(buf, size, size, maxCapacity);
@@ -535,10 +535,6 @@ final class AdaptivePoolingAllocator {
         Chunk newChunkAllocation(int promptingSize, Magazine magazine);
     }
 
-    private interface ChunkReleasePredicate {
-        boolean shouldReleaseChunk(int chunkSize);
-    }
-
     private static final class SizeClassChunkControllerFactory implements ChunkControllerFactory {
         // To amortize activation/deactivation of chunks, we should have a minimum number of segments per chunk.
         // We choose 32 because it seems neither too small nor too big.
@@ -649,7 +645,7 @@ final class AdaptivePoolingAllocator {
         public Chunk newChunkAllocation(int promptingSize, Magazine magazine) {
             int chunkSize = Math.min(MAX_CHUNK_SIZE,
                     MathUtil.safeFindNextPositivePowerOfTwo(BUFS_PER_CHUNK * promptingSize));
-            BuddyChunk chunk = new BuddyChunk(chunkAllocator.allocate(chunkSize, chunkSize), magazine, size -> false);
+            BuddyChunk chunk = new BuddyChunk(chunkAllocator.allocate(chunkSize, chunkSize), magazine);
             chunkRegistry.add(chunk);
             return chunk;
         }
@@ -909,10 +905,6 @@ final class AdaptivePoolingAllocator {
             chunk.releaseFromMagazine();
         }
 
-        boolean trySetNextInLine(Chunk chunk) {
-            return NEXT_IN_LINE.compareAndSet(this, null, chunk);
-        }
-
         void free() {
             // Release the current Chunk and the next that was stored for later usage.
             restoreMagazineFreed();
@@ -966,7 +958,6 @@ final class AdaptivePoolingAllocator {
         protected final AbstractByteBuf delegate;
         protected Magazine magazine;
         private final AdaptivePoolingAllocator allocator;
-        private final ChunkReleasePredicate chunkReleasePredicate;
         // Always populate the refCnt field, so HotSpot doesn't emit `null` checks.
         // This is safe to do even on native-image.
         private final RefCnt refCnt = new RefCnt();
@@ -979,13 +970,11 @@ final class AdaptivePoolingAllocator {
             delegate = null;
             magazine = null;
             allocator = null;
-            chunkReleasePredicate = null;
             capacity = 0;
             pooled = false;
         }
 
-        Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled,
-              ChunkReleasePredicate chunkReleasePredicate) {
+        Chunk(AbstractByteBuf delegate, Magazine magazine, boolean pooled) {
             this.delegate = delegate;
             this.pooled = pooled;
             capacity = delegate.capacity();
@@ -993,8 +982,6 @@ final class AdaptivePoolingAllocator {
 
             // We need the top-level allocator so ByteBuf.capacity(int) can call reallocate()
             allocator = magazine.group.allocator;
-
-            this.chunkReleasePredicate = chunkReleasePredicate;
 
             if (PlatformDependent.isJfrEnabled() && AllocateChunkEvent.isEventEnabled()) {
                 AllocateChunkEvent event = new AllocateChunkEvent();
@@ -1151,7 +1138,7 @@ final class AdaptivePoolingAllocator {
 
         SizeClassedChunk(AbstractByteBuf delegate, Magazine magazine,
                          SizeClassChunkController controller) {
-            super(delegate, magazine, true, ignoredSize -> false);
+            super(delegate, magazine, true);
             segmentSize = controller.segmentSize;
             ownerThread = magazine.group.ownerThread;
             if (ownerThread == null) {
@@ -1259,8 +1246,8 @@ final class AdaptivePoolingAllocator {
         private final byte[] buddies;
         private final int freeListCapacity;
 
-        BuddyChunk(AbstractByteBuf delegate, Magazine magazine, ChunkReleasePredicate chunkReleasePredicate) {
-            super(delegate, magazine, true, chunkReleasePredicate);
+        BuddyChunk(AbstractByteBuf delegate, Magazine magazine) {
+            super(delegate, magazine, true);
             int capacity = delegate.capacity();
             int capFactor = capacity / MIN_BUDDY_SIZE;
             int tree = (capFactor << 1) - 1;
