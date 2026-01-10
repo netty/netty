@@ -1379,6 +1379,18 @@ final class AdaptivePoolingAllocator {
             return super.remainingCapacity();
         }
 
+        @Override
+        boolean releaseFromMagazine() {
+            // Buddy chunks can be reused before they become empty.
+            // We can therefor put them in the shared queue as soon as the magazine is done with this chunk.
+            Magazine mag = magazine;
+            detachFromMagazine();
+            if (!mag.offerToQueue(this)) {
+                return super.releaseFromMagazine();
+            }
+            return false;
+        }
+
         /**
          * Claim a suitable buddy and return its start offset into the delegate chunk, or return -1 if nothing claimed.
          */
