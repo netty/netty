@@ -1026,7 +1026,14 @@ final class AdaptivePoolingAllocator {
          * Called when a magazine is done using this chunk, probably because it was emptied.
          */
         boolean releaseFromMagazine() {
-            return release();
+            // Chunks can be reused before they become empty.
+            // We can therefor put them in the shared queue as soon as the magazine is done with this chunk.
+            Magazine mag = magazine;
+            detachFromMagazine();
+            if (!mag.offerToQueue(this)) {
+                return release();
+            }
+            return false;
         }
 
         /**
@@ -1260,18 +1267,6 @@ final class AdaptivePoolingAllocator {
             return updatedRemainingCapacity;
         }
 
-        @Override
-        boolean releaseFromMagazine() {
-            // Size-classed chunks can be reused before they become empty.
-            // We can therefor put them in the shared queue as soon as the magazine is done with this chunk.
-            Magazine mag = magazine;
-            detachFromMagazine();
-            if (!mag.offerToQueue(this)) {
-                return super.releaseFromMagazine();
-            }
-            return false;
-        }
-
         private void releaseSegmentOffsetIntoFreeList(int startIndex) {
             IntStack localFreeList = this.localFreeList;
             if (localFreeList != null && Thread.currentThread() == ownerThread) {
@@ -1376,18 +1371,6 @@ final class AdaptivePoolingAllocator {
                 freeList.drain(freeListCapacity, this);
             }
             return super.remainingCapacity();
-        }
-
-        @Override
-        boolean releaseFromMagazine() {
-            // Buddy chunks can be reused before they become empty.
-            // We can therefor put them in the shared queue as soon as the magazine is done with this chunk.
-            Magazine mag = magazine;
-            detachFromMagazine();
-            if (!mag.offerToQueue(this)) {
-                return super.releaseFromMagazine();
-            }
-            return false;
         }
 
         /**
