@@ -373,14 +373,14 @@ final class AdaptivePoolingAllocator {
             if (isThreadLocal) {
                 ownerThread = Thread.currentThread();
                 magazineExpandLock = null;
-                threadLocalMagazine = new Magazine(this, false, chunkReuseQueue, chunkControllerFactory.create(this));
+                threadLocalMagazine = new Magazine(this, false, chunkControllerFactory.create(this));
             } else {
                 ownerThread = null;
                 magazineExpandLock = new StampedLock();
                 threadLocalMagazine = null;
                 Magazine[] mags = new Magazine[INITIAL_MAGAZINES];
                 for (int i = 0; i < mags.length; i++) {
-                    mags[i] = new Magazine(this, true, chunkReuseQueue, chunkControllerFactory.create(this));
+                    mags[i] = new Magazine(this, true, chunkControllerFactory.create(this));
                 }
                 magazines = mags;
             }
@@ -443,7 +443,7 @@ final class AdaptivePoolingAllocator {
                     Magazine firstMagazine = mags[0];
                     Magazine[] expanded = new Magazine[mags.length * 2];
                     for (int i = 0, l = expanded.length; i < l; i++) {
-                        Magazine m = new Magazine(this, true, chunkReuseQueue, chunkControllerFactory.create(this));
+                        Magazine m = new Magazine(this, true, chunkControllerFactory.create(this));
                         firstMagazine.initializeSharedStateIn(m);
                         expanded[i] = m;
                     }
@@ -456,6 +456,10 @@ final class AdaptivePoolingAllocator {
                 }
             }
             return true;
+        }
+
+        Chunk pollChunk() {
+            return chunkReuseQueue.poll();
         }
 
         boolean offerToQueue(Chunk buffer) {
@@ -693,10 +697,8 @@ final class AdaptivePoolingAllocator {
         private final ChunkController chunkController;
         private final StampedLock allocationLock;
         private final AdaptiveRecycler recycler;
-        private final Queue<Chunk> sharedChunkQueue;
 
-        Magazine(MagazineGroup group, boolean shareable, Queue<Chunk> sharedChunkQueue,
-                 ChunkController chunkController) {
+        Magazine(MagazineGroup group, boolean shareable, ChunkController chunkController) {
             this.group = group;
             this.chunkController = chunkController;
 
@@ -708,7 +710,6 @@ final class AdaptivePoolingAllocator {
                 allocationLock = null;
                 recycler = null;
             }
-            this.sharedChunkQueue = sharedChunkQueue;
         }
 
         public boolean tryAllocate(int size, int maxCapacity, AdaptiveByteBuf buf, boolean reallocate) {
@@ -737,7 +738,7 @@ final class AdaptivePoolingAllocator {
                 return false;
             }
             if (curr == null) {
-                curr = sharedChunkQueue.poll();
+                curr = group.pollChunk();
                 if (curr == null) {
                     return false;
                 }
@@ -838,7 +839,7 @@ final class AdaptivePoolingAllocator {
             }
 
             // Now try to poll from the central queue first
-            curr = sharedChunkQueue.poll();
+            curr = group.pollChunk();
             if (curr == null) {
                 curr = chunkController.newChunkAllocation(size, this);
             } else {
