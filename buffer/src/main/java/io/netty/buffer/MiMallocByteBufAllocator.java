@@ -58,7 +58,7 @@ final class MiMallocByteBufAllocator {
     // 64 KiB
     private static final int SEGMENT_SLICE_SHIFT = 16;
     // 4 Mib
-    private static final int DEFAULT_SEGMENT_SHIFT = SEGMENT_SLICE_SHIFT + 6;
+    private static final int DEFAULT_SEGMENT_SHIFT = SEGMENT_SLICE_SHIFT + 9;
     // 4 MiB
     private static final int DEFAULT_SEGMENT_SIZE = 1 << DEFAULT_SEGMENT_SHIFT;
 
@@ -99,7 +99,7 @@ final class MiMallocByteBufAllocator {
     // DEFAULT_SEGMENT_SIZE / 2
     private static final int LARGE_BLOCK_SIZE_MAX = DEFAULT_SEGMENT_SIZE >> 1;
 
-    private static final int SPAN_QUEUE_MAX_INDEX = 19;
+    private static final int SPAN_QUEUE_MAX_INDEX = 35;
 
     // TODO: make it configurable?
     private static final int MAX_PAGE_CANDIDATE_SEARCH = 4;
@@ -110,7 +110,7 @@ final class MiMallocByteBufAllocator {
 
     private static final int PAGE_MIN_EXTEND_BLOCKS = 4;
 
-    private static final int PAGE_QUEUE_BIN_LARGE_INDEX = 53;
+    private static final int PAGE_QUEUE_BIN_LARGE_INDEX = 73;
 
     private static final int PAGE_QUEUE_BIN_FULL_INDEX = PAGE_QUEUE_BIN_LARGE_INDEX + 1;
 
@@ -166,17 +166,25 @@ final class MiMallocByteBufAllocator {
         long segmentsPeakSize;    // peak size of all segments
         int reclaimCount; // number of reclaimed (abandoned) segments
         private final SpanQueue[] spanQueues = new SpanQueue[] {
-            new SpanQueue(1, 0), // placeholder, not used.
-            new SpanQueue(1, 1), new SpanQueue(2, 2),
-            new SpanQueue(3, 3), new SpanQueue(4, 4),
-            new SpanQueue(5, 5), new SpanQueue(6, 6),
-            new SpanQueue(7, 7), new SpanQueue(10, 8),
-            new SpanQueue(12, 9), new SpanQueue(14, 10),
-            new SpanQueue(16, 11), new SpanQueue(20, 12),
-            new SpanQueue(24, 13), new SpanQueue(28, 14),
-            new SpanQueue(32, 15), new SpanQueue(40, 16),
-            new SpanQueue(48, 17), new SpanQueue(56, 18),
-            new SpanQueue(64, SPAN_QUEUE_MAX_INDEX)
+                new SpanQueue(1, 0), // placeholder, not used.
+                new SpanQueue(1, 1), new SpanQueue(2, 2),
+                new SpanQueue(3, 3), new SpanQueue(4, 4),
+                new SpanQueue(5, 5), new SpanQueue(6, 6),
+                new SpanQueue(7, 7), new SpanQueue(10, 8),
+                new SpanQueue(12, 9), new SpanQueue(14, 10),
+                new SpanQueue(16, 11), new SpanQueue(20, 12),
+                new SpanQueue(24, 13), new SpanQueue(28, 14),
+                new SpanQueue(32, 15), new SpanQueue(40, 16),
+                new SpanQueue(48, 17), new SpanQueue(56, 18),
+                new SpanQueue(64, 19), new SpanQueue(80, 20),
+                new SpanQueue(96, 21), new SpanQueue(112, 22),
+                new SpanQueue(128, 23), new SpanQueue(160, 24),
+                new SpanQueue(192, 25), new SpanQueue(224, 26),
+                new SpanQueue(256, 27), new SpanQueue(320, 28),
+                new SpanQueue(384, 29), new SpanQueue(448, 30),
+                new SpanQueue(512, 31), new SpanQueue(640, 32),
+                new SpanQueue(768, 33), new SpanQueue(896, 34),
+                new SpanQueue(64, SPAN_QUEUE_MAX_INDEX)
         };
     }
 
@@ -239,6 +247,16 @@ final class MiMallocByteBufAllocator {
                     new PageQueue(7168, 47), new PageQueue(8192, 48), // 64KiB
                     new PageQueue(10240, 49), new PageQueue(12288, 50),
                     new PageQueue(14336, 51), new PageQueue(16384, 52), //128KiB
+                    new PageQueue(20480, 53), new PageQueue(24576, 54),
+                    new PageQueue(28672, 55), new PageQueue(32768, 56),
+                    new PageQueue(40960, 57), new PageQueue(49152, 58),
+                    new PageQueue(57344, 59), new PageQueue(65536, 60),
+                    new PageQueue(81920, 61), new PageQueue(98304, 62),
+                    new PageQueue(114688, 63), new PageQueue(131072, 64),
+                    new PageQueue(163840, 65), new PageQueue(196608, 66),
+                    new PageQueue(229376, 67), new PageQueue(262144, 68),
+                    new PageQueue(327680, 69), new PageQueue(393216, 70),
+                    new PageQueue(458752, 71), new PageQueue(524288, 72),
                     // Large queue
                     new PageQueue(MEDIUM_BLOCK_WORD_SIZE_MAX + 1, PAGE_QUEUE_BIN_LARGE_INDEX),
                     // Full queue
