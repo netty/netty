@@ -1568,6 +1568,7 @@ final class AdaptivePoolingAllocator {
             return rootParent().alloc();
         }
 
+        @SuppressWarnings("deprecation")
         @Override
         public ByteOrder order() {
             return rootParent().order();
