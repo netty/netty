@@ -46,6 +46,7 @@ import static io.netty.util.internal.EmptyArrays.EMPTY_X509_CERTIFICATES;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 import static io.netty.util.internal.ObjectUtil.checkNotNullWithIAE;
 import static io.netty.util.internal.ObjectUtil.checkNonEmpty;
+import static io.netty.util.internal.ObjectUtil.deepCheckNotNull;
 
 /**
  * Builder for configuring a new SslContext for creation.
@@ -513,10 +514,11 @@ public final class SslContextBuilder {
      * @see OpenSslCredentialBuilder
      */
     public SslContextBuilder credential(OpenSslCredential credential) {
+        checkNotNull(credential, "credential");
         if (this.credentials == null) {
             this.credentials = new ArrayList<>();
         }
-        this.credentials.add(checkNotNull(credential, "credential"));
+        this.credentials.add(credential);
         return this;
     }
 
@@ -534,12 +536,12 @@ public final class SslContextBuilder {
      * @see OpenSslCredentialBuilder
      */
     public SslContextBuilder credentials(OpenSslCredential... credentials) {
-        checkNotNull(credentials, "credentials");
+        deepCheckNotNull("credentials", credentials);
         if (this.credentials == null) {
             this.credentials = new ArrayList<>(credentials.length);
         }
         for (OpenSslCredential credential : credentials) {
-            this.credentials.add(checkNotNull(credential, "credential"));
+            this.credentials.add(credential);
         }
         return this;
     }
@@ -556,11 +558,15 @@ public final class SslContextBuilder {
      */
     public SslContextBuilder credentials(Iterable<? extends OpenSslCredential> credentials) {
         checkNotNull(credentials, "credentials");
+        // Validate all credentials before adding any of them to avoid partial state
+        for (OpenSslCredential credential : credentials) {
+            checkNotNull(credential, "credential");
+        }
         if (this.credentials == null) {
             this.credentials = new ArrayList<>();
         }
         for (OpenSslCredential credential : credentials) {
-            this.credentials.add(checkNotNull(credential, "credential"));
+            this.credentials.add(credential);
         }
         return this;
     }

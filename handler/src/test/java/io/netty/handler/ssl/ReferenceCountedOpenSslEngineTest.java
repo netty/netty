@@ -20,6 +20,7 @@ import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
 import io.netty.pkitesting.X509Bundle;
 import io.netty.util.ReferenceCountUtil;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -36,6 +37,8 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
 
     private static X509Bundle rsaCert;
     private static X509Bundle ecdsaCert;
+    private static OpenSslCredential rsaCredential;
+    private static OpenSslCredential ecdsaCredential;
 
     @BeforeAll
     public static void setUpCredentialCerts() throws Exception {
@@ -52,6 +55,25 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
                 .keyAlgorithm("EC")
                 .setIsCertificateAuthority(true)
                 .buildSelfSigned();
+
+        // Create credentials
+        rsaCredential = OpenSslCredentialBuilder
+                .forX509(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                .build();
+
+        ecdsaCredential = OpenSslCredentialBuilder
+                .forX509(ecdsaCert.getKeyPair().getPrivate(), ecdsaCert.getCertificate())
+                .build();
+    }
+
+    @AfterAll
+    public static void tearDownCredentials() {
+        if (rsaCredential != null) {
+            rsaCredential.release();
+        }
+        if (ecdsaCredential != null) {
+            ecdsaCredential.release();
+        }
     }
 
     @Override
@@ -112,51 +134,36 @@ public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
     public void testHandshakeWithMultipleCredentials(SSLEngineTestParam param) throws Exception {
         assumeTrue(OpenSsl.isBoringSSL(), "SSL_CREDENTIAL API is only supported with BoringSSL");
 
-        // Create both RSA and ECDSA credentials
-        OpenSslCredential rsaCredential = OpenSslCredentialBuilder
-                .forX509(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
-                .build();
+        // Server context with both credentials
+        SslContext serverSslContext = wrapContext(param,
+                SslContextBuilder.forServer(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
+                        .sslProvider(SslProvider.OPENSSL_REFCNT)
+                        .credentials(rsaCredential, ecdsaCredential)
+                        .protocols(param.protocols())
+                        .ciphers(param.ciphers())
+                        .build());
 
-        OpenSslCredential ecdsaCredential = OpenSslCredentialBuilder
-                .forX509(ecdsaCert.getKeyPair().getPrivate(), ecdsaCert.getCertificate())
-                .build();
+        SslContext clientSslContext = wrapContext(param, SslContextBuilder.forClient()
+                .sslProvider(SslProvider.OPENSSL_REFCNT)
+                .trustManager(InsecureTrustManagerFactory.INSTANCE)
+                .protocols(param.protocols())
+                .ciphers(param.ciphers())
+                .build());
+
+        SSLEngine clientEngine = wrapEngine(clientSslContext.newEngine(UnpooledByteBufAllocator.DEFAULT));
+        SSLEngine serverEngine = wrapEngine(serverSslContext.newEngine(UnpooledByteBufAllocator.DEFAULT));
 
         try {
-            // Server context with both credentials
-            SslContext serverSslContext = wrapContext(param,
-                    SslContextBuilder.forServer(rsaCert.getKeyPair().getPrivate(), rsaCert.getCertificate())
-                            .sslProvider(SslProvider.OPENSSL_REFCNT)
-                            .credentials(rsaCredential, ecdsaCredential)
-                            .protocols(param.protocols())
-                            .ciphers(param.ciphers())
-                            .build());
+            // Perform handshake using base class helper
+            handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
-            SslContext clientSslContext = wrapContext(param, SslContextBuilder.forClient()
-                    .sslProvider(SslProvider.OPENSSL_REFCNT)
-                    .trustManager(InsecureTrustManagerFactory.INSTANCE)
-                    .protocols(param.protocols())
-                    .ciphers(param.ciphers())
-                    .build());
-
-            SSLEngine clientEngine = wrapEngine(clientSslContext.newEngine(UnpooledByteBufAllocator.DEFAULT));
-            SSLEngine serverEngine = wrapEngine(serverSslContext.newEngine(UnpooledByteBufAllocator.DEFAULT));
-
-            try {
-                // Perform handshake using base class helper
-                handshake(param.type(), param.delegate(), clientEngine, serverEngine);
-
-                // Verify handshake succeeded
-                assertTrue(serverEngine.getSession().isValid());
-            } finally {
-                cleanupClientSslContext(clientSslContext);
-                cleanupServerSslContext(serverSslContext);
-                cleanupClientSslEngine(clientEngine);
-                cleanupServerSslEngine(serverEngine);
-            }
+            // Verify handshake succeeded
+            assertTrue(serverEngine.getSession().isValid());
         } finally {
-            // Cleanup credentials after test
-            rsaCredential.release();
-            ecdsaCredential.release();
+            cleanupClientSslContext(clientSslContext);
+            cleanupServerSslContext(serverSslContext);
+            cleanupClientSslEngine(clientEngine);
+            cleanupServerSslEngine(serverEngine);
         }
     }
 }
