@@ -715,7 +715,7 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <netty.build.version>31</netty.build.version>
     <jboss.marshalling.version>2.2.3.Final</jboss.marshalling.version>
-    <bouncycastle.version>1.82</bouncycastle.version>
+    <bouncycastle.version>1.83</bouncycastle.version>
     <argLine.common>
       -server
       -dsa -da -ea:io.netty...

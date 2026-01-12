@@ -204,10 +204,12 @@
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcpkix-jdk18on</artifactId>
+      <version>1.82</version> <!-- TODO reverted version to avoid jlink breakage introduced in 1.83 -->
     </dependency>
     <dependency>
       <groupId>org.bouncycastle</groupId>
       <artifactId>bcprov-jdk18on</artifactId>
+      <version>1.82</version> <!-- TODO reverted version to avoid jlink breakage introduced in 1.83 -->
     </dependency>
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
