@@ -262,10 +262,8 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
     }
 
     protected ChainedOptionsBuilder newOptionsBuilder() throws Exception {
-        return super.newOptionsBuilder()
-                .jvmArgsAppend("-XX:MaxDirectMemorySize=16g");
+        return super.newOptionsBuilder().jvmArgsAppend("-XX:MaxDirectMemorySize=16g");
     }
-
 
     /**
      * Copied from AllocationPatternSimulator.
