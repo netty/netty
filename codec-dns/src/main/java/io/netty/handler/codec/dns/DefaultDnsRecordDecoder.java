@@ -16,6 +16,8 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+import io.netty.handler.codec.CorruptedFrameException;
 
 /**
  * The default {@link DnsRecordDecoder} implementation.
@@ -99,6 +101,30 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
                                            DnsCodecUtil.decompressDomainName(
                                                    in.duplicate().setIndex(offset, offset + length)));
         }
+        if (type ==  DnsRecordType.MX) {
+            // MX RDATA: 16-bit preference + exchange (domain name, possibly compressed)
+            if (length < 3) {
+                throw new CorruptedFrameException("MX record RDATA is too short: " + length);
+            }
+            final int pref = in.getUnsignedShort(offset);
+            ByteBuf exchange = null;
+            try {
+                exchange = DnsCodecUtil.decompressDomainName(
+                        in.duplicate().setIndex(offset + 2, offset + length));
+
+                // Build decompressed RDATA = [preference][expanded exchange name]
+                final ByteBuf out = in.alloc().buffer(2 + exchange.readableBytes());
+                out.writeShort(pref);
+                out.writeBytes(exchange);
+
+                return new DefaultDnsRawRecord(name, type, dnsClass, timeToLive, out);
+            } finally {
+                if (exchange != null) {
+                    exchange.release();
+                }
+            }
+        }
+
         return new DefaultDnsRawRecord(
                 name, type, dnsClass, timeToLive, in.retainedDuplicate().setIndex(offset, offset + length));
     }
