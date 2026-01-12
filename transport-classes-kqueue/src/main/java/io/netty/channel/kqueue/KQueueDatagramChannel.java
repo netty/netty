@@ -310,7 +310,7 @@ public final class KQueueDatagramChannel extends AbstractKQueueDatagramChannel i
         return writtenBytes > 0;
     }
 
-    private IOException translateForConnected(Errors.NativeIoException e) {
+    private static IOException translateForConnected(Errors.NativeIoException e) {
         // We need to correctly translate connect errors to match NIO behaviour.
         if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
             PortUnreachableException error = new PortUnreachableException(e.getMessage());
