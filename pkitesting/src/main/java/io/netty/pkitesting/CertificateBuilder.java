@@ -455,12 +455,12 @@ public final class CertificateBuilder {
         requireNonNull(algorithmName, "algorithmName");
         if ("RSA".equalsIgnoreCase(algorithmName)) {
             return algorithm(Algorithm.rsa2048);
-        } else if ("EC".equalsIgnoreCase(algorithmName)) {
-            return algorithm(Algorithm.ecp256);
-        } else {
-            throw new IllegalArgumentException("Unsupported key algorithm: " + algorithmName +
-                    ". Supported values are 'RSA' and 'EC'");
         }
+        if ("EC".equalsIgnoreCase(algorithmName)) {
+            return algorithm(Algorithm.ecp256);
+        }
+        throw new IllegalArgumentException("Unsupported key algorithm: " + algorithmName +
+                ". Supported values are 'RSA' and 'EC'");
     }
 
     /**
