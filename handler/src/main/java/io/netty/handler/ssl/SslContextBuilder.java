@@ -749,8 +749,7 @@ public final class SslContextBuilder {
                 trustManagerFactory, keyCertChain, key, keyPassword, keyManagerFactory,
                 ciphers, cipherFilter, apn, protocols, sessionCacheSize,
                     sessionTimeout, enableOcsp, secureRandom, keyStoreType, endpointIdentificationAlgorithm,
-                    serverNames, toArray(options.entrySet(), EMPTY_ENTRIES),
-                    credentials);
+                    serverNames, toArray(options.entrySet(), EMPTY_ENTRIES), credentials);
         }
     }
 
