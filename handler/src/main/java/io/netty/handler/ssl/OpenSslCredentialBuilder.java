@@ -157,7 +157,6 @@ public final class OpenSslCredentialBuilder {
             long finalPtr = credentialPtr;
             credentialPtr = 0; // Don't free on cleanup
             return new DefaultOpenSslCredential(finalPtr, CredentialType.X509);
-
         } catch (Exception e) {
             throw new IllegalStateException("Failed to build SSL credential", e);
         } finally {
