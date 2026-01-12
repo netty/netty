@@ -18,13 +18,18 @@ package io.netty.microbench.buffer;
 import io.netty.buffer.AdaptiveByteBufAllocator;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.MiByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.microbench.util.AbstractMicrobenchmark;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.internal.MathUtil;
+import io.netty.util.internal.PlatformDependent;
+import jdk.jfr.consumer.RecordedEvent;
+import jdk.jfr.consumer.RecordingFile;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.CompilerControl;
+import org.openjdk.jmh.annotations.Fork;
 import org.openjdk.jmh.annotations.Measurement;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
@@ -36,9 +41,14 @@ import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.BenchmarkParams;
+import org.openjdk.jmh.runner.options.ChainedOptionsBuilder;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Map;
 import java.util.SplittableRandom;
+import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
@@ -47,11 +57,12 @@ import java.util.function.Supplier;
 @OutputTimeUnit(TimeUnit.NANOSECONDS)
 @State(Scope.Benchmark)
 @BenchmarkMode(Mode.AverageTime)
-@Threads(1)
+@Fork(1)
 public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmark {
 
     public enum AllocatorType {
         ADAPTIVE(AdaptiveByteBufAllocator::new),
+        MIMALLOC(MiByteBufAllocator::new),
         POOLED(() -> PooledByteBufAllocator.DEFAULT);
 
         private final Supplier<ByteBufAllocator> factory;
@@ -65,11 +76,30 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
         }
     }
 
-    @Param({ "ADAPTIVE" })
+    @Param({
+            "ADAPTIVE",
+            "POOLED",
+            "MIMALLOC"
+    })
     public AllocatorType allocatorType;
 
-    @Param({ "0", "200000" })
+    @Param({
+//            "0",
+            "200000"
+    })
     public int pollutionIterations;
+
+    @Param({
+            "128",
+            "256",
+            "512",
+            "1024",
+            "2048",
+            "4096",
+            "6144",
+            "8192"
+    })
+    public int MAX_LIVE_BUFFERS;
 
     private ByteBufAllocator allocator;
 
@@ -85,7 +115,7 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
         @Setup
         public void setup(ByteBufAllocatorAllocPatternBenchmark benchmark) {
             this.allocator = benchmark.allocator;
-            releaseIndexes = new int[MAX_LIVE_BUFFERS];
+            releaseIndexes = new int[benchmark.MAX_LIVE_BUFFERS];
             sizes = new int[MathUtil.findNextPositivePowerOfTwo(FLATTEND_SIZE_ARRAY.length)];
             SplittableRandom rand = new SplittableRandom(SEED);
             // Pre-generate the to be released index.
@@ -99,7 +129,7 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
             }
             nextReleaseIndex = 0;
             nextSizeIndex = 0;
-            buffers = new ByteBuf[MAX_LIVE_BUFFERS];
+            buffers = new ByteBuf[benchmark.MAX_LIVE_BUFFERS];
         }
 
         private int getNextReleaseIndex() {
@@ -210,26 +240,32 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
         fastThread.join();
     }
 
+    @Threads(8)
     @Benchmark
     public void directAllocation(AllocationPatternState state) {
         state.performDirectAllocation();
     }
 
-    @Benchmark
-    public void heapAllocation(AllocationPatternState state) {
-        state.performHeapAllocation();
-    }
+//    @Threads(8)
+//    @Benchmark
+//    public void heapAllocation(AllocationPatternState state) {
+//        state.performHeapAllocation();
+//    }
 
     private static final int SEED = 42;
     // Allocation size array.
     private static final int[] FLATTEND_SIZE_ARRAY;
 
-    private static final int MAX_LIVE_BUFFERS = 8192;
-
     // Use event-loop threads.
     public ByteBufAllocatorAllocPatternBenchmark() {
         super(true, false);
     }
+
+    protected ChainedOptionsBuilder newOptionsBuilder() throws Exception {
+        return super.newOptionsBuilder()
+                .jvmArgsAppend("-XX:MaxDirectMemorySize=16g");
+    }
+
 
     /**
      * Copied from AllocationPatternSimulator.
@@ -614,7 +650,43 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
             18432, 6,
     };
 
+    @SuppressWarnings("JvmTaintAnalysis")
+    private static Path toAbsolutePath(String jfrFile) {
+        return Paths.get(jfrFile).toAbsolutePath();
+    }
+
+    private static int[] buildPattern(String jfrFile) {
+        Path path = toAbsolutePath(jfrFile);
+        TreeMap<Integer, Integer> summation = new TreeMap<>();
+        try (RecordingFile eventReader = new RecordingFile(path)) {
+            while (eventReader.hasMoreEvents()) {
+                RecordedEvent event = eventReader.readEvent();
+                String name = event.getEventType().getName();
+                if (("AllocateBufferEvent".equals(name) || "io.netty.AllocateBuffer".equals(name)) &&
+                        event.hasField("size")) {
+                    int size = event.getInt("size");
+                    summation.compute(size, (k, v) -> v == null ? 1 : v + 1);
+                }
+            }
+        } catch (Throwable t) {
+            PlatformDependent.throwException(t);
+        }
+        if (summation.isEmpty()) {
+            throw new IllegalStateException("No 'AllocateBufferEvent' records found in JFR file: " + jfrFile);
+        }
+        int[] pattern = new int[summation.size() * 2];
+        int index = 0;
+        for (Map.Entry<Integer, Integer> entry : summation.entrySet()) {
+            pattern[index++] = entry.getKey();
+            pattern[index++] = entry.getValue();
+        }
+        return pattern;
+    }
+
     static {
+        int[] sizeArrray;
+        sizeArrray = WEB_SOCKET_PROXY_PATTERN;
+//        sizeArrray = buildPattern("/root/netty-allocator.jfr");
         // Flat the WEB_SOCKET_PROXY_PATTERN.
         ArrayList<Integer> sizeList = new ArrayList<>();
         for (int i = 0; i < WEB_SOCKET_PROXY_PATTERN.length; i += 2) {
