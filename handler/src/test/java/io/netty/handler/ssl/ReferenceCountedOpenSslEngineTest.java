@@ -35,7 +35,6 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 public class ReferenceCountedOpenSslEngineTest extends OpenSslEngineTest {
 
     private static X509Bundle rsaCert;
-
     private static X509Bundle ecdsaCert;
 
     @BeforeAll
