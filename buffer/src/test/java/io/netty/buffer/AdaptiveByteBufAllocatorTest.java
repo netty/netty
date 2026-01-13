@@ -19,6 +19,8 @@ import io.netty.util.NettyRuntime;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingStream;
+import org.junit.jupiter.api.RepeatedTest;
+import org.junit.jupiter.api.RepetitionInfo;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.condition.EnabledForJreRange;
@@ -26,10 +28,13 @@ import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
+import java.lang.reflect.Array;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.List;
+import java.util.SplittableRandom;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -385,5 +390,70 @@ public class AdaptiveByteBufAllocatorTest extends AbstractByteBufAllocatorTest<A
         FastThreadLocalThread thread = new FastThreadLocalThread(task);
         thread.start();
         task.get();
+    }
+
+    @RepeatedTest(100)
+    void buddyAllocationConsistency(RepetitionInfo info) {
+        SplittableRandom rng = new SplittableRandom(info.getCurrentRepetition());
+        AdaptiveByteBufAllocator allocator = newAllocator(true);
+        int small = 32768;
+        int large = 2 * small;
+        int xlarge = 2 * large;
+
+        int[] allocationSizes = {
+                small, small, small, small, small, small, small, small,
+                large, large, large, large,
+                xlarge, xlarge,
+        };
+
+        shuffle(rng, allocationSizes);
+
+        ByteBuf[] bufs = new ByteBuf[allocationSizes.length];
+        Arrays.setAll(bufs, i -> allocator.buffer(allocationSizes[i], allocationSizes[i]));
+
+        shuffle(rng, bufs);
+
+        int[] reallocations = new int[bufs.length / 2];
+        for (int i = 0; i < reallocations.length; i++) {
+            reallocations[i] = bufs[i].capacity();
+            bufs[i].release();
+            bufs[i] = null;
+        }
+        for (int i = 0; i < reallocations.length; i++) {
+            assertNull(bufs[i]);
+            bufs[i] = allocator.buffer(reallocations[i], reallocations[i]);
+        }
+
+        for (int i = 0; i < bufs.length; i++) {
+            while (bufs[i].isWritable()) {
+                bufs[i].writeByte(i + 1);
+            }
+        }
+        try {
+            for (int i = 0; i < bufs.length; i++) {
+                while (bufs[i].isReadable()) {
+                    int b = Byte.toUnsignedInt(bufs[i].readByte());
+                    if (b != i + 1) {
+                        fail("Expected byte " + (i + 1) +
+                                " at index " + (bufs[i].readerIndex() - 1) +
+                                " but got " + b);
+                    }
+                }
+            }
+        } finally {
+            for (ByteBuf buf : bufs) {
+                buf.release();
+            }
+        }
+    }
+
+    private static void shuffle(SplittableRandom rng, Object array) {
+        int len = Array.getLength(array);
+        for (int i = 0; i < len; i++) {
+            int n = rng.nextInt(i, len);
+            Object value = Array.get(array, i);
+            Array.set(array, i, Array.get(array, n));
+            Array.set(array, n, value);
+        }
     }
 }
