@@ -45,6 +45,7 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.StampedLock;
@@ -616,19 +617,23 @@ final class AdaptivePoolingAllocator {
     }
 
     private static final class BuddyChunkControllerFactory implements ChunkControllerFactory {
+        private final AtomicInteger maxChunkSize = new AtomicInteger();
+
         @Override
         public ChunkController create(MagazineGroup group) {
-            return new BuddyChunkController(group);
+            return new BuddyChunkController(group, maxChunkSize);
         }
     }
 
     private static final class BuddyChunkController implements ChunkController {
         private final ChunkAllocator chunkAllocator;
         private final ChunkRegistry chunkRegistry;
+        private final AtomicInteger maxChunkSize;
 
-        BuddyChunkController(MagazineGroup group) {
+        BuddyChunkController(MagazineGroup group, AtomicInteger maxChunkSize) {
             chunkAllocator = group.chunkAllocator;
             chunkRegistry = group.allocator.chunkRegistry;
+            this.maxChunkSize = maxChunkSize;
         }
 
         @Override
@@ -643,8 +648,13 @@ final class AdaptivePoolingAllocator {
 
         @Override
         public Chunk newChunkAllocation(int promptingSize, Magazine magazine) {
-            int chunkSize = Math.min(MAX_CHUNK_SIZE,
-                    MathUtil.safeFindNextPositivePowerOfTwo(BUFS_PER_CHUNK * promptingSize));
+            int maxChunkSize = this.maxChunkSize.get();
+            int proposedChunkSize = MathUtil.safeFindNextPositivePowerOfTwo(BUFS_PER_CHUNK * promptingSize);
+            int chunkSize = Math.min(MAX_CHUNK_SIZE, Math.max(maxChunkSize, proposedChunkSize));
+            if (chunkSize > maxChunkSize) {
+                // Update our stored max chunk size. It's fine that this is racy.
+                this.maxChunkSize.set(chunkSize);
+            }
             BuddyChunk chunk = new BuddyChunk(chunkAllocator.allocate(chunkSize, chunkSize), magazine);
             chunkRegistry.add(chunk);
             return chunk;
