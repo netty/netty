@@ -828,18 +828,15 @@ final class AdaptivePoolingAllocator {
                     return true;
                 }
 
-                if (remainingCapacity >= size) {
-                    // At this point we know that this will be the last time curr will be used, so directly set it to
-                    // null and release it once we are done.
-                    try {
+                try {
+                    if (remainingCapacity >= size) {
+                        // At this point we know that this will be the last time curr will be used, so directly set it to
+                        // null and release it once we are done.
                         return curr.readInitInto(buf, size, remainingCapacity, maxCapacity);
-                    } finally {
-                        // Release in a finally block so even if readInitInto(...) would throw we would still correctly
-                        // release the current chunk before null it out.
-                        curr.releaseFromMagazine();
                     }
-                } else {
-                    // Release it as it's too small.
+                } finally {
+                    // Release in a finally block so even if readInitInto(...) would throw we would still correctly
+                    // release the current chunk before null it out.
                     curr.releaseFromMagazine();
                 }
             }
