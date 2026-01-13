@@ -237,15 +237,13 @@ public interface Channel extends AttributeMap, ChannelOutboundInvoker, Comparabl
     }
 
     @Override
-    default Channel read() {
+    default void read() {
         pipeline().read();
-        return this;
     }
 
     @Override
-    default Channel flush() {
+    default void flush() {
         pipeline().flush();
-        return this;
     }
 
     @Override

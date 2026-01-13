@@ -91,18 +91,6 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     }
 
     @Override
-    public SocketChannel read() {
-        super.read();
-        return this;
-    }
-
-    @Override
-    public SocketChannel flush() {
-        super.flush();
-        return this;
-    }
-
-    @Override
     public ServerSocketChannel parent() {
         return (ServerSocketChannel) super.parent();
     }

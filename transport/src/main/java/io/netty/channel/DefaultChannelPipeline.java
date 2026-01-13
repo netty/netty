@@ -718,7 +718,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelPipeline fireChannelRegistered() {
+    public final void fireChannelRegistered() {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelRegistered(head);
@@ -728,11 +728,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(this::fireChannelRegistered);
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireChannelUnregistered() {
+    public final void fireChannelUnregistered() {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelUnregistered(head);
@@ -742,11 +741,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(this::fireChannelUnregistered);
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireChannelShutdown(ChannelShutdownType type) {
+    public final void fireChannelShutdown(ChannelShutdownType type) {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelShutdown(head, type);
@@ -756,7 +754,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(() -> head.fireChannelShutdown(type));
         }
-        return this;
     }
 
     /**
@@ -828,7 +825,7 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelPipeline fireChannelActive() {
+    public final void fireChannelActive() {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelActive(head);
@@ -838,11 +835,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(this::fireChannelActive);
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireChannelInactive() {
+    public final void fireChannelInactive() {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelInactive(head);
@@ -852,11 +848,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(this::fireChannelInactive);
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireExceptionCaught(Throwable cause) {
+    public final void fireExceptionCaught(Throwable cause) {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.exceptionCaught(head, cause);
@@ -866,11 +861,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(() -> fireExceptionCaught(cause));
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireUserEventTriggered(Object event) {
+    public final void fireUserEventTriggered(Object event) {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.userEventTriggered(head, event);
@@ -880,11 +874,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(() -> fireUserEventTriggered(event));
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireChannelRead(Object msg) {
+    public final void fireChannelRead(Object msg) {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelRead(head, msg);
@@ -894,11 +887,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(() -> fireChannelRead(msg));
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireChannelReadComplete() {
+    public final void fireChannelReadComplete() {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelReadComplete(head);
@@ -908,11 +900,10 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(this::fireChannelReadComplete);
         }
-        return this;
     }
 
     @Override
-    public final ChannelPipeline fireChannelWritabilityChanged() {
+    public final void fireChannelWritabilityChanged() {
         if (head.executor().inEventLoop()) {
             if (head.invokeHandler()) {
                 head.channelWritabilityChanged(head);
@@ -922,7 +913,6 @@ public class DefaultChannelPipeline implements ChannelPipeline {
         } else {
             head.executor().execute(this::fireChannelWritabilityChanged);
         }
-        return this;
     }
 
     @Override
@@ -961,9 +951,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelPipeline flush() {
+    public final void flush() {
         tail.flush();
-        return this;
     }
 
     @Override
@@ -1003,9 +992,8 @@ public class DefaultChannelPipeline implements ChannelPipeline {
     }
 
     @Override
-    public final ChannelPipeline read() {
+    public final void read() {
         tail.read();
-        return this;
     }
 
     @Override

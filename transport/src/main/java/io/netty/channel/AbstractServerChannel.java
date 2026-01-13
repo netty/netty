@@ -45,18 +45,6 @@ public abstract class AbstractServerChannel extends AbstractChannel implements S
     }
 
     @Override
-    public ServerChannel read() {
-        super.read();
-        return this;
-    }
-
-    @Override
-    public ServerChannel flush() {
-        super.flush();
-        return this;
-    }
-
-    @Override
     public EventLoopGroup childEventExecutorGroup() {
         return childEventLoopGroup;
     }

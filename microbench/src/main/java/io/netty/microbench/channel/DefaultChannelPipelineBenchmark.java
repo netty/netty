@@ -36,7 +36,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
-import org.openjdk.jmh.infra.Blackhole;
 
 import java.util.SplittableRandom;
 
@@ -344,28 +343,28 @@ public class DefaultChannelPipelineBenchmark extends AbstractMicrobenchmark {
 
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark
-    public void propagateEvent(Blackhole hole) {
+    public void propagateEvent() {
         ChannelPipeline pipeline = pipelines[pipelineCounter++ & pipelineArrayMask];
-        hole.consume(pipeline.fireChannelReadComplete());
+        pipeline.fireChannelReadComplete();
     }
 
     @OperationsPerInvocation(12)
     @CompilerControl(CompilerControl.Mode.DONT_INLINE)
     @Benchmark()
-    public void propagateVariety(Blackhole hole) {
+    public void propagateVariety() {
         int index = pipelineCounter++ & pipelineArrayMask;
         ChannelPipeline pipeline = pipelines[index];
-        hole.consume(pipeline.fireChannelActive());             // 1
-        hole.consume(pipeline.fireChannelRead(MESSAGE));        // 2
-        hole.consume(pipeline.fireChannelRead(MESSAGE));        // 3
-        pipeline.write(MESSAGE, promises[index]);               // 4
-        hole.consume(pipeline.fireChannelRead(MESSAGE));        // 5
-        hole.consume(pipeline.fireChannelRead(MESSAGE));        // 6
-        pipeline.write(MESSAGE, promises[index]);               // 7
-        hole.consume(pipeline.fireChannelReadComplete());       // 8
-        hole.consume(pipeline.fireUserEventTriggered(MESSAGE)); // 9
-        hole.consume(pipeline.fireChannelWritabilityChanged()); // 10
-        hole.consume(pipeline.flush());                         // 11
-        hole.consume(pipeline.fireChannelInactive());           // 12
+        pipeline.fireChannelActive();             // 1
+        pipeline.fireChannelRead(MESSAGE);        // 2
+        pipeline.fireChannelRead(MESSAGE);        // 3
+        pipeline.write(MESSAGE, promises[index]); // 4
+        pipeline.fireChannelRead(MESSAGE);        // 5
+        pipeline.fireChannelRead(MESSAGE);        // 6
+        pipeline.write(MESSAGE, promises[index]); // 7
+        pipeline.fireChannelReadComplete();       // 8
+        pipeline.fireUserEventTriggered(MESSAGE); // 9
+        pipeline.fireChannelWritabilityChanged(); // 10
+        pipeline.flush();                         // 11
+        pipeline.fireChannelInactive();           // 12
     }
 }

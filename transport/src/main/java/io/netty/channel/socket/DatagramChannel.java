@@ -219,10 +219,4 @@ public interface DatagramChannel extends Channel {
      * The given {@link Future} will be notified and also returned.
      */
     void block(InetAddress multicastAddress, InetAddress sourceToBlock, Promise<Void> future);
-
-    @Override
-    DatagramChannel read();
-
-    @Override
-    DatagramChannel flush();
 }

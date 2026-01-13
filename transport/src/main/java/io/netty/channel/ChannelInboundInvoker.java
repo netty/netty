@@ -24,7 +24,7 @@ public interface ChannelInboundInvoker {
      * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelInboundInvoker fireChannelRegistered();
+    void fireChannelRegistered();
 
     /**
      * A {@link Channel} was unregistered from its {@link EventLoop}.
@@ -33,7 +33,7 @@ public interface ChannelInboundInvoker {
      * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelInboundInvoker fireChannelUnregistered();
+    void fireChannelUnregistered();
 
     /**
      * A {@link Channel} is active now, which means it is connected.
@@ -42,7 +42,7 @@ public interface ChannelInboundInvoker {
      * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelInboundInvoker fireChannelActive();
+    void fireChannelActive();
 
     /**
      * A {@link Channel} is inactive now, which means it is closed.
@@ -51,7 +51,7 @@ public interface ChannelInboundInvoker {
      * called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelInboundInvoker fireChannelInactive();
+    void fireChannelInactive();
 
     /**
      * A {@link Channel} received an {@link Throwable} in one of its inbound operations.
@@ -60,7 +60,7 @@ public interface ChannelInboundInvoker {
      * method  called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelInboundInvoker fireExceptionCaught(Throwable cause);
+    void fireExceptionCaught(Throwable cause);
 
     /**
      * A {@link Channel} received an user defined event.
@@ -69,7 +69,7 @@ public interface ChannelInboundInvoker {
      * method  called of the next  {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelInboundInvoker fireUserEventTriggered(Object event);
+    void fireUserEventTriggered(Object event);
 
     /**
      * A {@link Channel} received a message.
@@ -78,19 +78,19 @@ public interface ChannelInboundInvoker {
      * method  called of the next {@link ChannelInboundHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelInboundInvoker fireChannelRead(Object msg);
+    void fireChannelRead(Object msg);
 
     /**
      * Triggers an {@link ChannelInboundHandler#channelReadComplete(ChannelHandlerContext)}
      * event to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      */
-    ChannelInboundInvoker fireChannelReadComplete();
+    void fireChannelReadComplete();
 
     /**
      * Triggers an {@link ChannelInboundHandler#channelWritabilityChanged(ChannelHandlerContext)}
      * event to the next {@link ChannelInboundHandler} in the {@link ChannelPipeline}.
      */
-    ChannelInboundInvoker fireChannelWritabilityChanged();
+    void fireChannelWritabilityChanged();
 
     /**
      * A {@link Channel} was shutdown in a specific direction.
@@ -100,5 +100,5 @@ public interface ChannelInboundInvoker {
      * called of the next  {@link ChannelHandler} contained in the  {@link ChannelPipeline} of the
      * {@link Channel}.
      */
-    ChannelInboundInvoker fireChannelShutdown(ChannelShutdownType type);
+    void fireChannelShutdown(ChannelShutdownType type);
 }

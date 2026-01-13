@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.reset;
@@ -44,8 +45,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.function.Executable;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
 
 /**
  * Tests for {@link DefaultHttp2LocalFlowController}.
@@ -81,21 +80,11 @@ public class DefaultHttp2LocalFlowControllerTest {
     private void setupChannelHandlerContext(boolean allowFlush) {
         reset(ctx);
         when(ctx.newPromise()).thenReturn(promise);
-        if (allowFlush) {
-            when(ctx.flush()).then(new Answer<ChannelHandlerContext>() {
-                @Override
-                public ChannelHandlerContext answer(InvocationOnMock invocationOnMock) {
-                    return ctx;
-                }
-            });
-        } else {
-            when(ctx.flush()).then(new Answer<ChannelHandlerContext>() {
-                @Override
-                public ChannelHandlerContext answer(InvocationOnMock invocationOnMock) {
-                    fail("forbidden");
-                    return null;
-                }
-            });
+        if (!allowFlush) {
+            doAnswer(invocationOnMock -> {
+                fail("forbidden");
+                return null;
+            }).when(ctx).flush();
         }
         when(ctx.executor()).thenReturn(executor);
     }

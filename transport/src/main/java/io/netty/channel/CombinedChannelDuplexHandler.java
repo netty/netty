@@ -407,63 +407,53 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
-        public ChannelHandlerContext fireChannelRegistered() {
+        public void fireChannelRegistered() {
             ctx.fireChannelRegistered();
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelUnregistered() {
+        public void fireChannelUnregistered() {
             ctx.fireChannelUnregistered();
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelActive() {
+        public void fireChannelActive() {
             ctx.fireChannelActive();
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelInactive() {
+        public void fireChannelInactive() {
             ctx.fireChannelInactive();
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
+        public void fireExceptionCaught(Throwable cause) {
             ctx.fireExceptionCaught(cause);
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireUserEventTriggered(Object event) {
+        public void fireUserEventTriggered(Object event) {
             ctx.fireUserEventTriggered(event);
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelRead(Object msg) {
+        public void fireChannelRead(Object msg) {
             ctx.fireChannelRead(msg);
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelReadComplete() {
+        public void fireChannelReadComplete() {
             ctx.fireChannelReadComplete();
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelWritabilityChanged() {
+        public void fireChannelWritabilityChanged() {
             ctx.fireChannelWritabilityChanged();
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelShutdown(ChannelShutdownType type) {
+        public void fireChannelShutdown(ChannelShutdownType type) {
             ctx.fireChannelShutdown(type);
-            return this;
         }
 
         @Override
@@ -538,9 +528,8 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
-        public ChannelHandlerContext read() {
+        public void read() {
             ctx.read();
-            return this;
         }
 
         @Override
@@ -554,9 +543,8 @@ public class CombinedChannelDuplexHandler<I extends ChannelInboundHandler, O ext
         }
 
         @Override
-        public ChannelHandlerContext flush() {
+        public void flush() {
             ctx.flush();
-            return this;
         }
 
         @Override

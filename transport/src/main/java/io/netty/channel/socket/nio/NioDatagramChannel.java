@@ -527,18 +527,6 @@ public final class NioDatagramChannel
     }
 
     @Override
-    public io.netty.channel.socket.DatagramChannel read() {
-        super.read();
-        return this;
-    }
-
-    @Override
-    public io.netty.channel.socket.DatagramChannel flush() {
-        super.flush();
-        return this;
-    }
-
-    @Override
     @Deprecated
     protected void setReadPending(boolean readPending) {
         super.setReadPending(readPending);

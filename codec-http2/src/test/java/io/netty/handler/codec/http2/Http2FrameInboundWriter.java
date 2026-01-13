@@ -162,63 +162,53 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public ChannelHandlerContext fireChannelRegistered() {
+        public void fireChannelRegistered() {
             channel.pipeline().fireChannelRegistered();
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelUnregistered() {
+        public void fireChannelUnregistered() {
             channel.pipeline().fireChannelUnregistered();
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelActive() {
+        public void fireChannelActive() {
             channel.pipeline().fireChannelActive();
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelInactive() {
+        public void fireChannelInactive() {
             channel.pipeline().fireChannelInactive();
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireExceptionCaught(Throwable cause) {
+        public void fireExceptionCaught(Throwable cause) {
             channel.pipeline().fireExceptionCaught(cause);
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireUserEventTriggered(Object evt) {
+        public void fireUserEventTriggered(Object evt) {
             channel.pipeline().fireUserEventTriggered(evt);
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelRead(Object msg) {
+        public void fireChannelRead(Object msg) {
             channel.pipeline().fireChannelRead(msg);
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelReadComplete() {
+        public void fireChannelReadComplete() {
             channel.pipeline().fireChannelReadComplete();
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelWritabilityChanged() {
+        public void fireChannelWritabilityChanged() {
             channel.pipeline().fireChannelWritabilityChanged();
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext fireChannelShutdown(ChannelShutdownType type) {
+        public void fireChannelShutdown(ChannelShutdownType type) {
             channel.pipeline().fireChannelShutdown(type);
-            return this;
         }
 
         @Override
@@ -227,15 +217,13 @@ final class Http2FrameInboundWriter {
         }
 
         @Override
-        public ChannelHandlerContext read() {
+        public void read() {
             channel.read();
-            return this;
         }
 
         @Override
-        public ChannelHandlerContext flush() {
+        public void flush() {
             channel.pipeline().fireChannelReadComplete();
-            return this;
         }
 
         @Override

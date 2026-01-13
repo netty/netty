@@ -111,9 +111,9 @@ class WebSocketClientProtocolHandshakeHandler implements ChannelInboundHandler {
                 }
 
                 if (localHandshakePromise.tryFailure(new WebSocketClientHandshakeException("handshake timed out"))) {
-                    ctx.flush()
-                       .fireUserEventTriggered(ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT)
-                       .close();
+                    ctx.flush();
+                    ctx.fireUserEventTriggered(ClientHandshakeStateEvent.HANDSHAKE_TIMEOUT);
+                    ctx.close();
                 }
             }
         }, handshakeTimeoutMillis, TimeUnit.MILLISECONDS);

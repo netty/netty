@@ -16,9 +16,6 @@
 package io.netty.channel;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.concurrent.DefaultPromise;
-import io.netty.util.concurrent.FailedFuture;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.Promise;
 
 import java.net.SocketAddress;
@@ -500,52 +497,4 @@ public interface ChannelPipeline
      * handler names and whose values are handlers.
      */
     Map<String, ChannelHandler> toMap();
-
-    @Override
-    ChannelPipeline fireChannelRegistered();
-
-    @Override
-    ChannelPipeline fireChannelUnregistered();
-
-    @Override
-    ChannelPipeline fireChannelActive();
-
-    @Override
-    ChannelPipeline fireChannelInactive();
-
-    @Override
-    ChannelPipeline fireExceptionCaught(Throwable cause);
-
-    @Override
-    ChannelPipeline fireUserEventTriggered(Object event);
-
-    @Override
-    ChannelPipeline fireChannelRead(Object msg);
-
-    @Override
-    ChannelPipeline fireChannelReadComplete();
-
-    @Override
-    ChannelPipeline fireChannelWritabilityChanged();
-
-    @Override
-    ChannelPipeline fireChannelShutdown(ChannelShutdownType type);
-
-    @Override
-    ChannelPipeline flush();
-
-    @Override
-    default <T> Promise<T> newPromise() {
-        return executor().newPromise();
-    }
-
-    @Override
-    default <T> Future<T> newFailedFuture(Throwable cause) {
-        return executor().newFailedFuture(cause);
-    }
-
-    @Override
-    default <T> Future<T> newSucceededFuture(T result) {
-        return executor().newSucceededFuture(result);
-    }
 }

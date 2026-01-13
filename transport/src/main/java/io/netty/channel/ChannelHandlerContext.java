@@ -107,42 +107,6 @@ public interface ChannelHandlerContext extends ChannelInboundInvoker, ChannelOut
      */
     boolean isRemoved();
 
-    @Override
-    ChannelHandlerContext fireChannelRegistered();
-
-    @Override
-    ChannelHandlerContext fireChannelUnregistered();
-
-    @Override
-    ChannelHandlerContext fireChannelActive();
-
-    @Override
-    ChannelHandlerContext fireChannelInactive();
-
-    @Override
-    ChannelHandlerContext fireExceptionCaught(Throwable cause);
-
-    @Override
-    ChannelHandlerContext fireUserEventTriggered(Object evt);
-
-    @Override
-    ChannelHandlerContext fireChannelRead(Object msg);
-
-    @Override
-    ChannelHandlerContext fireChannelReadComplete();
-
-    @Override
-    ChannelHandlerContext fireChannelShutdown(ChannelShutdownType type);
-
-    @Override
-    ChannelHandlerContext fireChannelWritabilityChanged();
-
-    @Override
-    ChannelHandlerContext read();
-
-    @Override
-    ChannelHandlerContext flush();
-
     /**
      * Return the assigned {@link ChannelPipeline}
      */

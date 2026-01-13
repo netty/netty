@@ -40,9 +40,4 @@ import io.netty.channel.ServerChannel;
  */
 public interface ServerSocketChannel extends ServerChannel {
 
-    @Override
-    ServerSocketChannel read();
-
-    @Override
-    ServerSocketChannel flush();
 }

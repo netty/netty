@@ -276,18 +276,6 @@ public class ServerBootstrapTest {
         }
 
         @Override
-        public ServerChannel read() {
-            super.read();
-            return this;
-        }
-
-        @Override
-        public ServerChannel flush() {
-            super.flush();
-            return this;
-        }
-
-        @Override
         protected void doBind(SocketAddress localAddress, Promise<Void> promise) {
             active = true;
             promise.setSuccess(null);

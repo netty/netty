@@ -458,18 +458,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
     }
 
     @Override
-    public Channel read() {
-        pipeline().read();
-        return this;
-    }
-
-    @Override
-    public Channel flush() {
-        pipeline().flush();
-        return this;
-    }
-
-    @Override
     public Future<Void> bind(SocketAddress localAddress) {
         return pipeline().bind(localAddress);
     }

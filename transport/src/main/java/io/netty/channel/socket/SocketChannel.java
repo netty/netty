@@ -50,13 +50,4 @@ import io.netty.channel.ChannelShutdownDirection;
 public interface SocketChannel extends Channel {
     @Override
     ServerSocketChannel parent();
-
-    @Override
-    boolean isShutdown(ChannelShutdownDirection direction);
-
-    @Override
-    SocketChannel read();
-
-    @Override
-    SocketChannel flush();
 }

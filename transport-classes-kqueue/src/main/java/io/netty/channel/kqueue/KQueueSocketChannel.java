@@ -100,18 +100,6 @@ public final class KQueueSocketChannel extends AbstractKQueueChannel implements 
     }
 
     @Override
-    public SocketChannel read() {
-        super.read();
-        return this;
-    }
-
-    @Override
-    public SocketChannel flush() {
-        super.flush();
-        return this;
-    }
-
-    @Override
     protected boolean isAllowHalfClosure() {
         return config.isAllowHalfClosure();
     }

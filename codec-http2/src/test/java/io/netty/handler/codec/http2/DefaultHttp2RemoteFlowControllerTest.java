@@ -43,6 +43,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.atLeastOnce;
@@ -94,7 +95,10 @@ public abstract class DefaultHttp2RemoteFlowControllerTest {
 
         when(config.getWriteBufferWaterMark()).thenReturn(new WriteBufferWaterMark(0, Integer.MAX_VALUE));
         when(ctx.newPromise()).thenReturn(promise);
-        when(ctx.flush()).thenThrow(new AssertionFailedError("forbidden"));
+        doAnswer(invocationOnMock -> {
+            fail("forbidden");
+            return null;
+        }).when(ctx).flush();
         setChannelWritability(true);
         when(channel.config()).thenReturn(config);
         when(executor.inEventLoop()).thenReturn(true);

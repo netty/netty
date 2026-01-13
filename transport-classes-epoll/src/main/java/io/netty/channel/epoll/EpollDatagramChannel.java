@@ -458,18 +458,6 @@ public final class EpollDatagramChannel extends AbstractEpollChannel implements 
     }
 
     @Override
-    public DatagramChannel read() {
-        super.read();
-        return this;
-    }
-
-    @Override
-    public DatagramChannel flush() {
-        super.flush();
-        return this;
-    }
-
-    @Override
     protected void doDisconnect(Promise<Void> promise) {
         try {
             socket.disconnect();
