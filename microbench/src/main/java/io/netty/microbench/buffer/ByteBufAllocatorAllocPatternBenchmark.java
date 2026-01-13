@@ -199,6 +199,11 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
         @TearDown
         public void tearDown() {
             releaseBufferArray(buffers);
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
         }
     }
 
