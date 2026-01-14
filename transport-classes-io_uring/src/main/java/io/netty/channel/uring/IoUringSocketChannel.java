@@ -167,8 +167,9 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
     protected int scheduleWriteMultiple(ChannelOutboundBuffer in) {
         assert writeId == 0;
 
-        if (IoUring.isSendmsgZcSupported() && (
-                (IoUringSocketChannelConfig) config()).shouldWriteZeroCopy((int) in.totalPendingWriteBytes())) {
+        IoUringSocketChannelConfig config = (IoUringSocketChannelConfig) config();
+        ByteBuf current = (ByteBuf) in.current();
+        if (IoUring.isSendmsgZcSupported() && current != null && config.shouldWriteZeroCopy(current.readableBytes())) {
             IoUringIoHandler handler = registration().attachment();
 
             IovArray iovArray = handler.iovArray();
@@ -177,7 +178,16 @@ public final class IoUringSocketChannel extends AbstractIoUringChannel implement
             // buffers.
             iovArray.maxCount(Native.MAX_SKB_FRAGS);
             try {
-                in.forEachFlushedMessage(iovArray);
+                in.forEachFlushedMessage((ChannelOutboundBuffer.MessageProcessor) msg -> {
+                    if (msg instanceof ByteBuf) {
+                        ByteBuf buf = (ByteBuf) msg;
+                        int length = buf.readableBytes();
+                        if (config.shouldWriteZeroCopy(length)) {
+                            return iovArray.processMessage(msg);
+                        }
+                    }
+                    return false;
+                });
             } catch (Exception e) {
                 // This should never happen, anyway fallback to single write.
                 return scheduleWriteSingle(in.current());
