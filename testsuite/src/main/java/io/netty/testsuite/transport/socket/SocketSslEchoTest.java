@@ -385,6 +385,7 @@ public class SocketSslEchoTest extends AbstractSocketTest {
         clientChannel.close().awaitUninterruptibly();
         sc.close().awaitUninterruptibly();
         delegatedTaskExecutor.shutdown();
+        assertTrue(delegatedTaskExecutor.awaitTermination(5, TimeUnit.SECONDS));
 
         if (serverException.get() != null && !(serverException.get() instanceof IOException)) {
             throw serverException.get();
