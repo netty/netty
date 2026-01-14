@@ -567,7 +567,9 @@ public final class IoUringDatagramChannel extends AbstractIoUringChannel impleme
             try {
                 return ioResult(errormsg, res) != 0;
             } catch (Throwable cause) {
-                return outboundBuffer.remove(cause);
+                Throwable e = (connected && cause instanceof NativeIoException) ?
+                        translateForConnected((NativeIoException) cause) : cause;
+                return outboundBuffer.remove(e);
             }
         }
 
