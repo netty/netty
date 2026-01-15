@@ -547,7 +547,7 @@ public abstract class SSLEngineTest {
         if (clientGroupShutdownFuture != null) {
             clientGroupShutdownFuture.sync();
         }
-        delegatingExecutor.shutdown();
+        assertTrue(delegatingExecutor.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         serverException = null;
         clientException = null;
     }

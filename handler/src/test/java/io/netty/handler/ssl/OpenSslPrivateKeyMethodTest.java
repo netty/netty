@@ -58,8 +58,6 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -110,11 +108,11 @@ public class OpenSslPrivateKeyMethodTest {
     }
 
     @AfterAll
-    public static void destroy() {
+    public static void destroy() throws InterruptedException {
         if (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) {
             GROUP.shutdownGracefully();
             CERT.delete();
-            EXECUTOR.shutdown();
+            assertTrue(EXECUTOR.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         }
     }
 

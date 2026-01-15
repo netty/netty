@@ -1000,7 +1000,7 @@ public class SslHandlerTest {
         try {
             testHandshakeWithExecutor(executorService, SslProvider.JDK, false);
         } finally {
-            executorService.shutdown();
+            assertTrue(executorService.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
@@ -1029,7 +1029,7 @@ public class SslHandlerTest {
         try {
             testHandshakeWithExecutor(executorService, SslProvider.OPENSSL, false);
         } finally {
-            executorService.shutdown();
+            assertTrue(executorService.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
@@ -1054,7 +1054,7 @@ public class SslHandlerTest {
         try {
             testHandshakeWithExecutor(executorService, SslProvider.JDK, true);
         } finally {
-            executorService.shutdown();
+            assertTrue(executorService.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
@@ -1083,7 +1083,7 @@ public class SslHandlerTest {
         try {
             testHandshakeWithExecutor(executorService, SslProvider.OPENSSL, true);
         } finally {
-            executorService.shutdown();
+            assertTrue(executorService.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
