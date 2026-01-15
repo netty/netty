@@ -40,6 +40,7 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
 
     private static final Class<?>[] SUPPORTED_MESSAGES = new Class<?>[] {
             DnsQuestion.class, DnsPtrRecord.class,
+            DnsCnameRecord.class, DnsNsRecord.class, DnsMxRecord.class,
             DnsOptEcsRecord.class, DnsOptPseudoRecord.class, DnsRawRecord.class };
 
     @Override
@@ -48,6 +49,12 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
             encodeQuestion((DnsQuestion) record, out);
         } else if (record instanceof DnsPtrRecord) {
             encodePtrRecord((DnsPtrRecord) record, out);
+        } else if (record instanceof DnsCnameRecord) {
+            encodeCnameRecord((DnsCnameRecord) record, out);
+        } else if (record instanceof DnsNsRecord) {
+            encodeNsRecord((DnsNsRecord) record, out);
+        } else if (record instanceof DnsMxRecord) {
+            encodeMxRecord((DnsMxRecord) record, out);
         } else if (record instanceof DnsOptEcsRecord) {
             encodeOptEcsRecord((DnsOptEcsRecord) record, out);
         } else if (record instanceof DnsOptPseudoRecord) {
@@ -73,6 +80,33 @@ public class DefaultDnsRecordEncoder implements DnsRecordEncoder {
         // See https://www.rfc-editor.org/rfc/rfc1035.html#section-3.2.1
         out.writerIndex(writerIndex + 2);
         encodeName(record.hostname(), out);
+        int rdLength = out.writerIndex() - (writerIndex + 2);
+        out.setShort(writerIndex, rdLength);
+    }
+
+    private void encodeCnameRecord(DnsCnameRecord record, ByteBuf out) throws Exception {
+        encodeNameRecord(record.canonicalName(), record, out);
+    }
+
+    private void encodeNsRecord(DnsNsRecord record, ByteBuf out) throws Exception {
+        encodeNameRecord(record.nameServer(), record, out);
+    }
+
+    private void encodeMxRecord(DnsMxRecord record, ByteBuf out) throws Exception {
+        encodeRecord0(record, out);
+        int writerIndex = out.writerIndex();
+        out.writerIndex(writerIndex + 2);
+        out.writeShort(record.preference());
+        encodeName(record.exchange(), out);
+        int rdLength = out.writerIndex() - (writerIndex + 2);
+        out.setShort(writerIndex, rdLength);
+    }
+
+    private void encodeNameRecord(String name, DnsRecord record, ByteBuf out) throws Exception {
+        encodeRecord0(record, out);
+        int writerIndex = out.writerIndex();
+        out.writerIndex(writerIndex + 2);
+        encodeName(name, out);
         int rdLength = out.writerIndex() - (writerIndex + 2);
         out.setShort(writerIndex, rdLength);
     }

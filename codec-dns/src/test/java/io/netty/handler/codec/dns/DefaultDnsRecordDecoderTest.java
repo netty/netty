@@ -20,6 +20,7 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
@@ -64,8 +65,7 @@ public class DefaultDnsRecordDecoderTest {
 
     private static void testDecodeName(String expected, ByteBuf buffer) {
         try {
-            DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
-            assertEquals(expected, decoder.decodeName0(buffer));
+            assertEquals(expected, DefaultDnsRecordDecoder.decodeName(buffer));
         } finally {
             buffer.release();
         }
@@ -73,7 +73,7 @@ public class DefaultDnsRecordDecoderTest {
 
     @Test
     public void testDecodePtrRecord() throws Exception {
-        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder(true);
         ByteBuf buffer = Unpooled.buffer().writeByte(0);
         int readerIndex = buffer.readerIndex();
         int writerIndex = buffer.writerIndex();
@@ -135,21 +135,21 @@ public class DefaultDnsRecordDecoderTest {
 
     @Test
     public void testDecodeCompressionRDataPointer() throws Exception {
-        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder(true);
         byte[] compressionPointer = {
                 5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0,
                 (byte) 0xC0, 0
         };
         ByteBuf buffer = Unpooled.wrappedBuffer(compressionPointer);
-        DefaultDnsRawRecord cnameRecord = null;
-        DefaultDnsRawRecord nsRecord = null;
+        DnsRawRecord cnameRecord = null;
+        DnsRawRecord nsRecord = null;
         try {
-            cnameRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+            cnameRecord = (DnsRawRecord) decoder.decodeRecord(
                     "netty.github.io", DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 10, 2);
             assertEquals(0, ByteBufUtil.compare(buffer.duplicate().setIndex(0, 10), cnameRecord.content()),
                 "The rdata of CNAME-type record should be decompressed in advance");
             assertEquals("netty.io.", DnsCodecUtil.decodeDomainName(cnameRecord.content()));
-            nsRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+            nsRecord = (DnsRawRecord) decoder.decodeRecord(
                     "netty.github.io", DnsRecordType.NS, DnsRecord.CLASS_IN, 60, buffer, 10, 2);
             assertEquals(0, ByteBufUtil.compare(buffer.duplicate().setIndex(0, 10), nsRecord.content()),
                         "The rdata of NS-type record should be decompressed in advance");
@@ -168,7 +168,7 @@ public class DefaultDnsRecordDecoderTest {
 
     @Test
     public void testDecodeCompressionRDataPointerMX() throws Exception {
-        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder(true);
         byte[] compressionPointer = {
                 5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0,
                 0, 10,          // preference = 10
@@ -180,10 +180,10 @@ public class DefaultDnsRecordDecoderTest {
                 5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0
         };
         ByteBuf buffer = Unpooled.wrappedBuffer(compressionPointer);
-        DefaultDnsRawRecord mxRecord = null;
+        DnsRawRecord mxRecord = null;
         ByteBuf expectedBuf = null;
         try {
-            mxRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+            mxRecord = (DnsRawRecord) decoder.decodeRecord(
                     "mail.example.com",
                     DnsRecordType.MX,
                     DnsRecord.CLASS_IN,
@@ -214,15 +214,15 @@ public class DefaultDnsRecordDecoderTest {
     @Test
     public void testDecodeMessageCompression() throws Exception {
         // See https://www.ietf.org/rfc/rfc1035 [4.1.4. Message compression]
-        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder(true);
         byte[] rfcExample = { 1, 'F', 3, 'I', 'S', 'I', 4, 'A', 'R', 'P', 'A',
                 0, 3, 'F', 'O', 'O',
                 (byte) 0xC0, 0, // this is 20 in the example
                 (byte) 0xC0, 6, // this is 26 in the example
         };
-        DefaultDnsRawRecord rawPlainRecord = null;
-        DefaultDnsRawRecord rawUncompressedRecord = null;
-        DefaultDnsRawRecord rawUncompressedIndexedRecord = null;
+        DnsRawRecord rawPlainRecord = null;
+        DnsRawRecord rawUncompressedRecord = null;
+        DnsRawRecord rawUncompressedIndexedRecord = null;
         ByteBuf buffer = Unpooled.wrappedBuffer(rfcExample);
         try {
             // First lets test that our utility function can correctly handle index references and decompression.
@@ -234,17 +234,17 @@ public class DefaultDnsRecordDecoderTest {
             assertEquals("FOO." + plainName, uncompressedIndexedName);
 
             // Now lets make sure out object parsing produces the same results for non PTR type (just use CNAME).
-            rawPlainRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+            rawPlainRecord = (DnsRawRecord) decoder.decodeRecord(
                     plainName, DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 0, 11);
             assertEquals(plainName, rawPlainRecord.name());
             assertEquals(plainName, DefaultDnsRecordDecoder.decodeName(rawPlainRecord.content()));
 
-            rawUncompressedRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+            rawUncompressedRecord = (DnsRawRecord) decoder.decodeRecord(
                     uncompressedPlainName, DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 16, 4);
             assertEquals(uncompressedPlainName, rawUncompressedRecord.name());
             assertEquals(uncompressedPlainName, DefaultDnsRecordDecoder.decodeName(rawUncompressedRecord.content()));
 
-            rawUncompressedIndexedRecord = (DefaultDnsRawRecord) decoder.decodeRecord(
+            rawUncompressedIndexedRecord = (DnsRawRecord) decoder.decodeRecord(
                     uncompressedIndexedName, DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 12, 8);
             assertEquals(uncompressedIndexedName, rawUncompressedIndexedRecord.name());
             assertEquals(uncompressedIndexedName,
@@ -289,11 +289,58 @@ public class DefaultDnsRecordDecoderTest {
 
         // Write a truncated last value.
         buffer.writeByte(0);
-        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder();
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder(true);
         try {
             int readerIndex = buffer.readerIndex();
             assertNull(decoder.decodeRecord(buffer));
             assertEquals(readerIndex, buffer.readerIndex());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testDecodeCompressionRDataPointerNonLegacy() throws Exception {
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder(false);
+        byte[] compressionPointer = {
+                5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0,
+                (byte) 0xC0, 0
+        };
+        ByteBuf buffer = Unpooled.wrappedBuffer(compressionPointer);
+        try {
+            DnsCnameRecord cnameRecord = (DnsCnameRecord) decoder.decodeRecord(
+                    "netty.github.io", DnsRecordType.CNAME, DnsRecord.CLASS_IN, 60, buffer, 10, 2);
+            assertEquals("netty.io.", cnameRecord.canonicalName());
+            DnsNsRecord nsRecord = (DnsNsRecord) decoder.decodeRecord(
+                    "netty.github.io", DnsRecordType.NS, DnsRecord.CLASS_IN, 60, buffer, 10, 2);
+            assertEquals("netty.io.", nsRecord.nameServer());
+        } finally {
+            buffer.release();
+        }
+    }
+
+    @Test
+    public void testDecodeCompressionRDataPointerMXNonLegacy() throws Exception {
+        DefaultDnsRecordDecoder decoder = new DefaultDnsRecordDecoder(false);
+        byte[] compressionPointer = {
+                5, 'n', 'e', 't', 't', 'y', 2, 'i', 'o', 0,
+                0, 10,          // preference = 10
+                (byte) 0xC0, 0  // record is a pointer to netty.io
+        };
+
+        ByteBuf buffer = Unpooled.wrappedBuffer(compressionPointer);
+        try {
+            DnsMxRecord mxRecord = (DnsMxRecord) decoder.decodeRecord(
+                    "mail.example.com",
+                    DnsRecordType.MX,
+                    DnsRecord.CLASS_IN,
+                    60,
+                    buffer,
+                    10,
+                    4);
+
+            assertEquals(10, mxRecord.preference());
+            assertEquals("netty.io.", mxRecord.exchange());
         } finally {
             buffer.release();
         }

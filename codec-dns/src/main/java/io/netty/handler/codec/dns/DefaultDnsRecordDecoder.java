@@ -16,7 +16,6 @@
 package io.netty.handler.codec.dns;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.CorruptedFrameException;
 
 /**
@@ -26,12 +25,34 @@ import io.netty.handler.codec.CorruptedFrameException;
  */
 public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
 
+    private final boolean legacyMode;
     static final String ROOT = ".";
 
     /**
-     * Creates a new instance.
+     * Creates a new instance in legacy mode.
+     *
+     * @deprecated Use {@link #DefaultDnsRecordDecoder(boolean)} with {@code legacyMode} set to {@code false} to
+     *             marshal supported DNS records into structured types; unsupported types remain
+     *             {@link DefaultDnsRawRecord}.
      */
-    protected DefaultDnsRecordDecoder() { }
+    @Deprecated
+    protected DefaultDnsRecordDecoder() {
+        this(true);
+    }
+
+    /**
+     * Creates a new instance.
+     *
+     * @param legacyMode {@code true} to use legacy =<4.2.8 decode behavior which returns
+     *                   {@link DefaultDnsRawRecord} for CNAME/NS (with decompressed RDATA) and
+     *                   {@link DefaultDnsPtrRecord} for PTR; other types are returned as raw records.
+     *                   {@code false} returns structured records (for example {@link DnsARecord},
+     *                   {@link DnsMxRecord}) with parsed fields, and uses raw records only for
+     *                   unsupported types.
+     */
+    protected DefaultDnsRecordDecoder(boolean legacyMode) {
+        this.legacyMode = legacyMode;
+    }
 
     @Override
     public final DnsQuestion decodeQuestion(ByteBuf in) throws Exception {
@@ -82,7 +103,7 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
      * @param offset the start offset of the RDATA in {@code in}
      * @param length the length of the RDATA
      *
-     * @return a {@link DnsRawRecord}. Override this method to decode RDATA and return other record implementation.
+     * @return a {@link DnsRecord}. Override this method to decode RDATA and return other record implementation.
      */
     protected DnsRecord decodeRecord(
             String name, DnsRecordType type, int dnsClass, long timeToLive,
@@ -92,6 +113,58 @@ public class DefaultDnsRecordDecoder implements DnsRecordDecoder {
         // to build a full message. This means the indexes are meaningful and we need the ability to reference the
         // indexes un-obstructed, and thus we cannot use a slice here.
         // See https://www.ietf.org/rfc/rfc1035 [4.1.4. Message compression]
+        if (legacyMode) {
+            return decodeRecordLegacy(name, type, dnsClass, timeToLive, in, offset, length);
+        }
+
+        if (type == DnsRecordType.NS) {
+            return decodeNsRecord(name, dnsClass, timeToLive, in, offset, length);
+        } else if (type == DnsRecordType.CNAME) {
+            return decodeCnameRecord(name, dnsClass, timeToLive, in, offset, length);
+        } else if (type == DnsRecordType.PTR) {
+            return decodePtrRecord(name, dnsClass, timeToLive, in, offset, length);
+        } else if (type == DnsRecordType.MX) {
+            return decodeMxRecord(name, dnsClass, timeToLive, in, offset, length);
+        }
+
+        return new DefaultDnsRawRecord(
+                name, type, dnsClass, timeToLive, in.retainedDuplicate().setIndex(offset, offset + length));
+    }
+
+    private DnsRecord decodePtrRecord(String name, int dnsClass, long timeToLive,
+                                      ByteBuf in, int offset, int length) {
+        return new DefaultDnsPtrRecord(
+                name, dnsClass, timeToLive, decodeName(in.duplicate().setIndex(offset, offset + length)));
+    }
+
+    private DnsRecord decodeCnameRecord(String name, int dnsClass, long timeToLive,
+                                        ByteBuf in, int offset, int length) {
+        String canonicalName = decodeName(in.duplicate().setIndex(offset, offset + length));
+        return new DefaultDnsCnameRecord(name, dnsClass, timeToLive, canonicalName);
+    }
+
+    private DnsRecord decodeNsRecord(String name, int dnsClass, long timeToLive,
+                                     ByteBuf in, int offset, int length) {
+        String nameServer = decodeName(in.duplicate().setIndex(offset, offset + length));
+        return new DefaultDnsNsRecord(name, dnsClass, timeToLive, nameServer);
+    }
+
+    private DnsRecord decodeMxRecord(String name, int dnsClass, long timeToLive,
+                                     ByteBuf in, int offset, int length) {
+        if (length < 3) {
+            throw new CorruptedFrameException("MX record RDATA is too short: " + length);
+        }
+        int pref = in.getUnsignedShort(offset);
+        String exchangeName = decodeName(in.duplicate().setIndex(offset + 2, offset + length));
+        return new DefaultDnsMxRecord(name, dnsClass, timeToLive, pref, exchangeName);
+    }
+
+    /**
+     * Legacy decode logic matching Netty 4.2.8 behavior
+     */
+    DnsRecord decodeRecordLegacy(
+            String name, DnsRecordType type, int dnsClass, long timeToLive,
+            ByteBuf in, int offset, int length) throws Exception {
         if (type == DnsRecordType.PTR) {
             return new DefaultDnsPtrRecord(
                     name, dnsClass, timeToLive, decodeName0(in.duplicate().setIndex(offset, offset + length)));
