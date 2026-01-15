@@ -58,6 +58,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 public class SocketSslGreetingTest extends AbstractSocketTest {
@@ -183,6 +184,7 @@ public class SocketSslGreetingTest extends AbstractSocketTest {
         } finally {
             if (executorService != null) {
                 executorService.shutdown();
+                assertTrue(executorService.awaitTermination(5, TimeUnit.SECONDS));
             }
         }
     }

@@ -253,6 +253,7 @@ public class NettyBlockHoundIntegrationTest {
             testHandshakeWithExecutor(executorService, "TLSv1.2");
         } finally {
             executorService.shutdown();
+            assertTrue(executorService.awaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
@@ -264,6 +265,7 @@ public class NettyBlockHoundIntegrationTest {
             testHandshakeWithExecutor(executorService, "TLSv1.3");
         } finally {
             executorService.shutdown();
+            assertTrue(executorService.awaitTermination(5, TimeUnit.SECONDS));
         }
     }
 

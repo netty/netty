@@ -232,16 +232,17 @@ public class CipherSuiteCanaryTest {
                     }
                 } finally {
                     server.close().sync();
+
+                    if (executorService != null) {
+                        executorService.shutdown();
+                        assertTrue(executorService.awaitTermination(5, TimeUnit.SECONDS));
+                    }
                 }
             } finally {
                 ReferenceCountUtil.release(sslClientContext);
             }
         } finally {
             ReferenceCountUtil.release(sslServerContext);
-
-            if (executorService != null) {
-                executorService.shutdown();
-            }
         }
     }
 
