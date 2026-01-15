@@ -56,9 +56,7 @@ public class DatagramConnectedWriteExceptionTest extends AbstractClientSocketTes
 
     protected void testWriteExceptionAfterServerStop(Bootstrap clientBootstrap) throws Throwable {
         CountDownLatch serverReceivedLatch = new CountDownLatch(1);
-        Bootstrap serverBootstrap = new Bootstrap()
-                .group(clientBootstrap.config().group())
-                .channel(clientBootstrap.config().channelFactory().newChannel().getClass())
+        Bootstrap serverBootstrap = clientBootstrap.clone()
                 .option(ChannelOption.SO_BROADCAST, false)
                 .handler(new SimpleChannelInboundHandler<DatagramPacket>() {
 
@@ -77,11 +75,6 @@ public class DatagramConnectedWriteExceptionTest extends AbstractClientSocketTes
                     @Override
                     protected void channelRead0(ChannelHandlerContext ctx, DatagramPacket msg) {
                         // no-op
-                    }
-
-                    @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                        ctx.fireExceptionCaught(cause);
                     }
                 });
 
