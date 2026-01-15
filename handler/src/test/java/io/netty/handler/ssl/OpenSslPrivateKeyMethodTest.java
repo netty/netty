@@ -114,10 +114,10 @@ public class OpenSslPrivateKeyMethodTest {
     }
 
     @AfterAll
-    public static void destroy() {
+    public static void destroy() throws InterruptedException {
         if (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) {
             GROUP.shutdownGracefully();
-            EXECUTOR.shutdown();
+            assertTrue(EXECUTOR.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
