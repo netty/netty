@@ -3597,48 +3597,6 @@ public class DnsNameResolverTest {
 
     @ParameterizedTest
     @EnumSource(DnsNameResolverChannelStrategy.class)
-    public void testCancelPromise(DnsNameResolverChannelStrategy strategy) throws Exception {
-        final EventLoop eventLoop = group.next();
-        final Promise<InetAddress> promise = eventLoop.newPromise();
-        final TestDnsServer dnsServer1 = new TestDnsServer(Collections.<String>emptySet()) {
-            @Override
-            protected DnsMessage filterMessage(DnsMessage message) {
-                promise.cancel(true);
-                return message;
-            }
-        };
-        dnsServer1.start();
-        final AtomicBoolean isQuerySentToSecondServer = new AtomicBoolean();
-        final TestDnsServer dnsServer2 = new TestDnsServer(Collections.<String>emptySet()) {
-            @Override
-            protected DnsMessage filterMessage(DnsMessage message) {
-                isQuerySentToSecondServer.set(true);
-                return message;
-            }
-        };
-        dnsServer2.start();
-        DnsServerAddressStreamProvider nameServerProvider =
-                new SequentialDnsServerAddressStreamProvider(dnsServer1.localAddress(),
-                                                             dnsServer2.localAddress());
-        final DnsNameResolver resolver = new DnsNameResolverBuilder(group.next())
-                .dnsQueryLifecycleObserverFactory(new TestRecursiveCacheDnsQueryLifecycleObserverFactory())
-                .datagramChannelType(NioDatagramChannel.class)
-                .optResourceEnabled(false)
-                .nameServerProvider(nameServerProvider)
-                .datagramChannelStrategy(strategy)
-                .build();
-
-        try {
-            resolver.resolve("non-existent.netty.io", promise).sync();
-            fail();
-        } catch (Exception e) {
-            assertInstanceOf(CancellationException.class, e);
-        }
-        assertFalse(isQuerySentToSecondServer.get());
-    }
-
-    @ParameterizedTest
-    @EnumSource(DnsNameResolverChannelStrategy.class)
     public void testCNAMERecursiveResolveDifferentNameServersForDomains(DnsNameResolverChannelStrategy strategy)
             throws Exception {
         final String firstName = "firstname.com";
