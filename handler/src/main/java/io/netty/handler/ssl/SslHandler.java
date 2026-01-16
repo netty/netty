@@ -1919,6 +1919,10 @@ public class SslHandler extends ByteToMessageDecoder implements ChannelOutboundH
 
         void runComplete() {
             EventExecutor executor = ctx.executor();
+            if (executor.isShuttingDown()) {
+                // The executor is already shutting down, just return.
+                return;
+            }
             // Jump back on the EventExecutor. We do this even if we are already on the EventLoop to guard against
             // reentrancy issues. Failing to do so could lead to the situation of tryDecode(...) be called and so
             // channelRead(...) while still in the decode loop. In this case channelRead(...) might release the input
