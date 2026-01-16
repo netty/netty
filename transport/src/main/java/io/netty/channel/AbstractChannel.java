@@ -449,9 +449,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         @Override
         public void shutdown(ChannelShutdownType type, Promise<Void> promise) {
             assertEventLoop();
-            if (!promise.setUncancellable()) {
-                return;
-            }
             if (!isActive()) {
                 if (isOpen()) {
                     promise.setFailure(new NotYetConnectedException());
@@ -492,7 +489,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
             // check if the channel is still open as it could be closed in the mean time when the register
             // call was outside of the eventLoop
-            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+            if (!ensureOpen(promise)) {
                 return;
             }
             if (isRegistered()) {
@@ -536,7 +533,7 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public void bind(final SocketAddress localAddress, final Promise<Void> promise) {
             assertEventLoop();
 
-            if (!promise.setUncancellable() || !ensureOpen(promise)) {
+            if (!ensureOpen(promise)) {
                 return;
             }
 
@@ -667,10 +664,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         public void disconnect(final Promise<Void> promise) {
             assertEventLoop();
 
-            if (!promise.setUncancellable()) {
-                return;
-            }
-
             boolean wasActive = isActive();
             Promise<Void> disconnectPromise = newPromise();
             disconnectPromise.addListener((FutureListener<Void>) f -> {
@@ -703,10 +696,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
 
         private void close(final Promise<Void> promise, final Throwable cause,
                            final ClosedChannelException closeCause) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
-
             if (closeInitiated) {
                 if (closeFuture.isDone()) {
                     // Closed already.
@@ -784,10 +773,6 @@ public abstract class AbstractChannel extends DefaultAttributeMap implements Cha
         }
 
         private void deregister(final Promise<Void> promise, final boolean fireChannelInactive) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
-
             if (!registered) {
                 safeSetSuccess(promise);
                 return;

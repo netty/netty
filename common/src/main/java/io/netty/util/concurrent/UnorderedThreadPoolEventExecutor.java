@@ -228,6 +228,11 @@ public final class UnorderedThreadPoolEventExecutor extends ScheduledThreadPoolE
         }
 
         @Override
+        boolean isCancellationSupported() {
+            return true;
+        }
+
+        @Override
         V runTask() throws Throwable {
             V result =  super.runTask();
             if (result == null && wasCallable) {

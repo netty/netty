@@ -95,11 +95,6 @@ public final class DelegatingChannelPromiseNotifier implements Promise<Void>, Fu
     }
 
     @Override
-    public boolean setUncancellable() {
-        return delegate.setUncancellable();
-    }
-
-    @Override
     public Promise<Void> await() throws InterruptedException {
         delegate.await();
         return this;

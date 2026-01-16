@@ -1507,9 +1507,6 @@ final class QuicheQuicChannel extends AbstractChannel implements QuicChannel {
 
     void connectStream(QuicStreamType type, @Nullable ChannelHandler handler,
                        Promise<QuicStreamChannel> promise) {
-        if (!promise.setUncancellable()) {
-            return;
-        }
         long streamId = idGenerator.nextStreamId(type == QuicStreamType.BIDIRECTIONAL);
 
         try {

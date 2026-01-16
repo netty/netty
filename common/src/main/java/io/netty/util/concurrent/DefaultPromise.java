@@ -131,8 +131,11 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
         return setFailure0(cause);
     }
 
-    @Override
-    public boolean setUncancellable() {
+    boolean isCancellationSupported() {
+        return false;
+    }
+
+    final boolean setUncancellable() {
         if (RESULT_UPDATER.compareAndSet(this, null, UNCANCELLABLE)) {
             return true;
         }
@@ -148,7 +151,7 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
 
     @Override
     public boolean isCancellable() {
-        return result == null;
+        return isCancellationSupported() && result == null;
     }
 
     private static final class LeanCancellationException extends CancellationException {
@@ -358,7 +361,8 @@ public class DefaultPromise<V> extends AbstractFuture<V> implements Promise<V> {
      */
     @Override
     public boolean cancel(boolean mayInterruptIfRunning) {
-        if (RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {
+        if (isCancellationSupported() &&
+                RESULT_UPDATER.compareAndSet(this, null, CANCELLATION_CAUSE_HOLDER)) {
             if (checkNotifyWaiters()) {
                 notifyListeners();
             }

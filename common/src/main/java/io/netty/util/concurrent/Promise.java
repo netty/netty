@@ -56,14 +56,6 @@ public interface Promise<V> extends Future<V> {
      */
     boolean tryFailure(Throwable cause);
 
-    /**
-     * Make this future impossible to cancel.
-     *
-     * @return {@code true} if and only if successfully marked this future as uncancellable or it is already done
-     *         without being cancelled.  {@code false} if this future has been cancelled already.
-     */
-    boolean setUncancellable();
-
     @Override
     Promise<V> addListener(FutureListener<? super V> listener);
 

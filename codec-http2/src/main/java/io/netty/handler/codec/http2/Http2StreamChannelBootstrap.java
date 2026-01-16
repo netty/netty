@@ -162,9 +162,6 @@ public final class Http2StreamChannelBootstrap {
     @Deprecated
     public void open0(ChannelHandlerContext ctx, final Promise<Http2StreamChannel> promise) {
         assert ctx.executor().inEventLoop();
-        if (!promise.setUncancellable()) {
-            return;
-        }
         final Http2StreamChannel streamChannel;
         try {
             if (ctx.handler() instanceof Http2MultiplexCodec) {
@@ -188,12 +185,15 @@ public final class Http2StreamChannelBootstrap {
         future.addListener(f -> {
             if (f.isSuccess()) {
                 promise.setSuccess(streamChannel);
-            } else if (f.isCancelled()) {
-                promise.cancel(false);
-            } else {
-                streamChannel.close();
-                promise.setFailure(f.cause());
+                return;
             }
+            if (f.isCancelled()) {
+                if (promise.cancel(false)) {
+                    return;
+                }
+            }
+            streamChannel.close();
+            promise.setFailure(f.cause());
         });
     }
 

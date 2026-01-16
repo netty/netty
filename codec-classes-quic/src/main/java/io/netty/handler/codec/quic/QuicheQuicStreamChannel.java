@@ -140,9 +140,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
     private void updatePriority0(QuicStreamPriority priority, Promise<Void> promise) {
         assert executor().inEventLoop();
-        if (!promise.setUncancellable()) {
-            return;
-        }
         try {
             parent().streamPriority(streamId(), (byte) priority.urgency(), priority.isIncremental());
         } catch (Throwable cause) {
@@ -438,9 +435,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
         @Override
         public void register(Promise<Void> promise) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
             if (registered) {
                 promise.setFailure(new IllegalStateException());
                 return;
@@ -454,9 +448,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         @Override
         public void bind(SocketAddress localAddress, Promise<Void> promise) {
             assert executor().inEventLoop();
-            if (!promise.setUncancellable()) {
-                return;
-            }
             promise.setFailure(new UnsupportedOperationException());
         }
 
@@ -473,9 +464,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
         void close(@Nullable ClosedChannelException writeFailCause, Promise<Void> promise) {
             assert executor().inEventLoop();
-            if (!promise.setUncancellable()) {
-                return;
-            }
             if (!active || closePromise.isDone()) {
                 closePromise.addListener(new PromiseNotifier<>(promise));
                 return;
@@ -516,10 +504,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
 
         private void deregister(final Promise<Void> promise, final boolean fireChannelInactive) {
             assert executor().inEventLoop();
-            if (!promise.setUncancellable()) {
-                return;
-            }
-
             if (!registered) {
                 promise.trySuccess(null);
                 return;
@@ -652,10 +636,6 @@ final class QuicheQuicStreamChannel extends DefaultAttributeMap implements QuicS
         @Override
         public void write(Object msg, Promise<Void> promise) {
             assert executor().inEventLoop();
-            if (!promise.setUncancellable()) {
-                ReferenceCountUtil.release(msg);
-                return;
-            }
             // Check first if the Channel is in a state in which it will accept writes, if not fail everything
             // with the right exception
             if (!isOpen()) {

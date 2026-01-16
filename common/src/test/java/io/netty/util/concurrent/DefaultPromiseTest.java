@@ -141,7 +141,12 @@ public class DefaultPromiseTest {
     public void testCancelDoesNotScheduleWhenNoListeners() {
         EventExecutor executor = new RejectingEventExecutor();
 
-        Promise<Void> promise = new DefaultPromise<Void>(executor);
+        Promise<Void> promise = new DefaultPromise<Void>(executor) {
+            @Override
+            boolean isCancellationSupported() {
+                return true;
+            }
+        };
         assertTrue(promise.cancel(false));
         assertTrue(promise.isCancelled());
     }
@@ -168,7 +173,12 @@ public class DefaultPromiseTest {
 
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGet() {
-        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE) {
+            @Override
+            boolean isCancellationSupported() {
+                return true;
+            }
+        };
         assertTrue(promise.cancel(false));
         assertThrows(CancellationException.class, new Executable() {
             @Override
@@ -180,7 +190,12 @@ public class DefaultPromiseTest {
 
     @Test
     public void testCancellationExceptionIsThrownWhenBlockingGetWithTimeout() {
-        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
+        final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE) {
+            @Override
+            boolean isCancellationSupported() {
+                return true;
+            }
+        };
         assertTrue(promise.cancel(false));
         assertThrows(CancellationException.class, new Executable() {
             @Override
@@ -191,10 +206,10 @@ public class DefaultPromiseTest {
     }
 
     @Test
-    public void testCancellationExceptionIsReturnedAsCause() {
+    public void testCancellation() {
         final Promise<Void> promise = new DefaultPromise<Void>(ImmediateEventExecutor.INSTANCE);
-        assertTrue(promise.cancel(false));
-        assertThat(promise.cause()).isInstanceOf(CancellationException.class);
+        assertFalse(promise.cancel(false));
+        assertNull(promise.cause());
     }
 
     @Test
@@ -376,22 +391,6 @@ public class DefaultPromiseTest {
         promise.setSuccess(Signal.valueOf(DefaultPromise.class, "SUCCESS"));
         assertTrue(promise.isDone());
         assertTrue(promise.isSuccess());
-    }
-
-    @Test
-    public void setUncancellableGetNow() {
-        final Promise<String> promise = new DefaultPromise<String>(ImmediateEventExecutor.INSTANCE);
-        assertNull(promise.getNow());
-        assertTrue(promise.setUncancellable());
-        assertNull(promise.getNow());
-        assertFalse(promise.isDone());
-        assertFalse(promise.isSuccess());
-
-        promise.setSuccess("success");
-
-        assertTrue(promise.isDone());
-        assertTrue(promise.isSuccess());
-        assertEquals("success", promise.getNow());
     }
 
     private static void testStackOverFlowChainedFuturesA(int promiseChainLength, final EventExecutor executor,

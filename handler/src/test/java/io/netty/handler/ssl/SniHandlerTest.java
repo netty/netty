@@ -549,7 +549,7 @@ public class SniHandlerTest {
                             } finally {
                                 if (!success) {
                                     ReferenceCountUtil.safeRelease(sslContext);
-                                    releasePromise.cancel(true);
+                                    releasePromise.tryFailure(new IllegalStateException());
                                 }
                             }
                         }

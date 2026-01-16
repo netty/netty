@@ -246,7 +246,7 @@ public class OpenSslPrivateKeyMethodTest {
                         pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                             @Override
                             public void channelInactive(ChannelHandlerContext ctx) {
-                                serverPromise.cancel(true);
+                                serverPromise.tryFailure(new IllegalStateException());
                                 ctx.fireChannelInactive();
                             }
 
@@ -282,7 +282,7 @@ public class OpenSslPrivateKeyMethodTest {
                             pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                                 @Override
                                 public void channelInactive(ChannelHandlerContext ctx) {
-                                    clientPromise.cancel(true);
+                                    clientPromise.tryFailure(new IllegalStateException());
                                     ctx.fireChannelInactive();
                                 }
 
