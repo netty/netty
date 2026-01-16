@@ -29,6 +29,8 @@ import io.netty.util.NetUtil;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.api.condition.DisabledOnOs;
+import org.junit.jupiter.api.condition.OS;
 
 import java.net.InetSocketAddress;
 import java.net.PortUnreachableException;
@@ -50,6 +52,7 @@ public class DatagramConnectedWriteExceptionTest extends AbstractClientSocketTes
 
     @Test
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
+    @DisabledOnOs(OS.WINDOWS)
     public void testWriteThrowsPortUnreachableException(TestInfo testInfo) throws Throwable {
         run(testInfo, (Runner<Bootstrap>) this::testWriteExceptionAfterServerStop);
     }
