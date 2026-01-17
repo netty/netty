@@ -102,7 +102,7 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
     @Override
     public void run() {
         try {
-            if (setUncancellableInternal()) {
+            if (setUncancellable()) {
                 V result = runTask();
                 setSuccessInternal(result);
             }
@@ -160,15 +160,6 @@ class PromiseTask<V> extends DefaultPromise<V> implements RunnableFuture<V> {
 
     protected final boolean trySuccessInternal(V result) {
         return clearTaskAfterCompletion(super.trySuccess(result), COMPLETED);
-    }
-
-    @Override
-    public final boolean setUncancellable() {
-        throw new IllegalStateException();
-    }
-
-    protected final boolean setUncancellableInternal() {
-        return super.setUncancellable();
     }
 
     @Override

@@ -97,8 +97,18 @@ public class PromiseNotifierTest {
 
     @Test
     public void testCancelPropagationWhenFusedFromFuture() {
-        Promise<Void> p1 = ImmediateEventExecutor.INSTANCE.newPromise();
-        Promise<Void> p2 = ImmediateEventExecutor.INSTANCE.newPromise();
+        Promise<Void> p1 = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE) {
+            @Override
+            boolean isCancellationSupported() {
+                return true;
+            }
+        };
+        Promise<Void> p2 = new DefaultPromise<>(ImmediateEventExecutor.INSTANCE) {
+            @Override
+            boolean isCancellationSupported() {
+                return true;
+            }
+        };
 
         Future<Void> returned = PromiseNotifier.cascade(p1, p2);
         assertSame(p1, returned);

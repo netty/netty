@@ -18,7 +18,6 @@ package io.netty.channel;
 import io.netty.buffer.AbstractReferenceCountedByteBuf;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufHolder;
-import io.netty.buffer.Unpooled;
 import io.netty.util.Recycler;
 import io.netty.util.Recycler.EnhancedHandle;
 import io.netty.util.ReferenceCountUtil;
@@ -167,11 +166,6 @@ public final class ChannelOutboundBuffer {
             }
             do {
                 flushed ++;
-                if (!entry.promise.setUncancellable()) {
-                    // Was cancelled so make sure we free up memory and notify about the freed bytes
-                    int pending = entry.cancel();
-                    decrementPendingOutboundBytes(pending);
-                }
                 entry = entry.next;
             } while (entry != null);
 
@@ -226,23 +220,20 @@ public final class ChannelOutboundBuffer {
 
         removeEntry(e);
 
-        // only release message, notify and decrement if it was not canceled before.
-        if (!e.cancelled) {
-            // this save both checking against the ReferenceCounted interface
-            // and makes better use of virtual calls vs interface ones
-            if (msg instanceof AbstractReferenceCountedByteBuf) {
-                try {
-                    // release now as it is flushed.
-                    ((AbstractReferenceCountedByteBuf) msg).release();
-                } catch (Throwable t) {
-                    logger.warn("Failed to release a ByteBuf: {}", msg, t);
-                }
-            } else {
-                ReferenceCountUtil.safeRelease(msg);
+        // this save both checking against the ReferenceCounted interface
+        // and makes better use of virtual calls vs interface ones
+        if (msg instanceof AbstractReferenceCountedByteBuf) {
+            try {
+                // release now as it is flushed.
+                ((AbstractReferenceCountedByteBuf) msg).release();
+            } catch (Throwable t) {
+                logger.warn("Failed to release a ByteBuf: {}", msg, t);
             }
-            safeSuccess(promise);
-            decrementPendingOutboundBytes(size);
+        } else {
+            ReferenceCountUtil.safeRelease(msg);
         }
+        safeSuccess(promise);
+        decrementPendingOutboundBytes(size);
 
         // recycle the entry
         e.unguardedRecycle();
@@ -269,13 +260,10 @@ public final class ChannelOutboundBuffer {
 
         removeEntry(e);
 
-        if (!e.cancelled) {
-            // only release message, fail and decrement if it was not canceled before.
-            ReferenceCountUtil.safeRelease(msg);
+        ReferenceCountUtil.safeRelease(msg);
 
-            safeFail(promise, cause);
-            decrementPendingOutboundBytes(size);
-        }
+        safeFail(promise, cause);
+        decrementPendingOutboundBytes(size);
 
         // recycle the entry
         e.unguardedRecycle();
@@ -374,53 +362,51 @@ public final class ChannelOutboundBuffer {
         ByteBuffer[] nioBuffers = NIO_BUFFERS.get(threadLocalMap);
         Entry entry = flushedEntry;
         while (isFlushedEntry(entry) && entry.msg instanceof ByteBuf) {
-            if (!entry.cancelled) {
-                ByteBuf buf = (ByteBuf) entry.msg;
-                final int readerIndex = buf.readerIndex();
-                final int readableBytes = buf.writerIndex() - readerIndex;
+            ByteBuf buf = (ByteBuf) entry.msg;
+            final int readerIndex = buf.readerIndex();
+            final int readableBytes = buf.writerIndex() - readerIndex;
 
-                if (readableBytes > 0) {
-                    if (maxBytes - readableBytes < nioBufferSize && nioBufferCount != 0) {
-                        // If the nioBufferSize + readableBytes will overflow maxBytes, and there is at least one entry
-                        // we stop populate the ByteBuffer array. This is done for 2 reasons:
-                        // 1. bsd/osx don't allow to write more bytes then Integer.MAX_VALUE with one writev(...) call
-                        // and so will return 'EINVAL', which will raise an IOException. On Linux it may work depending
-                        // on the architecture and kernel but to be safe we also enforce the limit here.
-                        // 2. There is no sense in putting more data in the array than is likely to be accepted by the
-                        // OS.
-                        //
-                        // See also:
-                        // - https://www.freebsd.org/cgi/man.cgi?query=write&sektion=2
-                        // - https://linux.die.net//man/2/writev
-                        break;
+            if (readableBytes > 0) {
+                if (maxBytes - readableBytes < nioBufferSize && nioBufferCount != 0) {
+                    // If the nioBufferSize + readableBytes will overflow maxBytes, and there is at least one entry
+                    // we stop populate the ByteBuffer array. This is done for 2 reasons:
+                    // 1. bsd/osx don't allow to write more bytes then Integer.MAX_VALUE with one writev(...) call
+                    // and so will return 'EINVAL', which will raise an IOException. On Linux it may work depending
+                    // on the architecture and kernel but to be safe we also enforce the limit here.
+                    // 2. There is no sense in putting more data in the array than is likely to be accepted by the
+                    // OS.
+                    //
+                    // See also:
+                    // - https://www.freebsd.org/cgi/man.cgi?query=write&sektion=2
+                    // - https://linux.die.net//man/2/writev
+                    break;
+                }
+                nioBufferSize += readableBytes;
+                int count = entry.count;
+                if (count == -1) {
+                    //noinspection ConstantValueVariableUse
+                    entry.count = count = buf.nioBufferCount();
+                }
+                int neededSpace = min(maxCount, nioBufferCount + count);
+                if (neededSpace > nioBuffers.length) {
+                    nioBuffers = expandNioBufferArray(nioBuffers, neededSpace, nioBufferCount);
+                    NIO_BUFFERS.set(threadLocalMap, nioBuffers);
+                }
+                if (count == 1) {
+                    ByteBuffer nioBuf = entry.buf;
+                    if (nioBuf == null) {
+                        // cache ByteBuffer as it may need to create a new ByteBuffer instance if its a
+                        // derived buffer
+                        entry.buf = nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
                     }
-                    nioBufferSize += readableBytes;
-                    int count = entry.count;
-                    if (count == -1) {
-                        //noinspection ConstantValueVariableUse
-                        entry.count = count = buf.nioBufferCount();
-                    }
-                    int neededSpace = min(maxCount, nioBufferCount + count);
-                    if (neededSpace > nioBuffers.length) {
-                        nioBuffers = expandNioBufferArray(nioBuffers, neededSpace, nioBufferCount);
-                        NIO_BUFFERS.set(threadLocalMap, nioBuffers);
-                    }
-                    if (count == 1) {
-                        ByteBuffer nioBuf = entry.buf;
-                        if (nioBuf == null) {
-                            // cache ByteBuffer as it may need to create a new ByteBuffer instance if its a
-                            // derived buffer
-                            entry.buf = nioBuf = buf.internalNioBuffer(readerIndex, readableBytes);
-                        }
-                        nioBuffers[nioBufferCount++] = nioBuf;
-                    } else {
-                        // The code exists in an extra method to ensure the method is not too big to inline as this
-                        // branch is not very likely to get hit very frequently.
-                        nioBufferCount = nioBuffers(entry, buf, nioBuffers, nioBufferCount, maxCount);
-                    }
-                    if (nioBufferCount >= maxCount) {
-                        break;
-                    }
+                    nioBuffers[nioBufferCount++] = nioBuf;
+                } else {
+                    // The code exists in an extra method to ensure the method is not too big to inline as this
+                    // branch is not very likely to get hit very frequently.
+                    nioBufferCount = nioBuffers(entry, buf, nioBuffers, nioBufferCount, maxCount);
+                }
+                if (nioBufferCount >= maxCount) {
+                    break;
                 }
             }
             entry = entry.next;
@@ -560,10 +546,8 @@ public final class ChannelOutboundBuffer {
                 int size = e.pendingSize;
                 decrementPendingOutboundBytes(size);
 
-                if (!e.cancelled) {
-                    ReferenceCountUtil.safeRelease(e.msg);
-                    safeFail(e.promise, cause);
-                }
+                ReferenceCountUtil.safeRelease(e.msg);
+                safeFail(e.promise, cause);
                 e = e.unguardedRecycleAndGetNext();
             }
         } finally {
@@ -603,10 +587,8 @@ public final class ChannelOutboundBuffer {
         }
 
         do {
-            if (!entry.cancelled) {
-                if (!processor.processMessage(entry.msg)) {
-                    return;
-                }
+            if (!processor.processMessage(entry.msg)) {
+                return;
             }
             entry = entry.next;
         } while (isFlushedEntry(entry));
@@ -642,7 +624,6 @@ public final class ChannelOutboundBuffer {
         long total;
         int pendingSize;
         int count = -1;
-        boolean cancelled;
 
         private Entry(Handle<Entry> handle) {
             this.handle = (EnhancedHandle<Entry>) handle;
@@ -657,25 +638,6 @@ public final class ChannelOutboundBuffer {
             return entry;
         }
 
-        int cancel() {
-            if (!cancelled) {
-                cancelled = true;
-                int pSize = pendingSize;
-
-                // release message and replace with an empty buffer
-                ReferenceCountUtil.safeRelease(msg);
-                msg = Unpooled.EMPTY_BUFFER;
-
-                pendingSize = 0;
-                total = 0;
-                progress = 0;
-                bufs = null;
-                buf = null;
-                return pSize;
-            }
-            return 0;
-        }
-
         void unguardedRecycle() {
             next = null;
             bufs = null;
@@ -686,7 +648,6 @@ public final class ChannelOutboundBuffer {
             total = 0;
             pendingSize = 0;
             count = -1;
-            cancelled = false;
             handle.unguardedRecycle(this);
         }
 

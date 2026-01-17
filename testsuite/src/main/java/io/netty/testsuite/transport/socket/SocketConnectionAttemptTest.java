@@ -22,7 +22,6 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandler;
 import io.netty.channel.ChannelOption;
 import io.netty.util.concurrent.Future;
-import io.netty.util.internal.SocketUtils;
 import io.netty.util.NetUtil;
 import io.netty.util.concurrent.GlobalEventExecutor;
 import io.netty.util.concurrent.Promise;
@@ -31,9 +30,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
 
-import java.io.IOException;
 import java.net.ConnectException;
-import java.net.Socket;
 import java.util.concurrent.TimeUnit;
 
 import static io.netty.testsuite.transport.socket.SocketTestPermutation.BAD_HOST;
@@ -42,8 +39,6 @@ import static io.netty.testsuite.transport.socket.SocketTestPermutation.UNASSIGN
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.junit.jupiter.api.Assertions.fail;
-import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
 
@@ -114,61 +109,6 @@ public class SocketConnectionAttemptTest extends AbstractClientSocketTest {
         Future<Channel> future = cb.connect(NetUtil.LOCALHOST, UNASSIGNED_PORT).awaitUninterruptibly();
         assertInstanceOf(ConnectException.class, future.cause());
         assertNull(errorPromise.cause());
-    }
-
-    @Test
-    public void testConnectCancellation(TestInfo testInfo) throws Throwable {
-        // Check if the test can be executed or should be skipped because of no network/internet connection
-        // See https://github.com/netty/netty/issues/1474
-        boolean badHostTimedOut = true;
-        Socket socket = new Socket();
-        try {
-            SocketUtils.connect(socket, SocketUtils.socketAddress(BAD_HOST, BAD_PORT), 10);
-        } catch (ConnectException e) {
-            badHostTimedOut = false;
-            // is thrown for no route to host when using Socket connect
-        } catch (Exception e) {
-            // ignore
-        } finally {
-            try {
-                socket.close();
-            } catch (IOException e) {
-                // ignore
-            }
-        }
-
-        assumeTrue(badHostTimedOut, "The connection attempt to " + BAD_HOST + " does not time out.");
-
-        run(testInfo, new Runner<Bootstrap>() {
-            @Override
-            public void run(Bootstrap bootstrap) throws Throwable {
-                testConnectCancellation(bootstrap);
-            }
-        });
-    }
-
-    public void testConnectCancellation(Bootstrap cb) throws Throwable {
-        cb.handler(new TestHandler()).option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 4000);
-        Future<Channel> future = cb.connect(BAD_HOST, BAD_PORT);
-        try {
-            if (future.await(1000)) {
-                if (future.isSuccess()) {
-                    fail("A connection attempt to " + BAD_HOST + " must not succeed.");
-                } else {
-                    throw future.cause();
-                }
-            }
-
-            if (future.cancel(true)) {
-                assertTrue(future.isCancelled());
-            } else {
-                fail();
-            }
-        } finally {
-            if (future.isSuccess()) {
-                future.getNow().close();
-            }
-        }
     }
 
     private static class TestHandler implements ChannelInboundHandler {

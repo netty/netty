@@ -160,7 +160,7 @@ public class CipherSuiteCanaryTest {
                         pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                             @Override
                             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                                serverPromise.cancel(true);
+                                serverPromise.tryFailure(new IllegalStateException());
                                 ctx.fireChannelInactive();
                             }
 
@@ -196,7 +196,7 @@ public class CipherSuiteCanaryTest {
                             pipeline.addLast(new SimpleChannelInboundHandler<Object>() {
                                 @Override
                                 public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                                    clientPromise.cancel(true);
+                                    clientPromise.tryFailure(new IllegalStateException());
                                     ctx.fireChannelInactive();
                                 }
 

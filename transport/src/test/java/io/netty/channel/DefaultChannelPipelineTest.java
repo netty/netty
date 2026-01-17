@@ -901,51 +901,6 @@ public class DefaultChannelPipelineTest {
         }).sync();
     }
 
-    // Tests for https://github.com/netty/netty/issues/2349
-    @Test
-    public void testCancelBind() {
-        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
-        pipeline.channel().register();
-
-        Promise<Void> promise = pipeline.channel().newPromise();
-        assertTrue(promise.cancel(false));
-        pipeline.bind(new LocalAddress("test"), promise);
-        assertTrue(promise.isCancelled());
-    }
-
-    @Test
-    public void testCancelConnect() {
-        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
-        pipeline.channel().register();
-
-        Promise<Void> promise = pipeline.channel().newPromise();
-        assertTrue(promise.cancel(false));
-        pipeline.connect(new LocalAddress("test"), promise);
-        assertTrue(promise.isCancelled());
-    }
-
-    @Test
-    public void testCancelDisconnect() {
-        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
-        pipeline.channel().register();
-
-        Promise<Void> promise = pipeline.channel().newPromise();
-        assertTrue(promise.cancel(false));
-        pipeline.disconnect(promise);
-        assertTrue(promise.isCancelled());
-    }
-
-    @Test
-    public void testCancelClose() {
-        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
-        pipeline.channel().register();
-
-        Promise<Void> promise = pipeline.channel().newPromise();
-        assertTrue(promise.cancel(false));
-        pipeline.close(promise);
-        assertTrue(promise.isCancelled());
-    }
-
     @Test
     public void testUnexpectedVoidChannelPromiseCloseFuture() throws Exception {
         final ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
@@ -962,45 +917,6 @@ public class DefaultChannelPipelineTest {
         } finally {
             pipeline.close();
         }
-    }
-
-    @Test
-    public void testCancelDeregister() {
-        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
-        pipeline.channel().register();
-
-        Promise<Void> promise = pipeline.channel().newPromise();
-        assertTrue(promise.cancel(false));
-        pipeline.deregister(promise);
-        assertTrue(promise.isCancelled());
-    }
-
-    @Test
-    public void testCancelWrite() {
-        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
-        pipeline.channel().register();
-
-        Promise<Void> promise = pipeline.channel().newPromise();
-        assertTrue(promise.cancel(false));
-        ByteBuf buffer = Unpooled.buffer();
-        assertEquals(1, buffer.refCnt());
-        pipeline.write(buffer, promise);
-        assertTrue(promise.isCancelled());
-        assertEquals(0, buffer.refCnt());
-    }
-
-    @Test
-    public void testCancelWriteAndFlush() {
-        ChannelPipeline pipeline = new LocalChannel(group.next()).pipeline();
-        pipeline.channel().register();
-
-        Promise<Void> promise = pipeline.channel().newPromise();
-        assertTrue(promise.cancel(false));
-        ByteBuf buffer = Unpooled.buffer();
-        assertEquals(1, buffer.refCnt());
-        pipeline.writeAndFlush(buffer, promise);
-        assertTrue(promise.isCancelled());
-        assertEquals(0, buffer.refCnt());
     }
 
     @Test

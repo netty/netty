@@ -635,9 +635,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         @Override
         public void connect(final SocketAddress remoteAddress,
                             SocketAddress localAddress, final Promise<Void> promise) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
             promise.setFailure(new UnsupportedOperationException());
         }
 
@@ -651,9 +648,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
         @Override
         public void register(Promise<Void> promise) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
             if (registered) {
                 promise.setFailure(new UnsupportedOperationException("Re-register is not supported"));
                 return;
@@ -671,9 +665,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
         @Override
         public void bind(SocketAddress localAddress, Promise<Void> promise) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
             promise.setFailure(new UnsupportedOperationException());
         }
 
@@ -688,9 +679,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
         }
 
         private void close(final Promise<Void> promise, Http2Error error) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
             if (closeInitiated) {
                 if (closePromise.isDone()) {
                     // Closed already.
@@ -755,10 +743,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
         private void fireChannelInactiveAndDeregister(final Promise<Void> promise,
                                                       final boolean fireChannelInactive) {
-            if (!promise.setUncancellable()) {
-                return;
-            }
-
             if (!registered) {
                 promise.setSuccess(null);
                 return;
@@ -978,12 +962,6 @@ abstract class AbstractHttp2StreamChannel extends DefaultAttributeMap implements
 
         @Override
         public void write(Object msg, final Promise<Void> promise) {
-            // After this point its not possible to cancel a write anymore.
-            if (!promise.setUncancellable()) {
-                ReferenceCountUtil.release(msg);
-                return;
-            }
-
             if (!isActive() ||
                     // Once the outbound side was closed we should not allow header / data frames
                     outboundClosed && (msg instanceof Http2HeadersFrame || msg instanceof Http2DataFrame)) {
