@@ -69,7 +69,7 @@ public class DatagramConnectedWriteExceptionTest extends AbstractClientSocketTes
                     }
                 });
 
-        Channel serverChannel = serverBootstrap.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).sync().channel();
+        Channel serverChannel = serverBootstrap.bind(new InetSocketAddress(NetUtil.LOCALHOST, 0)).get();
         InetSocketAddress serverAddress = (InetSocketAddress) serverChannel.localAddress();
 
         clientBootstrap.option(ChannelOption.AUTO_READ, false)
@@ -81,7 +81,7 @@ public class DatagramConnectedWriteExceptionTest extends AbstractClientSocketTes
                     }
                 });
 
-        Channel clientChannel = clientBootstrap.connect(serverAddress).sync().channel();
+        Channel clientChannel = clientBootstrap.connect(serverAddress).get();
 
         CountDownLatch clientFirstSendLatch = new CountDownLatch(1);
         try {
