@@ -19,6 +19,8 @@ import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
+import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -26,6 +28,7 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
+import io.netty.util.concurrent.FutureListener;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -58,7 +61,7 @@ public class DatagramConnectedWriteExceptionTest extends AbstractClientSocketTes
     }
 
     protected void testWriteExceptionAfterServerStop(Bootstrap clientBootstrap) throws Throwable {
-        CountDownLatch serverReceivedLatch = new CountDownLatch(1);
+        final CountDownLatch serverReceivedLatch = new CountDownLatch(1);
         Bootstrap serverBootstrap = clientBootstrap.clone()
                 .option(ChannelOption.SO_BROADCAST, false)
                 .handler(new SimpleChannelInboundHandler<DatagramPacket>() {
@@ -83,13 +86,16 @@ public class DatagramConnectedWriteExceptionTest extends AbstractClientSocketTes
 
         Channel clientChannel = clientBootstrap.connect(serverAddress).sync().channel();
 
-        CountDownLatch clientFirstSendLatch = new CountDownLatch(1);
+        final CountDownLatch clientFirstSendLatch = new CountDownLatch(1);
         try {
             ByteBuf firstMessage = Unpooled.wrappedBuffer("First message".getBytes(CharsetUtil.UTF_8));
             clientChannel.writeAndFlush(firstMessage)
-                    .addListener(future -> {
-                        if (future.isSuccess()) {
-                            clientFirstSendLatch.countDown();
+                    .addListener(new ChannelFutureListener() {
+                        @Override
+                        public void operationComplete(ChannelFuture future) {
+                            if (future.isSuccess()) {
+                                clientFirstSendLatch.countDown();
+                            }
                         }
                     });
 
@@ -98,17 +104,20 @@ public class DatagramConnectedWriteExceptionTest extends AbstractClientSocketTes
 
             serverChannel.close().sync();
 
-            AtomicReference<Throwable> writeException = new AtomicReference<>();
-            CountDownLatch writesCompleteLatch = new CountDownLatch(10);
+            final AtomicReference<Throwable> writeException = new AtomicReference<>();
+            final CountDownLatch writesCompleteLatch = new CountDownLatch(10);
 
             for (int i = 0; i < 10; i++) {
                 ByteBuf message = Unpooled.wrappedBuffer(("Message " + i).getBytes(CharsetUtil.UTF_8));
                 clientChannel.writeAndFlush(message)
-                        .addListener(future -> {
-                            if (!future.isSuccess()) {
-                                writeException.compareAndSet(null, future.cause());
+                        .addListener(new ChannelFutureListener() {
+                            @Override
+                            public void operationComplete(ChannelFuture future) {
+                                if (!future.isSuccess()) {
+                                    writeException.compareAndSet(null, future.cause());
+                                }
+                                writesCompleteLatch.countDown();
                             }
-                            writesCompleteLatch.countDown();
                         });
                 Thread.sleep(50);
             }
