@@ -111,8 +111,8 @@ public class OpenSslPrivateKeyMethodTest {
     public static void destroy() throws InterruptedException {
         if (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) {
             GROUP.shutdownGracefully();
-            CERT.delete();
             assertTrue(EXECUTOR.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
+            CERT.delete();
         }
     }
 
