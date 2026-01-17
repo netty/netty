@@ -28,7 +28,6 @@ import io.netty.channel.socket.DatagramPacket;
 import io.netty.testsuite.transport.TestsuitePermutation;
 import io.netty.util.CharsetUtil;
 import io.netty.util.NetUtil;
-import io.netty.util.concurrent.FutureListener;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.Timeout;
@@ -57,7 +56,12 @@ public class DatagramConnectedWriteExceptionTest extends AbstractClientSocketTes
     @Timeout(value = 10000, unit = TimeUnit.MILLISECONDS)
     @DisabledOnOs(OS.WINDOWS)
     public void testWriteThrowsPortUnreachableException(TestInfo testInfo) throws Throwable {
-        run(testInfo, (Runner<Bootstrap>) this::testWriteExceptionAfterServerStop);
+        run(testInfo, new Runner<Bootstrap>() {
+            @Override
+            public void run(Bootstrap bootstrap) throws Throwable {
+                testWriteExceptionAfterServerStop(bootstrap);
+            }
+        });
     }
 
     protected void testWriteExceptionAfterServerStop(Bootstrap clientBootstrap) throws Throwable {
@@ -104,7 +108,7 @@ public class DatagramConnectedWriteExceptionTest extends AbstractClientSocketTes
 
             serverChannel.close().sync();
 
-            final AtomicReference<Throwable> writeException = new AtomicReference<>();
+            final AtomicReference<Throwable> writeException = new AtomicReference<Throwable>();
             final CountDownLatch writesCompleteLatch = new CountDownLatch(10);
 
             for (int i = 0; i < 10; i++) {
