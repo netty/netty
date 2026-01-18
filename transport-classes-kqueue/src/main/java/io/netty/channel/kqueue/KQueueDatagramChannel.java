@@ -296,7 +296,11 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
         if (data.hasMemoryAddress()) {
             long memoryAddress = data.memoryAddress();
             if (remoteAddress == null) {
-                writtenBytes = socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());
+                try {
+                    writtenBytes = socket.writeAddress(memoryAddress, data.readerIndex(), data.writerIndex());
+                } catch (Errors.NativeIoException e) {
+                    throw translateForConnected(e);
+                }
             } else {
                 if (socket.protocolFamily() == SocketProtocolFamily.UNIX) {
                     DomainSocketAddress address = (DomainSocketAddress) remoteAddress;
@@ -345,6 +349,16 @@ public final class KQueueDatagramChannel extends AbstractKQueueChannel implement
         }
 
         return writtenBytes > 0;
+    }
+
+    private static IOException translateForConnected(Errors.NativeIoException e) {
+        // We need to correctly translate connect errors to match NIO behaviour.
+        if (e.expectedErr() == Errors.ERROR_ECONNREFUSED_NEGATIVE) {
+            PortUnreachableException error = new PortUnreachableException(e.getMessage());
+            error.initCause(e);
+            return error;
+        }
+        return e;
     }
 
     private static void checkUnresolved(SocketAddress address) {
