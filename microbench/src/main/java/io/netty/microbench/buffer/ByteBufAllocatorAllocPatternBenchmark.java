@@ -687,14 +687,14 @@ public class ByteBufAllocatorAllocPatternBenchmark extends AbstractMicrobenchmar
     }
 
     static {
-        int[] sizeArrray;
-        sizeArrray = WEB_SOCKET_PROXY_PATTERN;
-//        sizeArrray = buildPattern("/root/netty-allocator.jfr");
-        // Flat the WEB_SOCKET_PROXY_PATTERN.
+        int[] sizePattern;
+        sizePattern = WEB_SOCKET_PROXY_PATTERN;
+//        sizePattern = buildPattern("/root/netty-allocator.jfr");
+        // Flat the size pattern array.
         ArrayList<Integer> sizeList = new ArrayList<>();
-        for (int i = 0; i < WEB_SOCKET_PROXY_PATTERN.length; i += 2) {
-            int size = WEB_SOCKET_PROXY_PATTERN[i];
-            int frequency = WEB_SOCKET_PROXY_PATTERN[i + 1];
+        for (int i = 0; i < sizePattern.length; i += 2) {
+            int size = sizePattern[i];
+            int frequency = sizePattern[i + 1];
             for (int j = 0; j < frequency; j++) {
                 sizeList.add(size);
             }
