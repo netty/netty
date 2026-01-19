@@ -23,7 +23,9 @@ import io.netty.util.concurrent.AbstractEventExecutor;
 import io.netty.util.concurrent.DefaultPromise;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.Promise;
+import io.netty.util.concurrent.PromiseNotifier;
 import io.netty.util.internal.ObjectPool.Handle;
 import io.netty.util.internal.ObjectUtil;
 import io.netty.util.internal.PromiseNotificationUtil;
@@ -366,8 +368,27 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         }
     }
 
+    /**
+     * Check if the given {@link Promise} is using the same {@link EventExecutor} as this
+     * {@link ChannelHandlerContext} and if not return a new {@link Promise} that runs on the same
+     * {@link EventExecutor} as this {@link ChannelHandlerContext}. The result of the new {@link Promise} is
+     * cascaded to the old {@link Promise}.
+     *
+     * This is done to ensure that {@link FutureListener}s that are added to the {@link Promise} by an
+     * {@link ChannelOutboundHandler} are executed in the same thread as the handler itself. By doing so we can
+     * ensure that there are not issues even if fields etc that are stored in the handler are modified by the listener.
+     */
+    private Promise<Void> ensurePromiseUseCorrectExecutor(Promise<Void> promise) {
+        if (!promise.executor().inEventLoop()) {
+            Promise<Void> newPromise = newPromise();
+            PromiseNotifier.cascade(newPromise, promise);
+            return newPromise;
+        }
+        return promise;
+    }
+
     @Override
-    public void register(final Promise<Void> promise) {
+    public void register(Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
             return;
@@ -377,6 +398,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             if (next.invokeHandler()) {
+                promise = ensurePromiseUseCorrectExecutor(promise);
                 try {
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).register(next, promise);
@@ -389,12 +411,13 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 next.register(promise);
             }
         } else {
-            safeExecute(executor, () -> register(promise), promise, null, false);
+            final Promise<Void> p = promise;
+            safeExecute(executor, () -> register(p), p, null, false);
         }
     }
 
     @Override
-    public void bind(final SocketAddress localAddress, final Promise<Void> promise) {
+    public void bind(final SocketAddress localAddress, Promise<Void> promise) {
         ObjectUtil.checkNotNull(localAddress, "localAddress");
         if (isNotValidPromise(promise)) {
             // cancelled
@@ -405,6 +428,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             if (next.invokeHandler()) {
+                promise = ensurePromiseUseCorrectExecutor(promise);
                 try {
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).bind(next, localAddress, promise);
@@ -417,7 +441,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 next.bind(localAddress, promise);
             }
         } else {
-            safeExecute(executor, () -> bind(localAddress, promise), promise, null, false);
+            final Promise<Void> p = promise;
+            safeExecute(executor, () -> bind(localAddress, p), p, null, false);
         }
     }
 
@@ -428,7 +453,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
 
     @Override
     public void connect(
-            final SocketAddress remoteAddress, final SocketAddress localAddress, final Promise<Void> promise) {
+            final SocketAddress remoteAddress, final SocketAddress localAddress, Promise<Void> promise) {
         ObjectUtil.checkNotNull(remoteAddress, "remoteAddress");
 
         if (isNotValidPromise(promise)) {
@@ -440,6 +465,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             if (next.invokeHandler()) {
+                promise = ensurePromiseUseCorrectExecutor(promise);
                 try {
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).connect(next, remoteAddress, localAddress, promise);
@@ -452,12 +478,13 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 next.connect(remoteAddress, localAddress, promise);
             }
         } else {
-            safeExecute(executor, () -> connect(remoteAddress, localAddress, promise), promise, null, false);
+            final Promise<Void> p = promise;
+            safeExecute(executor, () -> connect(remoteAddress, localAddress, p), p, null, false);
         }
     }
 
     @Override
-    public void disconnect(final Promise<Void> promise) {
+    public void disconnect(Promise<Void> promise) {
         if (!pipeline.hasDisconnect) {
             // Translate disconnect to close if the channel has no notion of disconnect-reconnect.
             // So far, UDP/IP is the only transport that has such behavior.
@@ -473,6 +500,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             if (next.invokeHandler()) {
+                promise = ensurePromiseUseCorrectExecutor(promise);
                 try {
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).disconnect(next, promise);
@@ -485,12 +513,13 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 next.disconnect(promise);
             }
         } else {
-            safeExecute(executor, () -> disconnect(promise), promise, null, false);
+            final Promise<Void> p = promise;
+            safeExecute(executor, () -> disconnect(p), p, null, false);
         }
     }
 
     @Override
-    public void close(final Promise<Void> promise) {
+    public void close(Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
             return;
@@ -500,6 +529,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             if (next.invokeHandler()) {
+                promise = ensurePromiseUseCorrectExecutor(promise);
                 try {
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).close(next, promise);
@@ -512,12 +542,13 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 next.close(promise);
             }
         } else {
-            safeExecute(executor, () -> close(promise), promise, null, false);
+            final Promise<Void> p = promise;
+            safeExecute(executor, () -> close(p), p, null, false);
         }
     }
 
     @Override
-    public void deregister(final Promise<Void> promise) {
+    public void deregister(Promise<Void> promise) {
         if (isNotValidPromise(promise)) {
             // cancelled
             return;
@@ -527,6 +558,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             if (next.invokeHandler()) {
+                promise = ensurePromiseUseCorrectExecutor(promise);
                 try {
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).deregister(next, promise);
@@ -539,7 +571,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 next.deregister(promise);
             }
         } else {
-            safeExecute(executor, () -> deregister(promise), promise, null, false);
+            final Promise<Void> p = promise;
+            safeExecute(executor, () -> deregister(p), p, null, false);
         }
     }
 
@@ -556,6 +589,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
         EventExecutor executor = next.executor();
         if (executor.inEventLoop()) {
             if (next.invokeHandler()) {
+                promise = ensurePromiseUseCorrectExecutor(promise);
                 try {
                     next.saveCurrentPendingBytesIfNeeded();
                     ((ChannelOutboundHandler) next.handler()).shutdown(next, type, promise);
@@ -568,7 +602,8 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
                 next.shutdown(type, promise);
             }
         } else {
-            safeExecute(executor, () -> shutdown(type, promise), promise, null, false);
+            final Promise<Void> p = promise;
+            safeExecute(executor, () -> shutdown(type, p), p, null, false);
         }
     }
 
@@ -640,6 +675,7 @@ abstract class AbstractChannelHandlerContext implements ChannelHandlerContext, R
             EventExecutor executor = next.executor();
             if (executor.inEventLoop()) {
                 if (next.invokeHandler()) {
+                    promise = ensurePromiseUseCorrectExecutor(promise);
                     try {
                         next.saveCurrentPendingBytesIfNeeded();
                         ((ChannelOutboundHandler) next.handler()).write(next, msg, promise);
