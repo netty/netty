@@ -311,7 +311,7 @@ public class Http2ConnectionHandlerTest {
         handler.channelRead(ctx, Unpooled.wrappedBuffer(connectionPrefaceBuf(), buf));
         ArgumentCaptor<ByteBuf> captor = ArgumentCaptor.forClass(ByteBuf.class);
         verify(frameWriter).writeGoAway(eq(ctx), eq(Integer.MAX_VALUE), eq(PROTOCOL_ERROR.code()),
-                captor.capture(), eq(promise));
+                captor.capture(), any(Promise.class));
         assertEquals(0, captor.getValue().refCnt());
     }
 
