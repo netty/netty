@@ -19,23 +19,16 @@ import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.nio.NioIoHandler;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.MockTicker;
-import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.Ticker;
 import io.netty.util.internal.ThreadExecutorMap;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
-import org.junit.jupiter.api.function.Executable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 
-import java.util.Collections;
-import java.util.Set;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -60,7 +53,7 @@ public class ManualIoEventLoopTest {
 
         assertEquals(1, eventLoop.runNow());
         assertTrue(runnable.isDone());
-        eventLoop.shutdown();
+        eventLoop.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         while (!eventLoop.isTerminated()) {
             eventLoop.runNow();
         }
@@ -91,7 +84,7 @@ public class ManualIoEventLoopTest {
         assertThat(waitTime).isGreaterThan(System.nanoTime() - current);
 
         assertTrue(runnable.isDone());
-        eventLoop.shutdown();
+        eventLoop.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
 
         while (!eventLoop.isTerminated()) {
             eventLoop.runNow();
@@ -105,7 +98,7 @@ public class ManualIoEventLoopTest {
         Thread ownerThread = new Thread();
         ManualIoEventLoop eventLoop = new ManualIoEventLoop(ownerThread, executor ->
                 new TestIoHandler(semaphore));
-        eventLoop.shutdown();
+        eventLoop.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
         assertTrue(eventLoop.isShuttingDown());
         // we expect wakeup to be called!
         assertEquals(1, semaphore.availablePermits());
@@ -132,92 +125,12 @@ public class ManualIoEventLoopTest {
         eventLoop.execute(() -> queue.offer(ThreadExecutorMap.currentExecutor()));
         assertEquals(1, eventLoop.runNow());
         assertSame(eventLoop, queue.take());
-        eventLoop.shutdown();
+        eventLoop.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
 
         while (!eventLoop.isTerminated()) {
             eventLoop.runNow();
         }
         eventLoop.terminationFuture().sync();
-    }
-
-    @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testInvokeAnyInEventLoop() {
-        testInvokeInEventLoop(true, false);
-    }
-
-    @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testInvokeAnyInEventLoopWithTimeout() {
-        testInvokeInEventLoop(true, true);
-    }
-
-    @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testInvokeAllInEventLoop() {
-        testInvokeInEventLoop(false, false);
-    }
-
-    @Test
-    @Timeout(value = 3000, unit = TimeUnit.MILLISECONDS)
-    public void testInvokeAllInEventLoopWithTimeout() {
-        testInvokeInEventLoop(false, true);
-    }
-
-    private static void testInvokeInEventLoop(final boolean any, final boolean timeout) {
-        Semaphore semaphore = new Semaphore(0);
-        ManualIoEventLoop eventLoop = new ManualIoEventLoop(Thread.currentThread(), executor ->
-                new TestIoHandler(semaphore));
-        try {
-            assertThrows(RejectedExecutionException.class, new Executable() {
-                @Override
-                public void execute() throws Throwable {
-                    final Promise<Void> promise = eventLoop.newPromise();
-                    eventLoop.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            try {
-                                Set<Callable<Boolean>> set = Collections.<Callable<Boolean>>singleton(
-                                        new Callable<Boolean>() {
-                                            @Override
-                                            public Boolean call() {
-                                                promise.setFailure(
-                                                        new AssertionError("Should never execute the Callable"));
-                                                return Boolean.TRUE;
-                                            }
-                                        });
-                                if (any) {
-                                    if (timeout) {
-                                        eventLoop.invokeAny(set, 10, TimeUnit.SECONDS);
-                                    } else {
-                                        eventLoop.invokeAny(set);
-                                    }
-                                } else {
-                                    if (timeout) {
-                                        eventLoop.invokeAll(set, 10, TimeUnit.SECONDS);
-                                    } else {
-                                        eventLoop.invokeAll(set);
-                                    }
-                                }
-                                promise.setFailure(new AssertionError("Should never reach here"));
-                            } catch (Throwable cause) {
-                                promise.setFailure(cause);
-                            }
-                        }
-                    });
-                    while (!promise.isDone()) {
-                        eventLoop.runNow();
-                    }
-                    promise.syncUninterruptibly();
-                }
-            });
-        } finally {
-            eventLoop.shutdownGracefully(0, 0, TimeUnit.MILLISECONDS);
-            while (!eventLoop.isTerminated()) {
-                eventLoop.runNow();
-            }
-            assertTrue(eventLoop.terminationFuture().isSuccess());
-        }
     }
 
     @Test

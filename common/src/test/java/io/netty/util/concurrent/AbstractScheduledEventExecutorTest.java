@@ -136,11 +136,6 @@ public class AbstractScheduledEventExecutorTest {
         }
 
         @Override
-        public void shutdown() {
-            // NOOP
-        }
-
-        @Override
         public Future<?> shutdownGracefully(long quietPeriod, long timeout, TimeUnit unit) {
             throw new UnsupportedOperationException();
         }

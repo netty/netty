@@ -35,7 +35,6 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -146,7 +145,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
     /**
      * Create the global TrafficCounter
      */
-    void createGlobalTrafficCounter(ScheduledExecutorService executor) {
+    void createGlobalTrafficCounter(EventExecutor executor) {
         // Default
         setMaxDeviation(DEFAULT_DEVIATION, DEFAULT_SLOWDOWN, DEFAULT_ACCELERATION);
         checkNotNullWithIAE(executor, "executor");
@@ -164,7 +163,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      * Create a new instance.
      *
      * @param executor
-     *            the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
+     *            the {@link EventExecutor} to use for the {@link TrafficCounter}.
      * @param writeGlobalLimit
      *            0 or a limit in bytes/s
      * @param readGlobalLimit
@@ -179,7 +178,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      * @param maxTime
      *            The maximum delay to wait in case of traffic excess.
      */
-    public GlobalChannelTrafficShapingHandler(ScheduledExecutorService executor,
+    public GlobalChannelTrafficShapingHandler(EventExecutor executor,
             long writeGlobalLimit, long readGlobalLimit,
             long writeChannelLimit, long readChannelLimit,
             long checkInterval, long maxTime) {
@@ -193,7 +192,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      * Create a new instance.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
+     *          the {@link EventExecutor} to use for the {@link TrafficCounter}.
      * @param writeGlobalLimit
      *            0 or a limit in bytes/s
      * @param readGlobalLimit
@@ -206,7 +205,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      *          The delay between two computations of performances for
      *            channels or 0 if no stats are to be computed.
      */
-    public GlobalChannelTrafficShapingHandler(ScheduledExecutorService executor,
+    public GlobalChannelTrafficShapingHandler(EventExecutor executor,
             long writeGlobalLimit, long readGlobalLimit,
             long writeChannelLimit, long readChannelLimit,
             long checkInterval) {
@@ -220,7 +219,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      * Create a new instance.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
+     *          the {@link EventExecutor} to use for the {@link TrafficCounter}.
      * @param writeGlobalLimit
      *            0 or a limit in bytes/s
      * @param readGlobalLimit
@@ -230,7 +229,7 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      * @param readChannelLimit
      *            0 or a limit in bytes/s
      */
-    public GlobalChannelTrafficShapingHandler(ScheduledExecutorService executor,
+    public GlobalChannelTrafficShapingHandler(EventExecutor executor,
             long writeGlobalLimit, long readGlobalLimit,
             long writeChannelLimit, long readChannelLimit) {
         super(writeGlobalLimit, readGlobalLimit);
@@ -243,12 +242,12 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      * Create a new instance.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
+     *          the {@link EventExecutor} to use for the {@link TrafficCounter}.
      * @param checkInterval
      *          The delay between two computations of performances for
      *            channels or 0 if no stats are to be computed.
      */
-    public GlobalChannelTrafficShapingHandler(ScheduledExecutorService executor, long checkInterval) {
+    public GlobalChannelTrafficShapingHandler(EventExecutor executor, long checkInterval) {
         super(checkInterval);
         createGlobalTrafficCounter(executor);
     }
@@ -257,9 +256,9 @@ public class GlobalChannelTrafficShapingHandler extends AbstractTrafficShapingHa
      * Create a new instance.
      *
      * @param executor
-     *          the {@link ScheduledExecutorService} to use for the {@link TrafficCounter}.
+     *          the {@link EventExecutor} to use for the {@link TrafficCounter}.
      */
-    public GlobalChannelTrafficShapingHandler(ScheduledExecutorService executor) {
+    public GlobalChannelTrafficShapingHandler(EventExecutor executor) {
         createGlobalTrafficCounter(executor);
     }
 

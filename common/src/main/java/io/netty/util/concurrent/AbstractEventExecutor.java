@@ -24,16 +24,16 @@ import org.jetbrains.annotations.Async.Execute;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
-import java.util.concurrent.AbstractExecutorService;
+import java.util.Objects;
 import java.util.concurrent.Callable;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Abstract base class for {@link EventExecutor} implementations.
  */
-public abstract class AbstractEventExecutor extends AbstractExecutorService implements EventExecutor {
+public abstract class AbstractEventExecutor implements EventExecutor {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(AbstractEventExecutor.class);
 
     static final long DEFAULT_SHUTDOWN_QUIET_PERIOD = 2;
@@ -72,67 +72,42 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
         return shutdownGracefully(DEFAULT_SHUTDOWN_QUIET_PERIOD, DEFAULT_SHUTDOWN_TIMEOUT, TimeUnit.SECONDS);
     }
 
+    @Override
+    public final Future<?> submit(Runnable task) {
+        Objects.requireNonNull(task, "task");
+        RunnableFuture<Void> ftask = newTaskFor(task, null);
+        execute(ftask);
+        return (Future<?>) ftask;
+    }
+
+    @Override
+    @SuppressWarnings("unchecked")
+    public final <T> Future<T> submit(Runnable task, T result) {
+        Objects.requireNonNull(task, "task");
+        RunnableFuture<T> ftask = newTaskFor(task, result);
+        execute(ftask);
+        return (Future<T>) ftask;
+    }
+
     /**
-     * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
+     * @throws RejectedExecutionException {@inheritDoc}
+     * @throws NullPointerException       {@inheritDoc}
      */
     @Override
-    @Deprecated
-    public abstract void shutdown();
-
-    /**
-     * @deprecated {@link #shutdownGracefully(long, long, TimeUnit)} or {@link #shutdownGracefully()} instead.
-     */
-    @Override
-    @Deprecated
-    public List<Runnable> shutdownNow() {
-        shutdown();
-        return Collections.emptyList();
+    @SuppressWarnings("unchecked")
+    public final <T> Future<T> submit(Callable<T> task) {
+        Objects.requireNonNull(task, "task");
+        RunnableFuture<T> ftask = newTaskFor(task);
+        execute(ftask);
+        return (Future<T>) ftask;
     }
 
-    @Override
-    public Future<?> submit(Runnable task) {
-        return (Future<?>) super.submit(task);
-    }
-
-    @Override
-    public <T> Future<T> submit(Runnable task, T result) {
-        return (Future<T>) super.submit(task, result);
-    }
-
-    @Override
-    public <T> Future<T> submit(Callable<T> task) {
-        return (Future<T>) super.submit(task);
-    }
-
-    @Override
     protected final <T> RunnableFuture<T> newTaskFor(Runnable runnable, T value) {
         return new PromiseTask<T>(this, runnable, value);
     }
 
-    @Override
     protected final <T> RunnableFuture<T> newTaskFor(Callable<T> callable) {
         return new PromiseTask<T>(this, callable);
-    }
-
-    @Override
-    public ScheduledFuture<?> schedule(Runnable command, long delay,
-                                       TimeUnit unit) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay, TimeUnit unit) {
-        throw new UnsupportedOperationException();
     }
 
     @SuppressWarnings("unchecked")
@@ -142,6 +117,10 @@ public abstract class AbstractEventExecutor extends AbstractExecutorService impl
             return (Future<V>) succeededFuture;
         }
         return EventExecutor.super.newSucceededFuture(result);
+    }
+
+    protected final <T> ScheduledFuture<T> newFailedScheduledFuture(Throwable cause) {
+        return new FailedScheduledFuture<>(this, cause);
     }
 
     /**

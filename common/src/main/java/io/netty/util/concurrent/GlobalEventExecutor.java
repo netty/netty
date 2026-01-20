@@ -179,12 +179,6 @@ public final class GlobalEventExecutor extends AbstractScheduledEventExecutor im
     }
 
     @Override
-    @Deprecated
-    public void shutdown() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public boolean isShuttingDown() {
         return false;
     }

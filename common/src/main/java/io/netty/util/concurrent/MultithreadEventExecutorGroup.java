@@ -199,14 +199,6 @@ public abstract class MultithreadEventExecutorGroup extends AbstractEventExecuto
     }
 
     @Override
-    @Deprecated
-    public void shutdown() {
-        for (EventExecutor l: children) {
-            l.shutdown();
-        }
-    }
-
-    @Override
     public boolean isShuttingDown() {
         for (EventExecutor l: children) {
             if (!l.isShuttingDown()) {

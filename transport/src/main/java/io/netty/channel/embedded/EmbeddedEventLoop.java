@@ -111,12 +111,6 @@ final class EmbeddedEventLoop extends AbstractScheduledEventExecutor implements 
     }
 
     @Override
-    @Deprecated
-    public void shutdown() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
     public boolean isShuttingDown() {
         return false;
     }
