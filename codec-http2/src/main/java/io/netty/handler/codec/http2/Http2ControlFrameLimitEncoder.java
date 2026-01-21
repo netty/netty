@@ -29,16 +29,11 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
  */
 final class Http2ControlFrameLimitEncoder extends DecoratingHttp2ConnectionEncoder {
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(Http2ControlFrameLimitEncoder.class);
+    private int outstandingControlFrames;
 
     private final int maxOutstandingControlFrames;
-    private final ChannelFutureListener outstandingControlFramesListener = new ChannelFutureListener() {
-        @Override
-        public void operationComplete(ChannelFuture future) {
-            outstandingControlFrames--;
-        }
-    };
+    private final ChannelFutureListener outstandingControlFramesListener = f-> outstandingControlFrames--;
     private Http2LifecycleManager lifecycleManager;
-    private int outstandingControlFrames;
     private boolean limitReached;
 
     Http2ControlFrameLimitEncoder(Http2ConnectionEncoder delegate, int maxOutstandingControlFrames) {

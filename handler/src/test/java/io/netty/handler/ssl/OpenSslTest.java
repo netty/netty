@@ -17,7 +17,9 @@ package io.netty.handler.ssl;
 
 import org.junit.jupiter.api.Test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -28,6 +30,15 @@ final class OpenSslTest {
         if (!OpenSsl.isTlsv13Supported()) {
             assertTrue(
                     OpenSsl.DEFAULT_CIPHERS.size() <= SslUtils.DEFAULT_CIPHER_SUITES.length);
+        }
+    }
+
+    @Test
+    void boringSslHasX25519MLKEM768EnabledAndPreferredByDefault() throws Exception {
+        if (OpenSsl.isBoringSSL() || OpenSsl.isAWSLC()) {
+            assertEquals("X25519MLKEM768", OpenSsl.NAMED_GROUPS[0]);
+        } else {
+            assertNotEquals("X25519MLKEM768", OpenSsl.NAMED_GROUPS[0]);
         }
     }
 

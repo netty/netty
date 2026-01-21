@@ -181,32 +181,29 @@ abstract class DnsQueryContext {
         }
 
         // Ensure we remove the id from the QueryContextManager once the query completes.
-        promise.addListener(new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
-            @Override
-            public void operationComplete(Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
-                // Cancel the timeout task.
-                Future<?> timeoutFuture = DnsQueryContext.this.timeoutFuture;
-                if (timeoutFuture != null) {
-                    DnsQueryContext.this.timeoutFuture = null;
-                    timeoutFuture.cancel(false);
-                }
+        promise.addListener((FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>) future -> {
+            // Cancel the timeout task.
+            Future<?> timeoutFuture = DnsQueryContext.this.timeoutFuture;
+            if (timeoutFuture != null) {
+                DnsQueryContext.this.timeoutFuture = null;
+                timeoutFuture.cancel(false);
+            }
 
-                Throwable cause = future.cause();
-                if (cause instanceof DnsNameResolverTimeoutException || cause instanceof CancellationException) {
-                    // This query was failed due a timeout or cancellation. Let's delay the removal of the id to reduce
-                    // the risk of reusing the same id again while the remote nameserver might send the response after
-                    // the timeout.
-                    channel.eventLoop().schedule(new Runnable() {
-                        @Override
-                        public void run() {
-                            removeFromContextManager(nameServerAddr);
-                        }
-                    }, ID_REUSE_ON_TIMEOUT_DELAY_MILLIS, TimeUnit.MILLISECONDS);
-                } else {
-                    // Remove the id from the manager as soon as the query completes. This may be because of success,
-                    // failure or cancellation
-                    removeFromContextManager(nameServerAddr);
-                }
+            Throwable cause = future.cause();
+            if (cause instanceof DnsNameResolverTimeoutException || cause instanceof CancellationException) {
+                // This query was failed due a timeout or cancellation. Let's delay the removal of the id to reduce
+                // the risk of reusing the same id again while the remote nameserver might send the response after
+                // the timeout.
+                channel.eventLoop().schedule(new Runnable() {
+                    @Override
+                    public void run() {
+                        removeFromContextManager(nameServerAddr);
+                    }
+                }, ID_REUSE_ON_TIMEOUT_DELAY_MILLIS, TimeUnit.MILLISECONDS);
+            } else {
+                // Remove the id from the manager as soon as the query completes. This may be because of success,
+                // failure or cancellation
+                removeFromContextManager(nameServerAddr);
             }
         });
         final DnsQuestion question = question();
@@ -252,12 +249,8 @@ abstract class DnsQueryContext {
         if (writeFuture.isDone()) {
             onQueryWriteCompletion(queryTimeoutMillis, writeFuture);
         } else {
-            writeFuture.addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    onQueryWriteCompletion(queryTimeoutMillis, writeFuture);
-                }
-            });
+            writeFuture.addListener((ChannelFutureListener) future ->
+                    onQueryWriteCompletion(queryTimeoutMillis, future));
         }
     }
 
@@ -358,86 +351,78 @@ abstract class DnsQueryContext {
             return false;
         }
 
-        socketBootstrap.connect(nameServerAddr).addListener(new ChannelFutureListener() {
-            @Override
-            public void operationComplete(ChannelFuture future) {
-                if (!future.isSuccess()) {
-                    logger.debug("{} Unable to fallback to TCP [{}: {}]",
-                            future.channel(), id, nameServerAddr, future.cause());
-
-                    // TCP fallback failed, just use the truncated response or error.
-                    finishOriginal(originalResult, future);
-                    return;
-                }
-                final Channel tcpCh = future.channel();
-                Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise =
-                        tcpCh.eventLoop().newPromise();
-                final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(tcpCh,
-                        (InetSocketAddress) tcpCh.remoteAddress(), queryContextManager, queryLifecycleObserver, 0,
-                        recursionDesired, queryTimeoutMillis, question(), additionals, promise);
-                tcpCh.pipeline().addLast(TCP_ENCODER);
-                tcpCh.pipeline().addLast(new TcpDnsResponseDecoder());
-                tcpCh.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-                    @Override
-                    public void channelRead(ChannelHandlerContext ctx, Object msg) {
-                        Channel tcpCh = ctx.channel();
-                        DnsResponse response = (DnsResponse) msg;
-                        int queryId = response.id();
-
-                        if (logger.isDebugEnabled()) {
-                            logger.debug("{} RECEIVED: TCP [{}: {}], {}", tcpCh, queryId,
-                                    tcpCh.remoteAddress(), response);
-                        }
-
-                        DnsQueryContext foundCtx = queryContextManager.get(nameServerAddr, queryId);
-                        if (foundCtx != null && foundCtx.isDone()) {
-                            logger.debug("{} Received a DNS response for a query that was timed out or cancelled " +
-                                    ": TCP [{}: {}]", tcpCh, queryId, nameServerAddr);
-                            response.release();
-                        } else if (foundCtx == tcpCtx) {
-                            tcpCtx.finishSuccess(new AddressedEnvelopeAdapter(
-                                    (InetSocketAddress) ctx.channel().remoteAddress(),
-                                    (InetSocketAddress) ctx.channel().localAddress(),
-                                    response), false);
-                        } else {
-                            response.release();
-                            tcpCtx.finishFailure("Received TCP DNS response with unexpected ID", null, false);
-                            if (logger.isDebugEnabled()) {
-                                logger.debug("{} Received a DNS response with an unexpected ID: TCP [{}: {}]",
-                                        tcpCh, queryId, tcpCh.remoteAddress());
-                            }
-                        }
-                    }
-
-                    @Override
-                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
-                        if (tcpCtx.finishFailure(
-                                "TCP fallback error", cause, false) && logger.isDebugEnabled()) {
-                            logger.debug("{} Error during processing response: TCP [{}: {}]",
-                                    ctx.channel(), id,
-                                    ctx.channel().remoteAddress(), cause);
-                        }
-                    }
-                });
-
-                promise.addListener(
-                        new FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>() {
-                            @Override
-                            public void operationComplete(
-                                    Future<AddressedEnvelope<DnsResponse, InetSocketAddress>> future) {
-                                if (future.isSuccess()) {
-                                    finishSuccess(future.getNow(), false);
-                                    // Release the original result.
-                                    ReferenceCountUtil.release(originalResult);
-                                } else {
-                                    // TCP fallback failed, just use the truncated response or error.
-                                    finishOriginal(originalResult, future);
-                                }
-                                tcpCh.close();
-                            }
-                        });
-                tcpCtx.writeQuery(true);
+        socketBootstrap.connect(nameServerAddr).addListener((ChannelFutureListener) future -> {
+            if (!future.isSuccess()) {
+                logger.debug("{} Unable to fallback to TCP [{}: {}]",
+                        future.channel(), id, nameServerAddr, future.cause());
+                // TCP fallback failed, just use the truncated response or error.
+                finishOriginal(originalResult, future);
+                return;
             }
+            final Channel tcpCh = future.channel();
+            Promise<AddressedEnvelope<DnsResponse, InetSocketAddress>> promise =
+                    tcpCh.eventLoop().newPromise();
+            final TcpDnsQueryContext tcpCtx = new TcpDnsQueryContext(tcpCh,
+                    (InetSocketAddress) tcpCh.remoteAddress(), queryContextManager, queryLifecycleObserver, 0,
+                    recursionDesired, queryTimeoutMillis, question(), additionals, promise);
+            tcpCh.pipeline().addLast(TCP_ENCODER);
+            tcpCh.pipeline().addLast(new TcpDnsResponseDecoder());
+            tcpCh.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                @Override
+                public void channelRead(ChannelHandlerContext ctx, Object msg) {
+                    Channel tcpCh = ctx.channel();
+                    DnsResponse response = (DnsResponse) msg;
+                    int queryId = response.id();
+
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("{} RECEIVED: TCP [{}: {}], {}", tcpCh, queryId,
+                                tcpCh.remoteAddress(), response);
+                    }
+
+                    DnsQueryContext foundCtx = queryContextManager.get(nameServerAddr, queryId);
+                    if (foundCtx != null && foundCtx.isDone()) {
+                        logger.debug("{} Received a DNS response for a query that was timed out or cancelled " +
+                                ": TCP [{}: {}]", tcpCh, queryId, nameServerAddr);
+                        response.release();
+                    } else if (foundCtx == tcpCtx) {
+                        tcpCtx.finishSuccess(new AddressedEnvelopeAdapter(
+                                (InetSocketAddress) ctx.channel().remoteAddress(),
+                                (InetSocketAddress) ctx.channel().localAddress(),
+                                response), false);
+                    } else {
+                        response.release();
+                        tcpCtx.finishFailure("Received TCP DNS response with unexpected ID", null, false);
+                        if (logger.isDebugEnabled()) {
+                            logger.debug("{} Received a DNS response with an unexpected ID: TCP [{}: {}]",
+                                    tcpCh, queryId, tcpCh.remoteAddress());
+                        }
+                    }
+                }
+
+                @Override
+                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) {
+                    if (tcpCtx.finishFailure(
+                            "TCP fallback error", cause, false) && logger.isDebugEnabled()) {
+                        logger.debug("{} Error during processing response: TCP [{}: {}]",
+                                ctx.channel(), id,
+                                ctx.channel().remoteAddress(), cause);
+                    }
+                }
+            });
+
+            promise.addListener(
+                    (FutureListener<AddressedEnvelope<DnsResponse, InetSocketAddress>>) future1 -> {
+                        if (future1.isSuccess()) {
+                            finishSuccess(future1.getNow(), false);
+                            // Release the original result.
+                            ReferenceCountUtil.release(originalResult);
+                        } else {
+                            // TCP fallback failed, just use the truncated response or error.
+                            finishOriginal(originalResult, future1);
+                        }
+                        tcpCh.close();
+                    });
+            tcpCtx.writeQuery(true);
         });
         return true;
     }

@@ -46,17 +46,14 @@ public class ResolveAddressHandler extends ChannelOutboundHandlerAdapter {
                         final SocketAddress localAddress, final ChannelPromise promise)  {
         AddressResolver<? extends SocketAddress> resolver = resolverGroup.getResolver(ctx.executor());
         if (resolver.isSupported(remoteAddress) && !resolver.isResolved(remoteAddress)) {
-            resolver.resolve(remoteAddress).addListener(new FutureListener<SocketAddress>() {
-                @Override
-                public void operationComplete(Future<SocketAddress> future) {
-                    Throwable cause = future.cause();
-                    if (cause != null) {
-                        promise.setFailure(cause);
-                    } else {
-                        ctx.connect(future.getNow(), localAddress, promise);
-                    }
-                    ctx.pipeline().remove(ResolveAddressHandler.this);
+            resolver.resolve(remoteAddress).addListener((FutureListener<SocketAddress>) future -> {
+                Throwable cause = future.cause();
+                if (cause != null) {
+                    promise.setFailure(cause);
+                } else {
+                    ctx.connect(future.getNow(), localAddress, promise);
                 }
+                ctx.pipeline().remove(ResolveAddressHandler.this);
             });
         } else {
             ctx.connect(remoteAddress, localAddress, promise);

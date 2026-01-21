@@ -246,7 +246,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
             int offset = iovArray.count();
 
             try {
-                in.forEachFlushedMessage(iovArray);
+                in.forEachFlushedMessage(filterWriteMultiple(iovArray));
             } catch (Exception e) {
                 // This should never happen, anyway fallback to single write.
                 return scheduleWriteSingle(in.current());
@@ -263,6 +263,10 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 return 0;
             }
             return 1;
+        }
+
+        protected ChannelOutboundBuffer.MessageProcessor filterWriteMultiple(IovArray iovArray) {
+           return iovArray;
         }
 
         @Override
@@ -287,7 +291,7 @@ abstract class AbstractIoUringStreamChannel extends AbstractIoUringChannel imple
                 int length = buf.readableBytes();
                 short opsid = nextOpsId();
 
-                ops = IoUringIoOps.newWrite(fd, (byte) 0, 0, address, length, opsid);
+                ops = IoUringIoOps.newSend(fd, (byte) 0, 0, address, length, opsid);
             }
             byte opCode = ops.opcode();
             writeId = registration.submit(ops);

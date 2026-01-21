@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLParameters;
 
@@ -68,6 +69,16 @@ public class PkiTestingTlsTest {
             }
         }
         return args;
+    }
+
+    static Stream<Arguments> interoperabilityParams() {
+        Stream.Builder<Arguments> builder = Stream.builder();
+        for (boolean enableOnClient : new boolean[] {true, false}) {
+            for (String[] protocols : new String[][] {{"TLSv1.2"}, {"TLSv1.3"}, {"TLSv1.3", "TLSv1.2"}}) {
+                builder.add(Arguments.of(enableOnClient, protocols));
+            }
+        }
+        return builder.build();
     }
 
     /**
@@ -147,11 +158,7 @@ public class PkiTestingTlsTest {
                 .buildSelfSigned();
 
         // Disable 128-bit ciphers so only 256-bit ciphers remain.
-        String[] ciphers = {"TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384",
-                            "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384",
-                            "TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA",
-                            "TLS_RSA_WITH_AES_256_CBC_SHA",
-                            "TLS_AES_256_GCM_SHA384",
+        String[] ciphers = {"TLS_AES_256_GCM_SHA384",
                             "TLS_CHACHA20_POLY1305_SHA256"};
 
         String[] groups = new String[]{"X25519MLKEM768"};
@@ -179,6 +186,59 @@ public class PkiTestingTlsTest {
                 .build();
 
         testTlsConnection(serverContext, clientContext, configureViaParameter ? groups.clone() : null);
+    }
+
+    /**
+     * It is possible to enable the X25519MLKEM768 hybrid classical-and-quantum-safe key exchange in an interoperable
+     * manner.
+     * This way, we can allow the classical algorithms to be used as fallback if the peer doesn't support the hybrid
+     * quantum safe key exchange.
+     * This allows us to gradually introduce quantum safety into complex systems, without forcing all clients and
+     * servers to upgrade at the same time.
+     */
+    @EnabledIf("isBoringSSLAvailable")
+    @ParameterizedTest
+    @MethodSource("interoperabilityParams")
+    void x25519MLKEM768Interoperability(boolean enabledOnClient, String[] protocols) throws Exception {
+        X509Bundle cert = new CertificateBuilder()
+                .algorithm(CertificateBuilder.Algorithm.ecp256)
+                .setIsCertificateAuthority(true)
+                .subject("CN=localhost")
+                .buildSelfSigned();
+
+        String[] classicalGroups = new String[] {
+                "x25519",
+                "secp256r1",
+                "secp384r1",
+                "secp521r1",
+        };
+
+        String[] interoperableGroups = new String[] {
+                "X25519MLKEM768",
+                "x25519",
+                "secp256r1",
+                "secp384r1",
+                "secp521r1",
+        };
+
+        SslContextBuilder serverBuilder = SslContextBuilder.forServer(cert.toKeyManagerFactory())
+                .sslProvider(SslProvider.OPENSSL)
+                .protocols(protocols);
+        SslContextBuilder clientBuilder = SslContextBuilder.forClient()
+                .trustManager(cert.toTrustManagerFactory())
+                .sslProvider(SslProvider.OPENSSL)
+                .serverName(new SNIHostName("localhost"))
+                .protocols(protocols);
+
+        if (enabledOnClient) {
+            clientBuilder.option(OpenSslContextOption.GROUPS, interoperableGroups);
+            serverBuilder.option(OpenSslContextOption.GROUPS, classicalGroups);
+        } else {
+            clientBuilder.option(OpenSslContextOption.GROUPS, classicalGroups);
+            serverBuilder.option(OpenSslContextOption.GROUPS, interoperableGroups);
+        }
+
+        testTlsConnection(serverBuilder.build(), clientBuilder.build(), null);
     }
 
     private void testTlsConnection(SslContext serverContext, SslContext clientContext, String[] groups)

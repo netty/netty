@@ -33,7 +33,6 @@ import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelOutboundHandlerAdapter;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.DefaultChannelId;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
@@ -58,7 +57,6 @@ import io.netty.util.AbstractReferenceCounted;
 import io.netty.util.IllegalReferenceCountException;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.ReferenceCounted;
-import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.FutureListener;
 import io.netty.util.concurrent.ImmediateEventExecutor;
 import io.netty.util.concurrent.ImmediateExecutor;
@@ -146,12 +144,9 @@ public class SslHandlerTest {
         try {
             final CountDownLatch writeCauseLatch = new CountDownLatch(1);
             final AtomicReference<Throwable> failureRef = new AtomicReference<Throwable>();
-            ch.write(Unpooled.wrappedBuffer(new byte[]{1})).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    failureRef.compareAndSet(null, future.cause());
-                    writeCauseLatch.countDown();
-                }
+            ch.write(Unpooled.wrappedBuffer(new byte[]{1})).addListener(future -> {
+                failureRef.compareAndSet(null, future.cause());
+                writeCauseLatch.countDown();
             });
             writeLatch.await();
 
@@ -515,19 +510,16 @@ public class SslHandlerTest {
                 final SslHandler sslHandler = sslCtx.newHandler(ch.alloc());
                 sslHandler.setHandshakeTimeoutMillis(1000);
                 ch.pipeline().addFirst(sslHandler);
-                sslHandler.handshakeFuture().addListener(new FutureListener<Channel>() {
-                    @Override
-                    public void operationComplete(final Future<Channel> future) {
-                        ch.pipeline().remove(sslHandler);
+                sslHandler.handshakeFuture().addListener(future -> {
+                    ch.pipeline().remove(sslHandler);
 
-                        // Schedule the close so removal has time to propagate exception if any.
-                        ch.eventLoop().execute(new Runnable() {
-                            @Override
-                            public void run() {
-                                ch.close();
-                            }
-                        });
-                    }
+                    // Schedule the close so removal has time to propagate exception if any.
+                    ch.eventLoop().execute(new Runnable() {
+                        @Override
+                        public void run() {
+                            ch.close();
+                        }
+                    });
                 });
 
                 ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
@@ -606,7 +598,7 @@ public class SslHandlerTest {
         final BlockingQueue<Object> events = new LinkedBlockingQueue<Object>();
         Channel serverChannel = null;
         Channel clientChannel = null;
-        EventLoopGroup group = new DefaultEventLoopGroup();
+        EventLoopGroup group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
         try {
             ServerBootstrap sb = new ServerBootstrap();
             sb.group(group)
@@ -620,12 +612,9 @@ public class SslHandlerTest {
                           public void channelActive(ChannelHandlerContext ctx) {
                               ByteBuf buf = ctx.alloc().buffer(10);
                               buf.writeZero(buf.capacity());
-                              ctx.writeAndFlush(buf).addListener(new ChannelFutureListener() {
-                                  @Override
-                                  public void operationComplete(ChannelFuture future) {
-                                      events.add(future);
-                                      latch.countDown();
-                                  }
+                              ctx.writeAndFlush(buf).addListener(future -> {
+                                  events.add(future);
+                                  latch.countDown();
                               });
                           }
 
@@ -886,12 +875,9 @@ public class SslHandlerTest {
                                 }
                             });
                         }
-                    }).connect(sc.localAddress()).addListener(new ChannelFutureListener() {
-                        @Override
-                        public void operationComplete(ChannelFuture future) throws Exception {
-                            // Write something to trigger the handshake before fireChannelActive is called.
-                            future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
-                        }
+                    }).connect(sc.localAddress()).addListener((ChannelFutureListener) future -> {
+                        // Write something to trigger the handshake before fireChannelActive is called.
+                        future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
                     }).syncUninterruptibly().channel();
 
             // Ensure there is no AssertionError thrown by having the handshake failed by the writeAndFlush(...) before
@@ -965,12 +951,9 @@ public class SslHandlerTest {
                         }
                     }).connect(sc.localAddress());
             if (!startTls) {
-                future.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        // Write something to trigger the handshake before fireChannelActive is called.
-                        future.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
-                    }
+                future.addListener((ChannelFutureListener) future1 -> {
+                    // Write something to trigger the handshake before fireChannelActive is called.
+                    future1.channel().writeAndFlush(wrappedBuffer(new byte [] { 1, 2, 3, 4 }));
                 });
             }
             cc = future.syncUninterruptibly().channel();
@@ -1011,7 +994,7 @@ public class SslHandlerTest {
         try {
             testHandshakeWithExecutor(executorService, SslProvider.JDK, false);
         } finally {
-            executorService.shutdown();
+            assertTrue(executorService.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
@@ -1040,7 +1023,7 @@ public class SslHandlerTest {
         try {
             testHandshakeWithExecutor(executorService, SslProvider.OPENSSL, false);
         } finally {
-            executorService.shutdown();
+            assertTrue(executorService.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
@@ -1065,7 +1048,7 @@ public class SslHandlerTest {
         try {
             testHandshakeWithExecutor(executorService, SslProvider.JDK, true);
         } finally {
-            executorService.shutdown();
+            assertTrue(executorService.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
@@ -1094,7 +1077,7 @@ public class SslHandlerTest {
         try {
             testHandshakeWithExecutor(executorService, SslProvider.OPENSSL, true);
         } finally {
-            executorService.shutdown();
+            assertTrue(executorService.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         }
     }
 
@@ -1548,12 +1531,7 @@ public class SslHandlerTest {
                         }
                     }).connect(sc.localAddress());
             future.syncUninterruptibly();
-            clientSslHandler.handshakeFuture().addListener(new FutureListener<Channel>() {
-                @Override
-                public void operationComplete(Future<Channel> f) {
-                    future.channel().close();
-                }
-            });
+            clientSslHandler.handshakeFuture().addListener((FutureListener<Channel>) f -> future.channel().close());
             assertFalse(clientSslHandler.handshakeFuture().await().isSuccess());
             assertFalse(serverSslHandler.handshakeFuture().await().isSuccess());
 

@@ -29,7 +29,6 @@ import io.netty.handler.codec.redis.RedisArrayAggregator;
 import io.netty.handler.codec.redis.RedisBulkStringAggregator;
 import io.netty.handler.codec.redis.RedisDecoder;
 import io.netty.handler.codec.redis.RedisEncoder;
-import io.netty.util.concurrent.GenericFutureListener;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -77,13 +76,10 @@ public class RedisClient {
                 }
                 // Sends the received line to the server.
                 lastWriteFuture = ch.writeAndFlush(line);
-                lastWriteFuture.addListener(new GenericFutureListener<ChannelFuture>() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            System.err.print("write failed: ");
-                            future.cause().printStackTrace(System.err);
-                        }
+                lastWriteFuture.addListener(future -> {
+                    if (!future.isSuccess()) {
+                        System.err.print("write failed: ");
+                        future.cause().printStackTrace(System.err);
                     }
                 });
             }

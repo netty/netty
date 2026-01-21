@@ -17,8 +17,6 @@ package io.netty.bootstrap;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelConfig;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
@@ -132,7 +130,7 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
     }
 
     @Override
-    void init(Channel channel) {
+    void init(Channel channel) throws Throwable {
         setChannelOptions(channel, newOptionsArray(), logger);
         setAttributes(channel, newAttributesArray());
 
@@ -227,7 +225,12 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
 
             child.pipeline().addLast(childHandler);
 
-            setChannelOptions(child, childOptions, logger);
+            try {
+                setChannelOptions(child, childOptions, logger);
+            } catch (Throwable cause) {
+                forceClose(child, cause);
+                return;
+            }
             setAttributes(child, childAttrs);
 
             if (!extensions.isEmpty()) {
@@ -241,12 +244,9 @@ public class ServerBootstrap extends AbstractBootstrap<ServerBootstrap, ServerCh
             }
 
             try {
-                childGroup.register(child).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            forceClose(child, future.cause());
-                        }
+                childGroup.register(child).addListener(future -> {
+                    if (!future.isSuccess()) {
+                        forceClose(child, future.cause());
                     }
                 });
             } catch (Throwable t) {

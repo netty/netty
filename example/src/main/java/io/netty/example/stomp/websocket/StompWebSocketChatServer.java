@@ -34,14 +34,11 @@ public class StompWebSocketChatServer {
                     .group(group)
                     .channel(NioServerSocketChannel.class)
                     .childHandler(new StompWebSocketChatServerInitializer("/chat"));
-            bootstrap.bind(port).addListener(new ChannelFutureListener() {
-                @Override
-                public void operationComplete(ChannelFuture future) {
-                    if (future.isSuccess()) {
-                        System.out.println("Open your web browser and navigate to http://127.0.0.1:" + PORT + '/');
-                    } else {
-                        System.out.println("Cannot start server, follows exception " + future.cause());
-                    }
+            bootstrap.bind(port).addListener(future -> {
+                if (future.isSuccess()) {
+                    System.out.println("Open your web browser and navigate to http://127.0.0.1:" + PORT + '/');
+                } else {
+                    System.out.println("Cannot start server, follows exception " + future.cause());
                 }
             }).channel().closeFuture().sync();
         } finally {

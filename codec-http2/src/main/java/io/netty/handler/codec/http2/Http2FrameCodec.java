@@ -416,12 +416,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 numBufferedStreams++;
                 // Clean up the stream being initialized if writing the headers fails and also
                 // decrement the number of buffered streams.
-                promise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture channelFuture) {
-                        numBufferedStreams--;
-                        handleHeaderFuture(channelFuture, streamId);
-                    }
+                promise.addListener((ChannelFutureListener) channelFuture -> {
+                    numBufferedStreams--;
+                    handleHeaderFuture(channelFuture, streamId);
                 });
             } else {
                 handleHeaderFuture(promise, streamId);
@@ -445,12 +442,9 @@ public class Http2FrameCodec extends Http2ConnectionHandler {
                 numBufferedStreams++;
                 // Clean up the stream being initialized if writing the headers fails and also
                 // decrement the number of buffered streams.
-                promise.addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture channelFuture) {
-                        numBufferedStreams--;
-                        handleHeaderFuture(channelFuture, streamId);
-                    }
+                promise.addListener((ChannelFutureListener) channelFuture -> {
+                    numBufferedStreams--;
+                    handleHeaderFuture(channelFuture, streamId);
                 });
             }
         }

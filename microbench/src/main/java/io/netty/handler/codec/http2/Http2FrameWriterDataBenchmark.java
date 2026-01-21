@@ -15,7 +15,7 @@
 package io.netty.handler.codec.http2;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.PooledByteBufAllocator;
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 import io.netty.channel.ChannelFuture;
@@ -76,10 +76,10 @@ public class Http2FrameWriterDataBenchmark extends AbstractMicrobenchmark {
     public void setup() {
         writer = new DefaultHttp2FrameWriter();
         oldWriter = new OldDefaultHttp2FrameWriter();
-        payload = pooled ? PooledByteBufAllocator.DEFAULT.buffer(payloadSize) : Unpooled.buffer(payloadSize);
+        payload = pooled ? ByteBufAllocator.DEFAULT.buffer(payloadSize) : Unpooled.buffer(payloadSize);
         payload.writeZero(payloadSize);
         ctx = new EmbeddedChannelWriteReleaseHandlerContext(
-                pooled ? PooledByteBufAllocator.DEFAULT : UnpooledByteBufAllocator.DEFAULT,
+                pooled ? ByteBufAllocator.DEFAULT : UnpooledByteBufAllocator.DEFAULT,
                 new ChannelInboundHandlerAdapter()) {
             @Override
             protected void handleException(Throwable t) {

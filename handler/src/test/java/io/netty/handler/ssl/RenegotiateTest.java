@@ -31,8 +31,6 @@ import io.netty.handler.ssl.util.CachedSelfSignedCertificate;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.handler.ssl.util.SelfSignedCertificate;
 import io.netty.util.ReferenceCountUtil;
-import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.FutureListener;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -81,15 +79,12 @@ public abstract class RenegotiateTest {
                                             final SslHandler handler = ctx.pipeline().get(SslHandler.class);
 
                                             renegotiate = true;
-                                            handler.renegotiate().addListener(new FutureListener<Channel>() {
-                                                @Override
-                                                public void operationComplete(Future<Channel> future) throws Exception {
-                                                    if (!future.isSuccess()) {
-                                                        error.compareAndSet(null, future.cause());
-                                                        ctx.close();
-                                                    }
-                                                    latch.countDown();
+                                            handler.renegotiate().addListener(future -> {
+                                                if (!future.isSuccess()) {
+                                                    error.compareAndSet(null, future.cause());
+                                                    ctx.close();
                                                 }
+                                                latch.countDown();
                                             });
                                         } else {
                                             error.compareAndSet(null, event.cause());

@@ -21,14 +21,14 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPromise;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.channel.pool.FixedChannelPool.AcquireTimeoutAction;
 import io.netty.util.concurrent.Future;
-import io.netty.util.concurrent.GenericFutureListener;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -57,7 +57,7 @@ public class FixedChannelPoolTest {
 
     @BeforeAll
     public static void createEventLoop() {
-        group = new DefaultEventLoopGroup();
+        group = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
     }
 
     @AfterAll
@@ -278,12 +278,9 @@ public class FixedChannelPoolTest {
         pool.acquire().get();
 
         final ChannelPromise closePromise = sc.newPromise();
-        pool.closeAsync().addListener(new GenericFutureListener<Future<? super Void>>() {
-            @Override
-            public void operationComplete(Future<? super Void> future) throws Exception {
-                assertEquals(0, pool.acquiredChannelCount());
-                sc.close(closePromise).syncUninterruptibly();
-            }
+        pool.closeAsync().addListener(future -> {
+            assertEquals(0, pool.acquiredChannelCount());
+            sc.close(closePromise).syncUninterruptibly();
         }).awaitUninterruptibly();
         closePromise.awaitUninterruptibly();
     }

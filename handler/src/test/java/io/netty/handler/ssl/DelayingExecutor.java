@@ -41,7 +41,8 @@ final class DelayingExecutor implements Executor {
                 ThreadLocalRandom.current().nextInt(100), TimeUnit.MILLISECONDS);
     }
 
-    void shutdown() {
+    boolean shutdownAndAwaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
         service.shutdown();
+        return service.awaitTermination(timeout, unit);
     }
 }

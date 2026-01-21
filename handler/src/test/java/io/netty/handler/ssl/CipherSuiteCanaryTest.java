@@ -25,11 +25,12 @@ import io.netty.channel.ChannelHandler;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInitializer;
 import io.netty.channel.ChannelPipeline;
-import io.netty.channel.DefaultEventLoopGroup;
 import io.netty.channel.EventLoopGroup;
+import io.netty.channel.MultiThreadIoEventLoopGroup;
 import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.channel.local.LocalAddress;
 import io.netty.channel.local.LocalChannel;
+import io.netty.channel.local.LocalIoHandler;
 import io.netty.channel.local.LocalServerChannel;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.pkitesting.CertificateBuilder;
@@ -77,7 +78,7 @@ public class CipherSuiteCanaryTest {
 
     @BeforeAll
     public static void init() throws Exception {
-        GROUP = new DefaultEventLoopGroup();
+        GROUP = new MultiThreadIoEventLoopGroup(LocalIoHandler.newFactory());
         CERT = new CertificateBuilder()
                 .rsa2048()
                 .subject("cn=localhost")
@@ -231,16 +232,17 @@ public class CipherSuiteCanaryTest {
                     }
                 } finally {
                     server.close().sync();
+
+                    if (executorService != null) {
+                        executorService.shutdown();
+                        assertTrue(executorService.awaitTermination(5, TimeUnit.SECONDS));
+                    }
                 }
             } finally {
                 ReferenceCountUtil.release(sslClientContext);
             }
         } finally {
             ReferenceCountUtil.release(sslServerContext);
-
-            if (executorService != null) {
-                executorService.shutdown();
-            }
         }
     }
 

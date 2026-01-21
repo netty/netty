@@ -20,8 +20,6 @@ import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.CompositeByteBuf;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.unix.DomainSocketReadMode;
@@ -78,25 +76,19 @@ public class IoUringDomainSocketFdTest extends AbstractSocketTest {
                 // Create new channel and obtain a file descriptor from it.
                 final IoUringDomainSocketChannel ch = new IoUringDomainSocketChannel();
 
-                ctx.writeAndFlush(ch.fd()).addListener(new ChannelFutureListener() {
-                    @Override
-                    public void operationComplete(ChannelFuture future) throws Exception {
-                        if (!future.isSuccess()) {
-                            Throwable cause = future.cause();
-                            recvFdFuture.completeExceptionally(cause);
-                        } else {
-                            ByteBuf sendBuffer = ctx.alloc().directBuffer(expected.length());
-                            sendBuffer.writeBytes(expected.getBytes());
-                            ctx.writeAndFlush(sendBuffer).addListener(new ChannelFutureListener() {
-                                @Override
-                                public void operationComplete(ChannelFuture future) throws Exception {
-                                    if (!future.isSuccess()) {
-                                        Throwable cause = future.cause();
-                                        recvByteBufFuture.completeExceptionally(cause);
-                                    }
-                                }
-                            });
-                        }
+                ctx.writeAndFlush(ch.fd()).addListener(future -> {
+                    if (!future.isSuccess()) {
+                        Throwable cause = future.cause();
+                        recvFdFuture.completeExceptionally(cause);
+                    } else {
+                        ByteBuf sendBuffer = ctx.alloc().directBuffer(expected.length());
+                        sendBuffer.writeBytes(expected.getBytes());
+                        ctx.writeAndFlush(sendBuffer).addListener(f -> {
+                            if (!f.isSuccess()) {
+                                Throwable cause = f.cause();
+                                recvByteBufFuture.completeExceptionally(cause);
+                            }
+                        });
                     }
                 });
             }

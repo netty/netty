@@ -550,7 +550,7 @@ public abstract class SSLEngineTest {
         if (clientGroupShutdownFuture != null) {
             clientGroupShutdownFuture.sync();
         }
-        delegatingExecutor.shutdown();
+        assertTrue(delegatingExecutor.shutdownAndAwaitTermination(5, TimeUnit.SECONDS));
         serverException = null;
         clientException = null;
     }
@@ -1392,9 +1392,9 @@ public abstract class SSLEngineTest {
             handshake(param.type(), param.delegate(), clientEngine, serverEngine);
 
             SSLSession session = serverEngine.getSession();
-            assertTrue(session.isValid());
+            assertTrue(session.isValid(), () -> "session should be valid: " + session);
             session.invalidate();
-            assertFalse(session.isValid());
+            assertFalse(session.isValid(), () -> "session should be invalid: " + session);
         } finally {
             cleanupClientSslEngine(clientEngine);
             cleanupServerSslEngine(serverEngine);

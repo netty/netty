@@ -689,14 +689,13 @@ final class UnsafeByteBufUtil {
     }
 
     static UnpooledUnsafeDirectByteBuf newUnsafeDirectByteBuf(
-            ByteBufAllocator alloc, int initialCapacity, int maxCapacity,
-            boolean allowSectionedInternalNioBufferAccess) {
+            ByteBufAllocator alloc, int initialCapacity, int maxCapacity) {
         if (PlatformDependent.useDirectBufferNoCleaner()) {
             return new UnpooledUnsafeNoCleanerDirectByteBuf(
-                    alloc, initialCapacity, maxCapacity, allowSectionedInternalNioBufferAccess);
+                    alloc, initialCapacity, maxCapacity);
         }
         return new UnpooledUnsafeDirectByteBuf(
-                alloc, initialCapacity, maxCapacity, allowSectionedInternalNioBufferAccess);
+                alloc, initialCapacity, maxCapacity);
     }
 
     private UnsafeByteBufUtil() { }
